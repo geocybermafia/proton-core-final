@@ -1,0 +1,75 @@
+@import 'reactflow/dist/style.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-proton-accent: #00f2ff;
+  --color-proton-secondary: #ff2d55;
+  
+  /* Default (Dark) Theme */
+  --color-proton-bg: #0a0a0c;
+  --color-proton-card: #121217;
+  --color-proton-border: #22222a;
+  --color-proton-text: #e1e1e6;
+  --color-proton-muted: #8e8e93;
+}
+
+@layer base {
+  :root[data-theme="light"] {
+    --color-proton-bg: #f4f4f7;
+    --color-proton-card: #ffffff;
+    --color-proton-border: #e2e2e8;
+    --color-proton-text: #1a1a1e;
+    --color-proton-muted: #636366;
+  }
+
+  :root[data-theme="vibrant"] {
+    --color-proton-bg: #1a0a1a;
+    --color-proton-card: #2e0f2e;
+    --color-proton-border: #4a1a4a;
+    --color-proton-text: #ffe0ff;
+    --color-proton-muted: #cc88cc;
+  }
+
+  :root[data-theme="midnight"] {
+    --color-proton-bg: #050505;
+    --color-proton-card: #0a0a0a;
+    --color-proton-border: #1a1a1a;
+    --color-proton-text: #dcdcdc;
+    --color-proton-muted: #5e5e5e;
+  }
+
+  body {
+    @apply bg-proton-bg text-proton-text font-sans antialiased transition-colors duration-300;
+  }
+}
+
+.proton-glass {
+  @apply bg-proton-card/60 backdrop-blur-xl border border-proton-border/60 transition-all duration-300;
+}
+
+.proton-glass:hover {
+  @apply border-proton-accent/30;
+}
+
+.proton-button {
+  @apply px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300;
+  @apply hover:scale-105 active:scale-95;
+}
+
+.proton-glow {
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+}
+
+.proton-glow-red {
+  box-shadow: 0 0 20px rgba(255, 45, 85, 0.15);
+}
+
+.proton-grid {
+  background-image: radial-gradient(var(--color-proton-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
