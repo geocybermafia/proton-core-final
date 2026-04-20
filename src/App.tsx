@@ -2059,8 +2059,7 @@ export default function App() {
             </div>
             {isSidebarOpen && (
               <div className="min-w-0">
-                <p className="text-xs font-bold truncate">devdarianib@gmail.com</p>
-                <p className="text-[10px] text-proton-muted uppercase tracking-widest">Admin Access</p>
+<p className="text-xs font-bold truncate">Proton User</p>                <p className="text-[10px] text-proton-muted uppercase tracking-widest">Admin Access</p>
               </div>
             )}
           </div>
