@@ -2,51 +2,53 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: userId
-    // Fields:
-    //   - uid: string (required)
-    //   - email: string (required, email format)
-    //   - displayName: string (optional)
-    //
-    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false; // absolute default deny
+    }
 
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isVerifiedOwner(userId) {
+      return isSignedIn() && 
+             request.auth.uid == userId && 
+             request.auth.token.email_verified == true;
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'displayName']) &&
-             data.uid is string && data.uid == request.auth.uid &&
-             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100));
+    match /test/connection {
+      allow get: if true;
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data);
-      allow delete: if false;
-
+      // Allow the user to manage their own profile document
+      allow get, write: if isVerifiedOwner(userId);
+      
+      // Subcollections
+      match /personas/{personaId} {
+        allow list: if isVerifiedOwner(userId);
+        allow get, write: if isVerifiedOwner(userId) && isValidId(personaId);
+      }
+      
       match /workflows/{workflowId} {
-        allow read, write: if isOwner(userId);
+        allow list: if isVerifiedOwner(userId);
+        allow get, write: if isVerifiedOwner(userId) && isValidId(workflowId);
+      }
+      
+      match /customAvatars/{personaId} {
+        allow list: if isVerifiedOwner(userId);
+        allow get, write: if isVerifiedOwner(userId) && isValidId(personaId);
+      }
+      
+      match /chatHistory/{personaId} {
+        allow list: if isVerifiedOwner(userId);
+        allow get, write: if isVerifiedOwner(userId) && isValidId(personaId);
       }
     }
   }
 }
+

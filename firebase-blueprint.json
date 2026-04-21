@@ -1,19 +1,25 @@
 {
   "entities": {
-    "UserProfile": {
-      "title": "UserProfile",
-      "description": "User profile information",
+    "Persona": {
+      "title": "Persona",
+      "description": "User created or modified digital personas",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "displayName": { "type": "string" }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameGe": { "type": "string" },
+        "role": { "type": "string" },
+        "language": { "type": "string" },
+        "description": { "type": "string" },
+        "descriptionGe": { "type": "string" },
+        "systemInstruction": { "type": "string" },
+        "avatar": { "type": "string" }
       },
-      "required": ["uid", "email"]
+      "required": ["id", "name", "role", "systemInstruction", "avatar"]
     },
     "Workflow": {
       "title": "Workflow",
-      "description": "Workflow definition",
+      "description": "User created workflows",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -21,22 +27,49 @@
         "trigger": { "type": "string" },
         "action": { "type": "string" },
         "personaId": { "type": "string" },
-        "analysisHistory": {
-          "type": "array",
-          "items": { "type": "object" }
-        }
+        "nodes": { "type": "string" },
+        "edges": { "type": "string" },
+        "analysisHistory": { "type": "string" }
       },
       "required": ["id", "name"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "History of messages for a persona",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "number" },
+        "role": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["timestamp", "role", "content"]
+    },
+    "CustomAvatar": {
+      "title": "CustomAvatar",
+      "description": "Custom avatars for personas",
+      "type": "object",
+      "properties": {
+        "avatar": { "type": "string" }
+      },
+      "required": ["avatar"]
     }
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": { "$ref": "UserProfile" },
-      "description": "User profile documents"
+    "/users/{userId}/personas/{personaId}": {
+      "schema": { "$ref": "Persona" },
+      "description": "Custom Personas of the user"
     },
     "/users/{userId}/workflows/{workflowId}": {
       "schema": { "$ref": "Workflow" },
-      "description": "Workflow documents"
+      "description": "Saved workflows"
+    },
+    "/users/{userId}/customAvatars/{personaId}": {
+      "schema": { "$ref": "CustomAvatar" },
+      "description": "Saved custom avatars"
+    },
+    "/users/{userId}/chatHistory/{personaId}": {
+      "schema": { "$ref": "ChatMessage" },
+      "description": "We will store history stringified or inside an array. Actual implementation might store as distinct fields."
     }
   }
 }

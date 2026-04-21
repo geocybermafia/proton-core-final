@@ -1,20 +1,24 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import firebaseConfigJson from '../firebase-applet-config.json';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAawNki7fRFS_ZQGiAiXh4dmFNOH0OpZDM",
-  authDomain: "proton-core-ai.firebaseapp.com",
-  projectId: "proton-core-ai",
-  storageBucket: "proton-core-ai.firebasestorage.app",
-  messagingSenderId: "770674231164",
-  appId: "1:770674231164:web:20d834846552090fb486f9",
-  measurementId: "G-WTE6YHHYFC"
+  apiKey: firebaseConfigJson.apiKey,
+  authDomain: firebaseConfigJson.authDomain,
+  projectId: firebaseConfigJson.projectId,
+  storageBucket: firebaseConfigJson.storageBucket,
+  messagingSenderId: firebaseConfigJson.messagingSenderId,
+  appId: firebaseConfigJson.appId,
+  measurementId: firebaseConfigJson.measurementId
 };
 
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
+// Debug logging for database ID
+console.log("Firebase DB ID:", firebaseConfigJson.firestoreDatabaseId);
+
+export const db = getFirestore(app, firebaseConfigJson.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 

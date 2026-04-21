@@ -2,7 +2,57 @@ import React, { useState, useEffect, useRef, useMemo, Dispatch, SetStateAction }
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { auth, db, googleProvider } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer } from 'firebase/firestore';
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
+  path: string | null;
+  authInfo: {
+    userId: string;
+    email: string;
+    emailVerified: boolean;
+    isAnonymous: boolean;
+    providerInfo: { providerId: string; displayName: string; email: string; }[];
+  }
+}
+
+const handleFirestoreError = (error: any, operationType: FirestoreErrorInfo['operationType'], path: string | null = null) => {
+  if (error.code === 'permission-denied') {
+    const user = auth.currentUser;
+    const errorInfo: FirestoreErrorInfo = {
+      error: error.message,
+      operationType,
+      path,
+      authInfo: {
+        userId: user?.uid || 'unauthenticated',
+        email: user?.email || '',
+        emailVerified: user?.emailVerified || false,
+        isAnonymous: user?.isAnonymous || false,
+        providerInfo: user?.providerData.map(p => ({
+          providerId: p.providerId,
+          displayName: p.displayName || '',
+          email: p.email || ''
+        })) || []
+      }
+    };
+    console.error("Firestore Permission Denied:", errorInfo);
+    throw new Error(JSON.stringify(errorInfo));
+  }
+  throw error;
+};
+
+// Test connection helper
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    }
+  }
+}
+testConnection();
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts';
@@ -1479,7 +1529,8 @@ const WorkflowsView = ({
     setWorkflows(workflows.map(wf => wf.id === updatedWorkflow.id ? updatedWorkflow : wf));
     setEditingWorkflow(null);
     if (user && db) {
-      await setDoc(doc(db, 'users', user.uid, 'workflows', updatedWorkflow.id), updatedWorkflow);
+      const docRef = doc(db, 'users', user.uid, 'workflows', updatedWorkflow.id);
+      await setDoc(docRef, updatedWorkflow).catch(e => handleFirestoreError(e, 'update', docRef.path));
     }
   };
 
@@ -1493,7 +1544,8 @@ const WorkflowsView = ({
     };
     setWorkflows([...workflows, newWorkflow]);
     if (user && db) {
-      await setDoc(doc(db, 'users', user.uid, 'workflows', newWorkflow.id), newWorkflow);
+      const docRef = doc(db, 'users', user.uid, 'workflows', newWorkflow.id);
+      await setDoc(docRef, newWorkflow).catch(e => handleFirestoreError(e, 'create', docRef.path));
     }
   };
 
@@ -1674,16 +1726,16 @@ const ProfileView = ({
                 <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">Full Name</label>
                 <input 
                   type="text" 
-                  value={profile.name}
-                  onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+                  value={user?.displayName || profile.name}
+                  disabled
+                  className="w-full bg-proton-bg/50 border border-proton-border rounded-xl px-4 py-3 text-proton-muted cursor-not-allowed"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">Email Address</label>
                 <input 
                   type="email" 
-                  value={profile.email}
+                  value={user?.email || profile.email}
                   disabled
                   className="w-full bg-proton-bg/50 border border-proton-border rounded-xl px-4 py-3 text-proton-muted cursor-not-allowed"
                 />
@@ -1911,6 +1963,7 @@ export default function App() {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [user, setUser] = useState(auth.currentUser);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   async function handleTTS(text: string) {
     try {
@@ -1956,13 +2009,55 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
-        const workflowsRef = collection(db, 'users', currentUser.uid, 'workflows');
-        const snapshot = await getDocs(workflowsRef);
-        const loadedWorkflows = snapshot.docs.map(doc => doc.data() as Workflow);
-        setWorkflows(loadedWorkflows);
+        try {
+          // Fetch Workflows
+          const workflowsRef = collection(db, 'users', currentUser.uid, 'workflows');
+          const wfSnapshot = await getDocs(workflowsRef).catch(e => handleFirestoreError(e, 'list', workflowsRef.path));
+          const loadedWorkflows = wfSnapshot.docs.map(doc => doc.data() as Workflow);
+          setWorkflows(loadedWorkflows);
+
+          // Fetch Personas
+          const personasRef = collection(db, 'users', currentUser.uid, 'personas');
+          const pSnapshot = await getDocs(personasRef).catch(e => handleFirestoreError(e, 'list', personasRef.path));
+          let loadedPersonas = pSnapshot.docs.map(doc => doc.data() as Persona);
+          
+          if (loadedPersonas.length === 0) {
+            // Initialize defaults
+            loadedPersonas = PERSONAS;
+            for (const p of PERSONAS) {
+              const pDoc = doc(db, 'users', currentUser.uid, 'personas', p.id);
+              await setDoc(pDoc, p).catch(e => handleFirestoreError(e, 'create', pDoc.path));
+            }
+          }
+          setPersonas(loadedPersonas);
+
+          // Fetch Chat History
+          const chatRef = collection(db, 'users', currentUser.uid, 'chatHistory');
+          const chatSnap = await getDocs(chatRef).catch(e => handleFirestoreError(e, 'list', chatRef.path));
+          const historyObj: PersonaHistory = {};
+          chatSnap.docs.forEach(d => {
+            historyObj[d.id] = d.data().messages || [];
+          });
+          setChatHistory(historyObj);
+
+          // Fetch Custom Avatars
+          const avatarRef = collection(db, 'users', currentUser.uid, 'customAvatars');
+          const avatarSnap = await getDocs(avatarRef).catch(e => handleFirestoreError(e, 'list', avatarRef.path));
+          const avatarObj: { [id: string]: string } = {};
+          avatarSnap.docs.forEach(d => {
+            avatarObj[d.id] = d.data().avatar;
+          });
+          setPersonaAvatars(avatarObj);
+        } catch (error) {
+          console.error("Initial load error:", error);
+        }
       } else {
         setWorkflows([]);
+        setPersonas(PERSONAS);
+        setChatHistory({});
+        setPersonaAvatars({});
       }
+      setAuthInitialized(true);
     });
     return () => unsubscribe();
   }, []);
@@ -1970,13 +2065,14 @@ export default function App() {
   const handleGoogleSignIn = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const userDoc = await getDoc(userDocRef).catch(e => handleFirestoreError(e, 'get', userDocRef.path));
       if (!userDoc.exists()) {
-        await setDoc(doc(db, 'users', result.user.uid), {
+        await setDoc(userDocRef, {
           uid: result.user.uid,
           email: result.user.email,
           displayName: result.user.displayName
-        });
+        }).catch(e => handleFirestoreError(e, 'create', userDocRef.path));
       }
     } catch (error) {
       console.error('Error signing in:', error);
@@ -2014,18 +2110,95 @@ export default function App() {
   };
 
   const handleNewMessage = (personaId: string, msg: ChatMessage) => {
-    setChatHistory(prev => ({
-      ...prev,
-      [personaId]: [...(prev[personaId] || []), msg]
-    }));
+    setChatHistory(prev => {
+      const updated = {
+        ...prev,
+        [personaId]: [...(prev[personaId] || []), msg]
+      };
+      if (user) {
+        // Here we just save the message onto the chatHistory doc. Alternatively you can append.
+        const docRef = doc(db, 'users', user.uid, 'chatHistory', personaId);
+        setDoc(docRef, { messages: updated[personaId] }).catch(e => handleFirestoreError(e, 'write', docRef.path));
+      }
+      return updated;
+    });
+  };
+
+  const handleUpdatePersonas = async (newPersonas: Persona[] | ((prev: Persona[]) => Persona[])) => {
+    setPersonas(prev => {
+      const updated = typeof newPersonas === 'function' ? newPersonas(prev) : newPersonas;
+      if (user) {
+        updated.forEach(async (p) => {
+          const docRef = doc(db, 'users', user.uid, 'personas', p.id);
+          await setDoc(docRef, p).catch(e => handleFirestoreError(e, 'update', docRef.path));
+        });
+      }
+      return updated;
+    });
   };
 
   const handleUpdateAvatar = (personaId: string, avatar: string) => {
-    setPersonaAvatars(prev => ({
-      ...prev,
-      [personaId]: avatar
-    }));
+    setPersonaAvatars(prev => {
+      const updated = {
+        ...prev,
+        [personaId]: avatar
+      };
+      if (user) {
+        const docRef = doc(db, 'users', user.uid, 'customAvatars', personaId);
+        setDoc(docRef, { avatar }).catch(e => handleFirestoreError(e, 'update', docRef.path));
+      }
+      return updated;
+    });
   };
+
+  if (!authInitialized) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
+        <Loader2 className="w-8 h-8 text-proton-accent animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-proton-bg p-4 relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-proton-accent/5 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-proton-secondary/5 blur-[120px] pointer-events-none" />
+        
+        <div className="relative z-10 w-full max-w-md proton-glass p-8 rounded-3xl space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 shadow-2xl border border-white/5">
+          <div className="space-y-3 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shadow-[0_0_30px_rgba(0,242,255,0.3)] mb-6">
+              <Zap size={32} fill="currentColor" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">PROTON<span className="text-proton-accent">CORE</span></h1>
+            <p className="text-proton-muted text-sm">Sign in to access your digital personas, workflows, and compute clusters.</p>
+          </div>
+          
+          <div className="pt-4">
+            <button 
+              onClick={handleGoogleSignIn}
+              className="w-full relative flex items-center justify-center gap-3 px-6 py-4 bg-white hover:bg-gray-50 text-black font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] shadow-lg"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              Continue with Google
+            </button>
+          </div>
+          
+          <div className="pt-6 border-t border-proton-border/50 text-center">
+            <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest">
+              Secured by Proton Infrastructure
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
@@ -2105,15 +2278,20 @@ export default function App() {
 
         <div className="p-4 border-t border-proton-border">
           <div className={cn(
-            "flex items-center gap-3 p-3 rounded-xl bg-proton-bg/50 border border-proton-border overflow-hidden",
+            "flex items-center gap-3 p-3 rounded-xl bg-proton-bg/50 border border-proton-border overflow-hidden cursor-pointer hover:bg-proton-bg transition-colors",
             !isSidebarOpen && "justify-center"
-          )}>
-            <div className="w-8 h-8 rounded-full bg-proton-accent/20 flex items-center justify-center text-proton-accent shrink-0">
-              <Terminal size={16} />
+          )} onClick={() => handleViewChange('profile')}>
+            <div className="w-8 h-8 rounded-full bg-proton-accent/20 flex items-center justify-center text-proton-accent font-bold shrink-0 overflow-hidden">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              ) : (
+                (user.displayName || user.email || 'U').charAt(0).toUpperCase()
+              )}
             </div>
             {isSidebarOpen && (
               <div className="min-w-0">
-<p className="text-xs font-bold truncate">Proton User</p>                <p className="text-[10px] text-proton-muted uppercase tracking-widest">Admin Access</p>
+                <p className="text-xs font-bold truncate">{user.displayName || 'Proton User'}</p>
+                <p className="text-[10px] text-proton-muted truncate">{user.email}</p>
               </div>
             )}
           </div>
@@ -2185,7 +2363,7 @@ export default function App() {
                   customAvatars={personaAvatars}
                   onUpdateAvatar={handleUpdateAvatar}
                   personas={personas}
-                  onUpdatePersonas={setPersonas}
+                  onUpdatePersonas={handleUpdatePersonas}
                   aiSettings={aiSettings}
                 />
               )}
