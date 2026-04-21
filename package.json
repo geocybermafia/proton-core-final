@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@rainbow-me/rainbowkit": "^2.2.10",
     "@tailwindcss/vite": "^4.1.14",
+    "@tanstack/react-query": "^5.99.2",
     "@vitejs/plugin-react": "^5.0.4",
     "@walletconnect/web3-provider": "^1.8.0",
     "clsx": "^2.1.1",
@@ -28,7 +30,9 @@
     "reactflow": "^11.11.4",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0",
+    "viem": "^2.48.3",
     "vite": "^6.2.0",
+    "wagmi": "^2.19.5",
     "web3modal": "^1.9.12"
   },
   "devDependencies": {

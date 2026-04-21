@@ -84,18 +84,16 @@ import {
   Plus,
   Trash2,
   Image,
-  Volume2
+  Volume2,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from './lib/utils';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, type Persona } from './services/gemini';
 
-declare global {
-  interface Window {
-    ethereum: any;
-  }
-}
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount, useBalance } from 'wagmi';
 
 // --- Types ---
 type View = 'compute' | 'personas' | 'web3' | 'workflows' | 'profile' | 'settings' | 'image';
@@ -1197,150 +1195,167 @@ const PersonasView = ({
   );
 };
 
-const Web3View = ({
-  walletAddress,
-  onConnect,
-  onDisconnect,
-  walletError,
-  isConnecting
-}: {
-  walletAddress: string | null;
-  onConnect: () => void;
-  onDisconnect: () => void;
-  walletError: string | null;
-  isConnecting: boolean;
-}) => {
-  const [expandedTxId, setExpandedTxId] = useState<number | null>(null);
 
-  const transactions = [
-    { id: 1, type: 'Service Fee', amount: '-0.05 ETH', date: '2 hours ago', status: 'Confirmed', hash: '0x1234567890abcdef1234567890abcdef12345678', gasPrice: '0.002 ETH', explorerLink: '#' },
-    { id: 2, type: 'Compute Refund', amount: '+0.01 ETH', date: 'Yesterday', status: 'Confirmed', hash: '0xabcdef1234567890abcdef1234567890abcdef12', gasPrice: '0.001 ETH', explorerLink: '#' },
-    { id: 3, type: 'Subscription', amount: '-0.12 ETH', date: '3 days ago', status: 'Confirmed', hash: '0x9876543210fedcba9876543210fedcba98765432', gasPrice: '0.003 ETH', explorerLink: '#' },
-  ];
+const Web3View = () => {
+  const { address, isConnected } = useAccount();
+  const { data: balance } = useBalance({
+    address: address,
+  });
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Web3 Integration</h2>
-          <p className="text-proton-muted text-xs sm:text-sm mt-1">AI-as-a-Service Payment Infrastructure</p>
-        </div>
-        <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
-          {walletAddress ? (
-            <div className="flex items-center justify-between sm:justify-start gap-4 bg-proton-card p-2 rounded-xl border border-proton-border w-full sm:w-auto">
-              <span className="text-sm font-mono text-proton-text px-2">{walletAddress}</span>
-              <button 
-                onClick={onDisconnect}
-                className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 font-bold text-sm hover:bg-red-500/20 transition-all"
-              >
-                Disconnect
-              </button>
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 min-h-[60vh] flex flex-col justify-center">
+      {!isConnected ? (
+        <div className="max-w-md mx-auto w-full space-y-8 text-center py-20 px-6 proton-glass rounded-[40px] border border-white/5 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-purple-500/5 pointer-events-none" />
+          
+          <div className="relative z-10 space-y-6">
+            <div className="mx-auto w-20 h-20 rounded-3xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-muted shadow-2xl">
+              <Wallet size={40} className="opacity-20" />
             </div>
-          ) : (
-            <button 
-              onClick={onConnect}
-              disabled={isConnecting}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-proton-secondary to-purple-600 text-white font-bold text-sm flex items-center gap-2 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,45,85,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Wallet size={18} />
-                  Connect Ethereum Wallet
-                </>
-              )}
-            </button>
-          )}
-          {walletError && <p className="text-xs text-red-400 font-mono">{walletError}</p>}
-        </div>
-      </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-400" />
+                <span className="text-xs font-mono text-red-400 uppercase tracking-widest">Status: Disconnected</span>
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Enterprise Web3 Node</h2>
+              <p className="text-sm text-proton-muted leading-relaxed">
+                Connect your secure hardware or browser wallet to access the Proton Core AI compute settlement layer.
+              </p>
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="proton-glass p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-proton-card to-proton-bg relative overflow-hidden">
-            <div className="relative z-10 space-y-4 sm:space-y-8">
-              <div className="flex justify-between items-start">
+            <div className="pt-4 flex justify-center">
+              <ConnectButton label="Connect Wallet" />
+            </div>
+
+            <p className="text-[10px] text-proton-muted/40 font-mono uppercase tracking-[0.2em] pt-8">
+              Secured by Proton Infrastructure
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-8 animate-in zoom-in-95 duration-500">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Web3 Integration</h2>
+              <p className="text-proton-muted text-xs sm:text-sm mt-1">AI-as-a-Service Payment Infrastructure</p>
+            </div>
+            <div className="flex items-center gap-3 bg-proton-card/50 p-1.5 pl-4 rounded-2xl border border-proton-border backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                <span className="text-[10px] font-mono text-green-400 uppercase tracking-widest">Active</span>
+              </div>
+              <ConnectButton />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="proton-glass p-8 rounded-3xl bg-gradient-to-br from-proton-card to-proton-bg relative overflow-hidden border border-white/5 shadow-2xl">
+                <div className="relative z-10 space-y-8">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-proton-muted uppercase tracking-widest font-mono">Settlement Balance</p>
+                      <p className="text-5xl font-bold font-mono tracking-tighter text-proton-text">
+                        {balance ? `${Number(balance.formatted).toFixed(2)} ${balance.symbol}` : "0.00 ETH"}
+                      </p>
+                      <p className="text-xs text-proton-accent font-mono opacity-80 bg-proton-accent/5 py-1 px-2 rounded-lg inline-block mt-2">
+                        ≈ $0.00 USD
+                      </p>
+                    </div>
+                    <div className="p-4 bg-proton-accent/10 rounded-2xl text-proton-accent shadow-[0_0_40px_rgba(0,242,255,0.15)] border border-proton-accent/20">
+                      <Zap size={28} fill="currentColor" />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <button className="flex-1 py-4 rounded-2xl bg-white hover:bg-gray-100 text-black font-bold text-sm transition-all transform active:scale-[0.98] shadow-xl">
+                      Deposit
+                    </button>
+                    <button className="flex-1 py-4 rounded-2xl border border-proton-border bg-proton-bg/50 text-proton-text font-bold text-sm hover:bg-proton-card transition-all transform active:scale-[0.98]">
+                      Withdraw
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-proton-accent/5 rounded-full blur-[100px] pointer-events-none" />
+              </div>
+
+              <div className="proton-glass p-8 rounded-3xl space-y-8 border border-white/5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-[10px] uppercase tracking-widest text-proton-muted flex items-center gap-2">
+                    <Activity size={14} className="text-proton-accent" />
+                    Ledger History
+                  </h3>
+                  <div className="px-2 py-0.5 rounded bg-proton-bg border border-proton-border">
+                    <span className="text-[9px] font-mono text-proton-muted italic">NULL_SET</span>
+                  </div>
+                </div>
+                
+                <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 bg-proton-bg/10 rounded-[32px] border border-dashed border-proton-border/50">
+                  <div className="w-16 h-16 rounded-full bg-proton-card border border-proton-border flex items-center justify-center text-proton-muted/20">
+                    <Layers size={32} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-base font-bold text-proton-muted/80">No transactions yet</p>
+                    <p className="text-[10px] text-proton-muted/40 font-mono max-w-[200px] mx-auto leading-relaxed">
+                      Blockchain event listener is awaiting signature events for {address?.slice(0, 6)}...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="proton-glass p-6 rounded-3xl space-y-6 border border-white/5">
+                <div className="flex items-center gap-2">
+                  <Network size={16} className="text-proton-accent" />
+                  <h3 className="font-bold text-[10px] uppercase tracking-widest text-proton-muted">Network Health</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="p-4 rounded-2xl bg-proton-bg/50 border border-proton-border space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-proton-muted">Mainnet Node</span>
+                      <span className="text-[10px] font-mono text-green-400 flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
+                        SYNCED
+                      </span>
+                    </div>
+                    <div className="h-1 w-full bg-proton-border rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '100%' }}
+                        className="h-full bg-green-400/50"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-proton-bg/50 border border-proton-border">
+                    <span className="text-xs text-proton-muted">Gas Tracker</span>
+                    <span className="text-[10px] font-mono text-proton-accent font-bold">14 GWEI</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 rounded-3xl bg-proton-accent/5 border border-proton-accent/10 flex flex-col items-center text-center space-y-4">
+                <div className="p-3 bg-proton-accent/10 rounded-full text-proton-accent">
+                  <Shield size={24} />
+                </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-proton-muted uppercase tracking-widest font-mono">Current Balance</p>
-                  <p className="text-4xl font-bold font-mono">0.42 ETH</p>
-                  <p className="text-sm text-proton-accent font-mono">≈ $1,240.50 USD</p>
-                </div>
-                <div className="p-3 bg-proton-accent/10 rounded-2xl text-proton-accent">
-                  <Zap size={24} />
+                  <p className="text-xs font-bold">Proton Core Security</p>
+                  <p className="text-[10px] text-proton-muted leading-relaxed">
+                    Zero-knowledge settlement proofs are enabled for all transactions.
+                  </p>
                 </div>
               </div>
-              
-              <div className="flex gap-4">
-                <button className="flex-1 py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-white/90 transition-all">Deposit</button>
-                <button className="flex-1 py-3 rounded-xl border border-proton-border font-bold text-sm hover:bg-proton-card transition-all">Withdraw</button>
-              </div>
-            </div>
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-proton-accent/10 rounded-full blur-3xl" />
-          </div>
-
-          <div className="proton-glass p-6 rounded-2xl space-y-4">
-            <h3 className="font-bold text-sm uppercase tracking-widest text-proton-muted">Recent Transactions</h3>
-            <div className="space-y-4">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="border-b border-proton-border last:border-0">
-                  <button 
-                    onClick={() => setExpandedTxId(expandedTxId === tx.id ? null : tx.id)}
-                    className="w-full flex items-center justify-between py-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center",
-                        tx.amount.startsWith('-') ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"
-                      )}>
-                        {tx.amount.startsWith('-') ? <ChevronRight size={14} className="rotate-90" /> : <ChevronRight size={14} className="-rotate-90" />}
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-medium">{tx.type}</p>
-                        <p className="text-[10px] text-proton-muted">{tx.date}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-mono font-bold">{tx.amount}</p>
-                      <p className="text-[10px] text-green-400 uppercase font-mono">{tx.status}</p>
-                    </div>
-                  </button>
-                  {expandedTxId === tx.id && (
-                    <div className="p-4 bg-proton-bg/50 rounded-xl mt-2 space-y-2 text-xs font-mono">
-                      <div className="flex justify-between">
-                        <span className="text-proton-muted">Hash:</span>
-                        <span className="truncate max-w-[200px]">{tx.hash}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-proton-muted">Gas Price:</span>
-                        <span>{tx.gasPrice}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-proton-muted">Gas Used:</span>
-                        <span>21,000</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-proton-muted">Tx Fee:</span>
-                        <span>0.00042 ETH</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-proton-muted">Explorer:</span>
-                        <a href="https://georgia-blockchain-explorer.ge" target="_blank" rel="noopener noreferrer" className="text-proton-accent hover:underline">View on GeoBlock</a>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
+
+
 
 
 const ImageView = () => {
@@ -1961,8 +1976,6 @@ export default function App() {
     localStorage.setItem('proton_ai_settings', JSON.stringify(aiSettings));
   }, [aiSettings]);
 
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [walletError, setWalletError] = useState<string | null>(null);
   const [user, setUser] = useState(auth.currentUser);
   const [authInitialized, setAuthInitialized] = useState(false);
 
@@ -2084,31 +2097,6 @@ export default function App() {
     await signOut(auth);
   };
 
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const connectWallet = async () => {
-    setWalletError(null);
-    setIsConnecting(true);
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("User denied account access", error);
-        setWalletError("User denied account access.");
-      } finally {
-        setIsConnecting(false);
-      }
-    } else {
-      setWalletError("Please install MetaMask or another Ethereum-compatible wallet.");
-      setIsConnecting(false);
-    }
-  };
-
-  const disconnectWallet = () => {
-    setWalletAddress(null);
-    setWalletError(null);
-  };
 
   const handleNewMessage = (personaId: string, msg: ChatMessage) => {
     const updatedHistory = {
@@ -2369,13 +2357,7 @@ export default function App() {
                 />
               )}
               {activeView === 'web3' && (
-                <Web3View 
-                  walletAddress={walletAddress}
-                  onConnect={connectWallet}
-                  onDisconnect={disconnectWallet}
-                  walletError={walletError}
-                  isConnecting={isConnecting}
-                />
+                <Web3View />
               )}
               {activeView === 'image' && <ImageView />}
               {activeView === 'workflows' && (
