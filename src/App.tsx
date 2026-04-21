@@ -59,6 +59,8 @@ export type Workflow = {
   action: string;
   personaId: string;
   analysisHistory?: { timestamp: number; result: string }[];
+  nodes?: any[];
+  edges?: any[];
 };
 
 type UserProfile = {
@@ -186,13 +188,13 @@ const PersonaEditor = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-proton-bg/80 backdrop-blur-md flex items-center justify-center p-6"
+      className="fixed inset-0 z-[100] bg-proton-bg/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
     >
       <motion.div 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
-        className="proton-glass p-8 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl"
+        className="proton-glass p-4 sm:p-8 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 sm:space-y-6 shadow-2xl custom-scrollbar"
       >
         <div className="flex justify-between items-center sticky top-0 bg-transparent backdrop-blur-md pb-4 z-10">
           <h3 className="text-xl font-bold flex items-center gap-2 text-proton-accent">
@@ -411,12 +413,12 @@ const ComputeView = () => {
   }, [status]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">System Infrastructure</h2>
-          <p className="text-proton-muted mt-1">Real-time compute cluster diagnostics and management</p>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">System Infrastructure</h2>
+          <p className="text-proton-muted text-xs sm:text-sm mt-1">Real-time compute cluster diagnostics and management</p>
         </div>
         <div className={cn(
           "px-4 py-2 rounded-full text-xs font-mono border flex items-center gap-2",
@@ -578,6 +580,7 @@ const PersonasView = ({
   const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const chatEndRef = useRef<HTMLDivElement>(null);
   
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
@@ -682,9 +685,12 @@ const PersonasView = ({
   };
 
   return (
-    <div className="flex h-full gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="flex flex-col md:flex-row h-full gap-0 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       {/* Persona Selector */}
-      <div className="w-80 flex flex-col gap-4">
+      <div className={cn(
+        "w-full md:w-80 flex-col gap-4 shrink-0 h-full",
+        mobileView === 'chat' ? "hidden md:flex" : "flex"
+      )}>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Users size={20} className="text-proton-accent" />
@@ -730,7 +736,7 @@ const PersonasView = ({
             ))}
           </select>
         </div>
-        <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar pb-4">
           {filteredPersonas.map(persona => (
             <div
               key={persona.id}
@@ -745,6 +751,7 @@ const PersonasView = ({
               <div
                   onClick={() => {
                     setSelectedPersona(persona);
+                    setMobileView('chat');
                   }}
                   className="w-full text-left p-4 cursor-pointer"
                 >
@@ -841,10 +848,19 @@ const PersonasView = ({
       </div>
 
       {/* Chat Interface */}
-      <div className="flex-1 flex flex-col proton-glass rounded-3xl overflow-hidden">
+      <div className={cn(
+        "flex-1 flex-col proton-glass rounded-3xl overflow-hidden h-full w-full",
+        mobileView === 'list' ? "hidden md:flex" : "flex"
+      )}>
         {/* Chat Header */}
         <div className="p-4 border-b border-proton-border flex items-center justify-between bg-proton-bg/30">
           <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setMobileView('list')}
+              className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 rounded-lg text-proton-muted hover:bg-proton-card transition-colors"
+            >
+              <ChevronRight size={20} className="rotate-180" />
+            </button>
             <div className="relative group">
               <PersonaAvatar avatar={currentAvatar} className="w-10 h-10 ring-2 ring-proton-accent/20" />
               <button 
@@ -901,13 +917,13 @@ const PersonasView = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-proton-bg/80 backdrop-blur-sm flex items-center justify-center p-6"
+              className="absolute inset-0 z-50 bg-proton-bg/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
             >
               <motion.div 
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="proton-glass p-8 rounded-3xl max-w-md w-full space-y-6 shadow-2xl"
+                className="proton-glass p-4 sm:p-8 rounded-3xl max-w-md w-full space-y-4 sm:space-y-6 shadow-2xl"
               >
                 <div className="flex justify-between items-center">
                   <h3 className="text-xl font-bold flex items-center gap-2">
@@ -1153,15 +1169,15 @@ const Web3View = ({
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Web3 Integration</h2>
-          <p className="text-proton-muted text-sm mt-1">AI-as-a-Service Payment Infrastructure</p>
+          <p className="text-proton-muted text-xs sm:text-sm mt-1">AI-as-a-Service Payment Infrastructure</p>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
           {walletAddress ? (
-            <div className="flex items-center gap-4 bg-proton-card p-2 rounded-xl border border-proton-border">
+            <div className="flex items-center justify-between sm:justify-start gap-4 bg-proton-card p-2 rounded-xl border border-proton-border w-full sm:w-auto">
               <span className="text-sm font-mono text-proton-text px-2">{walletAddress}</span>
               <button 
                 onClick={onDisconnect}
@@ -1193,10 +1209,10 @@ const Web3View = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="proton-glass p-8 rounded-3xl bg-gradient-to-br from-proton-card to-proton-bg relative overflow-hidden">
-            <div className="relative z-10 space-y-8">
+          <div className="proton-glass p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-proton-card to-proton-bg relative overflow-hidden">
+            <div className="relative z-10 space-y-4 sm:space-y-8">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <p className="text-xs text-proton-muted uppercase tracking-widest font-mono">Current Balance</p>
@@ -1306,13 +1322,13 @@ const ImageView = () => {
         <h2 className="text-2xl font-bold tracking-tight">Image Studio</h2>
         <p className="text-proton-muted text-sm mt-1">Create and edit images with Gemini</p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="proton-glass p-8 rounded-3xl space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+        <div className="proton-glass p-4 sm:p-6 md:p-8 rounded-3xl space-y-6">
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe the image you want to create or edit..."
-            className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30"
+            className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 md:h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30"
           />
           <button 
             onClick={handleGenerate}
@@ -1362,13 +1378,13 @@ const WorkflowEditor = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-proton-bg/80 backdrop-blur-md flex items-center justify-center p-6"
+      className="fixed inset-0 z-[100] bg-proton-bg/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
     >
       <motion.div 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
-        className="proton-glass p-8 rounded-3xl max-w-4xl w-full space-y-6 shadow-2xl"
+        className="proton-glass p-4 sm:p-8 rounded-3xl max-w-4xl w-full space-y-4 sm:space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar flex flex-col"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-proton-accent">Edit Workflow</h3>
@@ -1377,57 +1393,64 @@ const WorkflowEditor = ({
              <button onClick={() => setEditorMode('flow')} className={`px-4 py-2 text-xs font-bold rounded ${editorMode === 'flow' ? 'bg-proton-accent text-proton-bg' : 'text-proton-muted'}`}>FLOW</button>
           </div>
         </div>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Name</label>
-            <input 
-              type="text" 
-              value={formData.name}
-              onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Trigger</label>
-            <input 
-              type="text" 
-              value={formData.trigger}
-              onChange={e => setFormData(prev => ({ ...prev, trigger: e.target.value }))}
-              className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Action</label>
-            <input 
-              type="text" 
-              value={formData.action}
-              onChange={e => setFormData(prev => ({ ...prev, action: e.target.value }))}
-              className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Digital Persona</label>
-            <select 
-              value={formData.personaId}
-              onChange={e => setFormData(prev => ({ ...prev, personaId: e.target.value }))}
-              className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+        {editorMode === 'form' ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Name</label>
+              <input 
+                type="text" 
+                value={formData.name}
+                onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Trigger</label>
+              <input 
+                type="text" 
+                value={formData.trigger}
+                onChange={e => setFormData(prev => ({ ...prev, trigger: e.target.value }))}
+                className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Action</label>
+              <input 
+                type="text" 
+                value={formData.action}
+                onChange={e => setFormData(prev => ({ ...prev, action: e.target.value }))}
+                className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Digital Persona</label>
+              <select 
+                value={formData.personaId}
+                onChange={e => setFormData(prev => ({ ...prev, personaId: e.target.value }))}
+                className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+              >
+                <option value="">Select a persona</option>
+                {personas.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <button 
+              onClick={async () => {
+                const analysis = await analyzeWorkflow(formData);
+                alert(analysis);
+              }}
+              className="w-full py-2 rounded-xl border border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all"
             >
-              <option value="">Select a persona</option>
-              {personas.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              Analyze Workflow with Gemini
+            </button>
           </div>
-          <button 
-            onClick={async () => {
-              const analysis = await analyzeWorkflow(formData);
-              alert(analysis);
-            }}
-            className="w-full py-2 rounded-xl border border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all"
-          >
-            Analyze Workflow with Gemini
-          </button>
-        </div>
+        ) : (
+          <div className="h-[300px] sm:h-[400px] md:h-[500px] w-full mt-4 shrink-0">
+            <WorkflowFlowEditor workflow={formData} onSave={setFormData} personas={personas} />
+          </div>
+        )}
+
         <div className="flex gap-4 pt-4">
           <button onClick={onClose} className="flex-1 py-3 rounded-xl border border-proton-border font-bold text-sm hover:bg-proton-card transition-all">Cancel</button>
           <button onClick={() => onSave(formData)} className="flex-1 py-3 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm hover:scale-105 active:scale-95 transition-all">Save</button>
@@ -1452,12 +1475,30 @@ const WorkflowsView = ({
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ action: () => void; message: string } | null>(null);
 
-  const handleSave = (updatedWorkflow: Workflow) => {
+  const handleSave = async (updatedWorkflow: Workflow) => {
     setWorkflows(workflows.map(wf => wf.id === updatedWorkflow.id ? updatedWorkflow : wf));
     setEditingWorkflow(null);
+    if (user && db) {
+      await setDoc(doc(db, 'users', user.uid, 'workflows', updatedWorkflow.id), updatedWorkflow);
+    }
+  };
+
+  const createWorkflow = async () => {
+    const newWorkflow: Workflow = { 
+      id: Date.now().toString(), 
+      name: 'New Workflow', 
+      trigger: 'New Lead', 
+      action: 'Send Email', 
+      personaId: '' 
+    };
+    setWorkflows([...workflows, newWorkflow]);
+    if (user && db) {
+      await setDoc(doc(db, 'users', user.uid, 'workflows', newWorkflow.id), newWorkflow);
+    }
   };
 
   const handleAnalyze = async (wf: Workflow) => {
+
     const result = await analyzeWorkflow(wf);
     const updatedWorkflow = {
       ...wf,
@@ -1474,16 +1515,16 @@ const WorkflowsView = ({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Workflows</h2>
-          <p className="text-proton-muted text-sm mt-1">Visually build automated business processes</p>
+          <p className="text-proton-muted text-xs sm:text-sm mt-1">Visually build automated business processes</p>
         </div>
         <button 
           onClick={() => setConfirmation({
             message: "Are you sure you want to create a new workflow?",
-            action: () => setWorkflows([...workflows, { id: Date.now().toString(), name: 'New Workflow', trigger: 'New Lead', action: 'Send Email', personaId: '' }])
+            action: createWorkflow
           })}
           className="px-4 py-2 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center gap-2 hover:scale-105 transition-all"
         >
@@ -1612,10 +1653,10 @@ const ProfileView = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
         {/* Account Settings */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="proton-glass p-8 rounded-3xl space-y-6">
+          <div className="proton-glass p-4 sm:p-8 rounded-3xl space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <Settings size={20} className="text-proton-accent" />
@@ -1701,7 +1742,7 @@ const ProfileView = ({
             </div>
           </div>
 
-          <div className="proton-glass p-8 rounded-3xl space-y-6">
+          <div className="proton-glass p-4 sm:p-8 rounded-3xl space-y-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <Activity size={20} className="text-proton-secondary" />
               Interaction History
@@ -1787,8 +1828,11 @@ export default function App() {
   const [activeView, setActiveView] = useState<View>('compute');                
   const handleViewChange = React.useCallback((view: View) => {
     setActiveView(view);
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
   }, []);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<'proton' | 'light' | 'vibrant' | 'midnight'>(
     (localStorage.getItem('proton_theme') as any) || 'proton'
@@ -1984,21 +2028,31 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-proton-bg text-proton-text font-sans">
+    <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <motion.aside 
-        initial={false}
-        animate={{ width: isSidebarOpen ? 280 : 80 }}
-        className="border-r border-proton-border bg-proton-card/50 backdrop-blur-xl flex flex-col z-50"
+      <aside 
+        className={cn(
+          "border-r border-proton-border bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl flex flex-col z-50",
+          "fixed inset-y-0 left-0 md:relative h-full transition-all duration-300 ease-in-out",
+          isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0 md:w-20 w-64"
+        )}
       >
         <div className="p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shadow-[0_0_15px_rgba(0,242,255,0.3)]">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shrink-0 shadow-[0_0_15px_rgba(0,242,255,0.3)]">
             <Zap size={24} fill="currentColor" />
           </div>
           {isSidebarOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-bold text-lg tracking-tight">
+            <div className="font-bold text-lg tracking-tight transition-opacity duration-300">
               PROTON<span className="text-proton-accent">CORE</span>
-            </motion.div>
+            </div>
           )}
         </div>
 
@@ -2064,35 +2118,42 @@ export default function App() {
             )}
           </div>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-proton-border flex items-center justify-between px-8 bg-proton-bg/50 backdrop-blur-md z-40">
-          <div className="flex items-center gap-4">
+        <header className="h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 bg-proton-bg/50 backdrop-blur-md z-30">
+          <div className="flex items-center gap-1 md:gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg hover:bg-proton-card text-proton-muted transition-colors"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-proton-card text-proton-muted transition-colors hidden md:flex"
             >
               <ChevronRight className={cn("transition-transform duration-300", isSidebarOpen ? "rotate-180" : "")} size={20} />
             </button>
-            <div className="h-4 w-px bg-proton-border" />
-            <div className="flex items-center gap-2 text-xs font-mono text-proton-muted uppercase tracking-widest">
-              <Globe size={14} />
-              <span>{userProfile.region} Node</span>
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-proton-card text-proton-muted transition-colors md:hidden"
+            >
+              <ChevronRight size={20} />
+            </button>
+            <div className="h-4 w-px bg-proton-border hidden md:block" />
+            <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-proton-muted uppercase tracking-widest">
+              <Globe size={14} className="min-w-[14px]" />
+              <span className="hidden sm:inline">{userProfile.region} Node</span>
+              <span className="inline sm:hidden">{userProfile.region.substring(0,3)}</span>
               <span className="text-proton-accent">•</span>
-              <span>v1.2.0-stable</span>
+              <span className="hidden sm:inline">v1.2.0-stable</span>
+              <span className="inline sm:hidden">v1.2</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            {/* Language Switcher */}
+          <div className="flex items-center gap-3 sm:gap-6">
             <div className="flex items-center gap-3">
               <select
                 value={userProfile.language}
                 onChange={(e) => setUserProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                className="bg-proton-card border border-proton-border rounded-lg px-2 py-1 text-[10px] font-mono text-proton-text focus:outline-none"
+                className="bg-proton-card border border-proton-border rounded-lg px-1 py-1 sm:px-2 text-[10px] font-mono text-proton-text focus:outline-none"
               >
                 <option value="en">EN</option>
                 <option value="ka">GE</option>
@@ -2106,7 +2167,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 proton-grid relative">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 proton-grid relative">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}
