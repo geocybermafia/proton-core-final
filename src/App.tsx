@@ -1163,7 +1163,7 @@ const PersonasView = ({
           {loading && (
             <div className="flex items-center gap-2 text-proton-muted">
               <Loader2 className="animate-spin" size={14} />
-              <span className="text-[10px] font-mono uppercase tracking-widest">Proton-Core Thinking...</span>
+              <span className="text-[10px] font-mono uppercase tracking-widest">Proton Core AI Thinking...</span>
             </div>
           )}
           <div ref={chatEndRef} />
@@ -1189,7 +1189,7 @@ const PersonasView = ({
             </button>
           </div>
           <p className="text-[10px] text-proton-muted text-center mt-3 uppercase tracking-widest">
-            Powered by Proton-Core GPU Cluster • Tbilisi, Georgia
+            Powered by Proton Core AI Infrastructure • Tbilisi, Georgia
           </p>
         </div>
       </div>
@@ -1702,7 +1702,7 @@ const ProfileView = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">User Profile</h2>
-          <p className="text-proton-muted text-sm mt-1">Manage your Proton-Core account and history</p>
+          <p className="text-proton-muted text-sm mt-1">Manage your Proton Core AI account and history</p>
         </div>
       </div>
 
@@ -1841,7 +1841,7 @@ const ProfileView = ({
             </div>
             <div>
               <h4 className="font-bold text-lg">{profile.name}</h4>
-              <p className="text-xs text-proton-muted font-mono uppercase tracking-widest">Proton-Core Explorer</p>
+              <p className="text-xs text-proton-muted font-mono uppercase tracking-widest">Proton Core AI Explorer</p>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-4">
               <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border">
@@ -2172,7 +2172,7 @@ export default function App() {
             <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shadow-[0_0_30px_rgba(0,242,255,0.3)] mb-6">
               <Zap size={32} fill="currentColor" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">PROTON<span className="text-proton-accent">CORE</span></h1>
+            <h1 className="text-3xl font-bold tracking-tight">Proton Core <span className="text-proton-accent">AI</span></h1>
             <p className="text-proton-muted text-sm">Sign in to access your digital personas, workflows, and compute clusters.</p>
           </div>
           
@@ -2193,7 +2193,7 @@ export default function App() {
           
           <div className="pt-6 border-t border-proton-border/50 text-center">
             <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest">
-              Secured by Proton Infrastructure
+              Secured by Proton Core AI Infrastructure
             </p>
           </div>
         </div>
@@ -2225,7 +2225,7 @@ export default function App() {
           </div>
           {isSidebarOpen && (
             <div className="font-bold text-lg tracking-tight transition-opacity duration-300">
-              PROTON<span className="text-proton-accent">CORE</span>
+              Proton Core <span className="text-proton-accent">AI</span>
             </div>
           )}
         </div>
@@ -2291,7 +2291,7 @@ export default function App() {
             </div>
             {isSidebarOpen && (
               <div className="min-w-0">
-                <p className="text-xs font-bold truncate">{user.displayName || 'Proton User'}</p>
+                <p className="text-xs font-bold truncate">{user.displayName || 'Proton Core AI User'}</p>
                 <p className="text-[10px] text-proton-muted truncate">{user.email}</p>
               </div>
             )}
