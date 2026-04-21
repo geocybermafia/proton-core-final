@@ -1562,7 +1562,8 @@ const WorkflowsView = ({
     setWorkflows(workflows.map(w => w.id === wf.id ? updatedWorkflow : w));
     
     if (user && db) {
-      await setDoc(doc(db, 'users', user.uid, 'workflows', wf.id), updatedWorkflow);
+      const docRef = doc(db, 'users', user.uid, 'workflows', wf.id);
+      await setDoc(docRef, updatedWorkflow).catch(e => handleFirestoreError(e, 'update', docRef.path));
     }
   };
 
@@ -2110,45 +2111,45 @@ export default function App() {
   };
 
   const handleNewMessage = (personaId: string, msg: ChatMessage) => {
-    setChatHistory(prev => {
-      const updated = {
-        ...prev,
-        [personaId]: [...(prev[personaId] || []), msg]
-      };
-      if (user) {
-        // Here we just save the message onto the chatHistory doc. Alternatively you can append.
-        const docRef = doc(db, 'users', user.uid, 'chatHistory', personaId);
-        setDoc(docRef, { messages: updated[personaId] }).catch(e => handleFirestoreError(e, 'write', docRef.path));
-      }
-      return updated;
-    });
+    const updatedHistory = {
+      ...chatHistory,
+      [personaId]: [...(chatHistory[personaId] || []), msg]
+    };
+    setChatHistory(updatedHistory);
+    
+    if (user) {
+      const docRef = doc(db, 'users', user.uid, 'chatHistory', personaId);
+      setDoc(docRef, { messages: updatedHistory[personaId] }).catch(e => handleFirestoreError(e, 'write', docRef.path));
+    }
   };
 
   const handleUpdatePersonas = async (newPersonas: Persona[] | ((prev: Persona[]) => Persona[])) => {
-    setPersonas(prev => {
-      const updated = typeof newPersonas === 'function' ? newPersonas(prev) : newPersonas;
-      if (user) {
-        updated.forEach(async (p) => {
+    const updated = typeof newPersonas === 'function' ? newPersonas(personas) : newPersonas;
+    setPersonas(updated);
+    
+    if (user) {
+      try {
+        await Promise.all(updated.map(p => {
           const docRef = doc(db, 'users', user.uid, 'personas', p.id);
-          await setDoc(docRef, p).catch(e => handleFirestoreError(e, 'update', docRef.path));
-        });
+          return setDoc(docRef, p);
+        })).catch(e => handleFirestoreError(e, 'update', 'multiple personas'));
+      } catch (error) {
+        console.error("Error syncing personas:", error);
       }
-      return updated;
-    });
+    }
   };
 
   const handleUpdateAvatar = (personaId: string, avatar: string) => {
-    setPersonaAvatars(prev => {
-      const updated = {
-        ...prev,
-        [personaId]: avatar
-      };
-      if (user) {
-        const docRef = doc(db, 'users', user.uid, 'customAvatars', personaId);
-        setDoc(docRef, { avatar }).catch(e => handleFirestoreError(e, 'update', docRef.path));
-      }
-      return updated;
-    });
+    const updatedAvatars = {
+      ...personaAvatars,
+      [personaId]: avatar
+    };
+    setPersonaAvatars(updatedAvatars);
+    
+    if (user) {
+      const docRef = doc(db, 'users', user.uid, 'customAvatars', personaId);
+      setDoc(docRef, { avatar }).catch(e => handleFirestoreError(e, 'update', docRef.path));
+    }
   };
 
   if (!authInitialized) {
