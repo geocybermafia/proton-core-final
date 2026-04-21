@@ -1,6 +1,3 @@
-import { GoogleGenAI, ThinkingLevel, Modality } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export type Persona = {
   id: string;
@@ -76,103 +73,65 @@ export async function chatWithPersona(
   globalInstruction?: string
 ) {
   try {
-    const tools: any[] = [];
-    if (includeSearch) {
-      tools.push({ googleSearch: {} });
-    } else if (includeMaps) {
-      tools.push({ googleMaps: {} });
-    }
-
-    const response = await ai.models.generateContent({
-      model,
-      contents: [
-        ...history,
-        { role: 'user', parts: [{ text: message }] }
-      ],
-      config: {
-        systemInstruction: `${persona.systemInstruction}
-${persona.language !== 'English' ? "\n\nCRITICAL LANGUAGE INSTRUCTION: Prioritize using the Georgian language (Mkhedruli script) in your responses. Always include Georgian when 'Georgian' or 'Mixed' is selected, and use Georgian script for terms, names, or cultural nuances." : ""}
-${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
-        temperature,
-        topP: 0.95,
-        tools: tools.length > 0 ? tools : undefined
-      }
+    const response = await fetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona, message, history, model, includeSearch, includeMaps, temperature, globalInstruction })
     });
-
-    return response.text || "I'm sorry, I couldn't process that request.";
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Server error');
+    }
+    
+    const data = await response.json();
+    return data.text || "I'm sorry, I couldn't process that request.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Error connecting to Proton-Core AI. Please ensure your GPU cluster is provisioned.";
+    console.error("Gemini Proxy Error:", error);
+    return "Error connecting to Proton Core AI. Please check your internet connection or login again.";
   }
 }
 
 export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[]) {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [
-        ...history,
-        { role: 'user', parts: [{ text: "Summarize this conversation in a concise way, highlighting key points and actionable items." }] }
-      ],
+    const response = await fetch('/api/ai/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history })
     });
-    return response.text || "Could not generate summary.";
+    const data = await response.json();
+    return data.text || "Could not generate summary.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Summary Error:", error);
     return "Error generating summary.";
   }
 }
 
 export async function analyzeWorkflow(workflow: { name: string, trigger: string, action: string }) {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
-      contents: `Analyze the following workflow and suggest improvements for efficiency and scalability:
-      Name: ${workflow.name}
-      Trigger: ${workflow.trigger}
-      Action: ${workflow.action}`,
-      config: {
-        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH }
-      }
+    const response = await fetch('/api/ai/analyze-workflow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workflow })
     });
-    return response.text || "Could not analyze workflow.";
+    const data = await response.json();
+    return data.text || "Could not analyze workflow.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Workflow Analysis Error:", error);
     return "Error analyzing workflow.";
   }
 }
 
 export async function generatePersonaAvatar(persona: Persona) {
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [
-          {
-            text: `Generate a high-quality, professional digital avatar for an AI persona named '${persona.name}'. 
-            Role: ${persona.role}. 
-            Description: ${persona.description}. 
-            Style: Neo-Brutalist, technical, clean, centered, circular composition, vibrant accents on a dark background. 
-            The avatar should be iconic and represent the persona's expertise.
-            OUTPUT ONLY THE IMAGE CONTENT.`,
-          },
-        ],
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        },
-      },
+    const response = await fetch('/api/ai/generate-avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona })
     });
-
-    if (response && response.candidates && response.candidates[0] && response.candidates[0].content && response.candidates[0].content.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
-        }
-      }
-    }
-    console.error("Avatar Generation Error: Response did not contain image data.", JSON.stringify(response, null, 2));
-    throw new Error("No image data returned from Gemini API");
+    const data = await response.json();
+    if (data.image) return data.image;
+    throw new Error(data.error || "No image data returned from Gemini API");
   } catch (error) {
     console.error("Avatar Generation Error:", error);
     throw error;
@@ -181,69 +140,30 @@ export async function generatePersonaAvatar(persona: Persona) {
 
 export async function generateOrEditImage(prompt: string, imageBase64?: string) {
   try {
-    const parts: any[] = [{ text: prompt + "\n\nOUTPUT ONLY THE IMAGE CONTENT." }];
-    if (imageBase64) {
-      parts.push({
-        inlineData: {
-          mimeType: "image/png",
-          data: imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, ""),
-        },
-      });
-    }
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: { parts },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        },
-      },
+    const response = await fetch('/api/ai/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, imageBase64 })
     });
-
-    if (response && response.candidates && response.candidates[0] && response.candidates[0].content && response.candidates[0].content.parts) {
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
-        }
-      }
-    }
-    console.error("Image Generation/Editing Error: Response did not contain image data.", JSON.stringify(response, null, 2));
-    throw new Error("No image data returned from Gemini API");
+    const data = await response.json();
+    if (data.image) return data.image;
+    throw new Error(data.error || "No image data returned from Gemini API");
   } catch (error) {
-    console.error("Image Generation/Editing Error:", error);
+    console.error("Image Generation Error:", error);
     throw error;
   }
 }
 
 export async function generateSpeech(text: string, voiceName: string = 'Kore') {
-  // Map custom dialect names to supported voices
-  let supportedVoice = voiceName;
-  if (voiceName === 'TbilisiDialect' || voiceName === 'GeorgianModern') {
-    supportedVoice = 'Kore'; // Fallback to a supported voice
-  }
-
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: text }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: supportedVoice },
-          },
-        },
-      },
+    const response = await fetch('/api/ai/generate-speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voiceName })
     });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) {
-      throw new Error("No audio data returned from Gemini API");
-    }
-    // Ensure base64 string doesn't include a Data URI header
-    // The browser Audio API needs a raw base64 string.
-    return base64Audio.replace(/^data:audio\/[a-z0-9]+;base64,/, "");
+    const data = await response.json();
+    if (data.audio) return data.audio;
+    throw new Error(data.error || "No audio data returned from Gemini API");
   } catch (error) {
     console.error("TTS Error:", error);
     throw error;

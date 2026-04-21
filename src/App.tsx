@@ -427,8 +427,8 @@ const PersonaEditor = ({
 
 const ComputeView = () => {
   const [provisioning, setProvisioning] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'provisioning' | 'active'>('idle');
-  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState<'idle' | 'provisioning' | 'active'>('active');
+  const [progress, setProgress] = useState(100);
 
   // Mock data for charts
   const resourceData = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
