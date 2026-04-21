@@ -1,6 +1,6 @@
 import { GoogleGenAI, ThinkingLevel, Modality } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: "AIzaSyAqOwY1BPxiC13JjDmKx4vGvlFOyJC6r6k" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 export type Persona = {
   id: string;
