@@ -11,7 +11,7 @@ import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
 
 const config = getDefaultConfig({
   appName: 'Proton Core AI',
-  projectId: 'YOUR_PROJECT_ID', // Replace with your actual Project ID from cloud.walletconnect.com
+  projectId: 'b8e9a89c6aa8c8262fe28fd6d58bf941',
   chains: [mainnet, polygon, optimism, arbitrum, base],
   transports: {
     [mainnet.id]: http(),
