@@ -63,6 +63,7 @@ import {
   Settings, 
   Activity, 
   Zap, 
+  Workflow,
   Globe, 
   Users, 
   ChevronRight, 
@@ -104,6 +105,12 @@ type View = 'dashboard' | 'compute' | 'personas' | 'web3' | 'workflows' | 'profi
 
 type ChatMessage = { role: 'user' | 'model', content: string, timestamp: number };
 type PersonaHistory = { [personaId: string]: ChatMessage[] };
+export type WorkflowStep = {
+  id: string;
+  label: string;
+  description: string;
+};
+
 export type Workflow = {
   id: string;
   name: string;
@@ -113,6 +120,7 @@ export type Workflow = {
   analysisHistory?: { timestamp: number; result: string }[];
   nodes?: any[];
   edges?: any[];
+  steps?: WorkflowStep[];
 };
 
 type UserProfile = {
@@ -138,25 +146,32 @@ const SidebarItem = React.memo(({
   icon: Icon, 
   label, 
   active, 
-  onClick 
+  onClick,
+  expanded = true
 }: { 
   icon: any, 
   label: string, 
   active: boolean, 
-  onClick: () => void 
+  onClick: () => void,
+  expanded?: boolean
 }) => (
   <button
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-all duration-200 group",
+      "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-300 group relative",
       active 
         ? "bg-proton-accent/10 text-proton-accent border border-proton-accent/20" 
-        : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
+        : "text-proton-muted hover:text-proton-text hover:bg-white/5",
+      !expanded && "justify-center px-0"
     )}
+    title={!expanded ? label : undefined}
   >
-    <Icon size={20} className={cn(active ? "text-proton-accent" : "group-hover:text-proton-text")} />
-    <span className="font-medium text-sm">{label}</span>
-    {active && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />}
+    <Icon size={20} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
+    {expanded && (
+      <span className="font-bold text-xs uppercase tracking-widest whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2">{label}</span>
+    )}
+    {active && expanded && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />}
+    {active && !expanded && <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-4 bg-proton-accent rounded-full" />}
   </button>
 ));
 
@@ -451,13 +466,19 @@ const DashboardView = ({
             <div className="p-2 rounded-xl bg-proton-accent/10 text-proton-accent">
               <Users size={20} />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight">AI & Digital Personas</h2>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight">AI & Digital Personas</h2>
+              <div className="flex items-center gap-1.5 text-[8px] font-mono text-proton-muted uppercase tracking-widest mt-1">
+                <span className="w-1 h-1 rounded-full bg-proton-accent" />
+                Featured Intelligence
+              </div>
+            </div>
           </div>
           <button 
             onClick={() => setActiveView('personas')}
-            className="text-xs font-mono text-proton-accent hover:underline flex items-center gap-2"
+            className="text-xs font-mono text-proton-accent hover:underline flex items-center gap-2 group"
           >
-            VIEW ALL <ArrowRight size={14} />
+            VIEW ALL <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
@@ -516,11 +537,14 @@ const DashboardView = ({
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-[10px] text-proton-muted uppercase tracking-[0.2em] font-mono">Total Net Liquidity</p>
-                <div className="flex items-baseline gap-3">
+                <div className="flex flex-col gap-1">
                   <h3 className="text-4xl md:text-5xl font-bold font-mono tracking-tighter">
-                    {isConnected && balance ? `${Number(balance.formatted).toFixed(2)} ${balance.symbol}` : "0.00 ETH"}
+                    {isConnected && balance ? `${Number(balance.formatted).toFixed(4)} ${balance.symbol}` : "0.0000 ETH"}
                   </h3>
-                  <span className="text-xs text-proton-muted font-mono mb-1">SETTLED</span>
+                  <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-proton-accent">
+                    <span className="bg-proton-accent/10 px-2 py-0.5 rounded border border-proton-accent/20">≈ ₾ {(parseFloat(balance?.formatted || '0') * 2650 * 2.72).toLocaleString(undefined, { maximumFractionDigits: 0 })} GEL</span>
+                    <span className="bg-white/5 px-2 py-0.5 rounded border border-white/10 text-white/60">≈ $ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString(undefined, { maximumFractionDigits: 0 })} USD</span>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -1369,6 +1393,8 @@ const Web3View = () => {
   });
 
   const [gelRate] = useState(2.72); // Mock NBG Rate
+  const [eurRate] = useState(0.92); // Mock EUR Rate
+  const [gbpRate] = useState(0.79); // Mock GBP Rate
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   return (
@@ -1441,14 +1467,22 @@ const Web3View = () => {
                           </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                          <div className="p-5 rounded-[28px] bg-proton-bg/40 border border-proton-border">
-                              <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest mb-1">Local Value (NBG)</p>
-                              <p className="text-xl font-bold">₾ {(parseFloat(balance?.formatted || '0') * 2650 * gelRate).toLocaleString()}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
+                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GEL (₾)</p>
+                              <p className="text-lg font-bold">₾ {(parseFloat(balance?.formatted || '0') * 2650 * gelRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                           </div>
-                          <div className="p-5 rounded-[28px] bg-proton-bg/40 border border-proton-border">
-                              <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest mb-1">USD Estimate</p>
-                              <p className="text-xl font-bold">$ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString()}</p>
+                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
+                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">USD ($)</p>
+                              <p className="text-lg font-bold">$ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
+                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">EUR (€)</p>
+                              <p className="text-lg font-bold">€ {(parseFloat(balance?.formatted || '0') * 2650 * eurRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                          </div>
+                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
+                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GBP (£)</p>
+                              <p className="text-lg font-bold">£ {(parseFloat(balance?.formatted || '0') * 2650 * gbpRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                           </div>
                       </div>
                    </div>
@@ -1566,7 +1600,7 @@ const Web3View = () => {
                              </button>
                          </div>
 
-                         <div className="grid grid-cols-2 gap-6 relative z-10">
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
                              <div className="space-y-2">
                                  <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Client Name / კლიენტი</label>
                                  <input type="text" placeholder="e.g. Acme Tech Corp" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
@@ -1581,10 +1615,19 @@ const Web3View = () => {
                                  </select>
                              </div>
                              <div className="space-y-2">
-                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Amount / თანხა (ETH)</label>
-                                 <input type="number" placeholder="0.05" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
+                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Settlement Currency / ვალუტა</label>
+                                 <select className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none cursor-pointer">
+                                     <option>ETH (Ethereum Native)</option>
+                                     <option>GEL (NBG Fixed Rate)</option>
+                                     <option>USD (International)</option>
+                                     <option>EUR (European)</option>
+                                 </select>
                              </div>
                              <div className="space-y-2">
+                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Amount / თანხა</label>
+                                 <input type="number" placeholder="0.05" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
+                             </div>
+                             <div className="space-y-2 sm:col-span-2">
                                  <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Due Date / ვადა</label>
                                  <input type="date" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
                              </div>
@@ -1770,11 +1813,70 @@ const WorkflowEditor = ({
                     type="text" 
                     value={formData.action}
                     onChange={e => setFormData(prev => ({ ...prev, action: e.target.value }))}
-                    placeholder="What should it do?"
+                    placeholder="Final action..."
                     className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all shadow-inner"
                   />
-                  <p className="text-[9px] text-proton-muted italic px-1">მაგ: ავტომატური პასუხი</p>
                 </div>
+            </div>
+
+            {/* Workflow Steps Management */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Execution Steps / პროცესის ნაბიჯები</label>
+                <button 
+                  onClick={() => {
+                    const newStep: WorkflowStep = { id: Date.now().toString(), label: 'New Step', description: 'Step description' };
+                    setFormData(prev => ({ ...prev, steps: [...(prev.steps || []), newStep] }));
+                  }}
+                  className="text-[10px] font-bold text-proton-accent hover:underline flex items-center gap-1"
+                >
+                  <Plus size={12} /> ADD STEP
+                </button>
+              </div>
+              <div className="space-y-2">
+                {(formData.steps || []).length === 0 && (
+                  <div className="p-4 rounded-xl border border-dashed border-proton-border/50 text-center text-[10px] text-proton-muted italic font-mono">
+                    No intermediate steps defined. Trigger will lead directly to action.
+                  </div>
+                )}
+                {(formData.steps || []).map((step, idx) => (
+                  <div key={step.id} className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border flex gap-4 items-start group/step">
+                    <div className="w-6 h-6 rounded-lg bg-proton-accent/20 text-proton-accent flex items-center justify-center text-[10px] font-bold shrink-0">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <input 
+                        value={step.label}
+                        onChange={(e) => {
+                          const newSteps = [...(formData.steps || [])];
+                          newSteps[idx] = { ...step, label: e.target.value };
+                          setFormData(prev => ({ ...prev, steps: newSteps }));
+                        }}
+                        className="bg-transparent border-none p-0 text-xs font-bold w-full focus:outline-none text-proton-text"
+                        placeholder="Step label..."
+                      />
+                      <input 
+                        value={step.description}
+                        onChange={(e) => {
+                          const newSteps = [...(formData.steps || [])];
+                          newSteps[idx] = { ...step, description: e.target.value };
+                          setFormData(prev => ({ ...prev, steps: newSteps }));
+                        }}
+                        className="bg-transparent border-none p-0 text-[10px] text-proton-muted w-full focus:outline-none"
+                        placeholder="Briefly describe this step..."
+                      />
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, steps: (prev.steps || []).filter(s => s.id !== step.id) }));
+                      }}
+                      className="opacity-0 group-hover/step:opacity-100 p-1 text-proton-muted hover:text-red-400 transition-all"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Digital Persona / პერსონა</label>
@@ -1843,10 +1945,13 @@ const WorkflowsView = ({
   const createWorkflow = async () => {
     const newWorkflow: Workflow = { 
       id: Date.now().toString(), 
-      name: 'New Workflow', 
-      trigger: 'New Lead', 
-      action: 'Send Email', 
-      personaId: '' 
+      name: 'New Business Process', 
+      trigger: 'Customer Inquiry', 
+      action: 'Send Quote', 
+      personaId: '',
+      steps: [
+        { id: 'step-1', label: 'Analyze Needs', description: 'AI agent evaluates the request complexity' }
+      ]
     };
     setWorkflows([...workflows, newWorkflow]);
     if (user && db) {
@@ -1991,6 +2096,16 @@ const WorkflowsView = ({
                       <p className="text-proton-text font-mono text-sm truncate">{wf.action || '—'}</p>
                     </div>
                   </div>
+
+                  {/* Visual Step Indicator */}
+                  {wf.steps && wf.steps.length > 0 && (
+                    <div className="flex items-center gap-1">
+                       {wf.steps.map((_, i) => (
+                         <div key={i} className="h-1.5 flex-1 rounded-full bg-proton-accent/30" />
+                       ))}
+                       <span className="text-[8px] font-mono text-proton-accent ml-2 uppercase">{wf.steps.length} STAGES</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="relative z-10 flex items-center justify-between text-[11px] text-proton-muted pt-4 border-t border-proton-border/50">
@@ -2536,111 +2651,137 @@ export default function App() {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "border-r border-proton-border bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl flex flex-col z-50",
+          "border-r border-proton-border bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl flex flex-col z-50 overflow-x-hidden",
           "fixed inset-y-0 left-0 md:relative h-full transition-all duration-300 ease-in-out",
-          isSidebarOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0 md:w-20 w-64"
+          isSidebarOpen ? "translate-x-0 w-64 px-3" : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
         )}
       >
-        <div className="p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap">
+        <div className={cn("p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shrink-0 shadow-[0_0_15px_rgba(0,242,255,0.3)]">
             <Zap size={24} fill="currentColor" />
           </div>
           {isSidebarOpen && (
-            <div className="font-bold text-lg tracking-tight transition-opacity duration-300">
+            <div className="font-bold text-lg tracking-tight transition-opacity duration-300 animate-in fade-in slide-in-from-left-1">
               Proton Core <span className="text-proton-accent">AI</span>
             </div>
           )}
         </div>
 
-        <nav className="flex-1 px-3 space-y-6 mt-4 overflow-y-auto">
+        <nav className="flex-1 px-3 space-y-6 mt-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <div className="space-y-1">
-            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Core</p>
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Core</p>}
             <SidebarItem 
               icon={LayoutDashboard} 
               label="Dashboard" 
               active={activeView === 'dashboard'} 
               onClick={() => handleViewChange('dashboard')} 
+              expanded={isSidebarOpen}
             />
             <SidebarItem 
               icon={Cpu} 
               label="Compute Cluster" 
               active={activeView === 'compute'} 
               onClick={() => handleViewChange('compute')} 
+              expanded={isSidebarOpen}
             />
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Agents</p>
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Agents</p>}
             <SidebarItem 
               icon={Users} 
               label="Digital Personas" 
               active={activeView === 'personas'} 
               onClick={() => handleViewChange('personas')} 
+              expanded={isSidebarOpen}
             />
             <SidebarItem 
-              icon={Zap} 
+              icon={Workflow} 
               label="Workflows" 
               active={activeView === 'workflows'} 
               onClick={() => handleViewChange('workflows')} 
+              expanded={isSidebarOpen}
             />
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Economy</p>
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
+              Economy
+              <span className="bg-proton-accent/20 text-proton-accent text-[7px] px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>
+            </p>}
             <SidebarItem 
               icon={Wallet} 
-              label="Web3 Payments" 
+              label="Payments & Settlement" 
               active={activeView === 'web3'} 
               onClick={() => handleViewChange('web3')} 
+              expanded={isSidebarOpen}
             />
           </div>
 
           <div className="space-y-1">
-            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Creative</p>
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Creative</p>}
             <SidebarItem 
               icon={Image} 
               label="Image Studio" 
               active={activeView === 'image'} 
               onClick={() => handleViewChange('image')} 
+              expanded={isSidebarOpen}
             />
           </div>
 
           <div className="pt-4 mt-4 border-t border-proton-border space-y-1">
-            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">System</p>
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">System</p>}
             <SidebarItem 
               icon={Terminal} 
               label="User Profile" 
               active={activeView === 'profile'} 
               onClick={() => handleViewChange('profile')} 
+              expanded={isSidebarOpen}
             />
             <SidebarItem 
               icon={Settings} 
               label="Settings" 
               active={activeView === 'settings'} 
               onClick={() => handleViewChange('settings')} 
+              expanded={isSidebarOpen}
             />
           </div>
         </nav>
 
-        <div className="p-4 border-t border-proton-border">
-          <div className={cn(
-            "flex items-center gap-3 p-3 rounded-xl bg-proton-bg/50 border border-proton-border overflow-hidden cursor-pointer hover:bg-proton-bg transition-colors",
-            !isSidebarOpen && "justify-center"
-          )} onClick={() => handleViewChange('profile')}>
-            <div className="w-8 h-8 rounded-full bg-proton-accent/20 flex items-center justify-center text-proton-accent font-bold shrink-0 overflow-hidden">
-              {user.photoURL ? (
-                <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                (user.displayName || user.email || 'U').charAt(0).toUpperCase()
+        <div className="mt-auto py-4 border-t border-proton-border/50">
+          <div className="px-3 mb-2">
+            <div className={cn(
+              "flex items-center gap-3 p-3 rounded-xl bg-proton-card/50 border border-proton-border/50 overflow-hidden cursor-pointer hover:bg-white/5 transition-all duration-300",
+              !isSidebarOpen && "justify-center px-0"
+            )} onClick={() => handleViewChange('profile')}>
+              <div className="w-8 h-8 rounded-full bg-proton-accent/20 flex items-center justify-center text-proton-accent font-bold shrink-0 overflow-hidden shadow-[0_0_10px_rgba(0,242,255,0.2)]">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="text-xs uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              {isSidebarOpen && (
+                <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2">
+                  <span className="text-[10px] font-bold text-proton-text truncate leading-tight">{user.displayName || 'Proton Core User'}</span>
+                  <span className="text-[8px] text-proton-muted truncate tracking-tighter">Proton Tier 1 Member</span>
+                </div>
               )}
             </div>
-            {isSidebarOpen && (
-              <div className="min-w-0">
-                <p className="text-xs font-bold truncate">{user.displayName || 'Proton Core AI User'}</p>
-                <p className="text-[10px] text-proton-muted truncate">{user.email}</p>
-              </div>
-            )}
           </div>
+          
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className={cn(
+              "hidden md:flex items-center gap-3 w-full px-4 py-3 text-proton-muted hover:text-proton-text hover:bg-white/5 transition-all duration-300",
+              !isSidebarOpen && "justify-center px-0"
+            )}
+          >
+            <div className={cn("transition-transform duration-500", isSidebarOpen && "rotate-180")}>
+              <ChevronRight size={20} />
+            </div>
+            {isSidebarOpen && <span className="font-bold text-[10px] uppercase tracking-widest">Collapse View</span>}
+          </button>
         </div>
       </aside>
 
