@@ -69,7 +69,7 @@ export async function chatWithPersona(
   persona: Persona, 
   message: string, 
   history: { role: 'user' | 'model', parts: { text: string }[] }[] = [],
-  model: string = "gemini-3-flash-latest",
+  model: string = "gemini-3-flash-preview",
   includeMaps: boolean = false,
   includeSearch: boolean = true,
   temperature: number = 0.8,
@@ -114,7 +114,7 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
 export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[]) {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-latest",
+      model: "gemini-3-flash-preview",
       contents: [
         ...history,
         { role: 'user', parts: [{ text: "Summarize this conversation in a concise way, highlighting key points and actionable items." }] }

@@ -13,56 +13,95 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Workflow } from '../App';
+import { Zap, Cpu, Calculator } from 'lucide-react';
 
 const TriggerNode = ({ data, id }: any) => (
-  <div className="proton-glass p-4 rounded-xl border border-proton-border min-w-[250px] shadow-lg bg-proton-card">
-    <div className="text-[10px] font-mono text-proton-accent mb-3 font-bold tracking-widest uppercase">TRIGGER NODE</div>
-    <div className="space-y-3">
+  <div className="proton-glass p-6 rounded-[32px] border border-proton-border min-w-[280px] shadow-2xl bg-proton-card/50 relative overflow-hidden group">
+    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-30 transition-opacity">
+        <Zap size={40} className="text-proton-accent" />
+    </div>
+    <div className="text-[9px] font-mono text-proton-accent mb-4 font-bold tracking-[0.3em] uppercase flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+        STEP 01: TRIGGER / ტრიგერი
+    </div>
+    <div className="space-y-4">
       <div>
-        <label className="text-[10px] text-proton-muted uppercase font-mono block mb-1 tracking-wider">Condition / Event</label>
+        <label className="text-[9px] text-proton-muted uppercase font-mono block mb-2 tracking-widest font-bold">EVENT CONDITION</label>
         <input 
           value={data.condition || ''}
           onChange={(e) => data.onChange(id, 'condition', e.target.value)}
-          placeholder="e.g. Schedule, Webhook..."
-          className="nodrag w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 sm:py-3 min-h-[44px] text-xs text-proton-text focus:border-proton-accent outline-none transition-colors"
+          placeholder="e.g. New User Joined..."
+          className="nodrag w-full bg-proton-bg/80 border border-proton-border rounded-2xl px-4 py-3 text-xs text-proton-text focus:border-proton-accent focus:ring-1 focus:ring-proton-accent/20 outline-none transition-all shadow-inner"
+        />
+      </div>
+      <p className="text-[10px] text-proton-muted italic opacity-60">This event starts the automation chain.</p>
+    </div>
+    <Handle type="source" position={Position.Right} className="w-5 h-5 !bg-proton-accent border-4 border-proton-bg shadow-lg" />
+  </div>
+);
+
+const LogicNode = ({ data, id }: any) => (
+  <div className="proton-glass p-6 rounded-[32px] border border-proton-border min-w-[280px] shadow-2xl bg-proton-card/50 relative overflow-hidden group">
+    <Handle type="target" position={Position.Left} className="w-5 h-5 !bg-proton-muted border-4 border-proton-bg shadow-lg" />
+    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-30 transition-opacity">
+        <Calculator size={40} className="text-proton-muted" />
+    </div>
+    <div className="text-[9px] font-mono text-proton-muted mb-4 font-bold tracking-[0.3em] uppercase flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-proton-muted" />
+        STEP 01.5: LOGIC / ლოგიკა
+    </div>
+    <div className="space-y-4">
+      <div>
+        <label className="text-[9px] text-proton-muted uppercase font-mono block mb-2 tracking-widest font-bold">CALCULATION FORMULA</label>
+        <textarea 
+          value={data.formula || ''}
+          onChange={(e) => data.onChange(id, 'formula', e.target.value)}
+          placeholder="e.g. Material + Labor + 30% Margin"
+          className="nodrag w-full bg-proton-bg/80 border border-proton-border rounded-2xl px-4 py-3 text-xs text-proton-text outline-none focus:border-proton-muted resize-none h-24 transition-all shadow-inner"
         />
       </div>
     </div>
-    <Handle type="source" position={Position.Right} className="w-4 h-4 rounded-full bg-proton-accent" />
+    <Handle type="source" position={Position.Right} className="w-5 h-5 !bg-proton-muted border-4 border-proton-bg shadow-lg" />
   </div>
 );
 
 const ActionNode = ({ data, id }: any) => (
-  <div className="proton-glass p-4 rounded-xl border border-proton-border min-w-[250px] shadow-lg bg-proton-card">
-    <Handle type="target" position={Position.Left} className="w-4 h-4 rounded-full bg-proton-secondary" />
-    <div className="text-[10px] font-mono text-proton-secondary mb-3 font-bold tracking-widest uppercase">ACTION NODE</div>
-    <div className="space-y-3">
+  <div className="proton-glass p-6 rounded-[32px] border border-proton-border min-w-[280px] shadow-2xl bg-proton-card/50 relative overflow-hidden group">
+    <Handle type="target" position={Position.Left} className="w-5 h-5 !bg-proton-secondary border-4 border-proton-bg shadow-lg" />
+    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-30 transition-opacity">
+        <Cpu size={40} className="text-proton-secondary" />
+    </div>
+    <div className="text-[9px] font-mono text-proton-secondary mb-4 font-bold tracking-[0.3em] uppercase flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-proton-secondary" />
+        STEP 02: ACTION / მოქმედება
+    </div>
+    <div className="space-y-4">
       <div>
-        <label className="text-[10px] text-proton-muted uppercase font-mono block mb-1 tracking-wider">Handler Persona</label>
+        <label className="text-[9px] text-proton-muted uppercase font-mono block mb-2 tracking-widest font-bold">EXECUTOR AGENT</label>
         <select 
           value={data.personaId || ''}
           onChange={(e) => data.onChange(id, 'personaId', e.target.value)}
-          className="nodrag w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 sm:py-3 min-h-[44px] text-xs text-proton-text outline-none focus:border-proton-accent transition-colors"
+          className="nodrag w-full bg-proton-bg/80 border border-proton-border rounded-2xl px-4 py-3 text-xs text-proton-text outline-none focus:border-proton-secondary transition-all shadow-inner cursor-pointer"
         >
           <option value="">Select Persona</option>
-          {data.personas?.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {data.personas?.map((p: any) => <option key={p.id} value={p.id}>{p.avatar} {p.name}</option>)}
         </select>
       </div>
       <div>
-        <label className="text-[10px] text-proton-muted uppercase font-mono block mb-1 tracking-wider">Action Parameters</label>
+        <label className="text-[9px] text-proton-muted uppercase font-mono block mb-2 tracking-widest font-bold">INSTRUCTIONS</label>
         <textarea 
           value={data.parameters || ''}
           onChange={(e) => data.onChange(id, 'parameters', e.target.value)}
-          placeholder="e.g. Send an automated response..."
-          className="nodrag w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-xs text-proton-text outline-none focus:border-proton-accent resize-none h-20 transition-colors"
+          placeholder="What should the agent do?"
+          className="nodrag w-full bg-proton-bg/80 border border-proton-border rounded-2xl px-4 py-3 text-xs text-proton-text outline-none focus:border-proton-secondary resize-none h-24 transition-all shadow-inner"
         />
       </div>
     </div>
-    <Handle type="source" position={Position.Right} className="w-3 h-3 bg-proton-secondary" />
+    <Handle type="source" position={Position.Right} className="w-4 h-4 !bg-proton-secondary opacity-50" />
   </div>
 );
 
-const nodeTypes = { triggerNode: TriggerNode, actionNode: ActionNode };
+const nodeTypes = { triggerNode: TriggerNode, actionNode: ActionNode, logicNode: LogicNode };
 
 export const WorkflowFlowEditor = ({ workflow, onSave, personas }: { workflow: Workflow, onSave: (wf: any) => void, personas: any[] }) => {
   const handleNodeDataChange = useCallback((nodeId: string, field: string, value: string) => {
