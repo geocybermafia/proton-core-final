@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo, Dispatch, SetStateAction } from 'react';
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { auth, db, googleProvider } from './firebase';
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  fetchSignInMethodsForEmail, 
+  linkWithCredential, 
+  GoogleAuthProvider,
+  EmailAuthProvider
+} from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer } from 'firebase/firestore';
 
 interface FirestoreErrorInfo {
@@ -90,18 +100,23 @@ import {
   LayoutDashboard,
   Receipt,
   FileText,
-  Building
+  Building,
+  Calendar as CalendarIcon,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
+import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, type Persona } from './services/gemini';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 
 // --- Types ---
-type View = 'dashboard' | 'compute' | 'personas' | 'web3' | 'workflows' | 'profile' | 'settings' | 'image';
+type View = 'dashboard' | 'compute' | 'personas' | 'web3' | 'workflows' | 'profile' | 'settings' | 'image' | 'organizer';
 
 type ChatMessage = { role: 'user' | 'model', content: string, timestamp: number };
 type PersonaHistory = { [personaId: string]: ChatMessage[] };
@@ -140,6 +155,14 @@ type GlobalAiSettings = {
   voice: string;
 };
 
+type Task = {
+  id: string;
+  content: string;
+  contentGe: string;
+  completed: boolean;
+  isAiSuggested?: boolean;
+};
+
 // --- Components ---
 
 const SidebarItem = React.memo(({ 
@@ -158,7 +181,7 @@ const SidebarItem = React.memo(({
   <button
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all duration-300 group relative",
+      "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all duration-300 group relative",
       active 
         ? "bg-proton-accent/10 text-proton-accent border border-proton-accent/20" 
         : "text-proton-muted hover:text-proton-text hover:bg-white/5",
@@ -166,12 +189,12 @@ const SidebarItem = React.memo(({
     )}
     title={!expanded ? label : undefined}
   >
-    <Icon size={20} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
+    <Icon size={18} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
     {expanded && (
-      <span className="font-bold text-xs uppercase tracking-widest whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2">{label}</span>
+      <span className="font-bold text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2">{label}</span>
     )}
-    {active && expanded && <motion.div layoutId="active-pill" className="ml-auto w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />}
-    {active && !expanded && <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-4 bg-proton-accent rounded-full" />}
+    {active && expanded && <motion.div layoutId="active-pill" className="ml-auto w-1 h-1 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />}
+    {active && !expanded && <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-proton-accent rounded-full" />}
   </button>
 ));
 
@@ -444,33 +467,486 @@ const PersonaEditor = ({
   );
 };
 
+const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, language: 'en' | 'ka' }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const t = translations[language].auth;
+
+  const passwordStrength = useMemo(() => {
+    if (!password) return 0;
+    let strength = 0;
+    if (password.length >= 6) strength += 1;
+    if (/[A-Z]/.test(password)) strength += 1;
+    if (/[0-9]/.test(password)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+    return strength;
+  }, [password]);
+
+  const strengthColor = useMemo(() => {
+    if (passwordStrength <= 1) return 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]';
+    if (passwordStrength <= 2) return 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]';
+    return 'bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.5)]';
+  }, [passwordStrength]);
+
+  const strengthLabel = useMemo(() => {
+    if (passwordStrength <= 1) return t.weak;
+    if (passwordStrength <= 2) return t.medium;
+    return t.strong;
+  }, [passwordStrength, t]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!email.includes('@')) {
+      setError(t.invalid_email);
+      return;
+    }
+    if (password.length < 6) {
+      setError(t.password_too_short);
+      return;
+    }
+    if (!isLogin && password !== confirmPassword) {
+      setError(t.passwords_dont_match);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        await signInWithEmailAndPassword(auth, email, password);
+      } else {
+        const methods = await fetchSignInMethodsForEmail(auth, email);
+        if (methods.length > 0 && methods.includes('google.com')) {
+          // In a real app, you might want to show a specific message or handle linking
+          // For now, let's just attempt sign in which might trigger account linking flows if enabled
+        }
+        await createUserWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err: any) {
+      console.error("Auth Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="h-[100dvh] flex items-center justify-center bg-proton-bg p-4 relative overflow-hidden">
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-proton-accent/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-proton-secondary/5 blur-[120px] pointer-events-none" />
+      
+      <motion.div 
+        layout
+        className="relative z-10 w-full max-w-md proton-glass p-8 rounded-3xl space-y-6 shadow-2xl border border-white/5"
+      >
+        <div className="space-y-2 text-center">
+          <motion.div 
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shadow-[0_0_30px_rgba(0,242,255,0.3)] mb-4"
+          >
+            <Zap size={32} fill="currentColor" />
+          </motion.div>
+          <h1 className="text-3xl font-bold tracking-tight">Proton Core <span className="text-proton-accent">AI</span></h1>
+          <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">
+            {isLogin ? t.login : t.signup}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.email}</label>
+            <input 
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
+              placeholder="operator@proton.core"
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.password}</label>
+            <input 
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
+              placeholder="••••••••"
+              required
+            />
+            {password && (
+              <div className="px-1 pt-1 space-y-1">
+                <div className="flex items-center justify-between text-[8px] font-mono uppercase tracking-widest text-proton-muted">
+                  <span>{t.password_strength}</span>
+                  <span className={cn("font-bold", passwordStrength > 2 ? "text-proton-accent" : "text-yellow-500")}>
+                    {strengthLabel}
+                  </span>
+                </div>
+                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(passwordStrength / 4) * 100}%` }}
+                    className={cn("h-full transition-colors", strengthColor)}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {!isLogin && (
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.confirm_password}</label>
+              <input 
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          )}
+
+          {error && (
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-[10px] text-red-500 font-mono text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20"
+            >
+              {error}
+            </motion.p>
+          )}
+
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-proton-accent text-proton-bg font-bold rounded-xl shadow-[0_0_20px_rgba(0,242,255,0.2)] hover:shadow-[0_0_30px_rgba(0,242,255,0.4)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 mt-2"
+          >
+            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isLogin ? t.login : t.signup)}
+          </button>
+        </form>
+
+        <div className="relative py-2">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-proton-muted bg-transparent">
+            <span className="px-2 bg-proton-bg/20 backdrop-blur-sm">{t.or_continue_with}</span>
+          </div>
+        </div>
+
+        <button 
+          onClick={onGoogleSignIn}
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all border border-white/10 active:scale-[0.98]"
+        >
+          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          {t.google_auth}
+        </button>
+
+        <div className="text-center pt-2">
+          <button 
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-xs text-proton-accent hover:underline font-medium"
+          >
+            {isLogin ? t.dont_have_account : t.already_have_account}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+const DigitalClock = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl proton-glass relative overflow-hidden group">
+      <div className="absolute inset-0 bg-proton-accent/5 blur-3xl group-hover:bg-proton-accent/10 transition-colors" />
+      <div className="relative z-10 font-mono text-2xl md:text-3xl font-bold tracking-tighter text-proton-text drop-shadow-[0_0_10px_rgba(0,242,255,0.4)]">
+        {time.toLocaleTimeString([], { hour12: false })}
+      </div>
+      <div className="relative z-10 text-[8px] uppercase tracking-[0.3em] text-proton-muted mt-1 font-bold">
+        Temporal Stabilization
+      </div>
+    </div>
+  );
+};
+
+const OrganizerView = ({
+  language,
+  workflows,
+  tasks,
+  onAddTask,
+  onToggleTask,
+  onDeleteTask,
+  onAiSuggest
+}: {
+  language: 'en' | 'ka',
+  workflows: Workflow[],
+  tasks: Task[],
+  onAddTask: (content: string) => void,
+  onToggleTask: (id: string) => void,
+  onDeleteTask: (id: string) => void,
+  onAiSuggest: () => void
+}) => {
+  const t = translations[language].organizer;
+  const common = translations[language].common;
+  const [newTaskInput, setNewTaskInput] = useState('');
+  const [isSuggesting, setIsSuggesting] = useState(false);
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskInput.trim()) return;
+    onAddTask(newTaskInput.trim());
+    setNewTaskInput('');
+  };
+
+  const handleAiSuggest = async () => {
+    setIsSuggesting(true);
+    await onAiSuggest();
+    setIsSuggesting(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full w-full max-w-5xl mx-auto p-4 md:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{t.title}</h1>
+          <p className="text-proton-muted text-[10px] md:text-xs font-mono uppercase tracking-[0.2em]">{t.subtitle}</p>
+        </div>
+        <DigitalClock />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Calendar & Workflows */}
+        <div className="lg:col-span-7 space-y-6">
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <CalendarIcon size={18} className="text-proton-accent" />
+              {t.calendar}
+            </h2>
+            <div className="p-3 sm:p-4 rounded-2xl proton-glass bg-white/[0.02] border border-white/[0.05]">
+              <style>{`
+                .react-calendar {
+                  background: transparent !important;
+                  border: none !important;
+                  font-family: inherit !important;
+                  width: 100% !important;
+                  font-size: 0.85rem !important;
+                }
+                .react-calendar__navigation {
+                  margin-bottom: 0.5em !important;
+                  height: 36px !important;
+                }
+                .react-calendar__navigation button {
+                  color: white !important;
+                  font-weight: bold !important;
+                  min-width: 36px !important;
+                  background: none !important;
+                }
+                .react-calendar__month-view__weekdays {
+                  text-transform: uppercase;
+                  font-size: 0.6rem;
+                  font-weight: bold;
+                  color: var(--color-proton-muted);
+                }
+                .react-calendar__tile {
+                  padding: 0.8em 0.2em !important;
+                  color: #ccc !important;
+                  border-radius: 8px;
+                  transition: all 0.2s;
+                }
+                .react-calendar__tile:hover {
+                  background: rgba(255, 255, 255, 0.1) !important;
+                  color: white !important;
+                }
+                .react-calendar__tile--active {
+                  background: var(--color-proton-accent) !important;
+                  color: black !important;
+                  font-weight: bold;
+                  box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+                }
+                .react-calendar__tile--now {
+                  background: rgba(0, 242, 255, 0.05) !important;
+                  color: var(--color-proton-accent) !important;
+                  border: 1px solid rgba(0, 242, 255, 0.3);
+                }
+                .react-calendar__month-view__days__day--neighboringMonth {
+                  opacity: 0.15;
+                }
+              `}</style>
+              <Calendar />
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Workflow size={18} className="text-proton-accent" />
+              {t.upcoming_workflows}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {workflows.slice(0, 4).map(wf => (
+                <div key={wf.id} className="p-4 rounded-2xl bg-proton-card/40 border border-proton-border hover:border-proton-accent/30 transition-all group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 rounded-lg bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform">
+                      <Zap size={16} />
+                    </div>
+                    <span className="font-bold text-sm truncate">{wf.name}</span>
+                  </div>
+                  <div className="text-[10px] text-proton-muted font-mono uppercase tracking-widest truncate">
+                    Trigger: {wf.trigger}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* Right Column: Tasks */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="p-4 rounded-2xl bg-proton-card/30 border border-proton-border flex flex-col h-full min-h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Layers size={18} className="text-proton-accent" />
+                {t.tasks}
+              </h2>
+              <button 
+                onClick={handleAiSuggest}
+                disabled={isSuggesting}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all",
+                  isSuggesting 
+                    ? "bg-proton-muted/20 text-proton-muted" 
+                    : "bg-proton-accent/10 text-proton-accent hover:bg-proton-accent/20 border border-proton-accent/30"
+                )}
+              >
+                {isSuggesting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                {isSuggesting ? t.generating : t.ai_suggest}
+              </button>
+            </div>
+
+            <form onSubmit={handleAddTask} className="flex gap-2 mb-6">
+              <input 
+                type="text"
+                placeholder={t.task_placeholder}
+                value={newTaskInput}
+                onChange={e => setNewTaskInput(e.target.value)}
+                className="flex-1 bg-proton-bg/50 border border-proton-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-proton-accent transition-colors"
+              />
+              <button type="submit" className="p-2 rounded-xl bg-proton-accent text-black font-bold">
+                <Plus size={20} />
+              </button>
+            </form>
+
+            <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-2">
+              <AnimatePresence initial={false}>
+                {tasks.length === 0 ? (
+                  <div className="text-center py-12 text-proton-muted text-sm italic">
+                    {t.no_tasks}
+                  </div>
+                ) : (
+                  tasks.map(task => (
+                    <motion.div 
+                      key={task.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      className={cn(
+                        "group p-4 rounded-2xl flex items-center gap-4 transition-all border",
+                        task.completed 
+                          ? "bg-proton-accent/5 border-proton-accent/20 opacity-60" 
+                          : "bg-proton-card/50 border-proton-border"
+                      )}
+                    >
+                      <button 
+                        onClick={() => onToggleTask(task.id)}
+                        className={cn(
+                          "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                          task.completed 
+                            ? "bg-proton-accent border-proton-accent text-black" 
+                            : "border-proton-muted/50 hover:border-proton-accent"
+                        )}
+                      >
+                        {task.completed && <Check size={14} strokeWidth={4} />}
+                      </button>
+                      <div className="flex-1">
+                        <p className={cn(
+                          "text-sm transition-all",
+                          task.completed ? "line-through text-proton-muted" : "text-proton-text"
+                        )}>
+                          {language === 'ka' ? task.contentGe : task.content}
+                        </p>
+                        {task.isAiSuggested && (
+                          <span className="text-[9px] uppercase tracking-widest text-proton-accent/80 font-bold flex items-center gap-1 mt-1">
+                            <Sparkles size={10} /> AI Recommendation
+                          </span>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => onDeleteTask(task.id)}
+                        className="opacity-0 group-hover:opacity-100 p-2 text-proton-muted hover:text-red-400 transition-all"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DashboardView = ({ 
   personas, 
   setActiveView,
-  chatHistory
+  chatHistory,
+  language = 'en'
 }: { 
   personas: Persona[], 
   activeView: View, 
   setActiveView: (v: View) => void,
-  chatHistory: PersonaHistory
+  chatHistory: PersonaHistory,
+  language?: 'en' | 'ka'
 }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
+  const t = translations[language].dashboard;
+  const common = translations[language].common;
 
   return (
-    <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8">
       {/* AI & Personas Section */}
-      <section className="space-y-6">
+      <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-proton-accent/10 text-proton-accent">
-              <Users size={20} />
+            <div className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent">
+              <Users size={18} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold tracking-tight">AI & Digital Personas</h2>
-              <div className="flex items-center gap-1.5 text-[8px] font-mono text-proton-muted uppercase tracking-widest mt-1">
+              <h2 className="text-lg md:text-xl font-bold tracking-tight">{t.ai_personas}</h2>
+              <div className="flex items-center gap-1.5 text-[7px] font-mono text-proton-muted uppercase tracking-widest mt-0.5">
                 <span className="w-1 h-1 rounded-full bg-proton-accent" />
-                Featured Intelligence
+                {t.featured_intelligence}
               </div>
             </div>
           </div>
@@ -478,7 +954,7 @@ const DashboardView = ({
             onClick={() => setActiveView('personas')}
             className="text-xs font-mono text-proton-accent hover:underline flex items-center gap-2 group"
           >
-            VIEW ALL <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            {t.view_all} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
@@ -495,18 +971,18 @@ const DashboardView = ({
                   {p.avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-lg truncate group-hover:text-proton-accent transition-colors">{p.name}</h3>
+                  <h3 className="font-bold text-lg truncate group-hover:text-proton-accent transition-colors">{language === 'ka' ? p.nameGe : p.name}</h3>
                   <p className="text-[10px] font-mono text-proton-accent/70 uppercase tracking-widest mb-2">{p.role}</p>
-                  <p className="text-xs text-proton-muted line-clamp-2 leading-relaxed">{p.description}</p>
+                  <p className="text-xs text-proton-muted line-clamp-2 leading-relaxed">{language === 'ka' ? p.descriptionGe : p.description}</p>
                 </div>
               </div>
               <div className="mt-6 flex items-center justify-between pt-4 border-t border-proton-border/50">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
-                  <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Active</span>
+                  <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.active}</span>
                 </div>
                 <div className="text-[10px] font-mono text-proton-muted uppercase tracking-widest italic">
-                  {chatHistory[p.id]?.length || 0} MESSAGES
+                  {chatHistory[p.id]?.length || 0} {t.messages}
                 </div>
               </div>
             </div>
@@ -521,13 +997,13 @@ const DashboardView = ({
             <div className="p-2 rounded-xl bg-proton-secondary/10 text-proton-secondary">
               <Wallet size={20} />
             </div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight">Financial & Settlement</h2>
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t.financial_settlement}</h2>
           </div>
           <button 
             onClick={() => setActiveView('web3')}
             className="text-xs font-mono text-proton-secondary hover:underline flex items-center gap-2"
           >
-            WALLET OPS <ArrowRight size={14} />
+            {t.wallet_ops} <ArrowRight size={14} />
           </button>
         </div>
 
@@ -536,7 +1012,7 @@ const DashboardView = ({
           <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-[10px] text-proton-muted uppercase tracking-[0.2em] font-mono">Total Net Liquidity</p>
+                <p className="text-[10px] text-proton-muted uppercase tracking-[0.2em] font-mono">{t.net_liquidity}</p>
                 <div className="flex flex-col gap-1">
                   <h3 className="text-4xl md:text-5xl font-bold font-mono tracking-tighter">
                     {isConnected && balance ? `${Number(balance.formatted).toFixed(4)} ${balance.symbol}` : "0.0000 ETH"}
@@ -552,27 +1028,27 @@ const DashboardView = ({
                   onClick={() => setActiveView('web3')}
                   className="px-6 py-3 rounded-xl bg-white text-black font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
                 >
-                  Quick Deposit
+                  {t.quick_deposit}
                 </button>
                 <button 
                   onClick={() => setActiveView('web3')}
                   className="px-6 py-3 rounded-xl border border-proton-border text-proton-text font-bold text-xs hover:bg-proton-card transition-all"
                 >
-                  Withdraw
+                  {t.withdraw}
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-3xl bg-proton-card/50 border border-proton-border flex flex-col gap-2">
-                <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">Network Speed</p>
+                <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">{t.network_speed}</p>
                 <p className="text-lg font-bold font-mono">14.2 GB/S</p>
                 <div className="w-full h-1 bg-proton-border rounded-full overflow-hidden">
                   <div className="w-3/4 h-full bg-proton-accent" />
                 </div>
               </div>
               <div className="p-4 rounded-3xl bg-proton-card/50 border border-proton-border flex flex-col gap-2">
-                <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">Gas Index</p>
+                <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">{t.gas_index}</p>
                 <p className="text-lg font-bold font-mono">12 GWEI</p>
                 <div className="flex gap-1">
                   {[1,2,3,4,5].map((i) => (
@@ -591,14 +1067,14 @@ const DashboardView = ({
           <div className="p-2 rounded-xl bg-proton-muted/10 text-proton-muted">
             <Activity size={20} />
           </div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight">System Infrastructure Health</h2>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t.system_health}</h2>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Compute', value: '1.2 PFL', icon: Cpu },
-            { label: 'Latency', value: '0.4ms', icon: Zap },
-            { label: 'Uptime', value: '99.9%', icon: ShieldCheck },
+            { label: t.compute, value: '1.2 PFL', icon: Cpu },
+            { label: t.latency, value: '0.4ms', icon: Zap },
+            { label: t.uptime, value: '99.9%', icon: ShieldCheck },
             { label: 'Nodes', value: '32 Active', icon: Network },
           ].map((stat, i) => (
             <div key={i} className="proton-glass p-5 rounded-2xl border border-proton-border/30 hover:border-proton-accent/20 transition-all flex flex-col gap-2">
@@ -2159,14 +2635,17 @@ const ProfileView = ({
   onSignIn: () => void,
   onSignOut: () => void
 }) => {
+  const language = profile.language;
+  const t = translations[language].sidebar;
+  const common = translations[language].common;
   const totalInteractions = Object.values(history).reduce((acc, msgs) => acc + msgs.length, 0);
   
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">User Profile</h2>
-          <p className="text-proton-muted text-sm mt-1">Manage your Proton Core AI account and history</p>
+          <h2 className="text-2xl font-bold tracking-tight">{language === 'ka' ? 'მომხმარებლის პროფილი' : 'User Profile'}</h2>
+          <p className="text-proton-muted text-sm mt-1">{language === 'ka' ? 'მართეთ თქვენი Proton Core AI ანგარიში და ისტორია' : 'Manage your Proton Core AI account and history'}</p>
         </div>
       </div>
 
@@ -2177,40 +2656,40 @@ const ProfileView = ({
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <Settings size={20} className="text-proton-accent" />
-                Account Settings
+                {language === 'ka' ? 'ანგარიშის პარამეტრები' : 'Account Settings'}
               </h3>
               {user ? (
-                <button onClick={onSignOut} className="text-sm text-red-400 hover:text-red-300">Sign Out</button>
+                <button onClick={onSignOut} className="text-sm text-red-400 hover:text-red-300">{language === 'ka' ? 'გასვლა' : 'Sign Out'}</button>
               ) : (
-                <button onClick={onSignIn} className="text-sm text-proton-accent hover:text-proton-accent/80">Sign In with Google</button>
+                <button onClick={onSignIn} className="text-sm text-proton-accent hover:text-proton-accent/80">{language === 'ka' ? 'შესვლა Google-ით' : 'Sign In with Google'}</button>
               )}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">Full Name</label>
+                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'სრული სახელი' : 'Full Name'}</label>
                 <input 
                   type="text" 
                   value={user?.displayName || profile.name}
                   disabled
-                  className="w-full bg-proton-bg/50 border border-proton-border rounded-xl px-4 py-3 text-proton-muted cursor-not-allowed"
+                  className="w-full bg-proton-bg/50 border border-proton-border rounded-lg px-3 py-2 text-sm text-proton-muted cursor-not-allowed"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">Email Address</label>
+                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'ელ.ფოსტა' : 'Email Address'}</label>
                 <input 
                   type="email" 
                   value={user?.email || profile.email}
                   disabled
-                  className="w-full bg-proton-bg/50 border border-proton-border rounded-xl px-4 py-3 text-proton-muted cursor-not-allowed"
+                  className="w-full bg-proton-bg/50 border border-proton-border rounded-lg px-3 py-2 text-sm text-proton-muted cursor-not-allowed"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">Preferred Language</label>
+                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'ენა' : 'Preferred Language'}</label>
                 <select 
                   value={profile.language}
                   onChange={(e) => setProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                  className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors"
+                  className="w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-proton-accent transition-colors"
                 >
                   <option value="en">English</option>
                   <option value="ka">ქართული (Georgian)</option>
@@ -2218,8 +2697,8 @@ const ProfileView = ({
               </div>
               <div className="flex items-center justify-between p-4 rounded-xl bg-proton-bg/30 border border-proton-border">
                 <div>
-                  <p className="text-sm font-medium">Email Notifications</p>
-                  <p className="text-[10px] text-proton-muted">Receive updates on GPU status</p>
+                  <p className="text-sm font-medium">{language === 'ka' ? 'შეტყობინებები ელ.ფოსტაზე' : 'Email Notifications'}</p>
+                  <p className="text-[10px] text-proton-muted">{language === 'ka' ? 'მიიღეთ განახლებები ვიდეო ბარათის სტატუსზე' : 'Receive updates on GPU status'}</p>
                 </div>
                 <button 
                   onClick={() => setProfile(prev => ({ ...prev, notifications: !prev.notifications }))}
@@ -2254,7 +2733,7 @@ const ProfileView = ({
                 }}
                 className="px-6 py-2 rounded-xl border border-proton-border text-proton-muted font-bold text-sm hover:bg-proton-card transition-all"
               >
-                Download Profile Data
+                {language === 'ka' ? 'პროფილის მონაცემების ჩამოტვირთვა' : 'Download Profile Data'}
               </button>
             </div>
           </div>
@@ -2262,7 +2741,7 @@ const ProfileView = ({
           <div className="proton-glass p-4 sm:p-8 rounded-3xl space-y-6">
             <h3 className="text-lg font-bold flex items-center gap-2">
               <Activity size={20} className="text-proton-secondary" />
-              Interaction History
+              {language === 'ka' ? 'ინტერაქციების ისტორია' : 'Interaction History'}
             </h3>
             
             <div className="space-y-4">
@@ -2275,12 +2754,14 @@ const ProfileView = ({
                     <div className="flex items-center gap-4">
                       <PersonaAvatar avatar={customAvatars[persona.id] || persona.avatar} className="w-10 h-10" />
                       <div>
-                        <p className="font-bold text-sm">{persona.name}</p>
-                        <p className="text-xs text-proton-muted">{personaMsgs.length} messages exchanged</p>
+                        <p className="font-bold text-sm">{language === 'ka' ? persona.nameGe : persona.name}</p>
+                        <p className="text-xs text-proton-muted">{personaMsgs.length} {common.messages}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-proton-muted uppercase font-mono">Last Active</p>
+                      <p className="text-[10px] text-proton-muted uppercase font-mono">
+                        {language === 'ka' ? 'ბოლოს აქტიური' : 'Last Active'}
+                      </p>
                       <p className="text-xs font-mono">
                         {new Date(personaMsgs[personaMsgs.length - 1].timestamp).toLocaleDateString()}
                       </p>
@@ -2290,7 +2771,7 @@ const ProfileView = ({
               })}
               {totalInteractions === 0 && (
                 <div className="text-center py-8 text-proton-muted italic text-sm">
-                  No interaction history found yet.
+                  {language === 'ka' ? 'ისტორია ჯერჯერობით ცარიელია' : 'No interaction history found yet.'}
                 </div>
               )}
             </div>
@@ -2304,34 +2785,34 @@ const ProfileView = ({
               <Users size={40} />
             </div>
             <div>
-              <h4 className="font-bold text-lg">{profile.name}</h4>
-              <p className="text-xs text-proton-muted font-mono uppercase tracking-widest">Proton Core AI Explorer</p>
+              <h4 className="font-bold text-lg">{user?.displayName || profile.name}</h4>
+              <p className="text-xs text-proton-muted font-mono uppercase tracking-widest">{language === 'ka' ? 'Proton Core AI-ის მკვლევარი' : 'Proton Core AI Explorer'}</p>
             </div>
             <div className="grid grid-cols-2 gap-4 pt-4">
               <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border">
                 <p className="text-xl font-bold font-mono text-proton-accent">{totalInteractions}</p>
-                <p className="text-[10px] text-proton-muted uppercase">Messages</p>
+                <p className="text-[10px] text-proton-muted uppercase">{common.messages}</p>
               </div>
               <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border">
-                <p className="text-xl font-bold font-mono text-proton-secondary">3</p>
-                <p className="text-[10px] text-proton-muted uppercase">Personas</p>
+                <p className="text-xl font-bold font-mono text-proton-secondary">{personas.length}</p>
+                <p className="text-[10px] text-proton-muted uppercase">{language === 'ka' ? 'პერსონაჟი' : 'Personas'}</p>
               </div>
             </div>
           </div>
 
           <div className="proton-glass p-6 rounded-2xl space-y-4">
-            <h4 className="font-bold text-sm uppercase tracking-widest text-proton-muted">Security Status</h4>
+            <h4 className="font-bold text-sm uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'უსაფრთხოების სტატუსი' : 'Security Status'}</h4>
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-proton-muted">2FA Status</span>
-                <span className="text-green-400 font-mono">ENABLED</span>
+                <span className="text-proton-muted">{language === 'ka' ? '2FA-ს სტატუსი' : '2FA Status'}</span>
+                <span className="text-green-400 font-mono">{language === 'ka' ? 'აქტიური' : 'ENABLED'}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-proton-muted">Last Login</span>
+                <span className="text-proton-muted">{language === 'ka' ? 'ბოლო შესვლა' : 'Last Login'}</span>
                 <span className="text-proton-text font-mono">Tbilisi, GE</span>
               </div>
               <button className="w-full py-2 rounded-lg border border-proton-secondary/30 text-proton-secondary text-xs font-bold hover:bg-proton-secondary/10 transition-all">
-                Reset Password
+                {language === 'ka' ? 'პაროლის განახლება' : 'Reset Password'}
               </button>
             </div>
           </div>
@@ -2427,6 +2908,11 @@ export default function App() {
 
   const [user, setUser] = useState(auth.currentUser);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    localStorage.setItem('proton_tasks', JSON.stringify(tasks));
+  }, [tasks]);
 
   async function handleTTS(text: string) {
     try {
@@ -2502,6 +2988,12 @@ export default function App() {
             historyObj[d.id] = d.data().messages || [];
           });
           setChatHistory(historyObj);
+
+          // Fetch Tasks
+          const tasksRef = collection(db, 'users', currentUser.uid, 'tasks');
+          const tasksSnap = await getDocs(tasksRef).catch(e => handleFirestoreError(e, 'list', tasksRef.path));
+          const loadedTasks = tasksSnap.docs.map(doc => doc.data() as Task);
+          setTasks(loadedTasks.length > 0 ? loadedTasks : []);
 
           // Fetch Custom Avatars
           const avatarRef = collection(db, 'users', currentUser.uid, 'customAvatars');
@@ -2589,6 +3081,71 @@ export default function App() {
     }
   };
 
+  const handleAddTask = (content: string) => {
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      content,
+      contentGe: content,
+      completed: false
+    };
+    setTasks(prev => [...prev, newTask]);
+    if (user) {
+      const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
+      setDoc(docRef, newTask).catch(e => handleFirestoreError(e, 'write', docRef.path));
+    }
+  };
+
+  const handleToggleTask = (id: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        const updated = { ...t, completed: !t.completed };
+        if (user) {
+          const docRef = doc(db, 'users', user.uid, 'tasks', id);
+          setDoc(docRef, updated).catch(e => handleFirestoreError(e, 'write', docRef.path));
+        }
+        return updated;
+      }
+      return t;
+    }));
+  };
+
+  const handleDeleteTask = (id: string) => {
+    setTasks(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      // We could delete from Firebase here, but filtering is sufficient for local session
+      return updated;
+    });
+  };
+
+  const handleAiSuggestTasks = async () => {
+    try {
+      const workflowContext = workflows.map(w => w.name).join(', ');
+      const prompt = `Based on these active project workflows: [${workflowContext}], suggest 3 next actionable steps as tasks. Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]`;
+      
+      const response = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3-flash-preview");
+      const suggestions = JSON.parse(response.replace(/```json|```/g, '').trim());
+      
+      const newTasks = suggestions.map((s: any, i: number) => ({
+        id: `ai-task-${Date.now()}-${i}`,
+        content: s.content,
+        contentGe: s.contentGe,
+        completed: false,
+        isAiSuggested: true
+      }));
+
+      setTasks(prev => [...prev, ...newTasks]);
+      
+      if (user) {
+        for (const task of newTasks) {
+          const docRef = doc(db, 'users', user.uid, 'tasks', task.id);
+          setDoc(docRef, task).catch(e => handleFirestoreError(e, 'write', docRef.path));
+        }
+      }
+    } catch (error) {
+      console.error("AI Suggestion Error:", error);
+    }
+  };
+
   if (!authInitialized) {
     return (
       <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
@@ -2599,44 +3156,11 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="h-[100dvh] flex items-center justify-center bg-proton-bg p-4 relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-proton-accent/5 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-proton-secondary/5 blur-[120px] pointer-events-none" />
-        
-        <div className="relative z-10 w-full max-w-md proton-glass p-8 rounded-3xl space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 shadow-2xl border border-white/5">
-          <div className="space-y-3 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shadow-[0_0_30px_rgba(0,242,255,0.3)] mb-6">
-              <Zap size={32} fill="currentColor" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight">Proton Core <span className="text-proton-accent">AI</span></h1>
-            <p className="text-proton-muted text-sm">Sign in to access your digital personas, workflows, and compute clusters.</p>
-          </div>
-          
-          <div className="pt-4">
-            <button 
-              onClick={handleGoogleSignIn}
-              className="w-full relative flex items-center justify-center gap-3 px-6 py-4 bg-white hover:bg-gray-50 text-black font-semibold rounded-xl transition-all duration-200 active:scale-[0.98] shadow-lg"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              Continue with Google
-            </button>
-          </div>
-          
-          <div className="pt-6 border-t border-proton-border/50 text-center">
-            <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest">
-              Secured by Proton Core AI Infrastructure
-            </p>
-          </div>
-        </div>
-      </div>
+      <AuthFlow onGoogleSignIn={handleGoogleSignIn} language={userProfile.language} />
     );
   }
+
+  const t = translations[userProfile.language];
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
@@ -2669,35 +3193,42 @@ export default function App() {
 
         <nav className="flex-1 px-3 space-y-6 mt-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
           <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Core</p>}
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.core}</p>}
             <SidebarItem 
               icon={LayoutDashboard} 
-              label="Dashboard" 
+              label={t.sidebar.dashboard} 
               active={activeView === 'dashboard'} 
               onClick={() => handleViewChange('dashboard')} 
               expanded={isSidebarOpen}
             />
             <SidebarItem 
               icon={Cpu} 
-              label="Compute Cluster" 
+              label={t.sidebar.compute} 
               active={activeView === 'compute'} 
               onClick={() => handleViewChange('compute')} 
+              expanded={isSidebarOpen}
+            />
+            <SidebarItem 
+              icon={CalendarIcon} 
+              label={t.sidebar.organizer} 
+              active={activeView === 'organizer'} 
+              onClick={() => handleViewChange('organizer')} 
               expanded={isSidebarOpen}
             />
           </div>
 
           <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Agents</p>}
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.agents}</p>}
             <SidebarItem 
               icon={Users} 
-              label="Digital Personas" 
+              label={t.sidebar.personas} 
               active={activeView === 'personas'} 
               onClick={() => handleViewChange('personas')} 
               expanded={isSidebarOpen}
             />
             <SidebarItem 
               icon={Workflow} 
-              label="Workflows" 
+              label={t.sidebar.workflows} 
               active={activeView === 'workflows'} 
               onClick={() => handleViewChange('workflows')} 
               expanded={isSidebarOpen}
@@ -2706,12 +3237,12 @@ export default function App() {
 
           <div className="space-y-1">
             {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
-              Economy
-              <span className="bg-proton-accent/20 text-proton-accent text-[7px] px-1.5 py-0.5 rounded-full animate-pulse">NEW</span>
+              {t.sidebar.economy}
+              <span className="bg-proton-accent/20 text-proton-accent text-[7px] px-1.5 py-0.5 rounded-full animate-pulse">{t.sidebar.new}</span>
             </p>}
             <SidebarItem 
               icon={Wallet} 
-              label="Payments & Settlement" 
+              label={t.sidebar.web3} 
               active={activeView === 'web3'} 
               onClick={() => handleViewChange('web3')} 
               expanded={isSidebarOpen}
@@ -2719,10 +3250,10 @@ export default function App() {
           </div>
 
           <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">Creative</p>}
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.creative}</p>}
             <SidebarItem 
               icon={Image} 
-              label="Image Studio" 
+              label={t.sidebar.image} 
               active={activeView === 'image'} 
               onClick={() => handleViewChange('image')} 
               expanded={isSidebarOpen}
@@ -2730,17 +3261,17 @@ export default function App() {
           </div>
 
           <div className="pt-4 mt-4 border-t border-proton-border space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">System</p>}
+            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.system}</p>}
             <SidebarItem 
               icon={Terminal} 
-              label="User Profile" 
+              label={t.sidebar.profile} 
               active={activeView === 'profile'} 
               onClick={() => handleViewChange('profile')} 
               expanded={isSidebarOpen}
             />
             <SidebarItem 
               icon={Settings} 
-              label="Settings" 
+              label={t.sidebar.settings} 
               active={activeView === 'settings'} 
               onClick={() => handleViewChange('settings')} 
               expanded={isSidebarOpen}
@@ -2780,7 +3311,7 @@ export default function App() {
             <div className={cn("transition-transform duration-500", isSidebarOpen && "rotate-180")}>
               <ChevronRight size={20} />
             </div>
-            {isSidebarOpen && <span className="font-bold text-[10px] uppercase tracking-widest">Collapse View</span>}
+            {isSidebarOpen && <span className="font-bold text-[10px] uppercase tracking-widest">{t.sidebar.collapse}</span>}
           </button>
         </div>
       </aside>
@@ -2805,10 +3336,10 @@ export default function App() {
             <div className="h-4 w-px bg-proton-border hidden md:block" />
             <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-proton-muted uppercase tracking-widest">
               <Globe size={14} className="min-w-[14px]" />
-              <span className="hidden sm:inline">{userProfile.region} Node</span>
+              <span className="hidden sm:inline">{userProfile.region} {t.common.node}</span>
               <span className="inline sm:hidden">{userProfile.region.substring(0,3)}</span>
               <span className="text-proton-accent">•</span>
-              <span className="hidden sm:inline">v1.2.0-stable</span>
+              <span className="hidden sm:inline">v1.2.0-{t.common.stable}</span>
               <span className="inline sm:hidden">v1.2</span>
             </div>
           </div>
@@ -2818,14 +3349,14 @@ export default function App() {
               <select
                 value={userProfile.language}
                 onChange={(e) => setUserProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                className="bg-proton-card border border-proton-border rounded-lg px-1 py-1 sm:px-2 text-[10px] font-mono text-proton-text focus:outline-none"
+                className="bg-proton-card border border-proton-border rounded-lg px-1 py-1 sm:px-2 text-[10px] font-mono text-proton-text focus:outline-none cursor-pointer hover:border-proton-accent transition-colors"
               >
-                <option value="en">EN</option>
-                <option value="ka">GE</option>
+                <option value="en">English (EN)</option>
+                <option value="ka">Georgian (GE)</option>
               </select>
 
               <div className="text-[10px] font-mono text-right hidden sm:block">
-                <span className="text-proton-muted block">GPU</span>
+                <span className="text-proton-muted block">{t.common.gpu}</span>
                 <span className="text-proton-accent">84%</span>
               </div>
             </div>
@@ -2848,6 +3379,18 @@ export default function App() {
                   activeView={activeView} 
                   setActiveView={setActiveView}
                   chatHistory={chatHistory}
+                  language={userProfile.language}
+                />
+              )}
+              {activeView === 'organizer' && (
+                <OrganizerView 
+                  language={userProfile.language}
+                  workflows={workflows}
+                  tasks={tasks}
+                  onAddTask={handleAddTask}
+                  onToggleTask={handleToggleTask}
+                  onDeleteTask={handleDeleteTask}
+                  onAiSuggest={handleAiSuggestTasks}
                 />
               )}
               {activeView === 'compute' && <ComputeView />}
@@ -2890,14 +3433,14 @@ export default function App() {
                 <div className="flex flex-col h-full w-full max-w-2xl mx-auto p-8 space-y-8">
                   <div className="flex items-center gap-4">
                     <Settings size={32} className="text-proton-accent" />
-                    <h2 className="text-2xl font-bold">System Settings</h2>
+                    <h2 className="text-2xl font-bold">{translations[userProfile.language].settings.title}</h2>
                   </div>
  
                   <div className="space-y-6">
                     <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">Profile</h3>
+                      <h3 className="font-bold border-b border-proton-border pb-2">{translations[userProfile.language].sidebar.profile}</h3>
                       <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">Region</label>
+                        <label className="text-xs text-proton-muted">{translations[userProfile.language].settings.region || 'Region'}</label>
                         <input 
                           value={userProfile.region || ''}
                           onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
@@ -2908,10 +3451,10 @@ export default function App() {
                     </section>
 
                     <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">AI Configuration</h3>
+                      <h3 className="font-bold border-b border-proton-border pb-2">{translations[userProfile.language].settings.ai_config}</h3>
                       
                       <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">Temperature: {aiSettings.temperature}</label>
+                        <label className="text-xs text-proton-muted">{translations[userProfile.language].settings.temperature}: {aiSettings.temperature}</label>
                         <input 
                           type="range" min="0" max="1" step="0.1"
                           value={aiSettings.temperature}
@@ -2921,7 +3464,7 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <label className="text-xs">Enable Google Search Grounding</label>
+                        <label className="text-xs">{translations[userProfile.language].settings.search}</label>
                         <input 
                           type="checkbox" checked={aiSettings.enableSearch}
                           onChange={e => setAiSettings(prev => ({ ...prev, enableSearch: e.target.checked }))}
@@ -2930,7 +3473,7 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <label className="text-xs">Enable Google Maps Grounding</label>
+                        <label className="text-xs">{translations[userProfile.language].settings.maps}</label>
                         <input 
                           type="checkbox" checked={aiSettings.enableMaps}
                           onChange={e => setAiSettings(prev => ({ ...prev, enableMaps: e.target.checked }))}

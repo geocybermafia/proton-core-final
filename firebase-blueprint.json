@@ -52,6 +52,19 @@
         "avatar": { "type": "string" }
       },
       "required": ["avatar"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "User tasks and AI suggestions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "content": { "type": "string" },
+        "contentGe": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "isAiSuggested": { "type": "boolean" }
+      },
+      "required": ["id", "content", "contentGe", "completed"]
     }
   },
   "firestore": {
@@ -70,6 +83,10 @@
     "/users/{userId}/chatHistory/{personaId}": {
       "schema": { "$ref": "ChatMessage" },
       "description": "We will store history stringified or inside an array. Actual implementation might store as distinct fields."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "Task" },
+      "description": "User tasks and AI suggestions"
     }
   }
 }
