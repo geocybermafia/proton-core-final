@@ -1110,9 +1110,15 @@ const SmartTaskArchitect = ({
       setCooldown(5);
     } catch (err: any) {
       console.error(err);
+      const errStr = JSON.stringify(err).toLowerCase();
+      const isQuotaError = errStr.includes('quota') || 
+                           errStr.includes('429') || 
+                           err.message?.toLowerCase().includes('quota') ||
+                           err.message?.includes('429');
+      
       setError({
         title: t.error_title,
-        message: t.api_error
+        message: isQuotaError ? t.quota_error : t.api_error
       });
     } finally {
       setLoading(false);
