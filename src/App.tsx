@@ -362,39 +362,59 @@ const PersonaEditor = ({
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Avatar</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Avatar Selection</label>
               <div className="flex items-center gap-4">
                 <PersonaAvatar avatar={formData.avatar} className="w-16 h-16 ring-2 ring-proton-accent/20" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex gap-2">
-                    {['🤖', '🧠', '🏺', '⛓️', '📈'].map(av => (
+                <div className="flex-1 space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {PREDEFINED_AVATARS.slice(0, 8).map(av => (
                       <button 
                         key={av}
                         onClick={() => setFormData(prev => ({ ...prev, avatar: av }))}
                         className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center text-sm border",
-                          formData.avatar === av ? "border-proton-accent bg-proton-accent/10" : "border-proton-border"
+                          "w-8 h-8 rounded-lg flex items-center justify-center text-sm border transition-all",
+                          formData.avatar === av ? "border-proton-accent bg-proton-accent/10" : "border-proton-border hover:border-proton-muted"
                         )}
                       >
                         {av}
                       </button>
                     ))}
+                    <label className="w-8 h-8 rounded-lg flex items-center justify-center border border-proton-border hover:border-proton-accent cursor-pointer transition-all">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setFormData(prev => ({ ...prev, avatar: reader.result as string }));
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                      <Image size={14} className="text-proton-muted" />
+                    </label>
                   </div>
-                  <input
-                    type="text"
-                    value={avatarPrompt}
-                    onChange={e => setAvatarPrompt(e.target.value)}
-                    placeholder="Enter custom prompt..."
-                    className="w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-proton-accent transition-colors"
-                  />
-                  <button 
-                    onClick={handleGenerateAvatar}
-                    disabled={generating}
-                    className="w-full py-2 rounded-lg bg-proton-accent/10 text-proton-accent border border-proton-accent/20 text-[10px] font-bold uppercase tracking-widest hover:bg-proton-accent/20 transition-all flex items-center justify-center gap-2"
-                  >
-                    {generating ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
-                    Generate with AI
-                  </button>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={avatarPrompt}
+                      onChange={e => setAvatarPrompt(e.target.value)}
+                      placeholder="AI Prompt (e.g. 'Cyberpunk hacking expert')"
+                      className="w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-proton-accent transition-colors"
+                    />
+                    <button 
+                      onClick={handleGenerateAvatar}
+                      disabled={generating}
+                      className="w-full py-2 rounded-lg bg-proton-accent/10 text-proton-accent border border-proton-accent/30 text-[10px] font-bold uppercase tracking-widest hover:bg-proton-accent/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      {generating ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
+                      {generating ? "Initializing Sequence..." : "Neural Projection"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1165,8 +1185,8 @@ const ComputeView = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 proton-glass p-6 rounded-2xl">
           <h4 className="font-bold flex items-center gap-2 mb-6">Resource Load Overload</h4>
-          <div className="h-64 min-h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-full w-full relative min-h-[256px] overflow-hidden">
+            <ResponsiveContainer width="100%" height={256} minWidth={0}>
               <AreaChart data={resourceData}>
                 <defs>
                   <linearGradient id="colorGpu" x1="0" y1="0" x2="0" y2="1">
@@ -1288,6 +1308,8 @@ const PersonasView = ({
   const [languageFilter, setLanguageFilter] = useState<string>('All');
   const [showGeorgian, setShowGeorgian] = useState<Record<string, boolean>>({});
   const [expandedPersonaId, setExpandedPersonaId] = useState<string | null>(null);
+  const [editingInstructionsId, setEditingInstructionsId] = useState<string | null>(null);
+  const [tempInstructions, setTempInstructions] = useState('');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [showPersonaEditor, setShowPersonaEditor] = useState(false);
   const [editingPersona, setEditingPersona] = useState<Persona | undefined>(undefined);
@@ -1549,8 +1571,41 @@ const PersonasView = ({
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="mt-3 p-3 rounded-xl bg-proton-bg/50 border border-proton-border/50 text-[11px] leading-relaxed text-proton-muted font-mono whitespace-pre-wrap">
-                        {persona.systemInstruction}
+                      <div className="mt-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">Directives (The 'Brain')</span>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (editingInstructionsId === persona.id) {
+                                // Save
+                                onUpdatePersonas(personas.map(p => p.id === persona.id ? { ...p, systemInstruction: tempInstructions } : p));
+                                setEditingInstructionsId(null);
+                              } else {
+                                // Start editing
+                                setEditingInstructionsId(persona.id);
+                                setTempInstructions(persona.systemInstruction);
+                              }
+                            }}
+                            className="text-[10px] font-mono text-proton-accent uppercase hover:underline transition-all"
+                          >
+                            {editingInstructionsId === persona.id ? "Apply Changes" : "Modify Core"}
+                          </button>
+                        </div>
+                        
+                        {editingInstructionsId === persona.id ? (
+                          <textarea
+                            value={tempInstructions}
+                            onChange={(e) => setTempInstructions(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full bg-proton-bg border border-proton-accent/30 rounded-xl p-3 text-[11px] leading-relaxed text-proton-text font-mono h-32 focus:outline-none focus:border-proton-accent transition-all custom-scrollbar"
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border/50 text-[11px] leading-relaxed text-proton-muted font-mono whitespace-pre-wrap">
+                            {persona.systemInstruction}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -1639,83 +1694,97 @@ const PersonasView = ({
                 exit={{ scale: 0.9, y: 20 }}
                 className="proton-glass p-4 sm:p-8 rounded-3xl max-w-md w-full space-y-4 sm:space-y-6 shadow-2xl"
               >
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center bg-transparent pb-4 border-b border-proton-border/50">
                   <h3 className="text-xl font-bold flex items-center gap-2">
                     <Sparkles className="text-proton-accent" size={20} />
                     Customize Avatar
                   </h3>
-                  <button onClick={() => setShowAvatarPicker(false)} className="text-proton-muted hover:text-proton-text">
+                  <button onClick={() => setShowAvatarPicker(false)} className="p-2 rounded-full hover:bg-proton-bg transition-all text-proton-muted hover:text-proton-text">
                     <X size={20} />
                   </button>
                 </div>
 
-                <div className="space-y-4">
-                  <p className="text-xs text-proton-muted uppercase tracking-widest font-mono">Select Predefined Avatar</p>
-                  <div className="grid grid-cols-5 gap-3">
-                    {PREDEFINED_AVATARS.map(av => (
-                      <button
-                        key={av}
-                        onClick={() => {
-                          onUpdateAvatar(selectedPersona.id, av);
-                          setShowAvatarPicker(false);
-                        }}
-                        className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center transition-all border overflow-hidden",
-                          currentAvatar === av 
-                            ? "bg-proton-accent/10 border-proton-accent/30 scale-110" 
-                            : "bg-proton-bg border-proton-border hover:border-proton-muted/50"
-                        )}
-                      >
-                        <PersonaAvatar avatar={av} className="w-full h-full" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                  <div className="p-4 rounded-xl bg-proton-bg/50 border border-proton-border space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-bold text-proton-text uppercase tracking-widest">Upload Custom Image</p>
-                        <p className="text-xs text-proton-muted">Upload your own avatar image.</p>
-                      </div>
-                      <label className="p-2 rounded-lg bg-proton-card text-proton-text hover:bg-proton-border cursor-pointer transition-all">
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          className="hidden" 
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                onUpdateAvatar(selectedPersona.id, reader.result as string);
-                                setShowAvatarPicker(false);
-                              };
-                              reader.readAsDataURL(file);
-                            }
+                <div className="space-y-6 pt-2">
+                  <div className="space-y-3">
+                    <p className="text-[10px] text-proton-muted uppercase tracking-[0.2em] font-mono font-bold">Predefined Identities</p>
+                    <div className="grid grid-cols-7 gap-2 pb-2">
+                      {PREDEFINED_AVATARS.map(av => (
+                        <button
+                          key={av}
+                          onClick={() => {
+                            onUpdateAvatar(selectedPersona.id, av);
+                            setShowAvatarPicker(false);
                           }}
-                        />
-                        <Image size={18} />
-                      </label>
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center transition-all border overflow-hidden",
+                            currentAvatar === av 
+                              ? "bg-proton-accent/10 border-proton-accent/30 scale-110 shadow-[0_0_15px_rgba(0,242,255,0.2)]" 
+                              : "bg-proton-bg border-proton-border hover:border-proton-muted/50"
+                          )}
+                        >
+                          <PersonaAvatar avatar={av} className="w-full h-full text-xl" />
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                <div className="p-4 rounded-xl bg-proton-accent/5 border border-proton-accent/20 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-proton-accent uppercase tracking-widest">AI Generation</p>
-                      <p className="text-xs text-proton-muted">Create a unique visual representation.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-proton-bg/50 border border-proton-border group/upload hover:border-proton-accent/30 transition-all">
+                      <div className="flex flex-col items-center text-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-proton-card flex items-center justify-center text-proton-muted group-hover/upload:text-proton-accent transition-colors">
+                          <Image size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-proton-text uppercase tracking-widest">Local Data</p>
+                          <p className="text-[10px] text-proton-muted">Upload custom image</p>
+                        </div>
+                        <label className="w-full py-2 rounded-lg bg-proton-card text-proton-text hover:bg-proton-border cursor-pointer transition-all border border-proton-border text-[10px] font-bold uppercase tracking-widest">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  onUpdateAvatar(selectedPersona.id, reader.result as string);
+                                  setShowAvatarPicker(false);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          Select File
+                        </label>
+                      </div>
                     </div>
-                    <button 
-                      onClick={handleGenerateAI}
-                      disabled={generatingAvatar}
-                      className="p-2 rounded-lg bg-proton-accent text-proton-bg hover:scale-105 active:scale-95 disabled:opacity-50 transition-all"
-                    >
-                      {generatingAvatar ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-                    </button>
+
+                    <div className="p-4 rounded-2xl bg-proton-accent/5 border border-proton-accent/10 group/ai hover:border-proton-accent/30 transition-all">
+                      <div className="flex flex-col items-center text-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl bg-proton-accent/10 flex items-center justify-center text-proton-accent",
+                          generatingAvatar && "animate-pulse"
+                        )}>
+                          <Sparkles size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-proton-accent uppercase tracking-widest">Neural Projection</p>
+                          <p className="text-[10px] text-proton-muted">AI generated avatar</p>
+                        </div>
+                        <button 
+                          onClick={handleGenerateAI}
+                          disabled={generatingAvatar}
+                          className="w-full py-2 rounded-lg bg-proton-accent text-proton-bg hover:scale-105 active:scale-95 disabled:opacity-50 transition-all text-[10px] font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(0,242,255,0.2)]"
+                        >
+                          {generatingAvatar ? "Generating..." : "Generate AI"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
+
                   {generatingAvatar && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 py-2">
                       <div className="h-1 bg-proton-border rounded-full overflow-hidden">
                         <motion.div 
                           className="h-full bg-proton-accent"
@@ -1723,45 +1792,17 @@ const PersonasView = ({
                           transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
                         />
                       </div>
-                      <p className="text-[10px] text-proton-muted text-center animate-pulse">PRODUCING VISUAL CONTEXT...</p>
+                      <p className="text-[10px] text-proton-muted text-center animate-pulse font-mono font-bold tracking-widest">SYNTHESIZING VISUAL CONTEXT...</p>
                     </div>
                   )}
-                </div>
 
-                <div className="p-4 rounded-xl bg-proton-card border border-proton-border space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-bold text-proton-text uppercase tracking-widest">Custom Upload</p>
-                      <p className="text-xs text-proton-muted">Upload your own image.</p>
-                    </div>
-                    <label className="p-2 rounded-lg bg-proton-bg border border-proton-border text-proton-text hover:bg-proton-border cursor-pointer transition-all">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              onUpdateAvatar(selectedPersona.id, reader.result as string);
-                              setShowAvatarPicker(false);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                      <Plus size={18} />
-                    </label>
-                  </div>
+                  <button 
+                    onClick={() => setShowAvatarPicker(false)}
+                    className="w-full py-3 rounded-xl border border-proton-border font-bold text-sm hover:bg-proton-card transition-all mt-2"
+                  >
+                    Cancel
+                  </button>
                 </div>
-
-                <button 
-                  onClick={() => setShowAvatarPicker(false)}
-                  className="w-full py-3 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm"
-                >
-                  Done
-                </button>
               </motion.div>
             </motion.div>
           )}

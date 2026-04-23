@@ -57,6 +57,7 @@ export const translations = {
       maps: "Google Maps integration",
       zen: "Zen Mode (Hidden UI)",
       voice: "Voice Synthesis",
+      region: "Geographic Hub",
       save: "Save Config"
     },
     common: {
@@ -145,6 +146,7 @@ export const translations = {
       maps: "Google Maps ინტეგრაცია",
       zen: "Zen რეჟიმი (დამალული UI)",
       voice: "ხმის სინთეზი",
+      region: "გეოგრაფიული ჰაბი",
       save: "კონფიგურაციის შენახვა"
     },
     common: {
