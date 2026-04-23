@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel, Modality } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Modality, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -13,6 +13,13 @@ export type Persona = {
   avatar: string;
   language: 'English' | 'Georgian' | 'Mixed';
 };
+
+export interface TaskPlan {
+  materials: { item: string; cost: string }[];
+  complexity: string;
+  estimatedTime: string;
+  firstSteps: string[];
+}
 
 export const PERSONAS: Persona[] = [
   {
@@ -241,6 +248,49 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
     return base64Audio.replace(/^data:audio\/[a-z0-9]+;base64,/, "");
   } catch (error) {
     console.error("TTS Error:", error);
+    throw error;
+  }
+}
+
+export async function architectTask(project: string): Promise<TaskPlan> {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Be professional, brief, and structured. Architect an action plan for: ${project}.
+      Respond EXCLUSIVELY in the user's language (e.g. Georgian for Georgian, English for English).`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            materials: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  item: { type: Type.STRING },
+                  cost: { type: Type.STRING }
+                },
+                required: ["item", "cost"]
+              }
+            },
+            complexity: { type: Type.STRING, description: "Beginner, Intermediate, Advanced, or Master" },
+            estimatedTime: { type: Type.STRING },
+            firstSteps: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: "The first 3 steps to take immediately."
+            }
+          },
+          required: ["materials", "complexity", "estimatedTime", "firstSteps"]
+        }
+      }
+    });
+    
+    const text = response.text || "{}";
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Gemini API Error:", error);
     throw error;
   }
 }

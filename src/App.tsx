@@ -12,7 +12,7 @@ import {
   GoogleAuthProvider,
   EmailAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 interface FirestoreErrorInfo {
   error: string;
@@ -110,7 +110,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
-import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, type Persona } from './services/gemini';
+import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type Persona, type TaskPlan } from './services/gemini';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
@@ -696,13 +696,12 @@ const DigitalClock = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl proton-glass relative overflow-hidden group">
-      <div className="absolute inset-0 bg-proton-accent/5 blur-3xl group-hover:bg-proton-accent/10 transition-colors" />
-      <div className="relative z-10 font-mono text-2xl md:text-3xl font-bold tracking-tighter text-proton-text drop-shadow-[0_0_10px_rgba(0,242,255,0.4)]">
-        {time.toLocaleTimeString([], { hour12: false })}
+    <div className="flex flex-col items-end px-4">
+      <div className="text-sm md:text-xl font-mono font-bold tracking-tighter text-proton-accent drop-shadow-[0_0_10px_rgba(0,242,255,0.8)]">
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
       </div>
-      <div className="relative z-10 text-[8px] uppercase tracking-[0.3em] text-proton-muted mt-1 font-bold">
-        Temporal Stabilization
+      <div className="text-[8px] font-mono text-proton-muted uppercase tracking-[0.3em] font-bold">
+        {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
       </div>
     </div>
   );
@@ -936,6 +935,318 @@ const OrganizerView = ({
   );
 };
 
+const SystemAlert = ({ 
+  title, 
+  message, 
+  onClose 
+}: { 
+  title: string, 
+  message: string, 
+  onClose: () => void 
+}) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+    animate={{ opacity: 1, scale: 1, y: 0 }}
+    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+    className="fixed bottom-8 right-8 z-[100] max-w-sm w-full"
+  >
+    <div className="proton-glass border-red-500/30 p-6 rounded-3xl shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
+      <div className="flex items-start gap-4">
+        <div className="p-2 rounded-xl bg-red-500/10 text-red-500">
+          <Shield size={20} />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-red-400">{title}</h3>
+          <p className="text-xs text-proton-muted mt-1">{message}</p>
+        </div>
+        <button 
+          onClick={onClose}
+          className="text-proton-muted hover:text-white p-1"
+        >
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  </motion.div>
+);
+
+const NeuralPulse = ({ language, onSelect }: { language: 'en' | 'ka', onSelect: (topic: string) => void }) => {
+  const [pulses, setPulses] = useState<any[]>([]);
+  const t = translations[language].architect;
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'neural_pulse'),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const livePulses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const simulated: any[] = [
+        { id: 'sim-1', projectTitle: language === 'ka' ? 'ხის მაგიდის რესტავრაცია' : 'Antique Table Restoration', createdAt: { seconds: Date.now() / 1000 - 3600 } },
+        { id: 'sim-2', projectTitle: language === 'ka' ? 'ჭკვიანი სახლის მოწყობა' : 'Smart Home Setup', createdAt: { seconds: Date.now() / 1000 - 7200 } }
+      ];
+      setPulses(livePulses.length > 0 ? livePulses : simulated);
+    }, (error) => {
+      console.warn("NeuralPulse connection deferred or denied:", error.message);
+      // Fallback to simulated data on error
+      setPulses([
+        { id: 'sim-1', projectTitle: language === 'ka' ? 'ხის მაგიდის რესტავრაცია' : 'Antique Table Restoration', createdAt: { seconds: Date.now() / 1000 - 3600 } },
+        { id: 'sim-2', projectTitle: language === 'ka' ? 'ჭკვიანი სახლის მოწყობა' : 'Smart Home Setup', createdAt: { seconds: Date.now() / 1000 - 7200 } }
+      ]);
+    });
+
+    return () => unsubscribe();
+  }, [language]);
+
+  const getTimeAgo = (timestamp: any) => {
+    if (!timestamp) return t.pulse_just_now;
+    const seconds = Math.floor((Date.now() - timestamp.seconds * 1000) / 1000);
+    if (seconds < 60) return t.pulse_just_now;
+    const mins = Math.floor(seconds / 60);
+    if (mins < 60) return `${mins}m ${t.pulse_ago}`;
+    const hours = Math.floor(mins / 60);
+    return `${hours}h ${t.pulse_ago}`;
+  };
+
+  return (
+    <div className="w-full overflow-hidden py-4 select-none">
+      <div className="flex items-center gap-4 mb-2 px-4">
+        <Activity size={14} className="text-proton-accent animate-pulse" />
+        <span className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">{t.pulse_title}</span>
+      </div>
+      <div className="flex gap-4 overflow-x-auto pb-4 px-4 no-scrollbar">
+        <AnimatePresence mode="popLayout">
+          {pulses.map((pulse, idx) => (
+            <motion.button
+              key={pulse.id}
+              initial={{ opacity: 0, scale: 0.8, x: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.8, x: -20 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onSelect(pulse.projectTitle)}
+              className="flex-shrink-0 group relative"
+            >
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300" />
+              <div className="relative flex items-center gap-3 px-4 py-2 bg-proton-card/50 backdrop-blur-md rounded-2xl border border-white/5 group-hover:border-proton-accent/30 transition-all font-medium">
+                <div className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
+                <div className="flex flex-col items-start">
+                  <span className="text-[10px] text-proton-accent font-bold uppercase tracking-tight">{t.pulse_prefix}</span>
+                  <span className="text-xs text-white truncate max-w-[150px]">{pulse.projectTitle}</span>
+                </div>
+                <span className="text-[9px] font-mono text-proton-muted self-end ml-4 italic">{getTimeAgo(pulse.createdAt)}</span>
+              </div>
+            </motion.button>
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
+const SmartTaskArchitect = ({ 
+  language, 
+  projectText, 
+  setProjectText 
+}: { 
+  language: 'en' | 'ka',
+  projectText: string,
+  setProjectText: Dispatch<SetStateAction<string>>
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState<TaskPlan | null>(null);
+  const [error, setError] = useState<{ title: string, message: string } | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const t = translations[language].architect;
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
+  const handleAnalyze = async () => {
+    if (!projectText.trim() || loading || cooldown > 0) return;
+
+    const cacheKey = `architect_cache_${projectText.trim().toLowerCase()}`;
+    const cachedData = localStorage.getItem(cacheKey);
+
+    if (cachedData) {
+      try {
+        setPlan(JSON.parse(cachedData));
+        return;
+      } catch (e) {
+        localStorage.removeItem(cacheKey);
+      }
+    }
+
+    if (!navigator.onLine) {
+      setError({
+        title: t.error_title,
+        message: t.offline_error
+      });
+      return;
+    }
+
+    setLoading(true);
+    setPlan(null);
+    setError(null);
+
+    try {
+      const result = await architectTask(projectText);
+      setPlan(result);
+      localStorage.setItem(cacheKey, JSON.stringify(result));
+      
+      // Emit pulse event
+      await addDoc(collection(db, 'neural_pulse'), {
+        projectTitle: projectText.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      setCooldown(5);
+    } catch (err: any) {
+      console.error(err);
+      setError({
+        title: t.error_title,
+        message: t.api_error
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <section className="flex flex-col items-center justify-center py-6 space-y-8 max-w-4xl mx-auto w-full relative z-10">
+
+      <AnimatePresence>
+        {error && (
+          <SystemAlert 
+            title={error.title} 
+            message={error.message} 
+            onClose={() => setError(null)} 
+          />
+        )}
+      </AnimatePresence>
+      <div className="w-full text-center space-y-3">
+        <motion.h2 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-proton-accent via-white to-proton-secondary bg-clip-text text-transparent"
+        >
+          {t.title}
+        </motion.h2>
+        <p className="text-proton-muted text-sm md:text-lg font-medium max-w-lg mx-auto">
+          {t.placeholder}
+        </p>
+      </div>
+
+      <div className="relative w-full group">
+        <div className="absolute -inset-1 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-[2rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+        <div className="relative flex flex-col md:flex-row p-2 bg-proton-card/80 backdrop-blur-xl rounded-[2rem] border border-proton-border shadow-2xl group-hover:border-proton-accent/30 transition-all">
+          <input 
+            type="text" 
+            value={projectText}
+            onChange={(e) => setProjectText(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
+            placeholder={t.placeholder}
+            className="flex-1 bg-transparent px-6 py-4 text-sm md:text-lg focus:outline-none placeholder:text-proton-muted font-medium"
+          />
+          <button 
+            onClick={handleAnalyze}
+            disabled={loading || !projectText.trim() || cooldown > 0}
+            className="m-1 px-8 py-4 rounded-3xl bg-proton-accent text-proton-bg font-bold text-xs md:text-base hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(0,242,255,0.4)]"
+          >
+            {loading ? <Loader2 className="animate-spin" size={20} /> : cooldown > 0 ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={20} />}
+            {loading ? t.analyzing : cooldown > 0 ? `${t.cooldown} (${cooldown}s)` : t.button}
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {plan && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="w-full group"
+          >
+            <div className="proton-glass p-8 md:p-12 rounded-[3rem] border border-proton-accent/20 space-y-10 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <LayoutDashboard size={120} className="text-proton-accent rotate-12" />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-mono text-proton-accent uppercase tracking-[0.3em] font-bold">{t.complexity}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20">
+                        <Terminal size={24} className="text-proton-accent" />
+                      </div>
+                      <p className="text-3xl font-bold">{plan.complexity}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-mono text-proton-secondary uppercase tracking-[0.3em] font-bold">{t.time}</p>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-2xl bg-proton-secondary/10 flex items-center justify-center border border-proton-secondary/20">
+                        <Zap size={24} className="text-proton-secondary" />
+                      </div>
+                      <p className="text-3xl font-bold">{plan.estimatedTime}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                   <p className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.3em] font-bold">{t.materials}</p>
+                   <div className="space-y-3 overflow-y-auto max-h-64 pr-2 custom-scrollbar">
+                      {plan.materials.map((m, idx) => (
+                        <motion.div 
+                          key={idx}
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.1 }}
+                          className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+                        >
+                          <span className="text-sm font-bold">{m.item}</span>
+                          <span className="text-xs font-mono bg-proton-accent/20 text-proton-accent px-3 py-1 rounded-full border border-proton-accent/30">{m.cost}</span>
+                        </motion.div>
+                      ))}
+                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-6 pt-10 border-t border-proton-border/30 relative z-10">
+                <p className="text-[10px] font-mono text-proton-text uppercase tracking-[0.3em] font-bold">{t.steps}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {plan.firstSteps.map((step, idx) => (
+                    <motion.div 
+                      key={idx} 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 + idx * 0.1 }}
+                      className="p-6 rounded-3xl bg-proton-card/40 border border-white/5 relative group/step hover:border-proton-accent/20 transition-all h-full"
+                    >
+                      <span className="absolute -top-3 -left-3 w-10 h-10 rounded-2xl bg-proton-accent text-proton-bg flex items-center justify-center font-bold text-xs shadow-lg group-hover/step:scale-110 transition-transform">
+                        0{idx + 1}
+                      </span>
+                      <p className="text-sm md:text-base leading-relaxed font-medium mt-2">{step}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+};
+
 const DashboardView = ({ 
   personas, 
   setActiveView,
@@ -950,11 +1261,30 @@ const DashboardView = ({
 }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
+  const [projectText, setProjectText] = useState('');
   const t = translations[language].dashboard;
   const common = translations[language].common;
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8">
+      <div className="proton-glass rounded-[40px] border border-proton-border/50 overflow-hidden group/architect shadow-2xl relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+        <SmartTaskArchitect 
+          language={language} 
+          projectText={projectText}
+          setProjectText={setProjectText}
+        />
+        <div className="relative z-10 border-t border-proton-border/30 bg-proton-card/30 backdrop-blur-md">
+          <NeuralPulse 
+            language={language} 
+            onSelect={(topic) => {
+              setProjectText(topic);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }} 
+          />
+        </div>
+      </div>
+
       {/* AI & Personas Section */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -3383,6 +3713,8 @@ export default function App() {
               <span className="hidden sm:inline">v1.2.0-{t.common.stable}</span>
               <span className="inline sm:hidden">v1.2</span>
             </div>
+            <div className="h-4 w-px bg-proton-border hidden md:block" />
+            <DigitalClock />
           </div>
           
           <div className="flex items-center gap-3 sm:gap-6">

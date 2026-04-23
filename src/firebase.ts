@@ -15,9 +15,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Debug logging for database ID
-console.log("Firebase DB ID:", firebaseConfigJson.firestoreDatabaseId);
-
 export const db = getFirestore(app, firebaseConfigJson.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

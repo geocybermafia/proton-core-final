@@ -28,6 +28,15 @@ service cloud.firestore {
              data.completed is bool;
     }
 
+    match /neural_pulse/{pulseId} {
+      allow list: if true;
+      allow create: if isSignedIn() && 
+                    isValidId(pulseId) && 
+                    request.resource.data.projectTitle is string &&
+                    request.resource.data.projectTitle.size() <= 200 &&
+                    request.resource.data.createdAt == request.time;
+    }
+
     match /test/connection {
       allow get: if true;
     }

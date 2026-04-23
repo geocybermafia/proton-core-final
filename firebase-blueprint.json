@@ -65,9 +65,23 @@
         "isAiSuggested": { "type": "boolean" }
       },
       "required": ["id", "content", "contentGe", "completed"]
+    },
+    "NeuralPulseEvent": {
+      "title": "NeuralPulseEvent",
+      "description": "Anonymous project plan generation events for the global feed",
+      "type": "object",
+      "properties": {
+        "projectTitle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectTitle", "createdAt"]
     }
   },
   "firestore": {
+    "/neural_pulse/{pulseId}": {
+      "schema": { "$ref": "NeuralPulseEvent" },
+      "description": "Global anonymous feed of recent activity"
+    },
     "/users/{userId}/personas/{personaId}": {
       "schema": { "$ref": "Persona" },
       "description": "Custom Personas of the user"

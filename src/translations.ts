@@ -30,6 +30,25 @@ export const translations = {
       generating: "AI is thinking...",
       upcoming_workflows: "Upcoming Workflows"
     },
+    architect: {
+      title: "Smart Task Architect",
+      placeholder: "Describe your project (e.g. Building a dog house...)",
+      button: "Analyze Project",
+      complexity: "Complexity Level",
+      time: "Estimated Time",
+      materials: "Required Materials",
+      steps: "First 3 Steps",
+      analyzing: "Architecting Plan...",
+      cost: "Est. Cost",
+      error_title: "System Alert",
+      api_error: "AI Infrastructure error. Please try again later.",
+      offline_error: "Neural link lost. Check your connection.",
+      cooldown: "Processor cooling down... please wait.",
+      pulse_title: "Recent Neural Activity",
+      pulse_prefix: "Neural Pulse detected:",
+      pulse_ago: "ago",
+      pulse_just_now: "just now"
+    },
     dashboard: {
       ai_personas: "AI & Digital Personas",
       featured_intelligence: "Featured Intelligence",
@@ -118,6 +137,25 @@ export const translations = {
       no_tasks: "აქტიური დავალებები არ არის. სთხოვეთ AI-ს რჩევა!",
       generating: "AI ფიქრობს...",
       upcoming_workflows: "მომავალი პროცესები"
+    },
+    architect: {
+      title: "Smart Task არქიტექტორი",
+      placeholder: "აღწერეთ პროექტი (მაგ: ხის მაგიდის რესტავრაცია...)",
+      button: "პროექტის ანალიზი",
+      complexity: "სირთულის დონე",
+      time: "სავარაუდო დრო",
+      materials: "საჭირო მასალები",
+      steps: "პირველი 3 ნაბიჯი",
+      analyzing: "გეგმის მომზადება...",
+      cost: "სავ. ღირებულება",
+      error_title: "სისტემური შეტყობინება",
+      api_error: "AI ინფრასტრუქტურის შეცდომა. სცადეთ მოგვიანებით.",
+      offline_error: "კავშირი გაწყვეტილია. შეამოწმეთ ინტერნეტი.",
+      cooldown: "პროცესორი გაციების პროცესშია... გთხოვთ დაელოდოთ.",
+      pulse_title: "უახლესი აქტივობა",
+      pulse_prefix: "ნეირონული იმპულსი:",
+      pulse_ago: "წინ",
+      pulse_just_now: "ახლახანს"
     },
     dashboard: {
       ai_personas: "AI და ციფრული პერსონაჟები",
