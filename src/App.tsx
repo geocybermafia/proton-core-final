@@ -12,7 +12,7 @@ import {
   GoogleAuthProvider,
   EmailAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 interface FirestoreErrorInfo {
   error: string;
@@ -110,7 +110,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
-import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type Persona, type TaskPlan } from './services/gemini';
+import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type Persona, type TaskPlan, type GeminiMetadata } from './services/gemini';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
@@ -170,30 +170,45 @@ const SidebarItem = React.memo(({
   label, 
   active, 
   onClick,
-  expanded = true
+  expanded = true,
+  uiMode = 'operator'
 }: { 
   icon: any, 
   label: string, 
   active: boolean, 
   onClick: () => void,
-  expanded?: boolean
+  expanded?: boolean,
+  uiMode?: 'operator' | 'artisan'
 }) => (
   <button
     onClick={onClick}
     className={cn(
       "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all duration-300 group relative",
       active 
-        ? "bg-proton-accent/10 text-proton-accent border border-proton-accent/20" 
-        : "text-proton-muted hover:text-proton-text hover:bg-white/5",
+        ? "bg-proton-accent/10 text-proton-accent border border-proton-accent/20"
+        : "text-proton-muted hover:text-proton-text hover:bg-proton-text/5",
       !expanded && "justify-center px-0"
     )}
     title={!expanded ? label : undefined}
   >
     <Icon size={18} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
     {expanded && (
-      <span className="font-bold text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2">{label}</span>
+      <span className={cn(
+        "text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2",
+        uiMode === 'artisan' ? "font-sans font-semibold" : "font-mono font-bold"
+      )}>
+        {label}
+      </span>
     )}
-    {active && expanded && <motion.div layoutId="active-pill" className="ml-auto w-1 h-1 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />}
+    {active && expanded && (
+      <motion.div 
+        layoutId="active-pill" 
+        className={cn(
+          "ml-auto w-1 h-1 rounded-full bg-proton-accent",
+          uiMode === 'operator' && "shadow-[0_0_8px_rgba(0,242,255,0.8)]"
+        )} 
+      />
+    )}
     {active && !expanded && <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-proton-accent rounded-full" />}
   </button>
 ));
@@ -610,7 +625,7 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
                     {strengthLabel}
                   </span>
                 </div>
-                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-1 w-full bg-proton-muted/10 rounded-full overflow-hidden">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${(passwordStrength / 4) * 100}%` }}
@@ -655,15 +670,15 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
         </form>
 
         <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-proton-border"></div></div>
           <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-proton-muted bg-transparent">
-            <span className="px-2 bg-proton-bg/20 backdrop-blur-sm">{t.or_continue_with}</span>
+            <span className="px-2 bg-proton-bg">{t.or_continue_with}</span>
           </div>
         </div>
 
         <button 
           onClick={onGoogleSignIn}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-xl transition-all border border-white/10 active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-proton-card/50 hover:bg-proton-card text-proton-text font-semibold rounded-xl transition-all border border-proton-border active:scale-[0.98]"
         >
           <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -687,7 +702,7 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   );
 };
 
-const DigitalClock = () => {
+const DigitalClock = ({ uiMode }: { uiMode?: 'operator' | 'artisan' }) => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -697,7 +712,10 @@ const DigitalClock = () => {
 
   return (
     <div className="flex flex-col items-end px-4">
-      <div className="text-sm md:text-xl font-mono font-bold tracking-tighter text-proton-accent drop-shadow-[0_0_10px_rgba(0,242,255,0.8)]">
+      <div className={cn(
+        "text-sm md:text-xl font-mono font-bold tracking-tighter transition-all duration-500",
+        "text-proton-accent drop-shadow-[0_0_10px_var(--color-proton-accent)]"
+      )}>
         {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
       </div>
       <div className="text-[8px] font-mono text-proton-muted uppercase tracking-[0.3em] font-bold">
@@ -714,7 +732,8 @@ const OrganizerView = ({
   onAddTask,
   onToggleTask,
   onDeleteTask,
-  onAiSuggest
+  onAiSuggest,
+  uiMode
 }: {
   language: 'en' | 'ka',
   workflows: Workflow[],
@@ -722,7 +741,8 @@ const OrganizerView = ({
   onAddTask: (content: string) => void,
   onToggleTask: (id: string) => void,
   onDeleteTask: (id: string) => void,
-  onAiSuggest: () => void
+  onAiSuggest: () => void,
+  uiMode: 'operator' | 'artisan'
 }) => {
   const t = translations[language].organizer;
   const common = translations[language].common;
@@ -746,10 +766,10 @@ const OrganizerView = ({
     <div className="flex flex-col h-full w-full max-w-5xl mx-auto p-4 md:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-0.5">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white">{t.title}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-proton-text">{t.title}</h1>
           <p className="text-proton-muted text-[10px] md:text-xs font-mono uppercase tracking-[0.2em]">{t.subtitle}</p>
         </div>
-        <DigitalClock />
+        <DigitalClock uiMode={uiMode} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -760,7 +780,7 @@ const OrganizerView = ({
               <CalendarIcon size={18} className="text-proton-accent" />
               {t.calendar}
             </h2>
-            <div className="p-3 sm:p-4 rounded-2xl proton-glass bg-white/[0.02] border border-white/[0.05]">
+            <div className="p-3 sm:p-4 rounded-2xl proton-glass border border-proton-border/30 shadow-sm">
               <style>{`
                 .react-calendar {
                   background: transparent !important;
@@ -774,7 +794,7 @@ const OrganizerView = ({
                   height: 36px !important;
                 }
                 .react-calendar__navigation button {
-                  color: white !important;
+                  color: var(--color-proton-text) !important;
                   font-weight: bold !important;
                   min-width: 36px !important;
                   background: none !important;
@@ -787,27 +807,29 @@ const OrganizerView = ({
                 }
                 .react-calendar__tile {
                   padding: 0.8em 0.2em !important;
-                  color: #ccc !important;
+                  color: var(--color-proton-text) !important;
+                  opacity: 0.7;
                   border-radius: 8px;
                   transition: all 0.2s;
                 }
                 .react-calendar__tile:hover {
-                  background: rgba(255, 255, 255, 0.1) !important;
-                  color: white !important;
+                  background: color-mix(in srgb, var(--color-proton-text), transparent 90%) !important;
+                  opacity: 1;
                 }
                 .react-calendar__tile--active {
                   background: var(--color-proton-accent) !important;
-                  color: black !important;
+                  color: var(--color-proton-bg) !important;
+                  opacity: 1 !important;
                   font-weight: bold;
-                  box-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+                  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-proton-accent), transparent 50%);
                 }
                 .react-calendar__tile--now {
-                  background: rgba(0, 242, 255, 0.05) !important;
+                  background: color-mix(in srgb, var(--color-proton-accent), transparent 85%) !important;
                   color: var(--color-proton-accent) !important;
-                  border: 1px solid rgba(0, 242, 255, 0.3);
+                  border: 1px solid color-mix(in srgb, var(--color-proton-accent), transparent 70%) !important;
                 }
                 .react-calendar__month-view__days__day--neighboringMonth {
-                  opacity: 0.15;
+                  opacity: 0.15 !important;
                 }
               `}</style>
               <Calendar />
@@ -837,9 +859,11 @@ const OrganizerView = ({
           </section>
         </div>
 
-        {/* Right Column: Tasks */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="p-4 rounded-2xl bg-proton-card/30 border border-proton-border flex flex-col h-full min-h-[400px]">
+          <div className={cn(
+            "p-4 rounded-2xl bg-proton-card/30 border border-proton-border flex flex-col h-full min-h-[400px]",
+            uiMode === 'artisan' ? "artisan-shadow" : ""
+          )}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Layers size={18} className="text-proton-accent" />
@@ -890,7 +914,7 @@ const OrganizerView = ({
                         "group p-4 rounded-2xl flex items-center gap-4 transition-all border",
                         task.completed 
                           ? "bg-proton-accent/5 border-proton-accent/20 opacity-60" 
-                          : "bg-proton-card/50 border-proton-border"
+                          : (uiMode === 'artisan' ? "bg-proton-card border-proton-border artisan-shadow" : "bg-proton-card/50 border-proton-border")
                       )}
                     >
                       <button 
@@ -938,10 +962,12 @@ const OrganizerView = ({
 const SystemAlert = ({ 
   title, 
   message, 
+  uiMode,
   onClose 
 }: { 
   title: string, 
   message: string, 
+  uiMode: 'operator' | 'artisan',
   onClose: () => void 
 }) => (
   <motion.div
@@ -950,19 +976,19 @@ const SystemAlert = ({
     exit={{ opacity: 0, scale: 0.9, y: 20 }}
     className="fixed bottom-8 right-8 z-[100] max-w-sm w-full"
   >
-    <div className="proton-glass border-red-500/30 p-6 rounded-3xl shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
+    <div className="proton-glass border-proton-secondary/20 p-6 rounded-3xl shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-1 h-full bg-proton-secondary" />
       <div className="flex items-start gap-4">
-        <div className="p-2 rounded-xl bg-red-500/10 text-red-500">
+        <div className="p-2 rounded-xl bg-proton-secondary/10 text-proton-secondary">
           <Shield size={20} />
         </div>
         <div className="flex-1">
-          <h3 className="font-bold text-red-400">{title}</h3>
+          <h3 className="font-bold text-proton-text">{title}</h3>
           <p className="text-xs text-proton-muted mt-1">{message}</p>
         </div>
         <button 
           onClick={onClose}
-          className="text-proton-muted hover:text-white p-1"
+          className="p-1 transition-colors text-proton-muted hover:text-proton-text"
         >
           <X size={16} />
         </button>
@@ -1031,11 +1057,11 @@ const NeuralPulse = ({ language, onSelect }: { language: 'en' | 'ka', onSelect: 
               className="flex-shrink-0 group relative"
             >
               <div className="absolute -inset-0.5 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300" />
-              <div className="relative flex items-center gap-3 px-4 py-2 bg-proton-card/50 backdrop-blur-md rounded-2xl border border-white/5 group-hover:border-proton-accent/30 transition-all font-medium">
+              <div className="relative flex items-center gap-3 px-4 py-2 bg-proton-card/50 backdrop-blur-md rounded-2xl border border-proton-border hover:border-proton-accent/50 transition-all font-medium">
                 <div className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
                 <div className="flex flex-col items-start">
                   <span className="text-[10px] text-proton-accent font-bold uppercase tracking-tight">{t.pulse_prefix}</span>
-                  <span className="text-xs text-white truncate max-w-[150px]">{pulse.projectTitle}</span>
+                  <span className="text-xs text-proton-text truncate max-w-[150px]">{pulse.projectTitle}</span>
                 </div>
                 <span className="text-[9px] font-mono text-proton-muted self-end ml-4 italic">{getTimeAgo(pulse.createdAt)}</span>
               </div>
@@ -1051,12 +1077,22 @@ const SmartTaskArchitect = ({
   language, 
   projectText, 
   setProjectText,
-  user
+  user,
+  uiMode,
+  onLoadingChange,
+  aiSettings,
+  setLastGeminiMetadata,
+  trackFirestore
 }: { 
   language: 'en' | 'ka',
   projectText: string,
   setProjectText: Dispatch<SetStateAction<string>>,
-  user: any
+  user: any,
+  uiMode: 'operator' | 'artisan',
+  onLoadingChange?: (loading: boolean) => void,
+  aiSettings: GlobalAiSettings,
+  setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
+  trackFirestore: <T>(promise: Promise<T>) => Promise<T>
 }) => {
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<TaskPlan | null>(null);
@@ -1095,19 +1131,21 @@ const SmartTaskArchitect = ({
     }
 
     setLoading(true);
+    onLoadingChange?.(true);
     setPlan(null);
     setError(null);
 
     try {
-      const result = await architectTask(projectText);
-      setPlan(result);
-      localStorage.setItem(cacheKey, JSON.stringify(result));
+      const outcome = await architectTask(projectText, aiSettings.temperature);
+      setPlan(outcome.data);
+      setLastGeminiMetadata(outcome.metadata);
+      localStorage.setItem(cacheKey, JSON.stringify(outcome.data));
       
       // Emit pulse event
-      await addDoc(collection(db, 'neural_pulse'), {
+      await trackFirestore(addDoc(collection(db, 'neural_pulse'), {
         projectTitle: projectText.trim(),
         createdAt: serverTimestamp()
-      });
+      }));
 
       // Automatically create a main task and its steps for the user
       if (user) {
@@ -1119,18 +1157,18 @@ const SmartTaskArchitect = ({
           completed: false
         };
         const mainRef = doc(db, 'users', user.uid, 'tasks', mainTask.id);
-        await setDoc(mainRef, mainTask).catch(e => handleFirestoreError(e, 'write', mainRef.path));
+        await trackFirestore(setDoc(mainRef, mainTask)).catch(e => handleFirestoreError(e, 'write', mainRef.path));
 
-        for (let i = 0; i < result.firstSteps.length; i++) {
+        for (let i = 0; i < outcome.data.firstSteps.length; i++) {
           const stepTask: Task = {
             id: `step-${Date.now()}-${i}`,
-            content: result.firstSteps[i],
-            contentGe: result.firstSteps[i], // Fallback if no translation returned for steps
+            content: outcome.data.firstSteps[i],
+            contentGe: outcome.data.firstSteps[i], // Fallback if no translation returned for steps
             completed: false,
             isAiSuggested: true
           };
           const stepRef = doc(db, 'users', user.uid, 'tasks', stepTask.id);
-          await setDoc(stepRef, stepTask).catch(e => handleFirestoreError(e, 'write', stepRef.path));
+          await trackFirestore(setDoc(stepRef, stepTask)).catch(e => handleFirestoreError(e, 'write', stepRef.path));
         }
       }
 
@@ -1149,51 +1187,68 @@ const SmartTaskArchitect = ({
       });
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
   };
 
   return (
-    <section className="flex flex-col items-center justify-center py-6 space-y-8 max-w-4xl mx-auto w-full relative z-10">
+    <section className="flex flex-col items-center justify-center py-4 space-y-4 max-w-4xl mx-auto w-full relative z-10 p-4">
 
       <AnimatePresence>
         {error && (
           <SystemAlert 
             title={error.title} 
             message={error.message} 
+            uiMode={uiMode}
             onClose={() => setError(null)} 
           />
         )}
       </AnimatePresence>
-      <div className="w-full text-center space-y-3">
+      <div className="w-full text-center space-y-2">
         <motion.h2 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-proton-accent via-white to-proton-secondary bg-clip-text text-transparent"
+          className={cn(
+            "text-2xl md:text-4xl font-black tracking-tight",
+            uiMode === 'artisan' 
+              ? "text-proton-text" 
+              : "bg-gradient-to-r from-proton-accent via-proton-text to-proton-secondary bg-clip-text text-transparent"
+          )}
         >
           {t.title}
         </motion.h2>
-        <p className="text-proton-muted text-sm md:text-lg font-medium max-w-lg mx-auto">
+        <p className="text-proton-muted text-xs md:text-base font-medium max-w-md mx-auto line-clamp-1">
           {t.placeholder}
         </p>
       </div>
 
       <div className="relative w-full group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-[2rem] blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-        <div className="relative flex flex-col md:flex-row p-2 bg-proton-card/80 backdrop-blur-xl rounded-[2rem] border border-proton-border shadow-2xl group-hover:border-proton-accent/30 transition-all">
+        {uiMode === 'operator' && (
+          <div className="absolute -inset-1 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+        )}
+        <div className={cn(
+          "relative flex flex-col md:flex-row p-1.5 bg-proton-card/80 backdrop-blur-xl rounded-2xl border border-proton-border hover:border-proton-accent/40 transition-all",
+          uiMode === 'artisan' ? "artisan-shadow" : "shadow-2xl"
+        )}>
           <input 
             type="text" 
             value={projectText}
             onChange={(e) => setProjectText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
             placeholder={t.placeholder}
-            className="flex-1 bg-transparent px-6 py-4 text-sm md:text-lg focus:outline-none placeholder:text-proton-muted font-medium"
+            className="flex-1 bg-transparent px-4 py-3 text-sm md:text-base focus:outline-none placeholder:text-proton-muted font-medium"
           />
           <button 
             onClick={handleAnalyze}
             disabled={loading || !projectText.trim() || cooldown > 0}
-            className="m-1 px-8 py-4 rounded-3xl bg-proton-accent text-proton-bg font-bold text-xs md:text-base hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(0,242,255,0.4)]"
+            className={cn(
+              "m-0.5 px-6 py-3 rounded-xl font-bold text-xs md:text-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2",
+              uiMode === 'artisan' 
+                ? "bg-proton-text text-proton-bg" 
+                : "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20"
+            )}
           >
-            {loading ? <Loader2 className="animate-spin" size={20} /> : cooldown > 0 ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={20} />}
+            {loading ? <Loader2 className="animate-spin" size={16} /> : cooldown > 0 ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={16} />}
             {loading ? t.analyzing : cooldown > 0 ? `${t.cooldown} (${cooldown}s)` : t.button}
           </button>
         </div>
@@ -1207,29 +1262,38 @@ const SmartTaskArchitect = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="w-full group"
           >
-            <div className="proton-glass p-8 md:p-12 rounded-[3rem] border border-proton-accent/20 space-y-10 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <LayoutDashboard size={120} className="text-proton-accent rotate-12" />
+            <div className={cn(
+              "proton-glass p-6 md:p-8 rounded-3xl border border-proton-accent/20 space-y-6 relative overflow-hidden",
+              uiMode === 'artisan' ? "artisan-shadow" : "shadow-2xl"
+            )}>
+              <div className="absolute top-0 right-0 p-6 opacity-10">
+                <LayoutDashboard size={80} className="text-proton-accent rotate-12" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
-                <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                <div className="space-y-6">
                   <div className="space-y-3">
                     <p className="text-[10px] font-mono text-proton-accent uppercase tracking-[0.3em] font-bold">{t.complexity}</p>
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20">
+                      <div className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center border transition-colors",
+                        uiMode === 'artisan' ? "bg-proton-accent/5 border-proton-accent/20" : "bg-proton-accent/10 border-proton-accent/20"
+                      )}>
                         <Terminal size={24} className="text-proton-accent" />
                       </div>
-                      <p className="text-3xl font-bold">{plan.complexity}</p>
+                      <p className="text-3xl font-bold text-proton-text">{plan.complexity}</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <p className="text-[10px] font-mono text-proton-secondary uppercase tracking-[0.3em] font-bold">{t.time}</p>
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-2xl bg-proton-secondary/10 flex items-center justify-center border border-proton-secondary/20">
+                      <div className={cn(
+                        "h-12 w-12 rounded-2xl flex items-center justify-center border transition-colors",
+                        uiMode === 'artisan' ? "bg-proton-secondary/5 border-proton-secondary/20" : "bg-proton-secondary/10 border-proton-secondary/20"
+                      )}>
                         <Zap size={24} className="text-proton-secondary" />
                       </div>
-                      <p className="text-3xl font-bold">{plan.estimatedTime}</p>
+                      <p className="text-3xl font-bold text-proton-text">{plan.estimatedTime}</p>
                     </div>
                   </div>
                 </div>
@@ -1243,7 +1307,7 @@ const SmartTaskArchitect = ({
                           initial={{ opacity: 0, x: 20 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: idx * 0.1 }}
-                          className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+                          className="flex justify-between items-center p-4 rounded-2xl bg-proton-text/5 border border-proton-border hover:bg-proton-text/10 transition-colors"
                         >
                           <span className="text-sm font-bold">{m.item}</span>
                           <span className="text-xs font-mono bg-proton-accent/20 text-proton-accent px-3 py-1 rounded-full border border-proton-accent/30">{m.cost}</span>
@@ -1262,7 +1326,7 @@ const SmartTaskArchitect = ({
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5 + idx * 0.1 }}
-                      className="p-6 rounded-3xl bg-proton-card/40 border border-white/5 relative group/step hover:border-proton-accent/20 transition-all h-full"
+                      className="p-6 rounded-3xl bg-proton-card/40 border border-proton-border relative group/step hover:border-proton-accent/40 transition-all h-full"
                     >
                       <span className="absolute -top-3 -left-3 w-10 h-10 rounded-2xl bg-proton-accent text-proton-bg flex items-center justify-center font-bold text-xs shadow-lg group-hover/step:scale-110 transition-transform">
                         0{idx + 1}
@@ -1280,95 +1344,453 @@ const SmartTaskArchitect = ({
   );
 };
 
+const ClusterTelemetry = ({ 
+  isLoading, 
+  uiMode, 
+  language 
+}: { 
+  isLoading: boolean, 
+  uiMode: 'operator' | 'artisan',
+  language: 'en' | 'ka'
+}) => {
+  const [latency, setLatency] = useState(42);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => setIsConnected(!!user));
+    const interval = setInterval(() => {
+      setLatency(prev => {
+        const jitter = Math.floor(Math.random() * 20) - 10;
+        return Math.max(30, Math.min(150, prev + jitter));
+      });
+    }, 3000);
+    return () => {
+      unsub();
+      clearInterval(interval);
+    };
+  }, []);
+
+  return (
+    <div className={cn(
+      "p-4 rounded-2xl border transition-all duration-500 overflow-hidden relative",
+      "bg-proton-card/50 border-proton-border/50 shadow-lg",
+      uiMode === 'artisan' && "artisan-shadow"
+    )}>
+      {uiMode === 'operator' && (
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+             style={{ backgroundImage: 'radial-gradient(var(--color-proton-accent) 0.5px, transparent 0.5px)', backgroundSize: '10px 10px' }} />
+      )}
+      
+      <div className="relative z-10 flex flex-col gap-4">
+        {/* Top: Status Indicators */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1">
+            <p className="text-[7px] font-mono text-proton-muted uppercase tracking-widest">Core Node</p>
+            <div className="flex items-center gap-1.5">
+              <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-proton-muted animate-pulse")} />
+              <span className={cn("text-[10px] font-bold uppercase", uiMode === 'operator' ? "font-mono" : "font-sans")}>
+                {isConnected ? 'CONN' : 'SYNC'}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1 border-x border-proton-border/30 px-2">
+            <p className="text-[7px] font-mono text-proton-muted uppercase tracking-widest">Gemini Uplink</p>
+            <div className="flex items-center gap-1.5">
+              <div className={cn("w-1.5 h-1.5 rounded-full", isLoading ? "bg-proton-accent animate-ping" : "bg-blue-500/50")} />
+              <span className={cn("text-[10px] font-bold uppercase", uiMode === 'operator' ? "font-mono" : "font-sans")}>
+                {isLoading ? 'PROC' : 'IDLE'}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-1 pl-1">
+            <p className="text-[7px] font-mono text-proton-muted uppercase tracking-widest">Network Latency</p>
+            <div className="flex items-center gap-1.5">
+              <span className={cn("text-[10px] font-bold", uiMode === 'operator' ? "font-mono text-proton-secondary" : "font-sans text-proton-text")}>
+                {latency}ms
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom: The Pulse Visualizer (Unified UI for both modes) */}
+        <div className="h-12 flex items-end justify-around gap-1 px-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ height: "20%" }}
+              animate={{ 
+                height: isLoading ? [ "40%", "90%", "30%", "100%", "50%" ] : [ "10%", "30%", "15%", "40%", "20%" ]
+              }}
+              transition={{ 
+                duration: isLoading ? 0.3 : 1.2, 
+                repeat: Infinity,
+                delay: i * 0.05
+              }}
+              className={cn(
+                "w-1.5 rounded-t-[2px] transition-all duration-500",
+                uiMode === 'operator' 
+                  ? "bg-proton-accent/80 shadow-[0_0_10px_rgba(0,242,255,0.3)]" 
+                  : "bg-proton-accent shadow-[0_0_8px_rgba(0,113,227,0.1)]"
+              )}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DashboardView = ({ 
   personas, 
+  activeView,
   setActiveView,
   chatHistory,
   language = 'en',
-  user
+  user,
+  uiMode,
+  aiSettings,
+  setLastGeminiMetadata,
+  trackFirestore
 }: { 
   personas: Persona[], 
   activeView: View, 
   setActiveView: (v: View) => void,
   chatHistory: PersonaHistory,
   language?: 'en' | 'ka',
-  user: any
+  user: any,
+  uiMode: 'operator' | 'artisan',
+  aiSettings: GlobalAiSettings,
+  setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
+  trackFirestore: <T>(promise: Promise<T>) => Promise<T>
 }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
   const [projectText, setProjectText] = useState('');
+  const [isComputing, setIsComputing] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const t = translations[language].dashboard;
   const common = translations[language].common;
 
-  return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8">
-      <div className="proton-glass rounded-[40px] border border-proton-border/50 overflow-hidden group/architect shadow-2xl relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-        <SmartTaskArchitect 
-          language={language} 
-          projectText={projectText}
-          setProjectText={setProjectText}
-          user={user}
-        />
-        <div className="relative z-10 border-t border-proton-border/30 bg-proton-card/30 backdrop-blur-md">
-          <NeuralPulse 
-            language={language} 
-            onSelect={(topic) => {
-              setProjectText(topic);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }} 
-          />
+  // Artisan Mode Layout
+  if (uiMode === 'artisan') {
+    return (
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 px-4 sm:px-6 lg:px-8">
+        {/* Artisan Header */}
+        <div className="pt-4">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-proton-text">
+            {t.artisan_title}
+          </h1>
+          <p className="text-proton-muted text-sm mt-1 font-medium italic">
+            Curated Workspace Active
+          </p>
         </div>
-      </div>
 
-      {/* AI & Personas Section */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent">
-              <Users size={18} />
+        {/* Persona Quick Selection (Horizontal Scroll) */}
+        <div className="relative group">
+          <div className="flex items-center gap-3 overflow-x-auto pb-4 custom-scrollbar no-scrollbar scroll-smooth">
+            {personas.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setActiveView('personas')}
+                className="flex-shrink-0 flex items-center gap-3 p-3 px-5 rounded-2xl bg-proton-card border border-proton-border artisan-shadow hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                <span className="text-xl">{p.avatar}</span>
+                <div className="text-left">
+                  <p className="text-xs font-bold whitespace-nowrap">{language === 'ka' ? p.nameGe : p.name}</p>
+                  <p className="text-[10px] text-proton-muted uppercase font-mono">{p.role}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="absolute top-0 right-0 h-full w-20 bg-gradient-to-l from-proton-bg to-transparent pointer-events-none" />
+        </div>
+
+        {/* Main Bento Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Column: Architect & Tasks */}
+          <div className="lg:col-span-8 space-y-8">
+            <div className="proton-glass rounded-[40px] border border-proton-border artisan-shadow overflow-hidden group/architect relative bg-proton-card">
+              <SmartTaskArchitect 
+                language={language} 
+                projectText={projectText}
+                setProjectText={setProjectText}
+                user={user}
+                uiMode={uiMode}
+                onLoadingChange={setIsComputing}
+                aiSettings={aiSettings}
+                setLastGeminiMetadata={setLastGeminiMetadata}
+                trackFirestore={trackFirestore}
+              />
             </div>
-            <div>
-              <h2 className="text-lg md:text-xl font-bold tracking-tight">{t.ai_personas}</h2>
-              <div className="flex items-center gap-1.5 text-[7px] font-mono text-proton-muted uppercase tracking-widest mt-0.5">
-                <span className="w-1 h-1 rounded-full bg-proton-accent" />
-                {t.featured_intelligence}
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-proton-text flex items-center gap-2">
+                  <LayoutDashboard size={14} className="text-proton-accent" />
+                  Active Blueprints
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="p-5 rounded-3xl bg-proton-card border border-proton-border artisan-shadow flex items-center justify-between group cursor-pointer hover:border-proton-accent transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
+                        <Layers size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">Project_Log_{i}</p>
+                        <p className="text-[10px] text-proton-muted font-mono uppercase">Version 1.2.4</p>
+                      </div>
+                    </div>
+                    <ArrowRight size={14} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
+
+          {/* Right Column: Activity Feed */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="proton-glass rounded-[40px] border border-proton-border p-8 artisan-shadow bg-proton-card flex flex-col h-full min-h-[500px]">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
+                  <Zap size={14} className="text-proton-accent" />
+                  Activity Log
+                </h3>
+                <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                {Object.entries(chatHistory).length > 0 ? (
+                  Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
+                    msgs.slice(-2).map((m, i) => (
+                      <div key={`${personaId}-${i}`} className="p-4 rounded-2xl bg-proton-bg/50 border border-proton-border hover:border-proton-accent/30 transition-all group">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-[10px] font-mono text-proton-accent uppercase font-bold">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
+                          <span className="text-[8px] font-mono text-proton-muted font-bold">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="text-xs text-proton-muted leading-relaxed font-medium group-hover:text-proton-text transition-colors italic">"{m.content}"</p>
+                      </div>
+                    ))
+                  )
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-12">
+                    <Shield size={40} className="mb-4 text-proton-muted opacity-30" />
+                    <p className="text-xs font-mono uppercase tracking-[0.2em] text-proton-muted">No recent neural activity</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="mt-8 pt-8 border-t border-proton-border">
+                <button 
+                  onClick={() => setActiveView('organizer')}
+                  className="w-full py-4 rounded-2xl bg-proton-bg border border-proton-border hover:bg-proton-accent hover:text-white transition-all text-xs font-bold uppercase tracking-widest text-proton-text active:scale-95"
+                >
+                  Open Task Hub
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Operator Mode Layout (Existing with Toggle)
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8 px-4 sm:px-6 lg:px-8">
+      {/* Operator Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tighter transition-all duration-500 font-mono text-proton-accent uppercase">
+            {t.title}
+          </h1>
+          <p className="text-proton-muted text-[10px] md:text-xs font-mono mt-2 uppercase tracking-[0.2em]">
+            Neural Command Node [Active]
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setShowDiagnostics(!showDiagnostics)}
+            className={cn(
+              "px-4 py-2 rounded-2xl flex items-center gap-3 transition-all border font-mono text-[10px] uppercase tracking-widest",
+              showDiagnostics ? "bg-proton-accent/20 border-proton-accent text-proton-accent" : "bg-proton-card border-proton-border text-proton-muted"
+            )}
+          >
+            <Activity size={14} />
+            Diagnostics {showDiagnostics ? '[On]' : '[Off]'}
+          </button>
+          <div className="px-4 py-2 rounded-2xl flex items-center gap-3 transition-colors bg-proton-card border border-proton-border shadow-sm">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">System Online</span>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {showDiagnostics && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden space-y-6"
+          >
+            {/* Operator Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <ClusterTelemetry 
+                  isLoading={isComputing} 
+                  uiMode={uiMode} 
+                  language={language === 'ka' ? 'ka' : 'en'} 
+                />
+              </div>
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
+                {[
+                  { label: 'Active Nodes', value: '01', icon: Cpu, color: 'text-proton-accent' },
+                  { label: 'Compute Load', value: isComputing ? '89%' : '12%', icon: Activity, color: 'text-proton-secondary' },
+                ].map((stat, i) => (
+                  <div key={i} className="p-4 rounded-2xl flex items-center justify-between group cursor-pointer transition-all proton-glass bg-proton-card/50 border border-proton-border/50">
+                    <div>
+                      <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest mb-1">{stat.label}</p>
+                      <p className="text-xl font-bold tracking-tighter text-proton-text">{stat.value}</p>
+                    </div>
+                    <div className={cn("p-2 rounded-lg transition-all bg-proton-card/50 border border-proton-border/50 group-hover:border-proton-accent/40", stat.color)}>
+                      <stat.icon size={16} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* System Health Section */}
+            <section className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-proton-muted/10 text-proton-muted">
+                  <Activity size={20} />
+                </div>
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t.system_health}</h2>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: t.compute, value: '1.2 PFL', icon: Cpu },
+                  { label: t.latency, value: '0.4ms', icon: Zap },
+                  { label: t.uptime, value: '99.9%', icon: ShieldCheck },
+                  { label: 'Nodes', value: '32 Active', icon: Network },
+                ].map((stat, i) => (
+                  <div key={i} className="proton-glass p-5 rounded-2xl border border-proton-border/30 hover:border-proton-accent/20 transition-all flex flex-col gap-2">
+                    <div className="flex items-center justify-between opacity-60">
+                      <span className="text-[8px] font-mono uppercase tracking-[0.2em]">{stat.label}</span>
+                      <stat.icon size={12} />
+                    </div>
+                    <p className="font-mono font-bold text-sm tracking-tight">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Grid: Architect & Activity Feed */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="proton-glass rounded-[40px] border border-proton-border/50 overflow-hidden group/architect relative shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+            <SmartTaskArchitect 
+              language={language} 
+              projectText={projectText}
+              setProjectText={setProjectText}
+              user={user}
+              uiMode={uiMode}
+              onLoadingChange={setIsComputing}
+              aiSettings={aiSettings}
+              setLastGeminiMetadata={setLastGeminiMetadata}
+              trackFirestore={trackFirestore}
+            />
+          </div>
+
+          <div className="relative z-10 p-2 proton-glass rounded-[30px] border border-proton-border/30 bg-proton-card/30 backdrop-blur-md">
+            <NeuralPulse 
+              language={language} 
+              onSelect={(topic) => {
+                setProjectText(topic);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }} 
+            />
+          </div>
+        </div>
+
+        <div className="proton-glass rounded-[40px] border border-proton-border/50 p-6 flex flex-col h-full shadow-xl">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex items-center gap-2">
+              <Zap size={14} className="text-proton-accent" />
+              Activity Log
+            </h3>
+            <span className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+          </div>
+          
+          <div className="flex-1 overflow-y-auto max-h-[440px] pr-2 space-y-4 custom-scrollbar">
+            {Object.entries(chatHistory).length > 0 ? (
+              Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
+                msgs.slice(-2).map((m, i) => (
+                  <div key={`${personaId}-${i}`} className="p-3 rounded-xl border transition-colors bg-proton-card/40 border-proton-border/30 hover:border-proton-accent/30">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[8px] font-mono text-proton-accent uppercase">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
+                      <span className="text-[8px] font-mono text-proton-muted">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p className="text-[10px] text-proton-muted line-clamp-2 leading-relaxed italic">{m.content}</p>
+                  </div>
+                ))
+              )
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
+                <Shield size={32} className="mb-4 text-proton-muted" />
+                <p className="text-[10px] font-mono uppercase tracking-widest">No Recent Activity</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-proton-border/50">
+            <button 
+              onClick={() => setActiveView('organizer')}
+              className="w-full py-2 rounded-xl border border-proton-border hover:bg-proton-accent/10 hover:text-proton-accent transition-all text-[10px] font-mono font-bold uppercase tracking-widest"
+            >
+              Open Task Hub
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Operator Personas Grid */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-mono font-bold uppercase tracking-widest flex items-center gap-2">
+            <Users size={16} className="text-proton-accent" />
+            {t.ai_personas}
+          </h2>
           <button 
             onClick={() => setActiveView('personas')}
-            className="text-xs font-mono text-proton-accent hover:underline flex items-center gap-2 group"
+            className="text-[10px] font-mono text-proton-accent hover:underline flex items-center gap-1 group"
           >
-            {t.view_all} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            {t.view_all} <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {personas.slice(0, 3).map((p) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {personas.slice(0, 4).map((p) => (
             <div 
               key={p.id}
               onClick={() => setActiveView('personas')}
-              className="group proton-glass p-6 rounded-3xl hover:border-proton-accent/40 transition-all cursor-pointer relative overflow-hidden"
+              className="group proton-glass p-3 rounded-2xl hover:border-proton-accent/40 transition-all cursor-pointer relative overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative z-10 flex items-start gap-4">
-                <div className="text-4xl bg-proton-card w-16 h-16 rounded-2xl flex items-center justify-center border border-proton-border group-hover:scale-110 transition-transform duration-500">
+              <div className="relative z-10 flex items-center gap-3">
+                <div className="text-xl bg-proton-card w-10 h-10 rounded-xl flex items-center justify-center border border-proton-border group-hover:scale-110 transition-transform">
                   {p.avatar}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-lg truncate group-hover:text-proton-accent transition-colors">{language === 'ka' ? p.nameGe : p.name}</h3>
-                  <p className="text-[10px] font-mono text-proton-accent/70 uppercase tracking-widest mb-2">{p.role}</p>
-                  <p className="text-xs text-proton-muted line-clamp-2 leading-relaxed">{language === 'ka' ? p.descriptionGe : p.description}</p>
-                </div>
-              </div>
-              <div className="mt-6 flex items-center justify-between pt-4 border-t border-proton-border/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
-                  <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.active}</span>
-                </div>
-                <div className="text-[10px] font-mono text-proton-muted uppercase tracking-widest italic">
-                  {chatHistory[p.id]?.length || 0} {t.messages}
+                <div className="min-w-0">
+                  <h3 className="font-bold text-xs truncate">{language === 'ka' ? p.nameGe : p.name}</h3>
+                  <p className="text-[8px] font-mono text-proton-muted uppercase truncate leading-none">{p.role}</p>
                 </div>
               </div>
             </div>
@@ -1376,7 +1798,7 @@ const DashboardView = ({
         </div>
       </section>
 
-      {/* Financial / Web3 Section */}
+      {/* Operator Financial Section */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1405,14 +1827,14 @@ const DashboardView = ({
                   </h3>
                   <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-proton-accent">
                     <span className="bg-proton-accent/10 px-2 py-0.5 rounded border border-proton-accent/20">≈ ₾ {(parseFloat(balance?.formatted || '0') * 2650 * 2.72).toLocaleString(undefined, { maximumFractionDigits: 0 })} GEL</span>
-                    <span className="bg-white/5 px-2 py-0.5 rounded border border-white/10 text-white/60">≈ $ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString(undefined, { maximumFractionDigits: 0 })} USD</span>
+                    <span className="px-2 py-0.5 rounded border border-white/10 text-white/60">≈ $ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString(undefined, { maximumFractionDigits: 0 })} USD</span>
                   </div>
                 </div>
               </div>
               <div className="flex gap-4">
                 <button 
                   onClick={() => setActiveView('web3')}
-                  className="px-6 py-3 rounded-xl bg-white text-black font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
+                  className="px-6 py-3 rounded-xl bg-proton-accent text-proton-bg font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
                 >
                   {t.quick_deposit}
                 </button>
@@ -1446,71 +1868,59 @@ const DashboardView = ({
           </div>
         </div>
       </section>
-
-      {/* System Health Section */}
-      <section className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-proton-muted/10 text-proton-muted">
-            <Activity size={20} />
-          </div>
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t.system_health}</h2>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: t.compute, value: '1.2 PFL', icon: Cpu },
-            { label: t.latency, value: '0.4ms', icon: Zap },
-            { label: t.uptime, value: '99.9%', icon: ShieldCheck },
-            { label: 'Nodes', value: '32 Active', icon: Network },
-          ].map((stat, i) => (
-            <div key={i} className="proton-glass p-5 rounded-2xl border border-proton-border/30 hover:border-proton-accent/20 transition-all flex flex-col gap-2">
-              <div className="flex items-center justify-between opacity-60">
-                <span className="text-[8px] font-mono uppercase tracking-[0.2em]">{stat.label}</span>
-                <stat.icon size={12} />
-              </div>
-              <p className="font-mono font-bold text-sm tracking-tight">{stat.value}</p>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 };
 
-const ComputeView = () => {
+const ComputeView = ({ 
+  metadata, 
+  aiSettings, 
+  setAiSettings, 
+  isFirestoreActive,
+  uiMode
+}: { 
+  metadata: GeminiMetadata | null, 
+  aiSettings: GlobalAiSettings, 
+  setAiSettings: Dispatch<SetStateAction<GlobalAiSettings>>,
+  isFirestoreActive: boolean,
+  uiMode: 'operator' | 'artisan'
+}) => {
   const [provisioning, setProvisioning] = useState(false);
   const [status, setStatus] = useState<'idle' | 'provisioning' | 'active'>('active');
-  const [progress, setProgress] = useState(100);
 
-  // Mock data for charts
+  // Resource Data: map to actual resource load (linked to temperature and usage)
   const resourceData = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
     time: i,
-    gpu: 40 + Math.random() * 50,
-    cpu: 20 + Math.random() * 30,
-  })), []);
+    gpu: aiSettings.temperature * 100 + (Math.random() * 10),
+    cpu: (metadata?.totalTokenCount ? Math.min(100, metadata.totalTokenCount / 10) : 10) + Math.random() * 5,
+  })), [aiSettings.temperature, metadata]);
 
-  const startProvisioning = () => {
-    setProvisioning(true);
-    setStatus('provisioning');
-    setProgress(0);
-  };
-
-  useEffect(() => {
-    if (status === 'provisioning') {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setStatus('active');
-            setProvisioning(false);
-            return 100;
-          }
-          return prev + 2;
-        });
-      }, 50);
-      return () => clearInterval(interval);
-    }
-  }, [status]);
+  const stats = [
+    { 
+      label: 'Compute Power', 
+      value: metadata ? `${metadata.totalTokenCount} TOK` : '0 TOK', 
+      subValue: metadata ? `${metadata.promptTokenCount}p / ${metadata.candidatesTokenCount}c` : '--',
+      icon: Cpu 
+    },
+    { 
+      label: 'Active GPU Nodes', 
+      value: metadata ? '32' : '0', 
+      subValue: metadata ? 'CONNECTED' : 'STANDBY',
+      icon: Activity 
+    },
+    { 
+      label: 'Network Throughput', 
+      value: isFirestoreActive ? `${(Math.random() * 5 + 10).toFixed(1)} Gbps` : '0.1 Gbps', 
+      subValue: isFirestoreActive ? 'SYNCING' : 'IDLE',
+      icon: Network 
+    },
+    { 
+      label: 'Cluster Latency', 
+      value: metadata ? `${metadata.latency}ms` : '--', 
+      subValue: metadata ? 'REAL-TIME' : 'N/A',
+      icon: Zap 
+    },
+  ];
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -1531,18 +1941,14 @@ const ComputeView = () => {
 
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Compute Power', value: '1.2 PFLOPS', icon: Cpu },
-          { label: 'Active GPU Nodes', value: status === 'active' ? '32' : '0', icon: Activity },
-          { label: 'Network Throughput', value: '14.2 Gbps', icon: Network },
-          { label: 'Cluster Latency', value: status === 'active' ? '0.4ms' : '--', icon: Zap },
-        ].map((stat, i) => (
+        {stats.map((stat, i) => (
           <div key={i} className="proton-glass p-6 rounded-2xl flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-proton-muted text-[10px] uppercase font-mono tracking-widest">{stat.label}</span>
               <stat.icon size={16} className="text-proton-accent" />
             </div>
             <p className="text-2xl font-bold font-mono">{stat.value}</p>
+            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-tighter">{stat.subValue}</p>
           </div>
         ))}
       </div>
@@ -1550,58 +1956,88 @@ const ComputeView = () => {
       {/* Graphs Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 proton-glass p-6 rounded-2xl">
-          <h4 className="font-bold flex items-center gap-2 mb-6">Resource Load Overload</h4>
+          <div className="flex items-center justify-between mb-6">
+            <h4 className="font-bold flex items-center gap-2">Resource Load Overview</h4>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-proton-accent" />
+                <span className="text-[10px] font-mono text-proton-muted uppercase">LOAD (TEMP)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-purple-500" />
+                <span className="text-[10px] font-mono text-proton-muted uppercase">TRAFFIC (TOKENS)</span>
+              </div>
+            </div>
+          </div>
           <div className="h-full w-full relative min-h-[256px] overflow-hidden">
             <ResponsiveContainer width="100%" height={256} minWidth={0}>
               <AreaChart data={resourceData}>
                 <defs>
                   <linearGradient id="colorGpu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00f2ff" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00f2ff" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-proton-accent)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--color-proton-accent)" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-proton-secondary)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--color-proton-secondary)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-proton-border)" />
                 <XAxis dataKey="time" hide />
-                <YAxis stroke="#666" fontSize={10} />
-                <Tooltip contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', fontSize: '12px' }} />
-                <Area type="monotone" dataKey="gpu" stroke="#00f2ff" fillOpacity={1} fill="url(#colorGpu)" />
-                <Area type="monotone" dataKey="cpu" stroke="#8884d8" fill="transparent" />
+                <YAxis stroke="var(--color-proton-muted)" fontSize={10} />
+                <Tooltip contentStyle={{ 
+                  backgroundColor: 'var(--color-proton-card)', 
+                  border: '1px solid var(--color-proton-border)', 
+                  fontSize: '12px',
+                  borderRadius: '12px',
+                  color: 'var(--color-proton-text)'
+                }} />
+                <Area type="monotone" dataKey="gpu" stroke="var(--color-proton-accent)" strokeWidth={2} fillOpacity={1} fill="url(#colorGpu)" />
+                <Area type="monotone" dataKey="cpu" stroke="var(--color-proton-secondary)" strokeWidth={2} fillOpacity={1} fill="url(#colorCpu)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
         
-        {/* Provisioning/Cluster Control */}
+        {/* Provisioning/Cluster Control -> Now Interactive Temperature Slider */}
         <div className="proton-glass p-6 rounded-2xl flex flex-col gap-6">
-          <h4 className="font-bold">Cluster Provisioning</h4>
-          <div className="flex-1 flex flex-col justify-center gap-4">
-             <div className="space-y-1">
-                <div className="flex justify-between text-xs font-mono text-proton-muted">
-                    <span>PROGRESS</span>
-                    <span>{progress}%</span>
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold">Model Temperature</h4>
+            <Sparkles size={16} className="text-proton-accent" />
+          </div>
+          <div className="flex-1 flex flex-col justify-center gap-8">
+             <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest block">COMPUTE LOAD</span>
+                      <p className="text-sm font-bold">{aiSettings.temperature < 0.4 ? 'CONCISE / STRICT' : aiSettings.temperature > 0.7 ? 'CREATIVE / VERBOSE' : 'BALANCED'}</p>
+                    </div>
+                    <span className="text-2xl font-mono font-bold text-proton-accent">{(aiSettings.temperature * 100).toFixed(0)}%</span>
                 </div>
-                <div className="h-2 bg-proton-border rounded-full overflow-hidden">
-                    <motion.div 
-                        className="h-full bg-proton-accent"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
+                <div className="relative pt-4">
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="1" 
+                      step="0.1" 
+                      value={aiSettings.temperature}
+                      onChange={(e) => setAiSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                      className="w-full h-1 bg-proton-border rounded-lg appearance-none cursor-pointer accent-proton-accent"
                     />
+                    <div className="flex justify-between mt-2 text-[8px] font-mono text-proton-muted uppercase tracking-widest">
+                      <span>Strict</span>
+                      <span>Balanced</span>
+                      <span>Creative</span>
+                    </div>
                 </div>
              </div>
              
-             <button 
-              onClick={startProvisioning}
-              disabled={status !== 'idle'}
-              className={cn(
-                "proton-button",
-                status === 'idle' 
-                  ? "bg-proton-accent text-proton-bg hover:bg-proton-accent/90" 
-                  : "bg-proton-border text-proton-muted cursor-not-allowed"
-              )}
-            >
-              {status === 'provisioning' ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
-              {status === 'idle' ? 'Provision Cluster' : status === 'provisioning' ? 'Provisioning...' : 'Provisioned'}
-            </button>
+             <div className="p-4 rounded-xl bg-proton-accent/5 border border-proton-accent/10">
+               <p className="text-[10px] leading-relaxed text-proton-muted">
+                 Adjusting temperature directly modifies the underlying <span className="text-proton-accent">Gemini Core</span> provisioning. 
+                 Higher percentages yield more diverse and complex outputs at the cost of strict instruction following.
+               </p>
+             </div>
           </div>
         </div>
       </div>
@@ -1619,8 +2055,10 @@ const PersonasView = ({
   personas,
   onUpdatePersonas,
   aiSettings,
+  setLastGeminiMetadata,
   workflows,
-  tasks
+  tasks,
+  uiMode
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -1629,8 +2067,10 @@ const PersonasView = ({
   personas: Persona[],
   onUpdatePersonas: (personas: Persona[]) => void,
   aiSettings: GlobalAiSettings,
+  setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   workflows: Workflow[],
-  tasks: Task[]
+  tasks: Task[],
+  uiMode: 'operator' | 'artisan'
 }) => {
   const handleTTS = async (text: string) => {
     try {
@@ -1768,7 +2208,7 @@ const PersonasView = ({
       - Reference the user's specific progress from their history.
     `;
 
-    const response = await chatWithPersona(
+    const { text, metadata } = await chatWithPersona(
       selectedPersona, 
       userMessage, 
       apiHistory, 
@@ -1778,7 +2218,8 @@ const PersonasView = ({
       aiSettings.temperature, 
       (aiSettings.systemInstruction || "") + userContext
     );
-    onNewMessage(selectedPersona.id, { role: 'model', content: response, timestamp: Date.now() });
+    setLastGeminiMetadata(metadata);
+    onNewMessage(selectedPersona.id, { role: 'model', content: text, timestamp: Date.now() });
     setLoading(false);
   };
 
@@ -2083,7 +2524,7 @@ const PersonasView = ({
                 initial={{ scale: 0.9, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.9, y: 20 }}
-                className="proton-glass p-4 sm:p-8 rounded-3xl max-w-md w-full space-y-4 sm:space-y-6 shadow-2xl"
+                className="proton-glass p-4 sm:p-8 rounded-3xl max-w-md w-full space-y-4 sm:space-y-6 shadow-2xl border-proton-border/80"
               >
                 <div className="flex justify-between items-center bg-transparent pb-4 border-b border-proton-border/50">
                   <h3 className="text-xl font-bold flex items-center gap-2">
@@ -2234,7 +2675,7 @@ const PersonasView = ({
                 "p-4 rounded-2xl text-sm leading-relaxed",
                 msg.role === 'user' 
                   ? "bg-proton-accent text-proton-bg font-medium rounded-tr-none" 
-                  : "bg-proton-card border border-proton-border rounded-tl-none prose prose-invert prose-sm"
+                  : cn("bg-proton-card border border-proton-border rounded-tl-none prose prose-sm max-w-none", uiMode === 'operator' && "prose-invert")
               )}>
                 {msg.role === 'model' ? (
                   <div className="space-y-2">
@@ -2294,7 +2735,7 @@ const PersonasView = ({
 };
 
 
-const Web3View = () => {
+const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({
     address: address,
@@ -2308,8 +2749,8 @@ const Web3View = () => {
   return (
     <div className="space-y-12 md:space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {!isConnected ? (
-        <div className="max-w-md mx-auto w-full space-y-8 text-center py-20 px-6 proton-glass rounded-[40px] border border-white/5 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-purple-500/5 pointer-events-none" />
+        <div className="max-w-md mx-auto w-full space-y-8 text-center py-20 px-6 proton-glass rounded-[40px] border border-proton-border relative overflow-hidden shadow-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-proton-secondary/5 pointer-events-none" />
           
           <div className="relative z-10 space-y-6">
             <div className="mx-auto w-20 h-20 rounded-3xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-muted shadow-2xl">
@@ -2400,21 +2841,21 @@ const Web3View = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <button 
                         onClick={() => setShowInvoiceModal(true)}
-                        className="proton-glass p-6 rounded-[32px] border border-white/5 hover:border-proton-accent/50 transition-all text-left space-y-4 group"
+                        className="proton-glass p-6 rounded-[32px] border border-proton-border hover:border-proton-accent/50 transition-all text-left space-y-4 group cursor-pointer"
                     >
                         <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-110 transition-transform">
                             <FileText size={24} />
                         </div>
                         <div>
                             <h4 className="font-bold text-lg">Smart Invoicing</h4>
-                            <p className="text-xs text-proton-muted">შექმენით ინვოისი AI სერვისებისთვის</p>
+                            <p className="text-xs text-proton-muted uppercase tracking-tighter">შექმენით ინვოისი AI სერვისებისთვის</p>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono text-proton-accent uppercase tracking-[0.2em] font-bold pt-2">
-                            Generate Now <ArrowRight size={14} />
+                            Generate Now <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                         </div>
                     </button>
 
-                    <div className="proton-glass p-6 rounded-[32px] border border-white/5 space-y-4">
+                    <div className="proton-glass p-6 rounded-[32px] border border-proton-border space-y-4 shadow-sm">
                         <div className="w-12 h-12 rounded-2xl bg-proton-secondary/10 text-proton-secondary flex items-center justify-center">
                             <Globe size={24} />
                         </div>
@@ -2489,7 +2930,7 @@ const Web3View = () => {
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="proton-glass p-8 rounded-[40px] max-w-2xl w-full border border-white/10 shadow-2xl space-y-8 relative overflow-hidden"
+                        className="proton-glass p-8 rounded-[40px] max-w-2xl w-full border border-proton-border/80 shadow-2xl space-y-8 relative overflow-hidden"
                     >
                          <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
                          
@@ -2564,7 +3005,7 @@ const Web3View = () => {
 
 
 
-const ImageView = () => {
+const ImageView = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2634,12 +3075,14 @@ const WorkflowEditor = ({
   workflow,
   onSave,
   onClose,
-  personas
+  personas,
+  uiMode
 }: {
   workflow: Workflow,
   onSave: (workflow: Workflow) => void,
   onClose: () => void,
-  personas: Persona[]
+  personas: Persona[],
+  uiMode: 'operator' | 'artisan'
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
   const [editorMode, setEditorMode] = useState<'form' | 'flow'>('form');
@@ -2813,7 +3256,7 @@ const WorkflowEditor = ({
           </div>
         ) : (
           <div className="h-[300px] sm:h-[400px] md:h-[500px] w-full mt-4 shrink-0">
-            <WorkflowFlowEditor workflow={formData} onSave={setFormData} personas={personas} />
+            <WorkflowFlowEditor workflow={formData} onSave={setFormData} personas={personas} uiMode={uiMode} />
           </div>
         )}
 
@@ -2830,12 +3273,14 @@ const WorkflowsView = ({
   workflows,
   setWorkflows,
   personas,
-  user
+  user,
+  uiMode
 }: {
   workflows: Workflow[],
   setWorkflows: React.Dispatch<React.SetStateAction<Workflow[]>>,
   personas: Persona[],
-  user: any
+  user: any,
+  uiMode: 'operator' | 'artisan'
 }) => {
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
@@ -3041,6 +3486,7 @@ const WorkflowsView = ({
             onSave={handleSave}
             onClose={() => setEditingWorkflow(null)}
             personas={personas}
+            uiMode={uiMode}
           />
         )}
       </AnimatePresence>
@@ -3056,7 +3502,8 @@ const ProfileView = ({
   personas,
   user,
   onSignIn,
-  onSignOut
+  onSignOut,
+  uiMode
 }: { 
   profile: UserProfile, 
   setProfile: React.Dispatch<React.SetStateAction<UserProfile>>, 
@@ -3065,7 +3512,8 @@ const ProfileView = ({
   personas: Persona[],
   user: any,
   onSignIn: () => void,
-  onSignOut: () => void
+  onSignOut: () => void,
+  uiMode: 'operator' | 'artisan'
 }) => {
   const language = profile.language;
   const t = translations[language].sidebar;
@@ -3254,8 +3702,48 @@ const ProfileView = ({
   );
 };
 
+const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMode: (m: 'operator' | 'artisan') => void, t: any }) => (
+  <div className="flex items-center gap-2 p-1 rounded-xl bg-proton-card border border-proton-border shadow-inner">
+    <button
+      onClick={() => setMode('operator')}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+        mode === 'operator' 
+          ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
+          : "text-proton-muted hover:text-proton-text"
+      )}
+    >
+      <Terminal size={14} />
+      <span className="hidden lg:inline">{t.modes.operator}</span>
+    </button>
+    <button
+      onClick={() => setMode('artisan')}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+        mode === 'artisan' 
+          ? "bg-proton-accent text-white shadow-lg shadow-proton-accent/10" 
+          : "text-proton-muted hover:text-proton-text"
+      )}
+    >
+      <Edit2 size={14} />
+      <span className="hidden lg:inline">{t.modes.artisan}</span>
+    </button>
+  </div>
+);
+
 export default function App() {
-  const [activeView, setActiveView] = useState<View>('dashboard');                
+  const [uiMode, setUiMode] = useState<'operator' | 'artisan'>(
+    (localStorage.getItem('proton_ui_mode') as 'operator' | 'artisan') || 'operator'
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-ui-mode', uiMode);
+    localStorage.setItem('proton_ui_mode', uiMode);
+  }, [uiMode]);
+
+  const [activeView, setActiveView] = useState<View>('dashboard');
+  const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
+  const [isFirestoreActive, setIsFirestoreActive] = useState(false);
   const handleViewChange = React.useCallback((view: View) => {
     setActiveView(view);
     if (window.innerWidth < 768) {
@@ -3514,6 +4002,15 @@ export default function App() {
     }
   };
 
+  async function trackFirestore<T>(promise: Promise<T>): Promise<T> {
+    setIsFirestoreActive(true);
+    try {
+      return await promise;
+    } finally {
+      setTimeout(() => setIsFirestoreActive(false), 800);
+    }
+  }
+
   const handleAddTask = (content: string) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
@@ -3524,7 +4021,7 @@ export default function App() {
     setTasks(prev => [...prev, newTask]);
     if (user) {
       const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
-      setDoc(docRef, newTask).catch(e => handleFirestoreError(e, 'write', docRef.path));
+      trackFirestore(setDoc(docRef, newTask)).catch(e => handleFirestoreError(e, 'write', docRef.path));
     }
   };
 
@@ -3534,7 +4031,7 @@ export default function App() {
         const updated = { ...t, completed: !t.completed };
         if (user) {
           const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          setDoc(docRef, updated).catch(e => handleFirestoreError(e, 'write', docRef.path));
+          trackFirestore(setDoc(docRef, updated)).catch(e => handleFirestoreError(e, 'write', docRef.path));
         }
         return updated;
       }
@@ -3543,11 +4040,11 @@ export default function App() {
   };
 
   const handleDeleteTask = (id: string) => {
-    setTasks(prev => {
-      const updated = prev.filter(t => t.id !== id);
-      // We could delete from Firebase here, but filtering is sufficient for local session
-      return updated;
-    });
+    setTasks(prev => prev.filter(t => t.id !== id));
+    if (user) {
+      const docRef = doc(db, 'users', user.uid, 'tasks', id);
+      trackFirestore(deleteDoc(docRef)).catch(e => handleFirestoreError(e, 'delete', docRef.path));
+    }
   };
 
   const handleAiSuggestTasks = async () => {
@@ -3559,8 +4056,9 @@ export default function App() {
       Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]
       Ensure the content is specific to the user's business niche.`;
       
-      const response = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3-flash-preview");
-      const suggestions = JSON.parse(response.replace(/```json|```/g, '').trim());
+      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3-flash-preview");
+      setLastGeminiMetadata(outcome.metadata);
+      const suggestions = JSON.parse(outcome.text.replace(/```json|```/g, '').trim());
       
       const newTasks = suggestions.map((s: any, i: number) => ({
         id: `ai-task-${Date.now()}-${i}`,
@@ -3612,18 +4110,22 @@ export default function App() {
       {/* Sidebar */}
       <aside 
         className={cn(
-          "border-r border-proton-border bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl flex flex-col z-50 overflow-x-hidden",
-          "fixed inset-y-0 left-0 md:relative h-full transition-all duration-300 ease-in-out",
+          "border-r border-proton-border flex flex-col z-50 overflow-x-hidden transition-all duration-300 ease-in-out bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl",
           isSidebarOpen ? "translate-x-0 w-64 px-3" : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
         )}
       >
         <div className={cn("p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shrink-0 shadow-[0_0_15px_rgba(0,242,255,0.3)]">
+          <div className={cn(
+            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500",
+            uiMode === 'artisan' 
+              ? "bg-proton-text text-proton-bg" 
+              : "bg-gradient-to-br from-proton-accent to-proton-secondary text-proton-bg shadow-[0_0_15px_rgba(0,242,255,0.3)]"
+          )}>
             <Zap size={24} fill="currentColor" />
           </div>
           {isSidebarOpen && (
             <div className="font-bold text-lg tracking-tight transition-opacity duration-300 animate-in fade-in slide-in-from-left-1">
-              Proton Core <span className="text-proton-accent">AI</span>
+              {uiMode === 'artisan' ? 'Proton' : 'Proton Core'} <span className="text-proton-accent">{uiMode === 'artisan' ? 'Studio' : 'AI'}</span>
             </div>
           )}
         </div>
@@ -3637,20 +4139,25 @@ export default function App() {
               active={activeView === 'dashboard'} 
               onClick={() => handleViewChange('dashboard')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
-            <SidebarItem 
-              icon={Cpu} 
-              label={t.sidebar.compute} 
-              active={activeView === 'compute'} 
-              onClick={() => handleViewChange('compute')} 
-              expanded={isSidebarOpen}
-            />
+            {uiMode !== 'artisan' && (
+              <SidebarItem 
+                icon={Cpu} 
+                label={t.sidebar.compute} 
+                active={activeView === 'compute'} 
+                onClick={() => handleViewChange('compute')} 
+                expanded={isSidebarOpen}
+                uiMode={uiMode}
+              />
+            )}
             <SidebarItem 
               icon={CalendarIcon} 
               label={t.sidebar.organizer} 
               active={activeView === 'organizer'} 
               onClick={() => handleViewChange('organizer')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
           </div>
 
@@ -3662,6 +4169,7 @@ export default function App() {
               active={activeView === 'personas'} 
               onClick={() => handleViewChange('personas')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
             <SidebarItem 
               icon={Workflow} 
@@ -3669,6 +4177,7 @@ export default function App() {
               active={activeView === 'workflows'} 
               onClick={() => handleViewChange('workflows')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
           </div>
 
@@ -3683,6 +4192,7 @@ export default function App() {
               active={activeView === 'web3'} 
               onClick={() => handleViewChange('web3')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
           </div>
 
@@ -3694,6 +4204,7 @@ export default function App() {
               active={activeView === 'image'} 
               onClick={() => handleViewChange('image')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
           </div>
 
@@ -3705,6 +4216,7 @@ export default function App() {
               active={activeView === 'profile'} 
               onClick={() => handleViewChange('profile')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
             <SidebarItem 
               icon={Settings} 
@@ -3712,6 +4224,7 @@ export default function App() {
               active={activeView === 'settings'} 
               onClick={() => handleViewChange('settings')} 
               expanded={isSidebarOpen}
+              uiMode={uiMode}
             />
           </div>
         </nav>
@@ -3719,7 +4232,7 @@ export default function App() {
         <div className="mt-auto py-4 border-t border-proton-border/50">
           <div className="px-3 mb-2">
             <div className={cn(
-              "flex items-center gap-3 p-3 rounded-xl bg-proton-card/50 border border-proton-border/50 overflow-hidden cursor-pointer hover:bg-white/5 transition-all duration-300",
+              "flex items-center gap-3 p-3 rounded-xl bg-proton-card/50 border border-proton-border/50 overflow-hidden cursor-pointer hover:bg-proton-accent/10 transition-all duration-300",
               !isSidebarOpen && "justify-center px-0"
             )} onClick={() => handleViewChange('profile')}>
               <div className="w-8 h-8 rounded-full bg-proton-accent/20 flex items-center justify-center text-proton-accent font-bold shrink-0 overflow-hidden shadow-[0_0_10px_rgba(0,242,255,0.2)]">
@@ -3741,7 +4254,7 @@ export default function App() {
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className={cn(
-              "hidden md:flex items-center gap-3 w-full px-4 py-3 text-proton-muted hover:text-proton-text hover:bg-white/5 transition-all duration-300",
+              "hidden md:flex items-center gap-3 w-full px-4 py-3 text-proton-muted hover:text-proton-text hover:bg-proton-accent/10 transition-all duration-300",
               !isSidebarOpen && "justify-center px-0"
             )}
           >
@@ -3756,7 +4269,10 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 bg-proton-bg/50 backdrop-blur-md z-30">
+        <header className={cn(
+          "h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 z-30 transition-colors backdrop-blur-md",
+          uiMode === 'artisan' ? "bg-proton-bg" : "bg-proton-bg/50"
+        )}>
           <div className="flex items-center gap-1 md:gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -3780,10 +4296,12 @@ export default function App() {
               <span className="inline sm:hidden">v1.2</span>
             </div>
             <div className="h-4 w-px bg-proton-border hidden md:block" />
-            <DigitalClock />
+            <DigitalClock uiMode={uiMode} />
           </div>
           
           <div className="flex items-center gap-3 sm:gap-6">
+            <ModeToggle mode={uiMode} setMode={setUiMode} t={t} />
+            
             <div className="flex items-center gap-3">
               <select
                 value={userProfile.language}
@@ -3820,6 +4338,10 @@ export default function App() {
                   chatHistory={chatHistory}
                   language={userProfile.language}
                   user={user}
+                  uiMode={uiMode}
+                  aiSettings={aiSettings}
+                  setLastGeminiMetadata={setLastGeminiMetadata}
+                  trackFirestore={trackFirestore}
                 />
               )}
               {activeView === 'organizer' && (
@@ -3831,9 +4353,18 @@ export default function App() {
                   onToggleTask={handleToggleTask}
                   onDeleteTask={handleDeleteTask}
                   onAiSuggest={handleAiSuggestTasks}
+                  uiMode={uiMode}
                 />
               )}
-              {activeView === 'compute' && <ComputeView />}
+              {activeView === 'compute' && (
+                <ComputeView 
+                  metadata={lastGeminiMetadata} 
+                  aiSettings={aiSettings} 
+                  setAiSettings={setAiSettings} 
+                  isFirestoreActive={isFirestoreActive} 
+                  uiMode={uiMode}
+                />
+              )}
               {activeView === 'personas' && (
                 <PersonasView 
                   history={chatHistory} 
@@ -3843,20 +4374,23 @@ export default function App() {
                   personas={personas}
                   onUpdatePersonas={handleUpdatePersonas}
                   aiSettings={aiSettings}
+                  setLastGeminiMetadata={setLastGeminiMetadata}
                   workflows={workflows}
                   tasks={tasks}
+                  uiMode={uiMode}
                 />
               )}
               {activeView === 'web3' && (
-                <Web3View />
+                <Web3View uiMode={uiMode} />
               )}
-              {activeView === 'image' && <ImageView />}
+              {activeView === 'image' && <ImageView uiMode={uiMode} />}
               {activeView === 'workflows' && (
                 <WorkflowsView 
                   workflows={workflows}
                   setWorkflows={setWorkflows}
                   personas={personas}
                   user={user}
+                  uiMode={uiMode}
                 />
               )}
               {activeView === 'profile' && (
@@ -3869,6 +4403,7 @@ export default function App() {
                   user={user}
                   onSignIn={handleGoogleSignIn}
                   onSignOut={handleSignOut}
+                  uiMode={uiMode}
                 />
               )}
               {activeView === 'settings' && (

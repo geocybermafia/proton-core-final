@@ -103,7 +103,17 @@ const ActionNode = ({ data, id }: any) => (
 
 const nodeTypes = { triggerNode: TriggerNode, actionNode: ActionNode, logicNode: LogicNode };
 
-export const WorkflowFlowEditor = ({ workflow, onSave, personas }: { workflow: Workflow, onSave: (wf: any) => void, personas: any[] }) => {
+export const WorkflowFlowEditor = ({ 
+  workflow, 
+  onSave, 
+  personas,
+  uiMode
+}: { 
+  workflow: Workflow, 
+  onSave: (wf: any) => void, 
+  personas: any[],
+  uiMode?: 'operator' | 'artisan'
+}) => {
   const handleNodeDataChange = useCallback((nodeId: string, field: string, value: string) => {
     setNodes((nds) => 
       nds.map((node) => {
@@ -181,8 +191,14 @@ export const WorkflowFlowEditor = ({ workflow, onSave, personas }: { workflow: W
         nodeTypes={nodeTypes}
         fitView
       >
-        <Background gap={12} size={1} />
-        <Controls />
+        <Background 
+          gap={12} 
+          size={1} 
+          color="var(--color-proton-border)"
+        />
+        <Controls 
+          className="bg-proton-card border-proton-border transition-colors"
+        />
       </ReactFlow>
     </div>
   );

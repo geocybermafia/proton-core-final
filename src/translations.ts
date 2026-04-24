@@ -51,6 +51,8 @@ export const translations = {
       pulse_just_now: "just now"
     },
     dashboard: {
+      title: "Command Center",
+      artisan_title: "My Workshop",
       ai_personas: "AI & Digital Personas",
       featured_intelligence: "Featured Intelligence",
       view_all: "VIEW ALL",
@@ -67,6 +69,10 @@ export const translations = {
       uptime: "Uptime",
       active: "Active",
       messages: "MESSAGES"
+    },
+    modes: {
+      operator: "Operator Mode",
+      artisan: "Artisan Mode"
     },
     settings: {
       title: "Settings & Node Configuration",
@@ -160,6 +166,8 @@ export const translations = {
       pulse_just_now: "ახლახანს"
     },
     dashboard: {
+      title: "საკონტროლო ცენტრი",
+      artisan_title: "ჩემი სახელოსნო",
       ai_personas: "AI და ციფრული პერსონაჟები",
       featured_intelligence: "რჩეული ინტელექტი",
       view_all: "ყველას ნახვა",
@@ -176,6 +184,10 @@ export const translations = {
       uptime: "მუშაობის დრო",
       active: "აქტიური",
       messages: "შეტყობინება"
+    },
+    modes: {
+      operator: "ოპერატორის რეჟიმი",
+      artisan: "ოსტატის რეჟიმი"
     },
     settings: {
       title: "პარამეტრები და კვანძის კონფიგურაცია",

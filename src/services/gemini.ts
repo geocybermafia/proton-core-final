@@ -72,6 +72,13 @@ export const PERSONAS: Persona[] = [
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
+export interface GeminiMetadata {
+  promptTokenCount: number;
+  candidatesTokenCount: number;
+  totalTokenCount: number;
+  latency: number;
+}
+
 export async function chatWithPersona(
   persona: Persona, 
   message: string, 
@@ -81,7 +88,8 @@ export async function chatWithPersona(
   includeSearch: boolean = true,
   temperature: number = 0.8,
   globalInstruction?: string
-) {
+): Promise<{ text: string, metadata: GeminiMetadata }> {
+  const startTime = performance.now();
   try {
     const tools: any[] = [];
     if (includeSearch) {
@@ -106,10 +114,25 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
       }
     });
 
-    return response.text || "I'm sorry, I couldn't process that request.";
+    const endTime = performance.now();
+    const metadata: GeminiMetadata = {
+      promptTokenCount: response.usageMetadata?.promptTokenCount || 0,
+      candidatesTokenCount: response.usageMetadata?.candidatesTokenCount || 0,
+      totalTokenCount: response.usageMetadata?.totalTokenCount || 0,
+      latency: Math.round(endTime - startTime)
+    };
+
+    return { 
+      text: response.text || "I'm sorry, I couldn't process that request.", 
+      metadata 
+    };
   } catch (error: any) {
     console.error("Gemini API Error:", error);
-    return `Connection Error: ${error.message}. Please try again later.`;
+    const endTime = performance.now();
+    return { 
+      text: `Connection Error: ${error.message}. Please try again later.`, 
+      metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: Math.round(endTime - startTime) } 
+    };
   }
 }
 
@@ -240,13 +263,15 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
   }
 }
 
-export async function architectTask(project: string): Promise<TaskPlan> {
+export async function architectTask(project: string, temperature: number = 0.8): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
+  const startTime = performance.now();
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Be professional, brief, and structured. Architect an action plan for: ${project}.
       Respond EXCLUSIVELY in the user's language (e.g. Georgian for Georgian, English for English).`,
       config: {
+        temperature,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -275,9 +300,24 @@ export async function architectTask(project: string): Promise<TaskPlan> {
       }
     });
     
-    return JSON.parse(response.text || "{}");
+    const endTime = performance.now();
+    const metadata: GeminiMetadata = {
+      promptTokenCount: response.usageMetadata?.promptTokenCount || 0,
+      candidatesTokenCount: response.usageMetadata?.candidatesTokenCount || 0,
+      totalTokenCount: response.usageMetadata?.totalTokenCount || 0,
+      latency: Math.round(endTime - startTime)
+    };
+
+    return { 
+      data: JSON.parse(response.text || "{}"), 
+      metadata 
+    };
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw error;
+    const endTime = performance.now();
+    throw { 
+      error, 
+      metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: Math.round(endTime - startTime) } 
+    };
   }
 }

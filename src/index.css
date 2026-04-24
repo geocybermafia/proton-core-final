@@ -9,7 +9,10 @@
   --color-proton-accent: #00f2ff;
   --color-proton-secondary: #ff2d55;
   
-  /* Default (Dark) Theme */
+  /* Custom Shadows */
+  --shadow-artisan: 0 4px 24px -4px rgba(0, 0, 0, 0.04);
+
+  /* Default (Operator) Theme */
   --color-proton-bg: #0a0a0c;
   --color-proton-card: #121217;
   --color-proton-border: #22222a;
@@ -18,46 +21,79 @@
 }
 
 @layer base {
+  :root[data-theme="proton"] {
+    --color-proton-bg: #0a0a0c;
+    --color-proton-card: #121217;
+    --color-proton-border: #22222a;
+    --color-proton-text: #e1e1e6;
+    --color-proton-muted: #8e8e93;
+    --color-proton-accent: #00f2ff;
+    --color-proton-secondary: #ff2d55;
+  }
+
   :root[data-theme="light"] {
-    --color-proton-bg: #f4f4f7;
+    --color-proton-bg: #f2f2f7;
     --color-proton-card: #ffffff;
-    --color-proton-border: #e2e2e8;
-    --color-proton-text: #1a1a1e;
-    --color-proton-muted: #636366;
+    --color-proton-border: #c6c6c8;
+    --color-proton-text: #1c1c1e;
+    --color-proton-muted: #3a3a3c;
+    --color-proton-accent: #007aff;
+    --color-proton-secondary: #ff3b30;
   }
 
   :root[data-theme="vibrant"] {
-    --color-proton-bg: #1a0a1a;
-    --color-proton-card: #2e0f2e;
-    --color-proton-border: #4a1a4a;
-    --color-proton-text: #ffe0ff;
-    --color-proton-muted: #cc88cc;
+    --color-proton-bg: #0f172a;
+    --color-proton-card: #1e293b;
+    --color-proton-border: #334155;
+    --color-proton-text: #f8fafc;
+    --color-proton-muted: #94a3b8;
+    --color-proton-accent: #0ea5e9;
+    --color-proton-secondary: #ec4899;
   }
 
   :root[data-theme="midnight"] {
-    --color-proton-bg: #050505;
-    --color-proton-card: #0a0a0a;
-    --color-proton-border: #1a1a1a;
-    --color-proton-text: #dcdcdc;
-    --color-proton-muted: #5e5e5e;
+    --color-proton-bg: #020617;
+    --color-proton-card: #0f172a;
+    --color-proton-border: #1e293b;
+    --color-proton-text: #e2e8f0;
+    --color-proton-muted: #64748b;
+    --color-proton-accent: #6366f1;
+    --color-proton-secondary: #8b5cf6;
+  }
+
+  :root[data-ui-mode="artisan"] {
+    --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
   }
 
   body {
-    @apply bg-proton-bg text-proton-text font-sans antialiased transition-colors duration-300;
+    @apply bg-proton-bg text-proton-text font-sans antialiased transition-colors duration-500;
   }
 }
 
 .proton-glass {
-  @apply bg-proton-card/60 backdrop-blur-xl border border-proton-border/60 transition-all duration-300;
+  @apply bg-proton-card/80 backdrop-blur-xl border border-proton-border/40 transition-all duration-300;
+}
+
+[data-ui-mode="artisan"] .proton-glass {
+  @apply shadow-artisan;
 }
 
 .proton-glass:hover {
-  @apply border-proton-accent/30;
+  @apply border-proton-accent/40 ring-1 ring-proton-accent/20;
+}
+
+[data-ui-mode="artisan"] .proton-glass:hover {
+  @apply border-proton-accent/30 ring-0;
+}
+
+.artisan-shadow {
+  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.04);
 }
 
 .proton-button {
-  @apply px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300;
+  @apply px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2;
   @apply hover:scale-105 active:scale-95;
+  @apply bg-proton-accent text-proton-bg hover:brightness-110 active:brightness-90;
 }
 
 .proton-glow {
