@@ -3,12 +3,12 @@ export const translations = {
     sidebar: {
       core: "Core",
       dashboard: "Dashboard",
-      compute: "Compute Cluster",
+      blueprints: "Blueprints",
+      finance: "Finance & Settlement",
       agents: "Agents",
       personas: "Digital Personas",
-      workflows: "Workflows",
+      organizer: "Organizer",
       economy: "Economy",
-      web3: "Payments & Settlement",
       creative: "Creative",
       image: "Image Studio",
       system: "System",
@@ -16,7 +16,13 @@ export const translations = {
       settings: "Settings",
       collapse: "Collapse View",
       new: "NEW",
-      organizer: "Organizer"
+      bottom_nav: {
+        dashboard: "Home",
+        blueprints: "Flow",
+        finance: "Fund",
+        personas: "Agents",
+        profile: "Node"
+      }
     },
     organizer: {
       title: "Proton Organizer",
@@ -118,12 +124,12 @@ export const translations = {
     sidebar: {
       core: "მთავარი",
       dashboard: "დეშბორდი",
-      compute: "გამოთვლითი კლასტერი",
+      blueprints: "ნახაზები",
+      finance: "ფინანსები და ანგარიშსწორება",
       agents: "აგენტები",
       personas: "ციფრული პერსონაჟები",
-      workflows: "სამუშაო პროცესები",
+      organizer: "ორგანიზატორი",
       economy: "ეკონომიკა",
-      web3: "გადახდები და ანგარიშები",
       creative: "კრეატივი",
       image: "სურათების სტუდია",
       system: "სისტემა",
@@ -131,7 +137,13 @@ export const translations = {
       settings: "პარამეტრები",
       collapse: "ხედის ჩაკეცვა",
       new: "ახალი",
-      organizer: "ორგანიზატორი"
+      bottom_nav: {
+        dashboard: "მთავარი",
+        blueprints: "ნახაზი",
+        finance: "ფონდი",
+        personas: "აგენტები",
+        profile: "პროფილი"
+      }
     },
     organizer: {
       title: "Proton ორგანიზატორი",

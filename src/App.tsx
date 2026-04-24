@@ -116,7 +116,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 
 // --- Types ---
-type View = 'dashboard' | 'compute' | 'personas' | 'web3' | 'workflows' | 'profile' | 'settings' | 'image' | 'organizer';
+type View = 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer';
 
 type ChatMessage = { role: 'user' | 'model', content: string, timestamp: number };
 type PersonaHistory = { [personaId: string]: ChatMessage[] };
@@ -1468,6 +1468,7 @@ const DashboardView = ({
   const [projectText, setProjectText] = useState('');
   const [isComputing, setIsComputing] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [operatorTab, setOperatorTab] = useState<'ops' | 'finance'>('ops');
   const t = translations[language].dashboard;
   const common = translations[language].common;
 
@@ -1598,274 +1599,313 @@ const DashboardView = ({
 
   // Operator Mode Layout (Existing with Toggle)
   return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8 px-4 sm:px-6 lg:px-8">
-      {/* Operator Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8 px-4 sm:px-6 lg:px-8 font-sans">
+      {/* Operator Header & Top Nav */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tighter transition-all duration-500 font-mono text-proton-accent uppercase">
+          <h1 className="text-3xl md:text-5xl font-bold tracking-tighter transition-all duration-500 font-mono text-proton-accent uppercase text-proton-text">
             {t.title}
           </h1>
-          <p className="text-proton-muted text-[10px] md:text-xs font-mono mt-2 uppercase tracking-[0.2em]">
-            Neural Command Node [Active]
-          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+            <p className="text-proton-muted text-[10px] md:text-xs font-mono uppercase tracking-[0.2em]">
+              Neural Command Node [Active]
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-wrap items-center gap-4 lg:bg-transparent lg:p-0 sticky top-0 z-40 bg-proton-bg/80 backdrop-blur-md p-2 -mx-4 sm:mx-0 md:relative md:top-auto md:z-auto">
+          <div className="flex p-1 bg-proton-card/50 border border-proton-border rounded-xl backdrop-blur-md shadow-lg shadow-proton-bg/20 w-full lg:w-auto">
+            {[
+              { id: 'ops', label: 'Operations' },
+              { id: 'finance', label: 'Financials' }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => setOperatorTab(tab.id as any)}
+                className={cn(
+                  "flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-widest transition-all duration-300 active:scale-95",
+                  operatorTab === tab.id 
+                    ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
+                    : "text-proton-muted hover:text-proton-text"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="h-8 w-px bg-proton-border hidden sm:block mx-2" />
+
           <button 
             onClick={() => setShowDiagnostics(!showDiagnostics)}
             className={cn(
-              "px-4 py-2 rounded-2xl flex items-center gap-3 transition-all border font-mono text-[10px] uppercase tracking-widest",
-              showDiagnostics ? "bg-proton-accent/20 border-proton-accent text-proton-accent" : "bg-proton-card border-proton-border text-proton-muted"
+              "px-4 py-2 rounded-xl flex items-center gap-3 transition-all border font-mono text-[10px] uppercase tracking-widest",
+              showDiagnostics ? "bg-proton-accent/20 border-proton-accent text-proton-accent shadow-[inset_0_0_10px_rgba(0,242,255,0.1)]" : "bg-proton-card border-proton-border text-proton-muted hover:border-proton-accent/30"
             )}
           >
-            <Activity size={14} />
-            Diagnostics {showDiagnostics ? '[On]' : '[Off]'}
+            <Activity size={14} className={cn(showDiagnostics && "animate-pulse")} />
+            Monitor {showDiagnostics ? '[ON]' : '[OFF]'}
           </button>
-          <div className="px-4 py-2 rounded-2xl flex items-center gap-3 transition-colors bg-proton-card border border-proton-border shadow-sm">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">System Online</span>
-          </div>
         </div>
       </div>
 
-      <AnimatePresence>
-        {showDiagnostics && (
+      <AnimatePresence mode="wait">
+        {operatorTab === 'ops' ? (
           <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden space-y-6"
+            key="ops"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
           >
             {/* Operator Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2">
-                <ClusterTelemetry 
-                  isLoading={isComputing} 
-                  uiMode={uiMode} 
-                  language={language === 'ka' ? 'ka' : 'en'} 
-                />
-              </div>
-              <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Active Nodes', value: '01', icon: Cpu, color: 'text-proton-accent' },
-                  { label: 'Compute Load', value: isComputing ? '89%' : '12%', icon: Activity, color: 'text-proton-secondary' },
-                ].map((stat, i) => (
-                  <div key={i} className="p-4 rounded-2xl flex items-center justify-between group cursor-pointer transition-all proton-glass bg-proton-card/50 border border-proton-border/50">
-                    <div>
-                      <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest mb-1">{stat.label}</p>
-                      <p className="text-xl font-bold tracking-tighter text-proton-text">{stat.value}</p>
-                    </div>
-                    <div className={cn("p-2 rounded-lg transition-all bg-proton-card/50 border border-proton-border/50 group-hover:border-proton-accent/40", stat.color)}>
-                      <stat.icon size={16} />
-                    </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: t.compute, value: '1.2 PFL', icon: Cpu, color: 'text-proton-accent' },
+                { label: t.latency, value: '0.4ms', icon: Zap, color: 'text-proton-secondary' },
+                { label: t.uptime, value: '99.9%', icon: ShieldCheck, color: 'text-green-400' },
+                { label: 'Nodes', value: '32 Active', icon: Network, color: 'text-proton-accent' },
+              ].map((stat, i) => (
+                <div key={i} className="proton-glass p-4 rounded-2xl border border-proton-border/30 hover:border-proton-accent/20 transition-all flex flex-col gap-1 group">
+                  <div className="flex items-center justify-between opacity-60">
+                    <span className="text-[8px] font-mono uppercase tracking-[0.2em]">{stat.label}</span>
+                    <stat.icon size={12} className={cn("transition-transform group-hover:scale-110", stat.color)} />
                   </div>
-                ))}
-              </div>
+                  <p className="font-mono font-bold text-sm tracking-tight text-proton-text">{stat.value}</p>
+                </div>
+              ))}
             </div>
 
-            {/* System Health Section */}
-            <section className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-proton-muted/10 text-proton-muted">
-                  <Activity size={20} />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Command Console */}
+              <div className="lg:col-span-8 space-y-6">
+                <div className="proton-glass rounded-[40px] border border-proton-border shadow-2xl overflow-hidden relative group/architect">
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-proton-accent to-transparent opacity-30 animate-pulse" />
+                  <SmartTaskArchitect 
+                    language={language} 
+                    projectText={projectText}
+                    setProjectText={setProjectText}
+                    user={user}
+                    uiMode={uiMode}
+                    onLoadingChange={setIsComputing}
+                    aiSettings={aiSettings}
+                    setLastGeminiMetadata={setLastGeminiMetadata}
+                    trackFirestore={trackFirestore}
+                  />
                 </div>
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t.system_health}</h2>
+
+                <div className="p-2 proton-glass rounded-[30px] border border-proton-border/30 bg-proton-card/20 backdrop-blur-md shadow-lg transition-transform hover:scale-[1.01] duration-500">
+                  <NeuralPulse 
+                    language={language} 
+                    onSelect={(topic) => {
+                      setProjectText(topic);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }} 
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: t.compute, value: '1.2 PFL', icon: Cpu },
-                  { label: t.latency, value: '0.4ms', icon: Zap },
-                  { label: t.uptime, value: '99.9%', icon: ShieldCheck },
-                  { label: 'Nodes', value: '32 Active', icon: Network },
-                ].map((stat, i) => (
-                  <div key={i} className="proton-glass p-5 rounded-2xl border border-proton-border/30 hover:border-proton-accent/20 transition-all flex flex-col gap-2">
-                    <div className="flex items-center justify-between opacity-60">
-                      <span className="text-[8px] font-mono uppercase tracking-[0.2em]">{stat.label}</span>
-                      <stat.icon size={12} />
-                    </div>
-                    <p className="font-mono font-bold text-sm tracking-tight">{stat.value}</p>
+              {/* Sidebar: Telemetry & Activity Log */}
+              <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
+                <div className={cn(
+                  "proton-glass rounded-[30px] border border-proton-border/50 p-6 shadow-xl transition-all duration-700",
+                  showDiagnostics ? "opacity-100" : "opacity-40 hover:opacity-100 scale-[0.98] blur-[1px] hover:blur-0 hover:scale-100"
+                )}>
+                  <div className="flex items-center justify-between mb-4 border-b border-proton-border/30 pb-4">
+                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
+                      <Activity size={14} className="text-proton-accent animate-pulse" />
+                      Infrastructure
+                    </h3>
                   </div>
-                ))}
+                  <ClusterTelemetry 
+                    isLoading={isComputing} 
+                    uiMode={uiMode} 
+                    language={language} 
+                  />
+                </div>
+
+                <div className="proton-glass rounded-[30px] border border-proton-border/50 p-6 flex flex-col h-full shadow-xl max-h-[440px] bg-gradient-to-b from-proton-card/30 to-transparent">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
+                      <Zap size={14} className="text-proton-accent" />
+                      Neural Activity
+                    </h3>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+                    {Object.entries(chatHistory).length > 0 ? (
+                      Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
+                        msgs.slice(-2).map((m, i) => (
+                          <div key={`${personaId}-${i}`} className="p-3 rounded-2xl border transition-all duration-300 bg-proton-card/40 border-proton-border/30 hover:border-proton-accent/40 group">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[9px] font-mono text-proton-accent uppercase font-black">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
+                              <span className="text-[8px] font-mono text-proton-muted opacity-50">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-[11px] text-proton-muted line-clamp-3 leading-relaxed italic group-hover:text-proton-text transition-colors">"{m.content}"</p>
+                          </div>
+                        ))
+                      )
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center py-12 opacity-30">
+                        <Shield size={32} className="mb-4" />
+                        <p className="text-[10px] font-mono uppercase tracking-[0.2em]">Neural Silence</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-4 pt-4 border-t border-proton-border/50">
+                    <button 
+                      onClick={() => setActiveView('organizer')}
+                      className="w-full py-3 rounded-2xl border border-proton-border hover:bg-proton-accent text-proton-bg transition-all text-[10px] font-mono font-bold uppercase tracking-widest active:scale-95 shadow-lg shadow-proton-bg/20"
+                    >
+                      Open Task Hub
+                    </button>
+                  </div>
+                </div>
               </div>
-            </section>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="finance"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            {/* Operator Financial Section (Modular) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                 <div className="proton-glass rounded-[40px] border border-proton-border p-8 shadow-2xl space-y-8 relative overflow-hidden bg-gradient-to-br from-proton-card/50 to-transparent">
+                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                     <div className="flex items-center gap-4">
+                       <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 border border-proton-accent/20 text-proton-accent flex items-center justify-center shadow-inner">
+                         <Wallet size={28} />
+                       </div>
+                       <div>
+                         <h2 className="text-2xl font-black tracking-tight uppercase font-mono text-proton-text">Operations Fund</h2>
+                         <p className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                           Settlements Connected
+                         </p>
+                       </div>
+                     </div>
+                     <ConnectButton />
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div className="p-8 rounded-[2.5rem] bg-proton-bg/80 border border-proton-border shadow-inner group hover:border-proton-accent/40 transition-all duration-500 flex flex-col justify-center">
+                       <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest mb-3">Total Liquidity</p>
+                       <div className="flex items-baseline gap-2">
+                         <span className="text-3xl font-bold font-mono tracking-tighter text-proton-text">
+                           {isConnected && balance ? parseFloat(balance.formatted).toFixed(4) : '0.000'}
+                         </span>
+                         <span className="text-proton-accent font-bold text-lg">{balance?.symbol || 'ETH'}</span>
+                       </div>
+                       <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-proton-accent mt-4 border-t border-proton-border/30 pt-4">
+                          <span className="opacity-70">≈ ₾ {(parseFloat(balance?.formatted || '0') * 2650 * 2.7).toLocaleString()}</span>
+                          <span className="opacity-70">≈ $ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString()}</span>
+                       </div>
+                     </div>
+                     
+                     <div className="p-8 rounded-[2.5rem] bg-proton-card/50 border border-proton-border space-y-6 flex flex-col justify-center">
+                       <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest border-l-2 border-proton-accent pl-3">Sovereign Actions</p>
+                       <div className="grid grid-cols-2 gap-4">
+                         <button className="py-4 rounded-2xl bg-proton-accent text-proton-bg font-black text-[10px] uppercase tracking-widest hover:brightness-110 hover:shadow-lg shadow-proton-accent/20 active:scale-95 transition-all">Deposit</button>
+                         <button className="py-4 rounded-2xl border border-proton-border text-proton-text font-black text-[10px] uppercase tracking-widest hover:bg-proton-card transition-all active:scale-95">Withdraw</button>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="proton-glass rounded-[40px] border border-proton-border p-8 shadow-xl bg-proton-card/10">
+                   <h3 className="text-sm font-mono font-bold uppercase tracking-widest mb-8 flex items-center gap-2 text-proton-text">
+                     <Receipt size={16} className="text-proton-accent" />
+                     Recent Settlements
+                   </h3>
+                   <div className="space-y-3">
+                     {[1, 2, 3].map(i => (
+                       <div key={i} className="flex items-center justify-between p-5 rounded-3xl bg-proton-bg/40 border border-proton-border/50 hover:bg-proton-bg/60 transition-all group">
+                         <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 rounded-full bg-proton-accent/5 border border-proton-accent/10 flex items-center justify-center text-proton-accent group-hover:scale-110 transition-transform">
+                             <Zap size={14} />
+                           </div>
+                           <div>
+                             <p className="text-xs font-bold font-mono text-proton-text">SETTLE_TX_{10920 + i}</p>
+                             <p className="text-[10px] text-proton-muted uppercase tracking-tighter">Automatic Revenue Share</p>
+                           </div>
+                         </div>
+                         <div className="text-right">
+                           <p className="text-xs font-black font-mono text-proton-accent">+ 0.0{i}22 ETH</p>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="proton-glass rounded-[30px] border border-proton-border p-6 shadow-xl space-y-6 bg-gradient-to-br from-proton-card to-transparent">
+                   <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest border-b border-proton-border/30 pb-4 text-proton-text">Node Economics</h3>
+                   <div className="space-y-5">
+                     {[
+                       { label: 'Ethereum (ETH)', val: '$ 2,650.42', trend: '+1.4%' },
+                       { label: 'Network Gas', val: '24.1 Gwei', trend: '-2.3%' },
+                       { label: 'Compute ROI', val: '12.4% APR', trend: '+0.5%' },
+                     ].map((idx, i) => (
+                       <div key={i} className="flex items-center justify-between group">
+                         <span className="text-[10px] font-medium text-proton-muted group-hover:text-proton-text transition-colors">{idx.label}</span>
+                         <div className="text-right font-mono">
+                           <p className="text-[11px] font-black text-proton-text">{idx.val}</p>
+                           <p className={cn("text-[8px] font-bold", idx.trend.startsWith('+') ? "text-green-400" : "text-proton-secondary")}>{idx.trend}</p>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                   <button 
+                     onClick={() => setActiveView('finance')}
+                     className="w-full py-4 rounded-2xl bg-proton-accent/10 border border-proton-accent/30 text-proton-accent text-[10px] font-bold uppercase tracking-widest hover:bg-proton-accent hover:text-proton-bg transition-all active:scale-95 shadow-lg shadow-proton-accent/5"
+                   >
+                     Full Ledger
+                   </button>
+                </div>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main Grid: Architect & Activity Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="proton-glass rounded-[40px] border border-proton-border/50 overflow-hidden group/architect relative shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-            <SmartTaskArchitect 
-              language={language} 
-              projectText={projectText}
-              setProjectText={setProjectText}
-              user={user}
-              uiMode={uiMode}
-              onLoadingChange={setIsComputing}
-              aiSettings={aiSettings}
-              setLastGeminiMetadata={setLastGeminiMetadata}
-              trackFirestore={trackFirestore}
-            />
-          </div>
-
-          <div className="relative z-10 p-2 proton-glass rounded-[30px] border border-proton-border/30 bg-proton-card/30 backdrop-blur-md">
-            <NeuralPulse 
-              language={language} 
-              onSelect={(topic) => {
-                setProjectText(topic);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }} 
-            />
-          </div>
-        </div>
-
-        <div className="proton-glass rounded-[40px] border border-proton-border/50 p-6 flex flex-col h-full shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex items-center gap-2">
-              <Zap size={14} className="text-proton-accent" />
-              Activity Log
-            </h3>
-            <span className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
-          </div>
-          
-          <div className="flex-1 overflow-y-auto max-h-[440px] pr-2 space-y-4 custom-scrollbar">
-            {Object.entries(chatHistory).length > 0 ? (
-              Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
-                msgs.slice(-2).map((m, i) => (
-                  <div key={`${personaId}-${i}`} className="p-3 rounded-xl border transition-colors bg-proton-card/40 border-proton-border/30 hover:border-proton-accent/30">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[8px] font-mono text-proton-accent uppercase">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
-                      <span className="text-[8px] font-mono text-proton-muted">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <p className="text-[10px] text-proton-muted line-clamp-2 leading-relaxed italic">{m.content}</p>
-                  </div>
-                ))
-              )
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                <Shield size={32} className="mb-4 text-proton-muted" />
-                <p className="text-[10px] font-mono uppercase tracking-widest">No Recent Activity</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 pt-4 border-t border-proton-border/50">
-            <button 
-              onClick={() => setActiveView('organizer')}
-              className="w-full py-2 rounded-xl border border-proton-border hover:bg-proton-accent/10 hover:text-proton-accent transition-all text-[10px] font-mono font-bold uppercase tracking-widest"
-            >
-              Open Task Hub
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Operator Personas Grid */}
-      <section className="space-y-4">
+      <section className="space-y-4 pt-4 border-t border-proton-border/30">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-mono font-bold uppercase tracking-widest flex items-center gap-2">
+          <h2 className="text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
             <Users size={16} className="text-proton-accent" />
-            {t.ai_personas}
+            Neural Specializations
           </h2>
           <button 
             onClick={() => setActiveView('personas')}
             className="text-[10px] font-mono text-proton-accent hover:underline flex items-center gap-1 group"
           >
-            {t.view_all} <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+            View All <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {personas.slice(0, 4).map((p) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {personas.slice(0, 6).map((p) => (
             <div 
               key={p.id}
               onClick={() => setActiveView('personas')}
-              className="group proton-glass p-3 rounded-2xl hover:border-proton-accent/40 transition-all cursor-pointer relative overflow-hidden"
+              className="group proton-glass p-4 rounded-3xl hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden flex flex-col items-center text-center gap-3 bg-gradient-to-b from-proton-card/50 to-transparent"
             >
-              <div className="relative z-10 flex items-center gap-3">
-                <div className="text-xl bg-proton-card w-10 h-10 rounded-xl flex items-center justify-center border border-proton-border group-hover:scale-110 transition-transform">
-                  {p.avatar}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold text-xs truncate">{language === 'ka' ? p.nameGe : p.name}</h3>
-                  <p className="text-[8px] font-mono text-proton-muted uppercase truncate leading-none">{p.role}</p>
-                </div>
+              <div className="text-2xl bg-proton-card w-12 h-12 rounded-2xl flex items-center justify-center border border-proton-border group-hover:rotate-12 group-hover:scale-110 transition-transform shadow-xl">
+                {p.avatar}
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-[10px] truncate max-w-full text-proton-text">{language === 'ka' ? p.nameGe : p.name}</h3>
+                <p className="text-[8px] font-mono text-proton-muted uppercase truncate leading-none mt-1 tracking-tighter">{p.role}</p>
               </div>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Operator Financial Section */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-proton-secondary/10 text-proton-secondary">
-              <Wallet size={20} />
-            </div>
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight">{t.financial_settlement}</h2>
-          </div>
-          <button 
-            onClick={() => setActiveView('web3')}
-            className="text-xs font-mono text-proton-secondary hover:underline flex items-center gap-2"
-          >
-            {t.wallet_ops} <ArrowRight size={14} />
-          </button>
-        </div>
-
-        <div className="proton-glass p-8 rounded-[40px] border border-white/5 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-proton-secondary/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-[10px] text-proton-muted uppercase tracking-[0.2em] font-mono">{t.net_liquidity}</p>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-4xl md:text-5xl font-bold font-mono tracking-tighter">
-                    {isConnected && balance ? `${Number(balance.formatted).toFixed(4)} ${balance.symbol}` : "0.0000 ETH"}
-                  </h3>
-                  <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-proton-accent">
-                    <span className="bg-proton-accent/10 px-2 py-0.5 rounded border border-proton-accent/20">≈ ₾ {(parseFloat(balance?.formatted || '0') * 2650 * 2.72).toLocaleString(undefined, { maximumFractionDigits: 0 })} GEL</span>
-                    <span className="px-2 py-0.5 rounded border border-white/10 text-white/60">≈ $ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString(undefined, { maximumFractionDigits: 0 })} USD</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setActiveView('web3')}
-                  className="px-6 py-3 rounded-xl bg-proton-accent text-proton-bg font-bold text-xs hover:scale-105 active:scale-95 transition-all shadow-xl"
-                >
-                  {t.quick_deposit}
-                </button>
-                <button 
-                  onClick={() => setActiveView('web3')}
-                  className="px-6 py-3 rounded-xl border border-proton-border text-proton-text font-bold text-xs hover:bg-proton-card transition-all"
-                >
-                  {t.withdraw}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-3xl bg-proton-card/50 border border-proton-border flex flex-col gap-2">
-                <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">{t.network_speed}</p>
-                <p className="text-lg font-bold font-mono">14.2 GB/S</p>
-                <div className="w-full h-1 bg-proton-border rounded-full overflow-hidden">
-                  <div className="w-3/4 h-full bg-proton-accent" />
-                </div>
-              </div>
-              <div className="p-4 rounded-3xl bg-proton-card/50 border border-proton-border flex flex-col gap-2">
-                <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">{t.gas_index}</p>
-                <p className="text-lg font-bold font-mono">12 GWEI</p>
-                <div className="flex gap-1">
-                  {[1,2,3,4,5].map((i) => (
-                    <div key={i} className={cn("w-1.5 h-1.5 rounded-full", i <= 2 ? "bg-green-400" : "bg-proton-border")} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     </div>
@@ -3758,8 +3798,9 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-ui-mode', uiMode);
     localStorage.setItem('proton_theme', theme);
-  }, [theme]);
+  }, [theme, uiMode]);
   
   const [chatHistory, setChatHistory] = useState<PersonaHistory>(() => {
     const saved = localStorage.getItem('proton_chat_history');
@@ -4141,21 +4182,19 @@ export default function App() {
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
-            {uiMode !== 'artisan' && (
-              <SidebarItem 
-                icon={Cpu} 
-                label={t.sidebar.compute} 
-                active={activeView === 'compute'} 
-                onClick={() => handleViewChange('compute')} 
-                expanded={isSidebarOpen}
-                uiMode={uiMode}
-              />
-            )}
             <SidebarItem 
-              icon={CalendarIcon} 
-              label={t.sidebar.organizer} 
-              active={activeView === 'organizer'} 
-              onClick={() => handleViewChange('organizer')} 
+              icon={Workflow} 
+              label={t.sidebar.blueprints} 
+              active={activeView === 'blueprints'} 
+              onClick={() => handleViewChange('blueprints')} 
+              expanded={isSidebarOpen}
+              uiMode={uiMode}
+            />
+            <SidebarItem 
+              icon={Wallet} 
+              label={t.sidebar.finance} 
+              active={activeView === 'finance'} 
+              onClick={() => handleViewChange('finance')} 
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
@@ -4172,25 +4211,10 @@ export default function App() {
               uiMode={uiMode}
             />
             <SidebarItem 
-              icon={Workflow} 
-              label={t.sidebar.workflows} 
-              active={activeView === 'workflows'} 
-              onClick={() => handleViewChange('workflows')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-          </div>
-
-          <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2 flex items-center justify-between">
-              {t.sidebar.economy}
-              <span className="bg-proton-accent/20 text-proton-accent text-[7px] px-1.5 py-0.5 rounded-full animate-pulse">{t.sidebar.new}</span>
-            </p>}
-            <SidebarItem 
-              icon={Wallet} 
-              label={t.sidebar.web3} 
-              active={activeView === 'web3'} 
-              onClick={() => handleViewChange('web3')} 
+              icon={CalendarIcon} 
+              label={t.sidebar.organizer} 
+              active={activeView === 'organizer'} 
+              onClick={() => handleViewChange('organizer')} 
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
@@ -4266,8 +4290,37 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Bottom Nav (Mobile Only) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/80 backdrop-blur-xl border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe">
+        {[
+          { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
+          { id: 'blueprints', icon: Workflow, label: t.sidebar.bottom_nav.blueprints },
+          { id: 'finance', icon: Wallet, label: t.sidebar.bottom_nav.finance },
+          { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
+          { id: 'profile', icon: Terminal, label: t.sidebar.bottom_nav.profile },
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleViewChange(item.id as any)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 relative",
+              activeView === item.id ? "text-proton-accent" : "text-proton-muted"
+            )}
+          >
+            <item.icon size={20} className={cn(activeView === item.id && "animate-pulse")} />
+            <span className="text-[10px] font-mono font-bold uppercase tracking-tighter">{item.label}</span>
+            {activeView === item.id && (
+              <motion.div 
+                layoutId="activeBottomTab"
+                className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]"
+              />
+            )}
+          </button>
+        ))}
+      </nav>
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main className="flex-1 flex flex-col relative overflow-hidden pb-16 md:pb-0">
         {/* Header */}
         <header className={cn(
           "h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 z-30 transition-colors backdrop-blur-md",
@@ -4380,11 +4433,11 @@ export default function App() {
                   uiMode={uiMode}
                 />
               )}
-              {activeView === 'web3' && (
+              {activeView === 'finance' && (
                 <Web3View uiMode={uiMode} />
               )}
               {activeView === 'image' && <ImageView uiMode={uiMode} />}
-              {activeView === 'workflows' && (
+              {activeView === 'blueprints' && (
                 <WorkflowsView 
                   workflows={workflows}
                   setWorkflows={setWorkflows}
