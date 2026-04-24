@@ -1050,11 +1050,13 @@ const NeuralPulse = ({ language, onSelect }: { language: 'en' | 'ka', onSelect: 
 const SmartTaskArchitect = ({ 
   language, 
   projectText, 
-  setProjectText 
+  setProjectText,
+  user
 }: { 
   language: 'en' | 'ka',
   projectText: string,
-  setProjectText: Dispatch<SetStateAction<string>>
+  setProjectText: Dispatch<SetStateAction<string>>,
+  user: any
 }) => {
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<TaskPlan | null>(null);
@@ -1072,7 +1074,7 @@ const SmartTaskArchitect = ({
   const handleAnalyze = async () => {
     if (!projectText.trim() || loading || cooldown > 0) return;
 
-    const cacheKey = `architect_cache_${projectText.trim().toLowerCase()}`;
+    const cacheKey = `architect_cache_${user?.uid || 'anon'}_${projectText.trim().toLowerCase()}`;
     const cachedData = localStorage.getItem(cacheKey);
 
     if (cachedData) {
@@ -1106,6 +1108,31 @@ const SmartTaskArchitect = ({
         projectTitle: projectText.trim(),
         createdAt: serverTimestamp()
       });
+
+      // Automatically create a main task and its steps for the user
+      if (user) {
+        const projectId = `project-task-${Date.now()}`;
+        const mainTask: Task = {
+          id: projectId,
+          content: `Project: ${projectText}`,
+          contentGe: `პროექტი: ${projectText}`,
+          completed: false
+        };
+        const mainRef = doc(db, 'users', user.uid, 'tasks', mainTask.id);
+        await setDoc(mainRef, mainTask).catch(e => handleFirestoreError(e, 'write', mainRef.path));
+
+        for (let i = 0; i < result.firstSteps.length; i++) {
+          const stepTask: Task = {
+            id: `step-${Date.now()}-${i}`,
+            content: result.firstSteps[i],
+            contentGe: result.firstSteps[i], // Fallback if no translation returned for steps
+            completed: false,
+            isAiSuggested: true
+          };
+          const stepRef = doc(db, 'users', user.uid, 'tasks', stepTask.id);
+          await setDoc(stepRef, stepTask).catch(e => handleFirestoreError(e, 'write', stepRef.path));
+        }
+      }
 
       setCooldown(5);
     } catch (err: any) {
@@ -1257,13 +1284,15 @@ const DashboardView = ({
   personas, 
   setActiveView,
   chatHistory,
-  language = 'en'
+  language = 'en',
+  user
 }: { 
   personas: Persona[], 
   activeView: View, 
   setActiveView: (v: View) => void,
   chatHistory: PersonaHistory,
-  language?: 'en' | 'ka'
+  language?: 'en' | 'ka',
+  user: any
 }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
@@ -1279,6 +1308,7 @@ const DashboardView = ({
           language={language} 
           projectText={projectText}
           setProjectText={setProjectText}
+          user={user}
         />
         <div className="relative z-10 border-t border-proton-border/30 bg-proton-card/30 backdrop-blur-md">
           <NeuralPulse 
@@ -1588,7 +1618,9 @@ const PersonasView = ({
   onUpdateAvatar,
   personas,
   onUpdatePersonas,
-  aiSettings
+  aiSettings,
+  workflows,
+  tasks
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -1596,7 +1628,9 @@ const PersonasView = ({
   onUpdateAvatar: (personaId: string, avatar: string) => void,
   personas: Persona[],
   onUpdatePersonas: (personas: Persona[]) => void,
-  aiSettings: GlobalAiSettings
+  aiSettings: GlobalAiSettings,
+  workflows: Workflow[],
+  tasks: Task[]
 }) => {
   const handleTTS = async (text: string) => {
     try {
@@ -1722,7 +1756,28 @@ const PersonasView = ({
     const includeSearch = aiSettings.enableSearch;
     const includeMaps = aiSettings.enableMaps || (userMessage.toLowerCase().includes("location") || userMessage.toLowerCase().includes("maps"));
 
-    const response = await chatWithPersona(selectedPersona, userMessage, apiHistory, model, includeMaps, includeSearch, aiSettings.temperature, aiSettings.systemInstruction);
+    // Inject User Context as Global Instruction
+    const userContext = `
+      CURRENT USER DATA CONTEXT:
+      - Workflows: ${workflows.map(w => `${w.name} (Trigger: ${w.trigger}, Action: ${w.action})`).join('; ')}
+      - Current Tasks: ${tasks.map(t => `${t.content} (Status: ${t.completed ? 'Done' : 'Pending'})`).join('; ')}
+      
+      PERSONALIZATION RULES:
+      - Always prioritize the user's existing business workflows and tasks when giving advice.
+      - If you are 'Artisan Guide', use the specific tasks and workflows to give localized, relevant advice for their Georgian business.
+      - Reference the user's specific progress from their history.
+    `;
+
+    const response = await chatWithPersona(
+      selectedPersona, 
+      userMessage, 
+      apiHistory, 
+      model, 
+      includeMaps, 
+      includeSearch, 
+      aiSettings.temperature, 
+      (aiSettings.systemInstruction || "") + userContext
+    );
     onNewMessage(selectedPersona.id, { role: 'model', content: response, timestamp: Date.now() });
     setLoading(false);
   };
@@ -3388,6 +3443,7 @@ export default function App() {
         setPersonas(PERSONAS);
         setChatHistory({});
         setPersonaAvatars({});
+        setTasks([]);
       }
       setAuthInitialized(true);
     });
@@ -3496,8 +3552,12 @@ export default function App() {
 
   const handleAiSuggestTasks = async () => {
     try {
-      const workflowContext = workflows.map(w => w.name).join(', ');
-      const prompt = `Based on these active project workflows: [${workflowContext}], suggest 3 next actionable steps as tasks. Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]`;
+      const workflowContext = workflows.map(w => `${w.name}: ${w.trigger} -> ${w.action}`).join('; ');
+      const existingTasks = tasks.map(t => t.content).join(', ');
+      
+      const prompt = `Based on these active project workflows: [${workflowContext}] and existing tasks: [${existingTasks}], suggest 3 next actionable steps as tasks that are not already listed. 
+      Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]
+      Ensure the content is specific to the user's business niche.`;
       
       const response = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3-flash-preview");
       const suggestions = JSON.parse(response.replace(/```json|```/g, '').trim());
@@ -3759,6 +3819,7 @@ export default function App() {
                   setActiveView={setActiveView}
                   chatHistory={chatHistory}
                   language={userProfile.language}
+                  user={user}
                 />
               )}
               {activeView === 'organizer' && (
@@ -3782,6 +3843,8 @@ export default function App() {
                   personas={personas}
                   onUpdatePersonas={handleUpdatePersonas}
                   aiSettings={aiSettings}
+                  workflows={workflows}
+                  tasks={tasks}
                 />
               )}
               {activeView === 'web3' && (
