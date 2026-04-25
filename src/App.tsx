@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   fetchSignInMethodsForEmail, 
+  sendPasswordResetEmail,
   linkWithCredential, 
   GoogleAuthProvider,
   EmailAuthProvider
@@ -504,11 +505,13 @@ const PersonaEditor = ({
 
 const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, language: 'en' | 'ka' }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   const t = translations[language].auth;
 
@@ -537,11 +540,27 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     
     if (!email.includes('@')) {
       setError(t.invalid_email);
       return;
     }
+
+    if (isResetting) {
+      setLoading(true);
+      try {
+        await sendPasswordResetEmail(auth, email);
+        setSuccess(t.reset_email_sent);
+      } catch (err: any) {
+        console.error("Reset Error:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (password.length < 6) {
       setError(t.password_too_short);
       return;
@@ -559,7 +578,6 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
         const methods = await fetchSignInMethodsForEmail(auth, email);
         if (methods.length > 0 && methods.includes('google.com')) {
           // In a real app, you might want to show a specific message or handle linking
-          // For now, let's just attempt sign in which might trigger account linking flows if enabled
         }
         await createUserWithEmailAndPassword(auth, email, password);
       }
@@ -590,7 +608,7 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
           </motion.div>
           <h1 className="text-3xl font-bold tracking-tight">Proton Core <span className="text-proton-accent">AI</span></h1>
           <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">
-            {isLogin ? t.login : t.signup}
+            {isResetting ? t.reset_password : (isLogin ? t.login : t.signup)}
           </p>
         </div>
 
@@ -607,36 +625,49 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.password}</label>
-            <input 
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
-              placeholder="••••••••"
-              required
-            />
-            {password && (
-              <div className="px-1 pt-1 space-y-1">
-                <div className="flex items-center justify-between text-[8px] font-mono uppercase tracking-widest text-proton-muted">
-                  <span>{t.password_strength}</span>
-                  <span className={cn("font-bold", passwordStrength > 2 ? "text-proton-accent" : "text-yellow-500")}>
-                    {strengthLabel}
-                  </span>
-                </div>
-                <div className="h-1 w-full bg-proton-muted/10 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(passwordStrength / 4) * 100}%` }}
-                    className={cn("h-full transition-colors", strengthColor)}
-                  />
-                </div>
+          {!isResetting && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between px-1">
+                <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.password}</label>
+                {isLogin && (
+                  <button 
+                    type="button"
+                    onClick={() => setIsResetting(true)}
+                    className="text-[9px] font-mono text-proton-accent hover:underline uppercase tracking-wider"
+                  >
+                    {t.forgot_password}
+                  </button>
+                )}
               </div>
-            )}
-          </div>
+              <input 
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
+                placeholder="••••••••"
+                required
+              />
+              {password && (
+                <div className="px-1 pt-1 space-y-1">
+                  <div className="flex items-center justify-between text-[8px] font-mono uppercase tracking-widest text-proton-muted">
+                    <span>{t.password_strength}</span>
+                    <span className={cn("font-bold", passwordStrength > 2 ? "text-proton-accent" : "text-yellow-500")}>
+                      {strengthLabel}
+                    </span>
+                  </div>
+                  <div className="h-1 w-full bg-proton-muted/10 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(passwordStrength / 4) * 100}%` }}
+                      className={cn("h-full transition-colors", strengthColor)}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-          {!isLogin && (
+          {!isLogin && !isResetting && (
             <div className="space-y-1">
               <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.confirm_password}</label>
               <input 
@@ -660,41 +691,61 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
             </motion.p>
           )}
 
+          {success && (
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-[10px] text-proton-accent font-mono text-center bg-proton-accent/10 py-2 rounded-lg border border-proton-accent/20"
+            >
+              {success}
+            </motion.p>
+          )}
+
           <button 
             type="submit"
             disabled={loading}
             className="w-full py-4 bg-proton-accent text-proton-bg font-bold rounded-xl shadow-[0_0_20px_rgba(0,242,255,0.2)] hover:shadow-[0_0_30px_rgba(0,242,255,0.4)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 mt-2"
           >
-            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isLogin ? t.login : t.signup)}
+            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isResetting ? t.send_reset_link : (isLogin ? t.login : t.signup))}
           </button>
         </form>
 
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-proton-border"></div></div>
-          <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-proton-muted bg-transparent">
-            <span className="px-2 bg-proton-bg">{t.or_continue_with}</span>
-          </div>
-        </div>
+        {!isResetting && (
+          <>
+            <div className="relative py-2">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-proton-border"></div></div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-proton-muted bg-transparent">
+                <span className="px-2 bg-proton-bg">{t.or_continue_with}</span>
+              </div>
+            </div>
 
-        <button 
-          onClick={onGoogleSignIn}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-proton-card/50 hover:bg-proton-card text-proton-text font-semibold rounded-xl transition-all border border-proton-border active:scale-[0.98]"
-        >
-          <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          {t.google_auth}
-        </button>
+            <button 
+              onClick={onGoogleSignIn}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-proton-card/50 hover:bg-proton-card text-proton-text font-semibold rounded-xl transition-all border border-proton-border active:scale-[0.98]"
+            >
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              {t.google_auth}
+            </button>
+          </>
+        )}
 
         <div className="text-center pt-2">
           <button 
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              if (isResetting) {
+                setIsResetting(false);
+              } else {
+                setIsLogin(!isLogin);
+              }
+            }}
             className="text-xs text-proton-accent hover:underline font-medium"
           >
-            {isLogin ? t.dont_have_account : t.already_have_account}
+            {isResetting ? t.back_to_login : (isLogin ? t.dont_have_account : t.already_have_account)}
           </button>
         </div>
       </motion.div>

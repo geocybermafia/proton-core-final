@@ -117,7 +117,12 @@ export const translations = {
       google_auth: "Google Neural Link",
       invalid_email: "Invalid email address",
       password_too_short: "Min 6 characters required",
-      passwords_dont_match: "Passwords do not match"
+      passwords_dont_match: "Passwords do not match",
+      forgot_password: "Forgot Password?",
+      reset_password: "Reset Password",
+      reset_email_sent: "Reset link sent! Check your inbox.",
+      send_reset_link: "Send Reset Link",
+      back_to_login: "Back to Login"
     }
   },
   ka: {
@@ -238,7 +243,12 @@ export const translations = {
       google_auth: "Google Neural Link",
       invalid_email: "არასწორი ელ.ფოსტა",
       password_too_short: "მინ. 6 სიმბოლო",
-      passwords_dont_match: "პაროლები არ ემთხვევა"
+      passwords_dont_match: "პაროლები არ ემთხვევა",
+      forgot_password: "დაგავიწყდათ პაროლი?",
+      reset_password: "პაროლის აღდგენა",
+      reset_email_sent: "აღდგენის ბმული გამოგზავნილია! შეამოწმეთ ფოსტა.",
+      send_reset_link: "ბმულის გაგზავნა",
+      back_to_login: "ავტორიზაციაზე დაბრუნება"
     }
   }
 };
