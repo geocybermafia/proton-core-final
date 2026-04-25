@@ -3884,6 +3884,24 @@ export default function App() {
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isArtisanSystemActive, setIsArtisanSystemActive] = useState(false);
 
+  // Bootstrap system config if missing
+  useEffect(() => {
+    const bootstrapConfig = async () => {
+      try {
+        const configRef = doc(db, 'system', 'config');
+        const snap = await getDoc(configRef);
+        if (!snap.exists()) {
+          // Note: This might fail if rules are already tightened, 
+          // but serves as a one-time helper.
+          await setDoc(configRef, { isArtisanSystemActive: false }, { merge: true });
+        }
+      } catch (e) {
+        console.log("System config already exists or restricted.");
+      }
+    };
+    bootstrapConfig();
+  }, []);
+
   useEffect(() => {
     const configRef = doc(db, 'system', 'config');
     const unsubscribe = onSnapshot(configRef, (snapshot) => {

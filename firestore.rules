@@ -41,6 +41,11 @@ service cloud.firestore {
       allow get: if true;
     }
 
+    match /system/config {
+      allow read: if true;
+      allow write: if false; // Only manageable via Console or bootstrap logic
+    }
+
     match /users/{userId} {
       // Allow the user to manage their own profile document
       allow get, write: if isSignedIn() && request.auth.uid == userId;

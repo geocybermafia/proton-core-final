@@ -66,6 +66,15 @@
       },
       "required": ["id", "content", "contentGe", "completed"]
     },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "Global system configuration",
+      "type": "object",
+      "properties": {
+        "isArtisanSystemActive": { "type": "boolean" }
+      },
+      "required": ["isArtisanSystemActive"]
+    },
     "NeuralPulseEvent": {
       "title": "NeuralPulseEvent",
       "description": "Anonymous project plan generation events for the global feed",
@@ -78,6 +87,10 @@
     }
   },
   "firestore": {
+    "/system/config": {
+      "schema": { "$ref": "SystemConfig" },
+      "description": "Global system configuration"
+    },
     "/neural_pulse/{pulseId}": {
       "schema": { "$ref": "NeuralPulseEvent" },
       "description": "Global anonymous feed of recent activity"
