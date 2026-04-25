@@ -1614,8 +1614,8 @@ const DashboardView = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 lg:bg-transparent lg:p-0 sticky top-0 z-40 bg-proton-bg/80 backdrop-blur-md p-2 -mx-4 sm:mx-0 md:relative md:top-auto md:z-auto">
-          <div className="flex p-1 bg-proton-card/50 border border-proton-border rounded-xl backdrop-blur-md shadow-lg shadow-proton-bg/20 w-full lg:w-auto">
+        <div className="flex flex-wrap items-center gap-4 lg:bg-transparent lg:p-0 sticky top-0 z-40 bg-proton-bg/80 backdrop-blur-md p-2 md:relative md:top-auto md:z-auto w-full md:w-auto">
+          <div className="flex p-1 bg-proton-card/50 border border-proton-border rounded-xl backdrop-blur-md shadow-lg shadow-proton-bg/20 w-full md:w-auto">
             {[
               { id: 'ops', label: 'Operations' },
               { id: 'finance', label: 'Financials' }
@@ -1660,7 +1660,7 @@ const DashboardView = ({
             className="space-y-6"
           >
             {/* Operator Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 { label: t.compute, value: '1.2 PFL', icon: Cpu, color: 'text-proton-accent' },
                 { label: t.latency, value: '0.4ms', icon: Zap, color: 'text-proton-secondary' },
@@ -1677,9 +1677,9 @@ const DashboardView = ({
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
               {/* Command Console */}
-              <div className="lg:col-span-8 space-y-6">
+              <div className="md:col-span-12 lg:col-span-8 space-y-6 w-full">
                 <div className="proton-glass rounded-[40px] border border-proton-border shadow-2xl overflow-hidden relative group/architect">
                   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-proton-accent to-transparent opacity-30 animate-pulse" />
                   <SmartTaskArchitect 
@@ -1707,7 +1707,7 @@ const DashboardView = ({
               </div>
 
               {/* Sidebar: Telemetry & Activity Log */}
-              <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
+              <div className="md:col-span-12 lg:col-span-4 space-y-6 lg:sticky lg:top-6 w-full">
                 <div className={cn(
                   "proton-glass rounded-[30px] border border-proton-border/50 p-6 shadow-xl transition-all duration-700",
                   showDiagnostics ? "opacity-100" : "opacity-40 hover:opacity-100 scale-[0.98] blur-[1px] hover:blur-0 hover:scale-100"
@@ -1811,7 +1811,7 @@ const DashboardView = ({
                      
                      <div className="p-8 rounded-[2.5rem] bg-proton-card/50 border border-proton-border space-y-6 flex flex-col justify-center">
                        <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest border-l-2 border-proton-accent pl-3">Sovereign Actions</p>
-                       <div className="grid grid-cols-2 gap-4">
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <button className="py-4 rounded-2xl bg-proton-accent text-proton-bg font-black text-[10px] uppercase tracking-widest hover:brightness-110 hover:shadow-lg shadow-proton-accent/20 active:scale-95 transition-all">Deposit</button>
                          <button className="py-4 rounded-2xl border border-proton-border text-proton-text font-black text-[10px] uppercase tracking-widest hover:bg-proton-card transition-all active:scale-95">Withdraw</button>
                        </div>
@@ -4141,18 +4141,26 @@ export default function App() {
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
       {/* Mobile Backdrop */}
-      {isSidebarOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
       <aside 
         className={cn(
-          "border-r border-proton-border flex flex-col z-50 overflow-x-hidden transition-all duration-300 ease-in-out bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl",
-          isSidebarOpen ? "translate-x-0 w-64 px-3" : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
+          "flex flex-col border-r border-proton-border bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl transition-all duration-300 ease-in-out z-[70] overflow-x-hidden",
+          "fixed inset-y-0 left-0 md:relative",
+          isSidebarOpen 
+            ? "translate-x-0 w-64 px-3" 
+            : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
         )}
       >
         <div className={cn("p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
@@ -4320,7 +4328,7 @@ export default function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative overflow-hidden pb-16 md:pb-0">
+      <main className="flex-1 min-w-0 flex flex-col relative overflow-hidden pb-16 md:pb-0">
         {/* Header */}
         <header className={cn(
           "h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 z-30 transition-colors backdrop-blur-md",
@@ -4345,21 +4353,25 @@ export default function App() {
               <span className="hidden sm:inline">{userProfile.region} {t.common.node}</span>
               <span className="inline sm:hidden">{userProfile.region.substring(0,3)}</span>
               <span className="text-proton-accent">•</span>
-              <span className="hidden sm:inline">v1.2.0-{t.common.stable}</span>
-              <span className="inline sm:hidden">v1.2</span>
+              <span className="hidden xs:inline">v1.2.0</span>
+              <span className="inline xs:hidden opacity-0 w-0">.</span>
             </div>
             <div className="h-4 w-px bg-proton-border hidden md:block" />
-            <DigitalClock uiMode={uiMode} />
+            <div className="hidden xs:block">
+              <DigitalClock uiMode={uiMode} />
+            </div>
           </div>
           
-          <div className="flex items-center gap-3 sm:gap-6">
-            <ModeToggle mode={uiMode} setMode={setUiMode} t={t} />
+          <div className="flex items-center gap-2 sm:gap-6">
+            <div className="scale-75 sm:scale-100 origin-right">
+              <ModeToggle mode={uiMode} setMode={setUiMode} t={t} />
+            </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <select
                 value={userProfile.language}
                 onChange={(e) => setUserProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                className="bg-proton-card border border-proton-border rounded-lg px-1 py-1 sm:px-2 text-[10px] font-mono text-proton-text focus:outline-none cursor-pointer hover:border-proton-accent transition-colors"
+                className="bg-proton-card border border-proton-border rounded-lg px-1 py-1 text-[10px] font-mono text-proton-text focus:outline-none cursor-pointer hover:border-proton-accent transition-colors"
               >
                 <option value="en">English (EN)</option>
                 <option value="ka">Georgian (GE)</option>

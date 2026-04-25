@@ -5,6 +5,8 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --breakpoint-xs: 480px;
   
   --color-proton-accent: #00f2ff;
   --color-proton-secondary: #ff2d55;
@@ -67,6 +69,13 @@
 
   body {
     @apply bg-proton-bg text-proton-text font-sans antialiased transition-colors duration-500;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  :root {
+    overflow-x: hidden;
   }
 }
 
