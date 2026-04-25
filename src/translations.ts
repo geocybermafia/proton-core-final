@@ -39,6 +39,7 @@ export const translations = {
     architect: {
       title: "Smart Task Architect",
       placeholder: "Describe your project (e.g. Building a dog house...)",
+      stasis_placeholder: "Artisan Neural Link is currently in recalibration mode. Estimated downtime: [Under Evaluation].",
       button: "Analyze Project",
       complexity: "Complexity Level",
       time: "Estimated Time",
@@ -74,6 +75,8 @@ export const translations = {
       latency: "Latency",
       uptime: "Uptime",
       active: "Active",
+      stasis_label: "SYSTEM STATUS: STASIS (MAINTENANCE)",
+      stasis_notice: "Core System Notice: Artisan mode is temporarily offline to optimize neural pathways. We apologize for the interruption.",
       messages: "MESSAGES"
     },
     modes: {
@@ -165,6 +168,7 @@ export const translations = {
     architect: {
       title: "Smart Task არქიტექტორი",
       placeholder: "აღწერეთ პროექტი (მაგ: ხის მაგიდის რესტავრაცია...)",
+      stasis_placeholder: "Artisan Neural Link ამჟამად რეკალიბრაციის რეჟიმშია. სავარაუდო დრო: [Under Evaluation].",
       button: "პროექტის ანალიზი",
       complexity: "სირთულის დონე",
       time: "სავარაუდო დრო",
@@ -200,6 +204,8 @@ export const translations = {
       latency: "დაყოვნება",
       uptime: "მუშაობის დრო",
       active: "აქტიური",
+      stasis_label: "SYSTEM STATUS: STASIS (MAINTENANCE)",
+      stasis_notice: "Core System Notice: Artisan mode is temporarily offline to optimize neural pathways. We apologize for the interruption.",
       messages: "შეტყობინება"
     },
     modes: {

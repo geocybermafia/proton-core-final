@@ -103,7 +103,10 @@ import {
   FileText,
   Building,
   Calendar as CalendarIcon,
-  Check
+  Check,
+  ShieldAlert,
+  Lock,
+  Search
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -1133,7 +1136,8 @@ const SmartTaskArchitect = ({
   onLoadingChange,
   aiSettings,
   setLastGeminiMetadata,
-  trackFirestore
+  trackFirestore,
+  isSystemActive = true
 }: { 
   language: 'en' | 'ka',
   projectText: string,
@@ -1143,7 +1147,8 @@ const SmartTaskArchitect = ({
   onLoadingChange?: (loading: boolean) => void,
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
-  trackFirestore: <T>(promise: Promise<T>) => Promise<T>
+  trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
+  isSystemActive?: boolean
 }) => {
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<TaskPlan | null>(null);
@@ -1159,7 +1164,7 @@ const SmartTaskArchitect = ({
   }, [cooldown]);
 
   const handleAnalyze = async () => {
-    if (!projectText.trim() || loading || cooldown > 0) return;
+    if (!isSystemActive || !projectText.trim() || loading || cooldown > 0) return;
 
     const cacheKey = `architect_cache_${user?.uid || 'anon'}_${projectText.trim().toLowerCase()}`;
     const cachedData = localStorage.getItem(cacheKey);
@@ -1278,20 +1283,36 @@ const SmartTaskArchitect = ({
           <div className="absolute -inset-1 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
         )}
         <div className={cn(
-          "relative flex flex-col md:flex-row p-1.5 bg-proton-card/80 backdrop-blur-xl rounded-2xl border border-proton-border hover:border-proton-accent/40 transition-all",
+          "relative flex flex-col md:flex-row p-1.5 bg-proton-card/80 backdrop-blur-xl rounded-2xl border border-proton-border hover:border-proton-accent/40 transition-all overflow-hidden",
           uiMode === 'artisan' ? "artisan-shadow" : "shadow-2xl"
         )}>
+          {!isSystemActive && (
+            <div className="absolute inset-0 z-20 bg-proton-bg/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-proton-card border border-proton-secondary/30 px-4 py-2 rounded-xl flex items-center gap-3 shadow-2xl"
+              >
+                <div className="w-2 h-2 rounded-full bg-proton-secondary animate-pulse" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-proton-secondary">Stasis Shield Active</span>
+              </motion.div>
+            </div>
+          )}
           <input 
             type="text" 
             value={projectText}
             onChange={(e) => setProjectText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-            placeholder={t.placeholder}
-            className="flex-1 bg-transparent px-4 py-3 text-sm md:text-base focus:outline-none placeholder:text-proton-muted font-medium"
+            onKeyDown={(e) => (e.key === 'Enter' && handleAnalyze())}
+            placeholder={isSystemActive ? t.placeholder : t.stasis_placeholder}
+            readOnly={!isSystemActive}
+            className={cn(
+              "flex-1 bg-transparent px-4 py-3 text-sm md:text-base focus:outline-none placeholder:text-proton-muted font-medium transition-opacity",
+              !isSystemActive && "opacity-40"
+            )}
           />
           <button 
             onClick={handleAnalyze}
-            disabled={loading || !projectText.trim() || cooldown > 0}
+            disabled={!isSystemActive || loading || !projectText.trim() || cooldown > 0}
             className={cn(
               "m-0.5 px-6 py-3 rounded-xl font-bold text-xs md:text-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2",
               uiMode === 'artisan' 
@@ -1300,7 +1321,7 @@ const SmartTaskArchitect = ({
             )}
           >
             {loading ? <Loader2 className="animate-spin" size={16} /> : cooldown > 0 ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={16} />}
-            {loading ? t.analyzing : cooldown > 0 ? `${t.cooldown} (${cooldown}s)` : t.button}
+            {loading ? t.analyzing : cooldown > 0 ? `${t.cooldown} (${cooldown}s)` : (isSystemActive ? t.button : "OFFLINE")}
           </button>
         </div>
       </div>
@@ -1501,7 +1522,8 @@ const DashboardView = ({
   uiMode,
   aiSettings,
   setLastGeminiMetadata,
-  trackFirestore
+  trackFirestore,
+  isArtisanSystemActive
 }: { 
   personas: Persona[], 
   activeView: View, 
@@ -1512,7 +1534,8 @@ const DashboardView = ({
   uiMode: 'operator' | 'artisan',
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
-  trackFirestore: <T>(promise: Promise<T>) => Promise<T>
+  trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
+  isArtisanSystemActive?: boolean
 }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({ address });
@@ -1532,8 +1555,11 @@ const DashboardView = ({
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-proton-text">
             {t.artisan_title}
           </h1>
-          <p className="text-proton-muted text-sm mt-1 font-medium italic">
-            Curated Workspace Active
+          <p className={cn(
+            "text-sm mt-1 font-medium italic",
+            isArtisanSystemActive ? "text-proton-muted" : "text-proton-secondary"
+          )}>
+            {isArtisanSystemActive ? "Curated Workspace Active" : t.stasis_label}
           </p>
         </div>
 
@@ -1572,6 +1598,7 @@ const DashboardView = ({
                 aiSettings={aiSettings}
                 setLastGeminiMetadata={setLastGeminiMetadata}
                 trackFirestore={trackFirestore}
+                isSystemActive={isArtisanSystemActive}
               />
             </div>
 
@@ -1606,13 +1633,27 @@ const DashboardView = ({
             <div className="proton-glass rounded-[40px] border border-proton-border p-8 artisan-shadow bg-proton-card flex flex-col h-full min-h-[500px]">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
-                  <Zap size={14} className="text-proton-accent" />
+                  <Zap size={14} className={isArtisanSystemActive ? "text-proton-accent" : "text-proton-secondary"} />
                   Activity Log
                 </h3>
-                <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+                <div className={cn(
+                  "w-2 h-2 rounded-full animate-pulse",
+                  isArtisanSystemActive ? "bg-proton-accent" : "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                )} />
               </div>
               
               <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+                {!isArtisanSystemActive && (
+                  <div className="p-4 rounded-2xl bg-proton-secondary/5 border border-proton-secondary/20 border-dashed animate-pulse">
+                    <div className="flex items-center gap-2 mb-2 text-proton-secondary">
+                      <ShieldAlert size={12} />
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest">Core System Notice</span>
+                    </div>
+                    <p className="text-xs text-proton-muted italic leading-relaxed">
+                      {t.stasis_notice}
+                    </p>
+                  </div>
+                )}
                 {Object.entries(chatHistory).length > 0 ? (
                   Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
                     msgs.slice(-2).map((m, i) => (
@@ -1658,9 +1699,12 @@ const DashboardView = ({
             {t.title}
           </h1>
           <div className="flex items-center gap-2 mt-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+            <div className={cn(
+              "w-2 h-2 rounded-full animate-pulse",
+              isArtisanSystemActive ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+            )} />
             <p className="text-proton-muted text-[10px] md:text-xs font-mono uppercase tracking-[0.2em]">
-              Neural Command Node [Active]
+              {isArtisanSystemActive ? "Neural Command Node [Active]" : t.stasis_label}
             </p>
           </div>
         </div>
@@ -1732,7 +1776,10 @@ const DashboardView = ({
               {/* Command Console */}
               <div className="md:col-span-12 lg:col-span-8 space-y-6 w-full">
                 <div className="proton-glass rounded-[40px] border border-proton-border shadow-2xl overflow-hidden relative group/architect">
-                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-proton-accent to-transparent opacity-30 animate-pulse" />
+                  <div className={cn(
+                    "absolute inset-x-0 top-0 h-1 bg-gradient-to-r opacity-30 animate-pulse",
+                    isArtisanSystemActive ? "from-transparent via-proton-accent to-transparent" : "from-transparent via-proton-secondary to-transparent"
+                  )} />
                   <SmartTaskArchitect 
                     language={language} 
                     projectText={projectText}
@@ -1743,6 +1790,7 @@ const DashboardView = ({
                     aiSettings={aiSettings}
                     setLastGeminiMetadata={setLastGeminiMetadata}
                     trackFirestore={trackFirestore}
+                    isSystemActive={isArtisanSystemActive}
                   />
                 </div>
 
@@ -3834,6 +3882,22 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
+  const [isArtisanSystemActive, setIsArtisanSystemActive] = useState(false);
+
+  useEffect(() => {
+    const configRef = doc(db, 'system', 'config');
+    const unsubscribe = onSnapshot(configRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setIsArtisanSystemActive(snapshot.data().isArtisanSystemActive ?? false);
+      } else {
+        setIsArtisanSystemActive(false);
+      }
+    }, (error) => {
+      setIsArtisanSystemActive(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const [isFirestoreActive, setIsFirestoreActive] = useState(false);
   const handleViewChange = React.useCallback((view: View) => {
     setActiveView(view);
@@ -4458,6 +4522,7 @@ export default function App() {
                   aiSettings={aiSettings}
                   setLastGeminiMetadata={setLastGeminiMetadata}
                   trackFirestore={trackFirestore}
+                  isArtisanSystemActive={isArtisanSystemActive}
                 />
               )}
               {activeView === 'organizer' && (
