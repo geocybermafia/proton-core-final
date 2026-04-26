@@ -187,33 +187,32 @@ const SidebarItem = React.memo(({
   <button
     onClick={onClick}
     className={cn(
-      "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg transition-all duration-300 group relative",
+      "flex items-center gap-4 w-full px-4 py-3 rounded-2xl transition-all duration-300 group relative",
       active 
-        ? "bg-proton-accent/10 text-proton-accent border border-proton-accent/20"
-        : "text-proton-muted hover:text-proton-text hover:bg-proton-text/5",
+        ? "bg-proton-accent/10 text-proton-accent"
+        : "text-proton-muted hover:text-proton-text hover:bg-white/5",
       !expanded && "justify-center px-0"
     )}
     title={!expanded ? label : undefined}
   >
-    <Icon size={18} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
+    <Icon size={20} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
     {expanded && (
       <span className={cn(
-        "text-[10px] uppercase tracking-widest whitespace-nowrap overflow-hidden animate-in fade-in slide-in-from-left-2",
-        uiMode === 'artisan' ? "font-sans font-semibold" : "font-mono font-bold"
+        "text-xs font-semibold tracking-wide whitespace-nowrap overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-left-2",
+        active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
       )}>
         {label}
       </span>
     )}
-    {active && expanded && (
+    {active && (
       <motion.div 
         layoutId="active-pill" 
         className={cn(
-          "ml-auto w-1 h-1 rounded-full bg-proton-accent",
-          uiMode === 'operator' && "shadow-[0_0_8px_rgba(0,242,255,0.8)]"
+          "absolute left-0 w-1 h-6 bg-proton-accent rounded-full",
+          active && "shadow-[0_0_15px_rgba(59,130,246,0.5)]"
         )} 
       />
     )}
-    {active && !expanded && <div className="absolute right-0.5 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-proton-accent rounded-full" />}
   </button>
 ));
 
@@ -516,7 +515,8 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  const t = translations[language].auth;
+  const currentLang = (language === 'ka' || language === 'en') ? language : 'en';
+  const t = translations[currentLang].auth;
 
   const passwordStrength = useMemo(() => {
     if (!password) return 0;
@@ -531,7 +531,7 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   const strengthColor = useMemo(() => {
     if (passwordStrength <= 1) return 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]';
     if (passwordStrength <= 2) return 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]';
-    return 'bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.5)]';
+    return 'bg-proton-accent shadow-[0_0_15px_rgba(59,130,246,0.4)]';
   }, [passwordStrength]);
 
   const strengthLabel = useMemo(() => {
@@ -578,10 +578,6 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const methods = await fetchSignInMethodsForEmail(auth, email);
-        if (methods.length > 0 && methods.includes('google.com')) {
-          // In a real app, you might want to show a specific message or handle linking
-        }
         await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
@@ -594,162 +590,160 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
 
   return (
     <div className="h-[100dvh] flex items-center justify-center bg-proton-bg p-4 relative overflow-hidden">
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-proton-accent/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-proton-secondary/5 blur-[120px] pointer-events-none" />
+      <div className="scanline opacity-[0.02]" />
+      <div className="proton-grain" />
+      
+      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-proton-accent/5 blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-proton-secondary/5 blur-[120px] pointer-events-none animate-pulse" />
       
       <motion.div 
         layout
-        className="relative z-10 w-full max-w-md proton-glass p-8 rounded-3xl space-y-6 shadow-2xl border border-white/5"
+        className="relative z-10 w-full max-w-md proton-glass p-1 rounded-[40px] shadow-2xl"
       >
-        <div className="space-y-2 text-center">
-          <motion.div 
-            initial={{ scale: 0.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-proton-accent to-proton-secondary flex items-center justify-center text-proton-bg shadow-[0_0_30px_rgba(0,242,255,0.3)] mb-4"
-          >
-            <Zap size={32} fill="currentColor" />
-          </motion.div>
-          <h1 className="text-3xl font-bold tracking-tight">Proton Core <span className="text-proton-accent">AI</span></h1>
-          <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">
-            {isResetting ? t.reset_password : (isLogin ? t.login : t.signup)}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.email}</label>
-            <input 
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
-              placeholder="operator@proton.core"
-              required
-            />
+        <div className="bg-proton-card/40 backdrop-blur-3xl rounded-[38px] p-10 space-y-10 border border-white/5">
+          <div className="space-y-6 text-center">
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="w-20 h-20 mx-auto rounded-3xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center text-proton-accent shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] mb-4 group relative"
+            >
+              <Zap size={36} className="relative z-10 group-hover:scale-110 transition-transform duration-500" />
+            </motion.div>
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold tracking-tighter text-proton-text font-display">
+                Proton Intelligence
+              </h1>
+              <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.4em] leading-none">
+                Enterprise Command Gateway
+              </p>
+            </div>
           </div>
 
-          {!isResetting && (
-            <div className="space-y-1">
-              <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.password}</label>
-                {isLogin && (
-                  <button 
-                    type="button"
-                    onClick={() => setIsResetting(true)}
-                    className="text-[9px] font-mono text-proton-accent hover:underline uppercase tracking-wider"
-                  >
-                    {t.forgot_password}
-                  </button>
-                )}
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.25em] px-2 font-sans">{t.email}</label>
               <input 
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
-                placeholder="••••••••"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-black/40 border border-proton-border focus:border-proton-accent/40 rounded-2xl px-6 py-4 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-proton-accent/5 font-sans"
+                placeholder="email@example.com"
                 required
               />
-              {password && (
-                <div className="px-1 pt-1 space-y-1">
-                  <div className="flex items-center justify-between text-[8px] font-mono uppercase tracking-widest text-proton-muted">
-                    <span>{t.password_strength}</span>
-                    <span className={cn("font-bold", passwordStrength > 2 ? "text-proton-accent" : "text-yellow-500")}>
-                      {strengthLabel}
-                    </span>
-                  </div>
-                  <div className="h-1 w-full bg-proton-muted/10 rounded-full overflow-hidden">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(passwordStrength / 4) * 100}%` }}
-                      className={cn("h-full transition-colors", strengthColor)}
-                    />
-                  </div>
+            </div>
+
+            {!isResetting && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between px-2">
+                  <label className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.25em] font-sans">{t.password}</label>
+                  {isLogin && (
+                    <button 
+                      type="button"
+                      onClick={() => setIsResetting(true)}
+                      className="text-[10px] font-bold text-proton-accent hover:text-proton-accent/80 uppercase tracking-widest transition-colors font-sans"
+                    >
+                      {t.forgot_password}
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-
-          {!isLogin && !isResetting && (
-            <div className="space-y-1">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">{t.confirm_password}</label>
-              <input 
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full bg-proton-card/50 border border-proton-border focus:border-proton-accent rounded-xl px-4 py-3 text-sm transition-all focus:outline-none"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          )}
-
-          {error && (
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-[10px] text-red-500 font-mono text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20"
-            >
-              {error}
-            </motion.p>
-          )}
-
-          {success && (
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-[10px] text-proton-accent font-mono text-center bg-proton-accent/10 py-2 rounded-lg border border-proton-accent/20"
-            >
-              {success}
-            </motion.p>
-          )}
-
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-proton-accent text-proton-bg font-bold rounded-xl shadow-[0_0_20px_rgba(0,242,255,0.2)] hover:shadow-[0_0_30px_rgba(0,242,255,0.4)] transition-all active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 mt-2"
-          >
-            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isResetting ? t.send_reset_link : (isLogin ? t.login : t.signup))}
-          </button>
-        </form>
-
-        {!isResetting && (
-          <>
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-proton-border"></div></div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-widest text-proton-muted bg-transparent">
-                <span className="px-2 bg-proton-bg">{t.or_continue_with}</span>
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-black/40 border border-proton-border focus:border-proton-accent/40 rounded-2xl px-6 py-4 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-proton-accent/5 font-sans"
+                  placeholder="••••••••"
+                  required
+                />
               </div>
-            </div>
+            )}
+
+            {isResetting && (
+              <div className="text-xs text-proton-muted text-center italic bg-white/5 py-4 rounded-2xl px-6 border border-proton-border">
+                Enter your email address and we'll send you a secure link to reset your password.
+              </div>
+            )}
+
+            {!isLogin && !isResetting && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.25em] px-2 font-sans">{t.confirm_password}</label>
+                <input 
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-black/40 border border-proton-border focus:border-proton-accent/40 rounded-2xl px-6 py-4 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-proton-accent/5 font-sans"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            )}
+
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-[10px] text-proton-secondary font-bold text-center bg-proton-secondary/5 py-4 rounded-2xl border border-proton-secondary/20 uppercase tracking-widest font-sans"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {success && (
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-[10px] text-proton-accent font-bold text-center bg-proton-accent/5 py-4 rounded-2xl border border-proton-accent/20 uppercase tracking-widest font-sans"
+              >
+                {success}
+              </motion.div>
+            )}
 
             <button 
-              onClick={onGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-proton-card/50 hover:bg-proton-card text-proton-text font-semibold rounded-xl transition-all border border-proton-border active:scale-[0.98]"
+              type="submit"
+              disabled={loading}
+              className="proton-button w-full shadow-2xl"
             >
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-              </svg>
-              {t.google_auth}
+              {loading ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> : (isResetting ? "Send Link" : (isLogin ? "Sign In" : "Create Account"))}
             </button>
-          </>
-        )}
+          </form>
 
-        <div className="text-center pt-2">
-          <button 
-            onClick={() => {
-              if (isResetting) {
-                setIsResetting(false);
-              } else {
-                setIsLogin(!isLogin);
-              }
-            }}
-            className="text-xs text-proton-accent hover:underline font-medium"
-          >
-            {isResetting ? t.back_to_login : (isLogin ? t.dont_have_account : t.already_have_account)}
-          </button>
+          {!isResetting && (
+            <>
+              <div className="relative flex items-center py-2 px-4">
+                <div className="flex-1 border-t border-proton-border" />
+                <p className="px-6 text-[9px] font-bold text-proton-muted uppercase tracking-[0.4em] leading-none font-sans">Identity Partner</p>
+                <div className="flex-1 border-t border-proton-border" />
+              </div>
+
+              <button 
+                onClick={onGoogleSignIn}
+                className="w-full flex items-center justify-center gap-4 px-8 py-4 bg-white/5 hover:bg-white/10 text-proton-text font-bold uppercase tracking-[0.2em] text-[10px] rounded-2xl transition-all border border-proton-border active:scale-[0.98] group"
+              >
+                <svg className="w-5 h-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="currentColor" fillOpacity="0.8" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="currentColor" fillOpacity="0.6"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor" fillOpacity="0.4" />
+                </svg>
+                Continue with Google
+              </button>
+            </>
+          )}
+
+          <div className="text-center pt-2">
+            <button 
+              onClick={() => {
+                if (isResetting) {
+                  setIsResetting(false);
+                } else {
+                  setIsLogin(!isLogin);
+                }
+              }}
+              className="text-[10px] font-bold text-proton-muted hover:text-proton-accent uppercase tracking-widest transition-colors font-sans"
+            >
+              {isResetting ? "Back to secure login" : (isLogin ? "Request new access credentials" : "Already have system access?")}
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
@@ -1543,34 +1537,73 @@ const DashboardView = ({
   const [isComputing, setIsComputing] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [operatorTab, setOperatorTab] = useState<'ops' | 'finance'>('ops');
-  const t = translations[language].dashboard;
-  const common = translations[language].common;
+  const currentLang = (language === 'ka' || language === 'en') ? language : 'en';
+  const t = translations[currentLang].dashboard;
+  const common = translations[currentLang].common;
 
   // Artisan Mode Layout
   if (uiMode === 'artisan') {
     return (
       <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 px-4 sm:px-6 lg:px-8 relative">
         {!isArtisanSystemActive && (
-          <div className="absolute inset-0 z-50 bg-proton-bg/10 backdrop-blur-[4px] pointer-events-none rounded-[40px] border border-proton-secondary/20 m-2 flex items-center justify-center">
-             <div className="bg-proton-card p-6 rounded-3xl border border-proton-secondary/40 shadow-2xl flex flex-col items-center gap-4 max-w-sm text-center">
-                <Lock size={40} className="text-proton-secondary animate-pulse" />
-                <h3 className="text-lg font-bold text-proton-text uppercase tracking-widest">Neural Link Offline</h3>
-                <p className="text-xs text-proton-muted leading-relaxed">The Artisan Intelligence framework is currently in protected stasis. Neural pathways are restricted.</p>
+          <div className="absolute inset-0 z-50 bg-proton-bg/20 backdrop-blur-[6px] pointer-events-none rounded-[40px] m-2 overflow-hidden border border-proton-secondary/10">
+             <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-black/60 p-8 rounded-3xl border border-proton-secondary/20 shadow-2xl flex flex-col items-center gap-6 max-w-sm text-center backdrop-blur-xl isolate"
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-proton-secondary/20 blur-2xl rounded-full animate-pulse" />
+                    <Lock size={48} className="text-proton-secondary relative z-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-proton-text uppercase tracking-[0.3em]">Neural Stasis</h3>
+                    <div className="h-[1px] w-12 bg-proton-secondary/40 mx-auto" />
+                    <p className="text-[10px] text-proton-muted font-mono leading-relaxed uppercase tracking-wider">
+                      Interface Protocol: Restricted<br/>
+                      Reason: Neural Quota Depleted<br/>
+                      Action: Awaiting Recalibration
+                    </p>
+                  </div>
+                </motion.div>
+             </div>
+             <div className="absolute top-0 right-0 p-8">
+               <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="w-12 h-12 border border-dashed border-proton-secondary/30 rounded-full"
+               />
              </div>
           </div>
         )}
         <div className={cn("space-y-8 transition-all duration-1000", !isArtisanSystemActive && "opacity-40 grayscale blur-[2px] pointer-events-none")}>
         {/* Artisan Header */}
-        <div className="pt-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-proton-text">
-            {t.artisan_title}
+        <div className="pt-12 border-l-2 border-proton-border pl-8 relative">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute -left-[2px] top-12 w-[3px] h-16 bg-proton-accent shadow-[0_0_20px_rgba(59,130,246,0.6)]"
+          />
+          <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-proton-text font-display flex flex-col md:flex-row md:items-baseline gap-4">
+             {t.artisan_title}
+             <span className="text-xs font-mono font-bold tracking-[0.5em] text-proton-muted md:translate-y-[-1.5rem] opacity-50">REL_5.0</span>
           </h1>
-          <p className={cn(
-            "text-sm mt-1 font-medium italic",
-            isArtisanSystemActive ? "text-proton-muted" : "text-proton-secondary"
-          )}>
-            {isArtisanSystemActive ? "Curated Workspace Active" : t.stasis_label}
-          </p>
+          <div className="flex items-center gap-6 mt-4">
+            <div className="flex items-center gap-3">
+              <div className={cn("w-2 h-2 rounded-full shadow-lg", isArtisanSystemActive ? "bg-proton-accent animate-pulse shadow-proton-accent/40" : "bg-proton-secondary")} />
+              <span className={cn(
+                "text-[10px] font-bold tracking-[0.2em] uppercase font-sans",
+                isArtisanSystemActive ? "text-proton-text" : "text-proton-secondary"
+              )}>
+                {isArtisanSystemActive ? "System Prime Active" : "Limited Service Mode"}
+              </span>
+            </div>
+            <div className="h-[1px] flex-1 bg-proton-border max-w-[200px]" />
+            <span className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.3em] font-sans">
+              {new Date().toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
         </div>
 
         {/* Persona Quick Selection (Horizontal Scroll) */}
@@ -1594,44 +1627,52 @@ const DashboardView = ({
         </div>
 
         {/* Main Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           {/* Left Column: Architect & Tasks */}
-          <div className="lg:col-span-8 space-y-8">
-            <div className="proton-glass rounded-[40px] border border-proton-border artisan-shadow overflow-hidden group/architect relative bg-proton-card">
-              <SmartTaskArchitect 
-                language={language} 
-                projectText={projectText}
-                setProjectText={setProjectText}
-                user={user}
-                uiMode={uiMode}
-                onLoadingChange={setIsComputing}
-                aiSettings={aiSettings}
-                setLastGeminiMetadata={setLastGeminiMetadata}
-                trackFirestore={trackFirestore}
-                isSystemActive={isArtisanSystemActive}
-              />
+          <div className="lg:col-span-8 space-y-12">
+            <div className="relative">
+              <div className="absolute -top-3 left-10 px-4 py-1 bg-proton-accent text-white text-[9px] font-bold uppercase tracking-[0.25em] rounded-full z-10 shadow-lg">
+                Intelligence Architect
+              </div>
+              <div className="proton-glass rounded-[48px] overflow-hidden group/architect relative bg-proton-card/40 backdrop-blur-3xl ring-1 ring-white/10 shadow-2xl">
+                <SmartTaskArchitect 
+                  language={language} 
+                  projectText={projectText}
+                  setProjectText={setProjectText}
+                  user={user}
+                  uiMode={uiMode}
+                  onLoadingChange={setIsComputing}
+                  aiSettings={aiSettings}
+                  setLastGeminiMetadata={setLastGeminiMetadata}
+                  trackFirestore={trackFirestore}
+                  isSystemActive={isArtisanSystemActive}
+                />
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-mono font-bold uppercase tracking-widest text-proton-text flex items-center gap-2">
-                  <LayoutDashboard size={14} className="text-proton-accent" />
-                  Active Blueprints
+            <div className="space-y-8">
+              <div className="flex items-center justify-between border-b border-proton-border pb-4">
+                <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-proton-text flex items-center gap-4">
+                  <span className="w-2.5 h-2.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
+                  Project Manifests
                 </h2>
+                <div className="text-[10px] font-bold text-proton-muted uppercase tracking-widest opacity-60">Archive 01</div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 {[1, 2].map((i) => (
-                  <div key={i} className="p-5 rounded-3xl bg-proton-card border border-proton-border artisan-shadow flex items-center justify-between group cursor-pointer hover:border-proton-accent transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
-                        <Layers size={18} />
+                  <div key={i} className="p-8 rounded-[40px] bg-white/5 border border-proton-border flex items-center justify-between group cursor-pointer hover:border-proton-accent/40 transition-all hover:bg-white/[0.08] shadow-sm hover:shadow-xl">
+                    <div className="flex items-center gap-6">
+                      <div className="w-14 h-14 rounded-[20px] bg-proton-accent/5 border border-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-105 transition-transform shadow-inner">
+                        <Layers size={24} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold">Project_Log_{i}</p>
-                        <p className="text-[10px] text-proton-muted font-mono uppercase">Version 1.2.4</p>
+                        <p className="text-base font-bold tracking-tight text-proton-text">Project_{i}</p>
+                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-[0.2em] mt-1">Status: Stable</p>
                       </div>
                     </div>
-                    <ArrowRight size={14} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
+                    <div className="w-10 h-10 rounded-full border border-proton-border flex items-center justify-center text-proton-muted group-hover:text-proton-accent group-hover:border-proton-accent/30 transition-all bg-white/5">
+                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1639,58 +1680,70 @@ const DashboardView = ({
           </div>
 
           {/* Right Column: Activity Feed */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="proton-glass rounded-[40px] border border-proton-border p-8 artisan-shadow bg-proton-card flex flex-col h-full min-h-[500px]">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xs font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
-                  <Zap size={14} className={isArtisanSystemActive ? "text-proton-accent" : "text-proton-secondary"} />
-                  Activity Log
+          <div className="lg:col-span-4 space-y-6 flex flex-col h-full">
+            <div className="proton-glass rounded-[48px] p-8 flex flex-col h-full min-h-[500px] relative ring-1 ring-white/10 shadow-2xl">
+              <div className="absolute top-0 right-12 w-px h-12 bg-gradient-to-b from-proton-accent to-transparent opacity-30" />
+              <div className="flex items-center justify-between mb-10">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] flex items-center gap-3 text-proton-text font-sans">
+                  <span className={cn(
+                    "w-2 h-2 rounded-full",
+                    isArtisanSystemActive ? "bg-proton-accent shadow-[0_0_12px_rgba(59,130,246,0.8)]" : "bg-proton-secondary"
+                  )} />
+                  {t.activity_log || "Global Activity"}
                 </h3>
-                <div className={cn(
-                  "w-2 h-2 rounded-full animate-pulse",
-                  isArtisanSystemActive ? "bg-proton-accent" : "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-                )} />
+                <Activity size={18} className="text-proton-muted opacity-30" />
               </div>
               
-              <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-10 pr-2 custom-scrollbar">
                 {!isArtisanSystemActive && (
-                  <div className="p-4 rounded-2xl bg-proton-secondary/5 border border-proton-secondary/20 border-dashed animate-pulse">
-                    <div className="flex items-center gap-2 mb-2 text-proton-secondary">
-                      <ShieldAlert size={12} />
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-widest">Core System Notice</span>
+                  <div className="p-8 rounded-[40px] bg-white/5 border border-proton-border border-dashed animate-pulse relative overflow-hidden group">
+                    <div className="flex items-center gap-3 mb-4 text-proton-secondary relative z-10">
+                      <ShieldAlert size={18} />
+                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] font-sans">Sync Locked</span>
                     </div>
-                    <p className="text-xs text-proton-muted italic leading-relaxed">
-                      {t.stasis_notice}
+                    <p className="text-xs text-proton-muted italic leading-relaxed relative z-10 opacity-70">
+                       Optimization mode is currently restricted. Authenticate to restore full system logging.
                     </p>
                   </div>
                 )}
+                
                 {Object.entries(chatHistory).length > 0 ? (
                   Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
-                    msgs.slice(-2).map((m, i) => (
-                      <div key={`${personaId}-${i}`} className="p-4 rounded-2xl bg-proton-bg/50 border border-proton-border hover:border-proton-accent/30 transition-all group">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] font-mono text-proton-accent uppercase font-bold">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
-                          <span className="text-[8px] font-mono text-proton-muted font-bold">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    msgs.slice(-4).map((m, i) => (
+                      <div key={`${personaId}-${i}`} className="relative pl-8 border-l border-white/5 group hover:border-proton-accent/40 transition-colors pb-2">
+                        <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-proton-border group-hover:bg-proton-accent group-hover:shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all" />
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] font-bold text-proton-accent uppercase tracking-[0.2em]">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
+                          <span className="text-[9px] font-mono text-proton-muted opacity-40">[{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
                         </div>
-                        <p className="text-xs text-proton-muted leading-relaxed font-medium group-hover:text-proton-text transition-colors italic">"{m.content}"</p>
+                        <p className="text-[13px] text-proton-text/70 leading-relaxed group-hover:text-proton-text transition-colors font-medium">
+                          {(m.content?.length ?? 0) > 110 ? m.content?.substring(0, 110) + '...' : m.content}
+                        </p>
                       </div>
                     ))
                   )
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center py-12">
-                    <Shield size={40} className="mb-4 text-proton-muted opacity-30" />
-                    <p className="text-xs font-mono uppercase tracking-[0.2em] text-proton-muted">No recent neural activity</p>
+                  <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-30">
+                    <div className="w-16 h-16 rounded-full border border-dashed border-proton-border flex items-center justify-center mb-6">
+                      <Database size={24} className="text-proton-muted" />
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No Activity Logged</p>
                   </div>
                 )}
               </div>
               
-              <div className="mt-8 pt-8 border-t border-proton-border">
+              <div className="mt-10 pt-10 border-t border-proton-border/40 space-y-6">
                 <button 
                   onClick={() => setActiveView('organizer')}
-                  className="w-full py-4 rounded-2xl bg-proton-bg border border-proton-border hover:bg-proton-accent hover:text-white transition-all text-xs font-bold uppercase tracking-widest text-proton-text active:scale-95"
+                  className="proton-button w-full shadow-lg"
                 >
-                  Open Task Hub
+                  <LayoutDashboard size={20} />
+                  Access Knowledge Base
                 </button>
+                <div className="flex items-center justify-between text-[9px] font-bold text-proton-muted uppercase tracking-[0.3em] px-2 opacity-50 font-sans">
+                    <span>Cache Ready</span>
+                    <span className={isArtisanSystemActive ? "text-proton-accent font-bold" : "text-proton-secondary"}>{isArtisanSystemActive ? "Synchronized" : "Limited"}</span>
+                 </div>
               </div>
             </div>
           </div>
@@ -1994,9 +2047,9 @@ const DashboardView = ({
           </h2>
           <button 
             onClick={() => setActiveView('personas')}
-            className="text-[10px] font-mono text-proton-accent hover:underline flex items-center gap-1 group"
+            className="text-[10px] font-bold text-proton-accent hover:underline flex items-center gap-1 group uppercase tracking-widest"
           >
-            View All <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+            Explore All <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
 
@@ -3283,7 +3336,7 @@ const WorkflowEditor = ({
             </div>
             <div>
                <h3 className="text-xl font-bold tracking-tight">Edit Workflow</h3>
-               <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">ID: {formData.id.slice(-6)}</p>
+               <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">ID: {formData.id?.slice(-6)}</p>
             </div>
           </div>
           <div className="flex bg-proton-card p-1 rounded-2xl border border-proton-border shadow-sm">
@@ -3655,7 +3708,7 @@ const WorkflowsView = ({
                         </span>
                     </div>
                     <div className="px-2 py-1 rounded bg-proton-bg border border-proton-border text-[9px] font-mono opacity-60">
-                        LN: {wf.id.slice(-4)}
+                        LN: {wf.id?.slice(-4)}
                     </div>
                 </div>
               </div>
@@ -3981,17 +4034,23 @@ export default function App() {
   }, [theme, uiMode]);
   
   const [chatHistory, setChatHistory] = useState<PersonaHistory>(() => {
-    const saved = localStorage.getItem('proton_chat_history');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('proton_chat_history');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
   });
   const [playingMsgIndex, setPlayingMsgIndex] = useState<number | null>(null);
   const [personaAvatars, setPersonaAvatars] = useState<{ [id: string]: string }>(() => {
-    const saved = localStorage.getItem('proton_persona_avatars');
-    return saved ? JSON.parse(saved) : {};
+    try {
+      const saved = localStorage.getItem('proton_persona_avatars');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
   });
   const [personas, setPersonas] = useState<Persona[]>(() => {
-    const saved = localStorage.getItem('proton_personas');
-    return saved ? JSON.parse(saved) : PERSONAS;
+    try {
+      const saved = localStorage.getItem('proton_personas');
+      return saved ? JSON.parse(saved) : PERSONAS;
+    } catch { return PERSONAS; }
   });
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
@@ -4007,14 +4066,24 @@ export default function App() {
     localStorage.setItem('proton_personas', JSON.stringify(personas));
   }, [personas]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('user-profile');
-    return saved ? JSON.parse(saved) : {
-      name: 'Darian B.',
-      email: 'devdarianib@gmail.com',
-      language: 'en',
-      region: 'Tbilisi',
-      notifications: true
-    };
+    try {
+      const saved = localStorage.getItem('user-profile');
+      return saved ? JSON.parse(saved) : {
+        name: 'Darian B.',
+        email: 'devdarianib@gmail.com',
+        language: 'en',
+        region: 'Tbilisi',
+        notifications: true
+      };
+    } catch {
+      return {
+        name: 'Darian B.',
+        email: 'devdarianib@gmail.com',
+        language: 'en',
+        region: 'Tbilisi',
+        notifications: true
+      };
+    }
   });
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('proton_favorite_personas');
@@ -4026,15 +4095,26 @@ export default function App() {
   }, [favoritePersonaIds]);
   
   const [aiSettings, setAiSettings] = useState<GlobalAiSettings>(() => {
-    const saved = localStorage.getItem('proton_ai_settings');
-    return saved ? JSON.parse(saved) : {
-      temperature: 0.8,
-      enableSearch: true,
-      enableMaps: false,
-      zenMode: false,
-      systemInstruction: "",
-      voice: "Kore"
-    };
+    try {
+      const saved = localStorage.getItem('proton_ai_settings');
+      return saved ? JSON.parse(saved) : {
+        temperature: 0.8,
+        enableSearch: true,
+        enableMaps: false,
+        zenMode: false,
+        systemInstruction: "",
+        voice: "Kore"
+      };
+    } catch {
+      return {
+        temperature: 0.8,
+        enableSearch: true,
+        enableMaps: false,
+        zenMode: false,
+        systemInstruction: "",
+        voice: "Kore"
+      };
+    }
   });
 
   useEffect(() => {
@@ -4315,10 +4395,13 @@ export default function App() {
     );
   }
 
-  const t = translations[userProfile.language];
+  const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
+  const t = translations[currentLanguage];
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
+    <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative crt-effect">
+      <div className="scanline" />
+      <div className="proton-grain" />
       {/* Mobile Backdrop */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -4335,25 +4418,25 @@ export default function App() {
       {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
       <aside 
         className={cn(
-          "flex flex-col border-r border-proton-border bg-proton-card/95 md:bg-proton-card/50 backdrop-blur-xl transition-all duration-300 ease-in-out z-[70] overflow-x-hidden",
+          "flex flex-col border-r border-proton-border bg-proton-card transition-all duration-300 ease-in-out z-[70] overflow-x-hidden shadow-2xl",
           "fixed inset-y-0 left-0 md:relative",
           isSidebarOpen 
-            ? "translate-x-0 w-64 px-3" 
-            : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
+            ? "translate-x-0 w-72 px-4 shadow-[20px_0_40px_rgba(0,0,0,0.4)]" 
+            : "-translate-x-full md:translate-x-0 md:w-20 w-72 px-2"
         )}
       >
-        <div className={cn("p-6 flex items-center gap-3 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
+        <div className={cn("p-8 flex items-center gap-4 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
           <div className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500",
+            "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500",
             uiMode === 'artisan' 
-              ? "bg-proton-text text-proton-bg" 
-              : "bg-gradient-to-br from-proton-accent to-proton-secondary text-proton-bg shadow-[0_0_15px_rgba(0,242,255,0.3)]"
+              ? "bg-proton-accent text-proton-bg shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
+              : "bg-gradient-to-br from-proton-accent to-proton-secondary text-proton-bg shadow-[0_0_15px_rgba(59,130,246,0.3)]"
           )}>
-            <Zap size={24} fill="currentColor" />
+            <Zap size={28} fill="currentColor" />
           </div>
           {isSidebarOpen && (
-            <div className="font-bold text-lg tracking-tight transition-opacity duration-300 animate-in fade-in slide-in-from-left-1">
-              {uiMode === 'artisan' ? 'Proton' : 'Proton Core'} <span className="text-proton-accent">{uiMode === 'artisan' ? 'Studio' : 'AI'}</span>
+            <div className="font-display font-bold text-2xl tracking-tighter transition-opacity duration-300 animate-in fade-in slide-in-from-left-2">
+              Proton<span className="text-proton-accent italic">_Core</span>
             </div>
           )}
         </div>
@@ -4530,7 +4613,7 @@ export default function App() {
             <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-proton-muted uppercase tracking-widest">
               <Globe size={14} className="min-w-[14px]" />
               <span className="hidden sm:inline">{userProfile.region} {t.common.node}</span>
-              <span className="inline sm:hidden">{userProfile.region.substring(0,3)}</span>
+              <span className="inline sm:hidden">{userProfile.region?.substring(0,3)}</span>
               <span className="text-proton-accent">•</span>
               <span className="hidden xs:inline">v1.2.0</span>
               <span className="inline xs:hidden opacity-0 w-0">.</span>
@@ -4570,14 +4653,31 @@ export default function App() {
               <motion.div 
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                className="bg-red-950/40 backdrop-blur-md border border-red-500/30 p-4 rounded-2xl flex items-center gap-4 shadow-2xl artisan-shadow"
+                className="bg-black/80 backdrop-blur-md border border-proton-secondary/30 p-1 rounded-2xl shadow-2xl artisan-shadow"
               >
-                <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                  <ShieldAlert className="text-red-500" size={24} />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-red-400 uppercase tracking-widest leading-none mb-1">System Recalibration</h4>
-                  <p className="text-[10px] text-red-200/60 leading-relaxed italic">The Neural Link is currently in high-security stasis mode. Artificial Intelligence guided operations are restricted.</p>
+                <div className="border border-proton-secondary/20 rounded-xl p-3 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-proton-secondary/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                    <ShieldAlert className="text-proton-secondary relative z-10" size={20} />
+                    <motion.div 
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.1, 0.3, 0.1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 bg-proton-secondary"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-[10px] font-bold text-proton-secondary uppercase tracking-[0.2em] leading-none">Status: Stasis Phase 4</h4>
+                      <span className="text-[8px] font-mono text-proton-secondary/60">ERR_QUOTA_EXCEEDED</span>
+                    </div>
+                    <div className="h-1 bg-proton-secondary/10 rounded-full overflow-hidden mb-2">
+                       <motion.div 
+                        initial={{ width: "0%" }}
+                        animate={{ width: "42%" }}
+                        className="h-full bg-proton-secondary shadow-[0_0_10px_rgba(255,45,85,0.5)]"
+                       />
+                    </div>
+                    <p className="text-[9px] text-proton-text/50 leading-tight font-mono">Neural Link: Restricted • System recalibrating to optimize token consumption...</p>
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -4674,14 +4774,14 @@ export default function App() {
                 <div className="flex flex-col h-full w-full max-w-2xl mx-auto p-8 space-y-8">
                   <div className="flex items-center gap-4">
                     <Settings size={32} className="text-proton-accent" />
-                    <h2 className="text-2xl font-bold">{translations[userProfile.language].settings.title}</h2>
+                    <h2 className="text-2xl font-bold">{t.settings.title}</h2>
                   </div>
  
                   <div className="space-y-6">
                     <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">{translations[userProfile.language].sidebar.profile}</h3>
+                      <h3 className="font-bold border-b border-proton-border pb-2">{t.sidebar.profile}</h3>
                       <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">{translations[userProfile.language].settings.region || 'Region'}</label>
+                        <label className="text-xs text-proton-muted">{t.settings.region || 'Region'}</label>
                         <input 
                           value={userProfile.region || ''}
                           onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
@@ -4692,10 +4792,10 @@ export default function App() {
                     </section>
 
                     <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">{translations[userProfile.language].settings.ai_config}</h3>
+                      <h3 className="font-bold border-b border-proton-border pb-2">{t.settings.ai_config}</h3>
                       
                       <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">{translations[userProfile.language].settings.temperature}: {aiSettings.temperature}</label>
+                        <label className="text-xs text-proton-muted">{t.settings.temperature}: {aiSettings.temperature}</label>
                         <input 
                           type="range" min="0" max="1" step="0.1"
                           value={aiSettings.temperature}
@@ -4705,7 +4805,7 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <label className="text-xs">{translations[userProfile.language].settings.search}</label>
+                        <label className="text-xs">{t.settings.search}</label>
                         <input 
                           type="checkbox" checked={aiSettings.enableSearch}
                           onChange={e => setAiSettings(prev => ({ ...prev, enableSearch: e.target.checked }))}
@@ -4714,7 +4814,7 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <label className="text-xs">{translations[userProfile.language].settings.maps}</label>
+                        <label className="text-xs">{t.settings.maps}</label>
                         <input 
                           type="checkbox" checked={aiSettings.enableMaps}
                           onChange={e => setAiSettings(prev => ({ ...prev, enableMaps: e.target.checked }))}

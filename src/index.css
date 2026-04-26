@@ -1,159 +1,119 @@
 @import 'reactflow/dist/style.css';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   --breakpoint-xs: 480px;
   
-  --color-proton-accent: #00f2ff;
-  --color-proton-secondary: #ff2d55;
+  --color-proton-accent: #3b82f6; /* Modern Blue */
+  --color-proton-secondary: #f43f5e; /* Rose */
   
   /* Custom Shadows */
-  --shadow-artisan: 0 4px 24px -4px rgba(0, 0, 0, 0.04);
+  --shadow-artisan: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
 
-  /* Default (Operator) Theme */
-  --color-proton-bg: #0a0a0c;
-  --color-proton-card: #121217;
-  --color-proton-border: #22222a;
-  --color-proton-text: #e1e1e6;
-  --color-proton-muted: #8e8e93;
+  /* Default Theme (Modern Dark) */
+  --color-proton-bg: #09090b;
+  --color-proton-card: #18181b;
+  --color-proton-border: rgba(255, 255, 255, 0.08);
+  --color-proton-text: #fafafa;
+  --color-proton-muted: #71717a;
 }
 
 @layer base {
   :root[data-theme="proton"] {
-    --color-proton-bg: #0a0a0c;
-    --color-proton-card: #121217;
-    --color-proton-border: #22222a;
-    --color-proton-text: #e1e1e6;
-    --color-proton-muted: #8e8e93;
-    --color-proton-accent: #00f2ff;
-    --color-proton-secondary: #ff2d55;
+    --color-proton-bg: #09090b;
+    --color-proton-card: #18181b;
+    --color-proton-border: rgba(255, 255, 255, 0.08);
+    --color-proton-text: #fafafa;
+    --color-proton-muted: #71717a;
+    --color-proton-accent: #3b82f6;
+    --color-proton-secondary: #f43f5e;
   }
 
   :root[data-theme="light"] {
-    --color-proton-bg: #f2f2f7;
+    --color-proton-bg: #fafafa;
     --color-proton-card: #ffffff;
-    --color-proton-border: #c6c6c8;
-    --color-proton-text: #1c1c1e;
-    --color-proton-muted: #3a3a3c;
-    --color-proton-accent: #007aff;
-    --color-proton-secondary: #ff3b30;
-  }
-
-  :root[data-theme="vibrant"] {
-    --color-proton-bg: #0f172a;
-    --color-proton-card: #1e293b;
-    --color-proton-border: #334155;
-    --color-proton-text: #f8fafc;
-    --color-proton-muted: #94a3b8;
-    --color-proton-accent: #0ea5e9;
-    --color-proton-secondary: #ec4899;
-  }
-
-  :root[data-theme="midnight"] {
-    --color-proton-bg: #020617;
-    --color-proton-card: #0f172a;
-    --color-proton-border: #1e293b;
-    --color-proton-text: #e2e8f0;
-    --color-proton-muted: #64748b;
-    --color-proton-accent: #6366f1;
-    --color-proton-secondary: #8b5cf6;
-  }
-
-  :root[data-ui-mode="artisan"] {
-    --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --color-proton-border: rgba(0, 0, 0, 0.08);
+    --color-proton-text: #09090b;
+    --color-proton-muted: #71717a;
+    --color-proton-accent: #2563eb;
+    --color-proton-secondary: #e11d48;
   }
 
   body {
-    @apply bg-proton-bg text-proton-text font-sans antialiased transition-colors duration-500;
-    overflow-x: hidden;
-    width: 100%;
-    position: relative;
-  }
-
-  :root {
+    @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/20;
     overflow-x: hidden;
   }
 }
 
 .proton-glass {
-  @apply bg-proton-card/80 backdrop-blur-xl border border-proton-border/40 transition-all duration-300;
-}
-
-[data-ui-mode="artisan"] .proton-glass {
-  @apply shadow-artisan;
+  @apply bg-proton-card/40 backdrop-blur-3xl border border-proton-border ring-1 ring-white/5 transition-all duration-500;
 }
 
 .proton-glass:hover {
-  @apply border-proton-accent/40 ring-1 ring-proton-accent/20;
-}
-
-[data-ui-mode="artisan"] .proton-glass:hover {
-  @apply border-proton-accent/30 ring-0;
+  @apply border-proton-accent/30 bg-proton-card/50;
 }
 
 .artisan-shadow {
-  box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.04);
+  @apply shadow-artisan;
 }
 
 .proton-button {
-  @apply px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2;
-  @apply hover:scale-105 active:scale-95;
-  @apply bg-proton-accent text-proton-bg hover:brightness-110 active:brightness-90;
+  @apply px-6 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-2;
+  @apply bg-proton-accent text-white shadow-[0_8px_30px_rgba(59,130,246,0.3)] hover:shadow-[0_12px_40px_rgba(59,130,246,0.4)];
+  @apply hover:scale-[1.02] active:scale-[0.98] hover:bg-proton-accent/90;
 }
 
 .proton-glow {
-  box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);
+  @apply relative;
 }
 
-.proton-glow-red {
-  box-shadow: 0 0 20px rgba(255, 45, 85, 0.15);
+.proton-glow::after {
+  content: "";
+  @apply absolute inset-0 -z-10 rounded-full blur-2xl opacity-20 bg-proton-accent transition-opacity duration-500;
 }
 
-.proton-grid {
-  background-image: radial-gradient(var(--color-proton-border) 1px, transparent 1px);
-  background-size: 24px 24px;
+.crt-effect {
+  @apply relative overflow-hidden;
+}
+
+/* Subtle, high-end scanline */
+.scanline {
+  @apply absolute inset-0 pointer-events-none z-50;
+  background: linear-gradient(to bottom, transparent 50%, rgba(255, 255, 255, 0.01) 50%);
+  background-size: 100% 4px;
+}
+
+.proton-grain {
+  @apply absolute inset-0 pointer-events-none z-50 opacity-[0.02];
+  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
 }
 
 @layer utilities {
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-proton-border rounded-full hover:bg-proton-muted/50 transition-colors;
+  @apply bg-proton-border rounded-full hover:bg-proton-muted/30 transition-colors;
 }
 
-/* Hide scrollbar on mobile by default but keep functionality */
-@media (max-width: 768px) {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 0px;
-    height: 0px;
-  }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
-
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
 

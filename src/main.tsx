@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Web3 compatibility shim
+if (typeof (window as any).global === 'undefined') {
+  (window as any).global = window;
+}
+
 import '@rainbow-me/rainbowkit/styles.css';
 import { getDefaultConfig, RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { WagmiProvider, http } from 'wagmi';
