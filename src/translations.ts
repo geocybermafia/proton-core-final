@@ -14,6 +14,7 @@ export const translations = {
       system: "System",
       profile: "Profile",
       settings: "Settings",
+      device: "Apparatus Intelligence",
       collapse: "Collapse",
       new: "NEW",
       bottom_nav: {
@@ -119,7 +120,30 @@ export const translations = {
       node: "System",
       stable: "Online",
       gpu: "Resources",
-      messages: "Messages"
+      messages: "Messages",
+      device: "Apparatus"
+    },
+    hardware: {
+      title: "Device Intelligence",
+      description: "Direct interface with local hardware sensors and peripheral systems.",
+      location: "Geolocation",
+      battery: "Power Management",
+      network: "Connectivity",
+      sensors: "Motion Sensors",
+      request_access: "Authorize Access",
+      status_active: "Active",
+      status_inactive: "Deactivated",
+      lat: "Latitude",
+      lng: "Longitude",
+      accuracy: "Accuracy",
+      level: "Battery Level",
+      health: "Storage Health",
+      downlink: "Bandwidth",
+      rtt: "Latency",
+      orientation: "Orientation",
+      alpha: "Alpha",
+      beta: "Beta",
+      gamma: "Gamma"
     },
     systems: {
       title: "Systems & Optimization",
@@ -181,6 +205,7 @@ export const translations = {
       system: "სისტემა",
       profile: "პროფილი",
       settings: "პარამეტრები",
+      device: "აპარატის ინტელექტი",
       collapse: "ჩაკეცვა",
       new: "ახალი",
       bottom_nav: {
@@ -311,7 +336,30 @@ export const translations = {
       node: "სისტემა",
       stable: "ონლაინ",
       gpu: "რესურსები",
-      messages: "შეტყობინებები"
+      messages: "შეტყობინებები",
+      device: "აპარატი"
+    },
+    hardware: {
+      title: "მოწყობილობის ინტელექტი",
+      description: "პირდაპირი ინტერფეისი ლოკალურ აპარატულ სენსორებთან და სისტემებთან.",
+      location: "გეოლოკაცია",
+      battery: "ენერგიის მართვა",
+      network: "კავშირი",
+      sensors: "მოძრაობის სენსორები",
+      request_access: "წვდომის ავტორიზაცია",
+      status_active: "აქტიური",
+      status_inactive: "დეაქტივირებული",
+      lat: "განედი",
+      lng: "გრძედი",
+      accuracy: "სიზუსტე",
+      level: "ელემენტის დონე",
+      health: "მეხსიერების მდგომარეობა",
+      downlink: "გამტარუნარიანობა",
+      rtt: "დაყოვნება",
+      orientation: "ორიენტაცია",
+      alpha: "ალფა",
+      beta: "ბეტა",
+      gamma: "გამა"
     },
     systems: {
       title: "სისტემები და ოპტიმიზაცია",

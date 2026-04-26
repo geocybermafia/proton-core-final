@@ -1,6 +1,6 @@
 {
   "name": "Proton Core AI",
   "description": "Localized LLM ecosystem for the Georgian market, featuring digital personas, Web3 integration, and automated business workflows.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["geolocation"],
   "majorCapabilities": []
 }

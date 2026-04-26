@@ -83,6 +83,7 @@ import {
   Terminal, 
   ShieldCheck, 
   Cloud,
+  Compass,
   ArrowRight,
   Send,
   Loader2,
@@ -121,7 +122,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 
 // --- Types ---
-type View = 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer';
+type View = 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device';
 
 type ChatMessage = { role: 'user' | 'model', content: string, timestamp: number };
 type PersonaHistory = { [personaId: string]: ChatMessage[] };
@@ -1103,6 +1104,205 @@ const SystemsView = ({
                     </div>
                  </div>
               </div>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
+  const t = translations[language].hardware;
+  const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
+  const [network, setNetwork] = useState<{ downlink: number; rtt: number } | null>(null);
+  const [orientation, setOrientation] = useState<{ alpha: number; beta: number; gamma: number } | null>(null);
+  const [supported, setSupported] = useState<Record<string, boolean>>({
+    geolocation: 'geolocation' in navigator,
+    battery: 'getBattery' in navigator,
+    network: 'connection' in navigator,
+    orientation: 'DeviceOrientationEvent' in window
+  });
+
+  const requestHardwareAccess = () => {
+    if (supported.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setLocation({ 
+          lat: pos.coords.latitude, 
+          lng: pos.coords.longitude, 
+          accuracy: pos.coords.accuracy 
+        }),
+        (err) => console.error(err),
+        { enableHighAccuracy: true }
+      );
+    }
+
+    if (supported.battery) {
+      (navigator as any).getBattery().then((bat: any) => {
+        setBattery({ level: bat.level, charging: bat.charging });
+        bat.addEventListener('levelchange', () => setBattery(prev => prev ? { ...prev, level: bat.level } : null));
+        bat.addEventListener('chargingchange', () => setBattery(prev => prev ? { ...prev, charging: bat.charging } : null));
+      });
+    }
+
+    if (supported.network) {
+      const conn = (navigator as any).connection;
+      setNetwork({ downlink: conn.downlink, rtt: conn.rtt });
+      conn.addEventListener('change', () => setNetwork({ downlink: conn.downlink, rtt: conn.rtt }));
+    }
+
+    if (supported.orientation) {
+      window.addEventListener('deviceorientation', (event) => {
+        setOrientation({
+          alpha: event.alpha || 0,
+          beta: event.beta || 0,
+          gamma: event.gamma || 0
+        });
+      });
+    }
+  };
+
+  useEffect(() => {
+    // Initial status check
+    setSupported({
+      geolocation: 'geolocation' in navigator,
+      battery: 'getBattery' in navigator,
+      network: 'connection' in navigator,
+      orientation: 'DeviceOrientationEvent' in window
+    });
+  }, []);
+
+  const stats = [
+    { 
+      label: t.location, 
+      icon: Compass, 
+      active: !!location,
+      supported: supported.geolocation,
+      value: location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : t.status_inactive,
+      sub: location ? `${t.accuracy}: ${location.accuracy.toFixed(0)}m` : null
+    },
+    { 
+      label: t.battery, 
+      icon: Zap, 
+      active: !!battery,
+      supported: supported.battery,
+      value: battery ? `${(battery.level * 100).toFixed(0)}%` : t.status_inactive,
+      sub: battery ? (battery.charging ? 'Charging' : 'Discharging') : null
+    },
+    { 
+      label: t.network, 
+      icon: Cloud, 
+      active: !!network,
+      supported: supported.network,
+      value: network ? `${network.downlink} Mbps` : t.status_inactive,
+      sub: network ? `RTT: ${network.rtt}ms` : null
+    },
+    { 
+      label: t.sensors, 
+      icon: Cpu, 
+      active: !!orientation,
+      supported: supported.orientation,
+      value: orientation ? `α:${orientation.alpha.toFixed(0)}°` : t.status_inactive,
+      sub: orientation ? `β:${orientation.beta.toFixed(0)}° γ:${orientation.gamma.toFixed(0)}°` : null
+    }
+  ];
+
+  return (
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
+        <div className="space-y-3 text-center md:text-left">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text uppercase">
+            {t.title}
+          </h1>
+          <p className="text-proton-muted text-lg font-medium max-w-xl">
+            {t.description}
+          </p>
+        </div>
+        <button 
+          onClick={requestHardwareAccess}
+          className="flex items-center gap-3 px-8 py-4 bg-proton-accent text-white rounded-full font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all"
+        >
+          <Zap size={20} />
+          {t.request_access}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat, i) => (
+          <div key={i} className={cn(
+            "bg-proton-card p-8 rounded-[40px] border transition-all duration-500 flex flex-col items-center text-center gap-6",
+            stat.active ? "border-proton-accent shadow-lg shadow-proton-accent/5" : "border-proton-border shadow-sm opactiy-60"
+          )}>
+            <div className={cn(
+              "w-20 h-20 rounded-3xl flex items-center justify-center transition-colors duration-500",
+              stat.active ? "bg-proton-accent text-white" : "bg-proton-bg text-proton-muted"
+            )}>
+               <stat.icon size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-bold text-sm uppercase tracking-widest text-proton-muted">{stat.label}</h3>
+              <p className={cn(
+                "text-2xl font-black tracking-tight",
+                stat.active ? "text-proton-text" : "text-proton-muted"
+              )}>{stat.value}</p>
+              {stat.sub && (
+                <p className="text-xs font-mono text-proton-accent font-bold uppercase">{stat.sub}</p>
+              )}
+            </div>
+            {!stat.supported && (
+              <span className="text-[10px] font-bold text-proton-secondary uppercase tracking-widest px-3 py-1 bg-proton-secondary/10 rounded-full">
+                Not Supported
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none">
+            <Compass size={200} />
+          </div>
+          <div className="relative z-10 space-y-6">
+             <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
+                   <ShieldCheck size={24} />
+                </div>
+                <h3 className="text-2xl font-bold tracking-tight">Apparatus Security Layer</h3>
+             </div>
+             <p className="text-proton-muted font-medium leading-relaxed max-w-xl">
+                The hardware integration layer uses browser-native sandbox protocols. Data requested from the apparatus (Location, NFC, Sensors) is processed locally and encrypted before any transmission to optimization nodes.
+             </p>
+             <div className="pt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Encryption', val: 'AES-256' },
+                  { label: 'Sandbox', val: 'Isolated' },
+                  { label: 'Auth', val: 'OAuth 2.0' },
+                  { label: 'Protocol', val: 'HTTPS/TLS' }
+                ].map((item, idx) => (
+                  <div key={idx} className="bg-proton-bg p-4 rounded-2xl border border-proton-border">
+                    <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest mb-1">{item.label}</p>
+                    <p className="text-sm font-bold text-proton-text">{item.val}</p>
+                  </div>
+                ))}
+             </div>
+          </div>
+        </div>
+        <div className="lg:col-span-4 bg-proton-accent p-10 rounded-[40px] text-white flex flex-col justify-between shadow-2xl shadow-proton-accent/20">
+           <div className="space-y-4">
+              <Cpu size={48} />
+              <h3 className="text-3xl font-bold tracking-tight leading-none">System Load</h3>
+              <p className="text-white/70 font-medium">Real-time optimization of local computational resources based on apparatus telemetry.</p>
+           </div>
+           <div className="pt-8 space-y-4">
+              <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
+                 <motion.div 
+                   animate={{ width: ["20%", "45%", "32%"] }}
+                   transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                   className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" 
+                 />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-60">Telemetry Optimized</p>
            </div>
         </div>
       </div>
@@ -2359,15 +2559,11 @@ export default function App() {
   const [isFirestoreActive, setIsFirestoreActive] = useState(false);
   const [showOptimizationModal, setShowOptimizationModal] = useState(false);
   const handleViewChange = React.useCallback((view: View) => {
-    if (!isArtisanSystemActive && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
-      setShowOptimizationModal(true);
-      return;
-    }
     setActiveView(view);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [isArtisanSystemActive]);
+  }, []);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<'proton' | 'light' | 'vibrant' | 'midnight'>(
@@ -2876,6 +3072,14 @@ export default function App() {
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
+            <SidebarItem 
+              icon={Cpu} 
+              label={t.sidebar.device} 
+              active={activeView === 'device'} 
+              onClick={() => handleViewChange('device')} 
+              expanded={isSidebarOpen}
+              uiMode={uiMode}
+            />
           </div>
         </nav>
 
@@ -3041,6 +3245,9 @@ export default function App() {
                   language={userProfile.language}
                   uiMode={uiMode}
                 />
+              )}
+              {activeView === 'device' && (
+                <HardwareView language={userProfile.language} />
               )}
               {activeView === 'personas' && (
                 <PersonasView 
