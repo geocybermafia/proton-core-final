@@ -74,7 +74,22 @@
 
   body {
     @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/30 selection:text-proton-accent;
+    transition: background-color 0.5s ease, color 0.5s ease;
   }
+
+  :root[data-ui-mode="artisan"] {
+    --color-proton-bg: #f8fafc;
+    /* Artisan specific tweaks can go here if needed per theme, 
+       but for now we'll use it to trigger component level shifts via tailwind classes like ui-artisan: */
+  }
+}
+
+.ui-artisan .proton-glass {
+  @apply backdrop-blur-md bg-proton-card/70 border-white/10;
+}
+
+.ui-operator .proton-glass {
+  @apply bg-proton-card border-proton-border;
 }
 
 .proton-glass {

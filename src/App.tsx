@@ -89,6 +89,7 @@ import {
   Loader2,
   Database,
   Layers,
+  Layout,
   Network,
   Sun,
   Moon,
@@ -882,6 +883,7 @@ const DashboardView = ({
   setActiveView, 
   chatHistory, 
   language = 'en',
+  uiMode,
   isArtisanSystemActive
 }: { 
   personas: Persona[], 
@@ -906,78 +908,149 @@ const DashboardView = ({
   }, [chatHistory, personas]);
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
-        <div className="space-y-3 text-center md:text-left">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text">
-            {t.sidebar.dashboard}
+    <div className={cn(
+      "space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20",
+      uiMode === 'artisan' ? "artisan-mode" : "operator-mode"
+    )}>
+      <div className={cn(
+        "flex flex-col md:flex-row items-center justify-between gap-8 pt-4",
+        uiMode === 'artisan' && "bg-proton-card p-10 rounded-[50px] border border-proton-border shadow-2xl relative overflow-hidden"
+      )}>
+        {uiMode === 'artisan' && (
+          <div className="absolute top-0 right-0 p-20 opacity-[0.03] pointer-events-none">
+            <Zap size={300} className="text-proton-accent" />
+          </div>
+        )}
+        <div className="space-y-3 text-center md:text-left relative z-10">
+          <h1 className={cn(
+            "font-black tracking-tighter text-proton-text uppercase",
+            uiMode === 'artisan' ? "text-5xl md:text-8xl leading-none" : "text-4xl md:text-6xl"
+          )}>
+            {uiMode === 'artisan' ? t.dashboard.artisan_title : t.sidebar.dashboard}
           </h1>
-          <p className="text-proton-muted text-lg font-medium max-w-xl">
+          <p className={cn(
+            "text-proton-muted font-medium max-w-xl",
+            uiMode === 'artisan' ? "text-xl md:text-2xl" : "text-lg"
+          )}>
              {t.dashboard.explore_subtitle}
           </p>
         </div>
         {!isArtisanSystemActive && (
-          <div className="bg-proton-accent/10 border border-proton-accent/20 px-6 py-4 rounded-2xl flex items-center gap-4">
-             <div className="w-10 h-10 rounded-xl bg-proton-accent flex items-center justify-center text-white">
-                <ShieldAlert size={24} />
+          <div className="bg-proton-secondary/10 border border-proton-secondary/20 px-8 py-5 rounded-[32px] flex items-center gap-5 shadow-lg shadow-proton-secondary/5 relative z-10">
+             <div className="w-12 h-12 rounded-2xl bg-proton-secondary flex items-center justify-center text-white shadow-lg shadow-proton-secondary/20">
+                <ShieldAlert size={28} />
              </div>
              <div>
-                <p className="text-sm font-bold text-proton-accent uppercase tracking-widest leading-none mb-1">{t.dashboard.maintenance}</p>
-                <p className="text-xs text-proton-muted font-medium">{t.dashboard.maintenance_desc}</p>
+                <p className="text-xs font-bold text-proton-secondary uppercase tracking-[0.2em] leading-none mb-1">{t.dashboard.maintenance}</p>
+                <p className="text-xs text-proton-muted font-semibold">{t.dashboard.maintenance_desc}</p>
              </div>
           </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-10">
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className={cn(
+          "space-y-10",
+          uiMode === 'artisan' ? "lg:col-span-12" : "lg:col-span-8"
+        )}>
+           <div className={cn(
+             "grid grid-cols-1 sm:grid-cols-2 gap-6",
+             uiMode === 'artisan' ? "md:grid-cols-4" : "md:grid-cols-2"
+           )}>
               <button 
                 onClick={() => setActiveView('finance')}
-                className="bg-proton-card p-6 rounded-3xl border border-proton-border hover:border-proton-accent transition-all text-left space-y-4 group"
+                className={cn(
+                  "bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
+                  uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
+                )}
               >
-                <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Wallet size={24} />
+                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                  <Wallet size={28} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">{t.dashboard.financial_center}</h3>
-                  <p className="text-xs text-proton-muted font-medium">{t.dashboard.financial_center_desc}</p>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-xl">{t.dashboard.financial_center}</h3>
+                  <p className="text-xs text-proton-muted font-medium leading-relaxed">{t.dashboard.financial_center_desc}</p>
+                </div>
+                <div className="absolute bottom-0 right-0 p-6 opacity-0 group-hover:opacity-10 transition-opacity">
+                  <ArrowRight size={40} />
                 </div>
               </button>
+
               <button 
                 onClick={() => setActiveView('organizer')}
-                className="bg-proton-card p-6 rounded-3xl border border-proton-border hover:border-proton-accent transition-all text-left space-y-4 group"
+                className={cn(
+                  "bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
+                  uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
+                )}
               >
-                <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-                   <CalendarIcon size={24} />
+                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                   <CalendarIcon size={28} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg">{t.dashboard.organizer_tool}</h3>
-                  <p className="text-xs text-proton-muted font-medium">{t.dashboard.organizer_desc}</p>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-xl">{t.dashboard.organizer_tool}</h3>
+                  <p className="text-xs text-proton-muted font-medium leading-relaxed">{t.dashboard.organizer_desc}</p>
+                </div>
+                <div className="absolute bottom-0 right-0 p-6 opacity-0 group-hover:opacity-10 transition-opacity">
+                  <ArrowRight size={40} />
                 </div>
               </button>
+
+              {uiMode === 'artisan' && (
+                <>
+                  <button 
+                    onClick={() => setActiveView('device')}
+                    className="bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                      <Cpu size={28} />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-xl">{t.sidebar.device}</h3>
+                      <p className="text-xs text-proton-muted font-medium leading-relaxed">Integrated hardware intelligence</p>
+                    </div>
+                  </button>
+                  <button 
+                    onClick={() => setActiveView('personas')}
+                    className="bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                      <Users size={28} />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-xl">{t.dashboard.ai_personas}</h3>
+                      <p className="text-xs text-proton-muted font-medium leading-relaxed">Manage your digital intelligence nodes</p>
+                    </div>
+                  </button>
+                </>
+              )}
            </div>
 
-           <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm">
+           <div className={cn(
+             "bg-proton-card p-10 rounded-[50px] border border-proton-border shadow-sm",
+             uiMode === 'artisan' && "border-proton-accent/20"
+           )}>
               <div className="flex items-center justify-between mb-8">
-                 <h3 className="font-bold text-xl">{t.dashboard.recent_activity}</h3>
-                 <button onClick={() => setActiveView('personas')} className="text-xs font-bold text-proton-accent uppercase hover:underline">{t.dashboard.view_all}</button>
+                 <h3 className="font-bold text-2xl tracking-tight">{t.dashboard.recent_activity}</h3>
+                 <button onClick={() => setActiveView('personas')} className="text-xs font-bold text-proton-accent uppercase hover:underline tracking-widest">{t.dashboard.view_all}</button>
               </div>
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  {recentHistory.length > 0 ? (
                     recentHistory.slice(0, 3).map((item, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-proton-bg border border-proton-border">
-                         <div className="w-10 h-10 rounded-full bg-proton-accent/10 flex items-center justify-center text-proton-accent font-bold">
-                            {item.personaName?.charAt(0)}
+                      <div key={i} className="flex flex-col gap-6 p-8 rounded-[32px] bg-proton-bg border border-proton-border hover:border-proton-accent/30 transition-all group">
+                         <div className="flex items-center gap-4">
+                           <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent font-bold text-xl shadow-inner group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                              {item.personaName?.charAt(0)}
+                           </div>
+                           <div>
+                              <p className="text-lg font-bold">{item.personaName}</p>
+                              <p className="text-[10px] font-mono font-bold text-proton-muted uppercase tracking-widest">Active Connection</p>
+                           </div>
                          </div>
-                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold">{item.personaName}</p>
-                            <p className="text-xs text-proton-muted truncate">{item.content}</p>
-                         </div>
+                         <p className="text-sm text-proton-muted font-medium leading-relaxed italic border-l-2 border-proton-accent/20 pl-4">"{item.content}"</p>
                       </div>
                     ))
                  ) : (
-                    <div className="text-center py-10 text-proton-muted font-medium italic">
+                    <div className="col-span-3 text-center py-20 text-proton-muted font-medium italic">
                        {t.dashboard.no_activity}
                     </div>
                  )}
@@ -985,36 +1058,51 @@ const DashboardView = ({
            </div>
         </div>
 
-        <div className="lg:col-span-4 space-y-8">
-           <div className="bg-proton-accent p-8 rounded-[40px] text-white space-y-6 shadow-2xl shadow-proton-accent/20">
-              <div className="space-y-2">
-                 <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.system_status}</h3>
-                 <p className="text-sm text-white/80 font-medium">{t.dashboard.system_status_desc}</p>
-              </div>
-              <div className="space-y-4 pt-4">
-                 <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
-                    <span>{t.dashboard.performance}</span>
-                    <span>98%</span>
-                 </div>
-                 <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full w-[98%] bg-white" />
-                 </div>
-              </div>
-              <button 
-                onClick={() => setActiveView('settings')}
-                className="w-full py-4 bg-white text-proton-accent rounded-2xl font-bold text-sm shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
-              >
-                {t.dashboard.configuration}
-              </button>
-           </div>
+        {uiMode === 'operator' && (
+          <div className="lg:col-span-4 space-y-8">
+            <div className="bg-proton-accent p-8 rounded-[40px] text-white space-y-6 shadow-2xl shadow-proton-accent/20 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
+                  <Activity size={100} />
+               </div>
+               <div className="space-y-2 relative z-10">
+                  <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.system_status}</h3>
+                  <p className="text-sm text-white/80 font-medium">{t.dashboard.system_status_desc}</p>
+               </div>
+               <div className="space-y-4 pt-4 relative z-10">
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em]">
+                     <span>{t.dashboard.performance}</span>
+                     <span>98%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
+                     <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: "98%" }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" 
+                     />
+                  </div>
+               </div>
+               <button 
+                 onClick={() => setActiveView('settings')}
+                 className="w-full py-4 bg-white text-proton-accent rounded-2xl font-bold text-sm shadow-xl hover:scale-[1.02] active:scale-95 transition-all relative z-10"
+               >
+                 {t.dashboard.configuration}
+               </button>
+            </div>
 
-           <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm">
-              <h3 className="font-bold text-lg mb-4">{t.dashboard.quick_setup}</h3>
-              <p className="text-xs text-proton-muted leading-relaxed font-medium font-sans">
-                {t.dashboard.quick_setup_desc}
-              </p>
-           </div>
-        </div>
+            <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm flex flex-col gap-6">
+               <div className="w-12 h-12 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
+                  <Layout size={24} />
+               </div>
+               <div className="space-y-2">
+                  <h3 className="font-bold text-lg tracking-tight">{t.dashboard.quick_setup}</h3>
+                  <p className="text-xs text-proton-muted leading-relaxed font-semibold font-sans">
+                    {t.dashboard.quick_setup_desc}
+                  </p>
+               </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2963,7 +3051,10 @@ export default function App() {
   const t = translations[currentLanguage];
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
+    <div className={cn(
+      "flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative transition-all duration-500",
+      uiMode === 'artisan' ? "ui-artisan" : "ui-operator"
+    )}>
       {/* Mobile Backdrop */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -3419,30 +3510,78 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowOptimizationModal(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
             />
             <motion.div 
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative bg-proton-card w-full max-w-md rounded-[40px] border border-proton-border shadow-2xl p-8 overflow-hidden"
+              className="relative bg-proton-card w-full max-w-lg rounded-[50px] border border-proton-border shadow-2xl overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                <ShieldAlert size={160} />
-              </div>
-              <div className="space-y-6 relative z-10">
-                <div className="w-16 h-16 rounded-3xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
-                  <Zap size={32} />
+              <div className="w-full bg-proton-accent p-8 text-white relative">
+                <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
+                  <Activity size={120} />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.optimization_title}</h3>
-                  <p className="text-sm text-proton-muted leading-relaxed font-medium">
-                    {t.dashboard.optimization_desc}
+                <div className="space-y-2 relative z-10">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+                      <Zap size={24} />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">{t.dashboard.optimization_title}</span>
+                  </div>
+                  <h3 className="text-3xl font-black tracking-tighter uppercase">{t.dashboard.system_sync}</h3>
+                  <p className="text-sm text-white/80 font-medium max-w-xs">{t.dashboard.optimization_desc}</p>
+                </div>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: t.sidebar.finance, status: 'Online', color: 'text-green-400', icon: Wallet },
+                    { label: t.sidebar.organizer, status: 'Online', color: 'text-green-400', icon: CalendarIcon },
+                    { label: t.sidebar.blueprints, status: 'Restoring', color: 'text-amber-400', icon: Workflow },
+                    { label: t.sidebar.personas, status: 'Syncing', color: 'text-proton-accent', icon: Users },
+                  ].map((sys, i) => (
+                    <div key={sys.label} className="p-4 rounded-3xl bg-proton-bg border border-proton-border flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-muted">
+                        <sys.icon size={18} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest leading-none mb-1">{sys.label}</p>
+                        <p className={cn("text-xs font-black uppercase tracking-widest", sys.color)}>{sys.status}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-[0.2em] text-proton-muted px-2">
+                    <span>{t.dashboard.sync_progress}</span>
+                    <span className="text-proton-accent">84%</span>
+                  </div>
+                  <div className="h-2 w-full bg-proton-bg rounded-full overflow-hidden border border-proton-border">
+                    <motion.div 
+                      initial={{ width: "30%" }}
+                      animate={{ width: "84%" }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                      className="h-full bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.5)]"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-proton-bg p-5 rounded-3xl border border-proton-border border-dashed">
+                  <div className="flex items-center gap-3 mb-2">
+                    <ShieldCheck size={16} className="text-proton-accent" />
+                    <span className="text-[10px] font-bold text-proton-text uppercase tracking-widest">{t.dashboard.security_verification}</span>
+                  </div>
+                  <p className="text-[11px] text-proton-muted font-medium leading-relaxed italic">
+                    "{t.dashboard.security_msg}"
                   </p>
                 </div>
+
                 <button 
                   onClick={() => setShowOptimizationModal(false)}
-                  className="w-full py-4 bg-proton-accent text-white rounded-2xl font-bold text-sm shadow-xl shadow-proton-accent/20 hover:brightness-110 active:scale-95 transition-all"
+                  className="w-full py-5 bg-proton-accent text-white rounded-[32px] font-bold text-sm shadow-2xl shadow-proton-accent/30 hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em]"
                 >
                   {t.dashboard.optimization_btn}
                 </button>
