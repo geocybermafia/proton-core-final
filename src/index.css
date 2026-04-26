@@ -9,103 +9,95 @@
 
   --breakpoint-xs: 480px;
   
-  --color-proton-accent: #3b82f6; /* Modern Blue */
-  --color-proton-secondary: #f43f5e; /* Rose */
+  --color-proton-accent: #3b82f6; 
+  --color-proton-secondary: #f43f5e;
   
-  /* Custom Shadows */
-  --shadow-artisan: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+  --shadow-artisan: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 
-  /* Default Theme (Modern Dark) */
-  --color-proton-bg: #09090b;
-  --color-proton-card: #18181b;
-  --color-proton-border: rgba(255, 255, 255, 0.08);
-  --color-proton-text: #fafafa;
+  --color-proton-bg: #ffffff;
+  --color-proton-card: #ffffff;
+  --color-proton-border: #e4e4e7;
+  --color-proton-text: #09090b;
   --color-proton-muted: #71717a;
 }
 
 @layer base {
-  :root[data-theme="proton"] {
-    --color-proton-bg: #09090b;
-    --color-proton-card: #18181b;
-    --color-proton-border: rgba(255, 255, 255, 0.08);
-    --color-proton-text: #fafafa;
-    --color-proton-muted: #71717a;
+  :root {
+    --color-proton-bg: #f8fafc;
+    --color-proton-card: #ffffff;
+    --color-proton-border: #e2e8f0;
+    --color-proton-text: #0f172a;
+    --color-proton-muted: #64748b;
     --color-proton-accent: #3b82f6;
     --color-proton-secondary: #f43f5e;
   }
 
+  :root[data-theme="proton"] {
+    --color-proton-bg: #0a0b10;
+    --color-proton-card: #13141c;
+    --color-proton-border: #232533;
+    --color-proton-text: #f1f1f3;
+    --color-proton-muted: #8a8e9e;
+    --color-proton-accent: #00f2ff;
+    --color-proton-secondary: #ff2d55;
+  }
+
   :root[data-theme="light"] {
-    --color-proton-bg: #fafafa;
+    --color-proton-bg: #f8fafc;
     --color-proton-card: #ffffff;
-    --color-proton-border: rgba(0, 0, 0, 0.08);
-    --color-proton-text: #09090b;
+    --color-proton-border: #e2e8f0;
+    --color-proton-text: #0f172a;
+    --color-proton-muted: #64748b;
+    --color-proton-accent: #3b82f6;
+    --color-proton-secondary: #f43f5e;
+  }
+
+  :root[data-theme="vibrant"] {
+    --color-proton-bg: #0f172a;
+    --color-proton-card: #1e293b;
+    --color-proton-border: #334155;
+    --color-proton-text: #f8fafc;
+    --color-proton-muted: #94a3b8;
+    --color-proton-accent: #8b5cf6;
+    --color-proton-secondary: #ec4899;
+  }
+
+  :root[data-theme="midnight"] {
+    --color-proton-bg: #000000;
+    --color-proton-card: #09090b;
+    --color-proton-border: #1d1d20;
+    --color-proton-text: #ffffff;
     --color-proton-muted: #71717a;
-    --color-proton-accent: #2563eb;
-    --color-proton-secondary: #e11d48;
+    --color-proton-accent: #ffffff;
+    --color-proton-secondary: #2dd4bf;
   }
 
   body {
-    @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/20;
-    overflow-x: hidden;
+    @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/30 selection:text-proton-accent;
   }
 }
 
 .proton-glass {
-  @apply bg-proton-card/40 backdrop-blur-3xl border border-proton-border ring-1 ring-white/5 transition-all duration-500;
+  @apply bg-proton-card border border-proton-border shadow-sm rounded-xl transition-all duration-200;
 }
 
 .proton-glass:hover {
-  @apply border-proton-accent/30 bg-proton-card/50;
-}
-
-.artisan-shadow {
-  @apply shadow-artisan;
+  @apply shadow-md;
 }
 
 .proton-button {
-  @apply px-6 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] transition-all duration-300 flex items-center justify-center gap-2;
-  @apply bg-proton-accent text-white shadow-[0_8px_30px_rgba(59,130,246,0.3)] hover:shadow-[0_12px_40px_rgba(59,130,246,0.4)];
-  @apply hover:scale-[1.02] active:scale-[0.98] hover:bg-proton-accent/90;
-}
-
-.proton-glow {
-  @apply relative;
-}
-
-.proton-glow::after {
-  content: "";
-  @apply absolute inset-0 -z-10 rounded-full blur-2xl opacity-20 bg-proton-accent transition-opacity duration-500;
-}
-
-.crt-effect {
-  @apply relative overflow-hidden;
-}
-
-/* Subtle, high-end scanline */
-.scanline {
-  @apply absolute inset-0 pointer-events-none z-50;
-  background: linear-gradient(to bottom, transparent 50%, rgba(255, 255, 255, 0.01) 50%);
-  background-size: 100% 4px;
-}
-
-.proton-grain {
-  @apply absolute inset-0 pointer-events-none z-50 opacity-[0.02];
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
-}
-
-@layer utilities {
-  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-  .pt-safe { padding-top: env(safe-area-inset-top); }
+  @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2;
+  @apply bg-proton-accent text-white hover:bg-proton-accent/90 focus:ring-2 focus:ring-proton-accent/20;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 5px;
+  width: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-proton-border rounded-full hover:bg-proton-muted/30 transition-colors;
+  @apply bg-proton-border rounded-full hover:bg-proton-muted/30;
 }
 
 .no-scrollbar {

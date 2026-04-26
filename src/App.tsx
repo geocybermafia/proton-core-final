@@ -82,6 +82,7 @@ import {
   Heart,
   Terminal, 
   ShieldCheck, 
+  Cloud,
   ArrowRight,
   Send,
   Loader2,
@@ -165,6 +166,8 @@ type Task = {
   contentGe: string;
   completed: boolean;
   isAiSuggested?: boolean;
+  priority?: 'low' | 'medium' | 'high';
+  category?: string;
 };
 
 // --- Components ---
@@ -575,13 +578,15 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
 
     setLoading(true);
     try {
-      if (isLogin) {
+      if (isResetting) {
+        await sendPasswordResetEmail(auth, email);
+        setSuccess(t.reset_email_sent);
+      } else if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
-      console.error("Auth Error:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -589,186 +594,122 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   };
 
   return (
-    <div className="h-[100dvh] flex items-center justify-center bg-proton-bg p-4 relative overflow-hidden">
-      <div className="scanline opacity-[0.02]" />
-      <div className="proton-grain" />
-      
-      <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-proton-accent/5 blur-[120px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-proton-secondary/5 blur-[120px] pointer-events-none animate-pulse" />
-      
+    <div className="min-h-screen flex items-center justify-center bg-proton-bg p-4">
       <motion.div 
-        layout
-        className="relative z-10 w-full max-w-md proton-glass p-1 rounded-[40px] shadow-2xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md bg-proton-card rounded-2xl shadow-xl border border-proton-border p-8"
       >
-        <div className="bg-proton-card/40 backdrop-blur-3xl rounded-[38px] p-10 space-y-10 border border-white/5">
-          <div className="space-y-6 text-center">
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="w-20 h-20 mx-auto rounded-3xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center text-proton-accent shadow-[inset_0_0_20px_rgba(59,130,246,0.1)] mb-4 group relative"
-            >
-              <Zap size={36} className="relative z-10 group-hover:scale-110 transition-transform duration-500" />
-            </motion.div>
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tighter text-proton-text font-display">
-                Proton Intelligence
-              </h1>
-              <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.4em] leading-none">
-                Enterprise Command Gateway
-              </p>
-            </div>
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-proton-accent rounded-xl mx-auto flex items-center justify-center text-white mb-4">
+            <Zap size={24} fill="currentColor" />
+          </div>
+          <h1 className="text-2xl font-bold text-proton-text">
+            {isResetting ? t.reset_password : (isLogin ? t.login : t.signup)}
+          </h1>
+          <p className="text-sm text-proton-muted mt-2">
+            Professional Business Intelligence
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-proton-text">{t.email}</label>
+            <input 
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 bg-proton-bg border border-proton-border rounded-lg outline-none focus:ring-2 focus:ring-proton-accent/20 transition-all text-proton-text"
+              placeholder="name@example.com"
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.25em] px-2 font-sans">{t.email}</label>
+          {!isResetting && (
+            <div className="space-y-1">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-proton-text">{t.password}</label>
+                {isLogin && (
+                  <button 
+                    type="button"
+                    onClick={() => setIsResetting(true)}
+                    className="text-xs text-proton-accent hover:underline"
+                  >
+                    {t.forgot_password}
+                  </button>
+                )}
+              </div>
               <input 
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-black/40 border border-proton-border focus:border-proton-accent/40 rounded-2xl px-6 py-4 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-proton-accent/5 font-sans"
-                placeholder="email@example.com"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 bg-proton-bg border border-proton-border rounded-lg outline-none focus:ring-2 focus:ring-proton-accent/20 transition-all text-proton-text"
+                placeholder="••••••••"
                 required
               />
             </div>
-
-            {!isResetting && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between px-2">
-                  <label className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.25em] font-sans">{t.password}</label>
-                  {isLogin && (
-                    <button 
-                      type="button"
-                      onClick={() => setIsResetting(true)}
-                      className="text-[10px] font-bold text-proton-accent hover:text-proton-accent/80 uppercase tracking-widest transition-colors font-sans"
-                    >
-                      {t.forgot_password}
-                    </button>
-                  )}
-                </div>
-                <input 
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-black/40 border border-proton-border focus:border-proton-accent/40 rounded-2xl px-6 py-4 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-proton-accent/5 font-sans"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            )}
-
-            {isResetting && (
-              <div className="text-xs text-proton-muted text-center italic bg-white/5 py-4 rounded-2xl px-6 border border-proton-border">
-                Enter your email address and we'll send you a secure link to reset your password.
-              </div>
-            )}
-
-            {!isLogin && !isResetting && (
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.25em] px-2 font-sans">{t.confirm_password}</label>
-                <input 
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-black/40 border border-proton-border focus:border-proton-accent/40 rounded-2xl px-6 py-4 text-sm transition-all focus:outline-none focus:ring-4 focus:ring-proton-accent/5 font-sans"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-            )}
-
-            {error && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-[10px] text-proton-secondary font-bold text-center bg-proton-secondary/5 py-4 rounded-2xl border border-proton-secondary/20 uppercase tracking-widest font-sans"
-              >
-                {error}
-              </motion.div>
-            )}
-
-            {success && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-[10px] text-proton-accent font-bold text-center bg-proton-accent/5 py-4 rounded-2xl border border-proton-accent/20 uppercase tracking-widest font-sans"
-              >
-                {success}
-              </motion.div>
-            )}
-
-            <button 
-              type="submit"
-              disabled={loading}
-              className="proton-button w-full shadow-2xl"
-            >
-              {loading ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> : (isResetting ? "Send Link" : (isLogin ? "Sign In" : "Create Account"))}
-            </button>
-          </form>
-
-          {!isResetting && (
-            <>
-              <div className="relative flex items-center py-2 px-4">
-                <div className="flex-1 border-t border-proton-border" />
-                <p className="px-6 text-[9px] font-bold text-proton-muted uppercase tracking-[0.4em] leading-none font-sans">Identity Partner</p>
-                <div className="flex-1 border-t border-proton-border" />
-              </div>
-
-              <button 
-                onClick={onGoogleSignIn}
-                className="w-full flex items-center justify-center gap-4 px-8 py-4 bg-white/5 hover:bg-white/10 text-proton-text font-bold uppercase tracking-[0.2em] text-[10px] rounded-2xl transition-all border border-proton-border active:scale-[0.98] group"
-              >
-                <svg className="w-5 h-5 transition-transform group-hover:scale-110" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="currentColor" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="currentColor" fillOpacity="0.8" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="currentColor" fillOpacity="0.6"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="currentColor" fillOpacity="0.4" />
-                </svg>
-                Continue with Google
-              </button>
-            </>
           )}
 
-          <div className="text-center pt-2">
+          {!isLogin && !isResetting && (
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-proton-text">{t.confirm_password}</label>
+              <input 
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-2 bg-proton-bg border border-proton-border rounded-lg outline-none focus:ring-2 focus:ring-proton-accent/20 transition-all text-proton-text"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          )}
+
+          {error && <div className="p-3 bg-red-500/10 text-red-500 rounded-lg text-sm border border-red-500/20">{error}</div>}
+          {success && <div className="p-3 bg-green-500/10 text-green-500 rounded-lg text-sm border border-green-500/20">{success}</div>}
+
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 bg-proton-accent text-white rounded-lg font-semibold hover:bg-proton-accent/90 transition-colors disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isResetting ? t.send_reset_link : (isLogin ? t.login : t.signup))}
+          </button>
+        </form>
+
+        {!isResetting && (
+          <>
+            <div className="relative my-6 text-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-proton-border"></div></div>
+              <span className="relative px-3 bg-proton-card text-xs text-proton-muted">OR</span>
+            </div>
+
             <button 
-              onClick={() => {
-                if (isResetting) {
-                  setIsResetting(false);
-                } else {
-                  setIsLogin(!isLogin);
-                }
-              }}
-              className="text-[10px] font-bold text-proton-muted hover:text-proton-accent uppercase tracking-widest transition-colors font-sans"
+              onClick={onGoogleSignIn}
+              className="w-full flex items-center justify-center gap-3 px-4 py-2 bg-proton-bg border border-proton-border rounded-lg text-sm font-medium text-proton-text hover:bg-proton-muted/5 transition-colors shadow-sm"
             >
-              {isResetting ? "Back to secure login" : (isLogin ? "Request new access credentials" : "Already have system access?")}
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.26v2.84C4.09 20.61 7.74 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.26C1.43 8.72 1 10.3 1 12s.43 3.28 1.26 4.93l3.58-2.84z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.74 1 4.09 3.39 2.26 7.07l3.58 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+              Google
             </button>
-          </div>
+          </>
+        )}
+
+        <div className="mt-8 text-center">
+          <button 
+            onClick={() => {
+              if (isResetting) setIsResetting(false);
+              else setIsLogin(!isLogin);
+            }}
+            className="text-sm text-proton-muted hover:text-proton-accent transition-colors"
+          >
+            {isResetting ? t.back_to_login : (isLogin ? t.dont_have_account : t.already_have_account)}
+          </button>
         </div>
       </motion.div>
-    </div>
-  );
-};
-
-const DigitalClock = ({ uiMode }: { uiMode?: 'operator' | 'artisan' }) => {
-  const [time, setTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="flex flex-col items-end px-4">
-      <div className={cn(
-        "text-sm md:text-xl font-mono font-bold tracking-tighter transition-all duration-500",
-        "text-proton-accent drop-shadow-[0_0_10px_var(--color-proton-accent)]"
-      )}>
-        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-      </div>
-      <div className="text-[8px] font-mono text-proton-muted uppercase tracking-[0.3em] font-bold">
-        {time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-      </div>
     </div>
   );
 };
@@ -780,29 +721,47 @@ const OrganizerView = ({
   onAddTask,
   onToggleTask,
   onDeleteTask,
+  onEditTask,
   onAiSuggest,
-  uiMode
 }: {
   language: 'en' | 'ka',
   workflows: Workflow[],
   tasks: Task[],
-  onAddTask: (content: string) => void,
+  onAddTask: (content: string, priority: 'low' | 'medium' | 'high', category?: string) => void,
   onToggleTask: (id: string) => void,
   onDeleteTask: (id: string) => void,
+  onEditTask: (id: string, updates: Partial<Task>) => void,
   onAiSuggest: () => void,
   uiMode: 'operator' | 'artisan'
 }) => {
   const t = translations[language].organizer;
-  const common = translations[language].common;
   const [newTaskInput, setNewTaskInput] = useState('');
+  const [taskPriority, setTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskInput.trim()) return;
-    onAddTask(newTaskInput.trim());
+    onAddTask(newTaskInput.trim(), taskPriority, undefined);
     setNewTaskInput('');
+    setTaskPriority('medium');
   };
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const contentMatch = (language === 'ka' ? task.contentGe : task.content)
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      
+      const statusMatch = filterStatus === 'all' 
+        ? true 
+        : filterStatus === 'completed' ? task.completed : !task.completed;
+      
+      return contentMatch && statusMatch;
+    });
+  }, [tasks, searchQuery, filterStatus, language]);
 
   const handleAiSuggest = async () => {
     setIsSuggesting(true);
@@ -811,695 +770,106 @@ const OrganizerView = ({
   };
 
   return (
-    <div className="flex flex-col h-full w-full max-w-5xl mx-auto p-4 md:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-0.5">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-proton-text">{t.title}</h1>
-          <p className="text-proton-muted text-[10px] md:text-xs font-mono uppercase tracking-[0.2em]">{t.subtitle}</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">{t.title}</h2>
+          <p className="text-proton-muted mt-1 font-medium">{t.subtitle}</p>
         </div>
-        <DigitalClock uiMode={uiMode} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Calendar & Workflows */}
-        <div className="lg:col-span-7 space-y-6">
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <CalendarIcon size={18} className="text-proton-accent" />
-              {t.calendar}
-            </h2>
-            <div className="p-3 sm:p-4 rounded-2xl proton-glass border border-proton-border/30 shadow-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <div className="bg-proton-card p-8 rounded-3xl border border-proton-border shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="font-bold text-lg flex items-center gap-2">
+                <CalendarIcon size={20} className="text-proton-accent" />
+                {t.calendar}
+              </h3>
+            </div>
+            <div className="w-full">
               <style>{`
-                .react-calendar {
-                  background: transparent !important;
-                  border: none !important;
-                  font-family: inherit !important;
-                  width: 100% !important;
-                  font-size: 0.85rem !important;
-                }
-                .react-calendar__navigation {
-                  margin-bottom: 0.5em !important;
-                  height: 36px !important;
-                }
-                .react-calendar__navigation button {
-                  color: var(--color-proton-text) !important;
-                  font-weight: bold !important;
-                  min-width: 36px !important;
-                  background: none !important;
-                }
-                .react-calendar__month-view__weekdays {
-                  text-transform: uppercase;
-                  font-size: 0.6rem;
-                  font-weight: bold;
-                  color: var(--color-proton-muted);
-                }
-                .react-calendar__tile {
-                  padding: 0.8em 0.2em !important;
-                  color: var(--color-proton-text) !important;
-                  opacity: 0.7;
-                  border-radius: 8px;
-                  transition: all 0.2s;
-                }
-                .react-calendar__tile:hover {
-                  background: color-mix(in srgb, var(--color-proton-text), transparent 90%) !important;
-                  opacity: 1;
-                }
-                .react-calendar__tile--active {
-                  background: var(--color-proton-accent) !important;
-                  color: var(--color-proton-bg) !important;
-                  opacity: 1 !important;
-                  font-weight: bold;
-                  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-proton-accent), transparent 50%);
-                }
-                .react-calendar__tile--now {
-                  background: color-mix(in srgb, var(--color-proton-accent), transparent 85%) !important;
-                  color: var(--color-proton-accent) !important;
-                  border: 1px solid color-mix(in srgb, var(--color-proton-accent), transparent 70%) !important;
-                }
-                .react-calendar__month-view__days__day--neighboringMonth {
-                  opacity: 0.15 !important;
-                }
+                .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
+                .react-calendar__navigation button { color: var(--color-proton-text) !important; font-weight: bold !important; min-width: 44px !important; }
+                .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: var(--color-proton-muted); }
+                .react-calendar__tile { padding: 1.5em 0.5em !important; color: var(--color-proton-text) !important; border-radius: 12px; transition: all 0.2s; }
+                .react-calendar__tile:hover { background: var(--color-proton-accent-muted) !important; }
+                .react-calendar__tile--active { background: var(--color-proton-accent) !important; color: white !important; font-weight: bold; }
               `}</style>
-              <Calendar />
+              <Calendar className="mx-auto" />
             </div>
-          </section>
+          </div>
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <Workflow size={18} className="text-proton-accent" />
-              {t.upcoming_workflows}
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {workflows.slice(0, 4).map(wf => (
-                <div key={wf.id} className="p-4 rounded-2xl bg-proton-card/40 border border-proton-border hover:border-proton-accent/30 transition-all group">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 rounded-lg bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform">
-                      <Zap size={16} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {workflows.slice(0, 4).map(wf => (
+               <div key={wf.id} className="bg-proton-card p-6 rounded-2xl border border-proton-border shadow-sm group hover:border-proton-accent/50 transition-all">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="p-3 rounded-xl bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform">
+                      <Zap size={20} />
                     </div>
-                    <span className="font-bold text-sm truncate">{wf.name}</span>
+                    <span className="font-bold text-lg truncate">{wf.name}</span>
                   </div>
-                  <div className="text-[10px] text-proton-muted font-mono uppercase tracking-widest truncate">
-                    Trigger: {wf.trigger}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                  <p className="text-sm text-proton-muted font-medium">Trigger: {wf.trigger}</p>
+               </div>
+             ))}
+          </div>
         </div>
 
-        <div className="lg:col-span-5 space-y-4">
-          <div className={cn(
-            "p-4 rounded-2xl bg-proton-card/30 border border-proton-border flex flex-col h-full min-h-[400px]",
-            uiMode === 'artisan' ? "artisan-shadow" : ""
-          )}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <Layers size={18} className="text-proton-accent" />
-                {t.tasks}
-              </h2>
-              <button 
-                onClick={handleAiSuggest}
-                disabled={isSuggesting}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all",
-                  isSuggesting 
-                    ? "bg-proton-muted/20 text-proton-muted" 
-                    : "bg-proton-accent/10 text-proton-accent hover:bg-proton-accent/20 border border-proton-accent/30"
-                )}
-              >
-                {isSuggesting ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                {isSuggesting ? t.generating : t.ai_suggest}
-              </button>
-            </div>
+        <div className="bg-proton-card p-8 rounded-3xl border border-proton-border shadow-sm h-fit">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Layers size={20} className="text-proton-accent" />
+              {t.tasks}
+            </h3>
+            <button 
+              onClick={handleAiSuggest}
+              disabled={isSuggesting}
+              className="p-2 rounded-lg bg-proton-accent/10 text-proton-accent hover:bg-proton-accent/20 transition-all"
+            >
+              {isSuggesting ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+            </button>
+          </div>
 
-            <form onSubmit={handleAddTask} className="flex gap-2 mb-6">
-              <input 
-                type="text"
-                placeholder={t.task_placeholder}
-                value={newTaskInput}
-                onChange={e => setNewTaskInput(e.target.value)}
-                className="flex-1 bg-proton-bg/50 border border-proton-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-proton-accent transition-colors"
-              />
-              <button type="submit" className="p-2 rounded-xl bg-proton-accent text-black font-bold">
-                <Plus size={20} />
-              </button>
-            </form>
+          <div className="space-y-6">
+             <form onSubmit={handleAddTask} className="space-y-4">
+                <input 
+                  type="text"
+                  placeholder={t.task_placeholder}
+                  value={newTaskInput}
+                  onChange={e => setNewTaskInput(e.target.value)}
+                  className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-proton-accent transition-all"
+                />
+                <button type="submit" className="w-full py-3 rounded-xl bg-proton-accent text-white font-bold text-sm shadow-lg shadow-proton-accent/20">
+                   Add Task
+                </button>
+             </form>
 
-            <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-2">
-              <AnimatePresence initial={false}>
-                {tasks.length === 0 ? (
-                  <div className="text-center py-12 text-proton-muted text-sm italic">
-                    {t.no_tasks}
-                  </div>
+             <div className="space-y-3">
+                {filteredTasks.length === 0 ? (
+                  <p className="text-center py-8 text-proton-muted font-medium italic text-xs">No tasks found.</p>
                 ) : (
-                  tasks.map(task => (
-                    <motion.div 
-                      key={task.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className={cn(
-                        "group p-4 rounded-2xl flex items-center gap-4 transition-all border",
-                        task.completed 
-                          ? "bg-proton-accent/5 border-proton-accent/20 opacity-60" 
-                          : (uiMode === 'artisan' ? "bg-proton-card border-proton-border artisan-shadow" : "bg-proton-card/50 border-proton-border")
-                      )}
-                    >
+                  filteredTasks.map(task => (
+                    <div key={task.id} className="flex items-center gap-4 p-4 rounded-xl bg-proton-bg border border-proton-border group">
                       <button 
                         onClick={() => onToggleTask(task.id)}
                         className={cn(
-                          "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
-                          task.completed 
-                            ? "bg-proton-accent border-proton-accent text-black" 
-                            : "border-proton-muted/50 hover:border-proton-accent"
+                          "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0",
+                          task.completed ? "bg-proton-accent border-proton-accent text-white" : "border-proton-border"
                         )}
                       >
-                        {task.completed && <Check size={14} strokeWidth={4} />}
+                        {task.completed && <Check size={14} strokeWidth={3} />}
                       </button>
-                      <div className="flex-1">
-                        <p className={cn(
-                          "text-sm transition-all",
-                          task.completed ? "line-through text-proton-muted" : "text-proton-text"
-                        )}>
-                          {language === 'ka' ? task.contentGe : task.content}
-                        </p>
-                        {task.isAiSuggested && (
-                          <span className="text-[9px] uppercase tracking-widest text-proton-accent/80 font-bold flex items-center gap-1 mt-1">
-                            <Sparkles size={10} /> AI Recommendation
-                          </span>
-                        )}
-                      </div>
-                      <button 
-                        onClick={() => onDeleteTask(task.id)}
-                        className="opacity-0 group-hover:opacity-100 p-2 text-proton-muted hover:text-red-400 transition-all"
-                      >
-                        <Trash2 size={14} />
+                      <span className={cn("text-sm flex-1 font-medium truncate", task.completed && "line-through text-proton-muted")}>
+                        {language === 'ka' ? task.contentGe : task.content}
+                      </span>
+                      <button onClick={() => onDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 text-proton-muted hover:text-red-500 transition-all">
+                        <Trash2 size={16} />
                       </button>
-                    </motion.div>
+                    </div>
                   ))
                 )}
-              </AnimatePresence>
-            </div>
+             </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const SystemAlert = ({ 
-  title, 
-  message, 
-  uiMode,
-  onClose 
-}: { 
-  title: string, 
-  message: string, 
-  uiMode: 'operator' | 'artisan',
-  onClose: () => void 
-}) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.9, y: 20 }}
-    animate={{ opacity: 1, scale: 1, y: 0 }}
-    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-    className="fixed bottom-8 right-8 z-[100] max-w-sm w-full"
-  >
-    <div className="proton-glass border-proton-secondary/20 p-6 rounded-3xl shadow-2xl relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-1 h-full bg-proton-secondary" />
-      <div className="flex items-start gap-4">
-        <div className="p-2 rounded-xl bg-proton-secondary/10 text-proton-secondary">
-          <Shield size={20} />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-proton-text">{title}</h3>
-          <p className="text-xs text-proton-muted mt-1">{message}</p>
-        </div>
-        <button 
-          onClick={onClose}
-          className="p-1 transition-colors text-proton-muted hover:text-proton-text"
-        >
-          <X size={16} />
-        </button>
-      </div>
-    </div>
-  </motion.div>
-);
-
-const NeuralPulse = ({ language, onSelect }: { language: 'en' | 'ka', onSelect: (topic: string) => void }) => {
-  const [pulses, setPulses] = useState<any[]>([]);
-  const t = translations[language].architect;
-
-  useEffect(() => {
-    const q = query(
-      collection(db, 'neural_pulse'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const livePulses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      const simulated: any[] = [
-        { id: 'sim-1', projectTitle: language === 'ka' ? 'ხის მაგიდის რესტავრაცია' : 'Antique Table Restoration', createdAt: { seconds: Date.now() / 1000 - 3600 } },
-        { id: 'sim-2', projectTitle: language === 'ka' ? 'ჭკვიანი სახლის მოწყობა' : 'Smart Home Setup', createdAt: { seconds: Date.now() / 1000 - 7200 } }
-      ];
-      setPulses(livePulses.length > 0 ? livePulses : simulated);
-    }, (error) => {
-      console.warn("NeuralPulse connection deferred or denied:", error.message);
-      // Fallback to simulated data on error
-      setPulses([
-        { id: 'sim-1', projectTitle: language === 'ka' ? 'ხის მაგიდის რესტავრაცია' : 'Antique Table Restoration', createdAt: { seconds: Date.now() / 1000 - 3600 } },
-        { id: 'sim-2', projectTitle: language === 'ka' ? 'ჭკვიანი სახლის მოწყობა' : 'Smart Home Setup', createdAt: { seconds: Date.now() / 1000 - 7200 } }
-      ]);
-    });
-
-    return () => unsubscribe();
-  }, [language]);
-
-  const getTimeAgo = (timestamp: any) => {
-    if (!timestamp) return t.pulse_just_now;
-    const seconds = Math.floor((Date.now() - timestamp.seconds * 1000) / 1000);
-    if (seconds < 60) return t.pulse_just_now;
-    const mins = Math.floor(seconds / 60);
-    if (mins < 60) return `${mins}m ${t.pulse_ago}`;
-    const hours = Math.floor(mins / 60);
-    return `${hours}h ${t.pulse_ago}`;
-  };
-
-  return (
-    <div className="w-full overflow-hidden py-4 select-none">
-      <div className="flex items-center gap-4 mb-2 px-4">
-        <Activity size={14} className="text-proton-accent animate-pulse" />
-        <span className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">{t.pulse_title}</span>
-      </div>
-      <div className="flex gap-4 overflow-x-auto pb-4 px-4 no-scrollbar">
-        <AnimatePresence mode="popLayout">
-          {pulses.map((pulse, idx) => (
-            <motion.button
-              key={pulse.id}
-              initial={{ opacity: 0, scale: 0.8, x: 20 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.8, x: -20 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onSelect(pulse.projectTitle)}
-              className="flex-shrink-0 group relative"
-            >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-300" />
-              <div className="relative flex items-center gap-3 px-4 py-2 bg-proton-card/50 backdrop-blur-md rounded-2xl border border-proton-border hover:border-proton-accent/50 transition-all font-medium">
-                <div className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
-                <div className="flex flex-col items-start">
-                  <span className="text-[10px] text-proton-accent font-bold uppercase tracking-tight">{t.pulse_prefix}</span>
-                  <span className="text-xs text-proton-text truncate max-w-[150px]">{pulse.projectTitle}</span>
-                </div>
-                <span className="text-[9px] font-mono text-proton-muted self-end ml-4 italic">{getTimeAgo(pulse.createdAt)}</span>
-              </div>
-            </motion.button>
-          ))}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-};
-
-const SmartTaskArchitect = ({ 
-  language, 
-  projectText, 
-  setProjectText,
-  user,
-  uiMode,
-  onLoadingChange,
-  aiSettings,
-  setLastGeminiMetadata,
-  trackFirestore,
-  isSystemActive = true
-}: { 
-  language: 'en' | 'ka',
-  projectText: string,
-  setProjectText: Dispatch<SetStateAction<string>>,
-  user: any,
-  uiMode: 'operator' | 'artisan',
-  onLoadingChange?: (loading: boolean) => void,
-  aiSettings: GlobalAiSettings,
-  setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
-  trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
-  isSystemActive?: boolean
-}) => {
-  const [loading, setLoading] = useState(false);
-  const [plan, setPlan] = useState<TaskPlan | null>(null);
-  const [error, setError] = useState<{ title: string, message: string } | null>(null);
-  const [cooldown, setCooldown] = useState(0);
-  const t = translations[language].architect;
-
-  useEffect(() => {
-    if (cooldown > 0) {
-      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [cooldown]);
-
-  const handleAnalyze = async () => {
-    if (!isSystemActive || !projectText.trim() || loading || cooldown > 0) return;
-
-    const cacheKey = `architect_cache_${user?.uid || 'anon'}_${projectText.trim().toLowerCase()}`;
-    const cachedData = localStorage.getItem(cacheKey);
-
-    if (cachedData) {
-      try {
-        setPlan(JSON.parse(cachedData));
-        return;
-      } catch (e) {
-        localStorage.removeItem(cacheKey);
-      }
-    }
-
-    if (!navigator.onLine) {
-      setError({
-        title: t.error_title,
-        message: t.offline_error
-      });
-      return;
-    }
-
-    setLoading(true);
-    onLoadingChange?.(true);
-    setPlan(null);
-    setError(null);
-
-    try {
-      const outcome = await architectTask(projectText, aiSettings.temperature);
-      setPlan(outcome.data);
-      setLastGeminiMetadata(outcome.metadata);
-      localStorage.setItem(cacheKey, JSON.stringify(outcome.data));
-      
-      // Emit pulse event
-      await trackFirestore(addDoc(collection(db, 'neural_pulse'), {
-        projectTitle: projectText.trim(),
-        createdAt: serverTimestamp()
-      }));
-
-      // Automatically create a main task and its steps for the user
-      if (user) {
-        const projectId = `project-task-${Date.now()}`;
-        const mainTask: Task = {
-          id: projectId,
-          content: `Project: ${projectText}`,
-          contentGe: `პროექტი: ${projectText}`,
-          completed: false
-        };
-        const mainRef = doc(db, 'users', user.uid, 'tasks', mainTask.id);
-        await trackFirestore(setDoc(mainRef, mainTask)).catch(e => handleFirestoreError(e, 'write', mainRef.path));
-
-        for (let i = 0; i < outcome.data.firstSteps.length; i++) {
-          const stepTask: Task = {
-            id: `step-${Date.now()}-${i}`,
-            content: outcome.data.firstSteps[i],
-            contentGe: outcome.data.firstSteps[i], // Fallback if no translation returned for steps
-            completed: false,
-            isAiSuggested: true
-          };
-          const stepRef = doc(db, 'users', user.uid, 'tasks', stepTask.id);
-          await trackFirestore(setDoc(stepRef, stepTask)).catch(e => handleFirestoreError(e, 'write', stepRef.path));
-        }
-      }
-
-      setCooldown(5);
-    } catch (err: any) {
-      console.error(err);
-      const errStr = JSON.stringify(err).toLowerCase();
-      const isQuotaError = errStr.includes('quota') || 
-                           errStr.includes('429') || 
-                           err.message?.toLowerCase().includes('quota') ||
-                           err.message?.includes('429');
-      
-      setError({
-        title: t.error_title,
-        message: isQuotaError ? t.quota_error : t.api_error
-      });
-    } finally {
-      setLoading(false);
-      onLoadingChange?.(false);
-    }
-  };
-
-  return (
-    <section className="flex flex-col items-center justify-center py-4 space-y-4 max-w-4xl mx-auto w-full relative z-10 p-4">
-
-      <AnimatePresence>
-        {error && (
-          <SystemAlert 
-            title={error.title} 
-            message={error.message} 
-            uiMode={uiMode}
-            onClose={() => setError(null)} 
-          />
-        )}
-      </AnimatePresence>
-      <div className="w-full text-center space-y-2">
-        <motion.h2 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            "text-2xl md:text-4xl font-black tracking-tight",
-            uiMode === 'artisan' 
-              ? "text-proton-text" 
-              : "bg-gradient-to-r from-proton-accent via-proton-text to-proton-secondary bg-clip-text text-transparent"
-          )}
-        >
-          {t.title}
-        </motion.h2>
-        <p className="text-proton-muted text-xs md:text-base font-medium max-w-md mx-auto line-clamp-1">
-          {t.placeholder}
-        </p>
-      </div>
-
-      <div className="relative w-full group">
-        {uiMode === 'operator' && (
-          <div className="absolute -inset-1 bg-gradient-to-r from-proton-accent to-proton-secondary rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-        )}
-        <div className={cn(
-          "relative flex flex-col md:flex-row p-1.5 bg-proton-card/80 backdrop-blur-xl rounded-2xl border border-proton-border hover:border-proton-accent/40 transition-all overflow-hidden",
-          uiMode === 'artisan' ? "artisan-shadow" : "shadow-2xl"
-        )}>
-          {!isSystemActive && (
-            <div className="absolute inset-0 z-20 bg-proton-bg/40 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-proton-card border border-proton-secondary/30 px-4 py-2 rounded-xl flex items-center gap-3 shadow-2xl"
-              >
-                <div className="w-2 h-2 rounded-full bg-proton-secondary animate-pulse" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-proton-secondary">Stasis Shield Active</span>
-              </motion.div>
-            </div>
-          )}
-          <input 
-            type="text" 
-            value={projectText}
-            onChange={(e) => setProjectText(e.target.value)}
-            onKeyDown={(e) => (e.key === 'Enter' && handleAnalyze())}
-            placeholder={isSystemActive ? t.placeholder : t.stasis_placeholder}
-            disabled={!isSystemActive}
-            className={cn(
-              "flex-1 bg-transparent px-4 py-3 text-sm md:text-base focus:outline-none placeholder:text-proton-muted font-medium transition-opacity",
-              !isSystemActive && "opacity-20 cursor-not-allowed"
-            )}
-          />
-          <button 
-            onClick={handleAnalyze}
-            disabled={!isSystemActive || loading || !projectText.trim() || cooldown > 0}
-            className={cn(
-              "m-0.5 px-6 py-3 rounded-xl font-bold text-xs md:text-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2",
-              uiMode === 'artisan' 
-                ? "bg-proton-text text-proton-bg" 
-                : "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20"
-            )}
-          >
-            {loading ? <Loader2 className="animate-spin" size={16} /> : cooldown > 0 ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={16} />}
-            {loading ? t.analyzing : cooldown > 0 ? `${t.cooldown} (${cooldown}s)` : (isSystemActive ? t.button : "OFFLINE")}
-          </button>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {plan && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 30 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="w-full group"
-          >
-            <div className={cn(
-              "proton-glass p-6 md:p-8 rounded-3xl border border-proton-accent/20 space-y-6 relative overflow-hidden",
-              uiMode === 'artisan' ? "artisan-shadow" : "shadow-2xl"
-            )}>
-              <div className="absolute top-0 right-0 p-6 opacity-10">
-                <LayoutDashboard size={80} className="text-proton-accent rotate-12" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-mono text-proton-accent uppercase tracking-[0.3em] font-bold">{t.complexity}</p>
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center border transition-colors",
-                        uiMode === 'artisan' ? "bg-proton-accent/5 border-proton-accent/20" : "bg-proton-accent/10 border-proton-accent/20"
-                      )}>
-                        <Terminal size={24} className="text-proton-accent" />
-                      </div>
-                      <p className="text-3xl font-bold text-proton-text">{plan.complexity}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-mono text-proton-secondary uppercase tracking-[0.3em] font-bold">{t.time}</p>
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "h-12 w-12 rounded-2xl flex items-center justify-center border transition-colors",
-                        uiMode === 'artisan' ? "bg-proton-secondary/5 border-proton-secondary/20" : "bg-proton-secondary/10 border-proton-secondary/20"
-                      )}>
-                        <Zap size={24} className="text-proton-secondary" />
-                      </div>
-                      <p className="text-3xl font-bold text-proton-text">{plan.estimatedTime}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                   <p className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.3em] font-bold">{t.materials}</p>
-                   <div className="space-y-3 overflow-y-auto max-h-64 pr-2 custom-scrollbar">
-                      {plan.materials.map((m, idx) => (
-                        <motion.div 
-                          key={idx}
-                          initial={{ opacity: 0, x: 20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className="flex justify-between items-center p-4 rounded-2xl bg-proton-text/5 border border-proton-border hover:bg-proton-text/10 transition-colors"
-                        >
-                          <span className="text-sm font-bold">{m.item}</span>
-                          <span className="text-xs font-mono bg-proton-accent/20 text-proton-accent px-3 py-1 rounded-full border border-proton-accent/30">{m.cost}</span>
-                        </motion.div>
-                      ))}
-                   </div>
-                </div>
-              </div>
-
-              <div className="space-y-6 pt-10 border-t border-proton-border/30 relative z-10">
-                <p className="text-[10px] font-mono text-proton-text uppercase tracking-[0.3em] font-bold">{t.steps}</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {plan.firstSteps.map((step, idx) => (
-                    <motion.div 
-                      key={idx} 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 + idx * 0.1 }}
-                      className="p-6 rounded-3xl bg-proton-card/40 border border-proton-border relative group/step hover:border-proton-accent/40 transition-all h-full"
-                    >
-                      <span className="absolute -top-3 -left-3 w-10 h-10 rounded-2xl bg-proton-accent text-proton-bg flex items-center justify-center font-bold text-xs shadow-lg group-hover/step:scale-110 transition-transform">
-                        0{idx + 1}
-                      </span>
-                      <p className="text-sm md:text-base leading-relaxed font-medium mt-2">{step}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-};
-
-const ClusterTelemetry = ({ 
-  isLoading, 
-  uiMode, 
-  language 
-}: { 
-  isLoading: boolean, 
-  uiMode: 'operator' | 'artisan',
-  language: 'en' | 'ka'
-}) => {
-  const [latency, setLatency] = useState(42);
-  const [isConnected, setIsConnected] = useState(false);
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => setIsConnected(!!user));
-    const interval = setInterval(() => {
-      setLatency(prev => {
-        const jitter = Math.floor(Math.random() * 20) - 10;
-        return Math.max(30, Math.min(150, prev + jitter));
-      });
-    }, 3000);
-    return () => {
-      unsub();
-      clearInterval(interval);
-    };
-  }, []);
-
-  return (
-    <div className={cn(
-      "p-4 rounded-2xl border transition-all duration-500 overflow-hidden relative",
-      "bg-proton-card/50 border-proton-border/50 shadow-lg",
-      uiMode === 'artisan' && "artisan-shadow"
-    )}>
-      {uiMode === 'operator' && (
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-             style={{ backgroundImage: 'radial-gradient(var(--color-proton-accent) 0.5px, transparent 0.5px)', backgroundSize: '10px 10px' }} />
-      )}
-      
-      <div className="relative z-10 flex flex-col gap-4">
-        {/* Top: Status Indicators */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-1">
-            <p className="text-[7px] font-mono text-proton-muted uppercase tracking-widest">Core Node</p>
-            <div className="flex items-center gap-1.5">
-              <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-proton-muted animate-pulse")} />
-              <span className={cn("text-[10px] font-bold uppercase", uiMode === 'operator' ? "font-mono" : "font-sans")}>
-                {isConnected ? 'CONN' : 'SYNC'}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1 border-x border-proton-border/30 px-2">
-            <p className="text-[7px] font-mono text-proton-muted uppercase tracking-widest">Gemini Uplink</p>
-            <div className="flex items-center gap-1.5">
-              <div className={cn("w-1.5 h-1.5 rounded-full", isLoading ? "bg-proton-accent animate-ping" : "bg-blue-500/50")} />
-              <span className={cn("text-[10px] font-bold uppercase", uiMode === 'operator' ? "font-mono" : "font-sans")}>
-                {isLoading ? 'PROC' : 'IDLE'}
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1 pl-1">
-            <p className="text-[7px] font-mono text-proton-muted uppercase tracking-widest">Network Latency</p>
-            <div className="flex items-center gap-1.5">
-              <span className={cn("text-[10px] font-bold", uiMode === 'operator' ? "font-mono text-proton-secondary" : "font-sans text-proton-text")}>
-                {latency}ms
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom: The Pulse Visualizer (Unified UI for both modes) */}
-        <div className="h-12 flex items-end justify-around gap-1 px-2">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ height: "20%" }}
-              animate={{ 
-                height: isLoading ? [ "40%", "90%", "30%", "100%", "50%" ] : [ "10%", "30%", "15%", "40%", "20%" ]
-              }}
-              transition={{ 
-                duration: isLoading ? 0.3 : 1.2, 
-                repeat: Infinity,
-                delay: i * 0.05
-              }}
-              className={cn(
-                "w-1.5 rounded-t-[2px] transition-all duration-500",
-                uiMode === 'operator' 
-                  ? "bg-proton-accent/80 shadow-[0_0_10px_rgba(0,242,255,0.3)]" 
-                  : "bg-proton-accent shadow-[0_0_8px_rgba(0,113,227,0.1)]"
-              )}
-            />
-          ))}
         </div>
       </div>
     </div>
@@ -1508,716 +878,215 @@ const ClusterTelemetry = ({
 
 const DashboardView = ({ 
   personas, 
-  activeView,
-  setActiveView,
-  chatHistory,
+  setActiveView, 
+  chatHistory, 
   language = 'en',
-  user,
-  uiMode,
-  aiSettings,
-  setLastGeminiMetadata,
-  trackFirestore,
   isArtisanSystemActive
 }: { 
   personas: Persona[], 
   activeView: View, 
   setActiveView: (v: View) => void,
   chatHistory: PersonaHistory,
-  language?: 'en' | 'ka',
+  language: 'en' | 'ka',
   user: any,
   uiMode: 'operator' | 'artisan',
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
-  isArtisanSystemActive?: boolean
+  isArtisanSystemActive: boolean
 }) => {
-  const { address, isConnected } = useAccount();
-  const { data: balance } = useBalance({ address });
-  const [projectText, setProjectText] = useState('');
-  const [isComputing, setIsComputing] = useState(false);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [operatorTab, setOperatorTab] = useState<'ops' | 'finance'>('ops');
-  const currentLang = (language === 'ka' || language === 'en') ? language : 'en';
-  const t = translations[currentLang].dashboard;
-  const common = translations[currentLang].common;
+  const t = translations[language];
 
-  // Artisan Mode Layout
-  if (uiMode === 'artisan') {
-    return (
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 px-4 sm:px-6 lg:px-8 relative">
+  const recentHistory = useMemo(() => {
+    return Object.entries(chatHistory).flatMap(([id, messages]) => {
+      const persona = personas.find(p => p.id === id);
+      return messages.slice(-1).map(m => ({ ...m, personaName: persona?.name }));
+    }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }, [chatHistory, personas]);
+
+  return (
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
+        <div className="space-y-3 text-center md:text-left">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text">
+            {t.sidebar.dashboard}
+          </h1>
+          <p className="text-proton-muted text-lg font-medium max-w-xl">
+             {t.dashboard.explore_subtitle}
+          </p>
+        </div>
         {!isArtisanSystemActive && (
-          <div className="absolute inset-0 z-50 bg-proton-bg/20 backdrop-blur-[6px] pointer-events-none rounded-[40px] m-2 overflow-hidden border border-proton-secondary/10">
-             <div className="absolute inset-0 flex items-center justify-center">
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-black/60 p-8 rounded-3xl border border-proton-secondary/20 shadow-2xl flex flex-col items-center gap-6 max-w-sm text-center backdrop-blur-xl isolate"
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-proton-secondary/20 blur-2xl rounded-full animate-pulse" />
-                    <Lock size={48} className="text-proton-secondary relative z-10" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-bold text-proton-text uppercase tracking-[0.3em]">Neural Stasis</h3>
-                    <div className="h-[1px] w-12 bg-proton-secondary/40 mx-auto" />
-                    <p className="text-[10px] text-proton-muted font-mono leading-relaxed uppercase tracking-wider">
-                      Interface Protocol: Restricted<br/>
-                      Reason: Neural Quota Depleted<br/>
-                      Action: Awaiting Recalibration
-                    </p>
-                  </div>
-                </motion.div>
+          <div className="bg-proton-accent/10 border border-proton-accent/20 px-6 py-4 rounded-2xl flex items-center gap-4">
+             <div className="w-10 h-10 rounded-xl bg-proton-accent flex items-center justify-center text-white">
+                <ShieldAlert size={24} />
              </div>
-             <div className="absolute top-0 right-0 p-8">
-               <motion.div 
-                animate={{ rotate: 360 }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="w-12 h-12 border border-dashed border-proton-secondary/30 rounded-full"
-               />
+             <div>
+                <p className="text-sm font-bold text-proton-accent uppercase tracking-widest leading-none mb-1">{t.dashboard.maintenance}</p>
+                <p className="text-xs text-proton-muted font-medium">{t.dashboard.maintenance_desc}</p>
              </div>
           </div>
         )}
-        <div className={cn("space-y-8 transition-all duration-1000", !isArtisanSystemActive && "opacity-40 grayscale blur-[2px] pointer-events-none")}>
-        {/* Artisan Header */}
-        <div className="pt-12 border-l-2 border-proton-border pl-8 relative">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="absolute -left-[2px] top-12 w-[3px] h-16 bg-proton-accent shadow-[0_0_20px_rgba(59,130,246,0.6)]"
-          />
-          <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-proton-text font-display flex flex-col md:flex-row md:items-baseline gap-4">
-             {t.artisan_title}
-             <span className="text-xs font-mono font-bold tracking-[0.5em] text-proton-muted md:translate-y-[-1.5rem] opacity-50">REL_5.0</span>
-          </h1>
-          <div className="flex items-center gap-6 mt-4">
-            <div className="flex items-center gap-3">
-              <div className={cn("w-2 h-2 rounded-full shadow-lg", isArtisanSystemActive ? "bg-proton-accent animate-pulse shadow-proton-accent/40" : "bg-proton-secondary")} />
-              <span className={cn(
-                "text-[10px] font-bold tracking-[0.2em] uppercase font-sans",
-                isArtisanSystemActive ? "text-proton-text" : "text-proton-secondary"
-              )}>
-                {isArtisanSystemActive ? "System Prime Active" : "Limited Service Mode"}
-              </span>
-            </div>
-            <div className="h-[1px] flex-1 bg-proton-border max-w-[200px]" />
-            <span className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.3em] font-sans">
-              {new Date().toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-          </div>
-        </div>
+      </div>
 
-        {/* Persona Quick Selection (Horizontal Scroll) */}
-        <div className="relative group">
-          <div className="flex items-center gap-3 overflow-x-auto pb-4 custom-scrollbar no-scrollbar scroll-smooth">
-            {personas.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setActiveView('personas')}
-                className="flex-shrink-0 flex items-center gap-3 p-3 px-5 rounded-2xl bg-proton-card border border-proton-border artisan-shadow hover:scale-[1.02] active:scale-[0.98] transition-all"
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-10">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button 
+                onClick={() => setActiveView('finance')}
+                className="bg-proton-card p-6 rounded-3xl border border-proton-border hover:border-proton-accent transition-all text-left space-y-4 group"
               >
-                <span className="text-xl">{p.avatar}</span>
-                <div className="text-left">
-                  <p className="text-xs font-bold whitespace-nowrap">{language === 'ka' ? p.nameGe : p.name}</p>
-                  <p className="text-[10px] text-proton-muted uppercase font-mono">{p.role}</p>
+                <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Wallet size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{t.dashboard.financial_center}</h3>
+                  <p className="text-xs text-proton-muted font-medium">{t.dashboard.financial_center_desc}</p>
                 </div>
               </button>
-            ))}
-          </div>
-          <div className="absolute top-0 right-0 h-full w-20 bg-gradient-to-l from-proton-bg to-transparent pointer-events-none" />
-        </div>
+              <button 
+                onClick={() => setActiveView('organizer')}
+                className="bg-proton-card p-6 rounded-3xl border border-proton-border hover:border-proton-accent transition-all text-left space-y-4 group"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-110 transition-transform">
+                   <CalendarIcon size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{t.dashboard.organizer_tool}</h3>
+                  <p className="text-xs text-proton-muted font-medium">{t.dashboard.organizer_desc}</p>
+                </div>
+              </button>
+           </div>
 
-        {/* Main Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Left Column: Architect & Tasks */}
-          <div className="lg:col-span-8 space-y-12">
-            <div className="relative">
-              <div className="absolute -top-3 left-10 px-4 py-1 bg-proton-accent text-white text-[9px] font-bold uppercase tracking-[0.25em] rounded-full z-10 shadow-lg">
-                Intelligence Architect
+           <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm">
+              <div className="flex items-center justify-between mb-8">
+                 <h3 className="font-bold text-xl">{t.dashboard.recent_activity}</h3>
+                 <button onClick={() => setActiveView('personas')} className="text-xs font-bold text-proton-accent uppercase hover:underline">{t.dashboard.view_all}</button>
               </div>
-              <div className="proton-glass rounded-[48px] overflow-hidden group/architect relative bg-proton-card/40 backdrop-blur-3xl ring-1 ring-white/10 shadow-2xl">
-                <SmartTaskArchitect 
-                  language={language} 
-                  projectText={projectText}
-                  setProjectText={setProjectText}
-                  user={user}
-                  uiMode={uiMode}
-                  onLoadingChange={setIsComputing}
-                  aiSettings={aiSettings}
-                  setLastGeminiMetadata={setLastGeminiMetadata}
-                  trackFirestore={trackFirestore}
-                  isSystemActive={isArtisanSystemActive}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <div className="flex items-center justify-between border-b border-proton-border pb-4">
-                <h2 className="text-xs font-bold uppercase tracking-[0.4em] text-proton-text flex items-center gap-4">
-                  <span className="w-2.5 h-2.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(59,130,246,0.6)]" />
-                  Project Manifests
-                </h2>
-                <div className="text-[10px] font-bold text-proton-muted uppercase tracking-widest opacity-60">Archive 01</div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                {[1, 2].map((i) => (
-                  <div key={i} className="p-8 rounded-[40px] bg-white/5 border border-proton-border flex items-center justify-between group cursor-pointer hover:border-proton-accent/40 transition-all hover:bg-white/[0.08] shadow-sm hover:shadow-xl">
-                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 rounded-[20px] bg-proton-accent/5 border border-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-105 transition-transform shadow-inner">
-                        <Layers size={24} />
-                      </div>
-                      <div>
-                        <p className="text-base font-bold tracking-tight text-proton-text">Project_{i}</p>
-                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-[0.2em] mt-1">Status: Stable</p>
-                      </div>
-                    </div>
-                    <div className="w-10 h-10 rounded-full border border-proton-border flex items-center justify-center text-proton-muted group-hover:text-proton-accent group-hover:border-proton-accent/30 transition-all bg-white/5">
-                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Activity Feed */}
-          <div className="lg:col-span-4 space-y-6 flex flex-col h-full">
-            <div className="proton-glass rounded-[48px] p-8 flex flex-col h-full min-h-[500px] relative ring-1 ring-white/10 shadow-2xl">
-              <div className="absolute top-0 right-12 w-px h-12 bg-gradient-to-b from-proton-accent to-transparent opacity-30" />
-              <div className="flex items-center justify-between mb-10">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] flex items-center gap-3 text-proton-text font-sans">
-                  <span className={cn(
-                    "w-2 h-2 rounded-full",
-                    isArtisanSystemActive ? "bg-proton-accent shadow-[0_0_12px_rgba(59,130,246,0.8)]" : "bg-proton-secondary"
-                  )} />
-                  {t.activity_log || "Global Activity"}
-                </h3>
-                <Activity size={18} className="text-proton-muted opacity-30" />
-              </div>
-              
-              <div className="flex-1 overflow-y-auto space-y-10 pr-2 custom-scrollbar">
-                {!isArtisanSystemActive && (
-                  <div className="p-8 rounded-[40px] bg-white/5 border border-proton-border border-dashed animate-pulse relative overflow-hidden group">
-                    <div className="flex items-center gap-3 mb-4 text-proton-secondary relative z-10">
-                      <ShieldAlert size={18} />
-                      <span className="text-[10px] font-bold uppercase tracking-[0.3em] font-sans">Sync Locked</span>
-                    </div>
-                    <p className="text-xs text-proton-muted italic leading-relaxed relative z-10 opacity-70">
-                       Optimization mode is currently restricted. Authenticate to restore full system logging.
-                    </p>
-                  </div>
-                )}
-                
-                {Object.entries(chatHistory).length > 0 ? (
-                  Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
-                    msgs.slice(-4).map((m, i) => (
-                      <div key={`${personaId}-${i}`} className="relative pl-8 border-l border-white/5 group hover:border-proton-accent/40 transition-colors pb-2">
-                        <div className="absolute -left-[4.5px] top-0 w-2 h-2 rounded-full bg-proton-border group-hover:bg-proton-accent group-hover:shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all" />
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-[10px] font-bold text-proton-accent uppercase tracking-[0.2em]">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
-                          <span className="text-[9px] font-mono text-proton-muted opacity-40">[{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
-                        </div>
-                        <p className="text-[13px] text-proton-text/70 leading-relaxed group-hover:text-proton-text transition-colors font-medium">
-                          {(m.content?.length ?? 0) > 110 ? m.content?.substring(0, 110) + '...' : m.content}
-                        </p>
+              <div className="space-y-4">
+                 {recentHistory.length > 0 ? (
+                    recentHistory.slice(0, 3).map((item, i) => (
+                      <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-proton-bg border border-proton-border">
+                         <div className="w-10 h-10 rounded-full bg-proton-accent/10 flex items-center justify-center text-proton-accent font-bold">
+                            {item.personaName?.charAt(0)}
+                         </div>
+                         <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold">{item.personaName}</p>
+                            <p className="text-xs text-proton-muted truncate">{item.content}</p>
+                         </div>
                       </div>
                     ))
-                  )
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-30">
-                    <div className="w-16 h-16 rounded-full border border-dashed border-proton-border flex items-center justify-center mb-6">
-                      <Database size={24} className="text-proton-muted" />
+                 ) : (
+                    <div className="text-center py-10 text-proton-muted font-medium italic">
+                       {t.dashboard.no_activity}
                     </div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em]">No Activity Logged</p>
-                  </div>
-                )}
+                 )}
               </div>
-              
-              <div className="mt-10 pt-10 border-t border-proton-border/40 space-y-6">
-                <button 
-                  onClick={() => setActiveView('organizer')}
-                  className="proton-button w-full shadow-lg"
-                >
-                  <LayoutDashboard size={20} />
-                  Access Knowledge Base
-                </button>
-                <div className="flex items-center justify-between text-[9px] font-bold text-proton-muted uppercase tracking-[0.3em] px-2 opacity-50 font-sans">
-                    <span>Cache Ready</span>
-                    <span className={isArtisanSystemActive ? "text-proton-accent font-bold" : "text-proton-secondary"}>{isArtisanSystemActive ? "Synchronized" : "Limited"}</span>
+           </div>
+        </div>
+
+        <div className="lg:col-span-4 space-y-8">
+           <div className="bg-proton-accent p-8 rounded-[40px] text-white space-y-6 shadow-2xl shadow-proton-accent/20">
+              <div className="space-y-2">
+                 <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.system_status}</h3>
+                 <p className="text-sm text-white/80 font-medium">{t.dashboard.system_status_desc}</p>
+              </div>
+              <div className="space-y-4 pt-4">
+                 <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
+                    <span>{t.dashboard.performance}</span>
+                    <span>98%</span>
+                 </div>
+                 <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full w-[98%] bg-white" />
                  </div>
               </div>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Operator Mode Layout (Existing with Toggle)
-  return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-8 px-4 sm:px-6 lg:px-8 font-sans">
-      {/* Operator Header & Top Nav */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tighter transition-all duration-500 font-mono text-proton-accent uppercase text-proton-text">
-            {t.title}
-          </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <div className={cn(
-              "w-2 h-2 rounded-full animate-pulse",
-              isArtisanSystemActive ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-            )} />
-            <p className="text-proton-muted text-[10px] md:text-xs font-mono uppercase tracking-[0.2em]">
-              {isArtisanSystemActive ? "Neural Command Node [Active]" : t.stasis_label}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 lg:bg-transparent lg:p-0 sticky top-0 z-40 bg-proton-bg/80 backdrop-blur-md p-2 md:relative md:top-auto md:z-auto w-full md:w-auto">
-          <div className="flex p-1 bg-proton-card/50 border border-proton-border rounded-xl backdrop-blur-md shadow-lg shadow-proton-bg/20 w-full md:w-auto">
-            {[
-              { id: 'ops', label: 'Operations' },
-              { id: 'finance', label: 'Financials' }
-            ].map(tab => (
               <button 
-                key={tab.id}
-                onClick={() => setOperatorTab(tab.id as any)}
-                className={cn(
-                  "flex-1 md:flex-none px-4 md:px-6 py-2.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-widest transition-all duration-300 active:scale-95",
-                  operatorTab === tab.id 
-                    ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
-                    : "text-proton-muted hover:text-proton-text"
-                )}
+                onClick={() => setActiveView('settings')}
+                className="w-full py-4 bg-white text-proton-accent rounded-2xl font-bold text-sm shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
               >
-                {tab.label}
+                {t.dashboard.configuration}
               </button>
-            ))}
-          </div>
+           </div>
 
-          <div className="h-8 w-px bg-proton-border hidden sm:block mx-2" />
-
-          <button 
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
-            className={cn(
-              "px-4 py-2 rounded-xl flex items-center gap-3 transition-all border font-mono text-[10px] uppercase tracking-widest",
-              showDiagnostics ? "bg-proton-accent/20 border-proton-accent text-proton-accent shadow-[inset_0_0_10px_rgba(0,242,255,0.1)]" : "bg-proton-card border-proton-border text-proton-muted hover:border-proton-accent/30"
-            )}
-          >
-            <Activity size={14} className={cn(showDiagnostics && "animate-pulse")} />
-            Monitor {showDiagnostics ? '[ON]' : '[OFF]'}
-          </button>
+           <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm">
+              <h3 className="font-bold text-lg mb-4">{t.dashboard.quick_setup}</h3>
+              <p className="text-xs text-proton-muted leading-relaxed font-medium font-sans">
+                {t.dashboard.quick_setup_desc}
+              </p>
+           </div>
         </div>
       </div>
-
-      <AnimatePresence mode="wait">
-        {operatorTab === 'ops' ? (
-          <motion.div 
-            key="ops"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            {/* Operator Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: t.compute, value: '1.2 PFL', icon: Cpu, color: 'text-proton-accent' },
-                { label: t.latency, value: '0.4ms', icon: Zap, color: 'text-proton-secondary' },
-                { label: t.uptime, value: '99.9%', icon: ShieldCheck, color: 'text-green-400' },
-                { label: 'Nodes', value: '32 Active', icon: Network, color: 'text-proton-accent' },
-              ].map((stat, i) => (
-                <div key={i} className="proton-glass p-4 rounded-2xl border border-proton-border/30 hover:border-proton-accent/20 transition-all flex flex-col gap-1 group">
-                  <div className="flex items-center justify-between opacity-60">
-                    <span className="text-[8px] font-mono uppercase tracking-[0.2em]">{stat.label}</span>
-                    <stat.icon size={12} className={cn("transition-transform group-hover:scale-110", stat.color)} />
-                  </div>
-                  <p className="font-mono font-bold text-sm tracking-tight text-proton-text">{stat.value}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-              {/* Command Console */}
-              <div className="md:col-span-12 lg:col-span-8 space-y-6 w-full">
-                <div className="proton-glass rounded-[40px] border border-proton-border shadow-2xl overflow-hidden relative group/architect">
-                  <div className={cn(
-                    "absolute inset-x-0 top-0 h-1 bg-gradient-to-r opacity-30 animate-pulse",
-                    isArtisanSystemActive ? "from-transparent via-proton-accent to-transparent" : "from-transparent via-proton-secondary to-transparent"
-                  )} />
-                  <SmartTaskArchitect 
-                    language={language} 
-                    projectText={projectText}
-                    setProjectText={setProjectText}
-                    user={user}
-                    uiMode={uiMode}
-                    onLoadingChange={setIsComputing}
-                    aiSettings={aiSettings}
-                    setLastGeminiMetadata={setLastGeminiMetadata}
-                    trackFirestore={trackFirestore}
-                    isSystemActive={isArtisanSystemActive}
-                  />
-                </div>
-
-                <div className="p-2 proton-glass rounded-[30px] border border-proton-border/30 bg-proton-card/20 backdrop-blur-md shadow-lg transition-transform hover:scale-[1.01] duration-500">
-                  <NeuralPulse 
-                    language={language} 
-                    onSelect={(topic) => {
-                      setProjectText(topic);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }} 
-                  />
-                </div>
-              </div>
-
-              {/* Sidebar: Telemetry & Activity Log */}
-              <div className="md:col-span-12 lg:col-span-4 space-y-6 lg:sticky lg:top-6 w-full">
-                <div className={cn(
-                  "proton-glass rounded-[30px] border border-proton-border/50 p-6 shadow-xl transition-all duration-700",
-                  showDiagnostics ? "opacity-100" : "opacity-40 hover:opacity-100 scale-[0.98] blur-[1px] hover:blur-0 hover:scale-100"
-                )}>
-                  <div className="flex items-center justify-between mb-4 border-b border-proton-border/30 pb-4">
-                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
-                      <Activity size={14} className="text-proton-accent animate-pulse" />
-                      Infrastructure
-                    </h3>
-                  </div>
-                  <ClusterTelemetry 
-                    isLoading={isComputing} 
-                    uiMode={uiMode} 
-                    language={language} 
-                  />
-                </div>
-
-                <div className="proton-glass rounded-[30px] border border-proton-border/50 p-6 flex flex-col h-full shadow-xl max-h-[440px] bg-gradient-to-b from-proton-card/30 to-transparent">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
-                      <Zap size={14} className="text-proton-accent" />
-                      Neural Activity
-                    </h3>
-                  </div>
-                  
-                  <div className="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-                    {Object.entries(chatHistory).length > 0 ? (
-                      Object.entries(chatHistory).flatMap(([personaId, msgs]) => 
-                        msgs.slice(-2).map((m, i) => (
-                          <div key={`${personaId}-${i}`} className="p-3 rounded-2xl border transition-all duration-300 bg-proton-card/40 border-proton-border/30 hover:border-proton-accent/40 group">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-[9px] font-mono text-proton-accent uppercase font-black">{personas.find(p => p.id === personaId)?.name || 'System'}</span>
-                              <span className="text-[8px] font-mono text-proton-muted opacity-50">{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                            <p className="text-[11px] text-proton-muted line-clamp-3 leading-relaxed italic group-hover:text-proton-text transition-colors">"{m.content}"</p>
-                          </div>
-                        ))
-                      )
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-12 opacity-30">
-                        <Shield size={32} className="mb-4" />
-                        <p className="text-[10px] font-mono uppercase tracking-[0.2em]">Neural Silence</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-proton-border/50">
-                    <button 
-                      onClick={() => setActiveView('organizer')}
-                      className="w-full py-3 rounded-2xl border border-proton-border hover:bg-proton-accent text-proton-bg transition-all text-[10px] font-mono font-bold uppercase tracking-widest active:scale-95 shadow-lg shadow-proton-bg/20"
-                    >
-                      Open Task Hub
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div 
-            key="finance"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            {/* Operator Financial Section (Modular) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                 <div className="proton-glass rounded-[40px] border border-proton-border p-8 shadow-2xl space-y-8 relative overflow-hidden bg-gradient-to-br from-proton-card/50 to-transparent">
-                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                     <div className="flex items-center gap-4">
-                       <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 border border-proton-accent/20 text-proton-accent flex items-center justify-center shadow-inner">
-                         <Wallet size={28} />
-                       </div>
-                       <div>
-                         <h2 className="text-2xl font-black tracking-tight uppercase font-mono text-proton-text">Operations Fund</h2>
-                         <p className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
-                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                           Settlements Connected
-                         </p>
-                       </div>
-                     </div>
-                     <ConnectButton />
-                   </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div className="p-8 rounded-[2.5rem] bg-proton-bg/80 border border-proton-border shadow-inner group hover:border-proton-accent/40 transition-all duration-500 flex flex-col justify-center">
-                       <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest mb-3">Total Liquidity</p>
-                       <div className="flex items-baseline gap-2">
-                         <span className="text-3xl font-bold font-mono tracking-tighter text-proton-text">
-                           {isConnected && balance ? parseFloat(balance.formatted).toFixed(4) : '0.000'}
-                         </span>
-                         <span className="text-proton-accent font-bold text-lg">{balance?.symbol || 'ETH'}</span>
-                       </div>
-                       <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono text-proton-accent mt-4 border-t border-proton-border/30 pt-4">
-                          <span className="opacity-70">≈ ₾ {(parseFloat(balance?.formatted || '0') * 2650 * 2.7).toLocaleString()}</span>
-                          <span className="opacity-70">≈ $ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString()}</span>
-                       </div>
-                     </div>
-                     
-                     <div className="p-8 rounded-[2.5rem] bg-proton-card/50 border border-proton-border space-y-6 flex flex-col justify-center">
-                       <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest border-l-2 border-proton-accent pl-3">Sovereign Actions</p>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                         <button className="py-4 rounded-2xl bg-proton-accent text-proton-bg font-black text-[10px] uppercase tracking-widest hover:brightness-110 hover:shadow-lg shadow-proton-accent/20 active:scale-95 transition-all">Deposit</button>
-                         <button className="py-4 rounded-2xl border border-proton-border text-proton-text font-black text-[10px] uppercase tracking-widest hover:bg-proton-card transition-all active:scale-95">Withdraw</button>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-
-                 <div className="proton-glass rounded-[40px] border border-proton-border p-8 shadow-xl bg-proton-card/10">
-                   <h3 className="text-sm font-mono font-bold uppercase tracking-widest mb-8 flex items-center gap-2 text-proton-text">
-                     <Receipt size={16} className="text-proton-accent" />
-                     Recent Settlements
-                   </h3>
-                   <div className="space-y-3">
-                     {[1, 2, 3].map(i => (
-                       <div key={i} className="flex items-center justify-between p-5 rounded-3xl bg-proton-bg/40 border border-proton-border/50 hover:bg-proton-bg/60 transition-all group">
-                         <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 rounded-full bg-proton-accent/5 border border-proton-accent/10 flex items-center justify-center text-proton-accent group-hover:scale-110 transition-transform">
-                             <Zap size={14} />
-                           </div>
-                           <div>
-                             <p className="text-xs font-bold font-mono text-proton-text">SETTLE_TX_{10920 + i}</p>
-                             <p className="text-[10px] text-proton-muted uppercase tracking-tighter">Automatic Revenue Share</p>
-                           </div>
-                         </div>
-                         <div className="text-right">
-                           <p className="text-xs font-black font-mono text-proton-accent">+ 0.0{i}22 ETH</p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="proton-glass rounded-[30px] border border-proton-border p-6 shadow-xl space-y-6 bg-gradient-to-br from-proton-card to-transparent">
-                   <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest border-b border-proton-border/30 pb-4 text-proton-text">Node Economics</h3>
-                   <div className="space-y-5">
-                     {[
-                       { label: 'Ethereum (ETH)', val: '$ 2,650.42', trend: '+1.4%' },
-                       { label: 'Network Gas', val: '24.1 Gwei', trend: '-2.3%' },
-                       { label: 'Compute ROI', val: '12.4% APR', trend: '+0.5%' },
-                     ].map((idx, i) => (
-                       <div key={i} className="flex items-center justify-between group">
-                         <span className="text-[10px] font-medium text-proton-muted group-hover:text-proton-text transition-colors">{idx.label}</span>
-                         <div className="text-right font-mono">
-                           <p className="text-[11px] font-black text-proton-text">{idx.val}</p>
-                           <p className={cn("text-[8px] font-bold", idx.trend.startsWith('+') ? "text-green-400" : "text-proton-secondary")}>{idx.trend}</p>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                   <button 
-                     onClick={() => setActiveView('finance')}
-                     className="w-full py-4 rounded-2xl bg-proton-accent/10 border border-proton-accent/30 text-proton-accent text-[10px] font-bold uppercase tracking-widest hover:bg-proton-accent hover:text-proton-bg transition-all active:scale-95 shadow-lg shadow-proton-accent/5"
-                   >
-                     Full Ledger
-                   </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <section className="space-y-4 pt-4 border-t border-proton-border/30">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[10px] font-mono font-bold uppercase tracking-widest flex items-center gap-2 text-proton-text">
-            <Users size={16} className="text-proton-accent" />
-            Neural Specializations
-          </h2>
-          <button 
-            onClick={() => setActiveView('personas')}
-            className="text-[10px] font-bold text-proton-accent hover:underline flex items-center gap-1 group uppercase tracking-widest"
-          >
-            Explore All <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {personas.slice(0, 6).map((p) => (
-            <div 
-              key={p.id}
-              onClick={() => setActiveView('personas')}
-              className="group proton-glass p-4 rounded-3xl hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden flex flex-col items-center text-center gap-3 bg-gradient-to-b from-proton-card/50 to-transparent"
-            >
-              <div className="text-2xl bg-proton-card w-12 h-12 rounded-2xl flex items-center justify-center border border-proton-border group-hover:rotate-12 group-hover:scale-110 transition-transform shadow-xl">
-                {p.avatar}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-[10px] truncate max-w-full text-proton-text">{language === 'ka' ? p.nameGe : p.name}</h3>
-                <p className="text-[8px] font-mono text-proton-muted uppercase truncate leading-none mt-1 tracking-tighter">{p.role}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 };
 
-const ComputeView = ({ 
+const SystemsView = ({ 
   metadata, 
   aiSettings, 
   setAiSettings, 
   isFirestoreActive,
-  uiMode
+  language = 'en'
 }: { 
   metadata: GeminiMetadata | null, 
   aiSettings: GlobalAiSettings, 
   setAiSettings: Dispatch<SetStateAction<GlobalAiSettings>>,
   isFirestoreActive: boolean,
+  language?: 'en' | 'ka',
   uiMode: 'operator' | 'artisan'
 }) => {
-  const [provisioning, setProvisioning] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'provisioning' | 'active'>('active');
-
-  // Resource Data: map to actual resource load (linked to temperature and usage)
-  const resourceData = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
-    time: i,
-    gpu: aiSettings.temperature * 100 + (Math.random() * 10),
-    cpu: (metadata?.totalTokenCount ? Math.min(100, metadata.totalTokenCount / 10) : 10) + Math.random() * 5,
-  })), [aiSettings.temperature, metadata]);
-
+  const t_raw = translations[language];
+  const ts = t_raw.systems;
+  
   const stats = [
-    { 
-      label: 'Compute Power', 
-      value: metadata ? `${metadata.totalTokenCount} TOK` : '0 TOK', 
-      subValue: metadata ? `${metadata.promptTokenCount}p / ${metadata.candidatesTokenCount}c` : '--',
-      icon: Cpu 
-    },
-    { 
-      label: 'Active GPU Nodes', 
-      value: metadata ? '32' : '0', 
-      subValue: metadata ? 'CONNECTED' : 'STANDBY',
-      icon: Activity 
-    },
-    { 
-      label: 'Network Throughput', 
-      value: isFirestoreActive ? `${(Math.random() * 5 + 10).toFixed(1)} Gbps` : '0.1 Gbps', 
-      subValue: isFirestoreActive ? 'SYNCING' : 'IDLE',
-      icon: Network 
-    },
-    { 
-      label: 'Cluster Latency', 
-      value: metadata ? `${metadata.latency}ms` : '--', 
-      subValue: metadata ? 'REAL-TIME' : 'N/A',
-      icon: Zap 
-    },
+    { label: ts.cloud_status, icon: Cloud, value: isFirestoreActive ? ts.connected : ts.offline },
+    { label: ts.security, icon: ShieldCheck, value: ts.active },
+    { label: ts.latency, icon: Zap, value: metadata ? `${metadata.latency}ms` : '32ms' },
+    { label: ts.data_sync, icon: Database, value: ts.synchronized }
   ];
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">System Infrastructure</h2>
-          <p className="text-proton-muted text-xs sm:text-sm mt-1">Real-time compute cluster diagnostics and management</p>
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
+        <div className="space-y-3 text-center md:text-left">
+          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text">
+            {ts.title}
+          </h1>
+          <p className="text-proton-muted text-lg font-medium max-w-xl">
+            {ts.description}
+          </p>
         </div>
-        <div className={cn(
-          "px-4 py-2 rounded-full text-xs font-mono border flex items-center gap-2",
-          status === 'active' ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-proton-card text-proton-muted border-proton-border"
-        )}>
-          <div className={cn("w-2 h-2 rounded-full", status === 'active' ? "bg-green-400 animate-pulse" : "bg-proton-muted")} />
-          {status === 'idle' ? 'SYSTEM IDLE' : status === 'provisioning' ? 'PROVISIONING...' : 'CLUSTER ACTIVE'}
+        <div className="flex items-center gap-3 px-6 py-3 bg-proton-card rounded-full border border-proton-border shadow-sm">
+           <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+           <span className="text-xs font-bold uppercase tracking-widest text-proton-text">{ts.operational}</span>
         </div>
       </div>
 
-      {/* Primary Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="proton-glass p-6 rounded-2xl flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-proton-muted text-[10px] uppercase font-mono tracking-widest">{stat.label}</span>
-              <stat.icon size={16} className="text-proton-accent" />
+          <div key={i} className="bg-proton-card p-6 rounded-3xl border border-proton-border shadow-sm flex flex-col items-center text-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
+               <stat.icon size={24} />
             </div>
-            <p className="text-2xl font-bold font-mono">{stat.value}</p>
-            <p className="text-[10px] font-mono text-proton-muted uppercase tracking-tighter">{stat.subValue}</p>
+            <div>
+              <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest mb-1">{stat.label}</p>
+              <p className="text-xl font-bold text-proton-text">{stat.value}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Graphs Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 proton-glass p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="font-bold flex items-center gap-2">Resource Load Overview</h4>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-proton-accent" />
-                <span className="text-[10px] font-mono text-proton-muted uppercase">LOAD (TEMP)</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-12 bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-lg">
+           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+              <div className="space-y-4 max-w-lg">
+                 <h2 className="text-3xl font-bold tracking-tight">{ts.intelligence_level}</h2>
+                 <p className="text-proton-muted font-medium">{ts.intelligence_desc}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-purple-500" />
-                <span className="text-[10px] font-mono text-proton-muted uppercase">TRAFFIC (TOKENS)</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-full w-full relative min-h-[256px] overflow-hidden">
-            <ResponsiveContainer width="100%" height={256} minWidth={0}>
-              <AreaChart data={resourceData}>
-                <defs>
-                  <linearGradient id="colorGpu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-proton-accent)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--color-proton-accent)" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-proton-secondary)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--color-proton-secondary)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-proton-border)" />
-                <XAxis dataKey="time" hide />
-                <YAxis stroke="var(--color-proton-muted)" fontSize={10} />
-                <Tooltip contentStyle={{ 
-                  backgroundColor: 'var(--color-proton-card)', 
-                  border: '1px solid var(--color-proton-border)', 
-                  fontSize: '12px',
-                  borderRadius: '12px',
-                  color: 'var(--color-proton-text)'
-                }} />
-                <Area type="monotone" dataKey="gpu" stroke="var(--color-proton-accent)" strokeWidth={2} fillOpacity={1} fill="url(#colorGpu)" />
-                <Area type="monotone" dataKey="cpu" stroke="var(--color-proton-secondary)" strokeWidth={2} fillOpacity={1} fill="url(#colorCpu)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-        {/* Provisioning/Cluster Control -> Now Interactive Temperature Slider */}
-        <div className="proton-glass p-6 rounded-2xl flex flex-col gap-6">
-          <div className="flex items-center justify-between">
-            <h4 className="font-bold">Model Temperature</h4>
-            <Sparkles size={16} className="text-proton-accent" />
-          </div>
-          <div className="flex-1 flex flex-col justify-center gap-8">
-             <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest block">COMPUTE LOAD</span>
-                      <p className="text-sm font-bold">{aiSettings.temperature < 0.4 ? 'CONCISE / STRICT' : aiSettings.temperature > 0.7 ? 'CREATIVE / VERBOSE' : 'BALANCED'}</p>
-                    </div>
-                    <span className="text-2xl font-mono font-bold text-proton-accent">{(aiSettings.temperature * 100).toFixed(0)}%</span>
-                </div>
-                <div className="relative pt-4">
+              <div className="w-full md:w-80 space-y-6">
+                 <div className="flex justify-between items-center bg-proton-bg p-4 rounded-2xl border border-proton-border">
+                    <span className="text-xs font-bold uppercase tracking-widest text-proton-muted">{ts.creativity_mode}</span>
+                    <span className="text-lg font-bold text-proton-accent">{(aiSettings.temperature * 100).toFixed(0)}%</span>
+                 </div>
+                 <div className="px-2">
                     <input 
                       type="range" 
                       min="0" 
@@ -2225,43 +1094,33 @@ const ComputeView = ({
                       step="0.1" 
                       value={aiSettings.temperature}
                       onChange={(e) => setAiSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
-                      className="w-full h-1 bg-proton-border rounded-lg appearance-none cursor-pointer accent-proton-accent"
+                      className="w-full h-3 bg-proton-bg rounded-lg appearance-none cursor-pointer accent-proton-accent border border-proton-border shadow-inner"
                     />
-                    <div className="flex justify-between mt-2 text-[8px] font-mono text-proton-muted uppercase tracking-widest">
-                      <span>Strict</span>
-                      <span>Balanced</span>
-                      <span>Creative</span>
+                    <div className="flex justify-between mt-4 text-[10px] font-bold text-proton-muted uppercase tracking-widest px-1">
+                      <span>{ts.focused}</span>
+                      <span>{ts.balanced}</span>
+                      <span>{ts.creative}</span>
                     </div>
-                </div>
-             </div>
-             
-             <div className="p-4 rounded-xl bg-proton-accent/5 border border-proton-accent/10">
-               <p className="text-[10px] leading-relaxed text-proton-muted">
-                 Adjusting temperature directly modifies the underlying <span className="text-proton-accent">Gemini Core</span> provisioning. 
-                 Higher percentages yield more diverse and complex outputs at the cost of strict instruction following.
-               </p>
-             </div>
-          </div>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     </div>
   );
 };
 
-const PREDEFINED_AVATARS = ["🏺", "⛓️", "📈", "🤖", "🧠", "💎", "🎨", "🚀", "⚡", "🌈", "🦁", "🏔️", "🍷", "⚔️"];
+const PREDEFINED_AVATARS = ["👤", "👔", "💼", "🏢", "📊", "🤖", "🎨", "🚀", "⚡", "🌟", "🦁", "🏔️", "💡", "🛡️"];
 
 const PersonasView = ({ 
   history, 
   onNewMessage,
   customAvatars,
-  onUpdateAvatar,
   personas,
-  onUpdatePersonas,
   aiSettings,
   setLastGeminiMetadata,
   workflows,
   tasks,
-  uiMode,
   isSystemActive
 }: { 
   history: PersonaHistory, 
@@ -2277,102 +1136,17 @@ const PersonasView = ({
   uiMode: 'operator' | 'artisan',
   isSystemActive: boolean
 }) => {
-  const handleTTS = async (text: string) => {
-    try {
-      const base64Audio = await generateSpeech(text, aiSettings.voice);
-      const binary = atob(base64Audio);
-      const dataSize = binary.length;
-      
-      // Create WAV header
-      const buffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(buffer);
-      
-      const writeString = (offset: number, str: string) => {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      };
-      
-      writeString(0, 'RIFF');
-      view.setUint32(4, 36 + dataSize, true);
-      writeString(8, 'WAVE');
-      writeString(12, 'fmt ');
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
-      view.setUint16(22, 1, true); // Mono
-      view.setUint32(24, 24000, true); // 24kHz
-      view.setUint32(28, 48000, true); // ByteRate
-      view.setUint16(32, 2, true); // BlockAlign
-      view.setUint16(34, 16, true); // BitsPerSample
-      writeString(36, 'data');
-      view.setUint32(40, dataSize, true);
-      
-      const pcmData = new Uint8Array(buffer, 44);
-      for (let i = 0; i < dataSize; i++) pcmData[i] = binary.charCodeAt(i);
-      
-      const blob = new Blob([buffer], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
-    } catch (error) {
-      console.error("TTS Playback Error:", error);
-    }
-  };
-
   const [selectedPersona, setSelectedPersona] = useState<Persona>(personas[0] || PERSONAS[0]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('All');
-  const [languageFilter, setLanguageFilter] = useState<string>('All');
-  const [showGeorgian, setShowGeorgian] = useState<Record<string, boolean>>({});
-  const [expandedPersonaId, setExpandedPersonaId] = useState<string | null>(null);
-  const [editingInstructionsId, setEditingInstructionsId] = useState<string | null>(null);
-  const [tempInstructions, setTempInstructions] = useState('');
-  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [showPersonaEditor, setShowPersonaEditor] = useState(false);
-  const [editingPersona, setEditingPersona] = useState<Persona | undefined>(undefined);
-  const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const chatEndRef = useRef<HTMLDivElement>(null);
-  
-  const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('proton_favorite_personas');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('proton_favorite_personas', JSON.stringify(favoritePersonaIds));
-  }, [favoritePersonaIds]);
-
-  const filteredPersonas = useMemo(() => {
-    const list = personas.filter(p => 
-      (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-       p.role.toLowerCase().includes(searchQuery.toLowerCase())) &&
-      (roleFilter === 'All' || p.role === roleFilter) &&
-      (languageFilter === 'All' || p.language === languageFilter)
-    );
-    return list.sort((a, b) => {
-      const aFav = favoritePersonaIds.includes(a.id);
-      const bFav = favoritePersonaIds.includes(b.id);
-      if (aFav && !bFav) return -1;
-      if (!aFav && bFav) return 1;
-      return 0;
-    });
-  }, [personas, searchQuery, roleFilter, languageFilter, favoritePersonaIds]);
 
   const messages = history[selectedPersona.id] || [];
   const currentAvatar = customAvatars[selectedPersona.id] || selectedPersona.avatar;
 
   useEffect(() => {
-    if (!personas.find(p => p.id === selectedPersona.id)) {
-      setSelectedPersona(personas[0] || PERSONAS[0]);
-    }
-  }, [personas]);
-
-  const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(scrollToBottom, [messages]);
+  }, [messages]);
 
   const handleSend = async () => {
     if (!isSystemActive || !input.trim() || loading) return;
@@ -2389,575 +1163,145 @@ const PersonasView = ({
       parts: [{ text: m.content }]
     }));
 
-    // Choose model based on query complexity/need
-    let model = "gemini-3-flash-preview";
-    if (userMessage.toLowerCase().includes("complex") || userMessage.toLowerCase().includes("code")) {
-      model = "gemini-3.1-pro-preview";
-    } else if (userMessage.length < 50) {
-      model = "gemini-3.1-flash-lite-preview";
-    }
-    
-    // Apply grounding settings from AI configuration
-    const includeSearch = aiSettings.enableSearch;
-    const includeMaps = aiSettings.enableMaps || (userMessage.toLowerCase().includes("location") || userMessage.toLowerCase().includes("maps"));
-
-    // Inject User Context as Global Instruction
     const userContext = `
-      CURRENT USER DATA CONTEXT:
-      - Workflows: ${workflows.map(w => `${w.name} (Trigger: ${w.trigger}, Action: ${w.action})`).join('; ')}
-      - Current Tasks: ${tasks.map(t => `${t.content} (Status: ${t.completed ? 'Done' : 'Pending'})`).join('; ')}
-      
-      PERSONALIZATION RULES:
-      - Always prioritize the user's existing business workflows and tasks when giving advice.
-      - If you are 'Artisan Guide', use the specific tasks and workflows to give localized, relevant advice for their Georgian business.
-      - Reference the user's specific progress from their history.
+      CONTEXT:
+      - Workflows: ${workflows.map(w => w.name).join(', ')}
+      - Tasks: ${tasks.map(t => t.content).join(', ')}
     `;
 
-    const { text, metadata } = await chatWithPersona(
-      selectedPersona, 
-      userMessage, 
-      apiHistory, 
-      model, 
-      includeMaps, 
-      includeSearch, 
-      aiSettings.temperature, 
-      (aiSettings.systemInstruction || "") + userContext
-    );
-    setLastGeminiMetadata(metadata);
-    onNewMessage(selectedPersona.id, { role: 'model', content: text, timestamp: Date.now() });
-    setLoading(false);
-  };
-
-  const handleSavePersona = (persona: Persona) => {
-    const exists = personas.find(p => p.id === persona.id);
-    if (exists) {
-      onUpdatePersonas(personas.map(p => p.id === persona.id ? persona : p));
-    } else {
-      onUpdatePersonas([...personas, persona]);
-    }
-    setShowPersonaEditor(false);
-    setSelectedPersona(persona);
-  };
-
-  const handleDeletePersona = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (personas.length <= 1) return;
-    onUpdatePersonas(personas.filter(p => p.id !== id));
-  };
-
-  const handleGenerateAI = async () => {
-    setGeneratingAvatar(true);
     try {
-      const newAvatar = await generatePersonaAvatar(selectedPersona);
-      onUpdateAvatar(selectedPersona.id, newAvatar);
-    } catch (error) {
-      console.error(error);
+      const { text, metadata } = await chatWithPersona(
+        selectedPersona, 
+        userMessage, 
+        apiHistory, 
+        "gemini-3.1-flash-preview", 
+        aiSettings.enableMaps, 
+        aiSettings.enableSearch, 
+        aiSettings.temperature, 
+        (aiSettings.systemInstruction || "") + userContext
+      );
+      setLastGeminiMetadata(metadata);
+      onNewMessage(selectedPersona.id, { role: 'model', content: text, timestamp: Date.now() });
+    } catch (err) {
+      console.error(err);
     } finally {
-      setGeneratingAvatar(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full gap-0 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-      {/* Persona Selector */}
-      <div className={cn(
-        "w-full md:w-80 flex-col gap-4 shrink-0 h-full",
-        mobileView === 'chat' ? "hidden md:flex" : "flex"
-      )}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Users size={20} className="text-proton-accent" />
-            Digital Personas
-          </h2>
-          <button 
-            onClick={() => {
-              setEditingPersona(undefined);
-              setShowPersonaEditor(true);
-            }}
-            className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent hover:bg-proton-accent/20 transition-all"
-            title="Create Persona"
-          >
-            <Plus size={18} />
-          </button>
-        </div>
-        <input
-          type="text"
-          placeholder="Search personas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-proton-card border border-proton-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-proton-accent transition-colors"
-        />
-        <div className="flex gap-2">
-          <select 
-            value={roleFilter} 
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="flex-1 bg-proton-card border border-proton-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-proton-accent transition-colors"
-          >
-            <option value="All">All Roles</option>
-            {Array.from(new Set(personas.map(p => p.role))).map(role => (
-              <option key={role} value={role}>{role}</option>
-            ))}
-          </select>
-          <select 
-            value={languageFilter} 
-            onChange={(e) => setLanguageFilter(e.target.value)}
-            className="flex-1 bg-proton-card border border-proton-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-proton-accent transition-colors"
-          >
-            <option value="All">All Languages</option>
-            {['English', 'Georgian', 'Mixed'].map(lang => (
-              <option key={lang} value={lang}>{lang}</option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar pb-4">
-          {filteredPersonas.map(persona => (
-            <div
-              key={persona.id}
-              className={cn(
-                "rounded-2xl transition-all border overflow-hidden group/card",
-                selectedPersona.id === persona.id 
-                  ? "bg-proton-accent/10 border-proton-accent/30 proton-glow" 
-                  : "bg-proton-card border-proton-border hover:border-proton-muted/30"
-              )}
-            >
-              <div className="relative">
-              <div
-                  onClick={() => {
-                    setSelectedPersona(persona);
-                    setMobileView('chat');
-                  }}
-                  className="w-full text-left p-4 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    <PersonaAvatar avatar={customAvatars[persona.id] || persona.avatar} className={cn("w-10 h-10 transition-all duration-700", !isSystemActive && "grayscale opacity-40 blur-[0.5px]")} />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="font-bold text-sm">{showGeorgian[persona.id] ? persona.nameGe : persona.name}</p>
-                        <div className="flex items-center gap-1">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFavoritePersonaIds(prev => 
-                                prev.includes(persona.id) ? prev.filter(id => id !== persona.id) : [...prev, persona.id]
-                              );
-                            }}
-                            className={cn("p-1 rounded-full transition-colors", favoritePersonaIds.includes(persona.id) ? "text-proton-secondary" : "text-proton-muted hover:text-proton-secondary")}
-                          >
-                            <Heart size={14} fill={favoritePersonaIds.includes(persona.id) ? "currentColor" : "none"} />
-                          </button>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowGeorgian(prev => ({ ...prev, [persona.id]: !prev[persona.id] }));
-                            }}
-                            className="text-[10px] font-mono bg-proton-accent/10 text-proton-accent px-2 py-0.5 rounded hover:bg-proton-accent/20 transition-colors"
-                          >
-                            {showGeorgian[persona.id] ? 'EN' : 'GE'}
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-proton-muted uppercase tracking-wider">{persona.role}</p>
-                    </div>
-                    <ChevronRight 
-                      size={16} 
-                      className={cn("text-proton-muted transition-transform", selectedPersona.id === persona.id ? "rotate-90 text-proton-accent" : "")} 
-                    />
-                  </div>
-                  <p className="text-xs text-proton-muted mt-3 line-clamp-2 leading-relaxed">
-                    {showGeorgian[persona.id] ? persona.descriptionGe : persona.description}
-                  </p>
-                </div>
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-12rem)] gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      <div className="w-full lg:w-80 space-y-6 flex flex-col h-full">
+         <div className="space-y-4">
+            <h2 className="text-3xl font-black tracking-tighter">Team Directory</h2>
+            <p className="text-sm font-medium text-proton-muted">Collaborate with specialized AI personnel designed for your business needs.</p>
+         </div>
 
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover/card:opacity-100 transition-opacity">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingPersona(persona);
-                      setShowPersonaEditor(true);
-                    }}
-                    className="p-1.5 rounded-md bg-proton-bg/80 text-proton-muted hover:text-proton-accent transition-colors"
-                  >
-                    <Edit2 size={12} />
-                  </button>
-                  <button 
-                    onClick={(e) => handleDeletePersona(persona.id, e)}
-                    className="p-1.5 rounded-md bg-proton-bg/80 text-proton-muted hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+         <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
+            {personas.map(persona => (
+              <button
+                key={persona.id}
+                onClick={() => setSelectedPersona(persona)}
+                className={cn(
+                  "w-full text-left p-4 rounded-3xl border transition-all flex items-center gap-4 group",
+                  selectedPersona.id === persona.id 
+                    ? "bg-proton-accent text-white border-proton-accent shadow-xl shadow-proton-accent/20" 
+                    : "bg-proton-card border-proton-border hover:border-proton-accent/50"
+                )}
+              >
+                <div className="text-3xl group-hover:scale-110 transition-transform">
+                  {customAvatars[persona.id] || persona.avatar}
                 </div>
-              </div>
-              
-              <div className="px-4 pb-4">
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setExpandedPersonaId(expandedPersonaId === persona.id ? null : persona.id);
-                  }}
-                  className="flex items-center gap-1.5 text-[10px] font-mono text-proton-accent uppercase tracking-widest hover:opacity-80 transition-opacity"
-                >
-                  <ChevronDown size={12} className={cn("transition-transform", expandedPersonaId === persona.id ? "rotate-180" : "")} />
-                  {expandedPersonaId === persona.id ? "Hide Directives" : "View Directives"}
-                </button>
-                
-                <AnimatePresence>
-                  {expandedPersonaId === persona.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-3 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-1">Directives (The 'Brain')</span>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (editingInstructionsId === persona.id) {
-                                // Save
-                                onUpdatePersonas(personas.map(p => p.id === persona.id ? { ...p, systemInstruction: tempInstructions } : p));
-                                setEditingInstructionsId(null);
-                              } else {
-                                // Start editing
-                                setEditingInstructionsId(persona.id);
-                                setTempInstructions(persona.systemInstruction);
-                              }
-                            }}
-                            className="text-[10px] font-mono text-proton-accent uppercase hover:underline transition-all"
-                          >
-                            {editingInstructionsId === persona.id ? "Apply Changes" : "Modify Core"}
-                          </button>
-                        </div>
-                        
-                        {editingInstructionsId === persona.id ? (
-                          <textarea
-                            value={tempInstructions}
-                            onChange={(e) => setTempInstructions(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full bg-proton-bg border border-proton-accent/30 rounded-xl p-3 text-[11px] leading-relaxed text-proton-text font-mono h-32 focus:outline-none focus:border-proton-accent transition-all custom-scrollbar"
-                            autoFocus
-                          />
-                        ) : (
-                          <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border/50 text-[11px] leading-relaxed text-proton-muted font-mono whitespace-pre-wrap">
-                            {persona.systemInstruction}
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          ))}
-        </div>
+                <div className="flex-1 min-w-0">
+                   <p className="font-bold truncate">{persona.name}</p>
+                   <p className={cn("text-[10px] font-bold uppercase tracking-widest", selectedPersona.id === persona.id ? "text-white/80" : "text-proton-muted")}>
+                      {persona.role}
+                   </p>
+                </div>
+              </button>
+            ))}
+         </div>
       </div>
 
-      {/* Chat Interface */}
-      <div className={cn(
-        "flex-1 flex-col proton-glass rounded-3xl overflow-hidden h-full w-full",
-        mobileView === 'list' ? "hidden md:flex" : "flex"
-      )}>
-        {/* Chat Header */}
-        <div className="p-4 border-b border-proton-border flex items-center justify-between bg-proton-bg/30">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setMobileView('list')}
-              className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 rounded-lg text-proton-muted hover:bg-proton-card transition-colors"
-            >
-              <ChevronRight size={20} className="rotate-180" />
-            </button>
+      <div className="flex-1 flex flex-col bg-proton-card rounded-[40px] border border-proton-border shadow-2xl overflow-hidden min-h-[500px]">
+         <div className="px-8 py-6 border-b border-proton-border flex items-center justify-between bg-proton-bg/50">
+            <div className="flex items-center gap-4">
+               <div className="text-3xl">{currentAvatar}</div>
+               <div>
+                  <h3 className="font-bold text-lg">{selectedPersona.name}</h3>
+                  <p className="text-xs text-proton-muted font-medium">{selectedPersona.role}</p>
+               </div>
+            </div>
+            <div className="flex items-center gap-2">
+               <div className={cn("w-2 h-2 rounded-full", isSystemActive ? "bg-green-500 animate-pulse" : "bg-proton-muted")} />
+               <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isSystemActive ? 'Available' : 'Busy'}</span>
+            </div>
+         </div>
+
+         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+            {messages.length === 0 ? (
+               <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-20">
+                  <MessageSquare size={48} className="mb-4 text-proton-muted" />
+                  <p className="text-sm font-bold uppercase tracking-[0.2em]">Start a conversation with {selectedPersona.name}</p>
+               </div>
+            ) : (
+               messages.map((m, i) => (
+                 <div key={i} className={cn("flex flex-col", m.role === 'user' ? "items-end" : "items-start")}>
+                    <div className={cn(
+                      "max-w-[80%] px-6 py-4 rounded-3xl font-medium text-sm leading-relaxed",
+                      m.role === 'user' 
+                        ? "bg-proton-accent text-white rounded-tr-none shadow-lg shadow-proton-accent/10" 
+                        : "bg-proton-bg border border-proton-border rounded-tl-none"
+                    )}>
+                       {m.content}
+                    </div>
+                    <span className="text-[9px] font-bold text-proton-muted uppercase mt-2 px-2">
+                       {m.role === 'user' ? 'You' : selectedPersona.name} • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                 </div>
+               ))
+            )}
+            <div ref={chatEndRef} />
+         </div>
+
+         <div className="p-8 bg-proton-bg/50 border-t border-proton-border">
             <div className="relative group">
-              <PersonaAvatar avatar={currentAvatar} className="w-10 h-10 ring-2 ring-proton-accent/20" />
-              <button 
-                onClick={() => setShowAvatarPicker(true)}
-                className="absolute -bottom-1 -right-1 p-1 bg-proton-accent text-proton-bg rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-              >
-                <Edit2 size={10} />
-              </button>
+               <input 
+                 type="text"
+                 value={input}
+                 onChange={(e) => setInput(e.target.value)}
+                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                 placeholder={`Consult with ${selectedPersona.name}...`}
+                 disabled={!isSystemActive || loading}
+                 className="w-full bg-proton-card border border-proton-border rounded-2xl px-6 py-4 pr-16 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-proton-accent/20 focus:border-proton-accent transition-all shadow-inner"
+               />
+               <button 
+                 onClick={handleSend}
+                 disabled={!isSystemActive || loading || !input.trim()}
+                 className={cn(
+                   "absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-white flex items-center justify-center transition-all shadow-md",
+                   loading ? "opacity-50" : "hover:brightness-110 active:scale-95"
+                 )}
+               >
+                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+               </button>
             </div>
-            <div>
-              <p className="font-bold text-sm">{selectedPersona.name}</p>
-              <div className={cn("text-[10px] flex items-center gap-1", isSystemActive ? "text-green-400" : "text-proton-secondary animate-pulse font-bold tracking-widest")}>
-                <div className={cn("w-1.5 h-1.5 rounded-full", isSystemActive ? "bg-green-400 animate-pulse" : "bg-proton-secondary")} />
-                {isSystemActive ? "ONLINE" : "SYSTEM STASIS"}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setShowAvatarPicker(true)}
-              className="p-2 rounded-lg hover:bg-proton-bg transition-colors text-proton-muted flex items-center gap-2 text-xs font-mono"
-            >
-              <Sparkles size={16} className="text-proton-accent" />
-              <span className="hidden sm:inline">CUSTOMIZE</span>
-            </button>
-            <div className="h-4 w-px bg-proton-border mx-1" />
-            <button className="p-2 rounded-lg hover:bg-proton-bg transition-colors text-proton-muted">
-              <ShieldCheck size={18} />
-            </button>
-            <button 
-              onClick={async () => {
-                const historyToSummarize = (history[selectedPersona.id] || []).map(m => ({
-                  role: m.role,
-                  parts: [{ text: m.content }]
-                }));
-                const summary = await summarizeConversation(historyToSummarize);
-                alert(summary);
-              }}
-              className="p-2 rounded-lg hover:bg-proton-bg transition-colors text-proton-muted"
-              title="Summarize Conversation"
-            >
-              <Database size={18} />
-            </button>
-            <button className="p-2 rounded-lg hover:bg-proton-bg transition-colors text-proton-muted">
-              <Settings size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Avatar Picker Modal */}
-        <AnimatePresence>
-          {showAvatarPicker && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 bg-proton-bg/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
-            >
-              <motion.div 
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
-                className="proton-glass p-4 sm:p-8 rounded-3xl max-w-md w-full space-y-4 sm:space-y-6 shadow-2xl border-proton-border/80"
-              >
-                <div className="flex justify-between items-center bg-transparent pb-4 border-b border-proton-border/50">
-                  <h3 className="text-xl font-bold flex items-center gap-2">
-                    <Sparkles className="text-proton-accent" size={20} />
-                    Customize Avatar
-                  </h3>
-                  <button onClick={() => setShowAvatarPicker(false)} className="p-2 rounded-full hover:bg-proton-bg transition-all text-proton-muted hover:text-proton-text">
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-6 pt-2">
-                  <div className="space-y-3">
-                    <p className="text-[10px] text-proton-muted uppercase tracking-[0.2em] font-mono font-bold">Predefined Identities</p>
-                    <div className="grid grid-cols-7 gap-2 pb-2">
-                      {PREDEFINED_AVATARS.map(av => (
-                        <button
-                          key={av}
-                          onClick={() => {
-                            onUpdateAvatar(selectedPersona.id, av);
-                            setShowAvatarPicker(false);
-                          }}
-                          className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center transition-all border overflow-hidden",
-                            currentAvatar === av 
-                              ? "bg-proton-accent/10 border-proton-accent/30 scale-110 shadow-[0_0_15px_rgba(0,242,255,0.2)]" 
-                              : "bg-proton-bg border-proton-border hover:border-proton-muted/50"
-                          )}
-                        >
-                          <PersonaAvatar avatar={av} className="w-full h-full text-xl" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-4 rounded-2xl bg-proton-bg/50 border border-proton-border group/upload hover:border-proton-accent/30 transition-all">
-                      <div className="flex flex-col items-center text-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-proton-card flex items-center justify-center text-proton-muted group-hover/upload:text-proton-accent transition-colors">
-                          <Image size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-proton-text uppercase tracking-widest">Local Data</p>
-                          <p className="text-[10px] text-proton-muted">Upload custom image</p>
-                        </div>
-                        <label className="w-full py-2 rounded-lg bg-proton-card text-proton-text hover:bg-proton-border cursor-pointer transition-all border border-proton-border text-[10px] font-bold uppercase tracking-widest">
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  onUpdateAvatar(selectedPersona.id, reader.result as string);
-                                  setShowAvatarPicker(false);
-                                };
-                                reader.readAsDataURL(file);
-                              }
-                            }}
-                          />
-                          Select File
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-proton-accent/5 border border-proton-accent/10 group/ai hover:border-proton-accent/30 transition-all">
-                      <div className="flex flex-col items-center text-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl bg-proton-accent/10 flex items-center justify-center text-proton-accent",
-                          generatingAvatar && "animate-pulse"
-                        )}>
-                          <Sparkles size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-proton-accent uppercase tracking-widest">Neural Projection</p>
-                          <p className="text-[10px] text-proton-muted">AI generated avatar</p>
-                        </div>
-                        <button 
-                          onClick={handleGenerateAI}
-                          disabled={generatingAvatar}
-                          className="w-full py-2 rounded-lg bg-proton-accent text-proton-bg hover:scale-105 active:scale-95 disabled:opacity-50 transition-all text-[10px] font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(0,242,255,0.2)]"
-                        >
-                          {generatingAvatar ? "Generating..." : "Generate AI"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {generatingAvatar && (
-                    <div className="space-y-2 py-2">
-                      <div className="h-1 bg-proton-border rounded-full overflow-hidden">
-                        <motion.div 
-                          className="h-full bg-proton-accent"
-                          animate={{ x: ["-100%", "100%"] }}
-                          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-proton-muted text-center animate-pulse font-mono font-bold tracking-widest">SYNTHESIZING VISUAL CONTEXT...</p>
-                    </div>
-                  )}
-
-                  <button 
-                    onClick={() => setShowAvatarPicker(false)}
-                    className="w-full py-3 rounded-xl border border-proton-border font-bold text-sm hover:bg-proton-card transition-all mt-2"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showPersonaEditor && (
-            <PersonaEditor 
-              persona={editingPersona}
-              onSave={handleSavePersona}
-              onClose={() => setShowPersonaEditor(false)}
-            />
-          )}
-        </AnimatePresence>
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 proton-grid">
-          {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50">
-              <div className="w-16 h-16 rounded-full bg-proton-accent/10 flex items-center justify-center text-proton-accent">
-                <MessageSquare size={32} />
-              </div>
-              <div>
-                <p className="font-bold">Start a conversation with {selectedPersona.nameGe}</p>
-                <p className="text-sm">Ask about business, Web3, or automation in Georgia.</p>
-              </div>
-            </div>
-          )}
-          {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "flex flex-col max-w-[85%]",
-                msg.role === 'user' ? "ml-auto items-end" : "mr-auto items-start"
-              )}
-            >
-              <div className={cn(
-                "p-4 rounded-2xl text-sm leading-relaxed",
-                msg.role === 'user' 
-                  ? "bg-proton-accent text-proton-bg font-medium rounded-tr-none" 
-                  : cn("bg-proton-card border border-proton-border rounded-tl-none prose prose-sm max-w-none", uiMode === 'operator' && "prose-invert")
-              )}>
-                {msg.role === 'model' ? (
-                  <div className="space-y-2">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    <button 
-                      onClick={() => handleTTS(msg.content)}
-                      className="text-proton-muted hover:text-proton-accent transition-colors"
-                    >
-                      <Volume2 size={16} />
-                       <span className="text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">Listen</span>
-                    </button>
-                  </div>
-                ) : (
-                  msg.content
-                )}
-              </div>
-              <span className="text-[10px] text-proton-muted mt-1 uppercase font-mono">
-                {msg.role === 'user' ? 'You' : selectedPersona.name}
-              </span>
-            </motion.div>
-          ))}
-          {loading && (
-            <div className="flex items-center gap-2 text-proton-muted">
-              <Loader2 className="animate-spin" size={14} />
-              <span className="text-[10px] font-mono uppercase tracking-widest">Proton Core AI Thinking...</span>
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="p-4 bg-proton-bg/50 border-t border-proton-border relative overflow-hidden">
-          {!isSystemActive && (
-            <div className="absolute inset-0 z-20 bg-proton-bg/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="bg-proton-card border border-proton-secondary/40 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl"
-              >
-                <Lock size={16} className="text-proton-secondary animate-pulse" />
-                <span className="text-xs font-mono font-bold uppercase tracking-widest text-proton-secondary">System Stasis: Link Restricted</span>
-              </motion.div>
-            </div>
-          )}
-          <div className={cn("relative transition-opacity duration-500", !isSystemActive && "opacity-20 grayscale pointer-events-none")}>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isSystemActive ? `Message ${selectedPersona.nameGe}...` : "Neural Link Stasis..."}
-              disabled={!isSystemActive}
-              className="w-full bg-proton-bg border border-proton-border rounded-2xl py-4 pl-6 pr-16 focus:outline-none focus:border-proton-accent transition-colors text-sm"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!isSystemActive || !input.trim() || loading}
-              className="absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-proton-bg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 transition-all font-bold text-xs"
-            >
-              {isSystemActive ? <Send size={18} /> : "LOCKED"}
-            </button>
-          </div>
-          <p className="text-[10px] text-proton-muted text-center mt-3 uppercase tracking-widest">
-            {isSystemActive ? "Powered by Proton Core AI Infrastructure • Tbilisi, Georgia" : "System recalibration in progress • Stasis Mode active"}
-          </p>
-        </div>
+         </div>
       </div>
     </div>
   );
 };
-
 
 const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
   const { address, isConnected } = useAccount();
   const { data: balance } = useBalance({
     address: address,
   });
+
+
+
+
+
 
   const [gelRate] = useState(2.72); // Mock NBG Rate
   const [eurRate] = useState(0.92); // Mock EUR Rate
@@ -2967,22 +1311,20 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
   return (
     <div className="space-y-12 md:space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {!isConnected ? (
-        <div className="max-w-md mx-auto w-full space-y-8 text-center py-20 px-6 proton-glass rounded-[40px] border border-proton-border relative overflow-hidden shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 via-transparent to-proton-secondary/5 pointer-events-none" />
-          
+        <div className="max-w-md mx-auto w-full space-y-8 text-center py-20 px-6 bg-proton-card rounded-[40px] border border-proton-border relative overflow-hidden shadow-xl">
           <div className="relative z-10 space-y-6">
-            <div className="mx-auto w-20 h-20 rounded-3xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-muted shadow-2xl">
+            <div className="mx-auto w-20 h-20 rounded-3xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted shadow-sm">
               <Wallet size={40} className="opacity-20" />
             </div>
             
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-red-400" />
-                <span className="text-xs font-mono text-red-400 uppercase tracking-widest">Status: Disconnected</span>
+                <div className="w-2 h-2 rounded-full bg-proton-muted" />
+                <span className="text-xs font-semibold text-proton-muted uppercase tracking-widest">Disconnected</span>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">Enterprise Web3 Node</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Payments & Settlement</h2>
               <p className="text-sm text-proton-muted leading-relaxed">
-                Connect your secure hardware or browser wallet to access the Proton Core AI compute settlement layer.
+                Connect your secure wallet to access the Proton Hub financial services and managed compute credits.
               </p>
             </div>
 
@@ -2990,8 +1332,8 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
               <ConnectButton label="Connect Wallet" />
             </div>
 
-            <p className="text-[10px] text-proton-muted/40 font-mono uppercase tracking-[0.2em] pt-8">
-              Secured by Proton Infrastructure
+            <p className="text-[10px] text-proton-muted/40 font-semibold uppercase tracking-[0.2em] pt-8">
+              Secured by Proton Hub Infrastructure
             </p>
           </div>
         </div>
@@ -3005,10 +1347,10 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                  AI სერვისებისა და ბიზნეს პროცესების ფინანსური მართვა ქართულ და გლობალურ ჭრილში.
               </p>
             </div>
-            <div className="flex items-center gap-3 bg-proton-card/50 p-1.5 pl-4 rounded-2xl border border-proton-border backdrop-blur-sm">
+            <div className="flex items-center gap-3 bg-proton-card p-1.5 pl-4 rounded-2xl border border-proton-border">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-[10px] font-mono text-green-400 uppercase tracking-[0.2em] font-bold">Node Online</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-semibold text-green-500 uppercase tracking-[0.2em]">Online</span>
               </div>
               <ConnectButton />
             </div>
@@ -3267,12 +1609,12 @@ const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'ar
           <button 
             onClick={handleGenerate}
             disabled={!isSystemActive || loading}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-proton-accent to-purple-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-proton-accent/20"
+            className="w-full py-4 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-proton-accent/20"
           >
             {loading ? (
                 <>
                     <Loader2 size={18} className="animate-spin" />
-                    Generating your masterpiece...
+                    Generating...
                 </>
             ) : (
                 isSystemActive ? (
@@ -3283,7 +1625,7 @@ const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'ar
                 ) : (
                 <>
                     <Lock size={18} />
-                    STASIS MODE
+                    Limited Mode
                 </>
                 )
             )}
@@ -4015,12 +2357,17 @@ export default function App() {
   }, []);
 
   const [isFirestoreActive, setIsFirestoreActive] = useState(false);
+  const [showOptimizationModal, setShowOptimizationModal] = useState(false);
   const handleViewChange = React.useCallback((view: View) => {
+    if (!isArtisanSystemActive && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
+      setShowOptimizationModal(true);
+      return;
+    }
     setActiveView(view);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, []);
+  }, [isArtisanSystemActive]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<'proton' | 'light' | 'vibrant' | 'midnight'>(
@@ -4310,18 +2657,34 @@ export default function App() {
     }
   }
 
-  const handleAddTask = (content: string) => {
+  const handleAddTask = (content: string, priority: 'low' | 'medium' | 'high' = 'medium', category?: string) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
       content,
       contentGe: content,
-      completed: false
+      completed: false,
+      priority,
+      category
     };
     setTasks(prev => [...prev, newTask]);
     if (user) {
       const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
       trackFirestore(setDoc(docRef, newTask)).catch(e => handleFirestoreError(e, 'write', docRef.path));
     }
+  };
+
+  const handleEditTask = (id: string, updates: Partial<Task>) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === id) {
+        const updated = { ...t, ...updates };
+        if (user) {
+          const docRef = doc(db, 'users', user.uid, 'tasks', id);
+          trackFirestore(setDoc(docRef, updated)).catch(e => handleFirestoreError(e, 'write', docRef.path));
+        }
+        return updated;
+      }
+      return t;
+    }));
   };
 
   const handleToggleTask = (id: string) => {
@@ -4399,9 +2762,7 @@ export default function App() {
   const t = translations[currentLanguage];
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative crt-effect">
-      <div className="scanline" />
-      <div className="proton-grain" />
+    <div className="flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative">
       {/* Mobile Backdrop */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -4418,25 +2779,20 @@ export default function App() {
       {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
       <aside 
         className={cn(
-          "flex flex-col border-r border-proton-border bg-proton-card transition-all duration-300 ease-in-out z-[70] overflow-x-hidden shadow-2xl",
+          "flex flex-col border-r border-proton-border bg-proton-card transition-all duration-300 ease-in-out z-[70] overflow-x-hidden shadow-sm",
           "fixed inset-y-0 left-0 md:relative",
           isSidebarOpen 
-            ? "translate-x-0 w-72 px-4 shadow-[20px_0_40px_rgba(0,0,0,0.4)]" 
-            : "-translate-x-full md:translate-x-0 md:w-20 w-72 px-2"
+            ? "translate-x-0 w-64 px-4 shadow-xl" 
+            : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
         )}
       >
-        <div className={cn("p-8 flex items-center gap-4 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
-          <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500",
-            uiMode === 'artisan' 
-              ? "bg-proton-accent text-proton-bg shadow-[0_0_20px_rgba(59,130,246,0.5)]" 
-              : "bg-gradient-to-br from-proton-accent to-proton-secondary text-proton-bg shadow-[0_0_15px_rgba(59,130,246,0.3)]"
-          )}>
-            <Zap size={28} fill="currentColor" />
+        <div className={cn("py-8 flex items-center gap-3 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 bg-proton-accent text-white shadow-lg shadow-proton-accent/20">
+            <Zap size={24} fill="currentColor" />
           </div>
           {isSidebarOpen && (
-            <div className="font-display font-bold text-2xl tracking-tighter transition-opacity duration-300 animate-in fade-in slide-in-from-left-2">
-              Proton<span className="text-proton-accent italic">_Core</span>
+            <div className="font-bold text-xl tracking-tight transition-opacity duration-300">
+              Proton<span className="text-proton-accent italic">Hub</span>
             </div>
           )}
         </div>
@@ -4592,35 +2948,26 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 min-w-0 flex flex-col relative overflow-hidden pb-16 md:pb-0">
         {/* Header */}
-        <header className={cn(
-          "h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 z-30 transition-colors backdrop-blur-md",
-          uiMode === 'artisan' ? "bg-proton-bg" : "bg-proton-bg/50"
-        )}>
-          <div className="flex items-center gap-1 md:gap-4">
+        <header className="h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 z-30 bg-proton-card shadow-sm">
+          <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-proton-card text-proton-muted transition-colors hidden md:flex"
+              className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg hover:bg-proton-bg text-proton-muted transition-colors hidden md:flex"
             >
-              <ChevronRight className={cn("transition-transform duration-300", isSidebarOpen ? "rotate-180" : "")} size={20} />
-            </button>
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-proton-card text-proton-muted transition-colors md:hidden"
-            >
-              <ChevronRight size={20} />
+              <LayoutDashboard size={20} />
             </button>
             <div className="h-4 w-px bg-proton-border hidden md:block" />
-            <div className="flex items-center gap-2 text-[10px] sm:text-xs font-mono text-proton-muted uppercase tracking-widest">
-              <Globe size={14} className="min-w-[14px]" />
-              <span className="hidden sm:inline">{userProfile.region} {t.common.node}</span>
-              <span className="inline sm:hidden">{userProfile.region?.substring(0,3)}</span>
-              <span className="text-proton-accent">•</span>
-              <span className="hidden xs:inline">v1.2.0</span>
-              <span className="inline xs:hidden opacity-0 w-0">.</span>
-            </div>
-            <div className="h-4 w-px bg-proton-border hidden md:block" />
-            <div className="hidden xs:block">
-              <DigitalClock uiMode={uiMode} />
+            <div className="flex items-center gap-2 text-xs font-semibold text-proton-muted uppercase tracking-wider">
+              <Globe size={14} />
+              <span>{userProfile.region}</span>
+              <span className="text-proton-border">|</span>
+              <span className="text-proton-accent">{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</span>
+              {!isArtisanSystemActive && (
+                <div className="hidden lg:flex items-center gap-2 ml-4 px-3 py-1 bg-proton-secondary/10 border border-proton-secondary/20 rounded-full">
+                   <div className="w-1.5 h-1.5 rounded-full bg-proton-secondary animate-pulse" />
+                   <span className="text-[9px] font-bold text-proton-secondary tracking-widest">{t.dashboard.maintenance}</span>
+                </div>
+              )}
             </div>
           </div>
           
@@ -4648,40 +2995,6 @@ export default function App() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 proton-grid relative">
-          {!isArtisanSystemActive && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-lg px-4 pointer-events-none">
-              <motion.div 
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="bg-black/80 backdrop-blur-md border border-proton-secondary/30 p-1 rounded-2xl shadow-2xl artisan-shadow"
-              >
-                <div className="border border-proton-secondary/20 rounded-xl p-3 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-proton-secondary/20 flex items-center justify-center flex-shrink-0 relative overflow-hidden">
-                    <ShieldAlert className="text-proton-secondary relative z-10" size={20} />
-                    <motion.div 
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.1, 0.3, 0.1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 bg-proton-secondary"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-[10px] font-bold text-proton-secondary uppercase tracking-[0.2em] leading-none">Status: Stasis Phase 4</h4>
-                      <span className="text-[8px] font-mono text-proton-secondary/60">ERR_QUOTA_EXCEEDED</span>
-                    </div>
-                    <div className="h-1 bg-proton-secondary/10 rounded-full overflow-hidden mb-2">
-                       <motion.div 
-                        initial={{ width: "0%" }}
-                        animate={{ width: "42%" }}
-                        className="h-full bg-proton-secondary shadow-[0_0_10px_rgba(255,45,85,0.5)]"
-                       />
-                    </div>
-                    <p className="text-[9px] text-proton-text/50 leading-tight font-mono">Neural Link: Restricted • System recalibrating to optimize token consumption...</p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}
@@ -4714,16 +3027,18 @@ export default function App() {
                   onAddTask={handleAddTask}
                   onToggleTask={handleToggleTask}
                   onDeleteTask={handleDeleteTask}
+                  onEditTask={handleEditTask}
                   onAiSuggest={handleAiSuggestTasks}
                   uiMode={uiMode}
                 />
               )}
               {activeView === 'compute' && (
-                <ComputeView 
+                <SystemsView 
                   metadata={lastGeminiMetadata} 
                   aiSettings={aiSettings} 
                   setAiSettings={setAiSettings} 
                   isFirestoreActive={isFirestoreActive} 
+                  language={userProfile.language}
                   uiMode={uiMode}
                 />
               )}
@@ -4882,6 +3197,47 @@ export default function App() {
           </AnimatePresence>
         </div>
       </main>
+
+      <AnimatePresence>
+        {showOptimizationModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowOptimizationModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-proton-card w-full max-w-md rounded-[40px] border border-proton-border shadow-2xl p-8 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                <ShieldAlert size={160} />
+              </div>
+              <div className="space-y-6 relative z-10">
+                <div className="w-16 h-16 rounded-3xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
+                  <Zap size={32} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.optimization_title}</h3>
+                  <p className="text-sm text-proton-muted leading-relaxed font-medium">
+                    {t.dashboard.optimization_desc}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setShowOptimizationModal(false)}
+                  className="w-full py-4 bg-proton-accent text-white rounded-2xl font-bold text-sm shadow-xl shadow-proton-accent/20 hover:brightness-110 active:scale-95 transition-all"
+                >
+                  {t.dashboard.optimization_btn}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
