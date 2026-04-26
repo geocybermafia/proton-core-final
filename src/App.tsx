@@ -1304,10 +1304,10 @@ const SmartTaskArchitect = ({
             onChange={(e) => setProjectText(e.target.value)}
             onKeyDown={(e) => (e.key === 'Enter' && handleAnalyze())}
             placeholder={isSystemActive ? t.placeholder : t.stasis_placeholder}
-            readOnly={!isSystemActive}
+            disabled={!isSystemActive}
             className={cn(
               "flex-1 bg-transparent px-4 py-3 text-sm md:text-base focus:outline-none placeholder:text-proton-muted font-medium transition-opacity",
-              !isSystemActive && "opacity-40"
+              !isSystemActive && "opacity-20 cursor-not-allowed"
             )}
           />
           <button 
@@ -1549,7 +1549,17 @@ const DashboardView = ({
   // Artisan Mode Layout
   if (uiMode === 'artisan') {
     return (
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 px-4 sm:px-6 lg:px-8 relative">
+        {!isArtisanSystemActive && (
+          <div className="absolute inset-0 z-50 bg-proton-bg/10 backdrop-blur-[4px] pointer-events-none rounded-[40px] border border-proton-secondary/20 m-2 flex items-center justify-center">
+             <div className="bg-proton-card p-6 rounded-3xl border border-proton-secondary/40 shadow-2xl flex flex-col items-center gap-4 max-w-sm text-center">
+                <Lock size={40} className="text-proton-secondary animate-pulse" />
+                <h3 className="text-lg font-bold text-proton-text uppercase tracking-widest">Neural Link Offline</h3>
+                <p className="text-xs text-proton-muted leading-relaxed">The Artisan Intelligence framework is currently in protected stasis. Neural pathways are restricted.</p>
+             </div>
+          </div>
+        )}
+        <div className={cn("space-y-8 transition-all duration-1000", !isArtisanSystemActive && "opacity-40 grayscale blur-[2px] pointer-events-none")}>
         {/* Artisan Header */}
         <div className="pt-4">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-proton-text">
@@ -1684,6 +1694,7 @@ const DashboardView = ({
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     );
@@ -2198,7 +2209,7 @@ const PersonasView = ({
   workflows,
   tasks,
   uiMode,
-  isSystemActive = true
+  isSystemActive
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -2211,7 +2222,7 @@ const PersonasView = ({
   workflows: Workflow[],
   tasks: Task[],
   uiMode: 'operator' | 'artisan',
-  isSystemActive?: boolean
+  isSystemActive: boolean
 }) => {
   const handleTTS = async (text: string) => {
     try {
@@ -2465,7 +2476,7 @@ const PersonasView = ({
                   className="w-full text-left p-4 cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
-                    <PersonaAvatar avatar={customAvatars[persona.id] || persona.avatar} className="w-10 h-10" />
+                    <PersonaAvatar avatar={customAvatars[persona.id] || persona.avatar} className={cn("w-10 h-10 transition-all duration-700", !isSystemActive && "grayscale opacity-40 blur-[0.5px]")} />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <p className="font-bold text-sm">{showGeorgian[persona.id] ? persona.nameGe : persona.name}</p>
@@ -2614,9 +2625,9 @@ const PersonasView = ({
             </div>
             <div>
               <p className="font-bold text-sm">{selectedPersona.name}</p>
-              <div className="text-[10px] text-green-400 flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                ONLINE
+              <div className={cn("text-[10px] flex items-center gap-1", isSystemActive ? "text-green-400" : "text-proton-secondary animate-pulse font-bold tracking-widest")}>
+                <div className={cn("w-1.5 h-1.5 rounded-full", isSystemActive ? "bg-green-400 animate-pulse" : "bg-proton-secondary")} />
+                {isSystemActive ? "ONLINE" : "SYSTEM STASIS"}
               </div>
             </div>
           </div>
@@ -3916,7 +3927,7 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
-  const [isArtisanSystemActive, setIsArtisanSystemActive] = useState(false);
+  const [isArtisanSystemActive, setIsArtisanSystemActive] = useState<boolean>(false);
 
   // Bootstrap system config if missing
   useEffect(() => {
@@ -4554,6 +4565,23 @@ export default function App() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 proton-grid relative">
+          {!isArtisanSystemActive && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-lg px-4 pointer-events-none">
+              <motion.div 
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="bg-red-950/40 backdrop-blur-md border border-red-500/30 p-4 rounded-2xl flex items-center gap-4 shadow-2xl artisan-shadow"
+              >
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <ShieldAlert className="text-red-500" size={24} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-red-400 uppercase tracking-widest leading-none mb-1">System Recalibration</h4>
+                  <p className="text-[10px] text-red-200/60 leading-relaxed italic">The Neural Link is currently in high-security stasis mode. Artificial Intelligence guided operations are restricted.</p>
+                </div>
+              </motion.div>
+            </div>
+          )}
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}
