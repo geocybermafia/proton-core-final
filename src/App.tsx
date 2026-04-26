@@ -1126,7 +1126,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
   const requestHardwareAccess = () => {
     if (supported.geolocation) {
-      navigator.geolocation.getCurrentPosition(
+      const watchId = navigator.geolocation.watchPosition(
         (pos) => setLocation({ 
           lat: pos.coords.latitude, 
           lng: pos.coords.longitude, 
@@ -1135,6 +1135,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         (err) => console.error(err),
         { enableHighAccuracy: true }
       );
+      return () => navigator.geolocation.clearWatch(watchId);
     }
 
     if (supported.battery) {
@@ -2559,11 +2560,15 @@ export default function App() {
   const [isFirestoreActive, setIsFirestoreActive] = useState(false);
   const [showOptimizationModal, setShowOptimizationModal] = useState(false);
   const handleViewChange = React.useCallback((view: View) => {
+    if (!isArtisanSystemActive && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
+      setShowOptimizationModal(true);
+      return;
+    }
     setActiveView(view);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, []);
+  }, [isArtisanSystemActive]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<'proton' | 'light' | 'vibrant' | 'midnight'>(
@@ -3124,8 +3129,9 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/80 backdrop-blur-xl border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
-          { id: 'blueprints', icon: Workflow, label: t.sidebar.bottom_nav.blueprints },
+          { id: 'device', icon: Cpu, label: t.sidebar.bottom_nav.device },
           { id: 'finance', icon: Wallet, label: t.sidebar.bottom_nav.finance },
+          { id: 'blueprints', icon: Workflow, label: t.sidebar.bottom_nav.blueprints },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'profile', icon: Terminal, label: t.sidebar.bottom_nav.profile },
         ].map((item) => (

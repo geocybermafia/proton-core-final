@@ -22,7 +22,8 @@ export const translations = {
         blueprints: "Tasks",
         finance: "Wallet",
         personas: "Chat",
-        profile: "Settings"
+        profile: "Settings",
+        device: "Device"
       }
     },
     organizer: {
@@ -213,7 +214,8 @@ export const translations = {
         blueprints: "დავალება",
         finance: "ბალანსი",
         personas: "ჩატები",
-        profile: "პროფილი"
+        profile: "პროფილი",
+        device: "აპარატი"
       }
     },
     organizer: {
