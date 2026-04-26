@@ -2197,7 +2197,8 @@ const PersonasView = ({
   setLastGeminiMetadata,
   workflows,
   tasks,
-  uiMode
+  uiMode,
+  isSystemActive = true
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -2209,7 +2210,8 @@ const PersonasView = ({
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   workflows: Workflow[],
   tasks: Task[],
-  uiMode: 'operator' | 'artisan'
+  uiMode: 'operator' | 'artisan',
+  isSystemActive?: boolean
 }) => {
   const handleTTS = async (text: string) => {
     try {
@@ -2309,7 +2311,7 @@ const PersonasView = ({
   useEffect(scrollToBottom, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if (!isSystemActive || !input.trim() || loading) return;
 
     const userMessage = input.trim();
     const timestamp = Date.now();
@@ -2846,26 +2848,39 @@ const PersonasView = ({
         </div>
 
         {/* Input */}
-        <div className="p-4 bg-proton-bg/50 border-t border-proton-border">
-          <div className="relative">
+        <div className="p-4 bg-proton-bg/50 border-t border-proton-border relative overflow-hidden">
+          {!isSystemActive && (
+            <div className="absolute inset-0 z-20 bg-proton-bg/60 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="bg-proton-card border border-proton-secondary/40 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl"
+              >
+                <Lock size={16} className="text-proton-secondary animate-pulse" />
+                <span className="text-xs font-mono font-bold uppercase tracking-widest text-proton-secondary">System Stasis: Link Restricted</span>
+              </motion.div>
+            </div>
+          )}
+          <div className={cn("relative transition-opacity duration-500", !isSystemActive && "opacity-20 grayscale pointer-events-none")}>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={`Message ${selectedPersona.nameGe}...`}
+              placeholder={isSystemActive ? `Message ${selectedPersona.nameGe}...` : "Neural Link Stasis..."}
+              disabled={!isSystemActive}
               className="w-full bg-proton-bg border border-proton-border rounded-2xl py-4 pl-6 pr-16 focus:outline-none focus:border-proton-accent transition-colors text-sm"
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-proton-bg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 transition-all"
+              disabled={!isSystemActive || !input.trim() || loading}
+              className="absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-proton-bg hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 transition-all font-bold text-xs"
             >
-              <Send size={18} />
+              {isSystemActive ? <Send size={18} /> : "LOCKED"}
             </button>
           </div>
           <p className="text-[10px] text-proton-muted text-center mt-3 uppercase tracking-widest">
-            Powered by Proton Core AI Infrastructure • Tbilisi, Georgia
+            {isSystemActive ? "Powered by Proton Core AI Infrastructure • Tbilisi, Georgia" : "System recalibration in progress • Stasis Mode active"}
           </p>
         </div>
       </div>
@@ -3144,13 +3159,13 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
 
 
 
-const ImageView = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
+const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'artisan', isSystemActive?: boolean }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!isSystemActive || !prompt.trim()) return;
     setLoading(true);
     try {
       const result = await generateOrEditImage(prompt);
@@ -3178,12 +3193,16 @@ const ImageView = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe the image you want to create or edit..."
-            className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 md:h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30"
+            disabled={!isSystemActive}
+            placeholder={isSystemActive ? "Describe the image you want to create or edit..." : "Image Studio is offline during system recalibration."}
+            className={cn(
+              "w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 md:h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30",
+              !isSystemActive && "opacity-50"
+            )}
           />
           <button 
             onClick={handleGenerate}
-            disabled={loading}
+            disabled={!isSystemActive || loading}
             className="w-full py-4 rounded-xl bg-gradient-to-r from-proton-accent to-purple-600 text-white font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-proton-accent/20"
           >
             {loading ? (
@@ -3192,10 +3211,17 @@ const ImageView = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                     Generating your masterpiece...
                 </>
             ) : (
+                isSystemActive ? (
                 <>
                     <Zap size={18} />
                     Generate Image
                 </>
+                ) : (
+                <>
+                    <Lock size={18} />
+                    STASIS MODE
+                </>
+                )
             )}
           </button>
         </div>
@@ -3413,13 +3439,15 @@ const WorkflowsView = ({
   setWorkflows,
   personas,
   user,
-  uiMode
+  uiMode,
+  isSystemActive = true
 }: {
   workflows: Workflow[],
   setWorkflows: React.Dispatch<React.SetStateAction<Workflow[]>>,
   personas: Persona[],
   user: any,
-  uiMode: 'operator' | 'artisan'
+  uiMode: 'operator' | 'artisan',
+  isSystemActive?: boolean
 }) => {
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
@@ -3479,14 +3507,18 @@ const WorkflowsView = ({
           <p className="text-proton-muted text-sm mt-1">ბიზნეს პროცესების ვიზუალური ავტომატიზაცია</p>
         </div>
         <button 
-          onClick={() => setConfirmation({
-            message: "გსურთ ახალი ვორქფლოუს შექმნა?",
-            action: createWorkflow
-          })}
-          className="px-5 py-3 rounded-2xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-proton-accent/20"
+          onClick={() => {
+            if (!isSystemActive) return;
+            setConfirmation({
+              message: "გსურთ ახალი ვორქფლოუს შექმნა?",
+              action: createWorkflow
+            });
+          }}
+          disabled={!isSystemActive}
+          className="px-5 py-3 rounded-2xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-proton-accent/20 disabled:opacity-50"
         >
-          <Plus size={20} />
-          Add Workflow
+          {isSystemActive ? <Plus size={20} /> : <Lock size={16} />}
+          {isSystemActive ? "Add Workflow" : "LOCKED"}
         </button>
       </div>
       {confirmation && (
@@ -3560,15 +3592,17 @@ const WorkflowsView = ({
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (!isSystemActive) return;
                         setConfirmation({
                           message: "გსურთ ვორქფლოუს ეფექტურობის ანალიზი Gemini-ს მიერ?",
                           action: () => handleAnalyze(wf)
                         });
                       }}
-                      className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border group-hover:shadow-[0_0_15px_rgba(0,242,255,0.1)]"
-                      title="Analyze efficiency"
+                      disabled={!isSystemActive}
+                      className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border group-hover:shadow-[0_0_15px_rgba(0,242,255,0.1)] disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={isSystemActive ? "Analyze efficiency" : "System in Stasis"}
                     >
-                      <Activity size={18} />
+                      {isSystemActive ? <Activity size={18} /> : <Lock size={14} />}
                     </button>
                   </div>
 
@@ -4222,6 +4256,7 @@ export default function App() {
   };
 
   const handleAiSuggestTasks = async () => {
+    if (!isArtisanSystemActive) return;
     try {
       const workflowContext = workflows.map(w => `${w.name}: ${w.trigger} -> ${w.action}`).join('; ');
       const existingTasks = tasks.map(t => t.content).join(', ');
@@ -4577,12 +4612,13 @@ export default function App() {
                   workflows={workflows}
                   tasks={tasks}
                   uiMode={uiMode}
+                  isSystemActive={isArtisanSystemActive}
                 />
               )}
               {activeView === 'finance' && (
                 <Web3View uiMode={uiMode} />
               )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} />}
+              {activeView === 'image' && <ImageView uiMode={uiMode} isSystemActive={isArtisanSystemActive} />}
               {activeView === 'blueprints' && (
                 <WorkflowsView 
                   workflows={workflows}
@@ -4590,6 +4626,7 @@ export default function App() {
                   personas={personas}
                   user={user}
                   uiMode={uiMode}
+                  isSystemActive={isArtisanSystemActive}
                 />
               )}
               {activeView === 'profile' && (
