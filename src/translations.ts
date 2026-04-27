@@ -149,7 +149,14 @@ export const translations = {
       orientation: "Orientation",
       alpha: "Alpha",
       beta: "Beta",
-      gamma: "Gamma"
+      gamma: "Gamma",
+      workspace: "Stasis Workspace",
+      local_mount: "Local Directory Indexing",
+      total_files: "Total Files Indexed",
+      mount_btn: "Mount Local Directory",
+      scanning: "Scanning Protocols...",
+      no_mount: "System Awaiting Local Mount",
+      restriction: "API Restriction: Native folder access restricted."
     },
     systems: {
       title: "Systems & Optimization",
@@ -391,7 +398,14 @@ export const translations = {
       orientation: "ორიენტაცია",
       alpha: "ალფა",
       beta: "ბეტა",
-      gamma: "გამა"
+      gamma: "გამა",
+      workspace: "Stasis ბაზა",
+      local_mount: "ლოკალური დირექტორიის ინდექსაცია",
+      total_files: "ინდექსირებული ფაილები",
+      mount_btn: "ლოკალური დირექტორიის მიბმა",
+      scanning: "სკანირების პროტოკოლი...",
+      no_mount: "სისტემა ელოდება ლოკალურ ბაზას",
+      restriction: "API შეზღუდვა: დირექტორიაზე წვდომა შეზღუდულია."
     },
     systems: {
       title: "სისტემები და ოპტიმიზაცია",

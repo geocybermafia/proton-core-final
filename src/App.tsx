@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, Dispatch, SetStateAction } from 'react';
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
+import { LocalFileScanner } from './components/LocalFileScanner';
 import { auth, db, googleProvider } from './firebase';
 import { 
   signInWithPopup, 
@@ -1517,6 +1518,26 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <LocalFileScanner t={t} />
+        <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative flex flex-col justify-center">
+            <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none">
+              <ShieldCheck size={200} />
+            </div>
+            <div className="relative z-10 space-y-6">
+               <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
+                     <ShieldCheck size={24} />
+                  </div>
+                  <h3 className="text-2xl font-bold tracking-tight">System Integrity</h3>
+               </div>
+               <p className="text-proton-muted font-medium leading-relaxed">
+                  Your workspace is operating in a localized, secure environment. All files scanned via the Stasis workspace remain on your device.
+               </p>
+            </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
