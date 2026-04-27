@@ -122,7 +122,8 @@ import {
   ShieldAlert,
   Search,
   RefreshCw,
-  Bell
+  Bell,
+  Wifi
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -770,7 +771,7 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
         className="w-full max-w-md bg-proton-card rounded-2xl shadow-xl border border-proton-border p-8"
       >
         <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-proton-accent rounded-xl mx-auto flex items-center justify-center text-white mb-4">
+          <div className="w-12 h-12 bg-proton-accent rounded-xl mx-auto flex items-center justify-center text-proton-on-accent mb-4">
             <Zap size={24} fill="currentColor" />
           </div>
           <h1 className="text-2xl font-bold text-proton-text">
@@ -839,7 +840,7 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
           <button 
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-proton-accent text-white rounded-lg font-semibold hover:bg-proton-accent/90 transition-colors disabled:opacity-50"
+            className="w-full py-2.5 bg-proton-accent text-proton-on-accent rounded-lg font-semibold hover:bg-proton-accent/90 transition-colors disabled:opacity-50"
           >
             {loading ? <Loader2 className="animate-spin mx-auto" size={20} /> : (isResetting ? t.send_reset_link : (isLogin ? t.login : t.signup))}
           </button>
@@ -1008,7 +1009,7 @@ const OrganizerView = ({
                   onChange={e => setNewTaskInput(e.target.value)}
                   className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-proton-accent transition-all"
                 />
-                <button type="submit" className="w-full py-3 rounded-xl bg-proton-accent text-white font-bold text-sm shadow-lg shadow-proton-accent/20">
+                <button type="submit" className="w-full py-3 rounded-xl bg-proton-accent text-proton-on-accent font-bold text-sm shadow-lg shadow-proton-accent/20">
                    Add Task
                 </button>
              </form>
@@ -1023,7 +1024,7 @@ const OrganizerView = ({
                         onClick={() => onToggleTask(task.id)}
                         className={cn(
                           "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0",
-                          task.completed ? "bg-proton-accent border-proton-accent text-white" : "border-proton-border"
+                          task.completed ? "bg-proton-accent border-proton-accent text-proton-on-accent" : "border-proton-border"
                         )}
                       >
                         {task.completed && <Check size={14} strokeWidth={3} />}
@@ -1131,7 +1132,7 @@ const DashboardView = ({
                   uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
                 )}
               >
-                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
                   <Wallet size={28} />
                 </div>
                 <div className="space-y-1">
@@ -1150,7 +1151,7 @@ const DashboardView = ({
                   uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
                 )}
               >
-                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
                    <CalendarIcon size={28} />
                 </div>
                 <div className="space-y-1">
@@ -1168,7 +1169,7 @@ const DashboardView = ({
                     onClick={() => setActiveView('device')}
                     className="bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
                       <Cpu size={28} />
                     </div>
                     <div className="space-y-1">
@@ -1180,7 +1181,7 @@ const DashboardView = ({
                     onClick={() => setActiveView('personas')}
                     className="bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
                       <Users size={28} />
                     </div>
                     <div className="space-y-1">
@@ -1376,8 +1377,14 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   const t = translations[language].hardware;
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
-  const [network, setNetwork] = useState<{ downlink: number; rtt: number } | null>(null);
+  const [network, setNetwork] = useState<{ downlink: number; rtt: number; type: string } | null>(null);
   const [orientation, setOrientation] = useState<{ alpha: number; beta: number; gamma: number } | null>(null);
+  const [hardware, setHardware] = useState<{ cores: number; memory: number; platform: string }>({
+    cores: navigator.hardwareConcurrency || 0,
+    memory: (navigator as any).deviceMemory || 0,
+    platform: (navigator as any).userAgentData?.platform || navigator.platform
+  });
+  
   const [supported, setSupported] = useState<Record<string, boolean>>({
     geolocation: 'geolocation' in navigator,
     battery: 'getBattery' in navigator,
@@ -1387,7 +1394,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
   const requestHardwareAccess = () => {
     if (supported.geolocation) {
-      const watchId = navigator.geolocation.watchPosition(
+      navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ 
           lat: pos.coords.latitude, 
           lng: pos.coords.longitude, 
@@ -1396,7 +1403,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         (err) => console.error(err),
         { enableHighAccuracy: true }
       );
-      return () => navigator.geolocation.clearWatch(watchId);
     }
 
     if (supported.battery) {
@@ -1409,183 +1415,256 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
     if (supported.network) {
       const conn = (navigator as any).connection;
-      setNetwork({ downlink: conn.downlink, rtt: conn.rtt });
-      conn.addEventListener('change', () => setNetwork({ downlink: conn.downlink, rtt: conn.rtt }));
+      setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
+      conn.addEventListener('change', () => setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType }));
     }
 
     if (supported.orientation) {
-      window.addEventListener('deviceorientation', (event) => {
+      const handler = (event: DeviceOrientationEvent) => {
         setOrientation({
           alpha: event.alpha || 0,
           beta: event.beta || 0,
           gamma: event.gamma || 0
         });
-      });
+      };
+      window.addEventListener('deviceorientation', handler);
+      return () => window.removeEventListener('deviceorientation', handler);
     }
   };
 
   useEffect(() => {
-    // Initial status check
     setSupported({
       geolocation: 'geolocation' in navigator,
       battery: 'getBattery' in navigator,
       network: 'connection' in navigator,
       orientation: 'DeviceOrientationEvent' in window
     });
+    
+    // Automatically try to get some data if permitted or simple
+    requestHardwareAccess();
   }, []);
-
-  const stats = [
-    { 
-      label: t.location, 
-      icon: Compass, 
-      active: !!location,
-      supported: supported.geolocation,
-      value: location ? `${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}` : t.status_inactive,
-      sub: location ? `${t.accuracy}: ${location.accuracy.toFixed(0)}m` : null
-    },
-    { 
-      label: t.battery, 
-      icon: Zap, 
-      active: !!battery,
-      supported: supported.battery,
-      value: battery ? `${(battery.level * 100).toFixed(0)}%` : t.status_inactive,
-      sub: battery ? (battery.charging ? 'Charging' : 'Discharging') : null
-    },
-    { 
-      label: t.network, 
-      icon: Cloud, 
-      active: !!network,
-      supported: supported.network,
-      value: network ? `${network.downlink} Mbps` : t.status_inactive,
-      sub: network ? `RTT: ${network.rtt}ms` : null
-    },
-    { 
-      label: t.sensors, 
-      icon: Cpu, 
-      active: !!orientation,
-      supported: supported.orientation,
-      value: orientation ? `α:${orientation.alpha.toFixed(0)}°` : t.status_inactive,
-      sub: orientation ? `β:${orientation.beta.toFixed(0)}° γ:${orientation.gamma.toFixed(0)}°` : null
-    }
-  ];
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
       <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
         <div className="space-y-3 text-center md:text-left">
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text uppercase">
-            {t.title}
+            Hardware Matrix
           </h1>
           <p className="text-proton-muted text-lg font-medium max-w-xl">
-            {t.description}
+            Real-time neural telemetry and apparatus system diagnostics.
           </p>
         </div>
         <button 
           onClick={requestHardwareAccess}
-          className="flex items-center gap-3 px-8 py-4 bg-proton-accent text-white rounded-full font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all"
+          className="flex items-center gap-3 px-8 py-4 bg-proton-accent text-proton-on-accent rounded-full font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all"
         >
-          <Zap size={20} />
-          {t.request_access}
+          <RefreshCw size={20} className="animate-spin-slow" />
+          Re-calibrate Sensors
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <div key={i} className={cn(
-            "bg-proton-card p-8 rounded-[40px] border transition-all duration-500 flex flex-col items-center text-center gap-6",
-            stat.active ? "border-proton-accent shadow-lg shadow-proton-accent/5" : "border-proton-border shadow-sm opactiy-60"
-          )}>
-            <div className={cn(
-              "w-20 h-20 rounded-3xl flex items-center justify-center transition-colors duration-500",
-              stat.active ? "bg-proton-accent text-white" : "bg-proton-bg text-proton-muted"
-            )}>
-               <stat.icon size={32} />
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-bold text-sm uppercase tracking-widest text-proton-muted">{stat.label}</h3>
-              <p className={cn(
-                "text-2xl font-black tracking-tight",
-                stat.active ? "text-proton-text" : "text-proton-muted"
-              )}>{stat.value}</p>
-              {stat.sub && (
-                <p className="text-xs font-mono text-proton-accent font-bold uppercase">{stat.sub}</p>
-              )}
-            </div>
-            {!stat.supported && (
-              <span className="text-[10px] font-bold text-proton-secondary uppercase tracking-widest px-3 py-1 bg-proton-secondary/10 rounded-full">
-                Not Supported
-              </span>
-            )}
+        {/* Battery / Power Core */}
+        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Zap size={80} />
           </div>
-        ))}
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center justify-between">
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                battery ? "bg-cyan-400/10 text-cyan-400" : "bg-proton-bg text-proton-muted"
+              )}>
+                {battery?.charging ? <Zap size={24} className="animate-pulse fill-cyan-400" /> : <Zap size={24} />}
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={cn("w-2 h-2 rounded-full", battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
+                <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest">
+                  {supported.battery ? (battery ? 'Optimal' : 'Pending') : 'Incompatible'}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="relative w-24 h-24 shrink-0">
+                <svg className="w-full h-full -rotate-90 transform">
+                  <circle
+                    cx="48"
+                    cy="48"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    className="text-proton-bg"
+                  />
+                  <motion.circle
+                    initial={{ strokeDasharray: "0, 251.2" }}
+                    animate={{ strokeDasharray: `${(battery?.level || 0) * 251.2}, 251.2` }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    cx="48"
+                    cy="48"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    fill="transparent"
+                    className="text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-black text-proton-text tabular-nums leading-none">
+                    {supported.battery ? (battery ? Math.round(battery.level * 100) : '...') : 'N/A'}
+                  </span>
+                  {supported.battery && battery && (
+                    <span className="text-[8px] font-black text-cyan-400 opacity-50 uppercase tracking-widest mt-1">%</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Power Core</h4>
+                <p className="text-[9px] font-bold text-proton-muted uppercase tracking-widest">
+                  {supported.battery ? (battery ? (battery.charging ? 'Neural Charge Inbound' : 'Native Discharge') : 'Searching Network...') : 'Hardware Lock Active'}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <div className={cn("w-1.5 h-1.5 rounded-full", battery?.charging ? "bg-cyan-400" : "bg-proton-border")} />
+                  <span className="text-[8px] font-black text-proton-muted uppercase tracking-widest">
+                    {battery?.charging ? 'Hyper-Charge Active' : 'Offline Stasis'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Compute Units (CPU) */}
+        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Cpu size={80} />
+          </div>
+          <div className="space-y-6 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-purple-400/10 flex items-center justify-center text-purple-400">
+              <Cpu size={24} />
+            </div>
+            <div>
+              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Compute Units</h4>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
+                <span className="text-lg font-black text-purple-400 opacity-50">{hardware.cores ? 'Unit Core' : ''}</span>
+              </div>
+              <div className="mt-4 flex gap-1">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className={cn("h-1 flex-1 rounded-full", hardware.cores && i < (hardware.cores/2) ? "bg-purple-400" : "bg-proton-bg")} />
+                ))}
+              </div>
+              <p className="mt-4 text-[9px] font-bold text-proton-muted uppercase tracking-widest truncate">
+                Level: <span className="text-purple-400">{hardware.cores ? 'Stable Architecture' : 'Data Masked'}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Memory Allocation (RAM) */}
+        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Database size={80} />
+          </div>
+          <div className="space-y-6 relative z-10">
+            <div className="w-12 h-12 rounded-2xl bg-blue-400/10 flex items-center justify-center text-blue-400">
+              <Database size={24} />
+            </div>
+            <div>
+              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Memory Matrix</h4>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-proton-text tracking-tighter">{hardware.memory || 'N/A'}</span>
+                <span className="text-lg font-black text-blue-400 opacity-50">{hardware.memory ? 'GB RAM' : ''}</span>
+              </div>
+              <div className="flex items-center gap-3 mt-4">
+                  <div className="flex-1 h-1.5 bg-proton-bg rounded-full overflow-hidden">
+                    <div className={cn("h-full bg-blue-400", hardware.memory ? "w-1/3" : "w-0")} />
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-400">{hardware.memory ? 'Verified' : 'N/A'}</span>
+              </div>
+              <p className="mt-4 text-[9px] font-bold text-proton-muted uppercase tracking-widest">
+                Platform: {hardware.platform || 'N/A'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Network Uplink */}
+        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Globe size={80} />
+          </div>
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center justify-between">
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                network ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
+              )}>
+                <Wifi size={24} />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={cn("w-2 h-2 rounded-full animate-pulse", network ? "bg-green-400" : "bg-gray-600")} />
+                <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{network ? 'Uplink' : 'Searching'}</span>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Network Stream</h4>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.type || 'N/A'}</span>
+                <span className="text-lg font-black text-green-400 opacity-50">{network?.type ? 'Link' : ''}</span>
+              </div>
+              <p className="mt-4 text-[9px] font-bold text-proton-muted uppercase tracking-widest">
+                Speed: <span className="text-green-400">{network?.downlink ? `${network.downlink} MBPS` : 'N/A'}</span>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <LocalFileScanner t={t} />
-        <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative flex flex-col justify-center">
-            <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none">
-              <ShieldCheck size={200} />
-            </div>
-            <div className="relative z-10 space-y-6">
-               <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
-                     <ShieldCheck size={24} />
-                  </div>
-                  <h3 className="text-2xl font-bold tracking-tight">System Integrity</h3>
-               </div>
-               <p className="text-proton-muted font-medium leading-relaxed">
-                  Your workspace is operating in a localized, secure environment. All files scanned via the Stasis workspace remain on your device.
-               </p>
-            </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none">
-            <Compass size={200} />
+        
+        <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative group">
+           <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none group-hover:scale-95 transition-transform duration-1000">
+            <MapPin size={240} />
           </div>
-          <div className="relative z-10 space-y-6">
-             <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
-                   <ShieldCheck size={24} />
-                </div>
-                <h3 className="text-2xl font-bold tracking-tight">Apparatus Security Layer</h3>
-             </div>
-             <p className="text-proton-muted font-medium leading-relaxed max-w-xl">
-                The hardware integration layer uses browser-native sandbox protocols. Data requested from the apparatus (Location, NFC, Sensors) is processed locally and encrypted before any transmission to optimization nodes.
-             </p>
-             <div className="pt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: 'Encryption', val: 'AES-256' },
-                  { label: 'Sandbox', val: 'Isolated' },
-                  { label: 'Auth', val: 'OAuth 2.0' },
-                  { label: 'Protocol', val: 'HTTPS/TLS' }
-                ].map((item, idx) => (
-                  <div key={idx} className="bg-proton-bg p-4 rounded-2xl border border-proton-border">
-                    <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest mb-1">{item.label}</p>
-                    <p className="text-sm font-bold text-proton-text">{item.val}</p>
-                  </div>
-                ))}
-             </div>
-          </div>
-        </div>
-        <div className="lg:col-span-4 bg-proton-accent p-10 rounded-[40px] text-white flex flex-col justify-between shadow-2xl shadow-proton-accent/20">
-           <div className="space-y-4">
-              <Cpu size={48} />
-              <h3 className="text-3xl font-bold tracking-tight leading-none">System Load</h3>
-              <p className="text-white/70 font-medium">Real-time optimization of local computational resources based on apparatus telemetry.</p>
-           </div>
-           <div className="pt-8 space-y-4">
-              <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                 <motion.div 
-                   animate={{ width: ["20%", "45%", "32%"] }}
-                   transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                   className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" 
-                 />
+          <div className="relative z-10 space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="text-2xl font-black tracking-tighter text-proton-text uppercase flex items-center gap-3">
+                  <MapPin className="text-cyan-400" size={24} />
+                  Geo-spatial Positioning
+                </h3>
+                <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">Global Coordinate Hash</p>
               </div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-60">Telemetry Optimized</p>
-           </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="p-8 rounded-[32px] bg-proton-bg border border-proton-border space-y-4">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Latitude</p>
+                <div className="text-3xl font-mono text-proton-text tracking-tighter truncate">
+                  {location?.lat.toFixed(6) || 'Scanning...'}
+                </div>
+              </div>
+              <div className="p-8 rounded-[32px] bg-proton-bg border border-proton-border space-y-4">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Longitude</p>
+                <div className="text-3xl font-mono text-proton-text tracking-tighter truncate">
+                  {location?.lng.toFixed(6) || 'Scanning...'}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center text-cyan-400">
+                <ShieldCheck size={20} />
+              </div>
+              <p className="text-[10px] font-bold text-cyan-400/80 uppercase tracking-widest leading-relaxed">
+                Precision Lock: Orbital sync verified. Signal strength nominal.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1702,7 +1781,7 @@ const PersonasView = ({
                 className={cn(
                   "w-full text-left p-4 rounded-3xl border transition-all flex items-center gap-4 group",
                   selectedPersona.id === persona.id 
-                    ? "bg-proton-accent text-white border-proton-accent shadow-xl shadow-proton-accent/20" 
+                    ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-xl shadow-proton-accent/20" 
                     : "bg-proton-card border-proton-border hover:border-proton-accent/50"
                 )}
               >
@@ -1711,7 +1790,7 @@ const PersonasView = ({
                 </div>
                 <div className="flex-1 min-w-0">
                    <p className="font-bold truncate">{persona.name}</p>
-                   <p className={cn("text-[10px] font-bold uppercase tracking-widest", selectedPersona.id === persona.id ? "text-white/80" : "text-proton-muted")}>
+                   <p className={cn("text-[10px] font-bold uppercase tracking-widest", selectedPersona.id === persona.id ? "text-proton-on-accent/80" : "text-proton-muted")}>
                       {persona.role}
                    </p>
                 </div>
@@ -1747,7 +1826,7 @@ const PersonasView = ({
                     <div className={cn(
                       "max-w-[80%] px-6 py-4 rounded-3xl font-medium text-sm leading-relaxed",
                       m.role === 'user' 
-                        ? "bg-proton-accent text-white rounded-tr-none shadow-lg shadow-proton-accent/10" 
+                        ? "bg-proton-accent text-proton-on-accent rounded-tr-none shadow-lg shadow-proton-accent/10" 
                         : "bg-proton-bg border border-proton-border rounded-tl-none"
                     )}>
                        {m.content}
@@ -1776,7 +1855,7 @@ const PersonasView = ({
                  onClick={handleSend}
                  disabled={!isSystemActive || loading || !input.trim()}
                  className={cn(
-                   "absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-white flex items-center justify-center transition-all shadow-md",
+                   "absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-proton-on-accent flex items-center justify-center transition-all shadow-md",
                    loading ? "opacity-50" : "hover:brightness-110 active:scale-95"
                  )}
                >
@@ -3485,7 +3564,7 @@ export default function App() {
               uiMode={uiMode}
             />
             <SidebarItem 
-              icon={Wallet} 
+              icon={CreditCard} 
               label={t.sidebar.finance} 
               active={activeView === 'finance'} 
               onClick={() => handleViewChange('finance')} 
@@ -3615,10 +3694,10 @@ export default function App() {
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'device', icon: Cpu, label: t.sidebar.bottom_nav.device },
-          { id: 'finance', icon: Wallet, label: t.sidebar.bottom_nav.finance },
+          { id: 'finance', icon: CreditCard, label: t.sidebar.bottom_nav.finance },
           { id: 'blueprints', icon: Workflow, label: t.sidebar.bottom_nav.blueprints },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
-          { id: 'profile', icon: Terminal, label: t.sidebar.bottom_nav.profile },
+          { id: 'profile', icon: UserIcon, label: t.sidebar.bottom_nav.profile },
         ].map((item) => (
           <button
             key={item.id}
