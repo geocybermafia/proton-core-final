@@ -123,7 +123,8 @@ import {
   Search,
   RefreshCw,
   Bell,
-  Wifi
+  Wifi,
+  Palette
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -899,6 +900,8 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   );
 };
 
+type OrganizerTheme = 'cyberpunk' | 'minimalist' | 'executive';
+
 const OrganizerView = ({
   language,
   workflows,
@@ -925,6 +928,72 @@ const OrganizerView = ({
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
+  const [theme, setTheme] = useState<OrganizerTheme>(() => {
+    return (localStorage.getItem('proton_organizer_theme') as OrganizerTheme) || 'executive';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('proton_organizer_theme', theme);
+  }, [theme]);
+
+  const themes = {
+    cyberpunk: {
+      container: "bg-black/95 text-cyan-400",
+      card: "bg-black border-pink-500/30 shadow-[0_0_20px_rgba(255,0,255,0.05)]",
+      accent: "text-cyan-400 bg-cyan-400/10 border-cyan-400/30",
+      button: "bg-pink-600 text-white shadow-[0_0_15px_rgba(236,72,153,0.4)]",
+      input: "bg-black border-cyan-400/20 text-cyan-400 focus:border-cyan-400 shadow-[inset_0_0_10px_rgba(0,243,255,0.05)]",
+      label: "text-cyan-400/60 font-mono italic",
+      muted: "text-cyan-400/40",
+      calendar: `
+        .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
+        .react-calendar__navigation button { color: #22d3ee !important; font-weight: bold !important; min-width: 44px !important; }
+        .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #ec4899; }
+        .react-calendar__tile { padding: 1.5em 0.5em !important; color: #22d3ee !important; border-radius: 12px; transition: all 0.2s; }
+        .react-calendar__tile:hover { background: rgba(34, 211, 238, 0.1) !important; }
+        .react-calendar__tile--now { background: rgba(34, 211, 238, 0.05) !important; border: 1px solid #22d3ee !important; }
+        .react-calendar__tile--active { background: #ec4899 !important; color: white !important; font-weight: bold; box-shadow: 0 0 15px rgba(236,72,153,0.5); }
+      `
+    },
+    minimalist: {
+      container: "bg-[#fcfcfd] text-slate-900",
+      card: "bg-white/70 backdrop-blur-2xl border-slate-200/60 shadow-xl rounded-[32px]",
+      accent: "text-slate-600 bg-slate-100 border-slate-200",
+      button: "bg-slate-900 text-white rounded-2xl",
+      input: "bg-slate-50 border-slate-200 text-slate-900 focus:border-slate-900 rounded-2xl",
+      label: "text-slate-400 font-bold tracking-tight",
+      muted: "text-slate-400",
+      calendar: `
+        .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
+        .react-calendar__navigation button { color: #0f172a !important; font-weight: bold !important; min-width: 44px !important; }
+        .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
+        .react-calendar__tile { padding: 1.5em 0.5em !important; color: #1e293b !important; border-radius: 16px; transition: all 0.2s; }
+        .react-calendar__tile:hover { background: #f1f5f9 !important; }
+        .react-calendar__tile--now { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+        .react-calendar__tile--active { background: #0f172a !important; color: white !important; font-weight: bold; }
+      `
+    },
+    executive: {
+      container: "bg-slate-950 text-slate-100",
+      card: "bg-slate-900/40 backdrop-blur-md border-slate-800 shadow-2xl rounded-3xl",
+      accent: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+      button: "bg-blue-600 text-white shadow-lg shadow-blue-600/20",
+      input: "bg-slate-950/50 border-slate-700 text-slate-100 focus:border-blue-500",
+      label: "text-slate-500 font-semibold uppercase tracking-widest",
+      muted: "text-slate-500",
+      calendar: `
+        .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
+        .react-calendar__navigation button { color: #f8fafc !important; font-weight: bold !important; min-width: 44px !important; }
+        .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #64748b; }
+        .react-calendar__tile { padding: 1.5em 0.5em !important; color: #cbd5e1 !important; border-radius: 12px; transition: all 0.2s; }
+        .react-calendar__tile:hover { background: rgba(59, 130, 246, 0.1) !important; }
+        .react-calendar__tile--now { background: rgba(59, 130, 246, 0.05) !important; border: 1px solid #3b82f6 !important; }
+        .react-calendar__tile--active { background: #3b82f6 !important; color: white !important; font-weight: bold; }
+      `
+    }
+  };
+
+  const currentTheme = themes[theme];
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -955,62 +1024,77 @@ const OrganizerView = ({
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div className={cn("min-h-screen p-4 md:p-10 -m-4 md:-m-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">{t.title}</h2>
-          <p className="text-proton-muted mt-1 font-medium">{t.subtitle}</p>
+          <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">{t.title}</h2>
+          <p className={cn("mt-1 font-medium", currentTheme.muted)}>{t.subtitle}</p>
+        </div>
+
+        <div className="flex items-center gap-4 bg-black/20 p-2 rounded-2xl border border-white/5">
+             <div className="flex items-center gap-2 px-3">
+                <Palette size={16} className={currentTheme.muted} />
+                <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>{t.workspace_theme}</span>
+             </div>
+             <div className="flex p-1 bg-black/40 rounded-xl gap-1">
+                {(['cyberpunk', 'minimalist', 'executive'] as OrganizerTheme[]).map(th => (
+                  <button
+                    key={th}
+                    onClick={() => setTheme(th)}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                      theme === th 
+                        ? "bg-white text-black shadow-lg" 
+                        : cn("text-white/40 hover:text-white/70", currentTheme.muted)
+                    )}
+                  >
+                    {t[`theme_${th}` as keyof typeof t]}
+                  </button>
+                ))}
+             </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-proton-card p-8 rounded-3xl border border-proton-border shadow-sm">
+          <div className={cn("p-8 rounded-[40px] border shadow-sm transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-8">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <CalendarIcon size={20} className="text-proton-accent" />
+              <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter">
+                <CalendarIcon size={24} className={currentTheme.muted} />
                 {t.calendar}
               </h3>
             </div>
             <div className="w-full">
-              <style>{`
-                .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
-                .react-calendar__navigation button { color: var(--color-proton-text) !important; font-weight: bold !important; min-width: 44px !important; }
-                .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: var(--color-proton-muted); }
-                .react-calendar__tile { padding: 1.5em 0.5em !important; color: var(--color-proton-text) !important; border-radius: 12px; transition: all 0.2s; }
-                .react-calendar__tile:hover { background: var(--color-proton-accent-muted) !important; }
-                .react-calendar__tile--now { background: var(--color-proton-accent-muted) !important; border: 1px solid var(--color-proton-accent) !important; }
-                .react-calendar__tile--active { background: var(--color-proton-accent) !important; color: var(--color-proton-on-accent) !important; font-weight: bold; }
-              `}</style>
+              <style>{currentTheme.calendar}</style>
               <Calendar className="mx-auto" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              {workflows.slice(0, 4).map(wf => (
-               <div key={wf.id} className="bg-proton-card p-6 rounded-2xl border border-proton-border shadow-sm group hover:border-proton-accent/50 transition-all">
+               <div key={wf.id} className={cn("p-6 rounded-[32px] border shadow-sm group hover:scale-[1.02] transition-all duration-500", currentTheme.card)}>
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="p-3 rounded-xl bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform">
-                      <Zap size={20} />
+                    <div className={cn("p-3 rounded-2xl transition-transform", currentTheme.accent)}>
+                      <Zap size={24} />
                     </div>
-                    <span className="font-bold text-lg truncate">{wf.name}</span>
+                    <span className="font-black text-xl tracking-tight truncate">{wf.name}</span>
                   </div>
-                  <p className="text-sm text-proton-muted font-medium">Trigger: {wf.trigger}</p>
+                  <p className={cn("text-xs font-bold uppercase tracking-widest", currentTheme.muted)}>Trigger: {wf.trigger}</p>
                </div>
              ))}
           </div>
         </div>
 
-        <div className="bg-proton-card p-8 rounded-3xl border border-proton-border shadow-sm h-fit">
+        <div className={cn("p-8 rounded-[40px] border shadow-sm h-fit transition-all duration-500", currentTheme.card)}>
           <div className="flex items-center justify-between mb-8">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Layers size={20} className="text-proton-accent" />
+            <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter">
+              <Layers size={24} className={currentTheme.muted} />
               {t.tasks}
             </h3>
             <button 
               onClick={handleAiSuggest}
               disabled={isSuggesting}
-              className="p-2 rounded-lg bg-proton-accent/10 text-proton-accent hover:bg-proton-accent/20 transition-all"
+              className={cn("p-3 rounded-2xl transition-all hover:scale-110", currentTheme.accent)}
             >
               {isSuggesting ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
             </button>
@@ -1023,35 +1107,47 @@ const OrganizerView = ({
                   placeholder={t.task_placeholder}
                   value={newTaskInput}
                   onChange={e => setNewTaskInput(e.target.value)}
-                  className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-proton-accent transition-all"
+                  className={cn("w-full border-2 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none transition-all", currentTheme.input)}
                 />
-                <button type="submit" className="w-full py-3 rounded-xl bg-proton-accent text-proton-on-accent font-bold text-sm shadow-lg shadow-proton-accent/20">
+                <button type="submit" className={cn("w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl", currentTheme.button)}>
                    {translations[language].common.add}
                 </button>
              </form>
 
              <div className="space-y-3">
                 {filteredTasks.length === 0 ? (
-                  <p className="text-center py-8 text-proton-muted font-medium italic text-xs">{translations[language].organizer.no_tasks}</p>
+                  <div className="py-20 text-center space-y-4">
+                     <p className={cn("font-black uppercase tracking-[0.3em] text-[10px]", currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
+                     <div className={cn("h-px w-20 mx-auto", theme === 'cyberpunk' ? "bg-cyan-400/20" : "bg-slate-200")} />
+                  </div>
                 ) : (
                   filteredTasks.map(task => (
-                    <div key={task.id} className="flex items-center gap-4 p-4 rounded-xl bg-proton-bg border border-proton-border group">
+                    <motion.div 
+                      layout
+                      key={task.id} 
+                      className={cn("flex items-center gap-4 p-5 rounded-2xl border transition-all group", currentTheme.card, theme === 'cyberpunk' ? "hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "hover:border-proton-accent")}
+                    >
                       <button 
                         onClick={() => onToggleTask(task.id)}
                         className={cn(
-                          "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0",
-                          task.completed ? "bg-proton-accent border-proton-accent text-proton-on-accent" : "border-proton-border"
+                          "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
+                          task.completed 
+                            ? (theme === 'cyberpunk' ? "bg-cyan-400 border-cyan-400 text-black" : "bg-slate-900 border-slate-900 text-white")
+                            : (theme === 'cyberpunk' ? "border-cyan-400/50" : "border-slate-200")
                         )}
                       >
-                        {task.completed && <Check size={14} strokeWidth={3} />}
+                        {task.completed && <Check size={16} strokeWidth={4} />}
                       </button>
-                      <span className={cn("text-sm flex-1 font-medium truncate", task.completed && "line-through text-proton-muted")}>
+                      <span className={cn("text-sm flex-1 font-bold tracking-tight truncate", task.completed && "opacity-30 line-through")}>
                         {language === 'ka' ? task.contentGe : task.content}
                       </span>
-                      <button onClick={() => onDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 text-proton-muted hover:text-red-500 transition-all">
-                        <Trash2 size={16} />
+                      <button 
+                        onClick={() => onDeleteTask(task.id)} 
+                        className={cn("opacity-0 group-hover:opacity-100 transition-all hover:scale-125", theme === 'cyberpunk' ? "text-pink-500" : "text-slate-400 hover:text-red-500")}
+                      >
+                        <Trash2 size={18} />
                       </button>
-                    </div>
+                    </motion.div>
                   ))
                 )}
              </div>

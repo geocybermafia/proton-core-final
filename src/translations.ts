@@ -37,7 +37,11 @@ export const translations = {
       ai_suggest: "AI Assistant",
       no_tasks: "No active tasks",
       generating: "AI is thinking...",
-      upcoming_workflows: "Upcoming Schedules"
+      upcoming_workflows: "Upcoming Schedules",
+      workspace_theme: "Workspace Theme",
+      theme_cyberpunk: "Cyberpunk",
+      theme_minimalist: "Minimalist",
+      theme_executive: "Executive Dark"
     },
     architect: {
       title: "Task Architect",
@@ -365,7 +369,11 @@ export const translations = {
       ai_suggest: "AI ასისტენტი",
       no_tasks: "დავალებები არ არის",
       generating: "AI ფიქრობს...",
-      upcoming_workflows: "დაგეგმილი პროცესები"
+      upcoming_workflows: "დაგეგმილი პროცესები",
+      workspace_theme: "სამუშაო თემა",
+      theme_cyberpunk: "კიბერპანკი",
+      theme_minimalist: "მინიმალისტი",
+      theme_executive: "ექსეკუტივ დარქი"
     },
     architect: {
       title: "დავალებების დაგეგმვა",
