@@ -78,9 +78,8 @@
   }
 
   :root[data-ui-mode="artisan"] {
-    --color-proton-bg: #f8fafc;
-    /* Artisan specific tweaks can go here if needed per theme, 
-       but for now we'll use it to trigger component level shifts via tailwind classes like ui-artisan: */
+    /* Artisan specific tweaks can go here if needed per theme */
+    --shadow-artisan: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   }
 }
 

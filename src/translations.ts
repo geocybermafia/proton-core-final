@@ -1,6 +1,7 @@
 export const translations = {
   en: {
     sidebar: {
+      main: "Architecture",
       core: "Navigation",
       dashboard: "Overview",
       blueprints: "Processes",
@@ -12,7 +13,7 @@ export const translations = {
       creative: "Creation",
       image: "Image Lab",
       system: "System",
-      profile: "Profile",
+      profile: "Cabinet",
       settings: "Settings",
       device: "Apparatus Intelligence",
       collapse: "Collapse",
@@ -193,10 +194,31 @@ export const translations = {
       reset_email_sent: "Reset link sent to your email.",
       send_reset_link: "Send Link",
       back_to_login: "Back to Sign In"
+    },
+    cabinet: {
+      title: "Personal Cabinet",
+      subtitle: "Global Access & Identity",
+      profile_info: "Profile Information",
+      subscription: "Subscription Tier",
+      tier_free: "Standard Member",
+      tier_pro: "Elite Explorer",
+      tier_enterprise: "Industrial Node",
+      usage_stats: "Usage Analytics",
+      storage: "Data Storage",
+      compute_time: "Compute Time",
+      api_calls: "AI Tokens",
+      connected_platforms: "Digital ecosystem",
+      security_level: "Security Protocols",
+      two_factor: "Biometric Sync",
+      sessions: "Active Sessions",
+      export_identity: "Export Identity",
+      delete_account: "Terminate Connection",
+      member_since: "Authorized since"
     }
   },
   ka: {
     sidebar: {
+      main: "არქიტექტურა",
       core: "ნავიგაცია",
       dashboard: "მთავარი",
       blueprints: "პროცესები",
@@ -208,7 +230,7 @@ export const translations = {
       creative: "შემოქმედება",
       image: "სურათების სტუდია",
       system: "სისტემა",
-      profile: "პროფილი",
+      profile: "კაბინეტი",
       settings: "პარამეტრები",
       device: "აპარატის ინტელექტი",
       collapse: "ჩაკეცვა",
@@ -389,6 +411,26 @@ export const translations = {
       focused: "ფოკუსირებული",
       balanced: "ბალანსირებული",
       creative: "კრეატიული"
+    },
+    cabinet: {
+      title: "პირადი კაბინეტი",
+      subtitle: "გლობალური წვდომა და იდენტობა",
+      profile_info: "პროფილის ინფორმაცია",
+      subscription: "გამოწერის დონე",
+      tier_free: "სტანდარტული წევრი",
+      tier_pro: "ელიტარული მკვლევარი",
+      tier_enterprise: "ინდუსტრიული კვანძი",
+      usage_stats: "გამოყენების ანალიტიკა",
+      storage: "მონაცემთა მეხსიერება",
+      compute_time: "გამოთვლითი დრო",
+      api_calls: "AI ტოკენები",
+      connected_platforms: "ციფრული ეკოსისტემა",
+      security_level: "უსაფრთხოების პროტოკოლები",
+      two_factor: "ბიომეტრიული სინქრონიზაცია",
+      sessions: "აქტიური სესიები",
+      export_identity: "იდენტობის ექსპორტი",
+      delete_account: "კავშირის გაწყვეტა",
+      member_since: "ავტორიზებულიდან"
     }
   }
 };

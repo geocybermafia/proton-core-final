@@ -95,12 +95,23 @@ import {
   Moon,
   Sparkles,
   Edit2,
+  Edit3,
+  Mail,
+  MapPin,
+  CreditCard,
+  BarChart3,
+  Fingerprint,
+  ClipboardList,
+  Clock,
+  LogOut,
+  User as UserIcon,
   X,
   Plus,
   Trash2,
   Image,
   Volume2,
   Shield,
+  Lock,
   LayoutDashboard,
   Receipt,
   FileText,
@@ -108,10 +119,11 @@ import {
   Calendar as CalendarIcon,
   Check,
   ShieldAlert,
-  Lock,
-  Search
+  Search,
+  RefreshCw,
+  Bell
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -192,33 +204,187 @@ const SidebarItem = React.memo(({
   <button
     onClick={onClick}
     className={cn(
-      "flex items-center gap-4 w-full px-4 py-3 rounded-2xl transition-all duration-300 group relative",
+      "flex items-center gap-4 w-full px-4 py-3.5 rounded-2xl transition-all duration-500 group relative",
       active 
-        ? "bg-proton-accent/10 text-proton-accent"
-        : "text-proton-muted hover:text-proton-text hover:bg-white/5",
+        ? "bg-proton-accent/10 text-proton-accent shadow-[inset_0_0_20px_rgba(0,242,255,0.05)]"
+        : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5",
       !expanded && "justify-center px-0"
     )}
     title={!expanded ? label : undefined}
   >
-    <Icon size={20} className={cn("shrink-0 transition-transform duration-300 group-hover:scale-110", active ? "text-proton-accent" : "group-hover:text-proton-text")} />
+    <div className="relative">
+      <Icon size={20} className={cn("shrink-0 transition-all duration-500 group-hover:scale-110", active ? "text-proton-accent scale-110" : "group-hover:text-proton-accent")} />
+      {active && (
+        <div className="absolute inset-0 bg-proton-accent/20 blur-md rounded-full -z-10" />
+      )}
+    </div>
+    
     {expanded && (
       <span className={cn(
-        "text-xs font-semibold tracking-wide whitespace-nowrap overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-left-2",
+        "text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-left-4",
         active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
       )}>
         {label}
       </span>
     )}
+
     {active && (
       <motion.div 
-        layoutId="active-pill" 
-        className={cn(
-          "absolute left-0 w-1 h-6 bg-proton-accent rounded-full",
-          active && "shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-        )} 
+        layoutId="active-marker" 
+        className="absolute left-0 w-1.5 h-6 bg-proton-accent rounded-full shadow-[0_0_15px_rgba(0,242,255,0.8)]" 
+        initial={{ scaleY: 0 }}
+        animate={{ scaleY: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
       />
     )}
   </button>
+));
+
+const LivePulseLog = () => {
+  const [logs, setLogs] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const events = [
+      "Optimizing Neural pathways...",
+      "Syncing with Tbilisi Datacenter...",
+      "Encrypting Financial Protocols...",
+      "Balancing GPU Load: 84%",
+      "Security Audit: Phase 4 Verified",
+      "Calibrating Charon Voice Engine...",
+      "Proton Hub Core v3.0.4 Online",
+      "Detecting User Pro Level: 4",
+      "Updating Blockchain Ledger...",
+      "Verifying Wallet Consensus...",
+      "Initializing Quantum Ledger...",
+      "Node Delta-7 Synchronized"
+    ];
+    
+    setLogs(events.slice(0, 5));
+    
+    const interval = setInterval(() => {
+      setLogs(prev => [events[Math.floor(Math.random() * events.length)], ...prev].slice(0, 6));
+    }, 4000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="font-mono text-[9px] uppercase tracking-[0.15em] text-proton-accent/60 space-y-2 select-none">
+      {logs.map((log, i) => (
+        <motion.div 
+          key={`${log}-${i}`}
+          initial={{ opacity: 0, x: -10 }} 
+          animate={{ opacity: 1 - i * 0.15, x: 0 }}
+          className="flex items-center gap-2"
+        >
+          <div className="w-1 h-1 rounded-full bg-proton-accent animate-pulse shrink-0" />
+          <span className="truncate">{log}</span>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
+const SystemGraph = () => {
+  const data = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
+    name: i,
+    val: 30 + Math.random() * 50,
+    load: 10 + Math.random() * 80
+  })), []);
+
+  return (
+    <div className="h-48 w-full bg-proton-bg/40 rounded-3xl border border-proton-border p-4 relative overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-t from-proton-accent/[0.02] to-transparent pointer-events-none" />
+      <div className="absolute top-4 left-4 z-10">
+        <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1">Compute Core Analysis</p>
+        <p className="text-xl font-black text-proton-accent tracking-tighter">NODE_ALFA_7</p>
+      </div>
+      
+      <div className="h-full w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--proton-accent)" stopOpacity={0.2}/>
+                <stop offset="95%" stopColor="var(--proton-accent)" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--proton-border)" vertical={false} opacity={0.1} />
+            <Tooltip 
+              contentStyle={{ 
+                backgroundColor: 'rgba(10, 10, 15, 0.9)', 
+                border: '1px solid var(--proton-border)', 
+                borderRadius: '16px',
+                backdropFilter: 'blur(8px)'
+              }}
+              itemStyle={{ color: 'var(--proton-accent)', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase' }}
+              labelStyle={{ display: 'none' }}
+              cursor={{ stroke: 'var(--proton-accent)', strokeWidth: 1, strokeDasharray: '4 4' }}
+            />
+            <Area 
+              type="stepAfter" 
+              dataKey="val" 
+              stroke="var(--proton-accent)" 
+              fillOpacity={1} 
+              fill="url(#colorVal)" 
+              strokeWidth={2}
+              animationDuration={2000}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+const SidebarPersonaItem = React.memo(({ 
+  persona, 
+  active, 
+  onClick, 
+  expanded, 
+  avatar 
+}: { 
+  persona: Persona, 
+  active: boolean, 
+  onClick: () => void, 
+  expanded: boolean, 
+  avatar: string 
+}) => (
+  <Reorder.Item
+    value={persona}
+    dragListener={expanded}
+    className={cn(
+      "flex items-center gap-3 w-full px-4 py-2.5 rounded-xl transition-all duration-300 group cursor-grab active:cursor-grabbing relative",
+      active 
+        ? "bg-proton-accent/10 text-proton-accent shadow-[inset_0_0_15px_rgba(0,242,255,0.05)]" 
+        : "text-proton-muted hover:bg-proton-accent/5 hover:text-proton-text"
+    )}
+  >
+    <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-proton-bg border border-proton-border shadow-sm group-hover:border-proton-accent/30 transition-colors">
+      <PersonaAvatar avatar={avatar} className="w-6 h-6 rounded-lg text-sm" />
+    </div>
+    
+    {expanded && (
+      <div className="flex-1 min-w-0 text-left select-none" onClick={onClick}>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-proton-accent">
+            {persona.name}
+          </span>
+          <span className="text-[7px] font-bold text-proton-muted uppercase truncate tracking-[0.1em] opacity-60">
+            {persona.role}
+          </span>
+        </div>
+      </div>
+    )}
+
+    {active && expanded && (
+      <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,1)]" />
+    )}
+    
+    {!expanded && active && (
+      <div className="absolute left-0 w-1 h-4 bg-proton-accent rounded-full shadow-[0_0_10px_rgba(0,242,255,0.8)]" />
+    )}
+  </Reorder.Item>
 ));
 
 const PersonaAvatar = ({ avatar, className }: { avatar: string, className?: string }) => {
@@ -1090,14 +1256,20 @@ const DashboardView = ({
                </button>
             </div>
 
-            <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm flex flex-col gap-6">
-               <div className="w-12 h-12 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
-                  <Layout size={24} />
+            <SystemGraph />
+
+            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm flex flex-col gap-8 relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
+                  <Database size={120} />
                </div>
-               <div className="space-y-2">
-                  <h3 className="font-bold text-lg tracking-tight">{t.dashboard.quick_setup}</h3>
-                  <p className="text-xs text-proton-muted leading-relaxed font-semibold font-sans">
-                    {t.dashboard.quick_setup_desc}
+               <div className="space-y-3 relative z-10">
+                  <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">Core Intelligence Stream</h3>
+                  <LivePulseLog />
+               </div>
+               
+               <div className="pt-4 border-t border-proton-border/50 relative z-10">
+                  <p className="text-[10px] text-proton-muted leading-relaxed font-bold font-sans uppercase tracking-widest opacity-40">
+                    Proton Infrastructure: Stage 4 Active
                   </p>
                </div>
             </div>
@@ -1410,7 +1582,8 @@ const PersonasView = ({
   setLastGeminiMetadata,
   workflows,
   tasks,
-  isSystemActive
+  isSystemActive,
+  initialPersonaId
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -1423,9 +1596,23 @@ const PersonasView = ({
   workflows: Workflow[],
   tasks: Task[],
   uiMode: 'operator' | 'artisan',
-  isSystemActive: boolean
+  isSystemActive: boolean,
+  initialPersonaId?: string | null
 }) => {
-  const [selectedPersona, setSelectedPersona] = useState<Persona>(personas[0] || PERSONAS[0]);
+  const [selectedPersona, setSelectedPersona] = useState<Persona>(() => {
+    if (initialPersonaId) {
+      const found = personas.find(p => p.id === initialPersonaId);
+      if (found) return found;
+    }
+    return personas[0] || PERSONAS[0];
+  });
+
+  useEffect(() => {
+    if (initialPersonaId) {
+      const found = personas.find(p => p.id === initialPersonaId);
+      if (found) setSelectedPersona(found);
+    }
+  }, [initialPersonaId, personas]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -2362,7 +2549,7 @@ const WorkflowsView = ({
   );
 };
 
-const ProfileView = ({ 
+const CabinetView = ({ 
   profile, 
   setProfile, 
   history,
@@ -2384,218 +2571,359 @@ const ProfileView = ({
   uiMode: 'operator' | 'artisan'
 }) => {
   const language = profile.language;
-  const t = translations[language].sidebar;
   const common = translations[language].common;
+  const cab = translations[language].cabinet;
   const totalInteractions = Object.values(history).reduce((acc, msgs) => acc + msgs.length, 0);
+
+  const stats = [
+    { label: cab.storage, value: '2.4 GB', icon: Database, color: 'text-proton-accent' },
+    { label: cab.compute_time, value: '14.2h', icon: Cpu, color: 'text-proton-secondary' },
+    { label: cab.api_calls, value: '1,280', icon: Zap, color: 'text-proton-accent' },
+  ];
   
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">{language === 'ka' ? 'მომხმარებლის პროფილი' : 'User Profile'}</h2>
-          <p className="text-proton-muted text-sm mt-1">{language === 'ka' ? 'მართეთ თქვენი Proton Core AI ანგარიში და ისტორია' : 'Manage your Proton Core AI account and history'}</p>
+    <div className={cn(
+      "space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20 overflow-y-auto max-h-full no-scrollbar px-1 pt-4",
+      uiMode === 'artisan' ? "artisan-theme" : ""
+    )}>
+      {/* Dynamic Header */}
+      <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-6 pb-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+            <span className="text-[10px] font-bold text-proton-accent uppercase tracking-[0.4em]">{cab.subtitle}</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-proton-text uppercase leading-none">
+            {cab.title}
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-4 bg-proton-card/50 backdrop-blur-xl p-4 rounded-3xl border border-proton-border/50 shadow-2xl">
+          <div className="flex -space-x-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="w-8 h-8 rounded-full border-2 border-proton-bg bg-proton-card flex items-center justify-center text-[10px] font-bold text-proton-muted">
+                {i}
+              </div>
+            ))}
+          </div>
+          <div className="h-8 w-px bg-proton-border" />
+          <div className="flex items-center gap-2 text-xs font-bold text-proton-muted uppercase tracking-widest">
+            <ShieldCheck size={14} className="text-green-400" />
+            Node Verified
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
-        {/* Account Settings */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="proton-glass p-4 sm:p-8 rounded-3xl space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                <Settings size={20} className="text-proton-accent" />
-                {language === 'ka' ? 'ანგარიშის პარამეტრები' : 'Account Settings'}
-              </h3>
-              {user ? (
-                <button onClick={onSignOut} className="text-sm text-red-400 hover:text-red-300">{language === 'ka' ? 'გასვლა' : 'Sign Out'}</button>
-              ) : (
-                <button onClick={onSignIn} className="text-sm text-proton-accent hover:text-proton-accent/80">{language === 'ka' ? 'შესვლა Google-ით' : 'Sign In with Google'}</button>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'სრული სახელი' : 'Full Name'}</label>
-                <input 
-                  type="text" 
-                  value={user?.displayName || profile.name}
-                  disabled
-                  className="w-full bg-proton-bg/50 border border-proton-border rounded-lg px-3 py-2 text-sm text-proton-muted cursor-not-allowed"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'ელ.ფოსტა' : 'Email Address'}</label>
-                <input 
-                  type="email" 
-                  value={user?.email || profile.email}
-                  disabled
-                  className="w-full bg-proton-bg/50 border border-proton-border rounded-lg px-3 py-2 text-sm text-proton-muted cursor-not-allowed"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'ენა' : 'Preferred Language'}</label>
-                <select 
-                  value={profile.language}
-                  onChange={(e) => setProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                  className="w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-proton-accent transition-colors"
-                >
-                  <option value="en">English</option>
-                  <option value="ka">ქართული (Georgian)</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-between p-4 rounded-xl bg-proton-bg/30 border border-proton-border">
-                <div>
-                  <p className="text-sm font-medium">{language === 'ka' ? 'შეტყობინებები ელ.ფოსტაზე' : 'Email Notifications'}</p>
-                  <p className="text-[10px] text-proton-muted">{language === 'ka' ? 'მიიღეთ განახლებები ვიდეო ბარათის სტატუსზე' : 'Receive updates on GPU status'}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Main Identity Card */}
+        <div className="lg:col-span-12">
+          <div className="group relative bg-proton-card p-1 md:p-2 rounded-[60px] border border-proton-border shadow-2xl transition-all hover:shadow-proton-accent/5">
+            <div className="bg-proton-bg/40 rounded-[54px] p-8 md:p-12 flex flex-col md:flex-row gap-12 items-center relative overflow-hidden">
+              {/* Background Accent */}
+              <div className="absolute -top-24 -right-24 w-96 h-96 bg-proton-accent/5 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="relative shrink-0">
+                <div className="w-40 h-40 md:w-48 md:h-48 rounded-[50px] bg-proton-bg border-2 border-proton-border flex items-center justify-center text-proton-accent p-1 shadow-inner group-hover:scale-[1.02] transition-transform duration-500 overflow-hidden">
+                  <div className="w-full h-full rounded-[45px] overflow-hidden bg-proton-card flex items-center justify-center text-6xl font-black italic">
+                    {user?.photoURL ? (
+                      <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.displayName?.charAt(0) || profile.name.charAt(0)
+                    )}
+                  </div>
                 </div>
-                <button 
-                  onClick={() => setProfile(prev => ({ ...prev, notifications: !prev.notifications }))}
-                  className={cn(
-                    "w-12 h-6 rounded-full transition-colors relative",
-                    profile.notifications ? "bg-proton-accent" : "bg-proton-border"
-                  )}
-                >
-                  <motion.div 
-                    animate={{ x: profile.notifications ? 26 : 2 }}
-                    className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
-                  />
+                <button className="absolute -bottom-2 -right-2 w-12 h-12 bg-proton-accent text-white rounded-3xl flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-all border-4 border-proton-bg">
+                  <Edit3 size={20} />
                 </button>
               </div>
-            </div>
 
-            <div className="pt-4 flex justify-between items-center">
-              <button 
-                onClick={() => {
-                  const exportData = {
-                    name: profile.name,
-                    language: profile.language,
-                    notifications: profile.notifications
-                  };
-                  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-                  const downloadAnchorNode = document.createElement('a');
-                  downloadAnchorNode.setAttribute("href", dataStr);
-                  downloadAnchorNode.setAttribute("download", "user_profile_data.json");
-                  document.body.appendChild(downloadAnchorNode);
-                  downloadAnchorNode.click();
-                  downloadAnchorNode.remove();
-                }}
-                className="px-6 py-2 rounded-xl border border-proton-border text-proton-muted font-bold text-sm hover:bg-proton-card transition-all"
-              >
-                {language === 'ka' ? 'პროფილის მონაცემების ჩამოტვირთვა' : 'Download Profile Data'}
-              </button>
-            </div>
-          </div>
-
-          <div className="proton-glass p-4 sm:p-8 rounded-3xl space-y-6">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <Activity size={20} className="text-proton-secondary" />
-              {language === 'ka' ? 'ინტერაქციების ისტორია' : 'Interaction History'}
-            </h3>
-            
-            <div className="space-y-4">
-              {personas.map(persona => {
-                const personaMsgs = history[persona.id] || [];
-                if (personaMsgs.length === 0) return null;
-                
-                return (
-                  <div key={persona.id} className="flex items-center justify-between p-4 rounded-2xl bg-proton-bg/50 border border-proton-border">
-                    <div className="flex items-center gap-4">
-                      <PersonaAvatar avatar={customAvatars[persona.id] || persona.avatar} className="w-10 h-10" />
-                      <div>
-                        <p className="font-bold text-sm">{language === 'ka' ? persona.nameGe : persona.name}</p>
-                        <p className="text-xs text-proton-muted">{personaMsgs.length} {common.messages}</p>
+              <div className="flex-1 space-y-8 text-center md:text-left">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                    <span className="px-4 py-1 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
+                       {cab.tier_pro}
+                    </span>
+                    <span className="px-4 py-1 bg-proton-secondary/10 border border-proton-secondary/20 text-proton-secondary rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
+                       Priority Access
+                    </span>
+                  </div>
+                  <div>
+                    <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight bg-gradient-to-br from-proton-text to-proton-text/60 bg-clip-text text-transparent">
+                      {user?.displayName || profile.name}
+                    </h2>
+                    <div className="flex items-center justify-center md:justify-start gap-4 mt-2 text-proton-muted font-medium">
+                      <div className="flex items-center gap-1.5 opacity-70">
+                        <Mail size={14} />
+                        <span className="text-sm">{user?.email || profile.email}</span>
+                      </div>
+                      <div className="w-1 h-1 rounded-full bg-proton-border" />
+                      <div className="flex items-center gap-1.5 opacity-70">
+                        <MapPin size={14} />
+                        <span className="text-sm">Georgia, TB</span>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-proton-muted uppercase font-mono">
-                        {language === 'ka' ? 'ბოლოს აქტიური' : 'Last Active'}
-                      </p>
-                      <p className="text-xs font-mono">
-                        {new Date(personaMsgs[personaMsgs.length - 1].timestamp).toLocaleDateString()}
-                      </p>
-                    </div>
                   </div>
-                );
-              })}
-              {totalInteractions === 0 && (
-                <div className="text-center py-8 text-proton-muted italic text-sm">
-                  {language === 'ka' ? 'ისტორია ჯერჯერობით ცარიელია' : 'No interaction history found yet.'}
                 </div>
-              )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-8 border-t border-proton-border/30">
+                  {stats.map((stat, i) => (
+                    <div key={i} className="space-y-2">
+                       <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.2em]">{stat.label}</p>
+                       <div className="flex items-center gap-2">
+                          <stat.icon size={16} className={stat.color} />
+                          <p className="text-2xl font-black tracking-tight">{stat.value}</p>
+                       </div>
+                    </div>
+                  ))}
+                  <div className="space-y-2">
+                     <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.2em]">{cab.member_since}</p>
+                     <p className="text-xl font-black tracking-tight">APR 2024</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Profile Sidebar */}
-        <div className="space-y-6">
-          <div className="proton-glass p-6 rounded-2xl text-center space-y-4">
-            <div className="w-20 h-20 rounded-full bg-proton-accent/10 flex items-center justify-center text-proton-accent mx-auto border-2 border-proton-accent/20">
-              <Users size={40} />
+        {/* Action Grid */}
+        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-proton-card p-10 rounded-[50px] border border-proton-border shadow-lg space-y-8">
+            <div className="flex items-center justify-between">
+               <h3 className="text-xl font-bold tracking-tight">{cab.profile_info}</h3>
+               <div className="w-10 h-10 rounded-2xl bg-proton-bg flex items-center justify-center text-proton-accent">
+                 <RefreshCw size={18} />
+               </div>
             </div>
-            <div>
-              <h4 className="font-bold text-lg">{user?.displayName || profile.name}</h4>
-              <p className="text-xs text-proton-muted font-mono uppercase tracking-widest">{language === 'ka' ? 'Proton Core AI-ის მკვლევარი' : 'Proton Core AI Explorer'}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border">
-                <p className="text-xl font-bold font-mono text-proton-accent">{totalInteractions}</p>
-                <p className="text-[10px] text-proton-muted uppercase">{common.messages}</p>
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-proton-muted uppercase tracking-widest flex items-center gap-2 ml-1">
+                  <Globe size={12} />
+                  {language === 'ka' ? 'ლოკალიზაცია' : 'Localization'}
+                </label>
+                <div className="relative group">
+                  <select 
+                    value={profile.language}
+                    onChange={(e) => setProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
+                    className="w-full bg-proton-bg/50 border-2 border-proton-border rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-proton-accent transition-all appearance-none cursor-pointer hover:bg-proton-bg"
+                  >
+                    <option value="en">English - US Hub</option>
+                    <option value="ka">ქართული - GE კვანძი</option>
+                  </select>
+                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-accent transition-colors" size={16} />
+                </div>
               </div>
-              <div className="p-3 rounded-xl bg-proton-bg/50 border border-proton-border">
-                <p className="text-xl font-bold font-mono text-proton-secondary">{personas.length}</p>
-                <p className="text-[10px] text-proton-muted uppercase">{language === 'ka' ? 'პერსონაჟი' : 'Personas'}</p>
+
+              <div className="p-6 rounded-3xl bg-proton-bg/30 border border-proton-border group hover:border-proton-accent/30 transition-colors">
+                <div className="flex items-center justify-between">
+                   <div className="space-y-1">
+                      <p className="font-bold text-sm tracking-tight">System Alerts</p>
+                      <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">Email & Push Sync</p>
+                   </div>
+                   <button 
+                     onClick={() => setProfile(prev => ({ ...prev, notifications: !prev.notifications }))}
+                     className={cn(
+                       "w-14 h-7 rounded-full transition-all relative overflow-hidden",
+                       profile.notifications ? "bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-border"
+                     )}
+                   >
+                     <motion.div 
+                       animate={{ x: profile.notifications ? 30 : 4 }}
+                       className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-lg z-10"
+                     />
+                   </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="proton-glass p-6 rounded-2xl space-y-4">
-            <h4 className="font-bold text-sm uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'უსაფრთხოების სტატუსი' : 'Security Status'}</h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-proton-muted">{language === 'ka' ? '2FA-ს სტატუსი' : '2FA Status'}</span>
-                <span className="text-green-400 font-mono">{language === 'ka' ? 'აქტიური' : 'ENABLED'}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-proton-muted">{language === 'ka' ? 'ბოლო შესვლა' : 'Last Login'}</span>
-                <span className="text-proton-text font-mono">Tbilisi, GE</span>
-              </div>
-              <button className="w-full py-2 rounded-lg border border-proton-secondary/30 text-proton-secondary text-xs font-bold hover:bg-proton-secondary/10 transition-all">
-                {language === 'ka' ? 'პაროლის განახლება' : 'Reset Password'}
-              </button>
-            </div>
+          <div className="bg-proton-accent p-10 rounded-[50px] text-white flex flex-col justify-between shadow-2xl shadow-proton-accent/20 relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                <Shield size={180} />
+             </div>
+             
+             <div className="space-y-2 relative z-10">
+                <h3 className="text-3xl font-black tracking-tight uppercase leading-none">{cab.subscription}</h3>
+                <p className="text-sm font-bold text-white/70 uppercase tracking-widest">{cab.tier_pro}</p>
+             </div>
+
+             <div className="space-y-6 pt-10 relative z-10">
+                <div className="space-y-2">
+                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
+                      <span>{cab.storage} Usage</span>
+                      <span>84%</span>
+                   </div>
+                   <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: "84%" }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="h-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.6)]" 
+                      />
+                   </div>
+                </div>
+                <button className="w-full py-5 bg-white text-proton-accent rounded-[32px] font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
+                  Upgrade Node
+                </button>
+             </div>
           </div>
+        </div>
+
+        {/* Sidebar Analytics */}
+        <div className="lg:col-span-4 space-y-8">
+           <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm space-y-6">
+              <div className="flex items-center justify-between">
+                 <h3 className="font-bold text-lg tracking-tight uppercase tracking-[0.1em]">{cab.security_level}</h3>
+                 <Lock size={18} className="text-green-400" />
+              </div>
+
+              <div className="space-y-4">
+                 {[
+                   { label: cab.two_factor, status: 'Secured', icon: Fingerprint, active: true },
+                   { label: 'Cloud Identity', status: 'Verified', icon: Cloud, active: true },
+                   { label: 'Security Log', status: 'Clean', icon: ClipboardList, active: false }
+                 ].map((item, idx) => (
+                   <div key={idx} className="flex items-center justify-between group cursor-pointer p-1">
+                      <div className="flex items-center gap-4">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                          item.active ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
+                        )}>
+                           <item.icon size={18} />
+                        </div>
+                        <div>
+                           <p className="text-xs font-bold text-proton-text group-hover:text-proton-accent transition-colors">{item.label}</p>
+                           <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{item.status}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={14} className="text-proton-border group-hover:text-proton-accent group-hover:translate-x-1 transition-all" />
+                   </div>
+                 ))}
+              </div>
+           </div>
+
+           <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-lg flex flex-col gap-8">
+              <div className="flex items-center justify-between">
+                 <h3 className="font-bold text-xl tracking-tight uppercase tracking-[0.1em]">{cab.usage_stats}</h3>
+                 <motion.div 
+                   animate={{ rotate: [0, 360] }}
+                   transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                   className="text-proton-secondary"
+                  >
+                    <RefreshCw size={20} />
+                 </motion.div>
+              </div>
+
+              <div className="space-y-6">
+                 <button 
+                   onClick={() => {
+                     const exportData = { id: user?.uid || 'temp', profile, history, timestamp: Date.now() };
+                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+                     const downloadAnchorNode = document.createElement('a');
+                     downloadAnchorNode.setAttribute("href", dataStr);
+                     downloadAnchorNode.setAttribute("download", "proton_identity.json");
+                     document.body.appendChild(downloadAnchorNode);
+                     downloadAnchorNode.click();
+                     downloadAnchorNode.remove();
+                   }}
+                   className="group w-full py-5 bg-proton-bg border-2 border-proton-border rounded-[32px] font-black text-[10px] uppercase tracking-[0.2em] text-proton-text hover:border-proton-accent hover:text-proton-accent transition-all flex items-center justify-center gap-3"
+                 >
+                   <LogOut className="rotate-180 group-hover:-translate-x-1 transition-transform" size={14} />
+                   {cab.export_identity}
+                 </button>
+                 
+                 <div className="flex items-center gap-4 text-proton-muted font-bold text-[10px] justify-center opacity-50">
+                    <Clock size={12} />
+                    <span>Last backup: 12 minutes ago</span>
+                 </div>
+              </div>
+           </div>
         </div>
       </div>
     </div>
   );
 };
 
-const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMode: (m: 'operator' | 'artisan') => void, t: any }) => (
-  <div className="flex items-center gap-2 p-1 rounded-xl bg-proton-card border border-proton-border shadow-inner">
-    <button
-      onClick={() => setMode('operator')}
-      className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
+const FlashOverlay = ({ mode }: { mode: 'operator' | 'artisan' }) => (
+  <motion.div 
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className="fixed inset-0 z-[1000] pointer-events-none flex items-center justify-center"
+  >
+    <motion.div 
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 1.2, opacity: 0 }}
+      className="relative"
+    >
+      <div className={cn(
+        "px-8 py-3 rounded-2xl border-2 backdrop-blur-2xl shadow-2xl flex items-center gap-4 transition-colors duration-500",
         mode === 'operator' 
-          ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
-          : "text-proton-muted hover:text-proton-text"
-      )}
-    >
-      <Terminal size={14} />
-      <span className="hidden lg:inline">{t.modes.operator}</span>
-    </button>
-    <button
-      onClick={() => setMode('artisan')}
+          ? "bg-proton-bg/80 border-proton-accent/50 text-proton-accent shadow-proton-accent/20" 
+          : "bg-white/80 border-proton-secondary/50 text-proton-secondary shadow-proton-secondary/20"
+      )}>
+        {mode === 'operator' ? <Terminal size={24} /> : <Zap size={24} />}
+        <span className="text-xl font-black uppercase tracking-[0.2em]">
+          {mode === 'operator' ? 'Operator System Engaged' : 'Artisan UX Active'}
+        </span>
+      </div>
+      <div className={cn(
+        "absolute inset-0 blur-3xl -z-10 opacity-30",
+        mode === 'operator' ? "bg-proton-accent" : "bg-proton-secondary"
+      )} />
+    </motion.div>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 0.2 }}
+      exit={{ opacity: 0 }}
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-300",
-        mode === 'artisan' 
-          ? "bg-proton-accent text-white shadow-lg shadow-proton-accent/10" 
-          : "text-proton-muted hover:text-proton-text"
+        "absolute inset-0",
+        mode === 'operator' ? "bg-proton-accent" : "bg-proton-secondary"
       )}
-    >
-      <Edit2 size={14} />
-      <span className="hidden lg:inline">{t.modes.artisan}</span>
-    </button>
+    />
+  </motion.div>
+);
+
+const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMode: (m: 'operator' | 'artisan') => void, t: any }) => (
+  <div className="flex items-center gap-1 p-1 rounded-xl bg-proton-card/80 border border-proton-border shadow-inner relative overflow-hidden backdrop-blur-md">
+    <div className="flex items-center gap-1 relative z-10">
+      <button
+        onClick={() => setMode('operator')}
+        className={cn(
+          "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
+          mode === 'operator' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+        )}
+      >
+        {mode === 'operator' && (
+          <motion.div 
+            layoutId="mode-bg"
+            className="absolute inset-0 bg-proton-accent rounded-lg -z-10 shadow-[0_0_15px_rgba(0,242,255,0.4)]"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+        <Terminal size={12} className={cn("transition-transform duration-500", mode === 'operator' && "scale-110")} />
+        <span className="hidden lg:inline">{t.modes.operator}</span>
+      </button>
+
+      <button
+        onClick={() => setMode('artisan')}
+        className={cn(
+          "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
+          mode === 'artisan' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+        )}
+      >
+        {mode === 'artisan' && (
+          <motion.div 
+            layoutId="mode-bg"
+            className="absolute inset-0 bg-proton-accent rounded-lg -z-10 shadow-[0_0_15px_rgba(0,242,255,0.4)]"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        )}
+        <Edit2 size={12} className={cn("transition-transform duration-500", mode === 'artisan' && "scale-110")} />
+        <span className="hidden lg:inline">{t.modes.artisan}</span>
+      </button>
+    </div>
   </div>
 );
 
@@ -2603,6 +2931,14 @@ export default function App() {
   const [uiMode, setUiMode] = useState<'operator' | 'artisan'>(
     (localStorage.getItem('proton_ui_mode') as 'operator' | 'artisan') || 'operator'
   );
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const handleModeChange = (newMode: 'operator' | 'artisan') => {
+    if (newMode === uiMode) return;
+    setIsTransitioning(true);
+    setUiMode(newMode);
+    setTimeout(() => setIsTransitioning(false), 2000);
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-ui-mode', uiMode);
@@ -2647,16 +2983,22 @@ export default function App() {
 
   const [isFirestoreActive, setIsFirestoreActive] = useState(false);
   const [showOptimizationModal, setShowOptimizationModal] = useState(false);
-  const handleViewChange = React.useCallback((view: View) => {
-    if (!isArtisanSystemActive && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
+  const [isSafeMode, setIsSafeMode] = useState(false);
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
+
+  const handleViewChange = React.useCallback((view: View, personaId?: string) => {
+    if (!isArtisanSystemActive && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
       setShowOptimizationModal(true);
       return;
+    }
+    if (personaId) {
+      setSelectedPersonaId(personaId);
     }
     setActiveView(view);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [isArtisanSystemActive]);
+  }, [isArtisanSystemActive, isSafeMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<'proton' | 'light' | 'vibrant' | 'midnight'>(
@@ -3052,9 +3394,15 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative transition-all duration-500",
+      "flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'artisan' ? "ui-artisan" : "ui-operator"
     )}>
+      <AnimatePresence>
+        {isTransitioning && (
+          <FlashOverlay mode={uiMode} />
+        )}
+      </AnimatePresence>
+
       {/* Mobile Backdrop */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -3062,7 +3410,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[60]"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
@@ -3071,27 +3419,34 @@ export default function App() {
       {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
       <aside 
         className={cn(
-          "flex flex-col border-r border-proton-border bg-proton-card transition-all duration-300 ease-in-out z-[70] overflow-x-hidden shadow-sm",
+          "flex flex-col border-r border-proton-border bg-proton-card transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-[70] overflow-x-hidden relative",
           "fixed inset-y-0 left-0 md:relative",
           isSidebarOpen 
-            ? "translate-x-0 w-64 px-4 shadow-xl" 
-            : "-translate-x-full md:translate-x-0 md:w-20 w-64 px-2"
+            ? "translate-x-0 w-[280px] shadow-2xl" 
+            : "-translate-x-full md:translate-x-0 md:w-20 shadow-none px-0"
         )}
       >
-        <div className={cn("py-8 flex items-center gap-3 overflow-hidden whitespace-nowrap transition-all duration-300", !isSidebarOpen && "md:justify-center px-0")}>
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500 bg-proton-accent text-white shadow-lg shadow-proton-accent/20">
-            <Zap size={24} fill="currentColor" />
+        {/* Sidebar Interior - Glass effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-proton-accent/[0.03] to-transparent pointer-events-none" />
+        
+        <div className={cn(
+          "h-20 shrink-0 flex items-center gap-4 px-6 border-b border-proton-border/30 overflow-hidden relative z-10 transition-all duration-500",
+          !isSidebarOpen && "md:justify-center md:px-0"
+        )}>
+          <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
+            <Zap size={22} fill="currentColor" />
           </div>
           {isSidebarOpen && (
-            <div className="font-bold text-xl tracking-tight transition-opacity duration-300">
-              Proton<span className="text-proton-accent italic">Hub</span>
+            <div className="flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
+              <span className="text-xl font-black tracking-tighter text-proton-text">PROTON</span>
+              <span className="text-[9px] font-black italic text-proton-accent tracking-[0.2em] uppercase leading-none opacity-80">Core x3</span>
             </div>
           )}
         </div>
 
-        <nav className="flex-1 px-3 space-y-6 mt-4 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.core}</p>}
+        <nav className="flex-1 px-4 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10">
+          <div className="space-y-1.5">
+            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.main}</p>}
             <SidebarItem 
               icon={LayoutDashboard} 
               label={t.sidebar.dashboard} 
@@ -3118,28 +3473,50 @@ export default function App() {
             />
           </div>
 
-          <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.agents}</p>}
-            <SidebarItem 
-              icon={Users} 
-              label={t.sidebar.personas} 
-              active={activeView === 'personas'} 
-              onClick={() => handleViewChange('personas')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={CalendarIcon} 
-              label={t.sidebar.organizer} 
-              active={activeView === 'organizer'} 
-              onClick={() => handleViewChange('organizer')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
+          <div className="space-y-1.5">
+            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.agents}</p>}
+            
+            <Reorder.Group 
+              axis="y" 
+              values={personas} 
+              onReorder={setPersonas} 
+              className="space-y-1"
+            >
+              {personas.slice(0, isSidebarOpen ? 8 : 4).map((persona) => (
+                <SidebarPersonaItem
+                  key={persona.id}
+                  persona={persona}
+                  avatar={personaAvatars[persona.id] || persona.avatar}
+                  active={activeView === 'personas' && selectedPersonaId === persona.id}
+                  onClick={() => handleViewChange('personas', persona.id)}
+                  expanded={isSidebarOpen}
+                />
+              ))}
+            </Reorder.Group>
+
+            {isSidebarOpen && personas.length > 8 && (
+              <button 
+                onClick={() => handleViewChange('personas')}
+                className="w-full text-center py-2 text-[8px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
+              >
+                + {personas.length - 8} More Agents
+              </button>
+            )}
+
+            <div className="pt-4">
+              <SidebarItem 
+                icon={CalendarIcon} 
+                label={t.sidebar.organizer} 
+                active={activeView === 'organizer'} 
+                onClick={() => handleViewChange('organizer')} 
+                expanded={isSidebarOpen}
+                uiMode={uiMode}
+              />
+            </div>
           </div>
 
-          <div className="space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.creative}</p>}
+          <div className="space-y-1.5">
+            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.creative}</p>}
             <SidebarItem 
               icon={Image} 
               label={t.sidebar.image} 
@@ -3150,10 +3527,10 @@ export default function App() {
             />
           </div>
 
-          <div className="pt-4 mt-4 border-t border-proton-border space-y-1">
-            {isSidebarOpen && <p className="text-[10px] font-mono text-proton-muted uppercase tracking-widest px-3 mb-2">{t.sidebar.system}</p>}
+          <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-1.5">
+            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.system}</p>}
             <SidebarItem 
-              icon={Terminal} 
+              icon={UserIcon} 
               label={t.sidebar.profile} 
               active={activeView === 'profile'} 
               onClick={() => handleViewChange('profile')} 
@@ -3179,23 +3556,23 @@ export default function App() {
           </div>
         </nav>
 
-        <div className="mt-auto py-4 border-t border-proton-border/50">
-          <div className="px-3 mb-2">
-            <div className={cn(
-              "flex items-center gap-3 p-3 rounded-xl bg-proton-card/50 border border-proton-border/50 overflow-hidden cursor-pointer hover:bg-proton-accent/10 transition-all duration-300",
-              !isSidebarOpen && "justify-center px-0"
-            )} onClick={() => handleViewChange('profile')}>
-              <div className="w-8 h-8 rounded-full bg-proton-accent/20 flex items-center justify-center text-proton-accent font-bold shrink-0 overflow-hidden shadow-[0_0_10px_rgba(0,242,255,0.2)]">
+        <div className="mt-auto p-4 border-t border-proton-border/30 relative z-10">
+          <div className={cn(
+            "p-1.5 rounded-3xl bg-proton-bg/40 border border-proton-border/50 group cursor-pointer transition-all duration-500 hover:border-proton-accent/30 overflow-hidden shadow-sm",
+            !isSidebarOpen && "md:rounded-2xl"
+          )} onClick={() => handleViewChange('profile')}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-xs uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                  <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
                 )}
               </div>
               {isSidebarOpen && (
-                <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2">
-                  <span className="text-[10px] font-bold text-proton-text truncate leading-tight">{user.displayName || 'Proton Core User'}</span>
-                  <span className="text-[8px] text-proton-muted truncate tracking-tighter">Proton Tier 1 Member</span>
+                <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-4 duration-700">
+                  <span className="text-[11px] font-black text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'Explorer'}</span>
+                  <span className="text-[9px] font-black text-proton-accent/60 truncate tracking-[0.15em] uppercase italic">Pro level 4</span>
                 </div>
               )}
             </div>
@@ -3203,15 +3580,11 @@ export default function App() {
           
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={cn(
-              "hidden md:flex items-center gap-3 w-full px-4 py-3 text-proton-muted hover:text-proton-text hover:bg-proton-accent/10 transition-all duration-300",
-              !isSidebarOpen && "justify-center px-0"
-            )}
+            className="mt-4 flex items-center justify-center w-full py-2 text-proton-muted hover:text-proton-accent transition-colors"
           >
-            <div className={cn("transition-transform duration-500", isSidebarOpen && "rotate-180")}>
-              <ChevronRight size={20} />
+            <div className={cn("transition-transform duration-700", isSidebarOpen && "rotate-180")}>
+              <ChevronRight size={18} />
             </div>
-            {isSidebarOpen && <span className="font-bold text-[10px] uppercase tracking-widest">{t.sidebar.collapse}</span>}
           </button>
         </div>
       </aside>
@@ -3246,65 +3619,89 @@ export default function App() {
         ))}
       </nav>
 
-      {/* Main Content */}
-      <main className="flex-1 min-w-0 flex flex-col relative overflow-hidden pb-16 md:pb-0">
-        {/* Header */}
-        <header className="h-16 border-b border-proton-border flex items-center justify-between px-4 md:px-8 z-30 bg-proton-card shadow-sm">
-          <div className="flex items-center gap-4">
+      <main className="flex-1 min-w-0 flex flex-col relative overflow-hidden pb-16 md:pb-0 bg-proton-bg">
+        {/* Subtle Background Gradients */}
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[150px] pointer-events-none -mr-40 -mt-40 z-0" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
+
+        {/* Dynamic Header */}
+        <header className="h-20 border-b border-proton-border/30 flex items-center justify-between px-6 md:px-10 z-30 bg-proton-card/40 backdrop-blur-3xl relative">
+          <div className="flex items-center gap-6">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg hover:bg-proton-bg text-proton-muted transition-colors hidden md:flex"
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-proton-bg/50 border border-proton-border/50 text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all hidden md:flex"
             >
-              <LayoutDashboard size={20} />
+              <LayoutDashboard size={18} />
             </button>
-            <div className="h-4 w-px bg-proton-border hidden md:block" />
-            <div className="flex items-center gap-2 text-xs font-semibold text-proton-muted uppercase tracking-wider">
-              <Globe size={14} />
-              <span>{userProfile.region}</span>
-              <span className="text-proton-border">|</span>
-              <span className="text-proton-accent">{activeView.charAt(0).toUpperCase() + activeView.slice(1)}</span>
-              {!isArtisanSystemActive && (
-                <div className="hidden lg:flex items-center gap-2 ml-4 px-3 py-1 bg-proton-secondary/10 border border-proton-secondary/20 rounded-full">
-                   <div className="w-1.5 h-1.5 rounded-full bg-proton-secondary animate-pulse" />
-                   <span className="text-[9px] font-bold text-proton-secondary tracking-widest">{t.dashboard.maintenance}</span>
-                </div>
-              )}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">
+                <Globe size={11} className="text-proton-accent" />
+                <span>Node: {userProfile.region}</span>
+              </div>
+              <h2 className="text-sm font-black tracking-[0.05em] text-proton-text uppercase">
+                {activeView.replace('_', ' ')} <span className="text-[8px] text-proton-accent font-black opacity-40 ml-1">v3.0.4</span>
+              </h2>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-6">
-            <div className="scale-75 sm:scale-100 origin-right">
-              <ModeToggle mode={uiMode} setMode={setUiMode} t={t} />
+          <div className="flex items-center gap-4 sm:gap-10">
+            <div className="hidden lg:flex items-center gap-10">
+               <div className="flex flex-col items-end">
+                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-2">Engine Efficiency</span>
+                  <div className="flex items-center gap-3">
+                     <div className="w-20 h-1.5 rounded-full bg-proton-border overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: "84%" }}
+                          className="h-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.6)]" 
+                        />
+                     </div>
+                     <span className="text-[10px] font-black text-proton-accent">84%</span>
+                  </div>
+               </div>
+
+               <div className="h-8 w-px bg-proton-border/50" />
+               
+               <div className="flex flex-col items-end">
+                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1.5">UX Framework</span>
+                  <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} />
+               </div>
             </div>
             
-            <div className="flex items-center gap-2 sm:gap-3">
-              <select
-                value={userProfile.language}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                className="bg-proton-card border border-proton-border rounded-lg px-1 py-1 text-[10px] font-mono text-proton-text focus:outline-none cursor-pointer hover:border-proton-accent transition-colors"
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => handleViewChange('settings')}
+                className="w-10 h-10 rounded-xl bg-proton-bg/50 border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
               >
-                <option value="en">English (EN)</option>
-                <option value="ka">Georgian (GE)</option>
-              </select>
-
-              <div className="text-[10px] font-mono text-right hidden sm:block">
-                <span className="text-proton-muted block">{t.common.gpu}</span>
-                <span className="text-proton-accent">84%</span>
+                <Settings size={18} />
+                <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-proton-secondary shadow-[0_0_8px_rgba(255,100,250,0.8)]" />
+              </button>
+              
+              <div 
+                className="w-11 h-11 rounded-2xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-accent font-black italic cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden shadow-lg" 
+                onClick={() => handleViewChange('profile')}
+              >
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm">{(user.displayName || 'U').charAt(0).toUpperCase()}</span>
+                )}
               </div>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 proton-grid relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeView}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-              className="max-w-6xl mx-auto h-full"
-            >
+        <div className="flex-1 overflow-y-auto px-6 md:px-10 py-10 relative z-10 custom-scrollbar-minimal">
+          <div className="max-w-7xl mx-auto h-full px-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeView}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                className="h-full"
+              >
               {activeView === 'dashboard' && (
                 <DashboardView 
                   personas={personas} 
@@ -3360,6 +3757,7 @@ export default function App() {
                   tasks={tasks}
                   uiMode={uiMode}
                   isSystemActive={isArtisanSystemActive}
+                  initialPersonaId={selectedPersonaId}
                 />
               )}
               {activeView === 'finance' && (
@@ -3377,7 +3775,7 @@ export default function App() {
                 />
               )}
               {activeView === 'profile' && (
-                <ProfileView 
+                <CabinetView 
                   profile={userProfile} 
                   setProfile={setUserProfile} 
                   history={chatHistory} 
@@ -3500,7 +3898,8 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </div>
-      </main>
+      </div>
+    </main>
 
       <AnimatePresence>
         {showOptimizationModal && (
@@ -3579,12 +3978,23 @@ export default function App() {
                   </p>
                 </div>
 
-                <button 
-                  onClick={() => setShowOptimizationModal(false)}
-                  className="w-full py-5 bg-proton-accent text-white rounded-[32px] font-bold text-sm shadow-2xl shadow-proton-accent/30 hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em]"
-                >
-                  {t.dashboard.optimization_btn}
-                </button>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button 
+                    onClick={() => setShowOptimizationModal(false)}
+                    className="flex-1 py-5 bg-proton-accent text-white rounded-[32px] font-bold text-sm shadow-2xl shadow-proton-accent/30 hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em]"
+                  >
+                    {t.dashboard.optimization_btn}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsSafeMode(true);
+                      setShowOptimizationModal(false);
+                    }}
+                    className="flex-1 py-5 bg-transparent border-2 border-proton-border text-proton-muted rounded-[32px] font-bold text-xs hover:border-proton-accent hover:text-proton-accent transition-all uppercase tracking-[0.2em]"
+                  >
+                    Safe Mode Bypass
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
