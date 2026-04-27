@@ -12,6 +12,7 @@
   --color-proton-accent: #3b82f6; 
   --color-proton-secondary: #f43f5e;
   --color-proton-on-accent: #ffffff;
+  --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
   
   --shadow-artisan: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
 
@@ -32,6 +33,7 @@
     --color-proton-accent: #3b82f6;
     --color-proton-secondary: #f43f5e;
     --color-proton-on-accent: #ffffff;
+    --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
   }
   
   :root[data-theme="proton"] {
@@ -43,6 +45,8 @@
     --color-proton-accent: #00f2ff;
     --color-proton-secondary: #ff2d55;
     --color-proton-on-accent: #000000;
+    --color-proton-on-secondary: #000000;
+    --color-proton-accent-muted: rgba(0, 242, 255, 0.1);
   }
 
   :root[data-theme="light"] {
@@ -54,6 +58,7 @@
     --color-proton-accent: #3b82f6;
     --color-proton-secondary: #f43f5e;
     --color-proton-on-accent: #ffffff;
+    --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
   }
 
   :root[data-theme="vibrant"] {
@@ -65,6 +70,8 @@
     --color-proton-accent: #8b5cf6;
     --color-proton-secondary: #ec4899;
     --color-proton-on-accent: #ffffff;
+    --color-proton-on-secondary: #ffffff;
+    --color-proton-accent-muted: rgba(139, 92, 246, 0.1);
   }
 
   :root[data-theme="midnight"] {
@@ -76,6 +83,8 @@
     --color-proton-accent: #00f2ff;
     --color-proton-secondary: #2dd4bf;
     --color-proton-on-accent: #000000;
+    --color-proton-on-secondary: #000000;
+    --color-proton-accent-muted: rgba(0, 242, 255, 0.11);
   }
 
   body {

@@ -490,7 +490,10 @@ const PersonaEditor = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">English Name ({formData.name.length}/50)</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
+                <span>English Name</span>
+                <span>{formData.name.length}/50</span>
+              </label>
               <input 
                 type="text" 
                 value={formData.name}
@@ -506,7 +509,10 @@ const PersonaEditor = ({
               {errors.name && <p className="text-[10px] text-red-500 font-mono">Name is required</p>}
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Georgian Name ({formData.nameGe.length}/50)</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
+                <span>Georgian Name</span>
+                <span>{formData.nameGe.length}/50</span>
+              </label>
               <input 
                 type="text" 
                 value={formData.nameGe}
@@ -522,7 +528,10 @@ const PersonaEditor = ({
               {errors.nameGe && <p className="text-[10px] text-red-500 font-mono">Georgian name is required</p>}
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Role ({formData.role.length}/50)</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
+                <span>Role</span>
+                <span>{formData.role.length}/50</span>
+              </label>
               <input 
                 type="text" 
                 value={formData.role}
@@ -610,7 +619,10 @@ const PersonaEditor = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Description ({formData.description.length}/200)</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
+                <span>Description</span>
+                <span>{formData.description.length}/200</span>
+              </label>
               <textarea 
                 value={formData.description}
                 onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -625,7 +637,10 @@ const PersonaEditor = ({
               {errors.description && <p className="text-[10px] text-red-500 font-mono">Description is required</p>}
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Georgian Description ({formData.descriptionGe.length}/200)</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
+                <span>Georgian Description</span>
+                <span>{formData.descriptionGe.length}/200</span>
+              </label>
               <textarea 
                 value={formData.descriptionGe}
                 onChange={e => setFormData(prev => ({ ...prev, descriptionGe: e.target.value }))}
@@ -964,7 +979,8 @@ const OrganizerView = ({
                 .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: var(--color-proton-muted); }
                 .react-calendar__tile { padding: 1.5em 0.5em !important; color: var(--color-proton-text) !important; border-radius: 12px; transition: all 0.2s; }
                 .react-calendar__tile:hover { background: var(--color-proton-accent-muted) !important; }
-                .react-calendar__tile--active { background: var(--color-proton-accent) !important; color: white !important; font-weight: bold; }
+                .react-calendar__tile--now { background: var(--color-proton-accent-muted) !important; border: 1px solid var(--color-proton-accent) !important; }
+                .react-calendar__tile--active { background: var(--color-proton-accent) !important; color: var(--color-proton-on-accent) !important; font-weight: bold; }
               `}</style>
               <Calendar className="mx-auto" />
             </div>
@@ -1105,7 +1121,7 @@ const DashboardView = ({
         </div>
         {!isArtisanSystemActive && (
           <div className="bg-proton-secondary/10 border border-proton-secondary/20 px-8 py-5 rounded-[32px] flex items-center gap-5 shadow-lg shadow-proton-secondary/5 relative z-10">
-             <div className="w-12 h-12 rounded-2xl bg-proton-secondary flex items-center justify-center text-white shadow-lg shadow-proton-secondary/20">
+             <div className="w-12 h-12 rounded-2xl bg-proton-secondary flex items-center justify-center text-proton-on-secondary shadow-lg shadow-proton-secondary/20">
                 <ShieldAlert size={28} />
              </div>
              <div>
@@ -1206,7 +1222,7 @@ const DashboardView = ({
                     recentHistory.slice(0, 3).map((item, i) => (
                       <div key={i} className="flex flex-col gap-6 p-8 rounded-[32px] bg-proton-bg border border-proton-border hover:border-proton-accent/30 transition-all group">
                          <div className="flex items-center gap-4">
-                           <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent font-bold text-xl shadow-inner group-hover:bg-proton-accent group-hover:text-white transition-all duration-500">
+                           <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent font-bold text-xl shadow-inner group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
                               {item.personaName?.charAt(0)}
                            </div>
                            <div>
@@ -1228,13 +1244,13 @@ const DashboardView = ({
 
         {uiMode === 'operator' && (
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-proton-accent p-8 rounded-[40px] text-white space-y-6 shadow-2xl shadow-proton-accent/20 relative overflow-hidden">
+            <div className="bg-proton-accent p-8 rounded-[40px] text-proton-on-accent space-y-6 shadow-2xl shadow-proton-accent/20 relative overflow-hidden">
                <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
                   <Activity size={100} />
                </div>
                <div className="space-y-2 relative z-10">
                   <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.system_status}</h3>
-                  <p className="text-sm text-white/80 font-medium">{t.dashboard.system_status_desc}</p>
+                  <p className="text-sm text-proton-on-accent/80 font-medium">{t.dashboard.system_status_desc}</p>
                </div>
                <div className="space-y-4 pt-4 relative z-10">
                   <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em]">
@@ -1379,6 +1395,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
   const [network, setNetwork] = useState<{ downlink: number; rtt: number; type: string } | null>(null);
   const [orientation, setOrientation] = useState<{ alpha: number; beta: number; gamma: number } | null>(null);
+  const [permissionRequested, setPermissionRequested] = useState(false);
   const [hardware, setHardware] = useState<{ cores: number; memory: number; platform: string }>({
     cores: navigator.hardwareConcurrency || 0,
     memory: (navigator as any).deviceMemory || 0,
@@ -1392,7 +1409,21 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     orientation: 'DeviceOrientationEvent' in window
   });
 
-  const requestHardwareAccess = () => {
+  const requestHardwareAccess = async () => {
+    setPermissionRequested(true);
+    
+    // iOS DeviceOrientation permission handling
+    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      try {
+        const permission = await (DeviceOrientationEvent as any).requestPermission();
+        if (permission === 'granted') {
+          setSupported(prev => ({ ...prev, orientation: true }));
+        }
+      } catch (err) {
+        console.error("Orientation permission denied:", err);
+      }
+    }
+
     if (supported.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ 
@@ -1445,178 +1476,183 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   }, []);
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
-        <div className="space-y-3 text-center md:text-left">
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text uppercase">
+    <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20 px-4 md:px-0">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4">
+        <div className="space-y-2 text-center md:text-left">
+          <h1 className="text-3xl md:text-6xl font-black tracking-tighter text-proton-text uppercase">
             Hardware Matrix
           </h1>
-          <p className="text-proton-muted text-lg font-medium max-w-xl">
-            Real-time neural telemetry and apparatus system diagnostics.
+          <p className="text-proton-muted text-base md:text-lg font-medium max-w-xl">
+            Real-time diagnostics and device telemetry optimization.
           </p>
         </div>
-        <button 
-          onClick={requestHardwareAccess}
-          className="flex items-center gap-3 px-8 py-4 bg-proton-accent text-proton-on-accent rounded-full font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all"
-        >
-          <RefreshCw size={20} className="animate-spin-slow" />
-          Re-calibrate Sensors
-        </button>
+        {!permissionRequested ? (
+          <button 
+            onClick={requestHardwareAccess}
+            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base"
+          >
+            <RefreshCw size={20} className="animate-spin-slow" />
+            Enable System Access
+          </button>
+        ) : (
+          <div className="text-[10px] bg-proton-border/50 text-proton-muted px-4 py-2 rounded-full font-black uppercase tracking-widest border border-proton-border">
+            Nodes Synchronized
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Battery / Power Core */}
-        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Zap size={80} />
+        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Zap size={60} />
           </div>
-          <div className="space-y-6 relative z-10">
+          <div className="space-y-4 md:space-y-6 relative z-10">
             <div className="flex items-center justify-between">
               <div className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
                 battery ? "bg-cyan-400/10 text-cyan-400" : "bg-proton-bg text-proton-muted"
               )}>
-                {battery?.charging ? <Zap size={24} className="animate-pulse fill-cyan-400" /> : <Zap size={24} />}
+                {battery?.charging ? <Zap size={20} className="animate-pulse fill-cyan-400" /> : <Zap size={20} />}
               </div>
               <div className="flex items-center gap-2">
                 <div className={cn("w-2 h-2 rounded-full", battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
-                <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest">
-                  {supported.battery ? (battery ? 'Optimal' : 'Pending') : 'Incompatible'}
+                <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
+                  {supported.battery ? (battery ? (battery.level > 0.2 ? 'Healthy' : 'Critical') : 'Syncing') : 'Locked'}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-6">
-              <div className="relative w-24 h-24 shrink-0">
+            <div className="flex items-center gap-4 md:gap-6">
+              <div className="relative w-16 h-16 md:w-24 md:h-24 shrink-0">
                 <svg className="w-full h-full -rotate-90 transform">
                   <circle
-                    cx="48"
-                    cy="48"
-                    r="40"
+                    cx="50%"
+                    cy="50%"
+                    r="40%"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="transparent"
                     className="text-proton-bg"
                   />
                   <motion.circle
-                    initial={{ strokeDasharray: "0, 251.2" }}
-                    animate={{ strokeDasharray: `${(battery?.level || 0) * 251.2}, 251.2` }}
+                    initial={{ strokeDasharray: "0, 100" }}
+                    animate={{ strokeDasharray: `${(battery?.level || 0) * 100}, 100` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
-                    cx="48"
-                    cy="48"
-                    r="40"
+                    cx="50%"
+                    cy="50%"
+                    r="40%"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     strokeLinecap="round"
                     fill="transparent"
-                    className="text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]"
+                    className="text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.3)]"
+                    pathLength="100"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl font-black text-proton-text tabular-nums leading-none">
-                    {supported.battery ? (battery ? Math.round(battery.level * 100) : '...') : 'N/A'}
+                  <span className="text-sm md:text-xl font-black text-proton-text tabular-nums leading-none">
+                    {supported.battery ? (battery ? Math.round(battery.level * 100) : '...') : '--'}
                   </span>
-                  {supported.battery && battery && (
-                    <span className="text-[8px] font-black text-cyan-400 opacity-50 uppercase tracking-widest mt-1">%</span>
-                  )}
                 </div>
               </div>
-              <div>
-                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Power Core</h4>
-                <p className="text-[9px] font-bold text-proton-muted uppercase tracking-widest">
-                  {supported.battery ? (battery ? (battery.charging ? 'Neural Charge Inbound' : 'Native Discharge') : 'Searching Network...') : 'Hardware Lock Active'}
+              <div className="min-w-0">
+                <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 truncate">Power Core</h4>
+                <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-tight">
+                  {battery?.charging ? 'Charging Active' : 'Native Battery'}
                 </p>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className={cn("w-1.5 h-1.5 rounded-full", battery?.charging ? "bg-cyan-400" : "bg-proton-border")} />
-                  <span className="text-[8px] font-black text-proton-muted uppercase tracking-widest">
-                    {battery?.charging ? 'Hyper-Charge Active' : 'Offline Stasis'}
-                  </span>
-                </div>
+                <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase leading-tight">
+                  {battery ? (battery.level * 100 > 50 ? 'Operating Level Full' : 'Optimization Advised') : 'Awaiting Telemetry'}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Compute Units (CPU) */}
-        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Cpu size={80} />
+        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Cpu size={60} />
           </div>
-          <div className="space-y-6 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-purple-400/10 flex items-center justify-center text-purple-400">
-              <Cpu size={24} />
+          <div className="space-y-4 md:space-y-6 relative z-10">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-purple-400/10 flex items-center justify-center text-purple-400">
+              <Cpu size={20} />
             </div>
             <div>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Compute Units</h4>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Compute Units</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
-                <span className="text-lg font-black text-purple-400 opacity-50">{hardware.cores ? 'Unit Core' : ''}</span>
+                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
+                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? 'Core' : ''}</span>
               </div>
-              <div className="mt-4 flex gap-1">
+              <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
+                {hardware.cores ? 'Processor Nominal' : 'Detecting...'}
+              </p>
+              <div className="mt-3 flex gap-1">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className={cn("h-1 flex-1 rounded-full", hardware.cores && i < (hardware.cores/2) ? "bg-purple-400" : "bg-proton-bg")} />
                 ))}
               </div>
-              <p className="mt-4 text-[9px] font-bold text-proton-muted uppercase tracking-widest truncate">
-                Level: <span className="text-purple-400">{hardware.cores ? 'Stable Architecture' : 'Data Masked'}</span>
-              </p>
             </div>
           </div>
         </div>
 
         {/* Memory Allocation (RAM) */}
-        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Database size={80} />
+        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Database size={60} />
           </div>
-          <div className="space-y-6 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-blue-400/10 flex items-center justify-center text-blue-400">
-              <Database size={24} />
+          <div className="space-y-4 md:space-y-6 relative z-10">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-blue-400/10 flex items-center justify-center text-blue-400">
+              <Database size={20} />
             </div>
             <div>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Memory Matrix</h4>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Memory Matrix</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-proton-text tracking-tighter">{hardware.memory || 'N/A'}</span>
-                <span className="text-lg font-black text-blue-400 opacity-50">{hardware.memory ? 'GB RAM' : ''}</span>
+                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.memory || 'N/A'}</span>
+                <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? 'GB' : ''}</span>
               </div>
-              <div className="flex items-center gap-3 mt-4">
-                  <div className="flex-1 h-1.5 bg-proton-bg rounded-full overflow-hidden">
-                    <div className={cn("h-full bg-blue-400", hardware.memory ? "w-1/3" : "w-0")} />
-                  </div>
-                  <span className="text-[10px] font-bold text-blue-400">{hardware.memory ? 'Verified' : 'N/A'}</span>
-              </div>
-              <p className="mt-4 text-[9px] font-bold text-proton-muted uppercase tracking-widest">
-                Platform: {hardware.platform || 'N/A'}
+              <p className="mt-2 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
+                {hardware.memory ? 'Memory Balanced' : 'Encrypted'}
               </p>
+              <div className="flex items-center gap-3 mt-3">
+                  <div className="flex-1 h-1.5 bg-proton-bg rounded-full overflow-hidden">
+                    <div className={cn("h-full bg-blue-400/60", hardware.memory ? "w-1/3" : "w-0")} />
+                  </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Network Uplink */}
-        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Globe size={80} />
+        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <Globe size={60} />
           </div>
-          <div className="space-y-6 relative z-10">
+          <div className="space-y-4 md:space-y-6 relative z-10">
             <div className="flex items-center justify-between">
               <div className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
                 network ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
               )}>
-                <Wifi size={24} />
+                <Wifi size={20} />
               </div>
               <div className="flex items-center gap-2">
                 <div className={cn("w-2 h-2 rounded-full animate-pulse", network ? "bg-green-400" : "bg-gray-600")} />
-                <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{network ? 'Uplink' : 'Searching'}</span>
+                <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
+                  {network ? (network.downlink > 10 ? 'Broadband' : 'Mobile Data') : 'Searching'}
+                </span>
               </div>
             </div>
             <div>
-              <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Network Stream</h4>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Comm Stream</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.type || 'N/A'}</span>
-                <span className="text-lg font-black text-green-400 opacity-50">{network?.type ? 'Link' : ''}</span>
+                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.type || 'N/A'}</span>
+                <span className="text-xs font-black text-green-400 opacity-50">{network ? 'Active Path' : ''}</span>
               </div>
-              <p className="mt-4 text-[9px] font-bold text-proton-muted uppercase tracking-widest">
-                Speed: <span className="text-green-400">{network?.downlink ? `${network.downlink} MBPS` : 'N/A'}</span>
+              <p className="mt-2 text-[10px] font-bold text-green-400 uppercase tracking-tight">
+                {network?.downlink ? `${network.downlink} MBPS Download` : 'Waiting for link...'}
+              </p>
+              <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
+                Latency: {network?.rtt ? `${network.rtt}ms Response` : '--'}
               </p>
             </div>
           </div>
@@ -1626,43 +1662,44 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <LocalFileScanner t={t} />
         
-        <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative group">
-           <div className="absolute top-0 right-0 p-10 opacity-[0.02] pointer-events-none group-hover:scale-95 transition-transform duration-1000">
+        <div className="bg-proton-card p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative group">
+           <div className="absolute top-0 right-0 p-6 md:p-10 opacity-[0.02] pointer-events-none group-hover:scale-95 transition-transform duration-1000">
             <MapPin size={240} />
           </div>
-          <div className="relative z-10 space-y-8">
+          <div className="relative z-10 space-y-6 md:space-y-8">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h3 className="text-2xl font-black tracking-tighter text-proton-text uppercase flex items-center gap-3">
+                <h3 className="text-xl md:text-2xl font-black tracking-tighter text-proton-text uppercase flex items-center gap-3">
                   <MapPin className="text-cyan-400" size={24} />
-                  Geo-spatial Positioning
+                  Geo-spatial
                 </h3>
-                <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">Global Coordinate Hash</p>
+                <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">Global Positioning</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <div className="p-8 rounded-[32px] bg-proton-bg border border-proton-border space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+              <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Latitude</p>
-                <div className="text-3xl font-mono text-proton-text tracking-tighter truncate">
+                <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
                   {location?.lat.toFixed(6) || 'Scanning...'}
                 </div>
               </div>
-              <div className="p-8 rounded-[32px] bg-proton-bg border border-proton-border space-y-4">
+              <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Longitude</p>
-                <div className="text-3xl font-mono text-proton-text tracking-tighter truncate">
+                <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
                   {location?.lng.toFixed(6) || 'Scanning...'}
                 </div>
               </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center text-cyan-400">
+            <div className="p-4 md:p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center text-cyan-400 shrink-0">
                 <ShieldCheck size={20} />
               </div>
-              <p className="text-[10px] font-bold text-cyan-400/80 uppercase tracking-widest leading-relaxed">
-                Precision Lock: Orbital sync verified. Signal strength nominal.
-              </p>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Location Secured</p>
+                <p className="text-[9px] font-medium text-proton-muted uppercase truncate">Precision Orbital Sync Verified</p>
+              </div>
             </div>
           </div>
         </div>
@@ -2732,7 +2769,7 @@ const CabinetView = ({
                     )}
                   </div>
                 </div>
-                <button className="absolute -bottom-2 -right-2 w-12 h-12 bg-proton-accent text-white rounded-3xl flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-all border-4 border-proton-bg">
+                <button className="absolute -bottom-2 -right-2 w-12 h-12 bg-proton-accent text-proton-on-accent rounded-3xl flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-all border-4 border-proton-bg">
                   <Edit3 size={20} />
                 </button>
               </div>
@@ -2837,14 +2874,14 @@ const CabinetView = ({
             </div>
           </div>
 
-          <div className="bg-proton-accent p-10 rounded-[50px] text-white flex flex-col justify-between shadow-2xl shadow-proton-accent/20 relative overflow-hidden group">
+          <div className="bg-proton-accent p-10 rounded-[50px] text-proton-on-accent flex flex-col justify-between shadow-2xl shadow-proton-accent/20 relative overflow-hidden group">
              <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none group-hover:scale-110 transition-transform duration-700">
                 <Shield size={180} />
              </div>
              
              <div className="space-y-2 relative z-10">
                 <h3 className="text-3xl font-black tracking-tight uppercase leading-none">{cab.subscription}</h3>
-                <p className="text-sm font-bold text-white/70 uppercase tracking-widest">{cab.tier_pro}</p>
+                <p className="text-sm font-bold text-proton-on-accent/70 uppercase tracking-widest">{cab.tier_pro}</p>
              </div>
 
              <div className="space-y-6 pt-10 relative z-10">
@@ -2992,7 +3029,7 @@ const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMod
         onClick={() => setMode('operator')}
         className={cn(
           "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
-          mode === 'operator' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+          mode === 'operator' ? "text-proton-on-accent" : "text-proton-muted hover:text-proton-text"
         )}
       >
         {mode === 'operator' && (
@@ -3010,7 +3047,7 @@ const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMod
         onClick={() => setMode('artisan')}
         className={cn(
           "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
-          mode === 'artisan' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+          mode === 'artisan' ? "text-proton-on-accent" : "text-proton-muted hover:text-proton-text"
         )}
       >
         {mode === 'artisan' && (
@@ -4017,7 +4054,7 @@ export default function App() {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="relative bg-proton-card w-full max-w-lg rounded-[50px] border border-proton-border shadow-2xl overflow-hidden"
             >
-              <div className="w-full bg-proton-accent p-8 text-white relative">
+              <div className="w-full bg-proton-accent p-8 text-proton-on-accent relative">
                 <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
                   <Activity size={120} />
                 </div>
@@ -4029,7 +4066,7 @@ export default function App() {
                     <span className="text-xs font-bold uppercase tracking-[0.3em] opacity-80">{t.dashboard.optimization_title}</span>
                   </div>
                   <h3 className="text-3xl font-black tracking-tighter uppercase">{t.dashboard.system_sync}</h3>
-                  <p className="text-sm text-white/80 font-medium max-w-xs">{t.dashboard.optimization_desc}</p>
+                  <p className="text-sm text-proton-on-accent/80 font-medium max-w-xs">{t.dashboard.optimization_desc}</p>
                 </div>
               </div>
 
@@ -4081,7 +4118,7 @@ export default function App() {
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button 
                     onClick={() => setShowOptimizationModal(false)}
-                    className="flex-1 py-5 bg-proton-accent text-white rounded-[32px] font-bold text-sm shadow-2xl shadow-proton-accent/30 hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em]"
+                    className="flex-1 py-5 bg-proton-accent text-proton-on-accent rounded-[32px] font-bold text-sm shadow-2xl shadow-proton-accent/30 hover:brightness-110 active:scale-95 transition-all uppercase tracking-[0.2em]"
                   >
                     {t.dashboard.optimization_btn}
                   </button>
