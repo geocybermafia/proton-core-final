@@ -1026,13 +1026,13 @@ const OrganizerView = ({
                   className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-proton-accent transition-all"
                 />
                 <button type="submit" className="w-full py-3 rounded-xl bg-proton-accent text-proton-on-accent font-bold text-sm shadow-lg shadow-proton-accent/20">
-                   Add Task
+                   {translations[language].common.add}
                 </button>
              </form>
 
              <div className="space-y-3">
                 {filteredTasks.length === 0 ? (
-                  <p className="text-center py-8 text-proton-muted font-medium italic text-xs">No tasks found.</p>
+                  <p className="text-center py-8 text-proton-muted font-medium italic text-xs">{translations[language].organizer.no_tasks}</p>
                 ) : (
                   filteredTasks.map(task => (
                     <div key={task.id} className="flex items-center gap-4 p-4 rounded-xl bg-proton-bg border border-proton-border group">
@@ -1281,13 +1281,13 @@ const DashboardView = ({
                   <Database size={120} />
                </div>
                <div className="space-y-3 relative z-10">
-                  <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">Core Intelligence Stream</h3>
+                  <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">{t.dashboard.core_intelligence}</h3>
                   <LivePulseLog />
                </div>
                
                <div className="pt-4 border-t border-proton-border/50 relative z-10">
                   <p className="text-[10px] text-proton-muted leading-relaxed font-bold font-sans uppercase tracking-widest opacity-40">
-                    Proton Infrastructure: Stage 4 Active
+                    {t.dashboard.infrastructure}: {t.dashboard.stage_active}
                   </p>
                </div>
             </div>
@@ -1480,10 +1480,10 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4">
         <div className="space-y-2 text-center md:text-left">
           <h1 className="text-3xl md:text-6xl font-black tracking-tighter text-proton-text uppercase">
-            Hardware Matrix
+            {t.title}
           </h1>
           <p className="text-proton-muted text-base md:text-lg font-medium max-w-xl">
-            Real-time diagnostics and device telemetry optimization.
+            {t.description}
           </p>
         </div>
         {!permissionRequested ? (
@@ -1492,11 +1492,11 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base"
           >
             <RefreshCw size={20} className="animate-spin-slow" />
-            Enable System Access
+            {t.request_access}
           </button>
         ) : (
           <div className="text-[10px] bg-proton-border/50 text-proton-muted px-4 py-2 rounded-full font-black uppercase tracking-widest border border-proton-border">
-            Nodes Synchronized
+            {t.status_active}
           </div>
         )}
       </div>
@@ -1518,7 +1518,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="flex items-center gap-2">
                 <div className={cn("w-2 h-2 rounded-full", battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {supported.battery ? (battery ? (battery.level > 0.2 ? 'Healthy' : 'Critical') : 'Syncing') : 'Locked'}
+                  {supported.battery ? (battery ? (battery.level > 0.2 ? t.status_healthy : t.status_critical) : t.status_syncing) : t.status_locked}
                 </span>
               </div>
             </div>
@@ -1556,12 +1556,12 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                 </div>
               </div>
               <div className="min-w-0">
-                <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 truncate">Power Core</h4>
+                <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 truncate">{t.battery}</h4>
                 <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-tight">
-                  {battery?.charging ? 'Charging Active' : 'Native Battery'}
+                  {battery?.charging ? t.charging : t.discharging}
                 </p>
                 <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase leading-tight">
-                  {battery ? (battery.level * 100 > 50 ? 'Operating Level Full' : 'Optimization Advised') : 'Awaiting Telemetry'}
+                  {battery ? (battery.level * 100 > 50 ? t.optimal : t.optimization) : t.awaiting}
                 </p>
               </div>
             </div>
@@ -1578,13 +1578,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <Cpu size={20} />
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Compute Units</h4>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.compute}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
                 <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? 'Core' : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
-                {hardware.cores ? 'Processor Nominal' : 'Detecting...'}
+                {hardware.cores ? t.status_healthy : t.status_syncing}
               </p>
               <div className="mt-3 flex gap-1">
                 {Array.from({ length: 8 }).map((_, i) => (
@@ -1605,13 +1605,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <Database size={20} />
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Memory Matrix</h4>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.memory}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.memory || 'N/A'}</span>
                 <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? 'GB' : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
-                {hardware.memory ? 'Memory Balanced' : 'Encrypted'}
+                {hardware.memory ? t.status_healthy : t.status_syncing}
               </p>
               <div className="flex items-center gap-3 mt-3">
                   <div className="flex-1 h-1.5 bg-proton-bg rounded-full overflow-hidden">
@@ -1638,21 +1638,21 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="flex items-center gap-2">
                 <div className={cn("w-2 h-2 rounded-full animate-pulse", network ? "bg-green-400" : "bg-gray-600")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {network ? (network.downlink > 10 ? 'Broadband' : 'Mobile Data') : 'Searching'}
+                  {network ? (network.downlink > 10 ? 'Broadband' : 'Mobile Data') : t.status_syncing}
                 </span>
               </div>
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Comm Stream</h4>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.network}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.type || 'N/A'}</span>
                 <span className="text-xs font-black text-green-400 opacity-50">{network ? 'Active Path' : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-green-400 uppercase tracking-tight">
-                {network?.downlink ? `${network.downlink} MBPS Download` : 'Waiting for link...'}
+                {network?.downlink ? `${network.downlink} MBPS ${t.downlink}` : t.awaiting}
               </p>
               <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
-                Latency: {network?.rtt ? `${network.rtt}ms Response` : '--'}
+                {t.rtt}: {network?.rtt ? `${network.rtt}ms` : '--'}
               </p>
             </div>
           </div>
@@ -1671,21 +1671,21 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="space-y-1">
                 <h3 className="text-xl md:text-2xl font-black tracking-tighter text-proton-text uppercase flex items-center gap-3">
                   <MapPin className="text-cyan-400" size={24} />
-                  Geo-spatial
+                  {t.geo_title}
                 </h3>
-                <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">Global Positioning</p>
+                <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{t.geo_subtitle}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
               <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Latitude</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lat}</p>
                 <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
                   {location?.lat.toFixed(6) || 'Scanning...'}
                 </div>
               </div>
               <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Longitude</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lng}</p>
                 <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
                   {location?.lng.toFixed(6) || 'Scanning...'}
                 </div>
@@ -1697,8 +1697,8 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                 <ShieldCheck size={20} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Location Secured</p>
-                <p className="text-[9px] font-medium text-proton-muted uppercase truncate">Precision Orbital Sync Verified</p>
+                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{t.location_secured}</p>
+                <p className="text-[9px] font-medium text-proton-muted uppercase truncate">{t.location_sync}</p>
               </div>
             </div>
           </div>
@@ -1714,13 +1714,17 @@ const PersonasView = ({
   history, 
   onNewMessage,
   customAvatars,
+  onUpdateAvatar,
   personas,
+  onUpdatePersonas,
   aiSettings,
   setLastGeminiMetadata,
   workflows,
   tasks,
+  uiMode,
   isSystemActive,
-  initialPersonaId
+  initialPersonaId,
+  language
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -1729,12 +1733,13 @@ const PersonasView = ({
   personas: Persona[],
   onUpdatePersonas: (personas: Persona[]) => void,
   aiSettings: GlobalAiSettings,
-  setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
+  setLastGeminiMetadata: (m: any) => void,
   workflows: Workflow[],
   tasks: Task[],
   uiMode: 'operator' | 'artisan',
   isSystemActive: boolean,
-  initialPersonaId?: string | null
+  initialPersonaId?: string | null,
+  language: 'en' | 'ka'
 }) => {
   const [selectedPersona, setSelectedPersona] = useState<Persona>(() => {
     if (initialPersonaId) {
@@ -1802,12 +1807,15 @@ const PersonasView = ({
     }
   };
 
+  const profile = personas.find(p => p.id === selectedPersona.id) || selectedPersona;
+  const t = translations[language].personas;
+
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-12rem)] gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
       <div className="w-full lg:w-80 space-y-6 flex flex-col h-full">
          <div className="space-y-4">
-            <h2 className="text-3xl font-black tracking-tighter">Team Directory</h2>
-            <p className="text-sm font-medium text-proton-muted">Collaborate with specialized AI personnel designed for your business needs.</p>
+            <h2 className="text-3xl font-black tracking-tighter">{t.title}</h2>
+            <p className="text-sm font-medium text-proton-muted">{t.description}</p>
          </div>
 
          <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
@@ -1847,7 +1855,7 @@ const PersonasView = ({
             </div>
             <div className="flex items-center gap-2">
                <div className={cn("w-2 h-2 rounded-full", isSystemActive ? "bg-green-500 animate-pulse" : "bg-proton-muted")} />
-               <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isSystemActive ? 'Available' : 'Busy'}</span>
+               <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isSystemActive ? t.available : t.busy}</span>
             </div>
          </div>
 
@@ -1855,7 +1863,7 @@ const PersonasView = ({
             {messages.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-20">
                   <MessageSquare size={48} className="mb-4 text-proton-muted" />
-                  <p className="text-sm font-bold uppercase tracking-[0.2em]">Start a conversation with {selectedPersona.name}</p>
+                  <p className="text-sm font-bold uppercase tracking-[0.2em]">{t.start_convo.replace('{name}', selectedPersona.name)}</p>
                </div>
             ) : (
                messages.map((m, i) => (
@@ -1884,7 +1892,7 @@ const PersonasView = ({
                  value={input}
                  onChange={(e) => setInput(e.target.value)}
                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                 placeholder={`Consult with ${selectedPersona.name}...`}
+                 placeholder={t.chat_placeholder.replace('{name}', selectedPersona.name)}
                  disabled={!isSystemActive || loading}
                  className="w-full bg-proton-card border border-proton-border rounded-2xl px-6 py-4 pr-16 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-proton-accent/20 focus:border-proton-accent transition-all shadow-inner"
                />
@@ -1905,8 +1913,9 @@ const PersonasView = ({
   );
 };
 
-const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
+const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', language: 'en' | 'ka' }) => {
   const { address, isConnected } = useAccount();
+  const t = translations[language].finance;
   const { data: balance } = useBalance({
     address: address,
   });
@@ -1933,16 +1942,16 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-proton-muted" />
-                <span className="text-xs font-semibold text-proton-muted uppercase tracking-widest">Disconnected</span>
+                <span className="text-xs font-semibold text-proton-muted uppercase tracking-widest">{t.disconnected}</span>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">Payments & Settlement</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{t.title}</h2>
               <p className="text-sm text-proton-muted leading-relaxed">
-                Connect your secure wallet to access the Proton Hub financial services and managed compute credits.
+                {t.connect_msg}
               </p>
             </div>
 
             <div className="pt-4 flex justify-center">
-              <ConnectButton label="Connect Wallet" />
+              <ConnectButton label={t.connect_btn} />
             </div>
 
             <p className="text-[10px] text-proton-muted/40 font-semibold uppercase tracking-[0.2em] pt-8">
@@ -1955,15 +1964,15 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div className="space-y-1">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Payments & Settlement</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{t.title}</h2>
               <p className="text-proton-muted text-sm leading-relaxed max-w-md">
-                 AI სერვისებისა და ბიზნეს პროცესების ფინანსური მართვა ქართულ და გლობალურ ჭრილში.
+                 {t.description}
               </p>
             </div>
             <div className="flex items-center gap-3 bg-proton-card p-1.5 pl-4 rounded-2xl border border-proton-border">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-semibold text-green-500 uppercase tracking-[0.2em]">Online</span>
+                <span className="text-[10px] font-semibold text-green-500 uppercase tracking-[0.2em]">{language === 'ka' ? 'ონლაინ' : 'Online'}</span>
               </div>
               <ConnectButton />
             </div>
@@ -1979,7 +1988,7 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                    <div className="relative z-10 space-y-8">
                       <div className="flex items-center justify-between">
                           <div className="space-y-1">
-                              <h3 className="text-sm font-mono font-bold uppercase tracking-[0.2em] text-proton-muted">Active Global Treasury</h3>
+                              <h3 className="text-sm font-mono font-bold uppercase tracking-[0.2em] text-proton-muted">{t.treasury}</h3>
                               <p className="text-3xl md:text-5xl font-bold tracking-tighter">
                                   {balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} <span className="text-proton-accent">{balance?.symbol}</span>
                               </p>
@@ -2020,11 +2029,11 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                             <FileText size={24} />
                         </div>
                         <div>
-                            <h4 className="font-bold text-lg">Smart Invoicing</h4>
-                            <p className="text-xs text-proton-muted uppercase tracking-tighter">შექმენით ინვოისი AI სერვისებისთვის</p>
+                            <h4 className="font-bold text-lg">{t.smart_invoicing}</h4>
+                            <p className="text-xs text-proton-muted uppercase tracking-tighter">{t.invoice_desc}</p>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono text-proton-accent uppercase tracking-[0.2em] font-bold pt-2">
-                            Generate Now <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                             {t.generate_now} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                         </div>
                     </button>
 
@@ -2033,11 +2042,11 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                             <Globe size={24} />
                         </div>
                         <div>
-                            <h4 className="font-bold text-lg">NBG Real-time Rate</h4>
-                            <p className="text-xs text-proton-muted">კურსი: $1 = {gelRate} GEL</p>
+                             <h4 className="font-bold text-lg">{t.nbg_rate}</h4>
+                             <p className="text-xs text-proton-muted">{language === 'ka' ? 'კურსი' : 'Rate'}: $1 = {gelRate} GEL</p>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono text-proton-secondary uppercase tracking-[0.2em] font-bold pt-2">
-                            Synced with Central Bank
+                             {t.nbg_sync}
                         </div>
                     </div>
                 </div>
@@ -2046,7 +2055,7 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
             {/* Sidebar Section: Exchanges & Info */}
             <div className="space-y-6">
                 <div className="proton-glass p-6 rounded-[32px] border border-white/5 space-y-6">
-                    <h4 className="text-[11px] font-mono font-bold text-proton-muted uppercase tracking-[0.3em]">Local Off-Ramps</h4>
+                    <h4 className="text-[11px] font-mono font-bold text-proton-muted uppercase tracking-[0.3em]">{t.off_ramps}</h4>
                     <div className="space-y-4">
                         {[
                             { name: 'Cryptal', desc: 'Secure P2P & Instant GEL', url: 'https://cryptal.com' },
@@ -2070,7 +2079,7 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                     </div>
                     <div className="p-4 rounded-2xl bg-proton-accent/5 border border-proton-accent/10">
                         <p className="text-[10px] leading-relaxed text-proton-muted italic">
-                            NBG რეგულაციების შესაბამისად, კრიპტო-აქტივების განაღდება შესაძლებელია მხოლოდ ლიცენზირებულ სერვის-პროვაიდერებთან.
+                             {t.off_ramps_notice}
                         </p>
                     </div>
                 </div>
@@ -2080,7 +2089,7 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
                         <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
                            <Activity size={16} />
                         </div>
-                        <h4 className="font-bold text-sm">Blockchain Ledger</h4>
+                        <h4 className="font-bold text-sm">{t.ledger}</h4>
                     </div>
                     <div className="space-y-3">
                         <div className="flex justify-between text-[10px] opacity-60">
@@ -2178,10 +2187,11 @@ const Web3View = ({ uiMode }: { uiMode: 'operator' | 'artisan' }) => {
 
 
 
-const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'artisan', isSystemActive?: boolean }) => {
+const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'operator' | 'artisan', isSystemActive?: boolean, language: 'en' | 'ka' }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const t = translations[language].image_studio;
 
   const handleGenerate = async () => {
     if (!isSystemActive || !prompt.trim()) return;
@@ -2192,9 +2202,9 @@ const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'ar
     } catch (error: any) {
       console.error(error);
       if (error?.message?.includes('PROHIBITED_CONTENT') || error?.toString().includes('PROHIBITED_CONTENT')) {
-        alert("We couldn't generate that image because it violates safety policies. Please try a different prompt.");
+        alert(t.safety_error);
       } else {
-        alert("Failed to generate image. Please try again.");
+        alert(t.fail_error);
       }
     } finally {
       setLoading(false);
@@ -2204,8 +2214,8 @@ const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'ar
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Image Studio</h2>
-        <p className="text-proton-muted text-sm mt-1">Create and edit images with Gemini</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t.title}</h2>
+        <p className="text-proton-muted text-sm mt-1">{t.subtitle}</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
         <div className="proton-glass p-4 sm:p-6 md:p-8 rounded-3xl space-y-6">
@@ -2213,7 +2223,7 @@ const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'ar
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={!isSystemActive}
-            placeholder={isSystemActive ? "Describe the image you want to create or edit..." : "Image Studio is offline during system recalibration."}
+            placeholder={isSystemActive ? t.placeholder : t.offline}
             className={cn(
               "w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 md:h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30",
               !isSystemActive && "opacity-50"
@@ -2227,18 +2237,18 @@ const ImageView = ({ uiMode, isSystemActive = true }: { uiMode: 'operator' | 'ar
             {loading ? (
                 <>
                     <Loader2 size={18} className="animate-spin" />
-                    Generating...
+                    {t.generating}
                 </>
             ) : (
                 isSystemActive ? (
                 <>
                     <Zap size={18} />
-                    Generate Image
+                    {t.generate_btn}
                 </>
                 ) : (
                 <>
                     <Lock size={18} />
-                    Limited Mode
+                    {t.limited}
                 </>
                 )
             )}
@@ -2260,16 +2270,19 @@ const WorkflowEditor = ({
   onSave,
   onClose,
   personas,
-  uiMode
+  uiMode,
+  language
 }: {
   workflow: Workflow,
   onSave: (workflow: Workflow) => void,
   onClose: () => void,
   personas: Persona[],
-  uiMode: 'operator' | 'artisan'
+  uiMode: 'operator' | 'artisan',
+  language: 'en' | 'ka'
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
   const [editorMode, setEditorMode] = useState<'form' | 'flow'>('form');
+  const t = translations[language].editor;
 
   return (
     <motion.div 
@@ -2290,7 +2303,7 @@ const WorkflowEditor = ({
                <Edit2 size={22} />
             </div>
             <div>
-               <h3 className="text-xl font-bold tracking-tight">Edit Workflow</h3>
+               <h3 className="text-xl font-bold tracking-tight">{t.title}</h3>
                <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">ID: {formData.id?.slice(-6)}</p>
             </div>
           </div>
@@ -2302,7 +2315,7 @@ const WorkflowEditor = ({
                     editorMode === 'form' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
                 )}
              >
-                PROX PROPS
+                {t.prox_props}
              </button>
              <button 
                 onClick={() => setEditorMode('flow')} 
@@ -2311,7 +2324,7 @@ const WorkflowEditor = ({
                     editorMode === 'flow' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
                 )}
              >
-                FLOW DESIGN
+                {t.flow_design}
              </button>
           </div>
         </div>
@@ -2319,36 +2332,36 @@ const WorkflowEditor = ({
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
-                <span>Name / სახელი</span>
-                <span className="opacity-50">Required</span>
+                <span>{t.name}</span>
+                <span className="opacity-50">{t.required}</span>
               </label>
               <input 
                 type="text" 
                 value={formData.name}
                 onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Workflow title..."
+                placeholder={t.placeholder_title}
                 className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all shadow-inner"
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Trigger / ტრიგერი</label>
+                  <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.trigger}</label>
                   <input 
                     type="text" 
                     value={formData.trigger}
                     onChange={e => setFormData(prev => ({ ...prev, trigger: e.target.value }))}
-                    placeholder="Event that starts it..."
+                    placeholder={t.trigger_placeholder}
                     className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all shadow-inner"
                   />
-                  <p className="text-[9px] text-proton-muted italic px-1">მაგ: ახალი შეტყობინება</p>
+                  <p className="text-[9px] text-proton-muted italic px-1">{t.trigger_example}</p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Action / მოქმედება</label>
+                  <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.action}</label>
                   <input 
                     type="text" 
                     value={formData.action}
                     onChange={e => setFormData(prev => ({ ...prev, action: e.target.value }))}
-                    placeholder="Final action..."
+                    placeholder={t.action_placeholder}
                     className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all shadow-inner"
                   />
                 </div>
@@ -2357,7 +2370,7 @@ const WorkflowEditor = ({
             {/* Workflow Steps Management */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Execution Steps / პროცესის ნაბიჯები</label>
+                <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.steps}</label>
                 <button 
                   onClick={() => {
                     const newStep: WorkflowStep = { id: Date.now().toString(), label: 'New Step', description: 'Step description' };
@@ -2365,13 +2378,13 @@ const WorkflowEditor = ({
                   }}
                   className="text-[10px] font-bold text-proton-accent hover:underline flex items-center gap-1"
                 >
-                  <Plus size={12} /> ADD STEP
+                  <Plus size={12} /> {t.add_step}
                 </button>
               </div>
               <div className="space-y-2">
                 {(formData.steps || []).length === 0 && (
                   <div className="p-4 rounded-xl border border-dashed border-proton-border/50 text-center text-[10px] text-proton-muted italic font-mono">
-                    No intermediate steps defined. Trigger will lead directly to action.
+                    {t.no_steps}
                   </div>
                 )}
                 {(formData.steps || []).map((step, idx) => (
@@ -2388,7 +2401,7 @@ const WorkflowEditor = ({
                           setFormData(prev => ({ ...prev, steps: newSteps }));
                         }}
                         className="bg-transparent border-none p-0 text-xs font-bold w-full focus:outline-none text-proton-text"
-                        placeholder="Step label..."
+                        placeholder={t.step_label}
                       />
                       <input 
                         value={step.description}
@@ -2398,7 +2411,7 @@ const WorkflowEditor = ({
                           setFormData(prev => ({ ...prev, steps: newSteps }));
                         }}
                         className="bg-transparent border-none p-0 text-[10px] text-proton-muted w-full focus:outline-none"
-                        placeholder="Briefly describe this step..."
+                        placeholder={t.step_desc}
                       />
                     </div>
                     <button 
@@ -2414,18 +2427,18 @@ const WorkflowEditor = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Digital Persona / პერსონა</label>
+              <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">{t.persona_label}</label>
               <select 
                 value={formData.personaId}
                 onChange={e => setFormData(prev => ({ ...prev, personaId: e.target.value }))}
                 className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all shadow-inner cursor-pointer"
               >
-                <option value="">Select a persona</option>
+                <option value="">{t.select_persona}</option>
                 {personas.map(p => (
                   <option key={p.id} value={p.id}>{p.avatar} {p.name}</option>
                 ))}
               </select>
-              <p className="text-[9px] text-proton-muted italic px-1">აირჩიეთ აგენტი, რომელიც შეასრულებს ამ პროცესს.</p>
+              <p className="text-[9px] text-proton-muted italic px-1">{t.persona_desc}</p>
             </div>
             <button 
               onClick={async () => {
@@ -2435,7 +2448,7 @@ const WorkflowEditor = ({
               className="w-full py-4 rounded-2xl border border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all flex items-center justify-center gap-2 group"
             >
               <Sparkles size={16} className="group-hover:animate-spin" />
-              Gemini-ს მიერ პროცესის ოპტიმიზაცია
+              {t.optimize_btn}
             </button>
           </div>
         ) : (
@@ -2459,6 +2472,7 @@ const WorkflowsView = ({
   personas,
   user,
   uiMode,
+  language,
   isSystemActive = true
 }: {
   workflows: Workflow[],
@@ -2466,8 +2480,11 @@ const WorkflowsView = ({
   personas: Persona[],
   user: any,
   uiMode: 'operator' | 'artisan',
+  language: 'en' | 'ka',
   isSystemActive?: boolean
 }) => {
+  const t = translations[language].workflows;
+  const common = translations[language].common;
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ action: () => void; message: string } | null>(null);
@@ -2484,12 +2501,12 @@ const WorkflowsView = ({
   const createWorkflow = async () => {
     const newWorkflow: Workflow = { 
       id: Date.now().toString(), 
-      name: 'New Business Process', 
-      trigger: 'Customer Inquiry', 
-      action: 'Send Quote', 
+      name: t.new_process, 
+      trigger: t.customer_inquiry, 
+      action: t.send_quote, 
       personaId: '',
       steps: [
-        { id: 'step-1', label: 'Analyze Needs', description: 'AI agent evaluates the request complexity' }
+        { id: 'step-1', label: t.analyze_needs, description: t.analyze_desc }
       ]
     };
     setWorkflows([...workflows, newWorkflow]);
@@ -2522,14 +2539,14 @@ const WorkflowsView = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Workflows</h2>
-          <p className="text-proton-muted text-sm mt-1">ბიზნეს პროცესების ვიზუალური ავტომატიზაცია</p>
+          <h2 className="text-3xl font-bold tracking-tight">{t.title}</h2>
+          <p className="text-proton-muted text-sm mt-1">{t.subtitle}</p>
         </div>
         <button 
           onClick={() => {
             if (!isSystemActive) return;
             setConfirmation({
-              message: "გსურთ ახალი ვორქფლოუს შექმნა?",
+              message: t.create_confirm,
               action: createWorkflow
             });
           }}
@@ -2537,7 +2554,7 @@ const WorkflowsView = ({
           className="px-5 py-3 rounded-2xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-proton-accent/20 disabled:opacity-50"
         >
           {isSystemActive ? <Plus size={20} /> : <Lock size={16} />}
-          {isSystemActive ? "Add Workflow" : "LOCKED"}
+          {isSystemActive ? t.add_workflow : t.locked}
         </button>
       </div>
       {confirmation && (
@@ -2549,12 +2566,12 @@ const WorkflowsView = ({
                     <Zap size={32} />
                 </div>
                 <div className="space-y-1">
-                    <h3 className="font-bold text-xl">ქმედების დადასტურება</h3>
+                    <h3 className="font-bold text-xl">{t.confirm_action}</h3>
                     <p className="text-sm text-proton-muted leading-relaxed">{confirmation.message}</p>
                 </div>
                 <div className="flex gap-3 pt-2">
-                    <button onClick={() => setConfirmation(null)} className="flex-1 py-3 rounded-xl border border-proton-border text-xs font-bold hover:bg-proton-card transition-all">გაუქმება</button>
-                    <button onClick={() => { confirmation.action(); setConfirmation(null); }} className="flex-1 py-3 rounded-xl bg-proton-accent text-proton-bg text-xs font-bold hover:scale-105 transition-all shadow-lg shadow-proton-accent/20">დადასტურება</button>
+                    <button onClick={() => setConfirmation(null)} className="flex-1 py-3 rounded-xl border border-proton-border text-xs font-bold hover:bg-proton-card transition-all">{common.cancel}</button>
+                    <button onClick={() => { confirmation.action(); setConfirmation(null); }} className="flex-1 py-3 rounded-xl bg-proton-accent text-proton-bg text-xs font-bold hover:scale-105 transition-all shadow-lg shadow-proton-accent/20">{language === 'ka' ? 'დადასტურება' : 'Confirm'}</button>
                 </div>
             </div>
           </div>
@@ -2567,19 +2584,19 @@ const WorkflowsView = ({
             <Zap size={40} className="animate-pulse" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-2xl font-bold">ვორქფლოუები არ არის</h3>
+            <h3 className="text-2xl font-bold">{t.no_workflows}</h3>
             <p className="text-proton-muted max-w-sm mx-auto leading-relaxed">
-              დაიწყეთ თქვენი პირველი ავტომატიზირებული პროცესის შექმნა პერსონებისა და სერვისების დაკავშირებით.
+              {t.no_workflows_desc}
             </p>
           </div>
           <button 
             onClick={() => setConfirmation({
-              message: "გსურთ ახალი ვორქფლოუს შექმნა?",
+              message: t.create_confirm,
               action: createWorkflow
             })}
             className="px-8 py-4 rounded-2xl bg-proton-accent text-proton-bg font-bold hover:scale-105 transition-all shadow-xl shadow-proton-accent/20"
           >
-            პროცესის შექმნა
+            {t.create_process}
           </button>
         </div>
       ) : (
@@ -2679,6 +2696,7 @@ const WorkflowsView = ({
             onClose={() => setEditingWorkflow(null)}
             personas={personas}
             uiMode={uiMode}
+            language={language}
           />
         )}
       </AnimatePresence>
@@ -2746,7 +2764,7 @@ const CabinetView = ({
           <div className="h-8 w-px bg-proton-border" />
           <div className="flex items-center gap-2 text-xs font-bold text-proton-muted uppercase tracking-widest">
             <ShieldCheck size={14} className="text-green-400" />
-            Node Verified
+            {common.verified}
           </div>
         </div>
       </div>
@@ -2781,7 +2799,7 @@ const CabinetView = ({
                        {cab.tier_pro}
                     </span>
                     <span className="px-4 py-1 bg-proton-secondary/10 border border-proton-secondary/20 text-proton-secondary rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                       Priority Access
+                       {language === 'ka' ? 'პრიორიტეტული წვდომა' : 'Priority Access'}
                     </span>
                   </div>
                   <div>
@@ -2796,7 +2814,7 @@ const CabinetView = ({
                       <div className="w-1 h-1 rounded-full bg-proton-border" />
                       <div className="flex items-center gap-1.5 opacity-70">
                         <MapPin size={14} />
-                        <span className="text-sm">Georgia, TB</span>
+                        <span className="text-sm">{language === 'ka' ? 'საქართველო' : 'Georgia'}, TB</span>
                       </div>
                     </div>
                   </div>
@@ -2814,7 +2832,7 @@ const CabinetView = ({
                   ))}
                   <div className="space-y-2">
                      <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.2em]">{cab.member_since}</p>
-                     <p className="text-xl font-black tracking-tight">APR 2024</p>
+                     <p className="text-xl font-black tracking-tight">{language === 'ka' ? 'აპრ 2024' : 'APR 2024'}</p>
                   </div>
                 </div>
               </div>
@@ -2854,8 +2872,8 @@ const CabinetView = ({
               <div className="p-6 rounded-3xl bg-proton-bg/30 border border-proton-border group hover:border-proton-accent/30 transition-colors">
                 <div className="flex items-center justify-between">
                    <div className="space-y-1">
-                      <p className="font-bold text-sm tracking-tight">System Alerts</p>
-                      <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">Email & Push Sync</p>
+                      <p className="font-bold text-sm tracking-tight">{language === 'ka' ? 'სისტემური შეტყობინებები' : 'System Alerts'}</p>
+                      <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">{language === 'ka' ? 'იმეილ და ფუშ სინქრონიზაცია' : 'Email & Push Sync'}</p>
                    </div>
                    <button 
                      onClick={() => setProfile(prev => ({ ...prev, notifications: !prev.notifications }))}
@@ -2887,7 +2905,7 @@ const CabinetView = ({
              <div className="space-y-6 pt-10 relative z-10">
                 <div className="space-y-2">
                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
-                      <span>{cab.storage} Usage</span>
+                      <span>{cab.storage} {language === 'ka' ? 'გამოყენება' : 'Usage'}</span>
                       <span>84%</span>
                    </div>
                    <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
@@ -2900,7 +2918,7 @@ const CabinetView = ({
                    </div>
                 </div>
                 <button className="w-full py-5 bg-white text-proton-accent rounded-[32px] font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
-                  Upgrade Node
+                  {language === 'ka' ? 'პაკეტის განახლება' : 'Upgrade Node'}
                 </button>
              </div>
           </div>
@@ -2916,9 +2934,9 @@ const CabinetView = ({
 
               <div className="space-y-4">
                  {[
-                   { label: cab.two_factor, status: 'Secured', icon: Fingerprint, active: true },
-                   { label: 'Cloud Identity', status: 'Verified', icon: Cloud, active: true },
-                   { label: 'Security Log', status: 'Clean', icon: ClipboardList, active: false }
+                   { label: cab.two_factor, status: language === 'ka' ? 'დაცულია' : 'Secured', icon: Fingerprint, active: true },
+                   { label: language === 'ka' ? 'ღრუბლოვანი იდენტობა' : 'Cloud Identity', status: language === 'ka' ? 'დადასტურებულია' : 'Verified', icon: Cloud, active: true },
+                   { label: language === 'ka' ? 'უსაფრთხოების ლოგი' : 'Security Log', status: language === 'ka' ? 'სუფთაა' : 'Clean', icon: ClipboardList, active: false }
                  ].map((item, idx) => (
                    <div key={idx} className="flex items-center justify-between group cursor-pointer p-1">
                       <div className="flex items-center gap-4">
@@ -2971,7 +2989,7 @@ const CabinetView = ({
                  
                  <div className="flex items-center gap-4 text-proton-muted font-bold text-[10px] justify-center opacity-50">
                     <Clock size={12} />
-                    <span>Last backup: 12 minutes ago</span>
+                    <span>{language === 'ka' ? 'ბოლო რეზერვი: 12 წუთის წინ' : 'Last backup: 12 minutes ago'}</span>
                  </div>
               </div>
            </div>
@@ -3813,7 +3831,6 @@ export default function App() {
                 <Settings size={18} />
                 <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-proton-secondary shadow-[0_0_8px_rgba(255,100,250,0.8)]" />
               </button>
-              
               <div 
                 className="w-11 h-11 rounded-2xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-accent font-black italic cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden shadow-lg" 
                 onClick={() => handleViewChange('profile')}
@@ -3895,12 +3912,13 @@ export default function App() {
                   uiMode={uiMode}
                   isSystemActive={isArtisanSystemActive}
                   initialPersonaId={selectedPersonaId}
+                  language={userProfile.language}
                 />
               )}
               {activeView === 'finance' && (
-                <Web3View uiMode={uiMode} />
+                <Web3View uiMode={uiMode} language={userProfile.language} />
               )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} isSystemActive={isArtisanSystemActive} />}
+              {activeView === 'image' && <ImageView uiMode={uiMode} isSystemActive={isArtisanSystemActive} language={userProfile.language} />}
               {activeView === 'blueprints' && (
                 <WorkflowsView 
                   workflows={workflows}
@@ -3908,9 +3926,11 @@ export default function App() {
                   personas={personas}
                   user={user}
                   uiMode={uiMode}
+                  language={userProfile.language}
                   isSystemActive={isArtisanSystemActive}
                 />
               )}
+
               {activeView === 'profile' && (
                 <CabinetView 
                   profile={userProfile} 
