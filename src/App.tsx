@@ -3,6 +3,7 @@ import { EnterpriseWorkflowBuilder } from './components/EnterpriseWorkflowBuilde
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { LocalFileScanner } from './components/LocalFileScanner';
 import { auth, db, googleProvider } from './firebase';
+import { supabase } from './lib/supabase';
 import { 
   signInWithPopup, 
   signOut, 
@@ -132,7 +133,10 @@ import {
   Wifi,
   Palette,
   Grid,
-  Download
+  Download,
+  LogIn,
+  History,
+  UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -174,6 +178,7 @@ type UserProfile = {
   language: 'en' | 'ka';
   region: string;
   notifications: boolean;
+  phoneNumber?: string;
 };
 
 type GlobalAiSettings = {
@@ -2926,8 +2931,11 @@ const CabinetView = ({
   customAvatars,
   personas,
   user,
+  supabaseUser,
   onSignIn,
   onSignOut,
+  onSupabaseLogin,
+  onSupabaseSignOut,
   uiMode,
   stats: userStats,
   onNavigate
@@ -2938,10 +2946,13 @@ const CabinetView = ({
   customAvatars: { [id: string]: string },
   personas: Persona[],
   user: any,
+  supabaseUser?: any,
   onSignIn: () => void,
   onSignOut: () => void,
+  onSupabaseLogin?: (email: string) => void,
+  onSupabaseSignOut?: () => void,
   uiMode: 'operator' | 'artisan',
-  stats: { storageGB: number, computeTimeHours: number, aiTokens: number },
+  stats: { storageGB: number, computeTimeHours: number, aiTokens: number, computeCycles?: number, node_id?: string },
   onNavigate: (view: any) => void
 }) => {
   const language = profile.language;
@@ -2967,6 +2978,21 @@ const CabinetView = ({
      return date.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'long', year: 'numeric' }).toUpperCase();
   }, [user, language]);
 
+  const recentActivity = [
+    { id: 1, type: 'login', label: language === 'ka' ? 'ავტორიზაცია' : 'Session Start', time: '10:42', date: '28 APR', icon: LogIn, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { id: 2, type: 'module', label: language === 'ka' ? 'ფინანსური მოდული' : 'Finance Access', time: '09:15', date: '28 APR', icon: Wallet, color: 'text-green-500', bg: 'bg-green-50' },
+    { id: 3, type: 'ai', label: language === 'ka' ? 'AI გენერაცია' : 'AI Generation', time: '14:20', date: '27 APR', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50' },
+  ];
+
+  const profileStrength = useMemo(() => {
+    let score = 20; // base for being logged in
+    if (user?.displayName) score += 20;
+    if (user?.photoURL) score += 20;
+    if (user?.emailVerified) score += 20;
+    if (profile.phoneNumber) score += 20;
+    return score;
+  }, [user, profile]);
+
   return (
     <div className="max-w-6xl mx-auto pb-24 animate-in fade-in slide-in-from-bottom-4 duration-1000 px-4">
       {/* Professional Header */}
@@ -2989,17 +3015,28 @@ const CabinetView = ({
               </h1>
               {user && <CheckCircle2 size={24} className="text-blue-500 fill-blue-50/50" />}
             </div>
-            <p className="text-gray-500 font-medium text-sm md:text-base">
-              {user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-gray-500 font-medium text-sm md:text-base">
+                {supabaseUser?.email || user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
+              </p>
+              {(supabaseUser?.id || user?.uid) && (
+                <span className="px-2 py-1 bg-gray-100 rounded text-[9px] font-mono text-gray-400 uppercase tracking-tighter">
+                  NODE: {userStats.node_id || (supabaseUser?.id || user?.uid || '').slice(0, 8)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all">
+          <button className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all group overflow-hidden relative">
             <Mail size={20} />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
           </button>
-          <button className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all">
+          <button 
+            onClick={() => onNavigate('settings')}
+            className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+          >
             <Settings size={20} />
           </button>
           {!user ? (
@@ -3018,7 +3055,7 @@ const CabinetView = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Stats & Environment */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm overflow-hidden animate-in slide-in-from-left-4 duration-700 delay-100">
             <div className="p-8 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{personal.title}</h2>
@@ -3031,8 +3068,8 @@ const CabinetView = ({
             </div>
 
             <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
+              <div className="space-y-2 group">
+                <div className="flex items-center gap-2 text-gray-500 mb-1 group-hover:text-blue-500 transition-colors">
                   <Database size={16} />
                   <span className="text-xs font-bold uppercase tracking-wide">{cab.storage}</span>
                 </div>
@@ -3041,12 +3078,15 @@ const CabinetView = ({
                   <span className="text-sm font-bold text-gray-400 uppercase">GB</span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(userStats.storageGB / 10) * 100}%` }} />
+                  <div 
+                    className="h-full bg-blue-500 rounded-full transition-all duration-1000" 
+                    style={{ width: `${Math.min((userStats.storageGB / 10) * 100, 100)}%` }} 
+                  />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
+              <div className="space-y-2 group">
+                <div className="flex items-center gap-2 text-gray-500 mb-1 group-hover:text-orange-500 transition-colors">
                   <Cpu size={16} />
                   <span className="text-xs font-bold uppercase tracking-wide">{cab.compute_time}</span>
                 </div>
@@ -3059,20 +3099,89 @@ const CabinetView = ({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
+              <div className="space-y-2 group">
+                <div className="flex items-center gap-2 text-gray-500 mb-1 group-hover:text-purple-500 transition-colors">
                   <Zap size={16} />
-                  <span className="text-xs font-bold uppercase tracking-wide">{cab.api_calls}</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">Compute Cycles</span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900">{(userStats.aiTokens / 1000).toFixed(1)}</span>
-                  <span className="text-sm font-bold text-gray-400 uppercase">K</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-gray-900">{userStats.computeCycles || 0}</span>
+                  <span className="text-sm font-bold text-gray-400 uppercase">CORE</span>
                 </div>
                 <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full bg-purple-500 rounded-full" style={{ width: '42%' }} />
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             {/* Recent Activity Feed */}
+             <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm p-8">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-lg font-bold text-gray-900">{t.activity}</h3>
+                   <History size={18} className="text-gray-400" />
+                </div>
+                <div className="space-y-4">
+                   {recentActivity.map(act => (
+                      <div key={act.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors group">
+                         <div className="flex items-center gap-4">
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", act.bg, act.color)}>
+                               <act.icon size={18} />
+                            </div>
+                            <div>
+                               <p className="text-sm font-bold text-gray-900">{act.label}</p>
+                               <p className="text-[10px] text-gray-400 font-medium">{act.date} • {act.time}</p>
+                            </div>
+                         </div>
+                         <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+                      </div>
+                   ))}
+                </div>
+                <button className="w-full mt-6 py-3 rounded-xl border border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:bg-gray-50 transition-colors">
+                   {language === 'ka' ? 'ყველა აქტივობა' : 'View Full History'}
+                </button>
+             </div>
+
+             {/* Profile Strength & Verification */}
+             <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm p-8 flex flex-col justify-between">
+                <div>
+                   <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-bold text-gray-900">{t.profile_strength}</h3>
+                      <UserCheck size={18} className="text-blue-500" />
+                   </div>
+                   <div className="relative pt-1">
+                      <div className="flex mb-2 items-center justify-between">
+                         <div>
+                            <span className="text-xs font-bold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
+                               {profileStrength === 100 ? (language === 'ka' ? 'დასრულებული' : 'Complete') : (language === 'ka' ? 'მიმდინარეობს' : 'In Progress')}
+                            </span>
+                         </div>
+                         <div className="text-right">
+                            <span className="text-sm font-bold inline-block text-blue-600">
+                               {profileStrength}%
+                            </span>
+                         </div>
+                      </div>
+                      <div className="flex h-2 mb-4 overflow-hidden text-xs bg-blue-100 rounded">
+                         <motion.div 
+                           initial={{ width: 0 }}
+                           animate={{ width: `${profileStrength}%` }}
+                           transition={{ duration: 1, ease: 'easeOut' }}
+                           className="flex flex-col justify-center text-center text-white bg-blue-500 shadow-none whitespace-nowrap"
+                         />
+                      </div>
+                   </div>
+                   <p className="text-xs text-gray-500 font-medium leading-relaxed">
+                      {language === 'ka' 
+                        ? 'დაასრულეთ თქვენი პროფილი პერსონალიზებული AI გამოცდილების მისაღებად.' 
+                        : 'Complete your profile to unlock more personalized AI interactions and better service distribution.'}
+                   </p>
+                </div>
+                <button className="mt-8 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-xs font-bold text-gray-700 hover:bg-white hover:border-blue-200 transition-all">
+                   {language === 'ka' ? 'პროფილის რედაქტირება' : 'Complete My Profile'}
+                </button>
+             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -3098,8 +3207,8 @@ const CabinetView = ({
 
         {/* Right Column: Information & Security */}
         <div className="space-y-8">
-          <div className="bg-gray-900 p-10 rounded-[32px] text-white shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+          <div className="bg-gray-900 p-10 rounded-[32px] text-white shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 group-hover:scale-125 transition-transform duration-1000" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-8">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">{language === 'ka' ? 'ვერიფიცირებული კვანძი' : 'VERIFIED NODE'}</span>
@@ -3115,16 +3224,44 @@ const CabinetView = ({
                     <Fingerprint size={16} />
                     <span className="text-xs font-bold uppercase tracking-tight">{cab.two_factor}</span>
                   </div>
-                  <div className="w-10 h-5 bg-white/20 rounded-full flex items-center px-1">
+                  <div className="w-10 h-5 bg-white/20 rounded-full flex items-center px-1 cursor-pointer">
                     <div className="w-3 h-3 bg-white rounded-full ml-auto" />
                   </div>
                 </div>
-                <button className="w-full py-4 bg-white text-gray-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-2 shadow-sm">
+                <button className="w-full py-4 bg-white text-gray-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
                   <Download size={16} />
                   {language === 'ka' ? 'იდენტობის ექსპორტი' : 'Export Identity'}
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* System Health */}
+          <div className="bg-white p-10 rounded-[32px] border border-gray-200 shadow-sm">
+             <div className="flex items-center justify-between mb-8">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{t.health}</h3>
+                <div className="flex items-center gap-1">
+                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                   <span className="text-[10px] font-bold text-green-500 uppercase">Stable</span>
+                </div>
+             </div>
+             <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cloud Latency</span>
+                   <span className="text-sm font-bold text-gray-900">14ms</span>
+                </div>
+                <div className="flex items-center justify-between">
+                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Uptime</span>
+                   <span className="text-sm font-bold text-gray-900">99.9%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Integrity</span>
+                   <span className="text-sm font-bold text-green-500">Secure</span>
+                </div>
+                <button className="w-full mt-4 py-3 rounded-xl bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-colors">
+                   {language === 'ka' ? 'დიაგნოსტიკა' : 'Full Diagnostics'}
+                </button>
+             </div>
           </div>
 
           <div className="bg-white p-10 rounded-[32px] border border-gray-200 shadow-sm">
@@ -3411,26 +3548,89 @@ export default function App() {
     }
   });
 
-  useEffect(() => {
-    localStorage.setItem('user-profile', JSON.stringify(userProfile));
-  }, [userProfile]);
-
-  useEffect(() => {
-    localStorage.setItem('proton_ai_settings', JSON.stringify(aiSettings));
-  }, [aiSettings]);
-
   const [user, setUser] = useState(auth.currentUser);
+  const [supabaseUser, setSupabaseUser] = useState<any>(null);
+  const [supabaseProfile, setSupabaseProfile] = useState<any>(null);
+  const [isSupabaseLoading, setIsSupabaseLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userStats, setUserStats] = useState<{
     storageGB: number;
     computeTimeHours: number;
     aiTokens: number;
+    computeCycles?: number;
+    node_id?: string;
   }>({
     storageGB: 0,
     computeTimeHours: 0,
-    aiTokens: 0
+    aiTokens: 0,
+    computeCycles: 0,
+    node_id: 'GUEST-NODE'
   });
+
+  useEffect(() => {
+    localStorage.setItem('user-profile', JSON.stringify(userProfile));
+  }, [userProfile]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSupabaseUser(session?.user ?? null);
+      setIsSupabaseLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    async function fetchSupabaseData() {
+      if (!supabaseUser) {
+        setSupabaseProfile(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (data && !error) {
+        setSupabaseProfile(data);
+        setUserStats(prev => ({
+          ...prev,
+          aiTokens: data.ai_tokens || prev.aiTokens,
+          computeCycles: data.compute_cycles || 0,
+          storageGB: data.storage_gb || prev.storageGB,
+          node_id: data.node_id || prev.node_id
+        }));
+      }
+    }
+
+    fetchSupabaseData();
+  }, [supabaseUser]);
+
+  const handleSupabaseLogin = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+      if (error) alert("Supabase Login Error: " + error.message);
+      else alert("Magic link sent! Check your email.");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSupabaseSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  useEffect(() => {
+    localStorage.setItem('proton_ai_settings', JSON.stringify(aiSettings));
+  }, [aiSettings]);
 
   useEffect(() => {
     if (!user) return;
@@ -3438,11 +3638,12 @@ export default function App() {
     const unsubscribe = onSnapshot(statsRef, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        setUserStats({
-          storageGB: data.storageGB || 0,
-          computeTimeHours: data.computeTimeHours || 0,
-          aiTokens: data.aiTokens || 0
-        });
+        setUserStats(prev => ({
+          ...prev,
+          storageGB: data.storageGB || prev.storageGB,
+          computeTimeHours: data.computeTimeHours || prev.computeTimeHours,
+          aiTokens: data.aiTokens || prev.aiTokens
+        }));
       } else {
         // Init stats with some realistic dev data if missing
         setDoc(statsRef, {
@@ -4007,10 +4208,12 @@ export default function App() {
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-proton-text uppercase tracking-tight leading-none">{user.displayName || 'Explorer'}</span>
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter">System Online</span>
+                  <span className="text-sm font-black text-proton-text uppercase tracking-tight leading-none">{supabaseUser?.email?.split('@')[0] || user?.displayName || 'Explorer'}</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/20 transition-all">
+                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", supabaseUser ? "bg-proton-accent" : "bg-proton-muted")} />
+                    <span className="text-[8px] font-black text-proton-text uppercase tracking-tighter">
+                      Proton Hub: {supabaseUser ? 'Syncing' : 'Offline'} (Supabase) | Core: Active (Firebase)
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 mt-1">
@@ -4067,6 +4270,26 @@ export default function App() {
             <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
 
             <div className="flex items-center gap-3">
+              {!supabaseUser ? (
+                <button 
+                  onClick={() => {
+                    const email = prompt("Enter email for Magic Link:");
+                    if (email) handleSupabaseLogin(email);
+                  }}
+                  className="px-6 py-2 bg-proton-accent text-proton-bg rounded-xl font-bold text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-proton-accent/20"
+                >
+                   {userProfile.language === 'ka' ? 'დაკავშირება' : 'Connect'}
+                </button>
+              ) : (
+                <button 
+                  onClick={() => handleSupabaseSignOut()}
+                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
+                  title="Supabase Sign Out"
+                >
+                  <LogOut size={18} className="text-proton-accent" />
+                </button>
+              )}
+              <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
               <button 
                 onClick={() => handleViewChange('settings')}
                 className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
@@ -4076,7 +4299,7 @@ export default function App() {
               <button 
                 onClick={handleSignOut}
                 className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
-                title="Sign Out"
+                title="Firebase Sign Out"
               >
                 <LogOut size={18} />
               </button>
@@ -4179,8 +4402,11 @@ export default function App() {
                   customAvatars={personaAvatars}
                   personas={personas}
                   user={user}
+                  supabaseUser={supabaseUser}
                   onSignIn={handleGoogleSignIn}
                   onSignOut={handleSignOut}
+                  onSupabaseLogin={handleSupabaseLogin}
+                  onSupabaseSignOut={handleSupabaseSignOut}
                   uiMode={uiMode}
                   stats={userStats}
                   onNavigate={handleViewChange}
