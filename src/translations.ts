@@ -98,6 +98,16 @@ export const translations = {
       quick_deposit: "Deposit",
       withdraw: "Withdraw",
       network_speed: "Performance",
+      diagnostic: {
+        title: "System Health & Performance",
+        run: "Run Diagnostic",
+        evaluating: "Evaluating core performance...",
+        testing: "Testing memory latency...",
+        optimal: "Status: Optimal. System ready for heavy workloads.",
+        standard: "Status: Standard. Cloud processing recommended.",
+        benchmarking: "Benchmarking...",
+        verdict: "Verdict"
+      },
       gas_index: "System Load",
       system_health: "Status",
       compute: "Usage",
@@ -471,6 +481,16 @@ export const translations = {
       quick_deposit: "შევსება",
       withdraw: "თანხის გატანა",
       network_speed: "სწრაფქმედება",
+      diagnostic: {
+        title: "სისტემის მდგომარეობა და წარმადობა",
+        run: "დიაგნოსტიკის გაშვება",
+        evaluating: "ბირთვის წარმადობის შეფასება...",
+        testing: "მეხსიერების დაყოვნების ტესტირება...",
+        optimal: "სტატუსი: ოპტიმალური. სისტემა მზადაა რთული ამოცანებისთვის.",
+        standard: "სტატუსი: სტანდარტული. რეკომენდებულია ღრუბლოვანი დამუშავება.",
+        benchmarking: "ბენჩმარკინგი...",
+        verdict: "ვერდიქტი"
+      },
       gas_index: "სისტემის დატვირთვა",
       system_health: "სტატუსი",
       compute: "რესურსები",

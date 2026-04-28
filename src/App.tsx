@@ -125,6 +125,7 @@ import {
   Building,
   Calendar as CalendarIcon,
   Check,
+  CheckCircle2,
   ShieldAlert,
   Search,
   Bell,
@@ -294,6 +295,12 @@ const LivePulseLog = () => {
 };
 
 const SystemGraph = () => {
+  const [isReady, setIsReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const data = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
     name: i,
     val: 30 + Math.random() * 50,
@@ -308,38 +315,40 @@ const SystemGraph = () => {
         <p className="text-xl font-black text-proton-accent tracking-tighter">NODE_ALFA_7</p>
       </div>
       
-      <div className="flex-1 w-full mt-4" style={{ minHeight: '120px' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--proton-accent)" stopOpacity={0.2}/>
-                <stop offset="95%" stopColor="var(--proton-accent)" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--proton-border)" vertical={false} opacity={0.1} />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'rgba(10, 10, 15, 0.9)', 
-                border: '1px solid var(--proton-border)', 
-                borderRadius: '16px',
-                backdropFilter: 'blur(8px)'
-              }}
-              itemStyle={{ color: 'var(--proton-accent)', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase' }}
-              labelStyle={{ display: 'none' }}
-              cursor={{ stroke: 'var(--proton-accent)', strokeWidth: 1, strokeDasharray: '4 4' }}
-            />
-            <Area 
-              type="stepAfter" 
-              dataKey="val" 
-              stroke="var(--proton-accent)" 
-              fillOpacity={1} 
-              fill="url(#colorVal)" 
-              strokeWidth={2}
-              animationDuration={2000}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+      <div className="flex-1 w-full mt-4 min-h-0 min-w-0 overflow-hidden">
+        {isReady && (
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--proton-accent)" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="var(--proton-accent)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--proton-border)" vertical={false} opacity={0.1} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(10, 10, 15, 0.9)', 
+                  border: '1px solid var(--proton-border)', 
+                  borderRadius: '16px',
+                  backdropFilter: 'blur(8px)'
+                }}
+                itemStyle={{ color: 'var(--proton-accent)', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase' }}
+                labelStyle={{ display: 'none' }}
+                cursor={{ stroke: 'var(--proton-accent)', strokeWidth: 1, strokeDasharray: '4 4' }}
+              />
+              <Area 
+                type="stepAfter" 
+                dataKey="val" 
+                stroke="var(--proton-accent)" 
+                fillOpacity={1} 
+                fill="url(#colorVal)" 
+                strokeWidth={2}
+                animationDuration={2000}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );
@@ -2810,168 +2819,6 @@ const WorkflowsView = ({
           />
         )}
       </AnimatePresence>
-    </div>
-  );
-};
-
-const SystemDiagnostic = ({ language }: { language: 'en' | 'ka' }) => {
-  const [state, setState] = useState<'idle' | 'running' | 'result'>('idle');
-  const [status, setStatus] = useState('');
-  const [score, setScore] = useState<number | null>(null);
-  const [progress, setProgress] = useState(0);
-  const t = translations[language].cabinet.diagnostic;
-
-  const runDiagnostic = async () => {
-    setState('running');
-    setProgress(0);
-    
-    const steps = [
-      { msg: t.evaluating, duration: 600 },
-      { msg: t.latency, duration: 800 },
-      { msg: t.matrix, duration: 600 }
-    ];
-
-    let currentProgress = 0;
-    for (const step of steps) {
-      setStatus(step.msg);
-      // Real workload
-      let sum = 0;
-      for (let i = 0; i < 2000000; i++) {
-        sum += Math.sqrt(Math.random() * Math.random());
-      }
-      
-      const interval = 20;
-      const iterations = step.duration / interval;
-      for (let i = 0; i < iterations; i++) {
-        currentProgress += (100 / steps.length) / iterations;
-        setProgress(Math.min(currentProgress, 100));
-        await new Promise(resolve => setTimeout(resolve, interval));
-      }
-    }
-
-    const finalScore = Math.floor(Math.random() * 15 + 85); 
-    setScore(finalScore);
-    setState('result');
-  };
-
-  return (
-    <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[48px] border border-proton-border shadow-sm h-full flex flex-col justify-between group overflow-hidden relative">
-      <AnimatePresence>
-        {state === 'running' && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-proton-accent/5 pointer-events-none"
-          />
-        )}
-      </AnimatePresence>
-
-      <div className="space-y-2 relative z-10 text-center md:text-left">
-        <h3 className="text-xl font-black tracking-tight text-proton-text uppercase">
-          {t.title}
-        </h3>
-        <AnimatePresence mode="wait">
-          <motion.p 
-            key={status || 'idle'}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            className="text-[10px] font-bold text-proton-muted uppercase tracking-widest min-h-[1.5em]"
-          >
-            {state === 'idle' ? t.hub : status}
-          </motion.p>
-        </AnimatePresence>
-      </div>
-
-      <div className="flex-1 flex items-center justify-center py-8 relative z-10">
-        {state === 'idle' && (
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            className="p-8 rounded-full bg-proton-bg border border-proton-border shadow-inner text-proton-muted/20"
-          >
-             <Zap size={48} />
-          </motion.div>
-        )}
-
-        {state === 'running' && (
-          <div className="relative w-36 h-36">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="72"
-                cy="72"
-                r="64"
-                stroke="currentColor"
-                strokeWidth="10"
-                fill="transparent"
-                className="text-proton-bg"
-              />
-              <motion.circle
-                cx="72"
-                cy="72"
-                r="64"
-                stroke="currentColor"
-                strokeWidth="10"
-                fill="transparent"
-                strokeDasharray="402.12"
-                animate={{ strokeDashoffset: 402.12 - (402.12 * progress) / 100 }}
-                transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                className="text-proton-accent"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center font-black text-2xl italic text-proton-text">
-              {Math.floor(progress)}%
-            </div>
-          </div>
-        )}
-
-        {state === 'result' && (
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center space-y-4"
-          >
-             <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.bench_score}</p>
-             <div className="text-7xl font-black italic tracking-tighter text-proton-accent leading-none">
-                {score}
-             </div>
-             <div className={cn(
-               "inline-flex items-center gap-2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border",
-               score && score > 90 
-                 ? "bg-green-500/10 text-green-500 border-green-500/20" 
-                 : "bg-blue-500/10 text-blue-500 border-blue-500/20"
-             )}>
-                <Shield size={12} />
-                {score && score > 90 ? t.status_optimal : t.status_standard}
-             </div>
-          </motion.div>
-        )}
-      </div>
-
-      <div className="relative z-10 pt-4">
-        {state === 'idle' && (
-          <button 
-            onClick={runDiagnostic}
-            className="w-full py-5 bg-proton-text text-white rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-proton-text/10"
-          >
-            {t.run}
-          </button>
-        )}
-        {state === 'result' && (
-          <button 
-            onClick={() => setState('idle')}
-            className="w-full py-5 bg-proton-bg border-2 border-proton-border text-proton-muted rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:text-proton-accent hover:border-proton-accent transition-all flex items-center justify-center gap-3"
-          >
-            <RefreshCw size={16} />
-            {t.retest}
-          </button>
-        )}
-        {state === 'running' && (
-          <div className="w-full py-5 bg-proton-bg/50 text-proton-muted rounded-[24px] font-black text-[11px] uppercase tracking-widest text-center border border-proton-border/50 animate-pulse">
-            {t.running}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
