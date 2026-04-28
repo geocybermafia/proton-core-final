@@ -130,7 +130,9 @@ import {
   Search,
   Bell,
   Wifi,
-  Palette
+  Palette,
+  Grid,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -249,47 +251,141 @@ const SidebarItem = React.memo(({
   </button>
 ));
 
-const LivePulseLog = () => {
-  const [logs, setLogs] = useState<string[]>([]);
-  
-  useEffect(() => {
-    const events = [
-      "Optimizing Neural pathways...",
-      "Syncing with Tbilisi Datacenter...",
-      "Encrypting Financial Protocols...",
-      "Balancing GPU Load: 84%",
-      "Security Audit: Phase 4 Verified",
-      "Calibrating Charon Voice Engine...",
-      "Proton Hub Core v3.0.4 Online",
-      "Detecting User Pro Level: 4",
-      "Updating Blockchain Ledger...",
-      "Verifying Wallet Consensus...",
-      "Initializing Quantum Ledger...",
-      "Node Delta-7 Synchronized"
-    ];
+const SystemDiagnostic = ({ t }: { t: any }) => {
+  const [state, setState] = useState<'idle' | 'running' | 'complete'>('idle');
+  const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState('');
+  const [score, setScore] = useState(0);
+
+  const diag = t.diagnostic;
+
+  const runDiagnostic = async () => {
+    setState('running');
+    setProgress(0);
     
-    setLogs(events.slice(0, 5));
-    
-    const interval = setInterval(() => {
-      setLogs(prev => [events[Math.floor(Math.random() * events.length)], ...prev].slice(0, 6));
-    }, 4000);
-    
-    return () => clearInterval(interval);
-  }, []);
+    // Step 1: Evaluating core performance
+    setStatusText(diag.evaluating);
+    for (let i = 0; i <= 40; i += 2) {
+      setProgress(i);
+      Math.sqrt(Math.random() * 1000000);
+      await new Promise(r => setTimeout(r, 30));
+    }
+
+    // Step 2: Testing memory latency
+    setStatusText(diag.latency);
+    for (let i = 41; i <= 80; i += 2) {
+      setProgress(i);
+      await new Promise(r => setTimeout(r, 40));
+    }
+
+    // Step 3: Benchmarking
+    setStatusText(diag.matrix || diag.running);
+    const start = performance.now();
+    let evaluations = 0;
+    while (performance.now() - start < 500) {
+      Math.sin(evaluations) * Math.cos(evaluations);
+      evaluations++;
+    }
+    for (let i = 81; i <= 100; i += 2) {
+      setProgress(i);
+      await new Promise(r => setTimeout(r, 20));
+    }
+
+    const finalScore = Math.min(98, 70 + Math.floor(Math.random() * 29));
+    setScore(finalScore);
+    setState('complete');
+  };
 
   return (
-    <div className="font-mono text-[9px] uppercase tracking-[0.15em] text-proton-accent/60 space-y-2 select-none">
-      {logs.map((log, i) => (
-        <motion.div 
-          key={`${log}-${i}`}
-          initial={{ opacity: 0, x: -10 }} 
-          animate={{ opacity: 1 - i * 0.15, x: 0 }}
-          className="flex items-center gap-2"
-        >
-          <div className="w-1 h-1 rounded-full bg-proton-accent animate-pulse shrink-0" />
-          <span className="truncate">{log}</span>
-        </motion.div>
-      ))}
+    <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm flex flex-col h-full group transition-all hover:border-proton-accent/30 relative overflow-hidden">
+      <div className="flex items-center justify-between mb-6 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
+            <Activity size={20} />
+          </div>
+          <h3 className="font-bold text-lg tracking-tight uppercase">{diag.title}</h3>
+        </div>
+        {state === 'complete' && (
+          <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+            <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">{score}% Score</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center items-center py-6 relative z-10">
+        {state === 'idle' && (
+          <div className="text-center space-y-6">
+            <div className="w-20 h-20 rounded-full bg-proton-bg border-4 border-proton-border flex items-center justify-center mx-auto group-hover:border-proton-accent/20 transition-all duration-700">
+              <Cpu size={32} className="text-proton-muted group-hover:text-proton-accent transition-colors" />
+            </div>
+            <button 
+              onClick={runDiagnostic}
+              className="px-8 py-3 bg-proton-text text-proton-bg rounded-2xl font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-proton-text/10"
+            >
+              {diag.run}
+            </button>
+          </div>
+        )}
+
+        {state === 'running' && (
+          <div className="w-full space-y-8 flex flex-col items-center">
+             <div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="64"
+                    cy="64"
+                    r="60"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    className="text-proton-border"
+                  />
+                  <motion.circle
+                    cx="64"
+                    cy="64"
+                    r="60"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray="377"
+                    animate={{ strokeDashoffset: 377 - (377 * progress) / 100 }}
+                    transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                    className="text-proton-accent"
+                  />
+                </svg>
+                <span className="absolute text-xl font-black italic">{progress}%</span>
+             </div>
+             <p className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] animate-pulse">{statusText}</p>
+          </div>
+        )}
+
+        {state === 'complete' && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center space-y-6 w-full"
+          >
+            <div className="flex flex-col items-center">
+               <div className="w-20 h-20 rounded-full bg-green-500/10 border-4 border-green-500/30 flex items-center justify-center mb-4">
+                  <CheckCircle2 size={40} className="text-green-500" />
+               </div>
+               <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em] mb-2">{diag.bench_score || 'Verdict'}</p>
+               <h4 className="text-sm font-black text-proton-text uppercase tracking-tight max-w-[240px] leading-relaxed">
+                 {score > 85 ? diag.status_optimal : diag.status_standard}
+               </h4>
+            </div>
+            <button 
+              onClick={() => setState('idle')}
+              className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline"
+            >
+              Restart Scan
+            </button>
+          </motion.div>
+        )}
+      </div>
+
+      <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-proton-accent/5 rounded-full blur-3xl pointer-events-none group-hover:bg-proton-accent/10 transition-colors" />
     </div>
   );
 };
@@ -1391,8 +1487,8 @@ const DashboardView = ({
                   <Database size={120} />
                </div>
                <div className="space-y-3 relative z-10">
-                  <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">{t.dashboard.core_intelligence}</h3>
-                  <LivePulseLog />
+                  <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">Diagnostic Assessment</h3>
+                  <SystemDiagnostic t={t} />
                </div>
                
                <div className="pt-4 border-t border-proton-border/50 relative z-10">
@@ -2852,320 +2948,212 @@ const CabinetView = ({
   const common = translations[language].common;
   const cab = translations[language].cabinet;
   const t = translations[language].cabinet;
-  const totalInteractions = Object.values(history).reduce((acc, msgs) => acc + msgs.length, 0);
-
-  const stats = [
-    { label: cab.storage, value: `${userStats.storageGB.toFixed(1)} GB`, icon: Database, color: 'text-proton-accent' },
-    { label: cab.compute_time, value: `${userStats.computeTimeHours.toFixed(1)}h`, icon: Cpu, color: 'text-proton-secondary' },
-    { label: cab.api_calls, value: userStats.aiTokens.toLocaleString(), icon: Zap, color: 'text-proton-accent' },
-  ];
-
-  const quickActions = [
-    { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance', desc: t.finance_desc, color: 'bg-blue-500/10 text-blue-500' },
-    { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio', desc: t.studio_desc, color: 'bg-purple-500/10 text-purple-500' },
-    { id: 'blueprints', icon: Layout, label: language === 'ka' ? 'პროცესები' : 'Workflows', desc: t.blueprints_desc, color: 'bg-orange-500/10 text-orange-500' },
-  ];
-
-  const [neuralProgress, setNeuralProgress] = useState(87);
   
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNeuralProgress(prev => {
-        if (prev >= 99) return 99;
-        return prev + Math.random();
-      });
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
+  const personal = {
+    title: language === 'ka' ? 'პირადი სამუშაო სივრცე' : 'Personal Workspace',
+    overview: language === 'ka' ? 'ოპერაციული მიმოხილვა' : 'Operational Overview',
+    dash_title: language === 'ka' ? 'მართვის ჰაბი' : 'Control Hub'
+  };
 
-  const neuralLogs = [
-    { time: '14:24', event: 'Neural Link Established', status: 'Stable' },
-    { time: '14:18', event: 'GPT-Core Calibration', status: 'Optimizing' },
-    { time: '14:02', event: 'Data Sharding Complete', status: 'Verified' }
+  const mainModules = [
+    { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance', desc: t.finance_desc, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 'blueprints', icon: Layout, label: language === 'ka' ? 'პროცესები' : 'Workflows', desc: t.blueprints_desc, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio', desc: t.studio_desc, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
   const formattedJoinDate = useMemo(() => {
-     if (!user?.metadata?.creationTime) return language === 'ka' ? 'აპრ 2024' : 'APR 2024';
+     if (!user?.metadata?.creationTime) return language === 'ka' ? 'აპრილი 2024' : 'APRIL 2024';
      const date = new Date(user.metadata.creationTime);
-     const month = date.toLocaleString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'short' }).toUpperCase();
-     return `${month} ${date.getFullYear()}`;
+     return date.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'long', year: 'numeric' }).toUpperCase();
   }, [user, language]);
-  
+
   return (
-    <div className={cn(
-      "space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 max-w-6xl mx-auto pb-20 no-scrollbar",
-      uiMode === 'artisan' ? "artisan-theme" : ""
-    )}>
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-8 py-6">
-        <div className="flex items-center gap-8">
-           <div className="relative group">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-[40px] bg-white border border-proton-border flex items-center justify-center overflow-hidden shadow-2xl group-hover:scale-105 transition-all duration-500">
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-4xl font-black text-proton-accent italic">{(user?.displayName || 'U').charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="absolute -bottom-2 -right-2 bg-proton-accent text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg border-2 border-proton-bg">
-                {user ? translations[language].finance.online : 'OFFLINE'}
-              </div>
-           </div>
-           <div>
-              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text mb-2 uppercase text-center md:text-left">
-                {user?.displayName || 'Proton User'}
+    <div className="max-w-6xl mx-auto pb-24 animate-in fade-in slide-in-from-bottom-4 duration-1000 px-4">
+      {/* Professional Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 mb-12 pt-8">
+        <div className="flex items-center gap-6">
+          <div className="relative group">
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-4xl font-bold text-gray-400">{(user?.displayName || 'U').charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full shadow-sm" />
+          </div>
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 tracking-tight">
+                {user?.displayName || (language === 'ka' ? 'მომხმარებელი' : 'User')}
               </h1>
-              <div className="flex flex-col md:flex-row items-center gap-4 mt-2">
-                <p className="text-proton-muted font-bold uppercase tracking-[0.25em] text-[10px] md:text-xs text-center md:text-left">
-                  {t.subtitle} • {user?.email}
-                </p>
-                {user?.uid && (
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(user.uid);
-                    }}
-                    className="group flex items-center gap-2 px-3 py-1 bg-proton-bg border border-proton-border rounded-full hover:border-proton-accent transition-colors"
-                  >
-                    <span className="text-[8px] font-black text-proton-muted group-hover:text-proton-accent uppercase">Node ID: {user.uid.substring(0, 8)}...</span>
-                    <ClipboardList size={10} className="text-proton-muted group-hover:text-proton-accent" />
-                  </button>
-                )}
-              </div>
-           </div>
+              {user && <CheckCircle2 size={24} className="text-blue-500 fill-blue-50/50" />}
+            </div>
+            <p className="text-gray-500 font-medium text-sm md:text-base">
+              {user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
+            </p>
+          </div>
         </div>
-        
-        <div className="flex gap-4">
-           {!user ? (
-             <button onClick={onSignIn} className="bg-proton-accent text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all">
-               {common.signin}
-             </button>
-           ) : (
-             <button onClick={onSignOut} className="bg-proton-bg/50 border border-proton-border text-proton-muted px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest hover:text-red-500 hover:border-red-500 transition-all">
-               {common.signout}
-             </button>
-           )}
+
+        <div className="flex items-center gap-3">
+          <button className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all">
+            <Mail size={20} />
+          </button>
+          <button className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all">
+            <Settings size={20} />
+          </button>
+          {!user ? (
+            <button onClick={onSignIn} className="ml-2 px-6 py-3 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-all shadow-sm">
+              {common.signin}
+            </button>
+          ) : (
+            <button onClick={onSignOut} className="ml-2 px-6 py-3 bg-white border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-all flex items-center gap-2">
+              <LogOut size={16} />
+              {common.signout}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left Column: Stats & Calibration */}
-        <div className="lg:col-span-8 space-y-8">
-           {/* AI Readiness Card */}
-           <div className="bg-proton-card p-10 rounded-[48px] border border-proton-border shadow-sm relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-10">
-                 <div className="w-16 h-16 rounded-full border-4 border-proton-accent/10 border-t-proton-accent animate-spin" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Stats & Environment */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{personal.title}</h2>
+                <p className="text-sm text-gray-500 font-medium">{personal.overview}</p>
               </div>
-              <div className="space-y-8 relative z-10">
-                 <div>
-                   <h3 className="text-2xl font-black tracking-tight uppercase mb-2">{t.readiness}</h3>
-                   <p className="text-sm text-proton-muted font-bold uppercase tracking-widest">{t.calibrating}...</p>
-                 </div>
-                 <div className="space-y-4">
-                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest opacity-80">
-                      <span>Neural Mapping</span>
-                      <span className="text-proton-accent">{Math.floor(neuralProgress)}%</span>
-                   </div>
-                   <div className="h-4 w-full bg-proton-bg rounded-full overflow-hidden p-1 border border-proton-border shadow-inner relative group/bar">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${neuralProgress}%` }}
-                        transition={{ duration: 1.5, ease: "easeOut" }}
-                        className="h-full bg-gradient-to-r from-proton-accent via-proton-secondary to-proton-accent rounded-full shadow-[0_0_15px_rgba(255,100,250,0.4)]" 
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none">
-                         <span className="text-[8px] font-black text-proton-text bg-white/80 px-2 rounded-full border border-proton-border shadow-sm uppercase tracking-tighter">
-                            Nodes active: {Math.floor(neuralProgress * 12)}
-                         </span>
-                      </div>
-                   </div>
-                 </div>
-                 <div className="flex flex-wrap gap-4">
-                    <span className="px-5 py-2 bg-proton-accent/5 rounded-2xl border border-proton-accent/20 text-[10px] font-black text-proton-accent uppercase tracking-widest">L3 CALIBRATED</span>
-                    <span className="px-5 py-2 bg-green-500/5 rounded-2xl border border-green-500/20 text-[10px] font-black text-green-500 uppercase tracking-widest">BIO-SYNC READY</span>
-                 </div>
+              <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
+                <Grid size={16} className="text-gray-400" />
+                <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">{personal.dash_title}</span>
               </div>
-           </div>
+            </div>
 
-           {/* Resource Grid */}
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             {stats.map((stat, idx) => (
-                <div key={idx} className="bg-proton-card p-10 rounded-[48px] border border-proton-border shadow-sm group hover:border-proton-accent transition-all duration-500">
-                   <div className={cn("p-5 w-fit rounded-[24px] bg-white border border-proton-border mb-8 shadow-md group-hover:scale-110 group-hover:rotate-6 transition-all", stat.color)}>
-                      <stat.icon size={32} />
-                   </div>
-                   <div className="space-y-1">
-                      <p className="text-[11px] font-black text-proton-muted uppercase tracking-[0.2em]">{stat.label}</p>
-                      <p className="text-4xl font-black tracking-tighter text-proton-text leading-none">{stat.value}</p>
-                   </div>
+            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Database size={16} />
+                  <span className="text-xs font-bold uppercase tracking-wide">{cab.storage}</span>
                 </div>
-             ))}
-           </div>
-
-           {/* Multitasking & Diagnostics Section */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <SystemDiagnostic language={language} />
-              
-              <div className="space-y-8">
-                <div className="p-10 rounded-[48px] bg-proton-secondary/5 border border-proton-secondary/20 group hover:bg-proton-secondary/10 transition-all flex flex-col justify-between h-full">
-                   <div>
-                     <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 bg-white rounded-2xl shadow-sm border border-proton-border">
-                          <Zap size={20} className="text-proton-secondary" />
-                        </div>
-                        <h4 className="text-sm font-black uppercase tracking-widest">{language === 'ka' ? 'აქტიური პროცესები' : 'ACTIVE PROCESSES'}</h4>
-                     </div>
-                     <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-white/50 rounded-3xl border border-proton-border group/item hover:border-proton-secondary/40 transition-colors">
-                           <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                              <span className="text-xs font-bold uppercase tracking-tight">Persona Evolution</span>
-                           </div>
-                           <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">RUNNING</span>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-white/50 rounded-3xl border border-proton-border opacity-50">
-                           <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full bg-proton-muted" />
-                              <span className="text-xs font-bold uppercase tracking-tight">Cloud Crawler</span>
-                           </div>
-                           <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest">IDLE</span>
-                        </div>
-                     </div>
-                   </div>
-                   <button className="mt-8 py-5 w-full bg-proton-secondary/10 border border-proton-secondary/20 rounded-[28px] text-[10px] font-black uppercase tracking-widest text-proton-secondary hover:bg-proton-secondary hover:text-white transition-all">
-                      {language === 'ka' ? 'მართვის პანელი' : 'Control center'}
-                   </button>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">{userStats.storageGB.toFixed(1)}</span>
+                  <span className="text-sm font-bold text-gray-400 uppercase">GB</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(userStats.storageGB / 10) * 100}%` }} />
                 </div>
               </div>
-           </div>
 
-           {/* Quick Access Modules */}
-           <div className="space-y-6">
-              <div className="flex items-center gap-4 px-4 text-proton-muted">
-                 <div className="h-px flex-1 bg-proton-border" />
-                 <h3 className="text-xs font-black uppercase tracking-[0.4em] whitespace-nowrap">{t.quick_actions}</h3>
-                 <div className="h-px flex-1 bg-proton-border" />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Cpu size={16} />
+                  <span className="text-xs font-bold uppercase tracking-wide">{cab.compute_time}</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">{userStats.computeTimeHours.toFixed(0)}</span>
+                  <span className="text-sm font-bold text-gray-400 uppercase">H</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-orange-500 rounded-full" style={{ width: '65%' }} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {quickActions.map(action => (
-                    <button 
-                      key={action.id}
-                      onClick={() => onNavigate(action.id)}
-                      className="p-8 rounded-[48px] bg-proton-card border border-proton-border text-left hover:scale-[1.05] active:scale-95 transition-all group shadow-xl"
-                    >
-                       <div className={cn("p-5 w-fit rounded-[24px] mb-6 group-hover:scale-110 transition-transform shadow-sm", action.color)}>
-                          <action.icon size={28} />
-                       </div>
-                       <h4 className="font-black text-lg uppercase tracking-tighter mb-2 group-hover:text-proton-accent transition-colors">{action.label}</h4>
-                       <p className="text-[11px] text-proton-muted font-bold leading-relaxed">{action.desc}</p>
-                    </button>
-                 ))}
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-500 mb-1">
+                  <Zap size={16} />
+                  <span className="text-xs font-bold uppercase tracking-wide">{cab.api_calls}</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">{(userStats.aiTokens / 1000).toFixed(1)}</span>
+                  <span className="text-sm font-bold text-gray-400 uppercase">K</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '42%' }} />
+                </div>
               </div>
-           </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {mainModules.map((module) => (
+              <button 
+                key={module.id} 
+                onClick={() => onNavigate(module.id)}
+                className="bg-white p-8 rounded-[32px] border border-gray-200 shadow-sm text-left group hover:border-blue-300 hover:shadow-md transition-all"
+              >
+                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform", module.bg, module.color)}>
+                  <module.icon size={24} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{module.label}</h3>
+                <p className="text-xs text-gray-500 font-medium leading-relaxed mb-6">{module.desc}</p>
+                <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-wider">
+                  {language === 'ka' ? 'გახსნა' : 'Access'}
+                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Right Column: Identity & Security */}
-        <div className="lg:col-span-4 space-y-8">
-           <div className="bg-proton-card rounded-[48px] border border-proton-border shadow-2xl flex flex-col overflow-hidden">
-              <div className="bg-white p-12 border-b border-proton-border">
-                 <div className="flex items-center justify-between mb-10">
-                    <div className="space-y-1">
-                       <h3 className="text-2xl font-black text-proton-accent italic leading-none uppercase">Proton ID</h3>
-                       <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{t.member_since} {formattedJoinDate}</p>
-                    </div>
-                    <Fingerprint size={40} className="text-proton-accent animate-pulse" />
-                 </div>
-                 
-                 <div className="space-y-6">
-                    <div className="flex items-center justify-between p-5 rounded-3xl bg-proton-bg border border-proton-border">
-                       <div className="flex items-center gap-4">
-                          <ShieldCheck size={20} className="text-green-500" />
-                          <span className="text-xs font-black uppercase tracking-tight">{t.two_factor}</span>
-                       </div>
-                       <div className="w-14 h-8 bg-proton-accent rounded-full p-1.5 cursor-pointer shadow-lg shadow-proton-accent/30">
-                          <div className="w-5 h-5 bg-white rounded-full ml-auto shadow-md" />
-                       </div>
-                    </div>
-                    
-                    <button className="w-full py-6 bg-proton-accent text-white rounded-[40px] font-black text-sm uppercase tracking-widest shadow-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-proton-accent/20">
-                       {language === 'ka' ? 'აკადემიის განახლება' : 'Upgrade Cluster'}
-                    </button>
-                 </div>
+        {/* Right Column: Information & Security */}
+        <div className="space-y-8">
+          <div className="bg-gray-900 p-10 rounded-[32px] text-white shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-8">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">{language === 'ka' ? 'ვერიფიცირებული კვანძი' : 'VERIFIED NODE'}</span>
+                <ShieldCheck size={20} className="text-white" />
               </div>
-              
-              <div className="p-12 bg-proton-bg/20 space-y-10">
-                 <div className="space-y-6">
-                   <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.4em] mb-4">Security Metrics</p>
-                   {[
-                     { label: 'Cloud Identity', icon: Cloud, status: 'Verified' },
-                     { label: 'Blockchain Ledger', icon: Key, status: 'Active' },
-                     { label: 'Neural Log', icon: ClipboardList, status: 'Secured' },
-                   ].map((item, i) => (
-                      <div key={i} className="flex items-center justify-between group cursor-pointer">
-                         <div className="flex items-center gap-4">
-                            <item.icon size={18} className="text-proton-muted transition-colors" />
-                            <span className="text-[11px] font-black uppercase tracking-tight group-hover:translate-x-1 transition-transform">{item.label}</span>
-                         </div>
-                         <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest">{item.status}</span>
-                      </div>
-                   ))}
-                 </div>
-                 
-                 <div className="pt-8 border-t border-proton-border/30 flex items-center gap-4 text-proton-muted font-bold text-[10px] justify-center opacity-70">
-                    <Clock size={14} />
-                    <span>{language === 'ka' ? 'ბოლო რეზერვი: 1 წამში' : 'Auto-sync active'}</span>
-                 </div>
-              </div>
-           </div>
-           
-           {/* Neural Log - New Feature */}
-           <div className="p-10 rounded-[48px] bg-black text-cyan-400 font-mono text-[10px] space-y-4 border border-cyan-500/20 shadow-2xl">
-              <div className="flex items-center justify-between border-b border-cyan-500/20 pb-4 mb-4">
-                 <span className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                    LIVE_SYSTEM_LOG
-                 </span>
-                 <span className="opacity-50">v4.0.2-neural</span>
-              </div>
-              <div className="space-y-2 max-h-[150px] overflow-hidden">
-                 {neuralLogs.map((log, i) => (
-                    <div key={i} className="flex gap-4">
-                       <span className="opacity-40">[{log.time}]</span>
-                       <span className="flex-1">EXEC: {log.event}</span>
-                       <span className="text-pink-500">{log.status}</span>
-                    </div>
-                 ))}
-                 <div className="flex gap-4 animate-pulse">
-                    <span className="opacity-40">[{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
-                    <span className="flex-1 italic">Waiting for quantum pulse...</span>
-                 </div>
-              </div>
-           </div>
-
-           {/* Quick Preference Card */}
-           <div className="p-10 rounded-[48px] bg-proton-bg border border-proton-border shadow-sm">
-              <div className="flex items-center gap-4 mb-8">
-                 <div className="p-3 bg-white rounded-2xl border border-proton-border">
-                   <Settings size={20} className="text-proton-muted" />
-                 </div>
-                 <h3 className="font-black text-sm uppercase tracking-[0.2em]">Preferences</h3>
+              <div className="mb-10">
+                <p className="text-gray-400 text-xs font-medium mb-1">{t.member_since}</p>
+                <h3 className="text-2xl font-bold">{formattedJoinDate}</h3>
               </div>
               <div className="space-y-4">
-                 <button onClick={() => onNavigate('settings')} className="w-full p-5 rounded-3xl bg-white border border-proton-border flex items-center justify-between hover:bg-proton-accent/5 transition-all group">
-                    <div className="flex items-center gap-4">
-                       <Globe size={18} className="text-proton-muted group-hover:text-proton-accent transition-colors" />
-                       <span className="text-xs font-black uppercase tracking-tighter">Localization</span>
-                    </div>
-                    <span className="text-[10px] font-black text-proton-accent uppercase tracking-widest">{language}</span>
-                 </button>
-                 <button className="w-full p-5 rounded-3xl bg-white border border-proton-border flex items-center justify-between hover:bg-proton-accent/5 transition-all group">
-                    <div className="flex items-center gap-4">
-                       <div className="w-4 h-4 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.4)]" />
-                       <span className="text-xs font-black uppercase tracking-tighter">UX Mode</span>
-                    </div>
-                    <span className="text-[10px] font-black text-proton-accent uppercase tracking-widest">{uiMode}</span>
-                 </button>
+                <div className="flex items-center justify-between p-4 bg-white/10 rounded-2xl border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Fingerprint size={16} />
+                    <span className="text-xs font-bold uppercase tracking-tight">{cab.two_factor}</span>
+                  </div>
+                  <div className="w-10 h-5 bg-white/20 rounded-full flex items-center px-1">
+                    <div className="w-3 h-3 bg-white rounded-full ml-auto" />
+                  </div>
+                </div>
+                <button className="w-full py-4 bg-white text-gray-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-2 shadow-sm">
+                  <Download size={16} />
+                  {language === 'ka' ? 'იდენტობის ექსპორტი' : 'Export Identity'}
+                </button>
               </div>
-           </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-10 rounded-[32px] border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{language === 'ka' ? 'კონვერტაცია' : 'Rate conversion'}</h3>
+              <RefreshCw size={16} className="text-gray-400" />
+            </div>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between group cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors">
+                <span className="text-xs font-bold text-gray-600">USD / GEL</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-gray-900">2.68</span>
+                  <span className="text-[10px] text-green-500 font-bold">+0.04%</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between group cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors">
+                <span className="text-xs font-bold text-gray-600">BTC / USD</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-gray-900">64.2K</span>
+                  <span className="text-[10px] text-red-500 font-bold">-1.2%</span>
+                </div>
+              </div>
+              <div className="pt-6 border-t border-gray-100 flex justify-center">
+                <button className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">
+                  {language === 'ka' ? 'სრული კურსები' : 'View all rates'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -4007,67 +3995,91 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="h-20 border-b border-proton-border/30 flex items-center justify-between px-6 md:px-10 z-30 bg-proton-card/40 backdrop-blur-3xl relative">
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="w-10 h-10 flex items-center justify-center rounded-xl bg-proton-bg/50 border border-proton-border/50 text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all hidden md:flex"
-            >
-              <LayoutDashboard size={18} />
-            </button>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2 text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">
-                <Globe size={11} className="text-proton-accent" />
-                <span>Node: {userProfile.region}</span>
+        <header className="h-20 border-b border-proton-border flex items-center justify-between px-6 md:px-10 z-40 bg-proton-card sticky top-0 backdrop-blur-md">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4 border-r border-proton-border pr-8 mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
+              <div className="w-12 h-12 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-lg group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                )}
               </div>
-              <h2 className="text-sm font-black tracking-[0.05em] text-proton-text uppercase">
-                {activeView.replace('_', ' ')} <span className="text-[8px] text-proton-accent font-black opacity-40 ml-1">v3.0.4</span>
-              </h2>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-black text-proton-text uppercase tracking-tight leading-none">{user.displayName || 'Explorer'}</span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter">System Online</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.15em]">NODE: <span className="text-proton-accent">{userProfile.region || 'CORE'}</span></span>
+                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.15em] border-l border-proton-border pl-3">LEVEL 4</span>
+                </div>
+              </div>
             </div>
+
+            <nav className="hidden lg:flex items-center gap-6">
+              {[
+                { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
+                { id: 'blueprints', label: t.sidebar.blueprints, icon: Workflow },
+                { id: 'personas', label: t.sidebar.agents, icon: Users },
+                { id: 'compute', label: 'Diagnostics', icon: Activity },
+              ].map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => handleViewChange(link.id as any)}
+                  className={cn(
+                    "text-[10px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-xl transition-all flex items-center gap-2",
+                    activeView === link.id ? "bg-proton-accent/10 text-proton-accent" : "text-proton-muted hover:text-proton-text"
+                  )}
+                >
+                  <link.icon size={14} />
+                  {link.label}
+                </button>
+              ))}
+            </nav>
           </div>
           
-          <div className="flex items-center gap-4 sm:gap-10">
-            <div className="hidden lg:flex items-center gap-10">
-               <div className="flex flex-col items-end">
-                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-2">Engine Efficiency</span>
-                  <div className="flex items-center gap-3">
-                     <div className="w-20 h-1.5 rounded-full bg-proton-border overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: "84%" }}
-                          className="h-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.6)]" 
-                        />
-                     </div>
-                     <span className="text-[10px] font-black text-proton-accent">84%</span>
-                  </div>
-               </div>
-
-               <div className="h-8 w-px bg-proton-border/50" />
-               
-               <div className="flex flex-col items-end">
-                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1.5">UX Framework</span>
-                  <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} />
-               </div>
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:flex items-center gap-3 bg-proton-bg border border-proton-border p-1 rounded-2xl">
+              <button 
+                onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
+                className={cn(
+                  "px-4 py-1.5 text-[10px] font-black rounded-xl transition-all",
+                  userProfile.language === 'en' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
+                )}
+              >
+                EN
+              </button>
+              <button 
+                onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
+                className={cn(
+                  "px-4 py-1.5 text-[10px] font-black rounded-xl transition-all",
+                  userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
+                )}
+              >
+                GE
+              </button>
             </div>
-            
+
+            <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
+
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => handleViewChange('settings')}
-                className="w-10 h-10 rounded-xl bg-proton-bg/50 border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
+                className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
               >
                 <Settings size={18} />
-                <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-proton-secondary shadow-[0_0_8px_rgba(255,100,250,0.8)]" />
               </button>
-              <div 
-                className="w-11 h-11 rounded-2xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-accent font-black italic cursor-pointer hover:scale-105 active:scale-95 transition-all overflow-hidden shadow-lg" 
-                onClick={() => handleViewChange('profile')}
+              <button 
+                onClick={handleSignOut}
+                className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
+                title="Sign Out"
               >
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-sm">{(user.displayName || 'U').charAt(0).toUpperCase()}</span>
-                )}
-              </div>
+                <LogOut size={18} />
+              </button>
             </div>
           </div>
         </header>
