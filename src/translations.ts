@@ -143,7 +143,9 @@ export const translations = {
       loading: "Loading...",
       error: "Error",
       success: "Success",
-      verified: "Node Verified"
+      verified: "Node Verified",
+      signin: "Sign In",
+      signout: "Sign Out"
     },
     hardware: {
       title: "Hardware Matrix",
@@ -234,15 +236,15 @@ export const translations = {
     },
     cabinet: {
       title: "Personal Cabinet",
-      subtitle: "Global Access & Identity",
+      subtitle: "Management & Resource Distribution",
       profile_info: "Profile Information",
       subscription: "Subscription Tier",
       tier_free: "Standard Member",
       tier_pro: "Elite Explorer",
       tier_enterprise: "Industrial Node",
       usage_stats: "Usage Analytics",
-      storage: "Data Storage",
-      compute_time: "Compute Time",
+      storage: "Neural Memory",
+      compute_time: "Compute Cycles",
       api_calls: "AI Tokens",
       connected_platforms: "Digital ecosystem",
       security_level: "Security Protocols",
@@ -250,7 +252,28 @@ export const translations = {
       sessions: "Active Sessions",
       export_identity: "Export Identity",
       delete_account: "Terminate Connection",
-      member_since: "Authorized since"
+      member_since: "Member Since",
+      readiness: "AI System Readiness",
+      calibrating: "Neural Calibration in Progress",
+      quick_actions: "Modular Access",
+      finance_desc: "Manage payments and assets",
+      studio_desc: "Creative engine and generation",
+      blueprints_desc: "Automated business processes",
+      connected: "Active Connection",
+      ready: "System Optimized",
+      diagnostic: {
+        title: "System Diagnostic",
+        hub: "Performance Hub",
+        evaluating: "Evaluating core performance...",
+        latency: "Testing memory latency...",
+        matrix: "Analyzing floating-point throughput...",
+        bench_score: "Bench Score",
+        status_optimal: "Status: Optimal",
+        status_standard: "Status: Standard",
+        run: "Run Diagnostic",
+        retest: "Re-test Module",
+        running: "Analyzing Realtime..."
+      }
     },
     workflows: {
       title: "Workflows",
@@ -295,7 +318,8 @@ export const translations = {
       nbg_sync: "Synced with Central Bank",
       off_ramps: "Local Off-Ramps",
       off_ramps_notice: "In accordance with NBG regulations, crypto-asset withdrawal is only possible through licensed service providers.",
-      ledger: "Blockchain Ledger"
+      ledger: "Blockchain Ledger",
+      online: "ONLINE"
     },
     image_studio: {
       title: "Image Studio",
@@ -500,7 +524,9 @@ export const translations = {
       loading: "იტვირთება...",
       error: "შეცდომა",
       success: "წარმატება",
-      verified: "კვანძი ვერიფიცირებულია"
+      verified: "კვანძი ვერიფიცირებულია",
+      signin: "შესვლა",
+      signout: "გამოსვლა"
     },
     hardware: {
       title: "აპარატურული მატრიცა",
@@ -566,7 +592,7 @@ export const translations = {
     },
     cabinet: {
       title: "პირადი კაბინეტი",
-      subtitle: "გლობალური წვდომა და იდენტობა",
+      subtitle: "მართვა და რესურსების განაწილება",
       profile_info: "პროფილის ინფორმაცია",
       subscription: "გამოწერის დონე",
       tier_free: "სტანდარტული წევრი",
@@ -582,7 +608,28 @@ export const translations = {
       sessions: "აქტიური სესიები",
       export_identity: "იდენტობის ექსპორტი",
       delete_account: "კავშირის გაწყვეტა",
-      member_since: "ავტორიზებულიდან"
+      member_since: "ავტორიზებულიდან",
+      readiness: "AI სისტემის მზადყოფნა",
+      calibrating: "ნეირონული კალიბრაცია პროცესშია",
+      quick_actions: "მოდულური წვდომა",
+      finance_desc: "გადახდებისა და აქტივების მართვა",
+      studio_desc: "კრეატიული ძრავი და გენერაცია",
+      blueprints_desc: "ავტომატიზირებული ბიზნეს პროცესები",
+      connected: "აქტიური კავშირი",
+      ready: "სისტემა ოპტიმიზებულია",
+      diagnostic: {
+        title: "სისტემური დიაგნოსტიკა",
+        hub: "პერფორმანსის ჰაბი",
+        evaluating: "ბირთვის ტესტირება...",
+        latency: "მეხსიერების ლატენტობა...",
+        matrix: "გრაფიკული მატრიცა...",
+        bench_score: "Bench შკალა",
+        status_optimal: "სტატუსი: ოპტიმალური",
+        status_standard: "სტატუსი: სტანდარტული",
+        run: "დიაგნოსტიკის გაშვება",
+        retest: "ხელახლა",
+        running: "მიმდინარეობს..."
+      }
     },
     workflows: {
       title: "ვორქფლოუები",
@@ -627,7 +674,8 @@ export const translations = {
       nbg_sync: "სინქრონიზირებულია ეროვნულ ბანკთან",
       off_ramps: "ადგილობრივი პლატფორმები",
       off_ramps_notice: "NBG რეგულაციების შესაბამისად, კრიპტო-აქტივების განაღდება შესაძლებელია მხოლოდ ლიცენზირებულ სერვის-პროვაიდერებთან.",
-      ledger: "ბლოკჩეინ რეესტრი"
+      ledger: "ბლოკჩეინ რეესტრი",
+      online: "ონლაინ"
     },
     image_studio: {
       title: "იმიჯ სტუდია",

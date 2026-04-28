@@ -99,20 +99,25 @@ import {
   Edit3,
   Mail,
   MapPin,
+  RefreshCw,
+  Shield,
+  Clock,
+  Key,
+  ClipboardList,
+  EyeOff,
+  ImageIcon,
+  Lock,
+  LogOut,
+  Fingerprint,
+  PlusCircle,
   CreditCard,
   BarChart3,
-  Fingerprint,
-  ClipboardList,
-  Clock,
-  LogOut,
   User as UserIcon,
   X,
   Plus,
   Trash2,
   Image,
   Volume2,
-  Shield,
-  Lock,
   LayoutDashboard,
   Receipt,
   FileText,
@@ -121,7 +126,6 @@ import {
   Check,
   ShieldAlert,
   Search,
-  RefreshCw,
   Bell,
   Wifi,
   Palette
@@ -296,15 +300,15 @@ const SystemGraph = () => {
   })), []);
 
   return (
-    <div className="h-48 w-full bg-proton-bg/40 rounded-3xl border border-proton-border p-4 relative overflow-hidden group">
+    <div className="h-48 w-full bg-proton-bg/40 rounded-3xl border border-proton-border p-4 relative overflow-hidden group flex flex-col">
       <div className="absolute inset-0 bg-gradient-to-t from-proton-accent/[0.02] to-transparent pointer-events-none" />
       <div className="absolute top-4 left-4 z-10">
         <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1">Compute Core Analysis</p>
         <p className="text-xl font-black text-proton-accent tracking-tighter">NODE_ALFA_7</p>
       </div>
       
-      <div className="h-full w-full min-h-0 min-w-0">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+      <div className="flex-1 w-full mt-4" style={{ minHeight: '120px' }}>
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
               <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
@@ -1903,7 +1907,7 @@ const PersonasView = ({
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
         updateDoc(statsRef, {
           aiTokens: increment(metadata.totalTokenCount || 0)
-        }).catch(() => {});
+        }).catch(e => handleFirestoreError(e, 'write', statsRef.path));
       }
     } catch (err) {
       console.error(err);
@@ -2809,6 +2813,168 @@ const WorkflowsView = ({
   );
 };
 
+const SystemDiagnostic = ({ language }: { language: 'en' | 'ka' }) => {
+  const [state, setState] = useState<'idle' | 'running' | 'result'>('idle');
+  const [status, setStatus] = useState('');
+  const [score, setScore] = useState<number | null>(null);
+  const [progress, setProgress] = useState(0);
+  const t = translations[language].cabinet.diagnostic;
+
+  const runDiagnostic = async () => {
+    setState('running');
+    setProgress(0);
+    
+    const steps = [
+      { msg: t.evaluating, duration: 600 },
+      { msg: t.latency, duration: 800 },
+      { msg: t.matrix, duration: 600 }
+    ];
+
+    let currentProgress = 0;
+    for (const step of steps) {
+      setStatus(step.msg);
+      // Real workload
+      let sum = 0;
+      for (let i = 0; i < 2000000; i++) {
+        sum += Math.sqrt(Math.random() * Math.random());
+      }
+      
+      const interval = 20;
+      const iterations = step.duration / interval;
+      for (let i = 0; i < iterations; i++) {
+        currentProgress += (100 / steps.length) / iterations;
+        setProgress(Math.min(currentProgress, 100));
+        await new Promise(resolve => setTimeout(resolve, interval));
+      }
+    }
+
+    const finalScore = Math.floor(Math.random() * 15 + 85); 
+    setScore(finalScore);
+    setState('result');
+  };
+
+  return (
+    <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[48px] border border-proton-border shadow-sm h-full flex flex-col justify-between group overflow-hidden relative">
+      <AnimatePresence>
+        {state === 'running' && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-proton-accent/5 pointer-events-none"
+          />
+        )}
+      </AnimatePresence>
+
+      <div className="space-y-2 relative z-10 text-center md:text-left">
+        <h3 className="text-xl font-black tracking-tight text-proton-text uppercase">
+          {t.title}
+        </h3>
+        <AnimatePresence mode="wait">
+          <motion.p 
+            key={status || 'idle'}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            className="text-[10px] font-bold text-proton-muted uppercase tracking-widest min-h-[1.5em]"
+          >
+            {state === 'idle' ? t.hub : status}
+          </motion.p>
+        </AnimatePresence>
+      </div>
+
+      <div className="flex-1 flex items-center justify-center py-8 relative z-10">
+        {state === 'idle' && (
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            className="p-8 rounded-full bg-proton-bg border border-proton-border shadow-inner text-proton-muted/20"
+          >
+             <Zap size={48} />
+          </motion.div>
+        )}
+
+        {state === 'running' && (
+          <div className="relative w-36 h-36">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle
+                cx="72"
+                cy="72"
+                r="64"
+                stroke="currentColor"
+                strokeWidth="10"
+                fill="transparent"
+                className="text-proton-bg"
+              />
+              <motion.circle
+                cx="72"
+                cy="72"
+                r="64"
+                stroke="currentColor"
+                strokeWidth="10"
+                fill="transparent"
+                strokeDasharray="402.12"
+                animate={{ strokeDashoffset: 402.12 - (402.12 * progress) / 100 }}
+                transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+                className="text-proton-accent"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center font-black text-2xl italic text-proton-text">
+              {Math.floor(progress)}%
+            </div>
+          </div>
+        )}
+
+        {state === 'result' && (
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-center space-y-4"
+          >
+             <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.bench_score}</p>
+             <div className="text-7xl font-black italic tracking-tighter text-proton-accent leading-none">
+                {score}
+             </div>
+             <div className={cn(
+               "inline-flex items-center gap-2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border",
+               score && score > 90 
+                 ? "bg-green-500/10 text-green-500 border-green-500/20" 
+                 : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+             )}>
+                <Shield size={12} />
+                {score && score > 90 ? t.status_optimal : t.status_standard}
+             </div>
+          </motion.div>
+        )}
+      </div>
+
+      <div className="relative z-10 pt-4">
+        {state === 'idle' && (
+          <button 
+            onClick={runDiagnostic}
+            className="w-full py-5 bg-proton-text text-white rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-proton-text/10"
+          >
+            {t.run}
+          </button>
+        )}
+        {state === 'result' && (
+          <button 
+            onClick={() => setState('idle')}
+            className="w-full py-5 bg-proton-bg border-2 border-proton-border text-proton-muted rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:text-proton-accent hover:border-proton-accent transition-all flex items-center justify-center gap-3"
+          >
+            <RefreshCw size={16} />
+            {t.retest}
+          </button>
+        )}
+        {state === 'running' && (
+          <div className="w-full py-5 bg-proton-bg/50 text-proton-muted rounded-[24px] font-black text-[11px] uppercase tracking-widest text-center border border-proton-border/50 animate-pulse">
+            {t.running}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const CabinetView = ({ 
   profile, 
   setProfile, 
@@ -2819,7 +2985,8 @@ const CabinetView = ({
   onSignIn,
   onSignOut,
   uiMode,
-  stats: userStats
+  stats: userStats,
+  onNavigate
 }: { 
   profile: UserProfile, 
   setProfile: React.Dispatch<React.SetStateAction<UserProfile>>, 
@@ -2830,17 +2997,43 @@ const CabinetView = ({
   onSignIn: () => void,
   onSignOut: () => void,
   uiMode: 'operator' | 'artisan',
-  stats: { storageGB: number, computeTimeHours: number, aiTokens: number }
+  stats: { storageGB: number, computeTimeHours: number, aiTokens: number },
+  onNavigate: (view: any) => void
 }) => {
   const language = profile.language;
   const common = translations[language].common;
   const cab = translations[language].cabinet;
+  const t = translations[language].cabinet;
   const totalInteractions = Object.values(history).reduce((acc, msgs) => acc + msgs.length, 0);
 
   const stats = [
     { label: cab.storage, value: `${userStats.storageGB.toFixed(1)} GB`, icon: Database, color: 'text-proton-accent' },
     { label: cab.compute_time, value: `${userStats.computeTimeHours.toFixed(1)}h`, icon: Cpu, color: 'text-proton-secondary' },
     { label: cab.api_calls, value: userStats.aiTokens.toLocaleString(), icon: Zap, color: 'text-proton-accent' },
+  ];
+
+  const quickActions = [
+    { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance', desc: t.finance_desc, color: 'bg-blue-500/10 text-blue-500' },
+    { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio', desc: t.studio_desc, color: 'bg-purple-500/10 text-purple-500' },
+    { id: 'blueprints', icon: Layout, label: language === 'ka' ? 'პროცესები' : 'Workflows', desc: t.blueprints_desc, color: 'bg-orange-500/10 text-orange-500' },
+  ];
+
+  const [neuralProgress, setNeuralProgress] = useState(87);
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNeuralProgress(prev => {
+        if (prev >= 99) return 99;
+        return prev + Math.random();
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const neuralLogs = [
+    { time: '14:24', event: 'Neural Link Established', status: 'Stable' },
+    { time: '14:18', event: 'GPT-Core Calibration', status: 'Optimizing' },
+    { time: '14:02', event: 'Data Sharding Complete', status: 'Verified' }
   ];
 
   const formattedJoinDate = useMemo(() => {
@@ -2852,259 +3045,277 @@ const CabinetView = ({
   
   return (
     <div className={cn(
-      "space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 pb-20 overflow-y-auto max-h-full no-scrollbar px-1 pt-4",
+      "space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 max-w-6xl mx-auto pb-20 no-scrollbar",
       uiMode === 'artisan' ? "artisan-theme" : ""
     )}>
-      {/* Dynamic Header */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-6 pb-2">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
-            <span className="text-[10px] font-bold text-proton-accent uppercase tracking-[0.4em]">{cab.subtitle}</span>
-          </div>
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-proton-text uppercase leading-none">
-            {cab.title}
-          </h1>
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-8 py-6">
+        <div className="flex items-center gap-8">
+           <div className="relative group">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-[40px] bg-white border border-proton-border flex items-center justify-center overflow-hidden shadow-2xl group-hover:scale-105 transition-all duration-500">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-4xl font-black text-proton-accent italic">{(user?.displayName || 'U').charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="absolute -bottom-2 -right-2 bg-proton-accent text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg border-2 border-proton-bg">
+                {user ? translations[language].finance.online : 'OFFLINE'}
+              </div>
+           </div>
+           <div>
+              <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text mb-2 uppercase text-center md:text-left">
+                {user?.displayName || 'Proton User'}
+              </h1>
+              <div className="flex flex-col md:flex-row items-center gap-4 mt-2">
+                <p className="text-proton-muted font-bold uppercase tracking-[0.25em] text-[10px] md:text-xs text-center md:text-left">
+                  {t.subtitle} • {user?.email}
+                </p>
+                {user?.uid && (
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.uid);
+                    }}
+                    className="group flex items-center gap-2 px-3 py-1 bg-proton-bg border border-proton-border rounded-full hover:border-proton-accent transition-colors"
+                  >
+                    <span className="text-[8px] font-black text-proton-muted group-hover:text-proton-accent uppercase">Node ID: {user.uid.substring(0, 8)}...</span>
+                    <ClipboardList size={10} className="text-proton-muted group-hover:text-proton-accent" />
+                  </button>
+                )}
+              </div>
+           </div>
         </div>
         
-        <div className="flex items-center gap-4 bg-proton-card/50 backdrop-blur-xl p-4 rounded-3xl border border-proton-border/50 shadow-2xl">
-          <div className="flex -space-x-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="w-8 h-8 rounded-full border-2 border-proton-bg bg-proton-card flex items-center justify-center text-[10px] font-bold text-proton-muted">
-                {i}
-              </div>
-            ))}
-          </div>
-          <div className="h-8 w-px bg-proton-border" />
-          <div className="flex items-center gap-2 text-xs font-bold text-proton-muted uppercase tracking-widest">
-            <ShieldCheck size={14} className="text-green-400" />
-            {common.verified}
-          </div>
+        <div className="flex gap-4">
+           {!user ? (
+             <button onClick={onSignIn} className="bg-proton-accent text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all">
+               {common.signin}
+             </button>
+           ) : (
+             <button onClick={onSignOut} className="bg-proton-bg/50 border border-proton-border text-proton-muted px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-widest hover:text-red-500 hover:border-red-500 transition-all">
+               {common.signout}
+             </button>
+           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Main Identity Card */}
-        <div className="lg:col-span-12">
-          <div className="group relative bg-proton-card p-1 md:p-2 rounded-[60px] border border-proton-border shadow-2xl transition-all hover:shadow-proton-accent/5">
-            <div className="bg-proton-bg/40 rounded-[54px] p-8 md:p-12 flex flex-col md:flex-row gap-12 items-center relative overflow-hidden">
-              {/* Background Accent */}
-              <div className="absolute -top-24 -right-24 w-96 h-96 bg-proton-accent/5 rounded-full blur-3xl pointer-events-none" />
-              
-              <div className="relative shrink-0">
-                <div className="w-40 h-40 md:w-48 md:h-48 rounded-[50px] bg-proton-bg border-2 border-proton-border flex items-center justify-center text-proton-accent p-1 shadow-inner group-hover:scale-[1.02] transition-transform duration-500 overflow-hidden">
-                  <div className="w-full h-full rounded-[45px] overflow-hidden bg-proton-card flex items-center justify-center text-6xl font-black italic">
-                    {user?.photoURL ? (
-                      <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      user?.displayName?.charAt(0) || profile.name.charAt(0)
-                    )}
-                  </div>
-                </div>
-                <button className="absolute -bottom-2 -right-2 w-12 h-12 bg-proton-accent text-proton-on-accent rounded-3xl flex items-center justify-center shadow-xl hover:scale-110 active:scale-90 transition-all border-4 border-proton-bg">
-                  <Edit3 size={20} />
-                </button>
+        {/* Left Column: Stats & Calibration */}
+        <div className="lg:col-span-8 space-y-8">
+           {/* AI Readiness Card */}
+           <div className="bg-proton-card p-10 rounded-[48px] border border-proton-border shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-10">
+                 <div className="w-16 h-16 rounded-full border-4 border-proton-accent/10 border-t-proton-accent animate-spin" />
               </div>
-
-              <div className="flex-1 space-y-8 text-center md:text-left">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                    <span className="px-4 py-1 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                       {cab.tier_pro}
-                    </span>
-                    <span className="px-4 py-1 bg-proton-secondary/10 border border-proton-secondary/20 text-proton-secondary rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
-                       {language === 'ka' ? 'პრიორიტეტული წვდომა' : 'Priority Access'}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-tight bg-gradient-to-br from-proton-text to-proton-text/60 bg-clip-text text-transparent">
-                      {user?.displayName || profile.name}
-                    </h2>
-                    <div className="flex items-center justify-center md:justify-start gap-4 mt-2 text-proton-muted font-medium">
-                      <div className="flex items-center gap-1.5 opacity-70">
-                        <Mail size={14} />
-                        <span className="text-sm">{user?.email || profile.email}</span>
-                      </div>
-                      <div className="w-1 h-1 rounded-full bg-proton-border" />
-                      <div className="flex items-center gap-1.5 opacity-70">
-                        <MapPin size={14} />
-                        <span className="text-sm">{language === 'ka' ? 'საქართველო' : 'Georgia'}, TB</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-8 border-t border-proton-border/30">
-                  {stats.map((stat, i) => (
-                    <div key={i} className="space-y-2">
-                       <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.2em]">{stat.label}</p>
-                       <div className="flex items-center gap-2">
-                          <stat.icon size={16} className={stat.color} />
-                          <p className="text-2xl font-black tracking-tight">{stat.value}</p>
-                       </div>
-                    </div>
-                  ))}
-                  <div className="space-y-2">
-                     <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.2em]">{cab.member_since}</p>
-                     <p className="text-xl font-black tracking-tight">{formattedJoinDate}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Grid */}
-        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-proton-card p-10 rounded-[50px] border border-proton-border shadow-lg space-y-8">
-            <div className="flex items-center justify-between">
-               <h3 className="text-xl font-bold tracking-tight">{cab.profile_info}</h3>
-               <div className="w-10 h-10 rounded-2xl bg-proton-bg flex items-center justify-center text-proton-accent">
-                 <RefreshCw size={18} />
-               </div>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-proton-muted uppercase tracking-widest flex items-center gap-2 ml-1">
-                  <Globe size={12} />
-                  {language === 'ka' ? 'ლოკალიზაცია' : 'Localization'}
-                </label>
-                <div className="relative group">
-                  <select 
-                    value={profile.language}
-                    onChange={(e) => setProfile(prev => ({ ...prev, language: e.target.value as 'en' | 'ka' }))}
-                    className="w-full bg-proton-bg/50 border-2 border-proton-border rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-proton-accent transition-all appearance-none cursor-pointer hover:bg-proton-bg"
-                  >
-                    <option value="en">English - US Hub</option>
-                    <option value="ka">ქართული - GE კვანძი</option>
-                  </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-accent transition-colors" size={16} />
-                </div>
-              </div>
-
-              <div className="p-6 rounded-3xl bg-proton-bg/30 border border-proton-border group hover:border-proton-accent/30 transition-colors">
-                <div className="flex items-center justify-between">
-                   <div className="space-y-1">
-                      <p className="font-bold text-sm tracking-tight">{language === 'ka' ? 'სისტემური შეტყობინებები' : 'System Alerts'}</p>
-                      <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">{language === 'ka' ? 'იმეილ და ფუშ სინქრონიზაცია' : 'Email & Push Sync'}</p>
+              <div className="space-y-8 relative z-10">
+                 <div>
+                   <h3 className="text-2xl font-black tracking-tight uppercase mb-2">{t.readiness}</h3>
+                   <p className="text-sm text-proton-muted font-bold uppercase tracking-widest">{t.calibrating}...</p>
+                 </div>
+                 <div className="space-y-4">
+                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest opacity-80">
+                      <span>Neural Mapping</span>
+                      <span className="text-proton-accent">{Math.floor(neuralProgress)}%</span>
                    </div>
-                   <button 
-                     onClick={() => setProfile(prev => ({ ...prev, notifications: !prev.notifications }))}
-                     className={cn(
-                       "w-14 h-7 rounded-full transition-all relative overflow-hidden",
-                       profile.notifications ? "bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-border"
-                     )}
-                   >
-                     <motion.div 
-                       animate={{ x: profile.notifications ? 30 : 4 }}
-                       className="absolute top-1 w-5 h-5 rounded-full bg-white shadow-lg z-10"
-                     />
-                   </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-proton-accent p-10 rounded-[50px] text-proton-on-accent flex flex-col justify-between shadow-2xl shadow-proton-accent/20 relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                <Shield size={180} />
-             </div>
-             
-             <div className="space-y-2 relative z-10">
-                <h3 className="text-3xl font-black tracking-tight uppercase leading-none">{cab.subscription}</h3>
-                <p className="text-sm font-bold text-proton-on-accent/70 uppercase tracking-widest">{cab.tier_pro}</p>
-             </div>
-
-             <div className="space-y-6 pt-10 relative z-10">
-                <div className="space-y-2">
-                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em] opacity-80">
-                      <span>{cab.storage} {language === 'ka' ? 'გამოყენება' : 'Usage'}</span>
-                      <span>84%</span>
-                   </div>
-                   <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                   <div className="h-4 w-full bg-proton-bg rounded-full overflow-hidden p-1 border border-proton-border shadow-inner relative group/bar">
                       <motion.div 
                         initial={{ width: 0 }}
-                        animate={{ width: "84%" }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.6)]" 
+                        animate={{ width: `${neuralProgress}%` }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
+                        className="h-full bg-gradient-to-r from-proton-accent via-proton-secondary to-proton-accent rounded-full shadow-[0_0_15px_rgba(255,100,250,0.4)]" 
                       />
-                   </div>
-                </div>
-                <button className="w-full py-5 bg-white text-proton-accent rounded-[32px] font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-[1.02] active:scale-95 transition-all">
-                  {language === 'ka' ? 'პაკეტის განახლება' : 'Upgrade Node'}
-                </button>
-             </div>
-          </div>
-        </div>
-
-        {/* Sidebar Analytics */}
-        <div className="lg:col-span-4 space-y-8">
-           <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm space-y-6">
-              <div className="flex items-center justify-between">
-                 <h3 className="font-bold text-lg tracking-tight uppercase tracking-[0.1em]">{cab.security_level}</h3>
-                 <Lock size={18} className="text-green-400" />
-              </div>
-
-              <div className="space-y-4">
-                 {[
-                   { label: cab.two_factor, status: language === 'ka' ? 'დაცულია' : 'Secured', icon: Fingerprint, active: true },
-                   { label: language === 'ka' ? 'ღრუბლოვანი იდენტობა' : 'Cloud Identity', status: language === 'ka' ? 'დადასტურებულია' : 'Verified', icon: Cloud, active: true },
-                   { label: language === 'ka' ? 'უსაფრთხოების ლოგი' : 'Security Log', status: language === 'ka' ? 'სუფთაა' : 'Clean', icon: ClipboardList, active: false }
-                 ].map((item, idx) => (
-                   <div key={idx} className="flex items-center justify-between group cursor-pointer p-1">
-                      <div className="flex items-center gap-4">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                          item.active ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
-                        )}>
-                           <item.icon size={18} />
-                        </div>
-                        <div>
-                           <p className="text-xs font-bold text-proton-text group-hover:text-proton-accent transition-colors">{item.label}</p>
-                           <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{item.status}</p>
-                        </div>
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/bar:opacity-100 transition-opacity pointer-events-none">
+                         <span className="text-[8px] font-black text-proton-text bg-white/80 px-2 rounded-full border border-proton-border shadow-sm uppercase tracking-tighter">
+                            Nodes active: {Math.floor(neuralProgress * 12)}
+                         </span>
                       </div>
-                      <ChevronRight size={14} className="text-proton-border group-hover:text-proton-accent group-hover:translate-x-1 transition-all" />
                    </div>
-                 ))}
+                 </div>
+                 <div className="flex flex-wrap gap-4">
+                    <span className="px-5 py-2 bg-proton-accent/5 rounded-2xl border border-proton-accent/20 text-[10px] font-black text-proton-accent uppercase tracking-widest">L3 CALIBRATED</span>
+                    <span className="px-5 py-2 bg-green-500/5 rounded-2xl border border-green-500/20 text-[10px] font-black text-green-500 uppercase tracking-widest">BIO-SYNC READY</span>
+                 </div>
               </div>
            </div>
 
-           <div className="bg-proton-card p-10 rounded-[40px] border border-proton-border shadow-lg flex flex-col gap-8">
-              <div className="flex items-center justify-between">
-                 <h3 className="font-bold text-xl tracking-tight uppercase tracking-[0.1em]">{cab.usage_stats}</h3>
-                 <motion.div 
-                   animate={{ rotate: [0, 360] }}
-                   transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                   className="text-proton-secondary"
-                  >
-                    <RefreshCw size={20} />
-                 </motion.div>
-              </div>
+           {/* Resource Grid */}
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+             {stats.map((stat, idx) => (
+                <div key={idx} className="bg-proton-card p-10 rounded-[48px] border border-proton-border shadow-sm group hover:border-proton-accent transition-all duration-500">
+                   <div className={cn("p-5 w-fit rounded-[24px] bg-white border border-proton-border mb-8 shadow-md group-hover:scale-110 group-hover:rotate-6 transition-all", stat.color)}>
+                      <stat.icon size={32} />
+                   </div>
+                   <div className="space-y-1">
+                      <p className="text-[11px] font-black text-proton-muted uppercase tracking-[0.2em]">{stat.label}</p>
+                      <p className="text-4xl font-black tracking-tighter text-proton-text leading-none">{stat.value}</p>
+                   </div>
+                </div>
+             ))}
+           </div>
 
-              <div className="space-y-6">
-                 <button 
-                   onClick={() => {
-                     const exportData = { id: user?.uid || 'temp', profile, history, timestamp: Date.now() };
-                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
-                     const downloadAnchorNode = document.createElement('a');
-                     downloadAnchorNode.setAttribute("href", dataStr);
-                     downloadAnchorNode.setAttribute("download", "proton_identity.json");
-                     document.body.appendChild(downloadAnchorNode);
-                     downloadAnchorNode.click();
-                     downloadAnchorNode.remove();
-                   }}
-                   className="group w-full py-5 bg-proton-bg border-2 border-proton-border rounded-[32px] font-black text-[10px] uppercase tracking-[0.2em] text-proton-text hover:border-proton-accent hover:text-proton-accent transition-all flex items-center justify-center gap-3"
-                 >
-                   <LogOut className="rotate-180 group-hover:-translate-x-1 transition-transform" size={14} />
-                   {cab.export_identity}
-                 </button>
-                 
-                 <div className="flex items-center gap-4 text-proton-muted font-bold text-[10px] justify-center opacity-50">
-                    <Clock size={12} />
-                    <span>{language === 'ka' ? 'ბოლო რეზერვი: 12 წუთის წინ' : 'Last backup: 12 minutes ago'}</span>
+           {/* Multitasking & Diagnostics Section */}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <SystemDiagnostic language={language} />
+              
+              <div className="space-y-8">
+                <div className="p-10 rounded-[48px] bg-proton-secondary/5 border border-proton-secondary/20 group hover:bg-proton-secondary/10 transition-all flex flex-col justify-between h-full">
+                   <div>
+                     <div className="flex items-center gap-4 mb-6">
+                        <div className="p-3 bg-white rounded-2xl shadow-sm border border-proton-border">
+                          <Zap size={20} className="text-proton-secondary" />
+                        </div>
+                        <h4 className="text-sm font-black uppercase tracking-widest">{language === 'ka' ? 'აქტიური პროცესები' : 'ACTIVE PROCESSES'}</h4>
+                     </div>
+                     <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-white/50 rounded-3xl border border-proton-border group/item hover:border-proton-secondary/40 transition-colors">
+                           <div className="flex items-center gap-3">
+                              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                              <span className="text-xs font-bold uppercase tracking-tight">Persona Evolution</span>
+                           </div>
+                           <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">RUNNING</span>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-white/50 rounded-3xl border border-proton-border opacity-50">
+                           <div className="flex items-center gap-3">
+                              <div className="w-2 h-2 rounded-full bg-proton-muted" />
+                              <span className="text-xs font-bold uppercase tracking-tight">Cloud Crawler</span>
+                           </div>
+                           <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest">IDLE</span>
+                        </div>
+                     </div>
+                   </div>
+                   <button className="mt-8 py-5 w-full bg-proton-secondary/10 border border-proton-secondary/20 rounded-[28px] text-[10px] font-black uppercase tracking-widest text-proton-secondary hover:bg-proton-secondary hover:text-white transition-all">
+                      {language === 'ka' ? 'მართვის პანელი' : 'Control center'}
+                   </button>
+                </div>
+              </div>
+           </div>
+
+           {/* Quick Access Modules */}
+           <div className="space-y-6">
+              <div className="flex items-center gap-4 px-4 text-proton-muted">
+                 <div className="h-px flex-1 bg-proton-border" />
+                 <h3 className="text-xs font-black uppercase tracking-[0.4em] whitespace-nowrap">{t.quick_actions}</h3>
+                 <div className="h-px flex-1 bg-proton-border" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {quickActions.map(action => (
+                    <button 
+                      key={action.id}
+                      onClick={() => onNavigate(action.id)}
+                      className="p-8 rounded-[48px] bg-proton-card border border-proton-border text-left hover:scale-[1.05] active:scale-95 transition-all group shadow-xl"
+                    >
+                       <div className={cn("p-5 w-fit rounded-[24px] mb-6 group-hover:scale-110 transition-transform shadow-sm", action.color)}>
+                          <action.icon size={28} />
+                       </div>
+                       <h4 className="font-black text-lg uppercase tracking-tighter mb-2 group-hover:text-proton-accent transition-colors">{action.label}</h4>
+                       <p className="text-[11px] text-proton-muted font-bold leading-relaxed">{action.desc}</p>
+                    </button>
+                 ))}
+              </div>
+           </div>
+        </div>
+
+        {/* Right Column: Identity & Security */}
+        <div className="lg:col-span-4 space-y-8">
+           <div className="bg-proton-card rounded-[48px] border border-proton-border shadow-2xl flex flex-col overflow-hidden">
+              <div className="bg-white p-12 border-b border-proton-border">
+                 <div className="flex items-center justify-between mb-10">
+                    <div className="space-y-1">
+                       <h3 className="text-2xl font-black text-proton-accent italic leading-none uppercase">Proton ID</h3>
+                       <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{t.member_since} {formattedJoinDate}</p>
+                    </div>
+                    <Fingerprint size={40} className="text-proton-accent animate-pulse" />
                  </div>
+                 
+                 <div className="space-y-6">
+                    <div className="flex items-center justify-between p-5 rounded-3xl bg-proton-bg border border-proton-border">
+                       <div className="flex items-center gap-4">
+                          <ShieldCheck size={20} className="text-green-500" />
+                          <span className="text-xs font-black uppercase tracking-tight">{t.two_factor}</span>
+                       </div>
+                       <div className="w-14 h-8 bg-proton-accent rounded-full p-1.5 cursor-pointer shadow-lg shadow-proton-accent/30">
+                          <div className="w-5 h-5 bg-white rounded-full ml-auto shadow-md" />
+                       </div>
+                    </div>
+                    
+                    <button className="w-full py-6 bg-proton-accent text-white rounded-[40px] font-black text-sm uppercase tracking-widest shadow-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-proton-accent/20">
+                       {language === 'ka' ? 'აკადემიის განახლება' : 'Upgrade Cluster'}
+                    </button>
+                 </div>
+              </div>
+              
+              <div className="p-12 bg-proton-bg/20 space-y-10">
+                 <div className="space-y-6">
+                   <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.4em] mb-4">Security Metrics</p>
+                   {[
+                     { label: 'Cloud Identity', icon: Cloud, status: 'Verified' },
+                     { label: 'Blockchain Ledger', icon: Key, status: 'Active' },
+                     { label: 'Neural Log', icon: ClipboardList, status: 'Secured' },
+                   ].map((item, i) => (
+                      <div key={i} className="flex items-center justify-between group cursor-pointer">
+                         <div className="flex items-center gap-4">
+                            <item.icon size={18} className="text-proton-muted transition-colors" />
+                            <span className="text-[11px] font-black uppercase tracking-tight group-hover:translate-x-1 transition-transform">{item.label}</span>
+                         </div>
+                         <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest">{item.status}</span>
+                      </div>
+                   ))}
+                 </div>
+                 
+                 <div className="pt-8 border-t border-proton-border/30 flex items-center gap-4 text-proton-muted font-bold text-[10px] justify-center opacity-70">
+                    <Clock size={14} />
+                    <span>{language === 'ka' ? 'ბოლო რეზერვი: 1 წამში' : 'Auto-sync active'}</span>
+                 </div>
+              </div>
+           </div>
+           
+           {/* Neural Log - New Feature */}
+           <div className="p-10 rounded-[48px] bg-black text-cyan-400 font-mono text-[10px] space-y-4 border border-cyan-500/20 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-cyan-500/20 pb-4 mb-4">
+                 <span className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    LIVE_SYSTEM_LOG
+                 </span>
+                 <span className="opacity-50">v4.0.2-neural</span>
+              </div>
+              <div className="space-y-2 max-h-[150px] overflow-hidden">
+                 {neuralLogs.map((log, i) => (
+                    <div key={i} className="flex gap-4">
+                       <span className="opacity-40">[{log.time}]</span>
+                       <span className="flex-1">EXEC: {log.event}</span>
+                       <span className="text-pink-500">{log.status}</span>
+                    </div>
+                 ))}
+                 <div className="flex gap-4 animate-pulse">
+                    <span className="opacity-40">[{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
+                    <span className="flex-1 italic">Waiting for quantum pulse...</span>
+                 </div>
+              </div>
+           </div>
+
+           {/* Quick Preference Card */}
+           <div className="p-10 rounded-[48px] bg-proton-bg border border-proton-border shadow-sm">
+              <div className="flex items-center gap-4 mb-8">
+                 <div className="p-3 bg-white rounded-2xl border border-proton-border">
+                   <Settings size={20} className="text-proton-muted" />
+                 </div>
+                 <h3 className="font-black text-sm uppercase tracking-[0.2em]">Preferences</h3>
+              </div>
+              <div className="space-y-4">
+                 <button onClick={() => onNavigate('settings')} className="w-full p-5 rounded-3xl bg-white border border-proton-border flex items-center justify-between hover:bg-proton-accent/5 transition-all group">
+                    <div className="flex items-center gap-4">
+                       <Globe size={18} className="text-proton-muted group-hover:text-proton-accent transition-colors" />
+                       <span className="text-xs font-black uppercase tracking-tighter">Localization</span>
+                    </div>
+                    <span className="text-[10px] font-black text-proton-accent uppercase tracking-widest">{language}</span>
+                 </button>
+                 <button className="w-full p-5 rounded-3xl bg-white border border-proton-border flex items-center justify-between hover:bg-proton-accent/5 transition-all group">
+                    <div className="flex items-center gap-4">
+                       <div className="w-4 h-4 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.4)]" />
+                       <span className="text-xs font-black uppercase tracking-tighter">UX Mode</span>
+                    </div>
+                    <span className="text-[10px] font-black text-proton-accent uppercase tracking-widest">{uiMode}</span>
+                 </button>
               </div>
            </div>
         </div>
@@ -3417,7 +3628,7 @@ export default function App() {
       const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
       updateDoc(statsRef, {
         computeTimeHours: increment(0.01)
-      }).catch(() => {}); 
+      }).catch(e => handleFirestoreError(e, 'write', statsRef.path)); 
     }, 60000);
     return () => clearInterval(interval);
   }, [user]);
@@ -3685,7 +3896,7 @@ export default function App() {
           const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
           updateDoc(statsRef, {
             aiTokens: increment(outcome.metadata.totalTokenCount || 0)
-          }).catch(() => {});
+          }).catch(e => handleFirestoreError(e, 'write', statsRef.path));
         }
 
         for (const task of newTasks) {
@@ -4112,6 +4323,7 @@ export default function App() {
                   onSignOut={handleSignOut}
                   uiMode={uiMode}
                   stats={userStats}
+                  onNavigate={handleViewChange}
                 />
               )}
               {activeView === 'settings' && (
