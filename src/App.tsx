@@ -3582,31 +3582,78 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    async function fetchSupabaseData() {
+    let channel: any;
+
+    async function fetchSupabaseDataAndSubscribe() {
       if (!supabaseUser) {
         setSupabaseProfile(null);
         return;
       }
 
+      const updateUserStatsFromProfile = (profile: any) => {
+        setUserStats(prev => ({
+          ...prev,
+          aiTokens: profile.ai_tokens || prev.aiTokens,
+          computeCycles: profile.compute_cycles || 0,
+          storageGB: profile.storage_gb || prev.storageGB,
+          node_id: profile.node_id || prev.node_id
+        }));
+      };
+
+      // Initial Fetch
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', supabaseUser.id)
         .single();
 
-      if (data && !error) {
+      if (error && error.code === 'PGRST116') {
+        // Profile doesn't exist, create it (PGRST116 is JSend style error for no rows returned with single())
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: supabaseUser.id, 
+              email: supabaseUser.email,
+              ai_tokens: 5000,
+              compute_cycles: 100,
+              storage_gb: 0.5,
+              node_id: `NODE-${supabaseUser.id.slice(0, 5).toUpperCase()}`
+            }
+          ])
+          .select()
+          .single();
+          
+        if (newProfile && !createError) {
+          setSupabaseProfile(newProfile);
+          updateUserStatsFromProfile(newProfile);
+        }
+      } else if (data && !error) {
         setSupabaseProfile(data);
-        setUserStats(prev => ({
-          ...prev,
-          aiTokens: data.ai_tokens || prev.aiTokens,
-          computeCycles: data.compute_cycles || 0,
-          storageGB: data.storage_gb || prev.storageGB,
-          node_id: data.node_id || prev.node_id
-        }));
+        updateUserStatsFromProfile(data);
       }
+
+      // Real-time subscription
+      channel = supabase
+        .channel(`profile-${supabaseUser.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${supabaseUser.id}` },
+          (payload: any) => {
+            if (payload.new) {
+              setSupabaseProfile(payload.new);
+              updateUserStatsFromProfile(payload.new);
+            }
+          }
+        )
+        .subscribe();
     }
 
-    fetchSupabaseData();
+    fetchSupabaseDataAndSubscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [supabaseUser]);
 
   const handleSupabaseLogin = async (email: string) => {
