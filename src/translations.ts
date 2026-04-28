@@ -293,7 +293,24 @@ export const translations = {
       analyze_needs: "Analyze Needs",
       analyze_desc: "AI agent evaluates the request complexity",
       create_confirm: "Create a new workflow?",
-      locked: "LOCKED"
+      locked: "LOCKED",
+      builder: {
+        node_library: "Node Library",
+        trigger_time: "Trigger: Time-based",
+        trigger_lead: "Trigger: New Lead",
+        action_scraper: "Action: Web Scraper",
+        action_crm: "Action: CRM Sync",
+        action_slack: "Action: Slack Alert",
+        action_email: "Action: Send Email",
+        logic_wait: "Logic: Wait/Delay",
+        logic_condition: "Logic: Condition",
+        action_format: "Action: Data Format",
+        empty_canvas: "Your workflow canvas is clear.",
+        empty_desc: "Add a trigger to initiate an automated sequence.",
+        workflow_name: "Workflow Name",
+        placeholder_name: "e.g., [Top of Funnel] - Inbound Leads",
+        save_workflow: "Save & Deploy"
+      }
     },
     personas: {
       title: "Team Directory",
@@ -649,7 +666,24 @@ export const translations = {
       analyze_needs: "საჭიროებების ანალიზი",
       analyze_desc: "AI აგენტი აფასებს მოთხოვნის სირთულეს",
       create_confirm: "გსურთ ახალი ვორქფლოუს შექმნა?",
-      locked: "დაბლოკილი"
+      locked: "დაბლოკილი",
+      builder: {
+        node_library: "კვანძების ბიბლიოთეკა",
+        trigger_time: "ტრიგერი: დროთა განრიგი",
+        trigger_lead: "ტრიგერი: ახალი ლიდი",
+        action_scraper: "მოქმედება: ვებ სკრეპერი",
+        action_crm: "მოქმედება: CRM სინქრონიზაცია",
+        action_slack: "მოქმედება: Slack შეტყობინება",
+        action_email: "მოქმედება: იმეილის გაგზავნა",
+        logic_wait: "ლოგიკა: დაყოვნება",
+        logic_condition: "ლოგიკა: პირობა",
+        action_format: "მოქმედება: მონაცემთა ფორმატი",
+        empty_canvas: "თქვენი სამუშაო სივრცე ცარიელია.",
+        empty_desc: "დაამატეთ ტრიგერი ავტომატიზაციის დასაწყებად.",
+        workflow_name: "ვორქფლოუს დასახელება",
+        placeholder_name: "მაგ: [Inbound] - ვებგვერდის ლიდები",
+        save_workflow: "შენახვა და გაშვება"
+      }
     },
     personas: {
       title: "გუნდის კატალოგი",

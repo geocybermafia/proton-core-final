@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, Dispatch, SetStateAction } from 'react';
+import { EnterpriseWorkflowBuilder } from './components/EnterpriseWorkflowBuilder';
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { LocalFileScanner } from './components/LocalFileScanner';
 import { auth, db, googleProvider } from './firebase';
@@ -2561,8 +2562,8 @@ const WorkflowEditor = ({
             </button>
           </div>
         ) : (
-          <div className="h-[300px] sm:h-[400px] md:h-[500px] w-full mt-4 shrink-0">
-            <WorkflowFlowEditor workflow={formData} onSave={setFormData} personas={personas} uiMode={uiMode} />
+          <div className="h-[500px] w-full mt-4 shrink-0">
+            <EnterpriseWorkflowBuilder workflow={formData} onSave={setFormData} language={language} />
           </div>
         )}
 
