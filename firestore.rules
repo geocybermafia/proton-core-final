@@ -72,6 +72,10 @@ service cloud.firestore {
         allow create, update: if isVerifiedOwner(userId) && isValidId(taskId) && isValidTask(request.resource.data);
         allow delete: if isVerifiedOwner(userId) && isValidId(taskId);
       }
+
+      match /stats/current {
+        allow get, write: if isVerifiedOwner(userId);
+      }
     }
   }
 }

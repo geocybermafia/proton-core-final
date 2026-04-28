@@ -75,6 +75,17 @@
       },
       "required": ["isArtisanSystemActive"]
     },
+    "UserStats": {
+      "title": "UserStats",
+      "description": "User resource usage and statistics",
+      "type": "object",
+      "properties": {
+        "storageGB": { "type": "number" },
+        "computeTimeHours": { "type": "number" },
+        "aiTokens": { "type": "number" }
+      },
+      "required": ["storageGB", "computeTimeHours", "aiTokens"]
+    },
     "NeuralPulseEvent": {
       "title": "NeuralPulseEvent",
       "description": "Anonymous project plan generation events for the global feed",
@@ -114,6 +125,10 @@
     "/users/{userId}/tasks/{taskId}": {
       "schema": { "$ref": "Task" },
       "description": "User tasks and AI suggestions"
+    },
+    "/users/{userId}/stats/current": {
+      "schema": { "$ref": "UserStats" },
+      "description": "Current resource usage stats for the user"
     }
   }
 }

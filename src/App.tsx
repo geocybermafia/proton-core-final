@@ -14,7 +14,7 @@ import {
   GoogleAuthProvider,
   EmailAuthProvider
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 interface FirestoreErrorInfo {
   error: string;
@@ -1820,7 +1820,8 @@ const PersonasView = ({
   uiMode,
   isSystemActive,
   initialPersonaId,
-  language
+  language,
+  user
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -1835,7 +1836,8 @@ const PersonasView = ({
   uiMode: 'operator' | 'artisan',
   isSystemActive: boolean,
   initialPersonaId?: string | null,
-  language: 'en' | 'ka'
+  language: 'en' | 'ka',
+  user: any
 }) => {
   const [selectedPersona, setSelectedPersona] = useState<Persona>(() => {
     if (initialPersonaId) {
@@ -1896,6 +1898,13 @@ const PersonasView = ({
       );
       setLastGeminiMetadata(metadata);
       onNewMessage(selectedPersona.id, { role: 'model', content: text, timestamp: Date.now() });
+
+      if (user && metadata) {
+        const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+        updateDoc(statsRef, {
+          aiTokens: increment(metadata.totalTokenCount || 0)
+        }).catch(() => {});
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -2809,7 +2818,8 @@ const CabinetView = ({
   user,
   onSignIn,
   onSignOut,
-  uiMode
+  uiMode,
+  stats: userStats
 }: { 
   profile: UserProfile, 
   setProfile: React.Dispatch<React.SetStateAction<UserProfile>>, 
@@ -2819,7 +2829,8 @@ const CabinetView = ({
   user: any,
   onSignIn: () => void,
   onSignOut: () => void,
-  uiMode: 'operator' | 'artisan'
+  uiMode: 'operator' | 'artisan',
+  stats: { storageGB: number, computeTimeHours: number, aiTokens: number }
 }) => {
   const language = profile.language;
   const common = translations[language].common;
@@ -2827,10 +2838,17 @@ const CabinetView = ({
   const totalInteractions = Object.values(history).reduce((acc, msgs) => acc + msgs.length, 0);
 
   const stats = [
-    { label: cab.storage, value: '2.4 GB', icon: Database, color: 'text-proton-accent' },
-    { label: cab.compute_time, value: '14.2h', icon: Cpu, color: 'text-proton-secondary' },
-    { label: cab.api_calls, value: '1,280', icon: Zap, color: 'text-proton-accent' },
+    { label: cab.storage, value: `${userStats.storageGB.toFixed(1)} GB`, icon: Database, color: 'text-proton-accent' },
+    { label: cab.compute_time, value: `${userStats.computeTimeHours.toFixed(1)}h`, icon: Cpu, color: 'text-proton-secondary' },
+    { label: cab.api_calls, value: userStats.aiTokens.toLocaleString(), icon: Zap, color: 'text-proton-accent' },
   ];
+
+  const formattedJoinDate = useMemo(() => {
+     if (!user?.metadata?.creationTime) return language === 'ka' ? 'აპრ 2024' : 'APR 2024';
+     const date = new Date(user.metadata.creationTime);
+     const month = date.toLocaleString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'short' }).toUpperCase();
+     return `${month} ${date.getFullYear()}`;
+  }, [user, language]);
   
   return (
     <div className={cn(
@@ -2928,7 +2946,7 @@ const CabinetView = ({
                   ))}
                   <div className="space-y-2">
                      <p className="text-[10px] font-bold text-proton-muted uppercase tracking-[0.2em]">{cab.member_since}</p>
-                     <p className="text-xl font-black tracking-tight">{language === 'ka' ? 'აპრ 2024' : 'APR 2024'}</p>
+                     <p className="text-xl font-black tracking-tight">{formattedJoinDate}</p>
                   </div>
                 </div>
               </div>
@@ -3357,6 +3375,52 @@ export default function App() {
   const [user, setUser] = useState(auth.currentUser);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [userStats, setUserStats] = useState<{
+    storageGB: number;
+    computeTimeHours: number;
+    aiTokens: number;
+  }>({
+    storageGB: 0,
+    computeTimeHours: 0,
+    aiTokens: 0
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+    const unsubscribe = onSnapshot(statsRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserStats({
+          storageGB: data.storageGB || 0,
+          computeTimeHours: data.computeTimeHours || 0,
+          aiTokens: data.aiTokens || 0
+        });
+      } else {
+        // Init stats with some realistic dev data if missing
+        setDoc(statsRef, {
+          storageGB: 1.2,
+          computeTimeHours: 0.1,
+          aiTokens: 150
+        }, { merge: true });
+      }
+    }, (err) => {
+      console.warn("Stats access restricted or failed:", err);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // Simulate usage while session is active
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+      updateDoc(statsRef, {
+        computeTimeHours: increment(0.01)
+      }).catch(() => {}); 
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     localStorage.setItem('proton_tasks', JSON.stringify(tasks));
@@ -3616,6 +3680,14 @@ export default function App() {
       setTasks(prev => [...prev, ...newTasks]);
       
       if (user) {
+        // Track stats
+        if (user && outcome.metadata) {
+          const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+          updateDoc(statsRef, {
+            aiTokens: increment(outcome.metadata.totalTokenCount || 0)
+          }).catch(() => {});
+        }
+
         for (const task of newTasks) {
           const docRef = doc(db, 'users', user.uid, 'tasks', task.id);
           setDoc(docRef, task).catch(e => handleFirestoreError(e, 'write', docRef.path));
@@ -4009,6 +4081,7 @@ export default function App() {
                   isSystemActive={isArtisanSystemActive}
                   initialPersonaId={selectedPersonaId}
                   language={userProfile.language}
+                  user={user}
                 />
               )}
               {activeView === 'finance' && (
@@ -4038,6 +4111,7 @@ export default function App() {
                   onSignIn={handleGoogleSignIn}
                   onSignOut={handleSignOut}
                   uiMode={uiMode}
+                  stats={userStats}
                 />
               )}
               {activeView === 'settings' && (
