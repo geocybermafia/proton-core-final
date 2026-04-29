@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion, Reorder } from 'motion/react';
-import { Target, CheckCircle2, Circle, Sparkles, ChevronRight, LayoutGrid, List } from 'lucide-react';
+import { Target, CheckCircle2, Circle, Sparkles, ChevronRight, LayoutGrid, List, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
@@ -42,6 +42,44 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
     }
   ]);
 
+  const toggleSubtask = (objId: string, taskIndex: number) => {
+    setObjectives(prev => prev.map(obj => {
+      if (obj.id !== objId) return obj;
+      const newSubtasks = [...obj.subtasks];
+      newSubtasks[taskIndex].completed = !newSubtasks[taskIndex].completed;
+      
+      // Re-calculate progress
+      const completedCount = newSubtasks.filter(t => t.completed).length;
+      const newProgress = Math.round((completedCount / newSubtasks.length) * 100);
+      
+      return { 
+        ...obj, 
+        subtasks: newSubtasks, 
+        progress: newProgress,
+        status: newProgress === 100 ? 'complete' : newProgress > 0 ? 'active' : 'calibrating'
+      };
+    }));
+  };
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const generateObjective = () => {
+    setIsGenerating(true);
+    setTimeout(() => {
+      const newObj = {
+        id: `obj-${Date.now()}`,
+        title: language === 'ka' ? 'ავტონომიური სკალირება' : 'Autonomous Scaling',
+        progress: 0,
+        status: 'calibrating',
+        subtasks: [
+          { label: 'Node Distribution', completed: false },
+          { label: 'Load Balancing', completed: false }
+        ]
+      };
+      setObjectives(prev => [newObj, ...prev]);
+      setIsGenerating(false);
+    }, 2000);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -55,19 +93,30 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
           <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">Neural Goal Breakdown Engine</p>
         </div>
 
-        <div className="flex bg-proton-card p-1.5 rounded-2xl border border-proton-border shadow-sm">
-           <button 
-             onClick={() => setView('grid')}
-             className={cn("p-2 rounded-xl transition-all", view === 'grid' ? "bg-proton-accent text-proton-bg" : "text-proton-muted hover:bg-white/5")}
-           >
-              <LayoutGrid size={18} />
-           </button>
-           <button 
-             onClick={() => setView('list')}
-             className={cn("p-2 rounded-xl transition-all", view === 'list' ? "bg-proton-accent text-proton-bg" : "text-proton-muted hover:bg-white/5")}
-           >
-              <List size={18} />
-           </button>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={generateObjective}
+            disabled={isGenerating}
+            className="px-6 py-3 bg-proton-accent text-proton-bg rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isGenerating ? <RotateCcw size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {language === 'ka' ? 'ახალი მიზნის გენერაცია' : 'Generate New Objective'}
+          </button>
+
+          <div className="flex bg-proton-card p-1.5 rounded-2xl border border-proton-border shadow-sm">
+             <button 
+               onClick={() => setView('grid')}
+               className={cn("p-2 rounded-xl transition-all", view === 'grid' ? "bg-proton-accent text-proton-bg" : "text-proton-muted hover:bg-white/5")}
+             >
+                <LayoutGrid size={18} />
+             </button>
+             <button 
+               onClick={() => setView('list')}
+               className={cn("p-2 rounded-xl transition-all", view === 'list' ? "bg-proton-accent text-proton-bg" : "text-proton-muted hover:bg-white/5")}
+             >
+                <List size={18} />
+             </button>
+          </div>
         </div>
       </div>
 
@@ -116,19 +165,23 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
 
                 <div className="space-y-4 pt-4 border-t border-proton-border/50">
                   {obj.subtasks.map((task, j) => (
-                    <div key={j} className="flex items-center gap-3 group/task">
+                    <button 
+                      key={j} 
+                      onClick={() => toggleSubtask(obj.id, j)}
+                      className="flex items-center gap-3 group/task w-full text-left"
+                    >
                        {task.completed ? (
-                         <CheckCircle2 size={16} className="text-proton-accent" />
+                         <CheckCircle2 size={16} className="text-proton-accent shrink-0" />
                        ) : (
-                         <Circle size={16} className="text-proton-muted group-hover/task:text-proton-accent transition-colors" />
+                         <Circle size={16} className="text-proton-muted group-hover/task:text-proton-accent transition-colors shrink-0" />
                        )}
                        <span className={cn(
-                         "text-xs font-medium",
+                         "text-xs font-medium transition-all",
                          task.completed ? "text-proton-muted line-through" : "text-proton-text"
                        )}>
                          {task.label}
                        </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
 

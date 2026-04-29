@@ -7,19 +7,57 @@ import { cn } from '../lib/utils';
 export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' }) => {
   const [activePath, setActivePath] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState<'idle' | 'running' | 'paused'>('running');
   
   const paths = [
-    { id: 0, name: language === 'ka' ? 'ოპტიმალური ზრდა' : 'Optimal Growth', color: 'text-cyan-400', secondary: 'bg-cyan-400/20' },
-    { id: 1, name: language === 'ka' ? 'აგრესიული სკალირება' : 'Aggressive Scale', color: 'text-purple-400', secondary: 'bg-purple-400/20' },
-    { id: 2, name: language === 'ka' ? 'რისკ-მიტიგაცია' : 'Risk Mitigation', color: 'text-amber-400', secondary: 'bg-amber-400/20' }
+    { 
+      id: 0, 
+      name: language === 'ka' ? 'ოპტიმალური ზრდა' : 'Optimal Growth', 
+      color: 'text-cyan-400', 
+      secondary: 'bg-cyan-400/20',
+      desc: language === 'ka' ? 'ბალანსირებული განვითარება და რისკების მინიმიზაცია.' : 'Balanced development with focused risk minimization.'
+    },
+    { 
+      id: 1, 
+      name: language === 'ka' ? 'აგრესიული სკალირება' : 'Aggressive Scale', 
+      color: 'text-purple-400', 
+      secondary: 'bg-purple-400/20',
+      desc: language === 'ka' ? 'მაქსიმალური ზრდა მაღალი რესურსების ხარჯზე.' : 'Maximum growth leveraging high resource throughput.'
+    },
+    { 
+      id: 2, 
+      name: language === 'ka' ? 'რისკ-მიტიგაცია' : 'Risk Mitigation', 
+      color: 'text-amber-400', 
+      secondary: 'bg-amber-400/20',
+      desc: language === 'ka' ? 'უსაფრთხოებაზე ორიენტირებული სტაბილური სეგმენტაცია.' : 'Safety-first approach with stable market segmentation.'
+    }
   ];
 
   useEffect(() => {
+    if (status !== 'running') return;
     const timer = setInterval(() => {
-      setProgress(p => (p + 1) % 100);
+      setProgress(p => {
+        if (p >= 100) return 0;
+        return p + 0.5;
+      });
     }, 50);
     return () => clearInterval(timer);
-  }, []);
+  }, [status]);
+
+  const toggleSimulation = () => {
+    setStatus(prev => prev === 'running' ? 'paused' : 'running');
+  };
+
+  const resetSimulation = () => {
+    setProgress(0);
+    setStatus('paused');
+  };
+
+  const metrics = [
+    { label: language === 'ka' ? 'დაყოვნება' : 'Latency', value: '1.2ms', desc: language === 'ka' ? 'მონაცემთა დამუშავების დრო' : 'Data processing speed' },
+    { label: language === 'ka' ? 'ენთროპია' : 'Entropy', value: `${(4.8 + progress/20).toFixed(1)}%`, desc: language === 'ka' ? 'სისტემური გაურკვევლობა' : 'Systemic unpredictability' },
+    { label: language === 'ka' ? 'წარმადობა' : 'Throughput', value: '12.4T/s', desc: language === 'ka' ? 'მონაცემთა ნაკადის მოცულობა' : 'Volume of data flow' }
+  ];
 
   return (
     <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-2xl relative overflow-hidden group">
@@ -41,7 +79,11 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
             {paths.map(path => (
               <button
                 key={path.id}
-                onClick={() => setActivePath(path.id)}
+                onClick={() => {
+                  setActivePath(path.id);
+                  setProgress(0);
+                  setStatus('running');
+                }}
                 className={cn(
                   "px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
                   activePath === path.id ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
@@ -53,7 +95,7 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
           </div>
         </div>
 
-        <div className="relative h-64 bg-proton-bg/40 rounded-[32px] border border-proton-border p-8 flex items-center justify-between overflow-hidden">
+        <div className="relative h-72 bg-proton-bg/40 rounded-[32px] border border-proton-border p-8 flex items-center justify-between overflow-hidden">
           {/* Futuristic Timeline Visualization */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-1/2 left-0 right-0 h-[1px] bg-white/20" />
@@ -64,14 +106,14 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
             </div>
           </div>
 
-          <div className="relative flex-1 space-y-12">
+          <div className="relative flex-1 space-y-10">
             <div className={cn("space-y-4 transition-all duration-700", paths[activePath].color)}>
               <div className="flex items-center gap-4">
-                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", paths[activePath].secondary)}>
-                  <Activity size={24} />
+                <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-500", status === 'running' && "scale-110", paths[activePath].secondary)}>
+                  <Activity size={24} className={cn(status === 'running' && "animate-pulse")} />
                 </div>
                 <div>
-                  <p className="text-3xl font-black tracking-tighter">{(90 + progress/2).toFixed(1)}%</p>
+                  <p className="text-3xl font-black tracking-tighter">{(90 + progress/10).toFixed(1)}%</p>
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Confidence Level</p>
                 </div>
               </div>
@@ -83,29 +125,40 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
                    className={cn("h-full", paths[activePath].secondary.replace('/20', ''))} 
                 />
               </div>
+              <p className="text-[10px] font-medium italic opacity-70">{paths[activePath].desc}</p>
             </div>
 
             <div className="grid grid-cols-3 gap-6">
-              {[
-                { label: 'Latency', value: '1.2ms' },
-                { id: 'entropy', label: 'Entropy', value: '4.8%' },
-                { label: 'Throughput', value: '12.4T/s' }
-              ].map((m, i) => (
-                <div key={i} className="space-y-1">
+              {metrics.map((m, i) => (
+                <div key={i} className="space-y-1 group/metric relative">
                    <p className="text-[9px] font-black text-proton-muted uppercase tracking-[0.2em]">{m.label}</p>
                    <p className="text-sm font-bold text-proton-text">{m.value}</p>
+                   <div className="absolute top-full left-0 mt-2 p-2 bg-proton-card border border-proton-border rounded-lg shadow-xl opacity-0 invisible group-hover/metric:opacity-100 group-hover/metric:visible transition-all z-20 w-32">
+                     <p className="text-[8px] font-bold text-proton-text leading-tight">{m.desc}</p>
+                   </div>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="hidden md:flex flex-col gap-3 ml-8">
-            <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400">
-               <RotateCcw size={20} className="animate-spin-slow" />
-            </div>
-            <div className="p-4 rounded-2xl bg-proton-accent/20 border border-proton-accent/40 text-proton-accent">
-               <Play size={20} />
-            </div>
+            <button 
+              onClick={resetSimulation}
+              className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition-colors"
+            >
+               <RotateCcw size={20} />
+            </button>
+            <button 
+              onClick={toggleSimulation}
+              className={cn(
+                "p-4 rounded-2xl border transition-all",
+                status === 'running' 
+                  ? "bg-purple-500/10 border-purple-500/20 text-purple-400 hover:bg-purple-500/20" 
+                  : "bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20"
+              )}
+            >
+               {status === 'running' ? <Play size={20} className="rotate-90" /> : <Play size={20} />}
+            </button>
           </div>
         </div>
 

@@ -175,7 +175,13 @@ export const EnterpriseWorkflowBuilder = ({
                     />
                 </div>
             </div>
-            <button className="bg-proton-text text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2">
+            <button 
+              onClick={() => {
+                alert(language === 'ka' ? 'ვორქფლოუ წარმატებით შეინახა და გაიშვა!' : 'Workflow successfully saved and deployed!');
+                onSave({ ...workflow, name: workflowName, nodes });
+              }}
+              className="bg-proton-text text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2"
+            >
                 {t.save_workflow}
                 <ChevronRight size={14} />
             </button>

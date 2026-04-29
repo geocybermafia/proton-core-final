@@ -1556,6 +1556,22 @@ const DashboardView = ({
 
       {isInvestorMode && (
         <div className="space-y-12 animate-in fade-in slide-in-from-top-12 duration-1000">
+          <div className="bg-proton-accent/5 border border-proton-accent/20 p-6 rounded-[32px] flex items-center gap-6">
+            <div className="w-12 h-12 rounded-2xl bg-proton-accent/20 text-proton-accent flex items-center justify-center shrink-0">
+               <ShieldCheck size={28} />
+            </div>
+            <div>
+               <h4 className="text-sm font-black text-proton-text uppercase tracking-widest">
+                 {language === 'ka' ? 'ინვესტორ BI რეჟიმი აქტიურია' : 'Investor BI Mode Active'}
+               </h4>
+               <p className="text-xs text-proton-muted font-medium mt-1">
+                 {language === 'ka' 
+                   ? 'ეს რეჟიმი გაწვდით სისტემურ ანალიტიკას, პროცესების ROI-ს და სამომავლო დროის სიმულაციებს თქვენი ბიზნესის ეფექტურობის გასაზრდელად.' 
+                   : 'This mode provides system diagnostics, process ROI metrics, and future timeline simulations to maximize your business efficiency.'}
+               </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <ParallelTimelineSimulator language={language} />
@@ -1566,19 +1582,30 @@ const DashboardView = ({
                    <Zap size={80} />
                  </div>
                  <div className="relative z-10 space-y-4">
-                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{t.settings.resonance_metrics}</p>
+                    <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{t.settings.resonance_metrics}</p>
+                        <button 
+                          onClick={startRecalibration}
+                          disabled={isRecalibrating}
+                          className="p-1.5 hover:bg-proton-accent/10 rounded-lg text-proton-accent transition-all disabled:opacity-50"
+                        >
+                           <RotateCcw size={14} className={cn(isRecalibrating && "animate-spin")} />
+                        </button>
+                    </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-black text-proton-text tracking-tighter">94.2%</span>
-                      <span className="text-xs font-bold text-proton-accent opacity-50">SYNC</span>
+                      <span className="text-5xl font-black text-proton-text tracking-tighter">{recalibrationProgress.toFixed(1)}%</span>
+                      <span className="text-xs font-bold text-proton-accent opacity-50">{isRecalibrating ? 'RECALIBRATING' : 'SYNC'}</span>
                     </div>
                     <div className="h-2 w-full bg-proton-bg/40 rounded-full overflow-hidden border border-proton-border/30">
                         <motion.div 
                           initial={{ width: 0 }}
-                          animate={{ width: "94.2%" }}
+                          animate={{ width: `${recalibrationProgress}%` }}
                           className="h-full bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.4)]" 
                         />
                     </div>
-                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em]">Optimal synergy verified across 4 active neural nodes.</p>
+                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em] h-8">
+                      {isRecalibrating ? 'Neural calibration in progress...' : 'Optimal synergy verified across 4 active neural nodes.'}
+                    </p>
                  </div>
               </div>
 
@@ -1587,11 +1614,24 @@ const DashboardView = ({
                    <Activity size={80} />
                  </div>
                  <div className="relative z-10 space-y-4">
-                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{t.settings.roi_analysis}</p>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-5xl font-black text-purple-400 tracking-tighter">+14.8h</span>
+                    <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{t.settings.roi_analysis}</p>
+                        <button 
+                          onClick={refreshRoi}
+                          disabled={isRefreshingRoi}
+                          className="p-1.5 hover:bg-purple-500/10 rounded-lg text-purple-400 transition-all disabled:opacity-50"
+                        >
+                           <RotateCcw size={14} className={cn(isRefreshingRoi && "animate-spin")} />
+                        </button>
                     </div>
-                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em]">Time saved this week via autonomous refactoring and decision mirroring.</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-black text-purple-400 tracking-tighter">
+                        {isRefreshingRoi ? '+...' : `+${roiValue}h`}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em] h-8">
+                      {isRefreshingRoi ? 'Processing latest efficiency data...' : 'Time saved this week via autonomous refactoring and decision mirroring.'}
+                    </p>
                  </div>
               </div>
             </div>
@@ -1631,16 +1671,19 @@ const DashboardView = ({
               <p className="text-[8px] font-bold text-proton-muted uppercase tracking-[0.2em] mt-2">Saved / Efficiency Refactor</p>
             </div>
 
-            <div className="lg:col-span-2 bg-gradient-to-br from-proton-accent/10 via-proton-card to-proton-card p-6 rounded-[32px] border border-proton-accent/20 shadow-xl flex items-center justify-between">
+            <button 
+              onClick={() => setIsInvestorMode(true)}
+              className="lg:col-span-2 bg-gradient-to-br from-proton-accent/10 via-proton-card to-proton-card p-6 rounded-[32px] border border-proton-accent/20 shadow-xl flex items-center justify-between text-left hover:border-proton-accent transition-all group"
+            >
               <div className="space-y-1">
                   <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.3em]">{language === 'ka' ? 'ინვესტორების რეჟიმი' : 'Investor Intelligence'}</p>
                   <h4 className="text-lg font-black text-proton-text uppercase tracking-tight">Digital Twin Mirroring Active</h4>
                   <p className="text-[10px] text-proton-muted font-medium max-w-xs uppercase leading-tight tracking-wider">Simulating 1,200 parallel workspace outcomes for optimal focus allocation.</p>
               </div>
-              <div className="w-16 h-16 rounded-full border-4 border-proton-accent/30 border-t-proton-accent animate-spin-slow flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full border-4 border-proton-accent/30 border-t-proton-accent animate-spin-slow flex items-center justify-center group-hover:scale-110 transition-transform">
                   <BarChart3 className="text-proton-accent" size={24} />
               </div>
-            </div>
+            </button>
           </div>
         </>
       )}
@@ -3707,6 +3750,32 @@ export default function App() {
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isArtisanSystemActive, setIsArtisanSystemActive] = useState<boolean>(false);
   const [isInvestorMode, setIsInvestorMode] = useState<boolean>(false);
+  const [isRecalibrating, setIsRecalibrating] = useState(false);
+  const [recalibrationProgress, setRecalibrationProgress] = useState(94.2);
+  const [isRefreshingRoi, setIsRefreshingRoi] = useState(false);
+  const [roiValue, setRoiValue] = useState(14.8);
+
+  const startRecalibration = () => {
+    setIsRecalibrating(true);
+    let start = 0;
+    const interval = setInterval(() => {
+      start += 2;
+      setRecalibrationProgress(start);
+      if (start >= 94.2) {
+        clearInterval(interval);
+        setRecalibrationProgress(94.2);
+        setIsRecalibrating(false);
+      }
+    }, 30);
+  };
+
+  const refreshRoi = () => {
+    setIsRefreshingRoi(true);
+    setTimeout(() => {
+      setRoiValue(prev => +(prev + Math.random() * 0.5).toFixed(1));
+      setIsRefreshingRoi(false);
+    }, 1500);
+  };
 
   // Bootstrap system config if missing
   useEffect(() => {

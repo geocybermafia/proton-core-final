@@ -1,5 +1,6 @@
 
 export type UserProfile = {
+  id?: string;
   name: string;
   email: string;
   language: 'en' | 'ka';
@@ -8,6 +9,7 @@ export type UserProfile = {
   phoneNumber?: string;
   bio?: string;
   avatar?: string;
+  role?: string;
 };
 
 export type GlobalAiSettings = {
