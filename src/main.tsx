@@ -8,6 +8,21 @@ if (typeof (window as any).global === 'undefined') {
   (window as any).global = window;
 }
 
+// Global fetch guard for libraries that try to polyfill it incorrectly
+try {
+  const originalFetch = window.fetch;
+  if (originalFetch) {
+    Object.defineProperty(window, 'fetch', {
+      value: originalFetch.bind(window),
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+  }
+} catch (e) {
+  // Silently ignore if fetch is already locked (non-configurable)
+}
+
 import '@rainbow-me/rainbowkit/styles.css';
 import { getDefaultConfig, RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { WagmiProvider, http } from 'wagmi';

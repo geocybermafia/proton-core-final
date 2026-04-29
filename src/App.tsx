@@ -248,7 +248,7 @@ const SystemDiagnostic = ({ t }: { t: any }) => {
   const [statusText, setStatusText] = useState('');
   const [score, setScore] = useState(0);
 
-  const diag = t.diagnostic;
+  const diag = t.diagnostic || t;
 
   const runDiagnostic = async () => {
     setState('running');
@@ -1524,20 +1524,31 @@ const DashboardView = ({
                 </div>
               </div>
             </div>
-            <div className="w-full md:w-64 h-32 bg-proton-bg/40 rounded-3xl border border-proton-border p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={[
-                  { v: 40 }, { v: 45 }, { v: 42 }, { v: 50 }, { v: 48 }, { v: 60 }, { v: 55 }, { v: 65 }, { v: 60 }, { v: 62 }
-                ]}>
-                  <defs>
-                    <linearGradient id="neuralFlow" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-proton-accent)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="var(--color-proton-accent)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="v" stroke="var(--color-proton-accent)" fillOpacity={1} fill="url(#neuralFlow)" strokeWidth={3} dot={false} />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="w-full md:w-64 h-32 bg-proton-bg/40 rounded-3xl border border-proton-border p-4 flex items-center justify-center">
+              <div className="w-full h-full min-h-[80px]">
+                <ResponsiveContainer width="100%" height="100%" debounce={50}>
+                  <AreaChart data={[
+                    { v: 40 }, { v: 45 }, { v: 42 }, { v: 50 }, { v: 48 }, { v: 60 }, { v: 55 }, { v: 65 }, { v: 60 }, { v: 62 }
+                  ]}>
+                    <defs>
+                      <linearGradient id="neuralFlow" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-proton-accent)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--color-proton-accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area 
+                      type="monotone" 
+                      dataKey="v" 
+                      stroke="var(--color-proton-accent)" 
+                      fillOpacity={1} 
+                      fill="url(#neuralFlow)" 
+                      strokeWidth={3} 
+                      dot={false} 
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>
@@ -1784,7 +1795,7 @@ const DashboardView = ({
                </div>
                <div className="space-y-3 relative z-10">
                   <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">Diagnostic Assessment</h3>
-                  <SystemDiagnostic t={t} />
+                  <SystemDiagnostic t={t.dashboard} />
                </div>
                
                <div className="pt-4 border-t border-proton-border/50 relative z-10">
@@ -3792,24 +3803,31 @@ export default function App() {
     localStorage.setItem('proton_personas', JSON.stringify(personas));
   }, [personas]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const defaultProfile: UserProfile = {
+      name: 'Darian B.',
+      email: 'devdarianib@gmail.com',
+      language: 'en',
+      region: 'Tbilisi',
+      notifications: true,
+      role: 'Standard',
+      phoneNumber: '',
+      id: 'default-user',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Darian'
+    };
     try {
       const saved = localStorage.getItem('user-profile');
-      return saved ? JSON.parse(saved) : {
-        name: 'Darian B.',
-        email: 'devdarianib@gmail.com',
-        language: 'en',
-        region: 'Tbilisi',
-        notifications: true
-      };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure language is valid
+        if (parsed.language !== 'en' && parsed.language !== 'ka') {
+          parsed.language = 'en';
+        }
+        return { ...defaultProfile, ...parsed };
+      }
     } catch {
-      return {
-        name: 'Darian B.',
-        email: 'devdarianib@gmail.com',
-        language: 'en',
-        region: 'Tbilisi',
-        notifications: true
-      };
+      // Return default on error
     }
+    return defaultProfile;
   });
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('proton_favorite_personas');
