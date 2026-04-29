@@ -108,6 +108,7 @@ import {
   Mail,
   MapPin,
   RefreshCw,
+  RotateCcw,
   Shield,
   Clock,
   Key,
@@ -1393,6 +1394,33 @@ const DashboardView = ({
   setTheme: (t: Theme) => void
 }) => {
   const t = translations[language];
+
+  const [isRecalibrating, setIsRecalibrating] = useState(false);
+  const [recalibrationProgress, setRecalibrationProgress] = useState(94.2);
+  const [isRefreshingRoi, setIsRefreshingRoi] = useState(false);
+  const [roiValue, setRoiValue] = useState(14.8);
+
+  const startRecalibration = () => {
+    setIsRecalibrating(true);
+    let start = 0;
+    const interval = setInterval(() => {
+      start += 2;
+      setRecalibrationProgress(start);
+      if (start >= 94.2) {
+        clearInterval(interval);
+        setRecalibrationProgress(94.2);
+        setIsRecalibrating(false);
+      }
+    }, 30);
+  };
+
+  const refreshRoi = () => {
+    setIsRefreshingRoi(true);
+    setTimeout(() => {
+      setRoiValue(prev => +(prev + Math.random() * 0.5).toFixed(1));
+      setIsRefreshingRoi(false);
+    }, 1500);
+  };
 
   const recentHistory = useMemo(() => {
     return Object.entries(chatHistory).flatMap(([id, messages]) => {
@@ -3750,32 +3778,6 @@ export default function App() {
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isArtisanSystemActive, setIsArtisanSystemActive] = useState<boolean>(false);
   const [isInvestorMode, setIsInvestorMode] = useState<boolean>(false);
-  const [isRecalibrating, setIsRecalibrating] = useState(false);
-  const [recalibrationProgress, setRecalibrationProgress] = useState(94.2);
-  const [isRefreshingRoi, setIsRefreshingRoi] = useState(false);
-  const [roiValue, setRoiValue] = useState(14.8);
-
-  const startRecalibration = () => {
-    setIsRecalibrating(true);
-    let start = 0;
-    const interval = setInterval(() => {
-      start += 2;
-      setRecalibrationProgress(start);
-      if (start >= 94.2) {
-        clearInterval(interval);
-        setRecalibrationProgress(94.2);
-        setIsRecalibrating(false);
-      }
-    }, 30);
-  };
-
-  const refreshRoi = () => {
-    setIsRefreshingRoi(true);
-    setTimeout(() => {
-      setRoiValue(prev => +(prev + Math.random() * 0.5).toFixed(1));
-      setIsRefreshingRoi(false);
-    }, 1500);
-  };
 
   // Bootstrap system config if missing
   useEffect(() => {
