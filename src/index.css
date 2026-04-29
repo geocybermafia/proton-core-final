@@ -61,6 +61,18 @@
     --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
   }
 
+  :root[data-theme="titanium"] {
+    --color-proton-bg: #ffffff;
+    --color-proton-card: rgba(255, 255, 255, 0.85);
+    --color-proton-border: rgba(226, 232, 240, 0.6);
+    --color-proton-text: #020617;
+    --color-proton-muted: #64748b;
+    --color-proton-accent: #0ea5e9;
+    --color-proton-secondary: #6366f1;
+    --color-proton-on-accent: #ffffff;
+    --color-proton-accent-muted: rgba(14, 165, 233, 0.1);
+  }
+
   :root[data-theme="vibrant"] {
     --color-proton-bg: #0f172a;
     --color-proton-card: #1e293b;
@@ -99,7 +111,11 @@
 }
 
 .ui-artisan .proton-glass {
-  @apply backdrop-blur-md bg-proton-card/70 border-white/10;
+  @apply backdrop-blur-[12px] bg-proton-card/75 border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)];
+}
+
+:root[data-theme="titanium"] .proton-glass {
+  @apply bg-white/60 border-slate-200/50 backdrop-blur-xl shadow-xl shadow-slate-200/20;
 }
 
 .ui-operator .proton-glass {

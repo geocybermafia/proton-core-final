@@ -17,7 +17,11 @@ import {
   ChevronRight,
   Save,
   CheckCircle2,
-  Lock
+  Lock,
+  Sparkles,
+  Sun,
+  Moon,
+  Circle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -31,7 +35,17 @@ interface SettingsViewProps {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   language: 'en' | 'ka';
+  uiMode: 'operator' | 'artisan';
+  setUiMode: (mode: 'operator' | 'artisan') => void;
 }
+
+const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'light', label: 'Minimalist', icon: <Sun size={18} />, color: 'bg-slate-200' },
+  { id: 'titanium', label: 'Titanium', icon: <Circle size={18} />, color: 'bg-sky-400' },
+  { id: 'proton', label: 'Cyberpunk', icon: <Zap size={18} />, color: 'bg-cyan-400' },
+  { id: 'vibrant', label: 'Nebula', icon: <Sparkles size={18} />, color: 'bg-purple-500' },
+  { id: 'midnight', label: 'Executive', icon: <Moon size={18} />, color: 'bg-slate-900' },
+];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   userProfile,
@@ -40,7 +54,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setAiSettings,
   theme,
   setTheme,
-  language
+  language,
+  uiMode,
+  setUiMode
 }) => {
   const t = translations[language].settings;
   const common = translations[language].common;
@@ -57,13 +73,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'profile', label: t.profile || 'Profile', icon: User },
     { id: 'appearance', label: t.appearance || 'Design', icon: Palette },
     { id: 'security', label: t.security || 'Security', icon: Shield },
-  ];
-
-  const themes: { id: Theme; color: string; label: string }[] = [
-    { id: 'proton', color: 'bg-[#00F2FF]', label: 'Proton' },
-    { id: 'light', color: 'bg-white border border-gray-200', label: 'Light' },
-    { id: 'vibrant', color: 'bg-purple-600', label: 'Vibrant' },
-    { id: 'midnight', color: 'bg-slate-900', label: 'Midnight' },
   ];
 
   return (
@@ -219,6 +228,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        </div>
                     </div>
 
+                    <div className={cn(
+                      "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
+                      uiMode === 'artisan' ? "bg-proton-accent/10 border-proton-accent/40 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
+                    )} onClick={() => setUiMode(uiMode === 'operator' ? 'artisan' : 'operator')}>
+                      <div className="flex items-center gap-5">
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                          uiMode === 'artisan' ? "bg-proton-accent text-proton-bg shadow-lg" : "bg-proton-secondary/20 text-proton-muted"
+                        )}>
+                          <Sparkles size={28} />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">{t.autonomous_mode}</label>
+                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">{t.autonomous_mode_desc}</p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "w-12 h-6 rounded-full relative transition-all border border-proton-border shrink-0",
+                        uiMode === 'artisan' ? "bg-proton-accent border-proton-accent" : "bg-proton-secondary/30"
+                      )}>
+                        <div className={cn(
+                          "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-md",
+                          uiMode === 'artisan' ? "right-0.5" : "left-0.5"
+                        )} />
+                      </div>
+                    </div>
+
                     <div className="space-y-3 pt-6 border-t border-proton-border/50">
                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
                          {t.system_prompt || 'Custom AI Instructions'}
@@ -290,23 +326,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="space-y-8">
                     <div>
                       <label className="text-[11px] font-black uppercase tracking-wider mb-5 block text-proton-muted">Color Palette</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        {themes.map((t_item) => (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        {THEMES.map((tInfo) => (
                           <button
-                            key={t_item.id}
-                            onClick={() => setTheme(t_item.id)}
+                            key={tInfo.id}
+                            onClick={() => setTheme(tInfo.id)}
                             className={cn(
-                              "flex items-center gap-4 p-5 rounded-3xl transition-all border-2",
-                              theme === t_item.id 
-                                ? "bg-proton-accent/10 border-proton-accent shadow-[0_0_20px_rgba(0,242,255,0.1)]" 
-                                : "border-proton-border bg-proton-secondary/10 hover:bg-proton-secondary/20"
+                              "flex flex-col items-center gap-3 p-5 rounded-[32px] transition-all border-2 group relative overflow-hidden",
+                              theme === tInfo.id 
+                                ? "bg-proton-card border-proton-accent shadow-2xl ring-4 ring-proton-accent/5 scale-[1.02]" 
+                                : "border-proton-border bg-proton-secondary/5 hover:bg-proton-secondary/10 hover:border-proton-accent/30"
                             )}
                           >
-                            <div className={cn("w-12 h-12 rounded-xl shadow-lg", t_item.color)} />
+                            <div className={cn(
+                              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
+                              theme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/10 text-proton-muted"
+                            )}>
+                              {tInfo.icon}
+                            </div>
                             <span className={cn(
-                              "text-xs font-black uppercase tracking-widest",
-                              theme === t_item.id ? "text-proton-accent" : "text-proton-text"
-                            )}>{t_item.label}</span>
+                              "text-[10px] font-black uppercase tracking-widest",
+                              theme === tInfo.id ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
+                            )}>{tInfo.label}</span>
+                            {theme === tInfo.id && (
+                              <motion.div 
+                                layoutId="active-theme-dot"
+                                className="absolute top-3 right-3 w-2 h-2 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
+                              />
+                            )}
                           </button>
                         ))}
                       </div>

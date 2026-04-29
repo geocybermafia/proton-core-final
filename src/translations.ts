@@ -155,6 +155,13 @@ export const translations = {
       phone: "Phone Number",
       experimental: "Experimental Features",
       system_prompt: "Global AI Instructions",
+      autonomous_mode: "Autonomous Neural Synergy",
+      autonomous_mode_desc: "Enable agents to collaborate and trigger resonance state without human intervention.",
+      investor_mode: "Investor BI Mode",
+      resonance_metrics: "Neural Resonance Metrics",
+      roi_analysis: "System ROI Analysis",
+      timeline_sim: "Parallel Timeline Simulator",
+      objective_center: "Autonomous Objective Center",
       connected_hub: "Connectivity"
     },
     common: {
@@ -587,7 +594,14 @@ export const translations = {
       profile_desc: "პერსონალური ინფორმაციის მართვა.",
       phone: "ტელეფონის ნომერი",
       experimental: "ექსპერიმენტული ფუნქციები",
-      system_prompt: "მთავარი ინსტრუქცია AI-სთვის"
+      system_prompt: "მთავარი ინსტრუქცია AI-სთვის",
+      autonomous_mode: "ავტონომიური ნეირონული სინერგია",
+      autonomous_mode_desc: "მიეცით აგენტებს საშუალება ითანამშრომლონ და გაააქტიურონ რეზონანსული მდგომარეობა ადამიანის ჩარევის გარეშე.",
+      investor_mode: "ინვესტორ BI რეჟიმი",
+      resonance_metrics: "ნეირონული რეზონანსის მეტრიკა",
+      roi_analysis: "სისტემის ROI ანალიზი",
+      timeline_sim: "პარალელური დროის სიმულატორი",
+      objective_center: "ავტონომიური მიზნების ცენტრი"
     },
     common: {
       user: "მომხმარებელი",

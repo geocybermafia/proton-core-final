@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, Dispatch, SetStateAction }
 import { EnterpriseWorkflowBuilder } from './components/EnterpriseWorkflowBuilder';
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { LocalFileScanner } from './components/LocalFileScanner';
+import { ParallelTimelineSimulator } from './components/ParallelTimelineSimulator';
+import { ObjectiveCenter } from './components/ObjectiveCenter';
 import { auth, db, googleProvider } from './firebase';
 import { supabase } from './lib/supabase';
 import { 
@@ -99,6 +101,7 @@ import {
   Network,
   Sun,
   Moon,
+  Circle,
   Sparkles,
   Edit2,
   Edit3,
@@ -1367,7 +1370,11 @@ const DashboardView = ({
   chatHistory, 
   language = 'en',
   uiMode,
-  isArtisanSystemActive
+  isArtisanSystemActive,
+  isInvestorMode,
+  setIsInvestorMode,
+  theme,
+  setTheme
 }: { 
   personas: Persona[], 
   activeView: View, 
@@ -1379,7 +1386,11 @@ const DashboardView = ({
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
-  isArtisanSystemActive: boolean
+  isArtisanSystemActive: boolean,
+  isInvestorMode: boolean,
+  setIsInvestorMode: (v: boolean) => void,
+  theme: Theme,
+  setTheme: (t: Theme) => void
 }) => {
   const t = translations[language];
 
@@ -1404,32 +1415,224 @@ const DashboardView = ({
             <Zap size={300} className="text-proton-accent" />
           </div>
         )}
-        <div className="space-y-3 text-center md:text-left relative z-10">
-          <h1 className={cn(
-            "font-black tracking-tighter text-proton-text uppercase",
-            uiMode === 'artisan' ? "text-4xl sm:text-5xl lg:text-7xl xl:text-8xl leading-[0.9]" : "text-3xl sm:text-4xl md:text-6xl leading-tight"
-          )}>
-            {uiMode === 'artisan' ? t.dashboard.artisan_title : t.sidebar.dashboard}
-          </h1>
-          <p className={cn(
-            "text-proton-muted font-medium max-w-xl",
-            uiMode === 'artisan' ? "text-lg md:text-2xl" : "text-base md:text-lg"
-          )}>
-             {t.dashboard.explore_subtitle}
-          </p>
-        </div>
-        {!isArtisanSystemActive && (
-          <div className="bg-proton-secondary/10 border border-proton-secondary/20 px-8 py-5 rounded-[32px] flex items-center gap-5 shadow-lg shadow-proton-secondary/5 relative z-10">
-             <div className="w-12 h-12 rounded-2xl bg-proton-secondary flex items-center justify-center text-proton-on-secondary shadow-lg shadow-proton-secondary/20">
-                <ShieldAlert size={28} />
-             </div>
-             <div>
-                <p className="text-xs font-bold text-proton-secondary uppercase tracking-[0.2em] leading-none mb-1">{t.dashboard.maintenance}</p>
-                <p className="text-xs text-proton-muted font-semibold">{t.dashboard.maintenance_desc}</p>
-             </div>
+        <div className="flex flex-col xl:flex-row items-center justify-between w-full gap-8 relative z-10">
+          <div className="space-y-4 text-center md:text-left flex-1">
+            <h1 className={cn(
+              "font-black tracking-tighter text-proton-text uppercase",
+              uiMode === 'artisan' ? "text-4xl sm:text-5xl lg:text-7xl xl:text-8xl leading-[0.9]" : "text-3xl sm:text-4xl md:text-5xl leading-tight"
+            )}>
+              {uiMode === 'artisan' ? t.dashboard.artisan_title : t.sidebar.dashboard}
+            </h1>
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <p className={cn(
+                "text-proton-muted font-medium max-w-xl",
+                uiMode === 'artisan' ? "text-lg md:text-xl" : "text-sm md:text-base"
+              )}>
+                {t.dashboard.explore_subtitle}
+              </p>
+              <div className="h-4 w-[1px] bg-proton-border hidden md:block" />
+              <div className="flex items-center gap-2 px-3 py-1 bg-proton-accent/5 rounded-full border border-proton-accent/10">
+                <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
+                <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest">{language === 'ka' ? 'სისტემა აქტიურია' : 'System Active'}</span>
+              </div>
+            </div>
           </div>
-        )}
+          
+          <div className="flex flex-col sm:flex-row gap-4 items-center shrink-0">
+            {!isArtisanSystemActive && (
+              <div className="bg-proton-secondary/5 border border-proton-secondary/20 px-8 py-5 rounded-[32px] flex items-center gap-5 shadow-lg shadow-proton-secondary/5 backdrop-blur-sm group hover:scale-[1.02] transition-transform">
+                 <div className="w-12 h-12 rounded-2xl bg-proton-secondary/20 text-proton-secondary flex items-center justify-center group-hover:rotate-12 transition-transform">
+                    <ShieldAlert size={28} />
+                 </div>
+                 <div className="hidden sm:block">
+                    <p className="text-[10px] font-black text-proton-secondary uppercase tracking-[0.2em]">{t.dashboard.maintenance}</p>
+                    <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest mt-1">Safely Restricted</p>
+                 </div>
+              </div>
+            )}
+
+            <button 
+              onClick={() => setIsInvestorMode(!isInvestorMode)}
+              className={cn(
+                "px-8 py-6 rounded-[32px] border font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center gap-4 shadow-2xl relative group overflow-hidden active:scale-95",
+                isInvestorMode 
+                  ? "bg-proton-accent text-proton-bg border-proton-accent shadow-proton-accent/30" 
+                  : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/50 hover:shadow-proton-accent/5"
+              )}
+            >
+              <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+              <BarChart3 size={20} className={cn(isInvestorMode && "animate-bounce")} />
+              {isInvestorMode ? t.settings.investor_mode : (language === 'ka' ? 'ინვესტორ BI' : 'Investor BI')}
+              <ChevronRight size={16} className={cn("transition-transform group-hover:translate-x-1", isInvestorMode && "rotate-90")} />
+            </button>
+          </div>
+        </div>
       </div>
+
+      {uiMode === 'artisan' && !isInvestorMode && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-4 duration-700">
+          {THEMES.map((tInfo) => (
+            <button
+              key={tInfo.id}
+              onClick={() => setTheme(tInfo.id)}
+              className={cn(
+                "p-4 rounded-2xl flex flex-col items-center gap-2 transition-all border group",
+                theme === tInfo.id 
+                  ? "bg-proton-accent/10 border-proton-accent shadow-lg shadow-proton-accent/5 ring-2 ring-proton-accent/20" 
+                  : "bg-proton-card/40 border-proton-border/30 hover:border-proton-accent/40"
+              )}
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+                theme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/5 text-proton-muted group-hover:text-proton-text"
+              )}>
+                {tInfo.icon}
+              </div>
+              <span className={cn(
+                "text-[8px] font-black uppercase tracking-[0.2em]",
+                theme === tInfo.id ? "text-proton-accent" : "text-proton-muted"
+              )}>{tInfo.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {uiMode === 'artisan' && !isInvestorMode && (
+        <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+            <Network size={120} />
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1 space-y-6">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.4em] mb-2">Neural Link Active</p>
+                <h3 className="text-3xl font-black text-proton-text tracking-tighter uppercase">{language === 'ka' ? 'ნეირონული ნაკადის ანალიზი' : 'Neural Flow Analysis'}</h3>
+                <p className="text-sm text-proton-muted font-medium max-w-sm">Continuous monitoring of cognitive load and autonomous assistance resonance.</p>
+              </div>
+              <div className="flex gap-10">
+                <div>
+                  <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">Latency</p>
+                  <p className="text-xl font-bold text-proton-text">0.42ms</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">Resonance</p>
+                  <p className="text-xl font-bold text-proton-text">98.1%</p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">Nodes</p>
+                  <p className="text-xl font-bold text-proton-text">12.4k</p>
+                </div>
+              </div>
+            </div>
+            <div className="w-full md:w-64 h-32 bg-proton-bg/40 rounded-3xl border border-proton-border p-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={[
+                  { v: 40 }, { v: 45 }, { v: 42 }, { v: 50 }, { v: 48 }, { v: 60 }, { v: 55 }, { v: 65 }, { v: 60 }, { v: 62 }
+                ]}>
+                  <defs>
+                    <linearGradient id="neuralFlow" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-proton-accent)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="var(--color-proton-accent)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Area type="monotone" dataKey="v" stroke="var(--color-proton-accent)" fillOpacity={1} fill="url(#neuralFlow)" strokeWidth={3} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isInvestorMode && (
+        <div className="space-y-12 animate-in fade-in slide-in-from-top-12 duration-1000">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2">
+              <ParallelTimelineSimulator language={language} />
+            </div>
+            <div className="space-y-6">
+              <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-2xl relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
+                   <Zap size={80} />
+                 </div>
+                 <div className="relative z-10 space-y-4">
+                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{t.settings.resonance_metrics}</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-black text-proton-text tracking-tighter">94.2%</span>
+                      <span className="text-xs font-bold text-proton-accent opacity-50">SYNC</span>
+                    </div>
+                    <div className="h-2 w-full bg-proton-bg/40 rounded-full overflow-hidden border border-proton-border/30">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: "94.2%" }}
+                          className="h-full bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.4)]" 
+                        />
+                    </div>
+                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em]">Optimal synergy verified across 4 active neural nodes.</p>
+                 </div>
+              </div>
+
+              <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-2xl relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:scale-110 transition-transform">
+                   <Activity size={80} />
+                 </div>
+                 <div className="relative z-10 space-y-4">
+                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{t.settings.roi_analysis}</p>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-black text-purple-400 tracking-tighter">+14.8h</span>
+                    </div>
+                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em]">Time saved this week via autonomous refactoring and decision mirroring.</p>
+                 </div>
+              </div>
+            </div>
+          </div>
+
+          <ObjectiveCenter language={language} />
+        </div>
+      )}
+
+      {!isInvestorMode && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-6 duration-1000 delay-200">
+            <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-xl relative overflow-hidden group hover:border-proton-accent transition-all">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Zap size={60} />
+              </div>
+              <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] mb-1">{language === 'ka' ? 'ნეირონული რეზონანსი' : 'Neural Resonance'}</p>
+              <h4 className="text-3xl font-black text-proton-text tabular-nums">94.2%</h4>
+              <div className="flex items-center gap-2 mt-4">
+                  <div className="flex-1 h-1.5 bg-proton-secondary/20 rounded-full overflow-hidden">
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '94.2%' }}
+                        className="h-full bg-proton-accent"
+                    />
+                  </div>
+                  <span className="text-[9px] font-black text-proton-accent uppercase tracking-tighter">Peak</span>
+              </div>
+            </div>
+
+            <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-xl relative overflow-hidden group hover:border-purple-500/50 transition-all">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Activity size={60} />
+              </div>
+              <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] mb-1">{language === 'ka' ? 'ავტონომიური მოგება' : 'Autonomous ROI'}</p>
+              <h4 className="text-3xl font-black text-purple-400 tabular-nums">+14.8h</h4>
+              <p className="text-[8px] font-bold text-proton-muted uppercase tracking-[0.2em] mt-2">Saved / Efficiency Refactor</p>
+            </div>
+
+            <div className="lg:col-span-2 bg-gradient-to-br from-proton-accent/10 via-proton-card to-proton-card p-6 rounded-[32px] border border-proton-accent/20 shadow-xl flex items-center justify-between">
+              <div className="space-y-1">
+                  <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.3em]">{language === 'ka' ? 'ინვესტორების რეჟიმი' : 'Investor Intelligence'}</p>
+                  <h4 className="text-lg font-black text-proton-text uppercase tracking-tight">Digital Twin Mirroring Active</h4>
+                  <p className="text-[10px] text-proton-muted font-medium max-w-xs uppercase leading-tight tracking-wider">Simulating 1,200 parallel workspace outcomes for optimal focus allocation.</p>
+              </div>
+              <div className="w-16 h-16 rounded-full border-4 border-proton-accent/30 border-t-proton-accent animate-spin-slow flex items-center justify-center">
+                  <BarChart3 className="text-proton-accent" size={24} />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className={cn(
@@ -3463,6 +3666,14 @@ const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMod
   </div>
 );
 
+const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'light', label: 'Minimalist', icon: <Sun size={18} />, color: 'bg-slate-200' },
+  { id: 'titanium', label: 'Titanium', icon: <Circle size={18} />, color: 'bg-sky-400' },
+  { id: 'proton', label: 'Cyberpunk', icon: <Zap size={18} />, color: 'bg-cyan-400' },
+  { id: 'vibrant', label: 'Nebula', icon: <Sparkles size={18} />, color: 'bg-purple-500' },
+  { id: 'midnight', label: 'Executive', icon: <Moon size={18} />, color: 'bg-slate-900' },
+];
+
 export default function App() {
   const [uiMode, setUiMode] = useState<'operator' | 'artisan'>(
     (localStorage.getItem('proton_ui_mode') as 'operator' | 'artisan') || 'operator'
@@ -3484,6 +3695,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isArtisanSystemActive, setIsArtisanSystemActive] = useState<boolean>(false);
+  const [isInvestorMode, setIsInvestorMode] = useState<boolean>(false);
 
   // Bootstrap system config if missing
   useEffect(() => {
@@ -3537,8 +3749,8 @@ export default function App() {
   }, [isArtisanSystemActive, isSafeMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  const [theme, setTheme] = useState<'proton' | 'light' | 'vibrant' | 'midnight'>(
-    (localStorage.getItem('proton_theme') as any) || 'proton'
+  const [theme, setTheme] = useState<Theme>(
+    (localStorage.getItem('proton_theme') as Theme) || 'proton'
   );
 
   useEffect(() => {
@@ -4391,6 +4603,10 @@ export default function App() {
                   setLastGeminiMetadata={setLastGeminiMetadata}
                   trackFirestore={trackFirestore}
                   isArtisanSystemActive={isArtisanSystemActive}
+                  isInvestorMode={isInvestorMode}
+                  setIsInvestorMode={setIsInvestorMode}
+                  theme={theme}
+                  setTheme={setTheme}
                 />
               )}
               {activeView === 'organizer' && (
@@ -4478,6 +4694,8 @@ export default function App() {
                   theme={theme}
                   setTheme={setTheme}
                   language={userProfile.language}
+                  uiMode={uiMode}
+                  setUiMode={handleModeChange}
                 />
               )}
             </motion.div>

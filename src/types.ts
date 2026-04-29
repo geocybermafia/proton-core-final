@@ -19,6 +19,6 @@ export type GlobalAiSettings = {
   voice: string;
 };
 
-export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight';
+export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium';
 
 export type View = 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device';
