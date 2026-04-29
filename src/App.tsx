@@ -14,9 +14,12 @@ import {
   sendPasswordResetEmail,
   linkWithCredential, 
   GoogleAuthProvider,
-  EmailAuthProvider
+  EmailAuthProvider,
+  User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { SettingsView } from './components/SettingsView';
+import { UserProfile, GlobalAiSettings, Theme, View } from './types';
 
 interface FirestoreErrorInfo {
   error: string;
@@ -150,8 +153,6 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 
 // --- Types ---
-type View = 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device';
-
 type ChatMessage = { role: 'user' | 'model', content: string, timestamp: number };
 type PersonaHistory = { [personaId: string]: ChatMessage[] };
 export type WorkflowStep = {
@@ -170,24 +171,6 @@ export type Workflow = {
   nodes?: any[];
   edges?: any[];
   steps?: WorkflowStep[];
-};
-
-type UserProfile = {
-  name: string;
-  email: string;
-  language: 'en' | 'ka';
-  region: string;
-  notifications: boolean;
-  phoneNumber?: string;
-};
-
-type GlobalAiSettings = {
-  temperature: number;
-  enableSearch: boolean;
-  enableMaps: boolean;
-  zenMode: boolean;
-  systemInstruction?: string;
-  voice: string;
 };
 
 type Task = {
@@ -1064,7 +1047,7 @@ const OrganizerView = ({
         .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
         .react-calendar__navigation button { color: #22d3ee !important; font-weight: bold !important; min-width: 44px !important; }
         .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #ec4899; }
-        .react-calendar__tile { padding: 1.5em 0.5em !important; color: #22d3ee !important; border-radius: 12px; transition: all 0.2s; }
+        .react-calendar__tile { padding: 0.8em 0.1em !important; font-size: 0.8rem !important; color: #22d3ee !important; border-radius: 12px; transition: all 0.2s; }
         .react-calendar__tile:hover { background: rgba(34, 211, 238, 0.1) !important; }
         .react-calendar__tile--now { background: rgba(34, 211, 238, 0.05) !important; border: 1px solid #22d3ee !important; }
         .react-calendar__tile--active { background: #ec4899 !important; color: white !important; font-weight: bold; box-shadow: 0 0 15px rgba(236,72,153,0.5); }
@@ -1082,7 +1065,7 @@ const OrganizerView = ({
         .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
         .react-calendar__navigation button { color: #0f172a !important; font-weight: bold !important; min-width: 44px !important; }
         .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
-        .react-calendar__tile { padding: 1.5em 0.5em !important; color: #1e293b !important; border-radius: 16px; transition: all 0.2s; }
+        .react-calendar__tile { padding: 0.8em 0.1em !important; font-size: 0.8rem !important; color: #1e293b !important; border-radius: 16px; transition: all 0.2s; }
         .react-calendar__tile:hover { background: #f1f5f9 !important; }
         .react-calendar__tile--now { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
         .react-calendar__tile--active { background: #0f172a !important; color: white !important; font-weight: bold; }
@@ -1100,7 +1083,7 @@ const OrganizerView = ({
         .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
         .react-calendar__navigation button { color: #f8fafc !important; font-weight: bold !important; min-width: 44px !important; }
         .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #64748b; }
-        .react-calendar__tile { padding: 1.5em 0.5em !important; color: #cbd5e1 !important; border-radius: 12px; transition: all 0.2s; }
+        .react-calendar__tile { padding: 0.8em 0.1em !important; font-size: 0.8rem !important; color: #cbd5e1 !important; border-radius: 12px; transition: all 0.2s; }
         .react-calendar__tile:hover { background: rgba(59, 130, 246, 0.1) !important; }
         .react-calendar__tile--now { background: rgba(59, 130, 246, 0.05) !important; border: 1px solid #3b82f6 !important; }
         .react-calendar__tile--active { background: #3b82f6 !important; color: white !important; font-weight: bold; }
@@ -1140,48 +1123,192 @@ const OrganizerView = ({
 
   return (
     <div className={cn("min-h-screen p-4 md:p-10 -m-4 md:-m-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-        <div>
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-6">
+        <div className="text-center xl:text-left">
           <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">{t.title}</h2>
           <p className={cn("mt-1 font-medium", currentTheme.muted)}>{t.subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-4 bg-black/20 p-2 rounded-2xl border border-white/5">
-             <div className="flex items-center gap-2 px-3">
-                <Palette size={16} className={currentTheme.muted} />
-                <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>{t.workspace_theme}</span>
-             </div>
-             <div className="flex p-1 bg-black/40 rounded-xl gap-1">
-                {(['cyberpunk', 'minimalist', 'executive'] as OrganizerTheme[]).map(th => (
-                  <button
-                    key={th}
-                    onClick={() => setTheme(th)}
-                    className={cn(
-                      "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
-                      theme === th 
-                        ? "bg-white text-black shadow-lg" 
-                        : cn("text-white/40 hover:text-white/70", currentTheme.muted)
-                    )}
-                  >
-                    {t[`theme_${th}` as keyof typeof t]}
-                  </button>
-                ))}
-             </div>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="relative group">
+            <Search size={14} className={cn("absolute left-4 top-1/2 -translate-y-1/2 transition-colors", currentTheme.muted, "group-focus-within:text-proton-accent")} />
+            <input 
+              type="text"
+              placeholder={language === 'ka' ? 'დავალების ძიება...' : 'Search tasks...'}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className={cn("pl-10 pr-4 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl border-2 focus:outline-none transition-all w-64 bg-black/20", currentTheme.input)}
+            />
+          </div>
+          
+          <div className="flex items-center bg-black/20 p-2 rounded-2xl border border-white/5 h-fit">
+               <div className="flex items-center gap-2 px-3">
+                  <Palette size={16} className={currentTheme.muted} />
+                  <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>{t.workspace_theme}</span>
+               </div>
+               <div className="flex p-1 bg-black/40 rounded-xl gap-1">
+                  {(['cyberpunk', 'minimalist', 'executive'] as OrganizerTheme[]).map(th => (
+                    <button
+                      key={th}
+                      onClick={() => setTheme(th)}
+                      className={cn(
+                        "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        theme === th 
+                          ? "bg-white text-black shadow-lg" 
+                          : cn("text-white/40 hover:text-white/70", currentTheme.muted)
+                      )}
+                    >
+                      {t[`theme_${th}` as keyof typeof t]}
+                    </button>
+                  ))}
+               </div>
+          </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
+             <div>
+                <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", currentTheme.muted)}>{t.total_completed}</p>
+                <h4 className="text-3xl font-black">{tasks.filter(t => t.completed).length}<span className="text-sm opacity-30 ml-2">/ {tasks.length}</span></h4>
+             </div>
+             <div className={cn("p-4 rounded-2xl", currentTheme.accent)}>
+                <Check size={28} />
+             </div>
+          </div>
+          <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
+             <div>
+                <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", currentTheme.muted)}>{t.productivity_score}</p>
+                <h4 className="text-3xl font-black">{tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0}%</h4>
+             </div>
+             <div className={cn("p-4 rounded-2xl", currentTheme.accent)}>
+                <Activity size={28} />
+             </div>
+          </div>
+          <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
+             <div className="flex items-center justify-between">
+                <div>
+                   <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", currentTheme.muted)}>{t.analytics}</p>
+                   <h4 className="text-lg font-black uppercase tracking-tight">{t.subtitle}</h4>
+                </div>
+                <div className="flex gap-1 h-2 w-32 bg-white/5 rounded-full overflow-hidden">
+                   <div 
+                      className="h-full bg-proton-accent transition-all duration-1000" 
+                      style={{ width: `${tasks.length > 0 ? (tasks.filter(t => t.completed).length / tasks.length) * 100 : 0}%` }}
+                   />
+                </div>
+             </div>
+          </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <div className={cn("p-8 rounded-[40px] border shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div className={cn("p-8 rounded-[40px] border shadow-sm h-fit transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-8">
               <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter">
-                <CalendarIcon size={24} className={currentTheme.muted} />
-                {t.calendar}
+                <Layers size={24} className={currentTheme.muted} />
+                {t.tasks}
               </h3>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => tasks.filter(t => t.completed).forEach(t => onDeleteTask(t.id))}
+                  className={cn("p-3 rounded-2xl transition-all hover:text-red-500", currentTheme.muted)}
+                  title="Clear completed"
+                >
+                  <RefreshCw size={18} />
+                </button>
+                <button 
+                  onClick={handleAiSuggest}
+                  disabled={isSuggesting}
+                  className={cn("p-3 rounded-2xl transition-all hover:scale-110", currentTheme.accent)}
+                >
+                  {isSuggesting ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                </button>
+              </div>
             </div>
-            <div className="w-full">
-              <style>{currentTheme.calendar}</style>
-              <Calendar className="mx-auto" />
+
+            <div className="space-y-6">
+               <form onSubmit={handleAddTask} className="space-y-6">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <input 
+                      type="text"
+                      placeholder={t.task_placeholder}
+                      value={newTaskInput}
+                      onChange={e => setNewTaskInput(e.target.value)}
+                      className={cn("flex-1 border-2 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none transition-all", currentTheme.input)}
+                    />
+                    <button type="submit" className={cn("px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl", currentTheme.button)}>
+                       {translations[language].common.add}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar-minimal">
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest mr-2 shrink-0", currentTheme.muted)}>{t.priority}:</span>
+                    {(['low', 'medium', 'high'] as const).map(p => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setTaskPriority(p)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0",
+                          taskPriority === p 
+                            ? (p === 'high' ? "bg-red-500 border-red-500 text-white" : p === 'medium' ? "bg-amber-500 border-amber-500 text-white" : "bg-blue-500 border-blue-500 text-white")
+                            : cn("border-white/10 text-white/40 hover:border-white/30", currentTheme.muted)
+                        )}
+                      >
+                        {t[p]}
+                      </button>
+                    ))}
+                  </div>
+               </form>
+
+               <div className="space-y-3">
+                  {filteredTasks.length === 0 ? (
+                    <div className="py-20 text-center space-y-4">
+                       <p className={cn("font-black uppercase tracking-[0.3em] text-[10px]", currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
+                       <div className={cn("h-px w-20 mx-auto", theme === 'cyberpunk' ? "bg-cyan-400/20" : "bg-slate-200")} />
+                    </div>
+                  ) : (
+                    filteredTasks.map(task => (
+                      <motion.div 
+                        layout
+                        key={task.id} 
+                        className={cn("flex items-center gap-4 p-5 rounded-2xl border transition-all group", currentTheme.card, theme === 'cyberpunk' ? "hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "hover:border-proton-accent")}
+                      >
+                        <button 
+                          onClick={() => onToggleTask(task.id)}
+                          className={cn(
+                            "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
+                            task.completed 
+                              ? (theme === 'cyberpunk' ? "bg-cyan-400 border-cyan-400 text-black" : "bg-slate-900 border-slate-900 text-white")
+                              : (theme === 'cyberpunk' ? "border-cyan-400/50" : "border-slate-200")
+                          )}
+                        >
+                          {task.completed && <Check size={16} strokeWidth={4} />}
+                        </button>
+                        <div className="flex-1 flex flex-col min-w-0">
+                          <span className={cn("text-sm font-bold tracking-tight truncate", task.completed && "opacity-30 line-through")}>
+                            {language === 'ka' ? task.contentGe : task.content}
+                          </span>
+                          {task.priority && (
+                             <span className={cn(
+                               "text-[8px] font-black uppercase tracking-widest mt-1",
+                               task.priority === 'high' ? "text-red-500" : task.priority === 'medium' ? "text-amber-500" : "text-blue-400"
+                             )}>
+                               {t[task.priority]}
+                             </span>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => onDeleteTask(task.id)} 
+                          className={cn("opacity-0 group-hover:opacity-100 transition-all hover:scale-125", theme === 'cyberpunk' ? "text-pink-500" : "text-slate-400 hover:text-red-500")}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </motion.div>
+                    ))
+                  )}
+               </div>
             </div>
           </div>
 
@@ -1200,71 +1327,32 @@ const OrganizerView = ({
           </div>
         </div>
 
-        <div className={cn("p-8 rounded-[40px] border shadow-sm h-fit transition-all duration-500", currentTheme.card)}>
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter">
-              <Layers size={24} className={currentTheme.muted} />
-              {t.tasks}
-            </h3>
-            <button 
-              onClick={handleAiSuggest}
-              disabled={isSuggesting}
-              className={cn("p-3 rounded-2xl transition-all hover:scale-110", currentTheme.accent)}
-            >
-              {isSuggesting ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-            </button>
+        <div className="space-y-8">
+          <div className={cn("p-8 rounded-[40px] border shadow-sm transition-all duration-500", currentTheme.card)}>
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tighter">
+                <CalendarIcon size={24} className={currentTheme.muted} />
+                {t.calendar}
+              </h3>
+            </div>
+            <div className="w-full">
+              <style>{currentTheme.calendar}</style>
+              <Calendar className="mx-auto" />
+            </div>
           </div>
-
-          <div className="space-y-6">
-             <form onSubmit={handleAddTask} className="space-y-4">
-                <input 
-                  type="text"
-                  placeholder={t.task_placeholder}
-                  value={newTaskInput}
-                  onChange={e => setNewTaskInput(e.target.value)}
-                  className={cn("w-full border-2 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none transition-all", currentTheme.input)}
-                />
-                <button type="submit" className={cn("w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl", currentTheme.button)}>
-                   {translations[language].common.add}
-                </button>
-             </form>
-
-             <div className="space-y-3">
-                {filteredTasks.length === 0 ? (
-                  <div className="py-20 text-center space-y-4">
-                     <p className={cn("font-black uppercase tracking-[0.3em] text-[10px]", currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
-                     <div className={cn("h-px w-20 mx-auto", theme === 'cyberpunk' ? "bg-cyan-400/20" : "bg-slate-200")} />
+          
+          <div className={cn("p-8 rounded-[40px] border shadow-sm bg-gradient-to-br from-proton-accent/10 to-transparent", currentTheme.card)}>
+             <h4 className="font-black text-xs uppercase tracking-widest mb-4">{t.upcoming_workflows}</h4>
+             <div className="space-y-4">
+                {[1,2,3].map(i => (
+                  <div key={i} className="flex items-center gap-4 p-4 bg-black/20 rounded-2xl border border-white/5">
+                     <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+                     <div className="flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-tight">Active Matrix Sync</p>
+                        <p className={cn("text-[8px] font-bold uppercase tracking-widest", currentTheme.muted)}>Node {i*47} • T+ {i*15}m</p>
+                     </div>
                   </div>
-                ) : (
-                  filteredTasks.map(task => (
-                    <motion.div 
-                      layout
-                      key={task.id} 
-                      className={cn("flex items-center gap-4 p-5 rounded-2xl border transition-all group", currentTheme.card, theme === 'cyberpunk' ? "hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "hover:border-proton-accent")}
-                    >
-                      <button 
-                        onClick={() => onToggleTask(task.id)}
-                        className={cn(
-                          "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
-                          task.completed 
-                            ? (theme === 'cyberpunk' ? "bg-cyan-400 border-cyan-400 text-black" : "bg-slate-900 border-slate-900 text-white")
-                            : (theme === 'cyberpunk' ? "border-cyan-400/50" : "border-slate-200")
-                        )}
-                      >
-                        {task.completed && <Check size={16} strokeWidth={4} />}
-                      </button>
-                      <span className={cn("text-sm flex-1 font-bold tracking-tight truncate", task.completed && "opacity-30 line-through")}>
-                        {language === 'ka' ? task.contentGe : task.content}
-                      </span>
-                      <button 
-                        onClick={() => onDeleteTask(task.id)} 
-                        className={cn("opacity-0 group-hover:opacity-100 transition-all hover:scale-125", theme === 'cyberpunk' ? "text-pink-500" : "text-slate-400 hover:text-red-500")}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </motion.div>
-                  ))
-                )}
+                ))}
              </div>
           </div>
         </div>
@@ -1309,7 +1397,7 @@ const DashboardView = ({
     )}>
       <div className={cn(
         "flex flex-col md:flex-row items-center justify-between gap-8 pt-4",
-        uiMode === 'artisan' && "bg-proton-card p-10 rounded-[50px] border border-proton-border shadow-2xl relative overflow-hidden"
+        uiMode === 'artisan' && "bg-proton-card p-6 md:p-10 rounded-[40px] md:rounded-[50px] border border-proton-border shadow-2xl relative overflow-hidden"
       )}>
         {uiMode === 'artisan' && (
           <div className="absolute top-0 right-0 p-20 opacity-[0.03] pointer-events-none">
@@ -1319,13 +1407,13 @@ const DashboardView = ({
         <div className="space-y-3 text-center md:text-left relative z-10">
           <h1 className={cn(
             "font-black tracking-tighter text-proton-text uppercase",
-            uiMode === 'artisan' ? "text-5xl md:text-8xl leading-none" : "text-4xl md:text-6xl"
+            uiMode === 'artisan' ? "text-4xl sm:text-5xl lg:text-7xl xl:text-8xl leading-[0.9]" : "text-3xl sm:text-4xl md:text-6xl leading-tight"
           )}>
             {uiMode === 'artisan' ? t.dashboard.artisan_title : t.sidebar.dashboard}
           </h1>
           <p className={cn(
             "text-proton-muted font-medium max-w-xl",
-            uiMode === 'artisan' ? "text-xl md:text-2xl" : "text-lg"
+            uiMode === 'artisan' ? "text-lg md:text-2xl" : "text-base md:text-lg"
           )}>
              {t.dashboard.explore_subtitle}
           </p>
@@ -1355,12 +1443,12 @@ const DashboardView = ({
               <button 
                 onClick={() => setActiveView('finance')}
                 className={cn(
-                  "bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
+                  "bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
                   uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
                 )}
               >
-                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                  <Wallet size={28} />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
+                  <Wallet size={24} className="md:w-7 md:h-7" />
                 </div>
                 <div className="space-y-1">
                   <h3 className="font-bold text-xl">{t.dashboard.financial_center}</h3>
@@ -1374,12 +1462,12 @@ const DashboardView = ({
               <button 
                 onClick={() => setActiveView('organizer')}
                 className={cn(
-                  "bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
+                  "bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
                   uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
                 )}
               >
-                <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                   <CalendarIcon size={28} />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
+                   <CalendarIcon size={24} className="md:w-7 md:h-7" />
                 </div>
                 <div className="space-y-1">
                   <h3 className="font-bold text-xl">{t.dashboard.organizer_tool}</h3>
@@ -1394,10 +1482,10 @@ const DashboardView = ({
                 <>
                   <button 
                     onClick={() => setActiveView('device')}
-                    className="bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
+                    className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                      <Cpu size={28} />
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
+                      <Cpu size={24} className="md:w-7 md:h-7" />
                     </div>
                     <div className="space-y-1">
                       <h3 className="font-bold text-xl">{t.sidebar.device}</h3>
@@ -1406,10 +1494,10 @@ const DashboardView = ({
                   </button>
                   <button 
                     onClick={() => setActiveView('personas')}
-                    className="bg-proton-card p-8 rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
+                    className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                      <Users size={28} />
+                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
+                      <Users size={24} className="md:w-7 md:h-7" />
                     </div>
                     <div className="space-y-1">
                       <h3 className="font-bold text-xl">{t.dashboard.ai_personas}</h3>
@@ -1421,7 +1509,7 @@ const DashboardView = ({
            </div>
 
            <div className={cn(
-             "bg-proton-card p-10 rounded-[50px] border border-proton-border shadow-sm",
+             "bg-proton-card p-6 md:p-10 rounded-[40px] md:rounded-[50px] border border-proton-border shadow-sm",
              uiMode === 'artisan' && "border-proton-accent/20"
            )}>
               <div className="flex items-center justify-between mb-8">
@@ -2931,11 +3019,8 @@ const CabinetView = ({
   customAvatars,
   personas,
   user,
-  supabaseUser,
   onSignIn,
   onSignOut,
-  onSupabaseLogin,
-  onSupabaseSignOut,
   uiMode,
   stats: userStats,
   onNavigate
@@ -2946,11 +3031,8 @@ const CabinetView = ({
   customAvatars: { [id: string]: string },
   personas: Persona[],
   user: any,
-  supabaseUser?: any,
   onSignIn: () => void,
   onSignOut: () => void,
-  onSupabaseLogin?: (email: string) => void,
-  onSupabaseSignOut?: () => void,
   uiMode: 'operator' | 'artisan',
   stats: { storageGB: number, computeTimeHours: number, aiTokens: number, computeCycles?: number, node_id?: string },
   onNavigate: (view: any) => void
@@ -3017,11 +3099,12 @@ const CabinetView = ({
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-gray-500 font-medium text-sm md:text-base">
-                {supabaseUser?.email || user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
+                {user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
               </p>
-              {(supabaseUser?.id || user?.uid) && (
-                <span className="px-2 py-1 bg-gray-100 rounded text-[9px] font-mono text-gray-400 uppercase tracking-tighter">
-                  NODE: {userStats.node_id || (supabaseUser?.id || user?.uid || '').slice(0, 8)}
+              {user && (
+                <span className="px-2 py-1 bg-proton-accent/10 text-[9px] font-bold text-proton-accent rounded uppercase tracking-tighter border border-proton-accent/20 flex items-center gap-1">
+                  <div className="w-1 h-1 rounded-full bg-proton-accent animate-pulse" />
+                  NODE: {userStats.node_id || user.uid.slice(0, 8)}
                 </span>
               )}
             </div>
@@ -3189,14 +3272,14 @@ const CabinetView = ({
               <button 
                 key={module.id} 
                 onClick={() => onNavigate(module.id)}
-                className="bg-white p-8 rounded-[32px] border border-gray-200 shadow-sm text-left group hover:border-blue-300 hover:shadow-md transition-all"
+                className="bg-white p-8 rounded-[32px] border border-gray-200 shadow-sm text-left group transition-all relative overflow-hidden hover:border-proton-accent hover:shadow-md"
               >
                 <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform", module.bg, module.color)}>
                   <module.icon size={24} />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{module.label}</h3>
                 <p className="text-xs text-gray-500 font-medium leading-relaxed mb-6">{module.desc}</p>
-                <div className="flex items-center gap-2 text-blue-600 font-bold text-xs uppercase tracking-wider">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-proton-accent">
                   {language === 'ka' ? 'გახსნა' : 'Access'}
                   <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
@@ -3549,9 +3632,6 @@ export default function App() {
   });
 
   const [user, setUser] = useState(auth.currentUser);
-  const [supabaseUser, setSupabaseUser] = useState<any>(null);
-  const [supabaseProfile, setSupabaseProfile] = useState<any>(null);
-  const [isSupabaseLoading, setIsSupabaseLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userStats, setUserStats] = useState<{
@@ -3573,107 +3653,50 @@ export default function App() {
   }, [userProfile]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSupabaseUser(session?.user ?? null);
-      setIsSupabaseLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthInitialized(true);
     });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    let channel: any;
-
-    async function fetchSupabaseDataAndSubscribe() {
-      if (!supabaseUser) {
-        setSupabaseProfile(null);
-        return;
-      }
-
-      const updateUserStatsFromProfile = (profile: any) => {
+    if (!user) return;
+    
+    async function fetchUserProfile() {
+      const docRef = doc(db, 'profiles', user!.uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const profile = docSnap.data();
         setUserStats(prev => ({
           ...prev,
           aiTokens: profile.ai_tokens || prev.aiTokens,
           computeCycles: profile.compute_cycles || 0,
           storageGB: profile.storage_gb || prev.storageGB,
-          node_id: profile.node_id || prev.node_id
+          node_id: profile.node_id || `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
         }));
-      };
-
-      // Initial Fetch
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        // Profile doesn't exist, create it (PGRST116 is JSend style error for no rows returned with single())
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert([
-            { 
-              id: supabaseUser.id, 
-              email: supabaseUser.email,
-              ai_tokens: 5000,
-              compute_cycles: 100,
-              storage_gb: 0.5,
-              node_id: `NODE-${supabaseUser.id.slice(0, 5).toUpperCase()}`
-            }
-          ])
-          .select()
-          .single();
-          
-        if (newProfile && !createError) {
-          setSupabaseProfile(newProfile);
-          updateUserStatsFromProfile(newProfile);
-        }
-      } else if (data && !error) {
-        setSupabaseProfile(data);
-        updateUserStatsFromProfile(data);
+      } else {
+        // Create default profile in Firestore
+        const defaultProfile = {
+          email: user!.email,
+          ai_tokens: 5000,
+          compute_cycles: 100,
+          storage_gb: 0.5,
+          node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
+        };
+        await setDoc(docRef, defaultProfile).catch(e => handleFirestoreError(e, 'create', docRef.path));
+        setUserStats(prev => ({
+          ...prev,
+          node_id: defaultProfile.node_id
+        }));
       }
-
-      // Real-time subscription
-      channel = supabase
-        .channel(`profile-${supabaseUser.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${supabaseUser.id}` },
-          (payload: any) => {
-            if (payload.new) {
-              setSupabaseProfile(payload.new);
-              updateUserStatsFromProfile(payload.new);
-            }
-          }
-        )
-        .subscribe();
     }
+    
+    fetchUserProfile().catch(err => console.error("Profile fetch error:", err));
+  }, [user]);
 
-    fetchSupabaseDataAndSubscribe();
 
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [supabaseUser]);
-
-  const handleSupabaseLogin = async (email: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin
-        }
-      });
-      if (error) alert("Supabase Login Error: " + error.message);
-      else alert("Magic link sent! Check your email.");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleSupabaseSignOut = async () => {
-    await supabase.auth.signOut();
-  };
 
   useEffect(() => {
     localStorage.setItem('proton_ai_settings', JSON.stringify(aiSettings));
@@ -3697,10 +3720,10 @@ export default function App() {
           storageGB: 1.2,
           computeTimeHours: 0.1,
           aiTokens: 150
-        }, { merge: true });
+        }, { merge: true }).catch(err => handleFirestoreError(err, 'write', statsRef.path));
       }
     }, (err) => {
-      console.warn("Stats access restricted or failed:", err);
+      handleFirestoreError(err, 'get', statsRef.path);
     });
     return () => unsubscribe();
   }, [user]);
@@ -4091,7 +4114,7 @@ export default function App() {
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pt-4">
             {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.agents}</p>}
             
             <Reorder.Group 
@@ -4133,7 +4156,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pt-6">
             {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.creative}</p>}
             <SidebarItem 
               icon={Image} 
@@ -4243,34 +4266,43 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="h-20 border-b border-proton-border flex items-center justify-between px-6 md:px-10 z-40 bg-proton-card sticky top-0 backdrop-blur-md">
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-4 border-r border-proton-border pr-8 mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
-              <div className="w-12 h-12 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-lg group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
+        <header className="h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 z-40 bg-proton-card sticky top-0 backdrop-blur-md">
+          <div className="flex items-center gap-3 md:gap-8">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="md:hidden w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all"
+            >
+              <Grid size={20} />
+            </button>
+
+            <div className="flex items-center gap-3 md:gap-4 md:border-r md:border-proton-border md:pr-8 md:mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-lg group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                  <span className="text-xs md:text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
                 )}
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-black text-proton-text uppercase tracking-tight leading-none">{supabaseUser?.email?.split('@')[0] || user?.displayName || 'Explorer'}</span>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/20 transition-all">
-                    <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", supabaseUser ? "bg-proton-accent" : "bg-proton-muted")} />
-                    <span className="text-[8px] font-black text-proton-text uppercase tracking-tighter">
-                      Proton Hub: {supabaseUser ? 'Syncing' : 'Offline'} (Supabase) | Core: Active (Firebase)
+              <div className="flex flex-col min-w-0">
+                <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-2">
+                  <span className="text-xs md:text-sm font-black text-proton-text uppercase tracking-tight leading-none truncate max-w-[80px] sm:max-w-none">
+                    {user?.displayName || user?.email?.split('@')[0] || 'Explorer'}
+                  </span>
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 transition-all w-fit">
+                    <div className={cn("w-1 h-1 md:w-1.5 md:h-1.5 rounded-full animate-pulse", user ? "bg-proton-accent" : "bg-proton-muted")} />
+                    <span className="text-[7px] md:text-[8px] font-black text-proton-text uppercase tracking-tighter whitespace-nowrap">
+                      {user ? 'Core Active' : 'Offline'}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.15em]">NODE: <span className="text-proton-accent">{userProfile.region || 'CORE'}</span></span>
-                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.15em] border-l border-proton-border pl-3">LEVEL 4</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[8px] md:text-[9px] font-black text-proton-muted uppercase tracking-[0.15em]">NODE: <span className="text-proton-accent">{userProfile.region || 'CORE'}</span></span>
+                  <span className="text-[8px] md:text-[9px] font-black text-proton-muted uppercase tracking-[0.15em] border-l border-proton-border pl-2 md:pl-3 ml-0.5 md:ml-0 overflow-hidden text-ellipsis">LVL 4</span>
                 </div>
               </div>
             </div>
 
-            <nav className="hidden lg:flex items-center gap-6">
+            <nav className="hidden xl:flex items-center gap-6">
               {[
                 { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
                 { id: 'blueprints', label: t.sidebar.blueprints, icon: Workflow },
@@ -4317,25 +4349,6 @@ export default function App() {
             <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
 
             <div className="flex items-center gap-3">
-              {!supabaseUser ? (
-                <button 
-                  onClick={() => {
-                    const email = prompt("Enter email for Magic Link:");
-                    if (email) handleSupabaseLogin(email);
-                  }}
-                  className="px-6 py-2 bg-proton-accent text-proton-bg rounded-xl font-bold text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-proton-accent/20"
-                >
-                   {userProfile.language === 'ka' ? 'დაკავშირება' : 'Connect'}
-                </button>
-              ) : (
-                <button 
-                  onClick={() => handleSupabaseSignOut()}
-                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
-                  title="Supabase Sign Out"
-                >
-                  <LogOut size={18} className="text-proton-accent" />
-                </button>
-              )}
               <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
               <button 
                 onClick={() => handleViewChange('settings')}
@@ -4449,123 +4462,23 @@ export default function App() {
                   customAvatars={personaAvatars}
                   personas={personas}
                   user={user}
-                  supabaseUser={supabaseUser}
                   onSignIn={handleGoogleSignIn}
                   onSignOut={handleSignOut}
-                  onSupabaseLogin={handleSupabaseLogin}
-                  onSupabaseSignOut={handleSupabaseSignOut}
                   uiMode={uiMode}
                   stats={userStats}
                   onNavigate={handleViewChange}
                 />
               )}
               {activeView === 'settings' && (
-                <div className="flex flex-col h-full w-full max-w-2xl mx-auto p-8 space-y-8">
-                  <div className="flex items-center gap-4">
-                    <Settings size={32} className="text-proton-accent" />
-                    <h2 className="text-2xl font-bold">{t.settings.title}</h2>
-                  </div>
- 
-                  <div className="space-y-6">
-                    <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">{t.sidebar.profile}</h3>
-                      <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">{t.settings.region || 'Region'}</label>
-                        <input 
-                          value={userProfile.region || ''}
-                          onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
-                          className="w-full bg-proton-card p-3 rounded-xl border border-proton-border text-xs focus:outline-none focus:border-proton-accent"
-                          placeholder="e.g. Tbilisi"
-                        />
-                      </div>
-                    </section>
-
-                    <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">{t.settings.ai_config}</h3>
-                      
-                      <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">{t.settings.temperature}: {aiSettings.temperature}</label>
-                        <input 
-                          type="range" min="0" max="1" step="0.1"
-                          value={aiSettings.temperature}
-                          onChange={e => setAiSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
-                          className="w-full accent-proton-accent"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs">{t.settings.search}</label>
-                        <input 
-                          type="checkbox" checked={aiSettings.enableSearch}
-                          onChange={e => setAiSettings(prev => ({ ...prev, enableSearch: e.target.checked }))}
-                          className="accent-proton-accent"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs">{t.settings.maps}</label>
-                        <input 
-                          type="checkbox" checked={aiSettings.enableMaps}
-                          onChange={e => setAiSettings(prev => ({ ...prev, enableMaps: e.target.checked }))}
-                          className="accent-proton-accent"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs">Enable Zen Mode (Hide Sidebar)</label>
-                        <input 
-                          type="checkbox" checked={aiSettings.zenMode}
-                          onChange={e => setAiSettings(prev => ({ ...prev, zenMode: e.target.checked }))}
-                          className="accent-proton-accent"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-xs text-proton-muted">Voice Style (Tbilisi Accent Enabled)</label>
-                        <select
-                          value={aiSettings.voice}
-                          onChange={e => setAiSettings(prev => ({ ...prev, voice: e.target.value }))}
-                          className="w-full bg-proton-card p-3 rounded-xl border border-proton-border text-xs focus:outline-none focus:border-proton-accent"
-                        >
-                          <option value="Kore">Professional (Kore)</option>
-                          <option value="Fenrir">Deep Male Voice (Fenrir)</option>
-                          <option value="Charon">Warm Male Voice (Charon)</option>
-                          <option value="TbilisiDialect">Tbilisi Local (Beta)</option>
-                          <option value="GeorgianModern">Modern Kartuli</option>
-                        </select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                         <label className="text-xs text-proton-muted">Global System Instruction</label>
-                         <textarea
-                           value={aiSettings.systemInstruction || ""}
-                           onChange={e => setAiSettings(prev => ({ ...prev, systemInstruction: e.target.value }))}
-                           className="w-full bg-proton-card p-3 rounded-xl border border-proton-border text-xs focus:outline-none focus:border-proton-accent"
-                           rows={3}
-                           placeholder="Enter global system instructions..."
-                         />
-                      </div>
-                    </section>
-
-                    <section className="space-y-4">
-                      <h3 className="font-bold border-b border-proton-border pb-2">Appearance</h3>
-                      <div className="flex gap-4">
-                        {(['proton', 'light', 'vibrant', 'midnight'] as const).map((t) => (
-                          <button
-                            key={t}
-                            onClick={() => setTheme(t)}
-                            className={cn(
-                              "px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all",
-                              theme === t ? "bg-proton-accent text-proton-bg" : "bg-proton-card hover:bg-proton-border"
-                            )}
-                          >
-                            {t}
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  </div>
-                </div>
+                <SettingsView 
+                  userProfile={userProfile}
+                  setUserProfile={setUserProfile}
+                  aiSettings={aiSettings}
+                  setAiSettings={setAiSettings}
+                  theme={theme}
+                  setTheme={setTheme}
+                  language={userProfile.language}
+                />
               )}
             </motion.div>
           </AnimatePresence>

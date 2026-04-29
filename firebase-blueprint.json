@@ -62,9 +62,37 @@
         "content": { "type": "string" },
         "contentGe": { "type": "string" },
         "completed": { "type": "boolean" },
-        "isAiSuggested": { "type": "boolean" }
+        "isAiSuggested": { "type": "boolean" },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "category": { "type": "string" }
       },
       "required": ["id", "content", "contentGe", "completed"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Main user profile and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "language": { "type": "string" },
+        "region": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "StatsProfile": {
+      "title": "StatsProfile",
+      "description": "User resource limits and node info",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "ai_tokens": { "type": "number" },
+        "compute_cycles": { "type": "number" },
+        "storage_gb": { "type": "number" },
+        "node_id": { "type": "string" }
+      }
     },
     "SystemConfig": {
       "title": "SystemConfig",
@@ -98,6 +126,10 @@
     }
   },
   "firestore": {
+    "/profiles/{userId}": {
+      "schema": { "$ref": "StatsProfile" },
+      "description": "User resource allocation and node identity"
+    },
     "/system/config": {
       "schema": { "$ref": "SystemConfig" },
       "description": "Global system configuration"
@@ -105,6 +137,10 @@
     "/neural_pulse/{pulseId}": {
       "schema": { "$ref": "NeuralPulseEvent" },
       "description": "Global anonymous feed of recent activity"
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "Main user account information"
     },
     "/users/{userId}/personas/{personaId}": {
       "schema": { "$ref": "Persona" },

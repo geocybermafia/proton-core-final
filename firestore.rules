@@ -11,9 +11,7 @@ service cloud.firestore {
     }
 
     function isVerifiedOwner(userId) {
-      return isSignedIn() && 
-             request.auth.uid == userId && 
-             request.auth.token.email_verified == true;
+      return isSignedIn() && request.auth.uid == userId;
     }
 
     function isValidId(id) {
@@ -28,6 +26,13 @@ service cloud.firestore {
              data.completed is bool;
     }
 
+    function isValidProfile(data) {
+      return data.keys().hasAll(['email', 'ai_tokens', 'compute_cycles', 'storage_gb', 'node_id']) &&
+             data.email is string && data.ai_tokens is number &&
+             data.compute_cycles is number && data.storage_gb is number &&
+             data.node_id is string;
+    }
+
     match /neural_pulse/{pulseId} {
       allow list: if true;
       allow create: if isSignedIn() && 
@@ -37,34 +42,38 @@ service cloud.firestore {
                     request.resource.data.createdAt == request.time;
     }
 
+    match /profiles/{userId} {
+      allow get, write: if isVerifiedOwner(userId);
+    }
+
     match /test/connection {
       allow get: if true;
     }
 
     match /system/config {
       allow read: if true;
-      allow write: if false; // Only manageable via Console or bootstrap logic
+      allow write: if false; 
     }
 
     match /users/{userId} {
       // Allow the user to manage their own profile document
-      allow get, write: if isSignedIn() && request.auth.uid == userId;
+      allow get, write: if isVerifiedOwner(userId);
       
-      // Subcollections - Relaxed for persona sharing and collaborative chat
+      // Subcollections
       match /personas/{personaId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isVerifiedOwner(userId);
       }
       
       match /workflows/{workflowId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isVerifiedOwner(userId);
       }
       
       match /customAvatars/{personaId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isVerifiedOwner(userId);
       }
       
       match /chatHistory/{personaId} {
-        allow read, write: if isSignedIn();
+        allow read, write: if isVerifiedOwner(userId);
       }
 
       match /tasks/{taskId} {
