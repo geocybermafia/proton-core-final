@@ -20,13 +20,13 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
     },
     {
       id: 'obj-2',
-      title: language === 'ka' ? 'ნეირონული ეფექტურობა' : 'Neural Efficiency',
+      title: language === 'ka' ? 'ოპერაციული ეფექტურობა' : 'Operational Efficiency',
       progress: 42,
       status: 'calibrating',
       subtasks: [
-        { label: 'Token Reduction', completed: true },
-        { label: 'Latency Optimization', completed: false },
-        { label: 'Memory Mirroring', completed: false }
+        { label: 'Process Optimization', completed: true },
+        { label: 'Resource Allocation', completed: false },
+        { label: 'Workflow Sync', completed: false }
       ]
     },
     {
@@ -81,16 +81,16 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-300">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
              <Target className="text-proton-accent" size={32} />
              <h2 className="text-3xl font-black tracking-tighter text-proton-text uppercase">
-                {language === 'ka' ? 'ავტონომიური მიზნების ცენტრი' : 'Autonomous Objective Center'}
+                {language === 'ka' ? 'სტრატეგიული მიზნების პანელი' : 'Strategic Goals Dashboard'}
              </h2>
           </div>
-          <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">Neural Goal Breakdown Engine</p>
+          <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">Business Objective Monitoring</p>
         </div>
 
         <div className="flex items-center gap-4">

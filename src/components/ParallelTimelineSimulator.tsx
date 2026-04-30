@@ -54,9 +54,9 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
   };
 
   const metrics = [
-    { label: language === 'ka' ? 'დაყოვნება' : 'Latency', value: '1.2ms', desc: language === 'ka' ? 'მონაცემთა დამუშავების დრო' : 'Data processing speed' },
-    { label: language === 'ka' ? 'ენთროპია' : 'Entropy', value: `${(4.8 + progress/20).toFixed(1)}%`, desc: language === 'ka' ? 'სისტემური გაურკვევლობა' : 'Systemic unpredictability' },
-    { label: language === 'ka' ? 'წარმადობა' : 'Throughput', value: '12.4T/s', desc: language === 'ka' ? 'მონაცემთა ნაკადის მოცულობა' : 'Volume of data flow' }
+    { label: language === 'ka' ? 'სიზუსტე' : 'Accuracy', value: '98.2%', desc: language === 'ka' ? 'მოდელის სიზუსტის მაჩვენებელი' : 'Model accuracy rating' },
+    { label: language === 'ka' ? 'რისკი' : 'Risk', value: `${(2.1 + progress/40).toFixed(1)}%`, desc: language === 'ka' ? 'სავარაუდო რისკ-ფაქტორი' : 'Estimated risk factor' },
+    { label: language === 'ka' ? 'ეფექტი' : 'Impact', value: 'High', desc: language === 'ka' ? 'ბიზნეს გავლენის ხარისხი' : 'Level of business impact' }
   ];
 
   return (
@@ -70,9 +70,9 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
           <div className="space-y-1">
             <h3 className="text-2xl font-black tracking-tighter text-proton-text flex items-center gap-3">
               <Zap className="text-proton-accent" size={24} />
-              {language === 'ka' ? 'პარალელური დროის სიმულატორი' : 'Parallel Timeline Simulator'}
+              {language === 'ka' ? 'სტრატეგიული სცენარების ანალიზატორი' : 'Strategic Scenario Analyzer'}
             </h3>
-            <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">Predictive Quantum Analysis</p>
+            <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">Business Forecast Analysis</p>
           </div>
           
           <div className="flex gap-2 p-1.5 bg-proton-bg/50 rounded-2xl border border-proton-border">
