@@ -133,7 +133,7 @@ export const translations = {
     },
     modes: {
       operator: "Management",
-      artisan: "Professional"
+      artisan: "Handyman's Guide"
     },
     settings: {
       title: "Settings",
@@ -574,8 +574,8 @@ export const translations = {
       back_to_login: "შესვლაზე დაბრუნება"
     },
     modes: {
-      operator: "მართვა",
-      artisan: "პროფესიონალი"
+      operator: "ბიზნეს რეჟიმი",
+      artisan: "ხელოსნის გზამკვლევი"
     },
     settings: {
       title: "პარამეტრები",

@@ -1449,7 +1449,7 @@ const DashboardView = ({
               "font-black tracking-tighter text-proton-text uppercase",
               uiMode === 'artisan' ? "text-4xl sm:text-5xl lg:text-7xl xl:text-8xl leading-[0.9]" : "text-3xl sm:text-4xl md:text-5xl leading-tight"
             )}>
-              {uiMode === 'artisan' ? t.dashboard.artisan_title : t.sidebar.dashboard}
+              {uiMode === 'artisan' ? (language === 'ka' ? 'ხელოსნის გზამკვლევი' : 'Handyman\'s Guide') : t.sidebar.dashboard}
             </h1>
             <div className="flex flex-col md:flex-row items-center gap-4">
               <p className={cn(
@@ -1582,7 +1582,7 @@ const DashboardView = ({
         </div>
       )}
 
-      {isInvestorMode && (
+      {uiMode === 'operator' ? (
         <div className="space-y-12 animate-in fade-in slide-in-from-top-12 duration-1000">
           <div className="bg-proton-accent/5 border border-proton-accent/20 p-6 rounded-[32px] flex items-center gap-6">
             <div className="w-12 h-12 rounded-2xl bg-proton-accent/20 text-proton-accent flex items-center justify-center shrink-0">
@@ -1590,12 +1590,12 @@ const DashboardView = ({
             </div>
             <div>
                <h4 className="text-sm font-black text-proton-text uppercase tracking-widest">
-                 {language === 'ka' ? 'ინვესტორ BI რეჟიმი აქტიურია' : 'Investor BI Mode Active'}
+                 {language === 'ka' ? 'ბიზნეს BI რეჟიმი აქტიურია' : 'Business BI Mode Active'}
                </h4>
                <p className="text-xs text-proton-muted font-medium mt-1">
                  {language === 'ka' 
-                   ? 'ეს რეჟიმი გაწვდით სისტემურ ანალიტიკას, პროცესების ROI-ს და სამომავლო დროის სიმულაციებს თქვენი ბიზნესის ეფექტურობის გასაზრდელად.' 
-                   : 'This mode provides system diagnostics, process ROI metrics, and future timeline simulations to maximize your business efficiency.'}
+                   ? 'სისტემური ანალიტიკა, პროცესების ROI და სამომავლო დროის სიმულაციები თქვენი ბიზნესის ეფექტურობისთვის.' 
+                   : 'System diagnostics, ROI metrics, and future timeline simulations for business efficiency.'}
                </p>
             </div>
           </div>
@@ -1631,9 +1631,6 @@ const DashboardView = ({
                           className="h-full bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.4)]" 
                         />
                     </div>
-                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em] h-8">
-                      {isRecalibrating ? 'Neural calibration in progress...' : 'Optimal synergy verified across 4 active neural nodes.'}
-                    </p>
                  </div>
               </div>
 
@@ -1657,21 +1654,16 @@ const DashboardView = ({
                         {isRefreshingRoi ? '+...' : `+${roiValue}h`}
                       </span>
                     </div>
-                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em] h-8">
-                      {isRefreshingRoi ? 'Processing latest efficiency data...' : 'Time saved this week via autonomous refactoring and decision mirroring.'}
-                    </p>
+                    <p className="text-[10px] text-proton-muted font-medium uppercase leading-tight tracking-[0.1em]">Time saved this week via autonomous refactoring.</p>
                  </div>
               </div>
             </div>
           </div>
-
           <ObjectiveCenter language={language} />
         </div>
-      )}
-
-      {!isInvestorMode && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-6 duration-1000 delay-200">
+      ) : (
+        <div className="space-y-12 animate-in fade-in slide-in-from-top-12 duration-1000">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-xl relative overflow-hidden group hover:border-proton-accent transition-all">
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Zap size={60} />
@@ -1686,7 +1678,6 @@ const DashboardView = ({
                         className="h-full bg-proton-accent"
                     />
                   </div>
-                  <span className="text-[9px] font-black text-proton-accent uppercase tracking-tighter">Peak</span>
               </div>
             </div>
 
@@ -1694,26 +1685,45 @@ const DashboardView = ({
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                   <Activity size={60} />
               </div>
-              <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] mb-1">{language === 'ka' ? 'ავტონომიური მოგება' : 'Autonomous ROI'}</p>
+              <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] mb-1">{language === 'ka' ? 'ავტონომიური მუშაობა' : 'Autonomous Work'}</p>
               <h4 className="text-3xl font-black text-purple-400 tabular-nums">+14.8h</h4>
-              <p className="text-[8px] font-bold text-proton-muted uppercase tracking-[0.2em] mt-2">Saved / Efficiency Refactor</p>
+              <p className="text-[8px] font-bold text-proton-muted uppercase tracking-[0.2em] mt-2">Efficiency Gain</p>
             </div>
 
-            <button 
-              onClick={() => setIsInvestorMode(true)}
-              className="lg:col-span-2 bg-gradient-to-br from-proton-accent/10 via-proton-card to-proton-card p-6 rounded-[32px] border border-proton-accent/20 shadow-xl flex items-center justify-between text-left hover:border-proton-accent transition-all group"
-            >
+            <div className="lg:col-span-2 bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-xl flex items-center justify-between border-proton-accent/20">
               <div className="space-y-1">
-                  <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.3em]">{language === 'ka' ? 'ინვესტორების რეჟიმი' : 'Investor Intelligence'}</p>
-                  <h4 className="text-lg font-black text-proton-text uppercase tracking-tight">Digital Twin Mirroring Active</h4>
-                  <p className="text-[10px] text-proton-muted font-medium max-w-xs uppercase leading-tight tracking-wider">Simulating 1,200 parallel workspace outcomes for optimal focus allocation.</p>
+                  <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.3em] font-mono">Artisan Intelligence</p>
+                  <h4 className="text-lg font-black text-proton-text uppercase tracking-tight">Active Guidance Mirroring</h4>
+                  <p className="text-[10px] text-proton-muted font-medium max-w-xs uppercase leading-tight tracking-wider">The system is optimizing your technical workspace in real-time.</p>
               </div>
-              <div className="w-16 h-16 rounded-full border-4 border-proton-accent/30 border-t-proton-accent animate-spin-slow flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <BarChart3 className="text-proton-accent" size={24} />
+              <div className="w-16 h-16 rounded-full border-4 border-proton-accent/30 border-t-proton-accent animate-spin-slow flex items-center justify-center">
+                  <Sparkles className="text-proton-accent" size={24} />
               </div>
-            </button>
+            </div>
           </div>
-        </>
+          
+          <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-2xl relative overflow-hidden group border-proton-accent/20">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+              <Network size={120} />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+              <div className="flex-1 space-y-6">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.4em] mb-2">Technical Engine</p>
+                  <h3 className="text-3xl font-black text-proton-text tracking-tighter uppercase">{language === 'ka' ? 'ხელოსნის ინსტრუმენტარიუმი' : 'Artisan Tools'}</h3>
+                  <p className="text-sm text-proton-muted font-medium max-w-sm">Access specialized technical assistance and specialized neural guidelines.</p>
+                </div>
+              </div>
+              <div className="w-full md:w-64 h-32 bg-proton-bg/40 rounded-3xl border border-proton-border p-4 flex items-center justify-center">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={[{v:10}, {v:30}, {v:25}, {v:45}, {v:40}, {v:60}]}>
+                     <Area type="monotone" dataKey="v" stroke="var(--color-proton-accent)" fill="var(--color-proton-accent)" fillOpacity={0.1} />
+                   </AreaChart>
+                 </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -4576,6 +4586,10 @@ export default function App() {
               <Grid size={20} />
             </button>
 
+            <div className="flex md:hidden">
+              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} />
+            </div>
+
             <div className="flex items-center gap-3 md:gap-4 md:border-r md:border-proton-border md:pr-8 md:mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-lg group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
                 {user.photoURL ? (
@@ -4623,6 +4637,9 @@ export default function App() {
                 </button>
               ))}
             </nav>
+
+            <div className="h-8 w-px bg-proton-border/50 hidden xl:block" />
+            <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} />
           </div>
           
           <div className="flex items-center gap-6">
