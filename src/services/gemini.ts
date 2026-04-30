@@ -83,11 +83,12 @@ export async function chatWithPersona(
   persona: Persona, 
   message: string, 
   history: { role: 'user' | 'model', parts: { text: string }[] }[] = [],
-  model: string = "gemini-3-flash-preview",
+  model: string = "gemini-3.1-flash-preview",
   includeMaps: boolean = false,
   includeSearch: boolean = true,
   temperature: number = 0.8,
-  globalInstruction?: string
+  globalInstruction?: string,
+  appLanguage: 'en' | 'ka' = 'en'
 ): Promise<{ text: string, metadata: GeminiMetadata }> {
   const startTime = performance.now();
   try {
@@ -130,7 +131,9 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
     console.error("Gemini API Error:", error);
     const endTime = performance.now();
     return { 
-      text: `Connection Error: ${error.message}. Please try again later.`, 
+      text: appLanguage === 'ka' 
+        ? `კავშირის შეცდომა: ${error.message}. გთხოვთ, სცადოთ მოგვიანებით.` 
+        : `Connection Error: ${error.message}. Please check your connection and try again.`, 
       metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: Math.round(endTime - startTime) } 
     };
   }

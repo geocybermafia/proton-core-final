@@ -58,6 +58,13 @@ const handleFirestoreError = (error: any, operationType: FirestoreErrorInfo['ope
     console.error("Firestore Permission Denied:", errorInfo);
     throw new Error(JSON.stringify(errorInfo));
   }
+  
+  if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+     console.error("Firestore Connection Error:", error.message);
+     // We can just throw a simpler error for the UI to catch or show a toast if we had one
+     throw new Error("Connection request reset. Please try again.");
+  }
+
   throw error;
 };
 
@@ -98,11 +105,12 @@ import {
   Database,
   Layers,
   Layout,
+  Wrench,
+  Sparkles,
   Network,
   Sun,
   Moon,
   Circle,
-  Sparkles,
   Edit2,
   Edit3,
   Mail,
@@ -509,11 +517,13 @@ const PersonaAvatar = ({ avatar, className }: { avatar: string, className?: stri
 const PersonaEditor = ({ 
   persona, 
   onSave, 
-  onClose 
+  onClose,
+  language = 'en'
 }: { 
   persona?: Persona, 
   onSave: (persona: Persona) => void, 
-  onClose: () => void 
+  onClose: () => void,
+  language?: 'en' | 'ka'
 }) => {
   const [formData, setFormData] = useState<Persona>(persona || {
     id: `persona-${Date.now()}`,
@@ -715,7 +725,7 @@ const PersonaEditor = ({
                       className="w-full py-2 rounded-lg bg-proton-accent/10 text-proton-accent border border-proton-accent/30 text-[10px] font-bold uppercase tracking-widest hover:bg-proton-accent/20 transition-all flex items-center justify-center gap-2"
                     >
                       {generating ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
-                      {generating ? "Initializing Sequence..." : "Neural Projection"}
+                      {generating ? (language === 'ka' ? "მიმდინარეობს..." : "Processing...") : (language === 'ka' ? "პროცესის ავტომატიზაცია" : "Automate Process")}
                     </button>
                   </div>
                 </div>
@@ -1354,7 +1364,7 @@ const OrganizerView = ({
                      <div className="flex-1">
                         <p className="text-[10px] font-black uppercase tracking-tight">Active Matrix Sync</p>
                         <p className={cn("text-[8px] font-bold uppercase tracking-widest", currentTheme.muted)}>Node {i*47} • T+ {i*15}m</p>
-                     </div>
+                      </div>
                   </div>
                 ))}
              </div>
@@ -1366,12 +1376,9 @@ const OrganizerView = ({
 };
 
 const DashboardView = ({ 
-  personas, 
   setActiveView, 
-  chatHistory, 
   language = 'en',
   uiMode,
-  isArtisanSystemActive,
   theme,
   setTheme
 }: { 
@@ -1391,336 +1398,149 @@ const DashboardView = ({
 }) => {
   const t = translations[language];
 
-  const [isRecalibrating, setIsRecalibrating] = useState(false);
-  const [recalibrationProgress, setRecalibrationProgress] = useState(94.2);
-  const [isRefreshingRoi, setIsRefreshingRoi] = useState(false);
-  const [roiValue, setRoiValue] = useState(14.8);
-
-  const startRecalibration = () => {
-    setIsRecalibrating(true);
-    let start = 0;
-    const interval = setInterval(() => {
-      start += 2;
-      setRecalibrationProgress(start);
-      if (start >= 94.2) {
-        clearInterval(interval);
-        setRecalibrationProgress(94.2);
-        setIsRecalibrating(false);
-      }
-    }, 30);
-  };
-
-  const refreshRoi = () => {
-    setIsRefreshingRoi(true);
-    setTimeout(() => {
-      setRoiValue(prev => +(prev + Math.random() * 0.5).toFixed(1));
-      setIsRefreshingRoi(false);
-    }, 1500);
-  };
-
-  const recentHistory = useMemo(() => {
-    return Object.entries(chatHistory).flatMap(([id, messages]) => {
-      const persona = personas.find(p => p.id === id);
-      return messages.slice(-1).map(m => ({ ...m, personaName: persona?.name }));
-    }).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-  }, [chatHistory, personas]);
-
   return (
     <div className={cn(
-      "space-y-8 animate-in fade-in duration-500 pb-20",
+      "space-y-6 animate-in fade-in duration-300 pb-20",
       uiMode === 'artisan' ? "artisan-mode" : "operator-mode"
     )}>
       <div className={cn(
-        "flex flex-col md:flex-row items-center justify-between gap-6",
-        uiMode === 'artisan' && "bg-proton-card p-6 md:p-8 rounded-[32px] border border-proton-border shadow-xl relative overflow-hidden"
+        "p-8 rounded-[40px] border shadow-2xl relative overflow-hidden transition-all duration-500",
+        uiMode === 'artisan' 
+          ? "bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20" 
+          : "bg-gradient-to-br from-proton-accent/10 via-proton-accent/5 to-transparent border-proton-accent/20"
       )}>
-        <div className="flex flex-col xl:flex-row items-center justify-between w-full gap-6 relative z-10">
+        <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8 relative z-10">
           <div className="space-y-2 text-center md:text-left flex-1">
-            <h1 className={cn(
-              "font-black tracking-tighter text-proton-text uppercase",
-              uiMode === 'artisan' ? "text-3xl sm:text-4xl lg:text-5xl" : "text-3xl sm:text-4xl"
+            <div className={cn(
+              "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2",
+              uiMode === 'artisan' ? "bg-amber-500/20 text-amber-500" : "bg-proton-accent/20 text-proton-accent"
             )}>
-              {uiMode === 'artisan' ? (language === 'ka' ? 'ხელოსნის გზამკვლევი' : "Handyman's Guide") : (language === 'ka' ? 'ბიზნესის მართვა' : 'Business Management')}
+              {uiMode === 'artisan' ? (language === 'ka' ? 'ოსტატის რეჟიმი' : 'Artisan Mode') : (language === 'ka' ? 'ოპერატორის რეჟიმი' : 'Operator Mode')}
+            </div>
+            <h1 className={cn(
+              "font-black tracking-tighter uppercase leading-none",
+              uiMode === 'artisan' ? "text-4xl md:text-6xl text-amber-500" : "text-4xl md:text-6xl text-proton-accent"
+            )}>
+              {uiMode === 'artisan' ? (language === 'ka' ? 'ხელოსნის ცენტრი' : "Artisan Hub") : (language === 'ka' ? 'ბიზნეს მართვა' : 'Business Control')}
             </h1>
-            <p className="text-proton-muted font-medium max-w-xl text-sm">
+            <p className="text-proton-muted font-medium max-w-xl text-base">
               {uiMode === 'artisan' 
-                ? (language === 'ka' ? 'თქვენი ტექნიკური სივრცე და ოპტიმიზაცია' : 'Your technical space and optimization.')
-                : (language === 'ka' ? 'პროცესების კონტროლი და ანალიტიკა' : 'Process control and high-level analytics.')}
+                ? (language === 'ka' ? 'თქვენი პრაქტიკული სამუშაო სივრცე და ტექნიკური ხელსაწყოები.' : 'Your practical workspace and technical toolset.')
+                : (language === 'ka' ? 'სტრატეგიული ანალიტიკა და ბიზნეს პროცესების მართვის ცენტრი.' : 'Strategic analytics and business process management center.')}
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-proton-accent/5 rounded-full border border-proton-accent/10">
-              <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
-              <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest">{language === 'ka' ? 'სისტემა აქტიურია' : 'System Active'}</span>
-            </div>
+          <div className="flex shrink-0">
+             {uiMode === 'artisan' ? (
+                <div className="w-24 h-24 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                  <Wrench className="text-amber-500" size={40} />
+                </div>
+             ) : (
+                <div className="w-24 h-24 rounded-full bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20">
+                  <Activity className="text-proton-accent" size={40} />
+                </div>
+             )}
           </div>
         </div>
       </div>
 
       {uiMode === 'operator' ? (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <ParallelTimelineSimulator language={language} />
-            </div>
-            <div className="space-y-6">
-              <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-lg">
-                 <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">{t.settings.resonance_metrics}</p>
-                        <button 
-                          onClick={startRecalibration}
-                          disabled={isRecalibrating}
-                          className="p-1.5 hover:bg-proton-accent/10 rounded-lg text-proton-accent transition-all"
-                        >
-                           <RotateCcw size={14} className={cn(isRecalibrating && "animate-spin")} />
-                        </button>
+        <div className="space-y-8">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div 
+                onClick={() => setActiveView('finance')}
+                className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-proton-accent transition-all cursor-pointer group shadow-lg"
+              >
+                 <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-bg transition-colors">
+                       <Wallet size={28} />
                     </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text tracking-tighter">{recalibrationProgress.toFixed(1)}%</span>
-                      <p className="text-[9px] font-bold text-proton-accent uppercase">{isRecalibrating ? 'Recalibrating' : 'Sync Status'}</p>
-                    </div>
-                    <div className="h-1.5 w-full bg-proton-bg/40 rounded-full overflow-hidden">
-                        <motion.div 
-                          animate={{ width: `${recalibrationProgress}%` }}
-                          className="h-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.3)]" 
-                        />
-                    </div>
+                    <ArrowRight className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-2 transition-all" size={24} />
                  </div>
+                 <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
+                    {language === 'ka' ? 'ფინანსური ცენტრი' : 'Financial Center'}
+                 </h3>
+                 <p className="text-sm text-proton-muted font-medium">
+                    {language === 'ka' ? 'მართეთ თქვენი ბიზნესის ფულადი ნაკადები და ტრანზაქციები.' : 'Manage your business cash flows and transactions.'}
+                 </p>
               </div>
 
-              <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-lg">
-                 <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">{t.settings.roi_analysis}</p>
-                        <button 
-                          onClick={refreshRoi}
-                          disabled={isRefreshingRoi}
-                          className="p-1.5 hover:bg-purple-500/10 rounded-lg text-purple-400 transition-all"
-                        >
-                           <RotateCcw size={14} className={cn(isRefreshingRoi && "animate-spin")} />
-                        </button>
+              <div 
+                onClick={() => setActiveView('blueprints')}
+                className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-purple-500 transition-all cursor-pointer group shadow-lg"
+              >
+                 <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                       <Workflow size={28} />
                     </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-purple-400 tracking-tighter">
-                        {isRefreshingRoi ? '+...' : `+${roiValue}h`}
-                      </span>
-                      <p className="text-[9px] font-bold text-proton-muted uppercase">Efficiency Gain</p>
-                    </div>
+                    <ArrowRight className="text-proton-muted group-hover:text-purple-400 group-hover:translate-x-2 transition-all" size={24} />
                  </div>
+                 <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
+                    {language === 'ka' ? 'სამუშაო პროცესები' : 'Business Workflows'}
+                 </h3>
+                 <p className="text-sm text-proton-muted font-medium">
+                    {language === 'ka' ? 'დაგეგმეთ და მოახდინეთ ბიზნეს ოპერაციების ავტომატიზაცია.' : 'Plan and automate your business operations.'}
+                 </p>
               </div>
-            </div>
-          </div>
-          <ObjectiveCenter language={language} />
+           </div>
+           
+           <ObjectiveCenter language={language} />
         </div>
       ) : (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-md">
-              <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] mb-1">{language === 'ka' ? 'სისტემის მდგომარეობა' : 'System Health'}</p>
-              <h4 className="text-3xl font-black text-proton-text">94.2%</h4>
-              <div className="h-1 bg-proton-bg rounded-full mt-4 overflow-hidden">
-                <div className="h-full bg-proton-accent w-[94.2%]" />
-              </div>
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
+              <Compass className="text-amber-500 mb-6" size={32} />
+              <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
+                {language === 'ka' ? 'ტექნიკური ბაზა' : 'Technical Base'}
+              </h3>
+              <p className="text-xs text-proton-muted font-medium">
+                {language === 'ka' ? 'წვდომა ყველა სახელმძღვანელოსა და დოკუმენტაციაზე.' : 'Access all manuals and technical documentation.'}
+              </p>
             </div>
 
-            <div className="bg-proton-card p-6 rounded-[32px] border border-proton-border shadow-md">
-              <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] mb-1">{language === 'ka' ? 'ეფექტურობა' : 'Efficiency'}</p>
-              <h4 className="text-3xl font-black text-purple-400">+14.8h</h4>
-              <p className="text-[8px] font-bold text-proton-muted uppercase mt-2">Saved this week</p>
+            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
+              <Zap className="text-amber-500 mb-6" size={32} />
+              <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
+                {language === 'ka' ? 'ინსტრუმენტარიუმი' : 'Toolbox'}
+              </h3>
+              <p className="text-xs text-proton-muted font-medium">
+                {language === 'ka' ? 'აქტიური ინსტრუმენტები და ტექნოლოგიური მართვა.' : 'Active tools and technological management.'}
+              </p>
             </div>
 
-            <div className="bg-proton-card p-6 rounded-[32px] border border-proton-accent/20 shadow-md flex items-center justify-between">
-              <div className="space-y-1">
-                  <p className="text-[10px] font-black text-proton-accent uppercase tracking-widest leading-none">Artisan IQ</p>
-                  <h4 className="text-base font-black text-proton-text uppercase">Active Optimization</h4>
-              </div>
-              <Sparkles className="text-proton-accent" size={24} />
+            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
+              <Sparkles className="text-amber-500 mb-6" size={32} />
+              <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
+                {language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant'}
+              </h3>
+              <p className="text-xs text-proton-muted font-medium">
+                {language === 'ka' ? 'მიიღეთ რჩევები და გადაჭერით რთული ტექნიკური ამოცანები.' : 'Get advice and solve complex technical tasks.'}
+              </p>
             </div>
           </div>
-          
-          <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-xl">
-             <div className="flex flex-col md:flex-row items-center gap-8">
-               <div className="flex-1 space-y-4">
-                  <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">{language === 'ka' ? 'ხელოსნის ინსტრუმენტარიუმი' : 'Artisan Tools'}</h3>
-                  <p className="text-sm text-proton-muted font-medium">Access specialized technical assistance and specialized neural guidelines.</p>
-               </div>
-               <div className="w-full md:w-48 h-20 bg-proton-bg/40 rounded-2xl border border-proton-border p-3">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={[{v:10}, {v:30}, {v:25}, {v:45}, {v:40}, {v:60}]}>
-                      <Area type="monotone" dataKey="v" stroke="var(--color-proton-accent)" fill="var(--color-proton-accent)" fillOpacity={0.1} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-               </div>
+
+          <div className="bg-amber-500/5 p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
+             <div className="flex-1 space-y-4">
+                <h3 className="text-3xl font-black text-proton-text uppercase tracking-tighter">
+                  {language === 'ka' ? 'ხელოსნის ინსტრუმენტარიუმი' : 'Digital Craftsmanship'}
+                </h3>
+                <p className="text-proton-muted font-medium">
+                  {language === 'ka' ? 'გამოიყენეთ ხელოვნური ინტელექტი თქვენი ყოველდღიური სამუშაოს ოპტიმიზაციისთვის. ჩვენი სისტემა დაგეხმარებათ რთული ტექნიკური პრობლემების მარტივად გადაჭრაში.' : 'Use AI to optimize your daily work. Our system will help you solve complex technical problems with ease.'}
+                </p>
+                <button 
+                  onClick={() => setActiveView('personas')}
+                  className="px-8 py-4 bg-amber-500 text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-transform"
+                >
+                  {language === 'ka' ? 'დაიწყე მუშაობა' : 'Get Started'}
+                </button>
+             </div>
+             <div className="w-full md:w-64 h-64 bg-proton-card rounded-[40px] border border-proton-border flex items-center justify-center p-8">
+                <Cpu className="text-amber-500/50 w-full h-full" />
              </div>
           </div>
         </div>
       )}
-
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className={cn(
-          "space-y-10",
-          uiMode === 'artisan' ? "lg:col-span-12" : "lg:col-span-8"
-        )}>
-           <div className={cn(
-             "grid grid-cols-1 sm:grid-cols-2 gap-6",
-             uiMode === 'artisan' ? "md:grid-cols-4" : "md:grid-cols-2"
-           )}>
-              <button 
-                onClick={() => setActiveView('finance')}
-                className={cn(
-                  "bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
-                  uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
-                )}
-              >
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                  <Wallet size={24} className="md:w-7 md:h-7" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-bold text-xl">{t.dashboard.financial_center}</h3>
-                  <p className="text-xs text-proton-muted font-medium leading-relaxed">{t.dashboard.financial_center_desc}</p>
-                </div>
-                <div className="absolute bottom-0 right-0 p-6 opacity-0 group-hover:opacity-10 transition-opacity">
-                  <ArrowRight size={40} />
-                </div>
-              </button>
-
-              <button 
-                onClick={() => setActiveView('organizer')}
-                className={cn(
-                  "bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden",
-                  uiMode === 'artisan' ? "hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10" : "hover:border-proton-accent shadow-sm"
-                )}
-              >
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                   <CalendarIcon size={24} className="md:w-7 md:h-7" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-bold text-xl">{t.dashboard.organizer_tool}</h3>
-                  <p className="text-xs text-proton-muted font-medium leading-relaxed">{t.dashboard.organizer_desc}</p>
-                </div>
-                <div className="absolute bottom-0 right-0 p-6 opacity-0 group-hover:opacity-10 transition-opacity">
-                  <ArrowRight size={40} />
-                </div>
-              </button>
-
-              {uiMode === 'artisan' && (
-                <>
-                  <button 
-                    onClick={() => setActiveView('device')}
-                    className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
-                  >
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                      <Cpu size={24} className="md:w-7 md:h-7" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-xl">{t.sidebar.device}</h3>
-                      <p className="text-xs text-proton-muted font-medium leading-relaxed">Integrated hardware intelligence</p>
-                    </div>
-                  </button>
-                  <button 
-                    onClick={() => setActiveView('personas')}
-                    className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border transition-all text-left space-y-4 group relative overflow-hidden hover:scale-[1.03] shadow-xl hover:shadow-proton-accent/10"
-                  >
-                    <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                      <Users size={24} className="md:w-7 md:h-7" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-xl">{t.dashboard.ai_personas}</h3>
-                      <p className="text-xs text-proton-muted font-medium leading-relaxed">Manage your digital intelligence nodes</p>
-                    </div>
-                  </button>
-                </>
-              )}
-           </div>
-
-           <div className={cn(
-             "bg-proton-card p-6 md:p-10 rounded-[40px] md:rounded-[50px] border border-proton-border shadow-sm",
-             uiMode === 'artisan' && "border-proton-accent/20"
-           )}>
-              <div className="flex items-center justify-between mb-8">
-                 <h3 className="font-bold text-2xl tracking-tight">{t.dashboard.recent_activity}</h3>
-                 <button onClick={() => setActiveView('personas')} className="text-xs font-bold text-proton-accent uppercase hover:underline tracking-widest">{t.dashboard.view_all}</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 {recentHistory.length > 0 ? (
-                    recentHistory.slice(0, 3).map((item, i) => (
-                      <div key={i} className="flex flex-col gap-6 p-8 rounded-[32px] bg-proton-bg border border-proton-border hover:border-proton-accent/30 transition-all group">
-                         <div className="flex items-center gap-4">
-                           <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent font-bold text-xl shadow-inner group-hover:bg-proton-accent group-hover:text-proton-on-accent transition-all duration-500">
-                              {item.personaName?.charAt(0)}
-                           </div>
-                           <div>
-                              <p className="text-lg font-bold">{item.personaName}</p>
-                              <p className="text-[10px] font-mono font-bold text-proton-muted uppercase tracking-widest">Active Connection</p>
-                           </div>
-                         </div>
-                         <p className="text-sm text-proton-muted font-medium leading-relaxed italic border-l-2 border-proton-accent/20 pl-4">"{item.content}"</p>
-                      </div>
-                    ))
-                 ) : (
-                    <div className="col-span-3 text-center py-20 text-proton-muted font-medium italic">
-                       {t.dashboard.no_activity}
-                    </div>
-                 )}
-              </div>
-           </div>
-        </div>
-
-        {uiMode === 'operator' && (
-          <div className="lg:col-span-4 space-y-8">
-            <div className="bg-proton-accent p-8 rounded-[40px] text-proton-on-accent space-y-6 shadow-2xl shadow-proton-accent/20 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-10 opacity-10 pointer-events-none">
-                  <Activity size={100} />
-               </div>
-               <div className="space-y-2 relative z-10">
-                  <h3 className="text-2xl font-bold tracking-tight">{t.dashboard.system_status}</h3>
-                  <p className="text-sm text-proton-on-accent/80 font-medium">{t.dashboard.system_status_desc}</p>
-               </div>
-               <div className="space-y-4 pt-4 relative z-10">
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em]">
-                     <span>{t.dashboard.performance}</span>
-                     <span>98%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                     <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: "98%" }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                        className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]" 
-                     />
-                  </div>
-               </div>
-               <button 
-                 onClick={() => setActiveView('settings')}
-                 className="w-full py-4 bg-white text-proton-accent rounded-2xl font-bold text-sm shadow-xl hover:scale-[1.02] active:scale-95 transition-all relative z-10"
-               >
-                 {t.dashboard.configuration}
-               </button>
-            </div>
-
-            <SystemGraph />
-
-            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm flex flex-col gap-8 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-8 opacity-[0.02] pointer-events-none">
-                  <Database size={120} />
-               </div>
-               <div className="space-y-3 relative z-10">
-                  <h3 className="font-black text-xs uppercase tracking-[0.3em] text-proton-muted">Diagnostic Assessment</h3>
-                  <SystemDiagnostic t={t.dashboard} />
-               </div>
-               
-               <div className="pt-4 border-t border-proton-border/50 relative z-10">
-                  <p className="text-[10px] text-proton-muted leading-relaxed font-bold font-sans uppercase tracking-widest opacity-40">
-                    {t.dashboard.infrastructure}: {t.dashboard.stage_active}
-                  </p>
-               </div>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -2225,7 +2045,8 @@ const PersonasView = ({
         aiSettings.enableMaps, 
         aiSettings.enableSearch, 
         aiSettings.temperature, 
-        (aiSettings.systemInstruction || "") + userContext
+        (aiSettings.systemInstruction || "") + userContext,
+        language
       );
       setLastGeminiMetadata(metadata);
       onNewMessage(selectedPersona.id, { role: 'model', content: text, timestamp: Date.now() });
@@ -3549,45 +3370,32 @@ const FlashOverlay = ({ mode }: { mode: 'operator' | 'artisan' }) => (
   </motion.div>
 );
 
-const ModeToggle = ({ mode, setMode, t }: { mode: 'operator' | 'artisan', setMode: (m: 'operator' | 'artisan') => void, t: any }) => (
-  <div className="flex items-center gap-1 p-1 rounded-xl bg-proton-card/80 border border-proton-border shadow-inner relative overflow-hidden backdrop-blur-md">
-    <div className="flex items-center gap-1 relative z-10">
-      <button
-        onClick={() => setMode('operator')}
-        className={cn(
-          "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
-          mode === 'operator' ? "text-proton-on-accent" : "text-proton-muted hover:text-proton-text"
-        )}
-      >
-        {mode === 'operator' && (
-          <motion.div 
-            layoutId="mode-bg"
-            className="absolute inset-0 bg-proton-accent rounded-lg -z-10 shadow-[0_0_15px_rgba(0,242,255,0.4)]"
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          />
-        )}
-        <Terminal size={12} className={cn("transition-transform duration-500", mode === 'operator' && "scale-110")} />
-        <span className="hidden lg:inline">{t.modes.operator}</span>
-      </button>
-
-      <button
-        onClick={() => setMode('artisan')}
-        className={cn(
-          "flex items-center gap-2 px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-500 relative",
-          mode === 'artisan' ? "text-proton-on-accent" : "text-proton-muted hover:text-proton-text"
-        )}
-      >
-        {mode === 'artisan' && (
-          <motion.div 
-            layoutId="mode-bg"
-            className="absolute inset-0 bg-proton-accent rounded-lg -z-10 shadow-[0_0_15px_rgba(0,242,255,0.4)]"
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          />
-        )}
-        <Edit2 size={12} className={cn("transition-transform duration-500", mode === 'artisan' && "scale-110")} />
-        <span className="hidden lg:inline">{t.modes.artisan}</span>
-      </button>
-    </div>
+const ModeToggle = ({ mode, setMode, language }: { mode: 'operator' | 'artisan', setMode: (m: 'operator' | 'artisan') => void, t: any, language: string }) => (
+  <div className="relative p-1 bg-proton-bg/50 backdrop-blur-md rounded-2xl border border-proton-border shadow-inner flex shrink-0">
+    <div 
+      className={cn(
+        "absolute top-1 bottom-1 w-[calc(50%-4px)] transition-all duration-200 rounded-xl",
+        mode === 'operator' ? "left-1 bg-proton-accent" : "left-[calc(50%+2px)] bg-amber-500"
+      )}
+    />
+    <button 
+      onClick={() => setMode('operator')}
+      className={cn(
+        "relative z-10 flex-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors",
+        mode === 'operator' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+      )}
+    >
+      {language === 'ka' ? 'ბიზნესი' : 'Business'}
+    </button>
+    <button 
+      onClick={() => setMode('artisan')}
+      className={cn(
+        "relative z-10 flex-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors",
+        mode === 'artisan' ? "text-black" : "text-proton-muted hover:text-proton-text"
+      )}
+    >
+       {language === 'ka' ? 'ხელოსანი' : 'Artisan'}
+    </button>
   </div>
 );
 
@@ -3794,6 +3602,8 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('user-profile', JSON.stringify(userProfile));
   }, [userProfile]);
+
+  const language = userProfile.language;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -4126,7 +3936,7 @@ export default function App() {
       Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]
       Ensure the content is specific to the user's business niche.`;
       
-      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3-flash-preview");
+      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3.1-flash-preview", false, true, 0.8, "", language);
       setLastGeminiMetadata(outcome.metadata);
       const suggestions = JSON.parse(outcome.text.replace(/```json|```/g, '').trim());
       
@@ -4419,7 +4229,7 @@ export default function App() {
             </button>
 
             <div className="flex md:hidden">
-              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} />
+              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
             </div>
 
             <div className="flex items-center gap-3 md:gap-4 md:border-r md:border-proton-border md:pr-8 md:mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
@@ -4471,7 +4281,7 @@ export default function App() {
             </nav>
 
             <div className="h-8 w-px bg-proton-border/50 hidden xl:block" />
-            <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} />
+            <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
           </div>
           
           <div className="flex items-center gap-6">

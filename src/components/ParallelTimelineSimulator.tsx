@@ -172,7 +172,7 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
                    ? 'სისტემა ამჟამად აანალიზებს 124 პარალელურ შესაძლებლობას.' 
                    : 'System is currently synthesizing 124 parallel probabilistic outcomes.'}
                </p>
-               <p className="text-[10px] text-proton-muted font-medium uppercase tracking-[0.1em]">Neural Convergence level: High</p>
+               <p className="text-[10px] text-proton-muted font-medium uppercase tracking-[0.1em]">{language === 'ka' ? 'გადაწყვეტილების საიმედოობა: მაღალი' : 'Decision Reliability: High'}</p>
             </div>
         </div>
       </div>
