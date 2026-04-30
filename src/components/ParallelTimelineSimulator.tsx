@@ -75,7 +75,7 @@ export const ParallelTimelineSimulator = ({ language }: { language: 'en' | 'ka' 
             <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">Business Forecast Analysis</p>
           </div>
           
-          <div className="flex gap-2 p-1.5 bg-proton-bg/50 rounded-2xl border border-proton-border">
+          <div className="grid grid-cols-1 sm:flex sm:flex-nowrap gap-2 p-1.5 bg-proton-bg/50 rounded-2xl border border-proton-border w-full sm:w-auto">
             {paths.map(path => (
               <button
                 key={path.id}

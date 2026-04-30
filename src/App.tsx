@@ -3381,20 +3381,22 @@ const ModeToggle = ({ mode, setMode, language }: { mode: 'operator' | 'artisan',
     <button 
       onClick={() => setMode('operator')}
       className={cn(
-        "relative z-10 flex-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors",
+        "relative z-10 flex-1 px-3 md:px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2",
         mode === 'operator' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
       )}
     >
-      {language === 'ka' ? 'ბიზნესი' : 'Business'}
+      <Terminal size={14} className="shrink-0" />
+      <span className="hidden sm:inline">{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>
     </button>
     <button 
       onClick={() => setMode('artisan')}
       className={cn(
-        "relative z-10 flex-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors",
+        "relative z-10 flex-1 px-3 md:px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2",
         mode === 'artisan' ? "text-black" : "text-proton-muted hover:text-proton-text"
       )}
     >
-       {language === 'ka' ? 'ხელოსანი' : 'Artisan'}
+       <Wrench size={14} className="shrink-0" />
+       <span className="hidden sm:inline">{language === 'ka' ? 'ხელოსანი' : 'Artisan'}</span>
     </button>
   </div>
 );
@@ -4010,6 +4012,19 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[65]"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
       <aside 
         className={cn(
@@ -4121,8 +4136,41 @@ export default function App() {
             />
           </div>
 
-          <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-1.5">
+          <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
             {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.system}</p>}
+            
+            {isSidebarOpen && (
+              <div className="px-3 space-y-4 mb-6">
+                <div className="space-y-2">
+                  <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'ენა' : 'Language'}</p>
+                  <div className="flex bg-proton-bg/50 border border-proton-border/50 rounded-xl p-0.5">
+                    <button 
+                      onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
+                      className={cn(
+                        "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
+                        userProfile.language === 'en' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
+                      )}
+                    >
+                      EN
+                    </button>
+                    <button 
+                      onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
+                      className={cn(
+                        "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
+                        userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
+                      )}
+                    >
+                      GE
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
+                  <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+                </div>
+              </div>
+            )}
+
             <SidebarItem 
               icon={UserIcon} 
               label={t.sidebar.profile} 
@@ -4229,7 +4277,6 @@ export default function App() {
             </button>
 
             <div className="flex md:hidden">
-              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
             </div>
 
             <div className="flex items-center gap-3 md:gap-4 md:border-r md:border-proton-border md:pr-8 md:mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
@@ -4252,7 +4299,7 @@ export default function App() {
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col min-w-0">
+                <div className="hidden sm:flex flex-col min-w-0">
                   <span className="text-[8px] md:text-[9px] font-black text-proton-muted uppercase tracking-[0.15em]">NODE: <span className="text-proton-accent">{userProfile.region || 'CORE'}</span></span>
                   <span className="text-[8px] md:text-[9px] font-black text-proton-muted uppercase tracking-[0.15em] border-l border-proton-border pl-2 md:pl-3 ml-0.5 md:ml-0 overflow-hidden text-ellipsis">LVL 4</span>
                 </div>
@@ -4281,15 +4328,17 @@ export default function App() {
             </nav>
 
             <div className="h-8 w-px bg-proton-border/50 hidden xl:block" />
-            <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+            <div className="hidden md:block">
+              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+            </div>
           </div>
           
-          <div className="flex items-center gap-6">
-            <div className="hidden sm:flex items-center gap-3 bg-proton-bg border border-proton-border p-1 rounded-2xl">
+          <div className="flex items-center gap-3 md:gap-6">
+            <div className="hidden md:flex items-center gap-1.5 md:gap-3 bg-proton-bg border border-proton-border p-1 rounded-2xl shrink-0">
               <button 
                 onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
                 className={cn(
-                  "px-4 py-1.5 text-[10px] font-black rounded-xl transition-all",
+                  "px-2 md:px-4 py-1.5 text-[9px] md:text-[10px] font-black rounded-xl transition-all",
                   userProfile.language === 'en' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
                 )}
               >
@@ -4298,7 +4347,7 @@ export default function App() {
               <button 
                 onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
                 className={cn(
-                  "px-4 py-1.5 text-[10px] font-black rounded-xl transition-all",
+                  "px-2 md:px-4 py-1.5 text-[9px] md:text-[10px] font-black rounded-xl transition-all",
                   userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
                 )}
               >
@@ -4308,21 +4357,23 @@ export default function App() {
 
             <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
-              <button 
-                onClick={() => handleViewChange('settings')}
-                className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
-              >
-                <Settings size={18} />
-              </button>
-              <button 
-                onClick={handleSignOut}
-                className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
-                title="Firebase Sign Out"
-              >
-                <LogOut size={18} />
-              </button>
+              <div className="hidden md:flex items-center gap-3">
+                <button 
+                  onClick={() => handleViewChange('settings')}
+                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
+                >
+                  <Settings size={18} />
+                </button>
+                <button 
+                  onClick={handleSignOut}
+                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
+                  title="Firebase Sign Out"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
             </div>
           </div>
         </header>

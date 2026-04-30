@@ -108,8 +108,12 @@
   }
 
   body {
-    @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/30 selection:text-proton-accent;
+    @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/30 selection:text-proton-accent overflow-x-hidden;
     transition: background-color 0.5s ease, color 0.5s ease;
+  }
+  
+  html {
+    @apply overflow-x-hidden;
   }
 
   :root[data-ui-mode="artisan"] {
