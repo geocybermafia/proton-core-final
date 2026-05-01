@@ -235,7 +235,7 @@ const SidebarItem = React.memo(({
     
     {expanded && (
       <span className={cn(
-        "text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-left-4",
+        "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-left-4",
         active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
       )}>
         {label}
@@ -1205,7 +1205,7 @@ const OrganizerView = ({
           <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
              <div className="flex items-center justify-between">
                 <div>
-                   <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", currentTheme.muted)}>{t.analytics}</p>
+                   <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", currentTheme.muted)}>{t.analytics}</p>
                    <h4 className="text-lg font-black uppercase tracking-tight">{t.subtitle}</h4>
                 </div>
                 <div className="flex gap-1 h-2 w-32 bg-white/5 rounded-full overflow-hidden">
@@ -1282,7 +1282,7 @@ const OrganizerView = ({
                <div className="space-y-3">
                   {filteredTasks.length === 0 ? (
                     <div className="py-20 text-center space-y-4">
-                       <p className={cn("font-black uppercase tracking-[0.3em] text-[10px]", currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
+                       <p className={cn("font-black uppercase tracking-widest text-[10px]", currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
                        <div className={cn("h-px w-20 mx-auto", theme === 'cyberpunk' ? "bg-cyan-400/20" : "bg-slate-200")} />
                     </div>
                   ) : (
@@ -1365,8 +1365,8 @@ const OrganizerView = ({
                   <div key={i} className="flex items-center gap-4 p-4 bg-black/20 rounded-2xl border border-white/5">
                      <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
                      <div className="flex-1">
-                        <p className="text-[10px] font-black uppercase tracking-tight">Active Matrix Sync</p>
-                        <p className={cn("text-[8px] font-bold uppercase tracking-widest", currentTheme.muted)}>Node {i*47} • T+ {i*15}m</p>
+                        <p className="text-[10px] font-black uppercase tracking-tight">System Sync</p>
+                        <p className={cn("text-[8px] font-bold uppercase tracking-widest", currentTheme.muted)}>ID {i*47} • {i*15}m ago</p>
                       </div>
                   </div>
                 ))}
@@ -2333,166 +2333,107 @@ const PersonasView = ({
 const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
   const t = language === 'ka' 
     ? {
-        title: "დოკუმენტაციის კაბინეტი",
-        subtitle: "პლატფორმის მართვა და სტრუქტურა",
-        ownership: "მფლობელობა და განვითარება",
-        owner_label: "მთავარი მფლობელი",
-        dev_label: "ტექნიკური დეველოპერი",
-        co_title: "სტრატეგიული პარტნიორობა",
-        desc: "პროტონის პლატფორმა წარმოადგენს ინოვაციურ გადაწყვეტილებას, რომელიც შექმნილია ნინო გოშთელიანის ხედვით და პროტონის ტექნიკური ექსპერტიზით. ორივე მხარე თანაბრად არის პასუხისმგებელი სისტემის წარმატებასა და განვითარებაზე.",
+        title: "ინფორმაცია",
+        subtitle: "პლატფორმის შესახებ",
+        governance: "სტრუქტურა",
         owner_name: "ნინო გოშთელიანი",
         dev_name: "პროტონი",
-        stats_owner: "სტრატეგია & ხედვა",
-        stats_dev: "კოდექსი & AI",
-        governance: "მმართველობა",
-        mission: "ჩვენი მისიაა შევქმნათ ციფრული ეკოსისტემა, სადაც ხელოვნური ინტელექტი და ადამიანის ხედვა ჰარმონიულად თანამშრომლობენ."
+        owner_label: "დამფუძნებელი",
+        dev_label: "ტექ. პარტნიორი",
+        owner_role: "ხედვა & სტრატეგია",
+        dev_role: "არქიტექტურა & AI",
+        desc: "პროტონი არის ინოვაციური პლატფორმა, რომელიც შექმნილია ნინო გოშთელიანის ხედვისა და პროტონის ტექნოლოგიური შესაძლებლობების სინთეზით. ჩვენი მიზანია შევქმნათ მარტივი და ეფექტური ციფრული გარემო.",
+        principles: [
+          { title: "უსაფრთხოება", desc: "თქვენი მონაცემები დაცულია." },
+          { title: "სიმარტივე", desc: "ყველაფერი არის გასაგები და ინტუიციური." },
+          { title: "ინოვაცია", desc: "AI ტექნოლოგიების ჭკვიანი გამოყენება." }
+        ],
+        signatures: "დადასტურებულია",
+        mission: "ჩვენი მისიაა ტექნოლოგია გავხადოთ ადამიანისთვის სასარგებლო."
       }
     : {
-        title: "Documentation Cabinet",
-        subtitle: "Platform Governance & Structure",
-        ownership: "Ownership & Development",
-        owner_label: "Lead Owner",
-        dev_label: "Technical Developer",
-        co_title: "Strategic Partnership",
-        desc: "The Proton platform represents an innovative solution created through the vision of Nino Goshteliani and the technical expertise of Proton. Both parties are equally responsible for the system's success and evolution.",
+        title: "Information",
+        subtitle: "About the Platform",
+        governance: "Structure",
         owner_name: "Nino Goshteliani",
         dev_name: "Proton",
-        stats_owner: "Strategy & Vision",
-        stats_dev: "Codebase & AI",
-        governance: "Governance",
-        mission: "Our mission is to create a digital ecosystem where AI and human vision collaborate harmoniously."
+        owner_label: "Founder",
+        dev_label: "Tech Partner",
+        owner_role: "Vision & Strategy",
+        dev_role: "Architecture & AI",
+        desc: "Proton is an innovative platform created by the synthesis of Nino Goshteliani's vision and Proton's technological capabilities. Our goal is to create a simple and effective digital environment.",
+        principles: [
+          { title: "Security", desc: "Your data is protected." },
+          { title: "Simplicity", desc: "Everything is clear and intuitive." },
+          { title: "Innovation", desc: "Smart use of AI technologies." }
+        ],
+        signatures: "Verified",
+        mission: "Our mission is to make technology useful for humans."
       };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-proton-border pb-10">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-[10px] font-black uppercase tracking-widest">
-            <Shield size={12} />
-            {t.governance}
-          </div>
-          <h2 className="text-5xl font-black tracking-tighter text-proton-text uppercase leading-none">{t.title}</h2>
-          <p className="text-sm font-medium text-proton-muted tracking-tight max-w-md">{t.subtitle}</p>
+    <div className="min-h-screen bg-proton-bg p-4 md:p-12 space-y-8 animate-in fade-in duration-700 overflow-y-auto">
+      {/* Simple Header */}
+      <div className="border-b border-proton-border pb-6">
+        <div className="flex items-center gap-2 text-proton-accent mb-2">
+          <ShieldCheck size={14} />
+          <span className="text-[10px] font-black uppercase tracking-widest">{t.governance}</span>
         </div>
-        <div className="text-right hidden md:block">
-          <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em] mb-1">Status</p>
-          <div className="flex items-center gap-2 justify-end">
-             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-             <span className="text-xs font-bold text-proton-text uppercase italic">Active Protocol</span>
+        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-proton-text uppercase">{t.title}</h1>
+        <p className="text-sm md:text-base font-medium text-proton-muted mt-1">{t.subtitle}</p>
+      </div>
+
+      <div className="space-y-8">
+        {/* Description Card */}
+        <div className="bg-proton-accent/5 border border-proton-accent/10 rounded-3xl p-6 md:p-10">
+          <p className="text-base md:text-xl text-proton-text font-medium leading-relaxed max-w-3xl">
+            {t.desc}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+             {t.principles.map((p, idx) => (
+               <div key={idx} className="bg-proton-card/50 border border-proton-border p-5 rounded-2xl">
+                 <p className="text-[10px] font-black text-proton-accent uppercase tracking-widest mb-1">{p.title}</p>
+                 <p className="text-xs font-medium text-proton-muted leading-relaxed">{p.desc}</p>
+               </div>
+             ))}
+          </div>
+        </div>
+
+        {/* Members Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-proton-card rounded-3xl border border-proton-border p-6 md:p-8 flex items-start gap-5">
+            <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent shrink-0">
+              <UserIcon size={24} />
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-proton-accent uppercase tracking-widest mb-0.5">{t.owner_label}</p>
+              <h3 className="text-xl font-black tracking-tight text-proton-text">{t.owner_name}</h3>
+              <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest mt-1">{t.owner_role}</p>
+            </div>
+          </div>
+
+          <div className="bg-proton-card rounded-3xl border border-proton-border p-6 md:p-8 flex items-start gap-5">
+            <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent shrink-0">
+              <Cpu size={24} />
+            </div>
+            <div>
+              <p className="text-[9px] font-black text-proton-accent uppercase tracking-widest mb-0.5">{t.dev_label}</p>
+              <h3 className="text-xl font-black tracking-tight text-proton-text">{t.dev_name}</h3>
+              <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest mt-1">{t.dev_role}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-center py-8 opacity-40">
+          <p className="text-sm md:text-lg font-medium italic text-proton-muted max-w-2xl mx-auto">
+            "{t.mission}"
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2 text-[10px] font-bold text-proton-muted uppercase tracking-widest">
+            <Sparkles size={12} className="text-proton-accent" />
+            {t.signatures}
           </div>
         </div>
       </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Nino Goshteliani Card */}
-        <motion.div 
-          whileHover={{ y: -5 }}
-          className="lg:col-span-1 bg-proton-card rounded-[48px] border border-proton-border p-10 relative overflow-hidden group shadow-2xl"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-proton-accent/10 transition-colors" />
-          <div className="relative z-10 space-y-8">
-            <div className="w-20 h-20 rounded-3xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent shadow-inner">
-              <UserIcon size={40} strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.2em] mb-2">{t.owner_label}</p>
-              <h3 className="text-3xl font-black tracking-tighter text-proton-text leading-tight">{t.owner_name}</h3>
-            </div>
-            <div className="pt-4 border-t border-proton-border/50">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent">
-                  <Target size={14} />
-                </div>
-                <span className="text-xs font-bold text-proton-text uppercase tracking-wider">{t.stats_owner}</span>
-              </div>
-              <p className="text-sm text-proton-muted font-medium leading-relaxed italic opacity-80">
-                {language === 'ka' 
-                  ? "პერსონალური ხედვის ავტორი, გადაწყვეტილების მიმღები და სტრატეგიული ინვესტორი." 
-                  : "Author of personal vision, primary decision maker, and strategic investor."}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Partnership / Mission Center */}
-        <motion.div 
-          whileHover={{ scale: 1.02 }}
-          className="lg:col-span-1 bg-proton-accent text-proton-bg rounded-[48px] p-10 flex flex-col justify-between relative overflow-hidden shadow-2xl shadow-proton-accent/20"
-        >
-          <div className="absolute inset-0 opacity-10 pointer-events-none">
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent opacity-20" />
-          </div>
-          <div className="relative z-10">
-            <Sparkles size={48} className="mb-8 opacity-50" />
-            <h4 className="text-3xl font-black tracking-tighter uppercase leading-tight mb-4">{t.co_title}</h4>
-            <p className="text-sm font-bold opacity-80 leading-relaxed italic">
-              {t.desc}
-            </p>
-          </div>
-          <div className="relative z-10 pt-10">
-            <div className="flex -space-x-4">
-              <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-proton-accent flex items-center justify-center backdrop-blur-md">
-                <UserIcon size={20} />
-              </div>
-              <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-proton-accent flex items-center justify-center backdrop-blur-md">
-                <Cpu size={20} />
-              </div>
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-60 italic">Equal Partnership Established</p>
-          </div>
-        </motion.div>
-
-        {/* Proton Card */}
-        <motion.div 
-          whileHover={{ y: -5 }}
-          className="lg:col-span-1 bg-proton-card rounded-[48px] border border-proton-border p-10 relative overflow-hidden group shadow-2xl"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-proton-accent/10 transition-colors" />
-          <div className="relative z-10 space-y-8">
-            <div className="w-20 h-20 rounded-3xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent shadow-inner">
-              <Cpu size={40} strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.2em] mb-2">{t.dev_label}</p>
-              <h3 className="text-3xl font-black tracking-tighter text-proton-text leading-tight">{t.dev_name}</h3>
-            </div>
-            <div className="pt-4 border-t border-proton-border/50">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent">
-                  <Database size={14} />
-                </div>
-                <span className="text-xs font-bold text-proton-text uppercase tracking-wider">{t.stats_dev}</span>
-              </div>
-              <p className="text-sm text-proton-muted font-medium leading-relaxed italic opacity-80">
-                {language === 'ka' 
-                  ? "სრული ტექნიკური უზრუნველყოფა, AI მოდელების მართვა და უსაფრთხოების პროტოკოლები." 
-                  : "Full technical maintenance, AI model management, and security protocols."}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-      </div>
-
-      {/* Footer Quote Area */}
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="text-center py-12 border-t border-proton-border/30"
-      >
-        <p className="text-xl font-medium tracking-tight text-proton-text opacity-40 italic max-w-2xl mx-auto">
-          "{t.mission}"
-        </p>
-        <div className="mt-8 flex items-center justify-center gap-4 text-proton-muted opacity-30">
-          <FileText size={16} />
-          <span className="text-[10px] font-black uppercase tracking-[0.5em]">Platform Document • v2.0.4</span>
-          <FileText size={16} />
-        </div>
-      </motion.div>
     </div>
   );
 };
@@ -2539,7 +2480,7 @@ const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', langua
             </div>
 
             <p className="text-[10px] text-proton-muted/40 font-semibold uppercase tracking-[0.2em] pt-8">
-              Secured by Proton Hub Infrastructure
+              Secured by Platform Infrastructure
             </p>
           </div>
         </div>
@@ -2565,20 +2506,20 @@ const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', langua
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Treasury Section */}
             <div className="lg:col-span-2 space-y-6">
-                <div className="proton-glass p-8 rounded-[40px] border border-proton-accent/20 relative overflow-hidden group">
+                <div className="proton-glass p-8 rounded-[32px] md:rounded-[40px] border border-proton-accent/20 relative overflow-hidden group">
                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                       <Zap size={120} className="text-proton-accent" />
+                       <CreditCard size={120} className="text-proton-accent" />
                    </div>
-                   <div className="relative z-10 space-y-8">
+                   <div className="relative z-10 space-y-6 md:space-y-8">
                       <div className="flex items-center justify-between">
                           <div className="space-y-1">
-                              <h3 className="text-sm font-mono font-bold uppercase tracking-[0.2em] text-proton-muted">{t.treasury}</h3>
-                              <p className="text-3xl md:text-5xl font-bold tracking-tighter">
+                              <h3 className="text-xs font-bold uppercase tracking-widest text-proton-muted">{t.treasury}</h3>
+                              <p className="text-2xl md:text-5xl font-bold tracking-tighter">
                                   {balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} <span className="text-proton-accent">{balance?.symbol}</span>
                               </p>
                           </div>
-                          <div className="p-4 rounded-2xl bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
-                              <Wallet size={32} />
+                          <div className="p-3 md:p-4 rounded-2xl bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
+                              <Wallet size={24} className="md:w-8 md:h-8" />
                           </div>
                       </div>
                       
@@ -2717,11 +2658,11 @@ const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', langua
 
                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
                              <div className="space-y-2">
-                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Client Name / კლიენტი</label>
+                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Client Name / კლიენტი</label>
                                  <input type="text" placeholder="e.g. Acme Tech Corp" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
                              </div>
                              <div className="space-y-2">
-                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Service Type / სერვისი</label>
+                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Service Type / სერვისი</label>
                                  <select className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none cursor-pointer">
                                      <option>AI Analysis & Automation</option>
                                      <option>Smart Contract Audit</option>
@@ -2730,7 +2671,7 @@ const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', langua
                                  </select>
                              </div>
                              <div className="space-y-2">
-                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Settlement Currency / ვალუტა</label>
+                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Currency / ვალუტა</label>
                                  <select className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none cursor-pointer">
                                      <option>ETH (Ethereum Native)</option>
                                      <option>GEL (NBG Fixed Rate)</option>
@@ -2739,11 +2680,11 @@ const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', langua
                                  </select>
                              </div>
                              <div className="space-y-2">
-                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Amount / თანხა</label>
+                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Amount / თანხა</label>
                                  <input type="number" placeholder="0.05" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
                              </div>
                              <div className="space-y-2 sm:col-span-2">
-                                 <label className="text-[10px] font-mono text-proton-muted uppercase tracking-[0.2em] font-bold">Due Date / ვადა</label>
+                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Due Date / ვადა</label>
                                  <input type="date" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
                              </div>
                          </div>
@@ -2826,7 +2767,7 @@ const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'opera
             ) : (
                 isSystemActive ? (
                 <>
-                    <Zap size={18} />
+                    <ImageIcon size={18} />
                     {t.generate_btn}
                 </>
                 ) : (
@@ -2888,7 +2829,7 @@ const WorkflowEditor = ({
             </div>
             <div>
                <h3 className="text-xl font-bold tracking-tight">{t.title}</h3>
-               <p className="text-proton-muted text-xs uppercase tracking-widest font-mono">ID: {formData.id?.slice(-6)}</p>
+               <p className="text-proton-muted text-xs uppercase tracking-widest">ID: {formData.id?.slice(-6)}</p>
             </div>
           </div>
           <div className="flex bg-proton-card p-1 rounded-2xl border border-proton-border shadow-sm">
@@ -2899,7 +2840,7 @@ const WorkflowEditor = ({
                     editorMode === 'form' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
                 )}
              >
-                {t.prox_props}
+                {translations[language].sidebar.settings}
              </button>
              <button 
                 onClick={() => setEditorMode('flow')} 
@@ -2908,7 +2849,7 @@ const WorkflowEditor = ({
                     editorMode === 'flow' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
                 )}
              >
-                {t.flow_design}
+                {translations[language].sidebar.blueprints}
              </button>
           </div>
         </div>
@@ -4376,19 +4317,19 @@ export default function App() {
           !isSidebarOpen && "md:justify-center md:px-0"
         )}>
           <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
-            <Zap size={22} fill="currentColor" />
+            <Layout size={22} fill="currentColor" />
           </div>
           {isSidebarOpen && (
             <div className="flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
-              <span className="text-xl font-black tracking-tighter text-proton-text">PROTON</span>
-              <span className="text-[9px] font-black italic text-proton-accent tracking-[0.2em] uppercase leading-none opacity-80">Core x3</span>
+              <span className="text-xl font-black tracking-tight text-proton-text uppercase">System</span>
+              <span className="text-[9px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-80">Workspace</span>
             </div>
           )}
         </div>
 
         <nav className="flex-1 px-4 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10">
           <div className="space-y-1.5">
-            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.main}</p>}
+            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-widest">{t.sidebar.main}</p>}
             <SidebarItem 
               icon={LayoutDashboard} 
               label={t.sidebar.dashboard} 
@@ -4545,7 +4486,7 @@ export default function App() {
             !isSidebarOpen && "md:rounded-2xl"
           )} onClick={() => handleViewChange('profile')}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
+              <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-bold shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -4554,8 +4495,8 @@ export default function App() {
               </div>
               {isSidebarOpen && (
                 <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-4 duration-700">
-                  <span className="text-[11px] font-black text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'Explorer'}</span>
-                  <span className="text-[9px] font-black text-proton-accent/60 truncate tracking-[0.15em] uppercase italic">Pro level 4</span>
+                  <span className="text-[11px] font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'User'}</span>
+                  <span className="text-[9px] font-medium text-proton-accent/60 truncate tracking-widest uppercase">Verified Account</span>
                 </div>
               )}
             </div>
@@ -4591,7 +4532,7 @@ export default function App() {
             )}
           >
             <item.icon size={20} className={cn(activeView === item.id && "animate-pulse")} />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-tighter">{item.label}</span>
+            <span className="text-[9px] font-sans font-bold uppercase">{item.label}</span>
             {activeView === item.id && (
               <motion.div 
                 layoutId="activeBottomTab"
@@ -4634,15 +4575,14 @@ export default function App() {
                     {user?.displayName || user?.email?.split('@')[0] || 'Explorer'}
                   </span>
                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 transition-all w-fit">
-                    <div className={cn("w-1 h-1 md:w-1.5 md:h-1.5 rounded-full animate-pulse", user ? "bg-proton-accent" : "bg-proton-muted")} />
-                    <span className="text-[7px] md:text-[8px] font-black text-proton-text uppercase tracking-tighter whitespace-nowrap">
-                      {user ? 'Core Active' : 'Offline'}
+                    <div className={cn("w-1 h-1 md:w-1.5 md:h-1.5 rounded-full", user ? "bg-green-500" : "bg-proton-muted")} />
+                    <span className="text-[7px] md:text-[8px] font-bold text-proton-text uppercase tracking-widest whitespace-nowrap">
+                      {user ? translations[language].common.stable : 'Offline'}
                     </span>
                   </div>
                 </div>
                 <div className="hidden sm:flex flex-col min-w-0">
-                  <span className="text-[8px] md:text-[9px] font-black text-proton-muted uppercase tracking-[0.15em]">NODE: <span className="text-proton-accent">{userProfile.region || 'CORE'}</span></span>
-                  <span className="text-[8px] md:text-[9px] font-black text-proton-muted uppercase tracking-[0.15em] border-l border-proton-border pl-2 md:pl-3 ml-0.5 md:ml-0 overflow-hidden text-ellipsis">LVL 4</span>
+                  <span className="text-[8px] md:text-[9px] font-bold text-proton-muted uppercase tracking-widest">REGION: <span className="text-proton-accent">{userProfile.region || 'GLOBAL'}</span></span>
                 </div>
               </div>
             </div>
