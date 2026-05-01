@@ -107,6 +107,8 @@ import {
   Layout,
   Wrench,
   Sparkles,
+  Star,
+  Save,
   Network,
   Sun,
   Moon,
@@ -130,6 +132,7 @@ import {
   CreditCard,
   BarChart3,
   User as UserIcon,
+  Target,
   X,
   Plus,
   Trash2,
@@ -159,7 +162,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
-import { PERSONAS, chatWithPersona, generatePersonaAvatar, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type Persona, type TaskPlan, type GeminiMetadata } from './services/gemini';
+import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type Persona, type TaskPlan, type GeminiMetadata } from './services/gemini';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
@@ -1971,6 +1974,8 @@ const PersonasView = ({
   uiMode,
   isSystemActive,
   initialPersonaId,
+  favoritePersonaIds,
+  onToggleFavorite,
   language,
   user
 }: { 
@@ -1987,6 +1992,8 @@ const PersonasView = ({
   uiMode: 'operator' | 'artisan',
   isSystemActive: boolean,
   initialPersonaId?: string | null,
+  favoritePersonaIds: string[],
+  onToggleFavorite: (id: string) => void,
   language: 'en' | 'ka',
   user: any
 }) => {
@@ -2319,6 +2326,173 @@ const PersonasView = ({
             </div>
          </div>
       </div>
+    </div>
+  );
+};
+
+const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
+  const t = language === 'ka' 
+    ? {
+        title: "დოკუმენტაციის კაბინეტი",
+        subtitle: "პლატფორმის მართვა და სტრუქტურა",
+        ownership: "მფლობელობა და განვითარება",
+        owner_label: "მთავარი მფლობელი",
+        dev_label: "ტექნიკური დეველოპერი",
+        co_title: "სტრატეგიული პარტნიორობა",
+        desc: "პროტონის პლატფორმა წარმოადგენს ინოვაციურ გადაწყვეტილებას, რომელიც შექმნილია ნინო გოშთელიანის ხედვით და პროტონის ტექნიკური ექსპერტიზით. ორივე მხარე თანაბრად არის პასუხისმგებელი სისტემის წარმატებასა და განვითარებაზე.",
+        owner_name: "ნინო გოშთელიანი",
+        dev_name: "პროტონი",
+        stats_owner: "სტრატეგია & ხედვა",
+        stats_dev: "კოდექსი & AI",
+        governance: "მმართველობა",
+        mission: "ჩვენი მისიაა შევქმნათ ციფრული ეკოსისტემა, სადაც ხელოვნური ინტელექტი და ადამიანის ხედვა ჰარმონიულად თანამშრომლობენ."
+      }
+    : {
+        title: "Documentation Cabinet",
+        subtitle: "Platform Governance & Structure",
+        ownership: "Ownership & Development",
+        owner_label: "Lead Owner",
+        dev_label: "Technical Developer",
+        co_title: "Strategic Partnership",
+        desc: "The Proton platform represents an innovative solution created through the vision of Nino Goshteliani and the technical expertise of Proton. Both parties are equally responsible for the system's success and evolution.",
+        owner_name: "Nino Goshteliani",
+        dev_name: "Proton",
+        stats_owner: "Strategy & Vision",
+        stats_dev: "Codebase & AI",
+        governance: "Governance",
+        mission: "Our mission is to create a digital ecosystem where AI and human vision collaborate harmoniously."
+      };
+
+  return (
+    <div className="p-8 max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-proton-border pb-10">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-[10px] font-black uppercase tracking-widest">
+            <Shield size={12} />
+            {t.governance}
+          </div>
+          <h2 className="text-5xl font-black tracking-tighter text-proton-text uppercase leading-none">{t.title}</h2>
+          <p className="text-sm font-medium text-proton-muted tracking-tight max-w-md">{t.subtitle}</p>
+        </div>
+        <div className="text-right hidden md:block">
+          <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em] mb-1">Status</p>
+          <div className="flex items-center gap-2 justify-end">
+             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+             <span className="text-xs font-bold text-proton-text uppercase italic">Active Protocol</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Nino Goshteliani Card */}
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="lg:col-span-1 bg-proton-card rounded-[48px] border border-proton-border p-10 relative overflow-hidden group shadow-2xl"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-proton-accent/10 transition-colors" />
+          <div className="relative z-10 space-y-8">
+            <div className="w-20 h-20 rounded-3xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent shadow-inner">
+              <UserIcon size={40} strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.2em] mb-2">{t.owner_label}</p>
+              <h3 className="text-3xl font-black tracking-tighter text-proton-text leading-tight">{t.owner_name}</h3>
+            </div>
+            <div className="pt-4 border-t border-proton-border/50">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent">
+                  <Target size={14} />
+                </div>
+                <span className="text-xs font-bold text-proton-text uppercase tracking-wider">{t.stats_owner}</span>
+              </div>
+              <p className="text-sm text-proton-muted font-medium leading-relaxed italic opacity-80">
+                {language === 'ka' 
+                  ? "პერსონალური ხედვის ავტორი, გადაწყვეტილების მიმღები და სტრატეგიული ინვესტორი." 
+                  : "Author of personal vision, primary decision maker, and strategic investor."}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Partnership / Mission Center */}
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          className="lg:col-span-1 bg-proton-accent text-proton-bg rounded-[48px] p-10 flex flex-col justify-between relative overflow-hidden shadow-2xl shadow-proton-accent/20"
+        >
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent opacity-20" />
+          </div>
+          <div className="relative z-10">
+            <Sparkles size={48} className="mb-8 opacity-50" />
+            <h4 className="text-3xl font-black tracking-tighter uppercase leading-tight mb-4">{t.co_title}</h4>
+            <p className="text-sm font-bold opacity-80 leading-relaxed italic">
+              {t.desc}
+            </p>
+          </div>
+          <div className="relative z-10 pt-10">
+            <div className="flex -space-x-4">
+              <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-proton-accent flex items-center justify-center backdrop-blur-md">
+                <UserIcon size={20} />
+              </div>
+              <div className="w-12 h-12 rounded-full bg-white/20 border-2 border-proton-accent flex items-center justify-center backdrop-blur-md">
+                <Cpu size={20} />
+              </div>
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-60 italic">Equal Partnership Established</p>
+          </div>
+        </motion.div>
+
+        {/* Proton Card */}
+        <motion.div 
+          whileHover={{ y: -5 }}
+          className="lg:col-span-1 bg-proton-card rounded-[48px] border border-proton-border p-10 relative overflow-hidden group shadow-2xl"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-bl-full -mr-16 -mt-16 group-hover:bg-proton-accent/10 transition-colors" />
+          <div className="relative z-10 space-y-8">
+            <div className="w-20 h-20 rounded-3xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent shadow-inner">
+              <Cpu size={40} strokeWidth={1.5} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.2em] mb-2">{t.dev_label}</p>
+              <h3 className="text-3xl font-black tracking-tighter text-proton-text leading-tight">{t.dev_name}</h3>
+            </div>
+            <div className="pt-4 border-t border-proton-border/50">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-1.5 rounded-lg bg-proton-accent/10 text-proton-accent">
+                  <Database size={14} />
+                </div>
+                <span className="text-xs font-bold text-proton-text uppercase tracking-wider">{t.stats_dev}</span>
+              </div>
+              <p className="text-sm text-proton-muted font-medium leading-relaxed italic opacity-80">
+                {language === 'ka' 
+                  ? "სრული ტექნიკური უზრუნველყოფა, AI მოდელების მართვა და უსაფრთხოების პროტოკოლები." 
+                  : "Full technical maintenance, AI model management, and security protocols."}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+      </div>
+
+      {/* Footer Quote Area */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-center py-12 border-t border-proton-border/30"
+      >
+        <p className="text-xl font-medium tracking-tight text-proton-text opacity-40 italic max-w-2xl mx-auto">
+          "{t.mission}"
+        </p>
+        <div className="mt-8 flex items-center justify-center gap-4 text-proton-muted opacity-30">
+          <FileText size={16} />
+          <span className="text-[10px] font-black uppercase tracking-[0.5em]">Platform Document • v2.0.4</span>
+          <FileText size={16} />
+        </div>
+      </motion.div>
     </div>
   );
 };
@@ -3714,6 +3888,12 @@ export default function App() {
     localStorage.setItem('proton_favorite_personas', JSON.stringify(favoritePersonaIds));
   }, [favoritePersonaIds]);
   
+  const handleToggleFavoritePersona = (id: string) => {
+    setFavoritePersonaIds(prev => 
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
   const [aiSettings, setAiSettings] = useState<GlobalAiSettings>(() => {
     try {
       const saved = localStorage.getItem('proton_ai_settings');
@@ -4341,6 +4521,14 @@ export default function App() {
               uiMode={uiMode}
             />
             <SidebarItem 
+              icon={FileText} 
+              label={t.sidebar.documentation} 
+              active={activeView === 'documentation'} 
+              onClick={() => handleViewChange('documentation')} 
+              expanded={isSidebarOpen}
+              uiMode={uiMode}
+            />
+            <SidebarItem 
               icon={Cpu} 
               label={t.sidebar.device} 
               active={activeView === 'device'} 
@@ -4600,6 +4788,8 @@ export default function App() {
                   uiMode={uiMode}
                   isSystemActive={isArtisanSystemActive}
                   initialPersonaId={selectedPersonaId}
+                  favoritePersonaIds={favoritePersonaIds}
+                  onToggleFavorite={handleToggleFavoritePersona}
                   language={userProfile.language}
                   user={user}
                 />
@@ -4647,6 +4837,9 @@ export default function App() {
                   uiMode={uiMode}
                   setUiMode={handleModeChange}
                 />
+              )}
+              {activeView === 'documentation' && (
+                <DocumentationView language={userProfile.language} />
               )}
             </motion.div>
           </AnimatePresence>

@@ -16,6 +16,7 @@ export const translations = {
       profile: "Profile",
       settings: "Settings",
       device: "Device",
+      documentation: "Documentation",
       collapse: "Collapse",
       new: "New",
       bottom_nav: {
@@ -433,6 +434,7 @@ export const translations = {
       profile: "პროფილი",
       settings: "პარამეტრები",
       device: "მოწყობილობა",
+      documentation: "დოკუმენტაცია",
       collapse: "ჩაკეცვა",
       new: "ახალი",
       bottom_nav: {
