@@ -208,14 +208,16 @@ const SidebarItem = React.memo(({
   active, 
   onClick,
   expanded = true,
-  uiMode = 'operator'
+  uiMode = 'operator',
+  badge
 }: { 
   icon: any, 
   label: string, 
   active: boolean, 
   onClick: () => void,
   expanded?: boolean,
-  uiMode?: 'operator' | 'artisan'
+  uiMode?: 'operator' | 'artisan',
+  badge?: string
 }) => (
   <button
     onClick={onClick}
@@ -236,12 +238,19 @@ const SidebarItem = React.memo(({
     </div>
     
     {expanded && (
-      <span className={cn(
-        "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-left-4",
-        active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
-      )}>
-        {label}
-      </span>
+      <div className="flex items-center justify-between flex-1 min-w-0">
+        <span className={cn(
+          "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-left-4",
+          active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
+        )}>
+          {label}
+        </span>
+        {badge && (
+          <span className="px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[8px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
+            {badge}
+          </span>
+        )}
+      </div>
     )}
 
     {active && (
@@ -3267,10 +3276,14 @@ const CabinetView = ({
     dash_title: language === 'ka' ? 'მართვის ჰაბი' : 'Control Hub'
   };
 
+  const [cabinetTab, setCabinetTab] = useState<'overview' | 'modules' | 'security'>('overview');
+
   const mainModules = [
-    { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance', desc: t.finance_desc, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 'blueprints', icon: Layout, label: language === 'ka' ? 'პროცესები' : 'Workflows', desc: t.blueprints_desc, color: 'text-orange-600', bg: 'bg-orange-50' },
-    { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio', desc: t.studio_desc, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance', desc: t.finance_desc, color: 'text-blue-500', border: 'border-blue-500/20', bg: 'bg-blue-500/5' },
+    { id: 'blueprints', icon: Workflow, label: language === 'ka' ? 'პროცესები' : 'Workflows', desc: t.blueprints_desc, color: 'text-proton-accent', border: 'border-proton-accent/20', bg: 'bg-proton-accent/5' },
+    { id: 'device', icon: Cpu, label: language === 'ka' ? 'მოწყობილობა' : 'Hardware', desc: language === 'ka' ? 'სისტემური რესურსების მართვა' : 'System resources management', color: 'text-amber-500', border: 'border-amber-500/20', bg: 'bg-amber-500/5' },
+    { id: 'documentation', icon: FileText, label: language === 'ka' ? 'დოკუმენტაცია' : 'Docs', desc: language === 'ka' ? 'სისტემური სახელმძღვანელო' : 'System documentation', color: 'text-emerald-500', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
+    { id: 'settings', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings', desc: language === 'ka' ? 'ინტერფეისის კონფიგურაცია' : 'Interface configuration', color: 'text-slate-500', border: 'border-slate-500/20', bg: 'bg-slate-500/5' },
   ];
 
   const formattedJoinDate = useMemo(() => {
@@ -3295,306 +3308,380 @@ const CabinetView = ({
   }, [user, profile]);
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 animate-in fade-in slide-in-from-bottom-4 duration-1000 px-4">
+    <div className="max-w-6xl mx-auto pb-24 animate-in fade-in slide-in-from-bottom-4 duration-1000 px-2 sm:px-4">
       {/* Professional Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-8 mb-12 pt-8">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-6 md:gap-8 mb-8 md:mb-12 pt-4 md:pt-8 bg-proton-card/30 p-6 rounded-[40px] border border-proton-border/30">
+        <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
           <div className="relative group">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-white border border-gray-200 flex items-center justify-center overflow-hidden shadow-sm group-hover:shadow-md transition-all">
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-[40px] bg-proton-bg border border-gray-200/10 flex items-center justify-center overflow-hidden shadow-2xl group-hover:shadow-proton-accent/20 transition-all duration-700 group-hover:rotate-6">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-4xl font-bold text-gray-400">{(user?.displayName || 'U').charAt(0).toUpperCase()}</span>
               )}
             </div>
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 border-4 border-white rounded-full shadow-sm" />
+            <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 border-4 border-proton-bg rounded-full shadow-lg" />
           </div>
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 tracking-tight">
+            <div className="flex flex-col md:flex-row items-center gap-2 md:gap-3 mb-1">
+              <h1 className="text-3xl md:text-5xl font-black text-proton-text tracking-tighter uppercase italic">
                 {user?.displayName || (language === 'ka' ? 'მომხმარებელი' : 'User')}
               </h1>
-              {user && <CheckCircle2 size={24} className="text-blue-500 fill-blue-50/50" />}
+              {user && <CheckCircle2 size={24} className="text-proton-accent animate-pulse" />}
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-gray-500 font-medium text-sm md:text-base">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <p className="text-proton-muted font-bold text-sm md:text-base font-mono">
                 {user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
               </p>
               {user && (
-                <span className="px-2 py-1 bg-proton-accent/10 text-[9px] font-bold text-proton-accent rounded uppercase tracking-tighter border border-proton-accent/20 flex items-center gap-1">
-                  <div className="w-1 h-1 rounded-full bg-proton-accent animate-pulse" />
-                  NODE: {userStats.node_id || user.uid.slice(0, 8)}
+                <span className="px-3 py-1 bg-proton-accent/10 text-[9px] font-black text-proton-accent rounded-full uppercase tracking-[0.2em] border border-proton-accent/20 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
+                  K-ID: {userStats.node_id || user.uid.slice(0, 8)}
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all group overflow-hidden relative">
-            <Mail size={20} />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-          </button>
-          <button 
-            onClick={() => onNavigate('settings')}
-            className="p-3 rounded-2xl bg-white border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
-          >
-            <Settings size={20} />
+        <div className="flex items-center gap-4 w-full md:w-auto justify-center">
+          <button className="p-4 rounded-2xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative">
+            <Bell size={20} />
+            <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-proton-bg" />
           </button>
           {!user ? (
-            <button onClick={onSignIn} className="ml-2 px-6 py-3 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-all shadow-sm">
+            <button onClick={onSignIn} className="flex-1 md:flex-none px-8 py-4 bg-proton-accent text-proton-bg rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-proton-accent/20">
               {common.signin}
             </button>
           ) : (
-            <button onClick={onSignOut} className="ml-2 px-6 py-3 bg-white border border-red-200 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-50 transition-all flex items-center gap-2">
-              <LogOut size={16} />
+            <button onClick={onSignOut} className="flex-1 md:flex-none px-8 py-4 bg-proton-bg border border-red-500/30 text-red-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-500/10 transition-all flex items-center justify-center gap-3">
+              <LogOut size={18} />
               {common.signout}
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Stats & Environment */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm overflow-hidden animate-in slide-in-from-left-4 duration-700 delay-100">
-            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{personal.title}</h2>
-                <p className="text-sm text-gray-500 font-medium">{personal.overview}</p>
+      {/* Navigation Tabs for Cabinet */}
+      <div className="flex items-center gap-2 mb-8 bg-proton-card/20 p-1.5 rounded-2xl border border-proton-border/30 overflow-x-auto no-scrollbar">
+        {[
+          { id: 'overview', label: language === 'ka' ? 'მიმოხილვა' : 'Overview', icon: Grid },
+          { id: 'modules', label: language === 'ka' ? 'ინსტრუმენტები' : 'Modules', icon: Layers },
+          { id: 'security', label: language === 'ka' ? 'უსაფრთხოება' : 'Security', icon: Shield },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setCabinetTab(tab.id as any)}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+              cabinetTab === tab.id 
+                ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
+                : "text-proton-muted hover:text-proton-text hover:bg-white/5"
+            )}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        {cabinetTab === 'overview' && (
+          <motion.div 
+            key="overview"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+          >
+            {/* Left Column: Stats & Environment */}
+            <div className="lg:col-span-2 space-y-8">
+              <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
+                <div className="flex items-center justify-between mb-10 relative z-10">
+                  <div>
+                    <h2 className="text-2xl font-black text-proton-text uppercase tracking-tight italic">{personal.title}</h2>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-[0.3em] font-mono mt-1">{personal.overview}</p>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-proton-accent/10 rounded-2xl border border-proton-accent/20">
+                    <Activity size={18} className="text-proton-accent animate-pulse" />
+                    <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest">{personal.dash_title}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative z-10">
+                  <div className="space-y-3 group">
+                    <div className="flex items-center gap-3 text-proton-muted mb-1 group-hover:text-blue-400 transition-colors">
+                      <Database size={18} />
+                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.storage}</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.storageGB.toFixed(1)}</span>
+                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">GB</span>
+                    </div>
+                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
+                      <div 
+                        className="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                        style={{ width: `${Math.min((userStats.storageGB / 10) * 100, 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 group">
+                    <div className="flex items-center gap-3 text-proton-muted mb-1 group-hover:text-amber-400 transition-colors">
+                      <Cpu size={18} />
+                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.compute_time}</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.computeTimeHours.toFixed(0)}</span>
+                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">H</span>
+                    </div>
+                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
+                      <div className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: '65%' }} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 group">
+                    <div className="flex items-center gap-3 text-proton-muted mb-1 group-hover:text-proton-accent transition-colors">
+                      <Zap size={18} />
+                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Compute Cycles</span>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.computeCycles || 0}</span>
+                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">LN</span>
+                    </div>
+                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
+                      <div className="h-full bg-proton-accent rounded-full shadow-[0_0_10px_rgba(0,242,255,0.5)]" style={{ width: '42%' }} />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl border border-gray-100">
-                <Grid size={16} className="text-gray-400" />
-                <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">{personal.dash_title}</span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50">
+                    <div className="flex items-center justify-between mb-8">
+                       <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">{t.activity}</h3>
+                       <History size={18} className="text-proton-muted" />
+                    </div>
+                    <div className="space-y-4">
+                       {recentActivity.map(act => (
+                          <div key={act.id} className="flex items-center justify-between p-4 rounded-2xl border border-proton-border/30 hover:border-proton-accent/30 hover:bg-proton-accent/5 transition-all group">
+                             <div className="flex items-center gap-4">
+                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", act.bg.replace('50', '500/10'), act.color.replace('500', '500'))}>
+                                   <act.icon size={18} />
+                                </div>
+                                <div>
+                                   <p className="text-[11px] font-black text-proton-text uppercase tracking-tight">{act.label}</p>
+                                   <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest font-mono">{act.date} • {act.time}</p>
+                                </div>
+                             </div>
+                             <ChevronRight size={14} className="text-proton-muted group-hover:text-proton-accent transition-colors" />
+                          </div>
+                       ))}
+                    </div>
+                 </div>
+
+                 <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 flex flex-col justify-between">
+                    <div>
+                       <div className="flex items-center justify-between mb-8">
+                          <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">{t.profile_strength}</h3>
+                          <Shield size={18} className="text-proton-accent" />
+                       </div>
+                       <div className="relative pt-1 mb-6">
+                          <div className="flex mb-3 items-center justify-between">
+                             <div>
+                                <span className="text-[9px] font-black inline-block py-1 px-3 uppercase rounded-full text-proton-accent bg-proton-accent/10 border border-proton-accent/20 tracking-widest">
+                                   {profileStrength === 100 ? (language === 'ka' ? 'დასრულებული' : 'Complete') : (language === 'ka' ? 'მიმდინარეობს' : 'In Progress')}
+                                </span>
+                             </div>
+                             <div className="text-right">
+                                <span className="text-xl font-black italic text-proton-accent">
+                                   {profileStrength}%
+                                </span>
+                             </div>
+                          </div>
+                          <div className="flex h-1.5 overflow-hidden bg-proton-bg/60 rounded-full border border-proton-border/30">
+                             <motion.div 
+                               initial={{ width: 0 }}
+                               animate={{ width: `${profileStrength}%` }}
+                               transition={{ duration: 1.5, ease: 'easeOut' }}
+                               className="flex flex-col justify-center text-center text-white bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.6)] whitespace-nowrap"
+                             />
+                          </div>
+                       </div>
+                       <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider leading-relaxed">
+                          {language === 'ka' 
+                            ? 'დაასრულეთ თქვენი პროფილი პერსონალიზებული AI გამოცდილების მისაღებად და კვანძების ოპტიმიზაციისთვის.' 
+                            : 'Complete your profile to unlock more personalized AI interactions and better service distribution.'}
+                       </p>
+                    </div>
+                    <button className="mt-8 py-4 bg-proton-bg border border-proton-border rounded-2xl text-[10px] font-black text-proton-text uppercase tracking-[0.2em] hover:border-proton-accent hover:text-proton-accent transition-all active:scale-95 shadow-inner">
+                       {language === 'ka' ? 'პროფილის რედაქტირება' : 'Complete My Profile'}
+                    </button>
+                 </div>
               </div>
             </div>
 
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-2 group">
-                <div className="flex items-center gap-2 text-gray-500 mb-1 group-hover:text-blue-500 transition-colors">
-                  <Database size={16} />
-                  <span className="text-xs font-bold uppercase tracking-wide">{cab.storage}</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900">{userStats.storageGB.toFixed(1)}</span>
-                  <span className="text-sm font-bold text-gray-400 uppercase">GB</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full transition-all duration-1000" 
-                    style={{ width: `${Math.min((userStats.storageGB / 10) * 100, 100)}%` }} 
-                  />
+            {/* Right Column: Information & Security */}
+            <div className="space-y-8">
+              <div className="bg-proton-text p-10 rounded-[40px] text-proton-bg shadow-2xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-proton-accent/20 rounded-full -translate-y-20 translate-x-20 group-hover:scale-150 transition-transform duration-1000 blur-2xl" />
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-proton-bg/60">{language === 'ka' ? 'ვერიფიცირებული კვანძი' : 'VERIFIED NODE'}</span>
+                    <ShieldCheck size={24} className="text-proton-bg" />
+                  </div>
+                  <div className="mb-10">
+                    <p className="text-proton-bg/60 text-[10px] font-black uppercase tracking-widest mb-1">{t.member_since}</p>
+                    <h3 className="text-3xl font-black italic uppercase tracking-tighter">{formattedJoinDate}</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-5 bg-proton-bg/10 rounded-2xl border border-proton-bg/10">
+                      <div className="flex items-center gap-3">
+                        <Fingerprint size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-wider">{cab.two_factor}</span>
+                      </div>
+                      <div className="w-10 h-6 bg-proton-bg/20 rounded-full flex items-center px-1.5 cursor-pointer border border-proton-bg/10">
+                        <div className="w-3.5 h-3.5 bg-proton-bg rounded-full ml-auto shadow-sm" />
+                      </div>
+                    </div>
+                    <button className="w-full py-5 bg-proton-bg text-proton-text rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-2xl active:scale-95">
+                      <Download size={18} />
+                      {language === 'ka' ? 'იდენტობის ექსპორტი' : 'Export Identity'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2 group">
-                <div className="flex items-center gap-2 text-gray-500 mb-1 group-hover:text-orange-500 transition-colors">
-                  <Cpu size={16} />
-                  <span className="text-xs font-bold uppercase tracking-wide">{cab.compute_time}</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900">{userStats.computeTimeHours.toFixed(0)}</span>
-                  <span className="text-sm font-bold text-gray-400 uppercase">H</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-orange-500 rounded-full" style={{ width: '65%' }} />
-                </div>
-              </div>
-
-              <div className="space-y-2 group">
-                <div className="flex items-center gap-2 text-gray-500 mb-1 group-hover:text-purple-500 transition-colors">
-                  <Zap size={16} />
-                  <span className="text-xs font-bold uppercase tracking-wide">Compute Cycles</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-gray-900">{userStats.computeCycles || 0}</span>
-                  <span className="text-sm font-bold text-gray-400 uppercase">CORE</span>
-                </div>
-                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-500 rounded-full" style={{ width: '42%' }} />
-                </div>
+              {/* System Health */}
+              <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50">
+                 <div className="flex items-center justify-between mb-10">
+                    <h3 className="text-xs font-black text-proton-text uppercase tracking-[0.3em] italic">{t.health}</h3>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
+                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                       <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Active</span>
+                    </div>
+                 </div>
+                 <div className="space-y-6">
+                    <div className="flex items-center justify-between group">
+                       <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider group-hover:text-proton-accent transition-colors">Cloud Latency</span>
+                       <span className="text-sm font-black text-proton-text font-mono">14ms</span>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                       <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider group-hover:text-proton-accent transition-colors">System Uptime</span>
+                       <span className="text-sm font-black text-proton-text font-mono">99.9%</span>
+                    </div>
+                    <div className="flex items-center justify-between group">
+                       <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider group-hover:text-proton-accent transition-colors">Node Integrity</span>
+                       <span className="text-sm font-black text-green-500 font-mono uppercase">Secure</span>
+                    </div>
+                    <button className="w-full mt-6 py-4 rounded-2xl bg-proton-bg/40 border border-proton-border/50 text-[9px] font-black text-proton-muted uppercase tracking-widest hover:border-proton-accent hover:text-proton-accent transition-all shadow-inner">
+                       {language === 'ka' ? 'სრული დიაგნოსტიკა' : 'Full Diagnostics'}
+                    </button>
+                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             {/* Recent Activity Feed */}
-             <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm p-8">
-                <div className="flex items-center justify-between mb-6">
-                   <h3 className="text-lg font-bold text-gray-900">{t.activity}</h3>
-                   <History size={18} className="text-gray-400" />
-                </div>
-                <div className="space-y-4">
-                   {recentActivity.map(act => (
-                      <div key={act.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 transition-colors group">
-                         <div className="flex items-center gap-4">
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", act.bg, act.color)}>
-                               <act.icon size={18} />
-                            </div>
-                            <div>
-                               <p className="text-sm font-bold text-gray-900">{act.label}</p>
-                               <p className="text-[10px] text-gray-400 font-medium">{act.date} • {act.time}</p>
-                            </div>
-                         </div>
-                         <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-                      </div>
-                   ))}
-                </div>
-                <button className="w-full mt-6 py-3 rounded-xl border border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:bg-gray-50 transition-colors">
-                   {language === 'ka' ? 'ყველა აქტივობა' : 'View Full History'}
-                </button>
-             </div>
-
-             {/* Profile Strength & Verification */}
-             <div className="bg-white rounded-[32px] border border-gray-200 shadow-sm p-8 flex flex-col justify-between">
-                <div>
-                   <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-bold text-gray-900">{t.profile_strength}</h3>
-                      <UserCheck size={18} className="text-blue-500" />
-                   </div>
-                   <div className="relative pt-1">
-                      <div className="flex mb-2 items-center justify-between">
-                         <div>
-                            <span className="text-xs font-bold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
-                               {profileStrength === 100 ? (language === 'ka' ? 'დასრულებული' : 'Complete') : (language === 'ka' ? 'მიმდინარეობს' : 'In Progress')}
-                            </span>
-                         </div>
-                         <div className="text-right">
-                            <span className="text-sm font-bold inline-block text-blue-600">
-                               {profileStrength}%
-                            </span>
-                         </div>
-                      </div>
-                      <div className="flex h-2 mb-4 overflow-hidden text-xs bg-blue-100 rounded">
-                         <motion.div 
-                           initial={{ width: 0 }}
-                           animate={{ width: `${profileStrength}%` }}
-                           transition={{ duration: 1, ease: 'easeOut' }}
-                           className="flex flex-col justify-center text-center text-white bg-blue-500 shadow-none whitespace-nowrap"
-                         />
-                      </div>
-                   </div>
-                   <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                      {language === 'ka' 
-                        ? 'დაასრულეთ თქვენი პროფილი პერსონალიზებული AI გამოცდილების მისაღებად.' 
-                        : 'Complete your profile to unlock more personalized AI interactions and better service distribution.'}
-                   </p>
-                </div>
-                <button className="mt-8 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-xs font-bold text-gray-700 hover:bg-white hover:border-blue-200 transition-all">
-                   {language === 'ka' ? 'პროფილის რედაქტირება' : 'Complete My Profile'}
-                </button>
-             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {cabinetTab === 'modules' && (
+          <motion.div 
+            key="modules"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
             {mainModules.map((module) => (
               <button 
                 key={module.id} 
                 onClick={() => onNavigate(module.id)}
-                className="bg-white p-8 rounded-[32px] border border-gray-200 shadow-sm text-left group transition-all relative overflow-hidden hover:border-proton-accent hover:shadow-md"
+                className="proton-glass p-8 rounded-[40px] border border-proton-border/50 text-left group transition-all relative overflow-hidden hover:border-proton-accent hover:shadow-[0_0_30px_rgba(0,242,255,0.05)] h-full flex flex-col items-start justify-between"
               >
-                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform", module.bg, module.color)}>
-                  <module.icon size={24} />
+                <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                <div className="w-full relative z-10">
+                  <div className={cn("w-16 h-16 rounded-[28px] border flex items-center justify-center mb-8 group-hover:rotate-12 transition-all duration-500 shadow-xl", module.bg, module.border, module.color)}>
+                    <module.icon size={28} />
+                  </div>
+                  <h3 className="text-xl font-black text-proton-text mb-2 italic uppercase tracking-tighter">{module.label}</h3>
+                  <p className="text-[11px] text-proton-muted font-bold tracking-wide leading-relaxed mb-10 opacity-70 group-hover:opacity-100 transition-opacity">{module.desc}</p>
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{module.label}</h3>
-                <p className="text-xs text-gray-500 font-medium leading-relaxed mb-6">{module.desc}</p>
-                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-proton-accent">
-                  {language === 'ka' ? 'გახსნა' : 'Access'}
-                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                
+                <div className="w-full pt-6 border-t border-proton-border/30 relative z-10 flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-black text-[10px] uppercase tracking-[0.25em] text-proton-accent group-hover:scale-105 transition-transform origin-left">
+                    {language === 'ka' ? 'მოდულის გახსნა' : 'Access Hub'}
+                    <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform h-3 w-3" />
+                  </div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-proton-accent/20 group-hover:bg-proton-accent transition-colors" />
                 </div>
               </button>
             ))}
-          </div>
-        </div>
+          </motion.div>
+        )}
 
-        {/* Right Column: Information & Security */}
-        <div className="space-y-8">
-          <div className="bg-gray-900 p-10 rounded-[32px] text-white shadow-xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 group-hover:scale-125 transition-transform duration-1000" />
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-8">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">{language === 'ka' ? 'ვერიფიცირებული კვანძი' : 'VERIFIED NODE'}</span>
-                <ShieldCheck size={20} className="text-white" />
-              </div>
-              <div className="mb-10">
-                <p className="text-gray-400 text-xs font-medium mb-1">{t.member_since}</p>
-                <h3 className="text-2xl font-bold">{formattedJoinDate}</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-white/10 rounded-2xl border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Fingerprint size={16} />
-                    <span className="text-xs font-bold uppercase tracking-tight">{cab.two_factor}</span>
-                  </div>
-                  <div className="w-10 h-5 bg-white/20 rounded-full flex items-center px-1 cursor-pointer">
-                    <div className="w-3 h-3 bg-white rounded-full ml-auto" />
-                  </div>
+        {cabinetTab === 'security' && (
+          <motion.div 
+            key="security"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-8"
+          >
+            {/* Security Settings Content */}
+             <div className="proton-glass p-10 rounded-[40px] border border-proton-border/50 space-y-8">
+                <div className="flex items-center gap-4 mb-4">
+                   <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+                      <ShieldAlert size={24} />
+                   </div>
+                   <div>
+                      <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">Access Control</h3>
+                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest leading-none">Security Permissions</p>
+                   </div>
                 </div>
-                <button className="w-full py-4 bg-white text-gray-900 rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
-                  <Download size={16} />
-                  {language === 'ka' ? 'იდენტობის ექსპორტი' : 'Export Identity'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* System Health */}
-          <div className="bg-white p-10 rounded-[32px] border border-gray-200 shadow-sm">
-             <div className="flex items-center justify-between mb-8">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{t.health}</h3>
-                <div className="flex items-center gap-1">
-                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                   <span className="text-[10px] font-bold text-green-500 uppercase">Stable</span>
+                <div className="space-y-4">
+                   {[
+                     { label: 'Cloud Wallet Auth', active: true, icon: Key },
+                     { label: 'Agent Verification', active: true, icon: UserCheck },
+                     { label: 'Global Privacy Shield', active: false, icon: Shield },
+                   ].map((item, i) => (
+                      <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-proton-bg/40 border border-proton-border/50">
+                         <div className="flex items-center gap-4 text-proton-text">
+                            <item.icon size={18} className={item.active ? "text-proton-accent" : "text-proton-muted"} />
+                            <span className="text-[11px] font-black uppercase tracking-wider">{item.label}</span>
+                         </div>
+                         <div className={cn("w-12 h-6 rounded-full flex items-center px-1 border transition-all cursor-pointer", item.active ? "bg-proton-accent/20 border-proton-accent/40" : "bg-proton-bg border-proton-border")}>
+                            <div className={cn("w-4 h-4 rounded-full shadow-sm transition-all", item.active ? "translate-x-6 bg-proton-accent" : "bg-proton-muted")} />
+                         </div>
+                      </div>
+                   ))}
                 </div>
              </div>
-             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Cloud Latency</span>
-                   <span className="text-sm font-bold text-gray-900">14ms</span>
-                </div>
-                <div className="flex items-center justify-between">
-                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Uptime</span>
-                   <span className="text-sm font-bold text-gray-900">99.9%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                   <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Integrity</span>
-                   <span className="text-sm font-bold text-green-500">Secure</span>
-                </div>
-                <button className="w-full mt-4 py-3 rounded-xl bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:bg-gray-100 transition-colors">
-                   {language === 'ka' ? 'დიაგნოსტიკა' : 'Full Diagnostics'}
-                </button>
-             </div>
-          </div>
 
-          <div className="bg-white p-10 rounded-[32px] border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{language === 'ka' ? 'კონვერტაცია' : 'Rate conversion'}</h3>
-              <RefreshCw size={16} className="text-gray-400" />
-            </div>
-            <div className="space-y-6">
-              <div className="flex items-center justify-between group cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors">
-                <span className="text-xs font-bold text-gray-600">USD / GEL</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold text-gray-900">2.68</span>
-                  <span className="text-[10px] text-green-500 font-bold">+0.04%</span>
+             <div className="proton-glass p-10 rounded-[40px] border border-proton-border/50 flex flex-col justify-between">
+                <div className="space-y-6">
+                   <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">Identity Management</h3>
+                   <p className="text-xs text-proton-muted font-bold leading-relaxed mb-6">
+                      Your decentralized identity is secured via a multi-layered cryptographic shield. You can rotate keys or export your full node reputation at any time.
+                   </p>
+                   <div className="p-6 rounded-3xl bg-proton-accent/5 border border-proton-accent/10 space-y-4">
+                      <div className="flex items-center gap-3 text-proton-accent">
+                         <Circle size={12} className="fill-current" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Active Keys: 3/3</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-green-500">
+                         <Circle size={12} className="fill-current animate-pulse" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Node Reputation: Excellent</span>
+                      </div>
+                   </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between group cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors">
-                <span className="text-xs font-bold text-gray-600">BTC / USD</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold text-gray-900">64.2K</span>
-                  <span className="text-[10px] text-red-500 font-bold">-1.2%</span>
+                <div className="flex flex-col sm:flex-row gap-4 mt-12">
+                   <button className="flex-1 py-4 px-6 rounded-2xl bg-proton-bg border border-proton-border text-[9px] font-black uppercase tracking-[0.2em] hover:border-proton-accent hover:text-proton-accent transition-all text-center">Rotate Keys</button>
+                   <button className="flex-1 py-4 px-6 rounded-2xl bg-proton-text text-proton-bg text-[9px] font-black uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-xl active:scale-95 text-center">Lock Node</button>
                 </div>
-              </div>
-              <div className="pt-6 border-t border-gray-100 flex justify-center">
-                <button className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">
-                  {language === 'ka' ? 'სრული კურსები' : 'View all rates'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -4360,22 +4447,6 @@ export default function App() {
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
-            <SidebarItem 
-              icon={Workflow} 
-              label={t.sidebar.blueprints} 
-              active={activeView === 'blueprints'} 
-              onClick={() => handleViewChange('blueprints')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={CreditCard} 
-              label={t.sidebar.finance} 
-              active={activeView === 'finance'} 
-              onClick={() => handleViewChange('finance')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
           </div>
 
           <div className="space-y-1.5 pt-4">
@@ -4477,35 +4548,12 @@ export default function App() {
 
             <SidebarItem 
               icon={UserIcon} 
-              label={t.sidebar.profile} 
+              label={language === 'ka' ? 'პირადი კაბინეტი' : 'Personal Cabinet'} 
               active={activeView === 'profile'} 
               onClick={() => handleViewChange('profile')} 
               expanded={isSidebarOpen}
               uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={Settings} 
-              label={t.sidebar.settings} 
-              active={activeView === 'settings'} 
-              onClick={() => handleViewChange('settings')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={FileText} 
-              label={t.sidebar.documentation} 
-              active={activeView === 'documentation'} 
-              onClick={() => handleViewChange('documentation')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={Cpu} 
-              label={t.sidebar.device} 
-              active={activeView === 'device'} 
-              onClick={() => handleViewChange('device')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
+              badge={language === 'ka' ? 'ჰაბი' : 'HUB'}
             />
           </div>
         </nav>
@@ -4547,11 +4595,9 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/80 backdrop-blur-xl border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
-          { id: 'device', icon: Cpu, label: t.sidebar.bottom_nav.device },
-          { id: 'finance', icon: CreditCard, label: t.sidebar.bottom_nav.finance },
-          { id: 'blueprints', icon: Workflow, label: t.sidebar.bottom_nav.blueprints },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
-          { id: 'profile', icon: UserIcon, label: t.sidebar.bottom_nav.profile },
+          { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
+          { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
         ].map((item) => (
           <button
             key={item.id}
@@ -4671,12 +4717,6 @@ export default function App() {
             <div className="flex items-center gap-2 md:gap-3">
               <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
               <div className="hidden md:flex items-center gap-3">
-                <button 
-                  onClick={() => handleViewChange('settings')}
-                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent transition-all relative"
-                >
-                  <Settings size={18} />
-                </button>
                 <button 
                   onClick={handleSignOut}
                   className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
