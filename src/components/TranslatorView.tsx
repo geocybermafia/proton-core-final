@@ -65,22 +65,25 @@ interface Message {
 }
 
 export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
-  const [isRecording, setIsRecording] = useState(false);
   const [activeSide, setActiveSide] = useState<'top' | 'bottom' | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 1024);
-  const [faceToFace, setFaceToFace] = useState(true);
+  const [faceToFace, setFaceToFace] = useState(false); // Default to normal for individual use
+  const [interimTranscript, setInterimTranscript] = useState('');
+  
+  // Robust state management
+  const [status, setStatus] = useState<'idle' | 'starting' | 'recording' | 'stopping' | 'processing'>('idle');
   
   // Settings
-  const [topLang, setTopLang] = useState('English');
-  const [bottomLang, setBottomLang] = useState('Georgian');
+  const [topLang] = useState('English');
+  const [bottomLang] = useState('Georgian');
   
   const ai = useRef(new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' }));
   const recognition = useRef<any>(null);
   const audioContext = useRef<AudioContext | null>(null);
+  const lastTranscript = useRef('');
 
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth > 1024);
@@ -93,33 +96,52 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     // Keyboard support for Desktop
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !isRecording && !isProcessing) {
+      if (e.code === 'Space' && status === 'idle') {
         e.preventDefault();
         startRecording('bottom');
       }
     };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        stopRecording();
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     // Initialize Speech Recognition
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognition.current = new SpeechRecognition();
-      recognition.current.continuous = false;
+      recognition.current.continuous = true;
       recognition.current.interimResults = true;
       
+      recognition.current.onstart = () => {
+        setStatus('recording');
+      };
+
       recognition.current.onresult = (event: any) => {
         const transcript = Array.from(event.results)
           .map((result: any) => result[0])
           .map((result: any) => result.transcript)
           .join('');
+        
+        lastTranscript.current = transcript;
+        setInterimTranscript(transcript);
           
         if (event.results[0].isFinal) {
-          handleFinalTranscript(transcript);
+          // We don't call handleFinalTranscript here if continuous is true 
+          // because we want to wait for manual stop for accuracy in translations
         }
       };
 
       recognition.current.onend = () => {
-        setIsRecording(false);
+        if (lastTranscript.current.trim()) {
+          handleFinalTranscript(lastTranscript.current);
+        } else {
+          setStatus('idle');
+        }
+        setInterimTranscript('');
       };
 
       recognition.current.onerror = (event: any) => {
@@ -127,7 +149,8 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         if (event.error === 'not-allowed') {
           setPermissionError('Microphone access is blocked. Please enable it in browser settings.');
         }
-        setIsRecording(false);
+        setStatus('idle');
+        setInterimTranscript('');
       };
     }
 
@@ -136,29 +159,31 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
       
-      // Cleanup recognition
       if (recognition.current) {
         recognition.current.stop();
       }
-      
-      // Cleanup audio context if needed (optional, but good practice)
-      // Note: closing AudioContext might prevent future use if re-mounted
-      // but usually for a full view like this it's fine.
     };
-  }, [isRecording, isProcessing]);
+  }, [status]);
 
   const handleFinalTranscript = async (text: string) => {
-    if (!text.trim() || !activeSide) return;
+    if (!text.trim() || !activeSide) {
+      setStatus('idle');
+      return;
+    }
+    
+    const textToTranslate = text;
+    lastTranscript.current = '';
 
-    setIsProcessing(true);
+    setStatus('processing');
     try {
       const sourceRole = activeSide === 'top' ? 'Tourist' : 'Artisan';
       const targetLanguage = activeSide === 'top' ? 'Georgian' : 'English';
       
       const response = await ai.current.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Translate this for the ${targetLanguage} speaker. Input from ${sourceRole}: ${text}`,
+        contents: `Translate this for the ${targetLanguage} speaker. Input from ${sourceRole}: ${textToTranslate}`,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION
         }
@@ -168,7 +193,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       
       const newMessage: Message = {
         id: Math.random().toString(36).substr(2, 9),
-        text,
+        text: textToTranslate,
         translatedText: translated,
         sender: activeSide,
         timestamp: new Date()
@@ -176,34 +201,41 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
       setMessages(prev => [newMessage, ...prev]);
       
-      // Auto TTS for the translated message
+      // Auto TTS
       playTTS(translated, activeSide === 'top' ? 'ka' : 'en');
     } catch (error) {
       console.error('Translation error:', error);
     } finally {
-      setIsProcessing(false);
+      setStatus('idle');
       setActiveSide(null);
     }
   };
 
-  const startRecording = (side: 'top' | 'bottom') => {
-    setPermissionError(null);
-    if (isRecording) {
+  const stopRecording = () => {
+    if (status === 'starting' || status === 'recording') {
+      setStatus('stopping');
       recognition.current?.stop();
-      return;
     }
+  };
+
+  const startRecording = (side: 'top' | 'bottom') => {
+    if (status !== 'idle') return;
+    
+    setPermissionError(null);
+    setInterimTranscript('');
+    lastTranscript.current = '';
 
     setActiveSide(side);
-    setIsRecording(true);
+    setStatus('starting');
     
-    // Set recognition language based on side
     if (recognition.current) {
       recognition.current.lang = side === 'top' ? 'en-US' : 'ka-GE';
       try {
         recognition.current.start();
+        if (navigator.vibrate) navigator.vibrate(10);
       } catch (e) {
         console.error('Recognition start error:', e);
-        setIsRecording(false);
+        setStatus('idle');
       }
     }
   };
@@ -300,11 +332,14 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
               <button 
                 onClick={() => setFaceToFace(!faceToFace)}
                 className={cn(
-                  "p-2 rounded-xl border transition-all flex items-center justify-center",
+                  "px-3 py-2 rounded-xl border transition-all flex items-center gap-2",
                   faceToFace ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "bg-white/5 border-white/10 text-white/30"
                 )}
               >
-                <RotateCcw size={18} className={cn(faceToFace && "rotate-180")} />
+                <RotateCcw size={16} className={cn(faceToFace && "rotate-180")} />
+                <span className="text-[9px] font-black uppercase tracking-widest hidden xs:inline">
+                  {faceToFace ? "Face-to-Face" : "Selfie mode"}
+                </span>
               </button>
             )}
             <button className="w-10 h-10 rounded-full border border-white/10 text-white/40 hover:bg-white/5 transition-all flex items-center justify-center">
@@ -313,69 +348,93 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 lg:space-y-10 max-w-2xl mx-auto">
-           <AnimatePresence mode="wait">
-            {messages.length > 0 && messages[0].sender === 'bottom' ? (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="space-y-6"
-              >
-                <p className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1] text-blue-50">
-                  {messages[0].translatedText}
-                </p>
-                <div className="flex flex-col items-center gap-2">
-                   <div className="h-px w-12 bg-blue-500/30" />
-                   <p className="text-sm md:text-base text-white/40 font-medium font-mono uppercase tracking-widest leading-relaxed">
-                    {messages[0].text}
-                  </p>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.3 }}
-                className="flex flex-col items-center gap-4"
-              >
-                <p className="text-xl lg:text-3xl font-black uppercase tracking-[0.3em] font-mono">Ready for Input</p>
-                <div className="flex gap-1">
-                   {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />)}
-                </div>
-              </motion.div>
-            )}
-           </AnimatePresence>
-        </div>
-
-        <div className="mt-8 lg:mt-auto flex justify-center pb-4 lg:pb-12">
-          <button 
-            onClick={() => startRecording('top')}
-            disabled={isProcessing}
-            className={cn(
-              "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
-              activeSide === 'top' && isRecording 
-                ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
-                : "bg-blue-600 border-blue-600/30 hover:bg-blue-500 hover:rotate-12 active:scale-90"
-            )}
-          >
+          <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 lg:space-y-10 max-w-2xl mx-auto">
             <AnimatePresence mode="wait">
-              {isRecording && activeSide === 'top' ? (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <MicOff size={isDesktop ? 54 : 40} />
+              {(status === 'recording' || status === 'starting') && activeSide === 'top' && interimTranscript ? (
+                <motion.div 
+                  key="interim-top"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-4"
+                >
+                  <p className="text-2xl md:text-4xl font-bold text-blue-400/60 animate-pulse italic">
+                    "{interimTranscript}..."
+                  </p>
+                </motion.div>
+              ) : messages.length > 0 && messages[0].sender === 'bottom' ? (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="space-y-6"
+                >
+                  <p className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1] text-blue-50">
+                    {messages[0].translatedText}
+                  </p>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="h-px w-12 bg-blue-500/30" />
+                    <p className="text-sm md:text-base text-white/40 font-medium font-mono uppercase tracking-widest leading-relaxed">
+                      {messages[0].text}
+                    </p>
+                  </div>
                 </motion.div>
               ) : (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <Mic size={isDesktop ? 54 : 40} />
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.3 }}
+                  className="flex flex-col items-center gap-4"
+                >
+                  <p className="text-xl lg:text-3xl font-black uppercase tracking-[0.3em] font-mono">
+                    {status === 'processing' ? 'Thinking...' : 'Ready for Input'}
+                  </p>
+                  <div className="flex gap-1">
+                    {[1, 2, 3].map(i => (
+                      <div 
+                        key={i} 
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full animate-pulse",
+                          status === 'processing' ? "bg-amber-500" : "bg-blue-500"
+                        )} 
+                        style={{ animationDelay: `${i * 0.2}s` }} 
+                      />
+                    ))}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            {isRecording && activeSide === 'top' && (
-              <>
-                <div className="absolute inset-[-15px] border-2 border-red-500 rounded-[50px] animate-ping opacity-40" />
-                <div className="absolute inset-[-30px] border border-red-500/30 rounded-[60px] animate-pulse opacity-20" />
-              </>
-            )}
-          </button>
-        </div>
+          </div>
+
+          <div className="mt-8 lg:mt-auto flex justify-center pb-4 lg:pb-12">
+            <button 
+              onPointerDown={() => startRecording('top')}
+              onPointerUp={stopRecording}
+              onPointerLeave={stopRecording}
+              disabled={status === 'processing'}
+              className={cn(
+                "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
+                activeSide === 'top' && (status === 'recording' || status === 'starting') 
+                  ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
+                  : "bg-blue-600 border-blue-600/30 hover:bg-blue-500 hover:rotate-12 active:scale-90"
+              )}
+            >
+              <AnimatePresence mode="wait">
+                {activeSide === 'top' && (status === 'starting' || status === 'recording') ? (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                    <MicOff size={isDesktop ? 54 : 40} />
+                  </motion.div>
+                ) : (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                    <Mic size={isDesktop ? 54 : 40} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {activeSide === 'top' && (status === 'recording' || status === 'starting') && (
+                <>
+                  <div className="absolute inset-[-15px] border-2 border-red-500 rounded-[50px] animate-ping opacity-40" />
+                  <div className="absolute inset-[-30px] border border-red-500/30 rounded-[60px] animate-pulse opacity-20" />
+                </>
+              )}
+            </button>
+          </div>
       </motion.div>
 
       {/* Center Divider / Controls */}
@@ -400,7 +459,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             <span className={isDesktop ? "hidden" : "inline text-center"}>{isOnline ? "io.net GPU CLUSTER L-V3" : "Offline Mode"}</span>
           </div>
           
-          {isProcessing && (
+          {status === 'processing' && (
              <div className="px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[0.25em] flex items-center gap-3 border bg-blue-600/20 text-blue-400 border-blue-500/30 shadow-2xl">
                <RotateCcw size={14} className="animate-spin" />
                <span className={isDesktop ? "hidden" : "inline text-center"}>Processing</span>
@@ -430,7 +489,18 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 lg:space-y-10 max-w-2xl mx-auto">
            <AnimatePresence mode="wait">
-            {messages.length > 0 && messages[0].sender === 'top' ? (
+            {(status === 'recording' || status === 'starting') && activeSide === 'bottom' && interimTranscript ? (
+              <motion.div 
+                key="interim-bottom"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
+                <p className="text-2xl md:text-4xl font-bold text-amber-400/60 animate-pulse italic">
+                   "{interimTranscript}..."
+                </p>
+              </motion.div>
+            ) : messages.length > 0 && messages[0].sender === 'top' ? (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -452,7 +522,9 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 animate={{ opacity: 0.3 }}
                 className="flex flex-col items-center gap-4"
               >
-                <p className="text-xl lg:text-3xl font-black uppercase tracking-[0.3em] font-sans">მზად არის</p>
+                <p className="text-xl lg:text-3xl font-black uppercase tracking-[0.3em] font-sans">
+                  {status === 'processing' ? 'მუშავდება...' : 'მზად არის'}
+                </p>
                 <div className="flex gap-1">
                    {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />)}
                 </div>
@@ -463,17 +535,19 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
         <div className="mt-8 lg:mt-auto flex flex-col items-center justify-center pb-4 lg:pb-12 space-y-4">
           <button 
-            onClick={() => startRecording('bottom')}
-            disabled={isProcessing}
+            onPointerDown={() => startRecording('bottom')}
+            onPointerUp={stopRecording}
+            onPointerLeave={stopRecording}
+            disabled={status === 'processing'}
             className={cn(
               "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
-              activeSide === 'bottom' && isRecording 
+              activeSide === 'bottom' && (status === 'recording' || status === 'starting') 
                 ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
                 : "bg-amber-600 border-amber-600/30 hover:bg-amber-500 hover:-rotate-12 active:scale-90"
             )}
           >
             <AnimatePresence mode="wait">
-              {isRecording && activeSide === 'bottom' ? (
+              {activeSide === 'bottom' && (status === 'starting' || status === 'recording') ? (
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
                   <MicOff size={isDesktop ? 54 : 40} />
                 </motion.div>
@@ -483,7 +557,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
                 </motion.div>
               )}
             </AnimatePresence>
-            {isRecording && activeSide === 'bottom' && (
+            {activeSide === 'bottom' && (status === 'recording' || status === 'starting') && (
               <>
                 <div className="absolute inset-[-15px] border-2 border-red-500 rounded-[50px] animate-ping opacity-40" />
                 <div className="absolute inset-[-30px] border border-red-500/30 rounded-[60px] animate-pulse opacity-20" />
@@ -491,7 +565,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             )}
           </button>
           
-          {isDesktop && !isRecording && (
+          {isDesktop && status === 'idle' && (
             <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-2">
                <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5">SPACE</span>
                to Speak
