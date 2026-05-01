@@ -266,6 +266,59 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
   }
 }
 
+export async function generateNewPersona(basePersona: Persona, userConcept: string): Promise<Persona> {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Based on this existing AI persona:
+      Name: ${basePersona.name}
+      Role: ${basePersona.role}
+      Description: ${basePersona.description}
+      
+      Create a NEW, distinct AI persona based on this concept: "${userConcept}".
+      The new persona should be creative, unique, and follow the same project style (Proton-Core AI).
+      
+      Respond EXCLUSIVELY with a JSON object matching this schema:
+      {
+        "name": string,
+        "nameGe": string (Georgian translation),
+        "role": string,
+        "description": string,
+        "descriptionGe": string (Georgian translation),
+        "systemInstruction": string (Detailed instructions for the AI),
+        "avatar": string (a single emoji),
+        "language": "English" | "Georgian" | "Mixed"
+      }`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            nameGe: { type: Type.STRING },
+            role: { type: Type.STRING },
+            description: { type: Type.STRING },
+            descriptionGe: { type: Type.STRING },
+            systemInstruction: { type: Type.STRING },
+            avatar: { type: Type.STRING },
+            language: { type: Type.STRING, enum: ["English", "Georgian", "Mixed"] }
+          },
+          required: ["name", "nameGe", "role", "description", "descriptionGe", "systemInstruction", "avatar", "language"]
+        }
+      }
+    });
+
+    const data = JSON.parse(response.text || "{}");
+    return {
+      ...data,
+      id: `custom-${Date.now()}`
+    };
+  } catch (error) {
+    console.error("Persona Generation Error:", error);
+    throw error;
+  }
+}
+
 export async function architectTask(project: string, temperature: number = 0.8): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
   const startTime = performance.now();
   try {

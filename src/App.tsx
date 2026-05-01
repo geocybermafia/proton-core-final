@@ -2006,7 +2006,41 @@ const PersonasView = ({
   }, [initialPersonaId, personas]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
+  const [tempInstructions, setTempInstructions] = useState(selectedPersona.systemInstruction);
+  const [isGeneratingPersona, setIsGeneratingPersona] = useState(false);
+  const [personaPrompt, setPersonaPrompt] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setTempInstructions(selectedPersona.systemInstruction);
+    setIsEditingInstructions(false);
+    setInput('');
+  }, [selectedPersona]);
+
+  const handleSaveInstructions = () => {
+    const updatedPersonas = personas.map(p => 
+      p.id === selectedPersona.id ? { ...p, systemInstruction: tempInstructions } : p
+    );
+    onUpdatePersonas(updatedPersonas);
+    setIsEditingInstructions(false);
+  };
+
+  const handleGeneratePersona = async () => {
+    if (!personaPrompt.trim()) return;
+    setLoading(true);
+    try {
+      const newPersona = await generateNewPersona(selectedPersona, personaPrompt);
+      onUpdatePersonas([...personas, newPersona]);
+      setPersonaPrompt('');
+      setIsGeneratingPersona(false);
+      setSelectedPersona(newPersona);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const messages = history[selectedPersona.id] || [];
   const currentAvatar = customAvatars[selectedPersona.id] || selectedPersona.avatar;
@@ -2064,39 +2098,102 @@ const PersonasView = ({
     }
   };
 
-  const profile = personas.find(p => p.id === selectedPersona.id) || selectedPersona;
   const t = translations[language].personas;
 
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-12rem)] gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
       <div className="w-full lg:w-80 space-y-6 flex flex-col h-full">
          <div className="space-y-4">
-            <h2 className="text-3xl font-black tracking-tighter">{t.title}</h2>
-            <p className="text-sm font-medium text-proton-muted">{t.description}</p>
+            <div className="flex items-center justify-between">
+               <h2 className="text-3xl font-black tracking-tighter">{t.title}</h2>
+               <button 
+                 onClick={() => setIsGeneratingPersona(!isGeneratingPersona)}
+                 className="p-2 rounded-xl bg-proton-accent/10 text-proton-accent hover:bg-proton-accent hover:text-proton-bg transition-all"
+                 title={language === 'ka' ? 'ახალი პერსონა' : 'Generate New Persona'}
+               >
+                 <Plus size={20} />
+               </button>
+            </div>
+            
+            <AnimatePresence>
+               {isGeneratingPersona && (
+                 <motion.div 
+                   initial={{ height: 0, opacity: 0 }}
+                   animate={{ height: 'auto', opacity: 1 }}
+                   exit={{ height: 0, opacity: 0 }}
+                   className="overflow-hidden space-y-3"
+                 >
+                   <input 
+                     type="text"
+                     value={personaPrompt}
+                     onChange={(e) => setPersonaPrompt(e.target.value)}
+                     placeholder={language === 'ka' ? 'რა ტიპის პერსონა გსურთ?' : 'What kind of persona?'}
+                     className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-2 text-xs focus:ring-1 focus:ring-proton-accent focus:outline-none"
+                   />
+                   <div className="flex gap-2">
+                      <button 
+                        onClick={handleGeneratePersona}
+                        disabled={loading || !personaPrompt.trim()}
+                        className="flex-1 bg-proton-accent text-proton-on-accent text-[10px] font-black uppercase py-2 rounded-lg"
+                      >
+                        {loading ? <Loader2 size={14} className="animate-spin mx-auto" /> : (language === 'ka' ? 'გენერაცია' : 'Generate')}
+                      </button>
+                      <button 
+                        onClick={() => setIsGeneratingPersona(false)}
+                        className="px-3 bg-proton-bg border border-proton-border text-proton-muted rounded-lg"
+                      >
+                        <X size={14} />
+                      </button>
+                   </div>
+                 </motion.div>
+               )}
+            </AnimatePresence>
+
+            <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{t.description}</p>
          </div>
 
          <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
             {personas.map(persona => (
-              <button
-                key={persona.id}
-                onClick={() => setSelectedPersona(persona)}
-                className={cn(
-                  "w-full text-left p-4 rounded-3xl border transition-all flex items-center gap-4 group",
-                  selectedPersona.id === persona.id 
-                    ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-xl shadow-proton-accent/20" 
-                    : "bg-proton-card border-proton-border hover:border-proton-accent/50"
-                )}
+              <div 
+                key={persona.id} 
+                className="relative group/item"
               >
-                <div className="text-3xl group-hover:scale-110 transition-transform">
-                  {customAvatars[persona.id] || persona.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                   <p className="font-bold truncate">{persona.name}</p>
-                   <p className={cn("text-[10px] font-bold uppercase tracking-widest", selectedPersona.id === persona.id ? "text-proton-on-accent/80" : "text-proton-muted")}>
-                      {persona.role}
-                   </p>
-                </div>
-              </button>
+                 <button
+                   onClick={() => setSelectedPersona(persona)}
+                   className={cn(
+                     "w-full text-left p-4 rounded-3xl border transition-all flex items-center gap-4 group",
+                     selectedPersona.id === persona.id 
+                       ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-xl shadow-proton-accent/20" 
+                       : "bg-proton-card border-proton-border hover:border-proton-accent/50"
+                   )}
+                 >
+                   <div className="text-3xl group-hover:scale-110 transition-transform">
+                      {customAvatars[persona.id] || persona.avatar}
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                         <p className="font-bold truncate">{language === 'ka' ? persona.nameGe : persona.name}</p>
+                      </div>
+                      <p className={cn("text-[10px] font-bold uppercase tracking-widest", selectedPersona.id === persona.id ? "text-proton-on-accent/80" : "text-proton-muted")}>
+                         {persona.role}
+                      </p>
+                   </div>
+                 </button>
+                 <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     onToggleFavorite(persona.id);
+                   }}
+                   className={cn(
+                     "absolute top-4 right-4 p-1.5 rounded-full transition-all",
+                     favoritePersonaIds.includes(persona.id)
+                       ? "text-amber-400 bg-amber-400/10"
+                       : "text-proton-muted opacity-0 group-hover/item:opacity-100 hover:bg-white/10"
+                   )}
+                 >
+                   <Star size={14} fill={favoritePersonaIds.includes(persona.id) ? "currentColor" : "none"} />
+                 </button>
+              </div>
             ))}
          </div>
       </div>
@@ -2106,21 +2203,77 @@ const PersonasView = ({
             <div className="flex items-center gap-4">
                <div className="text-3xl">{currentAvatar}</div>
                <div>
-                  <h3 className="font-bold text-lg">{selectedPersona.name}</h3>
+                  <h3 className="font-bold text-lg">{language === 'ka' ? selectedPersona.nameGe : selectedPersona.name}</h3>
                   <p className="text-xs text-proton-muted font-medium">{selectedPersona.role}</p>
                </div>
             </div>
-            <div className="flex items-center gap-2">
-               <div className={cn("w-2 h-2 rounded-full", isSystemActive ? "bg-green-500 animate-pulse" : "bg-proton-muted")} />
-               <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isSystemActive ? t.available : t.busy}</span>
+            <div className="flex items-center gap-4">
+               <button 
+                 onClick={() => setIsEditingInstructions(!isEditingInstructions)}
+                 className={cn(
+                   "p-2 rounded-xl transition-all",
+                   isEditingInstructions ? "bg-proton-accent text-proton-bg" : "bg-proton-bg border border-proton-border text-proton-muted hover:border-proton-accent/50"
+                 )}
+                 title={language === 'ka' ? 'ინსტრუქციების რედაქტირება' : 'Edit System Instructions'}
+               >
+                 <Settings size={18} />
+               </button>
+               <div className="h-8 w-px bg-proton-border/50" />
+               <div className="flex items-center gap-2">
+                  <div className={cn("w-2 h-2 rounded-full", isSystemActive ? "bg-green-500 animate-pulse" : "bg-proton-muted")} />
+                  <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isSystemActive ? t.available : t.busy}</span>
+               </div>
             </div>
          </div>
 
-         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+         <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar relative">
+            <AnimatePresence>
+               {isEditingInstructions && (
+                 <motion.div 
+                   initial={{ opacity: 0, y: -20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   exit={{ opacity: 0, y: -20 }}
+                   className="absolute inset-x-0 top-0 z-20 p-8 bg-proton-card/95 backdrop-blur shadow-xl border-b border-proton-border space-y-4"
+                 >
+                    <div className="flex items-center justify-between">
+                       <h4 className="text-[10px] font-black uppercase tracking-widest text-proton-accent">
+                          {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'System Instructions'}
+                       </h4>
+                       <button onClick={() => setIsEditingInstructions(false)} className="text-proton-muted">
+                          <X size={18} />
+                       </button>
+                    </div>
+                    <textarea 
+                      value={tempInstructions}
+                      onChange={(e) => setTempInstructions(e.target.value)}
+                      className="w-full h-48 bg-proton-bg border border-proton-border rounded-2xl p-4 text-xs font-medium focus:ring-1 focus:ring-proton-accent outline-none resize-none custom-scrollbar"
+                    />
+                    <div className="flex justify-end gap-3">
+                       <button 
+                         onClick={() => {
+                           setTempInstructions(selectedPersona.systemInstruction);
+                           setIsEditingInstructions(false);
+                         }}
+                         className="px-6 py-2 rounded-xl text-[10px] font-black uppercase text-proton-muted hover:text-proton-text transition-all"
+                       >
+                         {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                       </button>
+                       <button 
+                         onClick={handleSaveInstructions}
+                         className="flex items-center gap-2 px-6 py-2 rounded-xl bg-proton-accent text-proton-bg text-[10px] font-black uppercase shadow-lg shadow-proton-accent/20 hover:brightness-110 active:scale-95 transition-all"
+                       >
+                         <Save size={14} />
+                         {language === 'ka' ? 'შენახვა' : 'Save Changes'}
+                       </button>
+                    </div>
+                 </motion.div>
+               )}
+            </AnimatePresence>
+
             {messages.length === 0 ? (
                <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-20">
                   <MessageSquare size={48} className="mb-4 text-proton-muted" />
-                  <p className="text-sm font-bold uppercase tracking-[0.2em]">{t.start_convo.replace('{name}', selectedPersona.name)}</p>
+                  <p className="text-sm font-bold uppercase tracking-[0.2em]">{t.start_convo.replace('{name}', language === 'ka' ? selectedPersona.nameGe : selectedPersona.name)}</p>
                </div>
             ) : (
                messages.map((m, i) => (
@@ -2134,7 +2287,7 @@ const PersonasView = ({
                        {m.content}
                     </div>
                     <span className="text-[9px] font-bold text-proton-muted uppercase mt-2 px-2">
-                       {m.role === 'user' ? 'You' : selectedPersona.name} • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                       {m.role === 'user' ? 'You' : (language === 'ka' ? selectedPersona.nameGe : selectedPersona.name)} • {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                  </div>
                ))
@@ -2149,7 +2302,7 @@ const PersonasView = ({
                  value={input}
                  onChange={(e) => setInput(e.target.value)}
                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                 placeholder={t.chat_placeholder.replace('{name}', selectedPersona.name)}
+                 placeholder={t.chat_placeholder.replace('{name}', language === 'ka' ? selectedPersona.nameGe : selectedPersona.name)}
                  disabled={!isSystemActive || loading}
                  className="w-full bg-proton-card border border-proton-border rounded-2xl px-6 py-4 pr-16 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-proton-accent/20 focus:border-proton-accent transition-all shadow-inner"
                />

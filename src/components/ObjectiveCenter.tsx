@@ -6,12 +6,23 @@ import { cn } from '../lib/utils';
 
 export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterPriority, setFilterPriority] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'priority' | 'progress'>('priority');
+
+  const categories = ['Marketing', 'Operations', 'Product', 'Strategy', 'Infrastructure'];
+  const priorities = ['low', 'medium', 'high'];
+
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+
   const [objectives, setObjectives] = useState([
     {
       id: 'obj-1',
       title: language === 'ka' ? 'ბაზრის დომინაცია' : 'Market Domination',
       progress: 68,
       status: 'active',
+      priority: 'high',
+      category: 'Marketing',
       subtasks: [
         { label: language === 'ka' ? 'კონკურენტების ანალიზი' : 'Competitor Sync', completed: true },
         { label: language === 'ka' ? 'ფასების ოპტიმიზაცია' : 'Price Refactoring', completed: true },
@@ -23,6 +34,8 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
       title: language === 'ka' ? 'ოპერაციული ეფექტურობა' : 'Operational Efficiency',
       progress: 42,
       status: 'calibrating',
+      priority: 'medium',
+      category: 'Operations',
       subtasks: [
         { label: 'Process Optimization', completed: true },
         { label: 'Resource Allocation', completed: false },
@@ -34,6 +47,8 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
       title: language === 'ka' ? 'ბრენდის არქიტექტურა' : 'Brand Architecture',
       progress: 91,
       status: 'complete',
+      priority: 'low',
+      category: 'Product',
       subtasks: [
         { label: 'Visual ID', completed: true },
         { label: 'Messaging Matrix', completed: true },
@@ -41,6 +56,16 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
       ]
     }
   ]);
+
+  const filteredAndSortedObjectives = objectives
+    .filter(obj => (filterCategory === 'all' || obj.category === filterCategory))
+    .filter(obj => (filterPriority === 'all' || obj.priority === filterPriority))
+    .sort((a, b) => {
+      if (sortBy === 'priority') {
+        return priorityWeight[b.priority as keyof typeof priorityWeight] - priorityWeight[a.priority as keyof typeof priorityWeight];
+      }
+      return b.progress - a.progress;
+    });
 
   const toggleSubtask = (objId: string, taskIndex: number) => {
     setObjectives(prev => prev.map(obj => {
@@ -70,6 +95,8 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
         title: language === 'ka' ? 'ავტონომიური სკალირება' : 'Autonomous Scaling',
         progress: 0,
         status: 'calibrating',
+        priority: priorities[Math.floor(Math.random() * priorities.length)],
+        category: categories[Math.floor(Math.random() * categories.length)],
         subtasks: [
           { label: 'Node Distribution', completed: false },
           { label: 'Load Balancing', completed: false }
@@ -93,7 +120,37 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
           <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">Business Objective Monitoring</p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+           {/* Filters */}
+           <div className="flex items-center gap-2">
+              <select 
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="bg-proton-card border border-proton-border text-proton-text text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl focus:outline-none focus:border-proton-accent"
+              >
+                <option value="all">{language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}</option>
+                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+
+              <select 
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="bg-proton-card border border-proton-border text-proton-text text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl focus:outline-none focus:border-proton-accent"
+              >
+                <option value="all">{language === 'ka' ? 'ყველა პრიორიტეტი' : 'All Priorities'}</option>
+                {priorities.map(p => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+              </select>
+
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'priority' | 'progress')}
+                className="bg-proton-card border border-proton-border text-proton-text text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-xl focus:outline-none focus:border-proton-accent"
+              >
+                <option value="priority">{language === 'ka' ? 'სორტირება: პრიორიტეტი' : 'Sort: Priority'}</option>
+                <option value="progress">{language === 'ka' ? 'სორტირება: პროგრესი' : 'Sort: Progress'}</option>
+              </select>
+           </div>
+
           <button 
             onClick={generateObjective}
             disabled={isGenerating}
@@ -124,7 +181,7 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
         "grid gap-6",
         view === 'grid' ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"
       )}>
-        {objectives.map((obj, i) => (
+        {filteredAndSortedObjectives.map((obj, i) => (
           <motion.div 
             key={obj.id}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -135,6 +192,28 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
              <div className="p-8 space-y-8 relative z-10">
                 <div className="flex items-start justify-between">
                    <div className="space-y-1">
+                      <div className="flex flex-wrap gap-2 mb-2">
+                         <span className={cn(
+                           "px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border",
+                           obj.priority === 'high' ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                           obj.priority === 'medium' ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                           "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                         )}>
+                            {language === 'ka' ? (
+                              obj.priority === 'high' ? 'მაღალი' : 
+                              obj.priority === 'medium' ? 'საშუალო' : 'დაბალი'
+                            ) : obj.priority.toUpperCase()}
+                         </span>
+                         <span className="px-2 py-0.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-[8px] font-black uppercase tracking-wider">
+                            {language === 'ka' ? (
+                               obj.category === 'Marketing' ? 'მარკეტინგი' :
+                               obj.category === 'Operations' ? 'ოპერაციები' :
+                               obj.category === 'Product' ? 'პროდუქტი' :
+                               obj.category === 'Strategy' ? 'სტრატეგია' :
+                               obj.category === 'Infrastructure' ? 'ინფრასტრუქტურა' : obj.category
+                             ) : obj.category}
+                         </span>
+                      </div>
                       <h3 className="text-xl font-bold text-proton-text truncate">{obj.title}</h3>
                       <div className="flex items-center gap-2">
                          <div className={cn(
