@@ -13,7 +13,8 @@ import {
   History,
   Languages,
   Info,
-  ArrowLeft
+  ArrowLeft,
+  Zap
 } from 'lucide-react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { cn } from '../lib/utils';
@@ -65,6 +66,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   
   // Settings
   const [topLang, setTopLang] = useState('English');
@@ -104,6 +106,9 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
       recognition.current.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setPermissionError('Microphone access is blocked. Please enable it in your browser settings.');
+        }
         setIsRecording(false);
       };
     }
@@ -150,6 +155,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   };
 
   const startRecording = (side: 'top' | 'bottom') => {
+    setPermissionError(null);
     if (isRecording) {
       recognition.current?.stop();
       return;
@@ -283,6 +289,18 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
       {/* Center Divider / Controls */}
       <div className="h-px w-full bg-white/10 relative z-20">
+        <AnimatePresence>
+          {permissionError && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-72 bg-red-500/90 text-white p-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-center shadow-xl backdrop-blur-md border border-white/20"
+            >
+              {permissionError}
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-4">
           <div className={cn(
             "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 border bg-black transition-all",
