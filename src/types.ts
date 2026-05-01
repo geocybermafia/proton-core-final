@@ -23,4 +23,4 @@ export type GlobalAiSettings = {
 
 export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium';
 
-export type View = 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
+export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';

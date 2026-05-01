@@ -17,6 +17,7 @@ export const translations = {
       settings: "Settings",
       device: "Device",
       documentation: "About",
+      translator: "Translator",
       collapse: "Collapse",
       new: "New",
       bottom_nav: {
@@ -435,6 +436,7 @@ export const translations = {
       settings: "პარამეტრები",
       device: "მოწყობილობა",
       documentation: "შესახებ",
+      translator: "თარჯიმანი",
       collapse: "ჩაკეცვა",
       new: "ახალი",
       bottom_nav: {

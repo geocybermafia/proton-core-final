@@ -79,6 +79,7 @@ async function testConnection() {
   }
 }
 testConnection();
+import { TranslatorView } from './components/TranslatorView';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts';
@@ -154,7 +155,8 @@ import {
   Download,
   LogIn,
   History,
-  UserCheck
+  UserCheck,
+  Languages
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -3695,7 +3697,23 @@ export default function App() {
     localStorage.setItem('proton_ui_mode', uiMode);
   }, [uiMode]);
 
-  const [activeView, setActiveView] = useState<View>('dashboard');
+  // Routing / View logic
+  // Routing / View logic
+  const [activeView, setActiveView] = useState<View>(() => {
+    if (window.location.pathname === '/translator') return 'translator';
+    return 'dashboard';
+  });
+
+  useEffect(() => {
+    const handlePathChange = () => {
+      if (window.location.pathname === '/translator') {
+        setActiveView('translator');
+      }
+    };
+    window.addEventListener('popstate', handlePathChange);
+    return () => window.removeEventListener('popstate', handlePathChange);
+  }, []);
+  
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isArtisanSystemActive, setIsArtisanSystemActive] = useState<boolean>(false);
 
@@ -4262,6 +4280,10 @@ export default function App() {
   const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
   const t = translations[currentLanguage];
 
+  if (activeView === 'translator') {
+    return <TranslatorView onBack={() => setActiveView('dashboard')} />;
+  }
+
   return (
     <div className={cn(
       "flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
@@ -4405,6 +4427,14 @@ export default function App() {
               label={t.sidebar.image} 
               active={activeView === 'image'} 
               onClick={() => handleViewChange('image')} 
+              expanded={isSidebarOpen}
+              uiMode={uiMode}
+            />
+            <SidebarItem 
+              icon={Languages} 
+              label={t.sidebar.translator} 
+              active={(activeView as string) === 'translator'} 
+              onClick={() => handleViewChange('translator')} 
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
