@@ -19,8 +19,9 @@ interface CabinetViewProps {
   user: any;
   onSignIn: () => void;
   onSignOut: () => void;
-  uiMode: 'operator' | 'artisan';
-  stats: { storageGB: number, computeTimeHours: number, aiTokens: number, computeCycles?: number, node_id?: string };
+  uiMode: 'business' | 'creative';
+  setUiMode: React.Dispatch<React.SetStateAction<'business' | 'creative'>>;
+  stats: { storageGB: number, workHours: number, aiEnergy: number, productivity?: number, node_id?: string };
   onNavigate: (view: any) => void;
 }
 
@@ -32,6 +33,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
   onSignIn,
   onSignOut,
   uiMode,
+  setUiMode,
   stats: userStats,
   onNavigate
 }) => {
@@ -76,6 +78,10 @@ const CabinetView: React.FC<CabinetViewProps> = ({
     { id: 3, type: 'ai', label: language === 'ka' ? 'AI გენერაცია' : 'AI Generation', time: '14:20', date: '27 APR', icon: Zap, color: 'text-purple-500', bg: 'bg-purple-50' },
   ];
 
+  const handleModeChange = (mode: 'business' | 'creative') => {
+    setUiMode(mode);
+  };
+
   const profileStrength = useMemo(() => {
     let score = 20;
     if (user?.displayName) score += 20;
@@ -116,7 +122,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
               {user && (
                 <span className="px-3 py-1 bg-proton-accent/10 text-[9px] font-black text-proton-accent rounded-full uppercase tracking-[0.2em] border border-proton-accent/20 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
-                  K-ID: {userStats.node_id || user.uid.slice(0, 8)}
+                  ID: {userStats.node_id || user.uid.slice(0, 8)}
                 </span>
               )}
             </div>
@@ -176,6 +182,67 @@ const CabinetView: React.FC<CabinetViewProps> = ({
           >
             {/* Stats Summary */}
             <div className="lg:col-span-2 space-y-8">
+              {/* SYSTEM MODE SELECTOR */}
+              <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 relative overflow-hidden">
+                <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
+                   <div>
+                      <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">{language === 'ka' ? 'სამუშაო რეჟიმი' : 'System Work Mode'}</h3>
+                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest mt-1">{language === 'ka' ? 'აირჩიეთ თქვენი მიმართულება' : 'Choose your direction'}</p>
+                   </div>
+                   <div className="flex bg-proton-bg p-1.5 rounded-2xl border border-proton-border">
+                      <button 
+                        onClick={() => handleModeChange('business')}
+                        className={cn(
+                          "px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                          uiMode === 'business' ? "bg-blue-500 text-white shadow-lg" : "text-proton-muted hover:text-proton-text"
+                        )}
+                      >
+                         {language === 'ka' ? 'ბიზნესი' : 'BUSINESS'}
+                      </button>
+                      <button 
+                        onClick={() => handleModeChange('creative')}
+                        className={cn(
+                          "px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                          uiMode === 'creative' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
+                        )}
+                      >
+                         {language === 'ka' ? 'შემოქმედება' : 'CREATIVE'}
+                      </button>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className={cn(
+                     "p-6 rounded-3xl border transition-all",
+                     uiMode === 'business' ? "bg-blue-500/5 border-blue-500/20" : "bg-proton-bg/20 border-proton-border/50 opacity-40"
+                   )}>
+                      <div className="flex items-center gap-3 mb-4">
+                         <Activity className="text-blue-500" size={20} />
+                         <h4 className="text-sm font-black text-proton-text uppercase tracking-tight">{language === 'ka' ? 'ბიზნესი და მართვა' : 'Business & Management'}</h4>
+                      </div>
+                      <p className="text-[10px] text-proton-muted font-bold leading-relaxed uppercase tracking-wide">
+                        {language === 'ka' 
+                          ? 'ფოკუსირებულია პროცესების მართვაზე, მასშტაბირებაზე და ავტომატიზაციაზე.' 
+                          : 'Focused on process management, scaling, and automation.'}
+                      </p>
+                   </div>
+                   <div className={cn(
+                     "p-6 rounded-3xl border transition-all",
+                     uiMode === 'creative' ? "bg-proton-accent/5 border-proton-accent/20" : "bg-proton-bg/20 border-proton-border/50 opacity-40"
+                   )}>
+                      <div className="flex items-center gap-3 mb-4">
+                         <Zap className="text-proton-accent" size={20} />
+                         <h4 className="text-sm font-black text-proton-text uppercase tracking-tight">{language === 'ka' ? 'შემოქმედება და ხარისხი' : 'Creation & Quality'}</h4>
+                      </div>
+                      <p className="text-[10px] text-proton-muted font-bold leading-relaxed uppercase tracking-wide">
+                        {language === 'ka' 
+                          ? 'ფოკუსირებულია დეტალურ მუშაობაზე, პრეციზიასა და ინდივიდუალურ შემოქმედებაზე.' 
+                          : 'Focused on detailed execution, precision, and individual creativity.'}
+                      </p>
+                   </div>
+                </div>
+              </div>
+
               <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 shadow-2xl relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-10 relative z-10 gap-4">
@@ -197,46 +264,149 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                       <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.storage}</span>
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.storageGB.toFixed(1)}</span>
+                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.storageGB.toFixed(2)}</span>
                       <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">GB</span>
                     </div>
                     <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
                       <div 
                         className="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
-                        style={{ width: `${Math.min((userStats.storageGB / 10) * 100, 100)}%` }} 
+                        style={{ width: `${Math.min((userStats.storageGB / 5) * 100, 100)}%` }} 
                       />
                     </div>
                   </div>
 
-                  {/* Compute Time */}
+                  {/* Work Time */}
                   <div className="space-y-3 group">
                     <div className="flex items-center gap-3 text-proton-muted group-hover:text-amber-400 transition-colors">
                       <Clock size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.compute_time}</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.work_time}</span>
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.computeTimeHours.toFixed(0)}</span>
+                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.workHours.toFixed(1)}</span>
                       <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">H</span>
                     </div>
                     <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
-                      <div className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: '65%' }} />
+                      <div className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: '72%' }} />
                     </div>
                   </div>
 
-                  {/* Compute Cycles */}
+                  {/* Productivity */}
                   <div className="space-y-3 group">
                     <div className="flex items-center gap-3 text-proton-muted group-hover:text-proton-accent transition-colors">
                       <Zap size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Compute Cycles</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{language === 'ka' ? 'ეფექტურობა' : 'Efficiency'}</span>
                     </div>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.computeCycles || 0}</span>
-                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">LN</span>
+                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.productivity || 0}</span>
+                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">%</span>
                     </div>
                     <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
-                      <div className="h-full bg-proton-accent rounded-full shadow-[0_0_10px_rgba(0,242,255,0.5)]" style={{ width: '42%' }} />
+                      <div className="h-full bg-proton-accent rounded-full shadow-[0_0_10px_rgba(0,242,255,0.5)]" style={{ width: `${userStats.productivity || 0}%` }} />
                     </div>
                   </div>
+                </div>
+
+                {/* MODES & ROADMAP ENHANCEMENT */}
+                <div className="mt-12 p-8 rounded-[32px] bg-proton-bg/20 border border-proton-border/30 relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    {uiMode === 'operator' ? <Activity size={120} /> : <Zap size={120} />}
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-between mb-8 relative z-10 gap-4">
+                    <div>
+                      <h3 className="text-lg font-black text-proton-text uppercase tracking-tight italic">
+                        {uiMode === 'business' ? t.business_roadmap : t.creative_roadmap}
+                      </h3>
+                      <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest mt-1 opacity-70">
+                        {t.roadmap_desc}
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest",
+                      uiMode === 'business' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" : "bg-proton-accent/10 border-proton-accent/20 text-proton-accent"
+                    )}>
+                      {uiMode === 'business' ? "Scale Phase: Growth" : "Craft Phase: Mastery"}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
+                    {(uiMode === 'business' ? t.business_features : t.creative_features).map((feature: string, i: number) => (
+                      <div key={i} className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black text-proton-text uppercase tracking-wider">{feature}</span>
+                          <span className="text-[10px] font-mono text-proton-muted">{15 + i * 25}%</span>
+                        </div>
+                        <div className="h-1 w-full bg-proton-bg/60 rounded-full overflow-hidden">
+                           <motion.div 
+                             initial={{ width: 0 }}
+                             animate={{ width: `${15 + i * 25}%` }}
+                             className={cn("h-full rounded-full", uiMode === 'business' ? "bg-blue-500" : "bg-proton-accent")}
+                           />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* STRATEGIC ADVANCEMENT PLAN */}
+                <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 relative overflow-hidden">
+                   <div className="flex items-center gap-4 mb-10">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-xl">
+                         <Star size={24} className="fill-current animate-pulse" />
+                      </div>
+                      <div>
+                         <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">
+                            {language === 'ka' ? 'განვითარების გეგმა' : 'Growth & Mastery Plan'}
+                         </h3>
+                         <p className="text-[10px] text-proton-muted font-black uppercase tracking-[0.2em] mt-1">
+                            {language === 'ka' ? 'თქვენი შემდეგი ეტაპები' : 'Your next major milestones'}
+                         </p>
+                      </div>
+                   </div>
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                         {[
+                           { label: uiMode === 'business' ? (language === 'ka' ? 'კაპიტალის მობილიზება' : 'Capital Sourcing') : (language === 'ka' ? 'ახალი იარაღები' : 'Digital Crafting Tools'), desc: uiMode === 'business' ? (language === 'ka' ? 'ახალი ფინანსური არხების და რესურსების გახსნა.' : 'Unlock new funding channels and resources.') : (language === 'ka' ? 'მაღალი სიზუსტის ციფრული ხელსაწყოების შეძენა.' : 'Acquire high-precision digital tools.'), status: 'upcoming' },
+                           { label: uiMode === 'business' ? (language === 'ka' ? 'პროცესების სინთეზი' : 'Workflow Synthesis') : (language === 'ka' ? 'სტილის დასრულება' : 'Signature Refinement'), desc: uiMode === 'business' ? (language === 'ka' ? 'რამდენიმე სამუშაო პროცესის ერთიან ნაკადად გაერთიანება.' : 'Combine multiple workflows into a single stream.') : (language === 'ka' ? 'თქვენი უნიკალური ნამუშევრების ხარისხის გაუმჯობესება.' : 'Enhance the unique fingerprint of your work.'), status: 'active' },
+                         ].map((goal, i) => (
+                           <div key={i} className="p-6 rounded-3xl bg-proton-bg/40 border border-proton-border/50 relative group hover:border-proton-accent/30 transition-all">
+                              <div className="flex items-start justify-between gap-4">
+                                 <div>
+                                    <h4 className="text-sm font-black text-proton-text uppercase tracking-tight mb-2">{goal.label}</h4>
+                                    <p className="text-[10px] text-proton-muted font-bold tracking-wide uppercase leading-relaxed">{goal.desc}</p>
+                                 </div>
+                                 <div className={cn(
+                                   "px-2 py-1 rounded text-[8px] font-black uppercase whitespace-nowrap",
+                                   goal.status === 'active' ? "bg-proton-accent/10 text-proton-accent" : "bg-proton-bg border border-proton-border text-proton-muted"
+                                 )}>
+                                   {goal.status}
+                                 </div>
+                              </div>
+                           </div>
+                         ))}
+                      </div>
+                      <div className="p-8 rounded-[40px] bg-proton-accent/5 border border-proton-accent/10 flex flex-col items-center justify-center text-center">
+                         <div className="w-20 h-20 rounded-full bg-proton-bg border border-proton-accent flex items-center justify-center text-proton-accent mb-6 shadow-2xl relative">
+                            <div className="absolute inset-0 bg-proton-accent/20 rounded-full animate-ping" />
+                            <Zap size={32} />
+                         </div>
+                         <h4 className="text-lg font-black text-proton-text uppercase italic tracking-tight mb-3">
+                           {language === 'ka' ? 'სტრატეგიული ნახტომი' : 'Next Strategic Jump'}
+                         </h4>
+                         <p className="text-xs text-proton-muted font-bold tracking-tight uppercase leading-relaxed max-w-[200px] mb-8 opacity-70">
+                           {uiMode === 'business' 
+                             ? (language === 'ka' ? 'მიაღწიეთ 1,000 ავტომატიზირებულ ციკლს ახალი შესაძლებლობებისთვის.' : 'Reach 1,000 automated cycles to unlock new features.') 
+                             : (language === 'ka' ? 'დაასრულეთ 5 პრემიუმ პროექტი ოსტატის სტატუსის მისაღებად.' : 'Complete 5 premium projects to reach Master status.')}
+                         </p>
+                         <button className={cn(
+                           "px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95",
+                           uiMode === 'operator' ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-proton-accent text-proton-bg hover:scale-105"
+                         )}>
+                            {language === 'ka' ? 'გეგმის გააქტიურება' : 'Deploy Next Step'}
+                         </button>
+                      </div>
+                   </div>
                 </div>
 
                 {/* Quick Actions Hub */}

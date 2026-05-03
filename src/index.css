@@ -116,13 +116,13 @@
     @apply overflow-x-hidden;
   }
 
-  :root[data-ui-mode="artisan"] {
-    /* Artisan specific tweaks can go here if needed per theme */
+  :root[data-ui-mode="creative"] {
+    /* Creative specific tweaks can go here if needed per theme */
     --shadow-artisan: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   }
 }
 
-.ui-artisan .proton-glass {
+.ui-creative .proton-glass {
   @apply backdrop-blur-[12px] bg-proton-card/75 border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)];
 }
 
@@ -130,7 +130,7 @@
   @apply bg-white/60 border-slate-200/50 backdrop-blur-xl shadow-xl shadow-slate-200/20;
 }
 
-.ui-operator .proton-glass {
+.ui-business .proton-glass {
   @apply bg-proton-card border-proton-border;
 }
 

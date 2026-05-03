@@ -35,8 +35,8 @@ interface SettingsViewProps {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   language: 'en' | 'ka';
-  uiMode: 'operator' | 'artisan';
-  setUiMode: (mode: 'operator' | 'artisan') => void;
+  uiMode: 'business' | 'creative';
+  setUiMode: (mode: 'business' | 'creative') => void;
 }
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
@@ -230,27 +230,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     <div className={cn(
                       "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
-                      uiMode === 'artisan' ? "bg-proton-accent/10 border-proton-accent/40 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
-                    )} onClick={() => setUiMode(uiMode === 'operator' ? 'artisan' : 'operator')}>
+                      uiMode === 'creative' ? "bg-proton-accent/10 border-proton-accent/40 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
+                    )} onClick={() => setUiMode(uiMode === 'business' ? 'creative' : 'business')}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
                           "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
-                          uiMode === 'artisan' ? "bg-proton-accent text-proton-bg shadow-lg" : "bg-proton-secondary/20 text-proton-muted"
+                          uiMode === 'creative' ? "bg-proton-accent text-proton-bg shadow-lg" : "bg-proton-secondary/20 text-proton-muted"
                         )}>
                           <Sparkles size={28} />
                         </div>
                         <div className="flex-1">
-                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">{t.autonomous_mode}</label>
-                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">{t.autonomous_mode_desc}</p>
+                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">{language === 'ka' ? 'კრეატიული რეჟიმი' : 'Creative Mode'}</label>
+                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">{language === 'ka' ? 'ფოკუსი შემოქმედებაზე და დეტალებზე' : 'Focus on creation and meticulous details'}</p>
                         </div>
                       </div>
                       <div className={cn(
                         "w-12 h-6 rounded-full relative transition-all border border-proton-border shrink-0",
-                        uiMode === 'artisan' ? "bg-proton-accent border-proton-accent" : "bg-proton-secondary/30"
+                        uiMode === 'creative' ? "bg-proton-accent border-proton-accent" : "bg-proton-secondary/30"
                       )}>
                         <div className={cn(
                           "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-md",
-                          uiMode === 'artisan' ? "right-0.5" : "left-0.5"
+                          uiMode === 'creative' ? "right-0.5" : "left-0.5"
                         )} />
                       </div>
                     </div>

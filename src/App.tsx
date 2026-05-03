@@ -207,7 +207,7 @@ const SidebarItem = React.memo(({
   active, 
   onClick,
   expanded = true,
-  uiMode = 'operator',
+  uiMode = 'business',
   badge
 }: { 
   icon: any, 
@@ -215,7 +215,7 @@ const SidebarItem = React.memo(({
   active: boolean, 
   onClick: () => void,
   expanded?: boolean,
-  uiMode?: 'operator' | 'artisan',
+  uiMode?: 'business' | 'creative',
   badge?: string
 }) => (
   <button
@@ -420,8 +420,8 @@ const SystemGraph = () => {
     <div className="h-48 w-full bg-proton-bg/40 rounded-3xl border border-proton-border p-4 relative overflow-hidden group flex flex-col">
       <div className="absolute inset-0 bg-gradient-to-t from-proton-accent/[0.02] to-transparent pointer-events-none" />
       <div className="absolute top-4 left-4 z-10">
-        <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1">Compute Core Analysis</p>
-        <p className="text-xl font-black text-proton-accent tracking-tighter">NODE_ALFA_7</p>
+        <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1">System Analysis</p>
+        <p className="text-xl font-black text-proton-accent tracking-tighter">{language === 'ka' ? 'პირადი-პორტალი' : 'SECURE_HUB_7'}</p>
       </div>
       
       <div className="flex-1 w-full mt-4 min-h-0 min-w-0 overflow-hidden">
@@ -1414,7 +1414,7 @@ const DashboardView = ({
   return (
     <div className={cn(
       "space-y-6 animate-in fade-in duration-300 pb-20",
-      uiMode === 'artisan' ? "artisan-mode" : "operator-mode"
+      uiMode === 'creative' ? "creative-mode" : "business-mode"
     )}>
       <div className={cn(
         "p-8 rounded-[40px] border shadow-2xl relative overflow-hidden transition-all duration-500",
@@ -1457,7 +1457,7 @@ const DashboardView = ({
         </div>
       </div>
 
-      {uiMode === 'operator' ? (
+      {uiMode === 'business' ? (
         <div className="space-y-8">
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div 
@@ -2448,7 +2448,7 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
   );
 };
 
-const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', language: 'en' | 'ka' }) => {
+const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', language: 'en' | 'ka' }) => {
   const { address, isConnected } = useAccount();
   const t = translations[language].finance;
   const { data: balance } = useBalance({
@@ -2722,7 +2722,7 @@ const Web3View = ({ uiMode, language }: { uiMode: 'operator' | 'artisan', langua
 
 
 
-const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'operator' | 'artisan', isSystemActive?: boolean, language: 'en' | 'ka' }) => {
+const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'business' | 'creative', isSystemActive?: boolean, language: 'en' | 'ka' }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -3280,33 +3280,33 @@ const FlashOverlay = ({ mode }: { mode: 'operator' | 'artisan' }) => (
   </motion.div>
 );
 
-const ModeToggle = ({ mode, setMode, language }: { mode: 'operator' | 'artisan', setMode: (m: 'operator' | 'artisan') => void, t: any, language: string }) => (
+const ModeToggle = ({ mode, setMode, language }: { mode: 'business' | 'creative', setMode: (m: 'business' | 'creative') => void, t: any, language: string }) => (
   <div className="relative p-1 bg-proton-bg/50 backdrop-blur-md rounded-2xl border border-proton-border shadow-inner flex shrink-0">
     <div 
       className={cn(
         "absolute top-1 bottom-1 w-[calc(50%-4px)] transition-all duration-200 rounded-xl",
-        mode === 'operator' ? "left-1 bg-proton-accent" : "left-[calc(50%+2px)] bg-amber-500"
+        mode === 'business' ? "left-1 bg-proton-accent" : "left-[calc(50%+2px)] bg-amber-500"
       )}
     />
     <button 
-      onClick={() => setMode('operator')}
+      onClick={() => setMode('business')}
       className={cn(
         "relative z-10 flex-1 px-3 md:px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2",
-        mode === 'operator' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+        mode === 'business' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
       )}
     >
-      <Terminal size={14} className="shrink-0" />
+      <Activity size={14} className="shrink-0" />
       <span className="hidden sm:inline">{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>
     </button>
     <button 
-      onClick={() => setMode('artisan')}
+      onClick={() => setMode('creative')}
       className={cn(
         "relative z-10 flex-1 px-3 md:px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2",
-        mode === 'artisan' ? "text-black" : "text-proton-muted hover:text-proton-text"
+        mode === 'creative' ? "text-black" : "text-proton-muted hover:text-proton-text"
       )}
     >
-       <Wrench size={14} className="shrink-0" />
-       <span className="hidden sm:inline">{language === 'ka' ? 'ხელოსანი' : 'Artisan'}</span>
+       <Sparkles size={14} className="shrink-0" />
+       <span className="hidden sm:inline">{language === 'ka' ? 'შემოქმედი' : 'Creative'}</span>
     </button>
   </div>
 );
@@ -3320,12 +3320,12 @@ const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }
 ];
 
 export default function App() {
-  const [uiMode, setUiMode] = useState<'operator' | 'artisan'>(
-    (localStorage.getItem('proton_ui_mode') as 'operator' | 'artisan') || 'operator'
+  const [uiMode, setUiMode] = useState<'business' | 'creative'>(
+    (localStorage.getItem('proton_ui_mode') as 'business' | 'creative') || 'business'
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const handleModeChange = (newMode: 'operator' | 'artisan') => {
+  const handleModeChange = (newMode: 'business' | 'creative') => {
     if (newMode === uiMode) return;
     setIsTransitioning(true);
     setUiMode(newMode);
@@ -3521,16 +3521,16 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userStats, setUserStats] = useState<{
     storageGB: number;
-    computeTimeHours: number;
-    aiTokens: number;
-    computeCycles?: number;
+    workHours: number;
+    aiEnergy: number;
+    productivity?: number;
     node_id?: string;
   }>({
-    storageGB: 0,
-    computeTimeHours: 0,
-    aiTokens: 0,
-    computeCycles: 0,
-    node_id: 'GUEST-NODE'
+    storageGB: 1.42,
+    workHours: 142.5,
+    aiEnergy: 84,
+    productivity: 92,
+    node_id: 'PN-4299-GE'
   });
 
   useEffect(() => {
@@ -3927,7 +3927,7 @@ export default function App() {
   return (
     <div className={cn(
       "flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
-      uiMode === 'artisan' ? "ui-artisan" : "ui-operator"
+      uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
       <AnimatePresence>
         {isTransitioning && (
@@ -4383,6 +4383,7 @@ export default function App() {
                   onSignIn={handleGoogleSignIn}
                   onSignOut={handleSignOut}
                   uiMode={uiMode}
+                  setUiMode={setUiMode}
                   stats={userStats}
                   onNavigate={handleViewChange}
                 />
