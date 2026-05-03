@@ -215,6 +215,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     if (status === 'starting' || status === 'recording') {
       setStatus('stopping');
       recognition.current?.stop();
+      if (navigator.vibrate) navigator.vibrate(5);
     }
   };
 
@@ -405,10 +406,20 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
           <div className="mt-8 lg:mt-auto flex justify-center pb-4 lg:pb-12">
             <button 
-              onPointerDown={() => startRecording('top')}
-              onPointerUp={stopRecording}
-              onPointerLeave={stopRecording}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                startRecording('top');
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault();
+                stopRecording();
+              }}
+              onPointerCancel={(e) => {
+                e.preventDefault();
+                stopRecording();
+              }}
               disabled={status === 'processing'}
+              style={{ touchAction: 'none' }}
               className={cn(
                 "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
                 activeSide === 'top' && (status === 'recording' || status === 'starting') 
@@ -535,10 +546,20 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
         <div className="mt-8 lg:mt-auto flex flex-col items-center justify-center pb-4 lg:pb-12 space-y-4">
           <button 
-            onPointerDown={() => startRecording('bottom')}
-            onPointerUp={stopRecording}
-            onPointerLeave={stopRecording}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              startRecording('bottom');
+            }}
+            onPointerUp={(e) => {
+              e.preventDefault();
+              stopRecording();
+            }}
+            onPointerCancel={(e) => {
+              e.preventDefault();
+              stopRecording();
+            }}
             disabled={status === 'processing'}
+            style={{ touchAction: 'none' }}
             className={cn(
               "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
               activeSide === 'bottom' && (status === 'recording' || status === 'starting') 

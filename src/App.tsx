@@ -3454,6 +3454,24 @@ const CabinetView = ({
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-12 flex flex-wrap gap-4 relative z-10">
+                   <button 
+                     onClick={() => onNavigate('finance')}
+                     className="px-6 py-3 bg-proton-accent text-proton-bg rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 group hover:scale-105 transition-all shadow-xl shadow-proton-accent/20"
+                   >
+                     <Wallet size={16} />
+                     {language === 'ka' ? 'ფინანსების მართვა' : 'Manage Finance'}
+                     <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                   </button>
+                   <button 
+                     onClick={() => setCabinetTab('modules')}
+                     className="px-6 py-3 bg-proton-bg border border-proton-border text-proton-text rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:border-proton-accent transition-all"
+                   >
+                     <Layers size={16} />
+                     {language === 'ka' ? 'ყველა ხელსაწყო' : 'All Modules'}
+                   </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -4596,6 +4614,7 @@ export default function App() {
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
+          { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance' },
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
           { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
         ].map((item) => (
@@ -4666,9 +4685,9 @@ export default function App() {
             <nav className="hidden xl:flex items-center gap-6">
               {[
                 { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
-                { id: 'blueprints', label: t.sidebar.blueprints, icon: Workflow },
                 { id: 'personas', label: t.sidebar.agents, icon: Users },
-                { id: 'compute', label: 'Diagnostics', icon: Activity },
+                { id: 'finance', label: language === 'ka' ? 'ფინანსები' : 'Finance', icon: Wallet },
+                { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
               ].map((link) => (
                 <button
                   key={link.id}
@@ -4685,9 +4704,9 @@ export default function App() {
             </nav>
 
             <div className="h-8 w-px bg-proton-border/50 hidden xl:block" />
-            <div className="hidden md:block">
-              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
-            </div>
+                  <div className="flex-1 md:flex-none">
+                    <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+                  </div>
           </div>
           
           <div className="flex items-center gap-3 md:gap-6">
@@ -4712,14 +4731,12 @@ export default function App() {
               </button>
             </div>
 
-            <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
-
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2 md:gap-3 ml-auto">
               <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
-              <div className="hidden md:flex items-center gap-3">
+              <div className="flex items-center gap-2 md:gap-3">
                 <button 
                   onClick={handleSignOut}
-                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-secondary hover:border-proton-secondary transition-all"
+                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all"
                   title="Firebase Sign Out"
                 >
                   <LogOut size={18} />
@@ -4729,7 +4746,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 md:px-10 py-10 relative z-10 custom-scrollbar-minimal">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 relative z-10 custom-scrollbar-minimal">
           <div className="max-w-7xl mx-auto h-full px-1">
             <AnimatePresence mode="wait">
               <motion.div
