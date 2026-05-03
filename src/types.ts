@@ -21,6 +21,9 @@ export type GlobalAiSettings = {
   voice: string;
 };
 
+export type ChatMessage = { role: 'user' | 'model', content: string, timestamp: number };
+export type PersonaHistory = { [personaId: string]: ChatMessage[] };
+
 export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium';
 
 export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
