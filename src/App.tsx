@@ -4191,7 +4191,7 @@ export default function App() {
           
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="mt-4 flex items-center justify-center w-full py-2 text-proton-muted hover:text-proton-accent transition-colors"
+            className="mt-4 flex items-center justify-center w-full py-2 text-proton-muted hover:text-proton-accent transition-colors hidden md:flex"
           >
             <div className={cn("transition-transform duration-700", isSidebarOpen && "rotate-180")}>
               <ChevronRight size={18} />
@@ -4235,19 +4235,17 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 z-40 bg-proton-card sticky top-0 backdrop-blur-md">
-          <div className="flex items-center gap-3 md:gap-8">
+        <header className="min-h-20 h-auto md:h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-0 gap-x-4 flex-wrap md:flex-nowrap z-40 bg-proton-card sticky top-0 backdrop-blur-md">
+          {/* Left Section: User & Status */}
+          <div className="flex items-center gap-3 sm:gap-4 md:gap-8 shrink-0">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all"
+              className="md:hidden w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all shrink-0"
             >
               <Grid size={20} />
             </button>
 
-            <div className="flex md:hidden">
-            </div>
-
-            <div className="flex items-center gap-3 md:gap-4 md:border-r md:border-proton-border md:pr-8 md:mr-2 cursor-pointer group" onClick={() => handleViewChange('profile')}>
+            <div className="flex items-center gap-3 md:gap-4 cursor-pointer group shrink-0" onClick={() => handleViewChange('profile')}>
               <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-lg group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -4257,7 +4255,7 @@ export default function App() {
               </div>
               <div className="flex flex-col min-w-0">
                 <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-2">
-                  <span className="text-xs md:text-sm font-black text-proton-text uppercase tracking-tight leading-none truncate max-w-[80px] sm:max-w-none">
+                  <span className="text-xs md:text-sm font-black text-proton-text uppercase tracking-tight leading-none truncate max-w-[80px] sm:max-w-[120px]">
                     {user?.displayName || user?.email?.split('@')[0] || 'Explorer'}
                   </span>
                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 transition-all w-fit">
@@ -4268,44 +4266,45 @@ export default function App() {
                   </div>
                 </div>
                 <div className="hidden sm:flex flex-col min-w-0">
-                  <span className="text-[8px] md:text-[9px] font-bold text-proton-muted uppercase tracking-widest">REGION: <span className="text-proton-accent">{userProfile.region || 'GLOBAL'}</span></span>
+                  <span className="text-[8px] md:text-[9px] font-bold text-proton-muted uppercase tracking-widest truncate">REGION: <span className="text-proton-accent">{userProfile.region || 'GLOBAL'}</span></span>
                 </div>
               </div>
             </div>
-
-            <nav className="hidden xl:flex items-center gap-6">
-              {[
-                { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
-                { id: 'personas', label: t.sidebar.agents, icon: Users },
-                { id: 'finance', label: language === 'ka' ? 'ფინანსები' : 'Finance', icon: Wallet },
-                { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
-              ].map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => handleViewChange(link.id as any)}
-                  className={cn(
-                    "text-[10px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-xl transition-all flex items-center gap-2",
-                    activeView === link.id ? "bg-proton-accent/10 text-proton-accent" : "text-proton-muted hover:text-proton-text"
-                  )}
-                >
-                  <link.icon size={14} />
-                  {link.label}
-                </button>
-              ))}
-            </nav>
-
-            <div className="h-8 w-px bg-proton-border/50 hidden xl:block" />
-                  <div className="flex-1 md:flex-none">
-                    <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
-                  </div>
           </div>
+
+          {/* Center Section: Main Navigation */}
+          <nav className="hidden xl:flex items-center justify-center gap-2 md:gap-4 lg:gap-6 flex-1 min-w-0 px-4">
+            {[
+              { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
+              { id: 'personas', label: t.sidebar.agents, icon: Users },
+              { id: 'finance', label: language === 'ka' ? 'ფინანსები' : 'Finance', icon: Wallet },
+              { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
+            ].map((link) => (
+              <button
+                key={link.id}
+                onClick={() => handleViewChange(link.id as any)}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap",
+                  activeView === link.id ? "bg-proton-accent/10 text-proton-accent" : "text-proton-muted hover:text-proton-text"
+                )}
+              >
+                <link.icon size={14} />
+                {link.label}
+              </button>
+            ))}
+          </nav>
           
-          <div className="flex items-center gap-3 md:gap-6">
-            <div className="hidden md:flex items-center gap-1.5 md:gap-3 bg-proton-bg border border-proton-border p-1 rounded-2xl shrink-0">
+          {/* Right Section: System Controls & Mode */}
+          <div className="flex items-center justify-end gap-3 md:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
+            <div className="hidden sm:block">
+              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+            </div>
+
+            <div className="flex items-center gap-1.5 md:gap-2 bg-proton-bg border border-proton-border p-1 rounded-2xl shrink-0">
               <button 
                 onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
                 className={cn(
-                  "px-2 md:px-4 py-1.5 text-[9px] md:text-[10px] font-black rounded-xl transition-all",
+                  "px-2 md:px-3 py-1.5 text-[9px] md:text-[10px] font-black rounded-xl transition-all",
                   userProfile.language === 'en' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
                 )}
               >
@@ -4314,7 +4313,7 @@ export default function App() {
               <button 
                 onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
                 className={cn(
-                  "px-2 md:px-4 py-1.5 text-[9px] md:text-[10px] font-black rounded-xl transition-all",
+                  "px-2 md:px-3 py-1.5 text-[9px] md:text-[10px] font-black rounded-xl transition-all",
                   userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
                 )}
               >
@@ -4322,18 +4321,16 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-3 ml-auto">
+            <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <DarkModeToggle theme={theme} setTheme={setTheme} language={language} minimal />
               <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
-              <div className="flex items-center gap-2 md:gap-3">
-                <button 
-                  onClick={handleSignOut}
-                  className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all"
-                  title="Firebase Sign Out"
-                >
-                  <LogOut size={18} />
-                </button>
-              </div>
+              <button 
+                onClick={handleSignOut}
+                className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0"
+                title="Firebase Sign Out"
+              >
+                <LogOut size={18} />
+              </button>
             </div>
           </div>
         </header>
