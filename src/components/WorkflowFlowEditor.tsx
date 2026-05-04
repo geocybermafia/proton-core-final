@@ -112,7 +112,7 @@ export const WorkflowFlowEditor = ({
   workflow: Workflow, 
   onSave: (wf: any) => void, 
   personas: any[],
-  uiMode?: 'operator' | 'artisan'
+  uiMode?: 'business' | 'creative'
 }) => {
   const handleNodeDataChange = useCallback((nodeId: string, field: string, value: string) => {
     setNodes((nds) => 

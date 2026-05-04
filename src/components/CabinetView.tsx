@@ -21,7 +21,7 @@ interface CabinetViewProps {
   onSignOut: () => void;
   uiMode: 'business' | 'creative';
   setUiMode: React.Dispatch<React.SetStateAction<'business' | 'creative'>>;
-  stats: { storageGB: number, workHours: number, aiEnergy: number, productivity?: number, node_id?: string };
+  stats: { storageGB: number, workHours: number, aiEnergy: number, productivity?: number, node_id?: string, aiTokens: number, computeTimeHours: number };
   onNavigate: (view: any) => void;
 }
 
@@ -56,7 +56,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
     { id: 'device', icon: Cpu, label: language === 'ka' ? 'მოწყობილობა' : 'Hardware', desc: language === 'ka' ? 'სისტემური რესურსების მართვა' : 'System resources management', color: 'text-amber-500', border: 'border-amber-500/20', bg: 'bg-amber-500/5', badge: 'v2.4' },
     { id: 'documentation', icon: FileText, label: language === 'ka' ? 'დოკუმენტაცია' : 'Docs', desc: language === 'ka' ? 'სისტემური სახელმძღვანელო' : 'System documentation', color: 'text-emerald-500', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
     { id: 'settings', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings', desc: language === 'ka' ? 'ინტერფეისის კონფიგურაცია' : 'Interface configuration', color: 'text-slate-500', border: 'border-slate-500/20', bg: 'bg-slate-500/5' },
-    { id: 'personas', icon: UserCheck, label: language === 'ka' ? 'აგენტები' : 'Agents', desc: language === 'ka' ? 'ხელოვნური ინტელექტის მართვა' : 'AI agents management', color: 'text-red-500', border: 'border-red-500/20', bg: 'bg-red-500/5' },
+    { id: 'personas', icon: UserCheck, label: language === 'ka' ? 'ასისტენტები' : 'Team', desc: language === 'ka' ? 'ასისტენტების მართვა' : 'Team management', color: 'text-red-500', border: 'border-red-500/20', bg: 'bg-red-500/5' },
   ];
 
   const quickActions = [
@@ -151,7 +151,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
       <div className="flex items-center gap-2 mb-8 bg-proton-card/20 p-1.5 rounded-2xl border border-proton-border/30 overflow-x-auto no-scrollbar">
         {[
           { id: 'overview', label: language === 'ka' ? 'მიმოხილვა' : 'Overview', icon: Grid },
-          { id: 'modules', label: language === 'ka' ? 'ინსტრუმენტები' : 'Modules', icon: Layers },
+          { id: 'modules', label: language === 'ka' ? 'ხელსაწყოები' : 'Tools', icon: Layers },
           { id: 'settings', label: language === 'ka' ? 'პროფილი' : 'Profile', icon: Settings },
           { id: 'security', label: language === 'ka' ? 'უსაფრთხოება' : 'Security', icon: Shield },
         ].map(tab => (
@@ -186,7 +186,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
               <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 relative overflow-hidden">
                 <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
                    <div>
-                      <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">{language === 'ka' ? 'სამუშაო რეჟიმი' : 'System Work Mode'}</h3>
+                      <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">{language === 'ka' ? 'სამუშაო არჩევანი' : 'System Work Mode'}</h3>
                       <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest mt-1">{language === 'ka' ? 'აირჩიეთ თქვენი მიმართულება' : 'Choose your direction'}</p>
                    </div>
                    <div className="flex bg-proton-bg p-1.5 rounded-2xl border border-proton-border">
@@ -206,7 +206,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                           uiMode === 'creative' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
                         )}
                       >
-                         {language === 'ka' ? 'შემოქმედება' : 'CREATIVE'}
+                         {language === 'ka' ? 'შემოქმედებითი' : 'CREATIVE'}
                       </button>
                    </div>
                 </div>
@@ -309,7 +309,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                 {/* MODES & ROADMAP ENHANCEMENT */}
                 <div className="mt-12 p-8 rounded-[32px] bg-proton-bg/20 border border-proton-border/30 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    {uiMode === 'operator' ? <Activity size={120} /> : <Zap size={120} />}
+                    {uiMode === 'business' ? <Activity size={120} /> : <Zap size={120} />}
                   </div>
                   
                   <div className="flex flex-col sm:flex-row items-center justify-between mb-8 relative z-10 gap-4">
@@ -356,7 +356,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                       </div>
                       <div>
                          <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">
-                            {language === 'ka' ? 'განვითარების გეგმა' : 'Growth & Mastery Plan'}
+                            {language === 'ka' ? 'ზრდის გეგმა' : 'Growth & Mastery Plan'}
                          </h3>
                          <p className="text-[10px] text-proton-muted font-black uppercase tracking-[0.2em] mt-1">
                             {language === 'ka' ? 'თქვენი შემდეგი ეტაპები' : 'Your next major milestones'}
@@ -367,8 +367,8 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-6">
                          {[
-                           { label: uiMode === 'business' ? (language === 'ka' ? 'კაპიტალის მობილიზება' : 'Capital Sourcing') : (language === 'ka' ? 'ახალი იარაღები' : 'Digital Crafting Tools'), desc: uiMode === 'business' ? (language === 'ka' ? 'ახალი ფინანსური არხების და რესურსების გახსნა.' : 'Unlock new funding channels and resources.') : (language === 'ka' ? 'მაღალი სიზუსტის ციფრული ხელსაწყოების შეძენა.' : 'Acquire high-precision digital tools.'), status: 'upcoming' },
-                           { label: uiMode === 'business' ? (language === 'ka' ? 'პროცესების სინთეზი' : 'Workflow Synthesis') : (language === 'ka' ? 'სტილის დასრულება' : 'Signature Refinement'), desc: uiMode === 'business' ? (language === 'ka' ? 'რამდენიმე სამუშაო პროცესის ერთიან ნაკადად გაერთიანება.' : 'Combine multiple workflows into a single stream.') : (language === 'ka' ? 'თქვენი უნიკალური ნამუშევრების ხარისხის გაუმჯობესება.' : 'Enhance the unique fingerprint of your work.'), status: 'active' },
+                           { label: uiMode === 'business' ? (language === 'ka' ? 'კაპიტალის მოძიება' : 'Capital Sourcing') : (language === 'ka' ? 'ახალი ხელსაწყოები' : 'Digital Crafting Tools'), desc: uiMode === 'business' ? (language === 'ka' ? 'ახალი ფინანსური არხების და რესურსების გახსნა.' : 'Unlock new funding channels and resources.') : (language === 'ka' ? 'მაღალი სიზუსტის ციფრული ხელსაწყოების შეძენა.' : 'Acquire high-precision digital tools.'), status: 'upcoming' },
+                           { label: uiMode === 'business' ? (language === 'ka' ? 'პროცესების სინთეზი' : 'Workflow Synthesis') : (language === 'ka' ? 'სტილის დასრულება' : 'Signature Refinement'), desc: uiMode === 'business' ? (language === 'ka' ? 'რამდენიმე სამუშაო პროცესის ერთიან ნაკადად გაერთიანება.' : 'Combine multiple workflows into a single stream.') : (language === 'ka' ? 'თვეების განმავლობაში შექმნილი სტილის დახვეწა.' : 'Enhance the unique fingerprint of your work.'), status: 'active' },
                          ].map((goal, i) => (
                            <div key={i} className="p-6 rounded-3xl bg-proton-bg/40 border border-proton-border/50 relative group hover:border-proton-accent/30 transition-all">
                               <div className="flex items-start justify-between gap-4">
@@ -401,7 +401,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                          </p>
                          <button className={cn(
                            "px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95",
-                           uiMode === 'operator' ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-proton-accent text-proton-bg hover:scale-105"
+                           uiMode === 'business' ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-proton-accent text-proton-bg hover:scale-105"
                          )}>
                             {language === 'ka' ? 'გეგმის გააქტიურება' : 'Deploy Next Step'}
                          </button>

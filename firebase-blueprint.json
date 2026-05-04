@@ -99,9 +99,9 @@
       "description": "Global system configuration",
       "type": "object",
       "properties": {
-        "isArtisanSystemActive": { "type": "boolean" }
+        "isCreativeMode": { "type": "boolean" }
       },
-      "required": ["isArtisanSystemActive"]
+      "required": ["isCreativeMode"]
     },
     "UserStats": {
       "title": "UserStats",

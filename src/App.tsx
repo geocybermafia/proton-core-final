@@ -221,11 +221,13 @@ const SidebarItem = React.memo(({
   <button
     onClick={onClick}
     className={cn(
-      "flex items-center gap-4 w-full px-4 py-3.5 rounded-2xl transition-all duration-500 group relative",
+      "flex w-full rounded-2xl transition-all duration-500 group relative",
+      expanded 
+        ? "flex-row items-center gap-4 px-4 py-3.5" 
+        : "flex-col items-center justify-center px-0 py-4 items-center",
       active 
         ? "bg-proton-accent/10 text-proton-accent shadow-[inset_0_0_20px_rgba(0,242,255,0.05)]"
         : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5",
-      !expanded && "justify-center px-0"
     )}
     title={!expanded ? label : undefined}
   >
@@ -403,7 +405,7 @@ const SystemDiagnostic = ({ t }: { t: any }) => {
   );
 };
 
-const SystemGraph = () => {
+const SystemGraph = ({ language }: { language: 'en' | 'ka' }) => {
   const [isReady, setIsReady] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setIsReady(true), 100);
@@ -480,18 +482,22 @@ const SidebarPersonaItem = React.memo(({
     value={persona}
     dragListener={expanded}
     className={cn(
-      "flex items-center gap-3 w-full px-4 py-2.5 rounded-xl transition-all duration-300 group cursor-grab active:cursor-grabbing relative",
+      "flex w-full rounded-xl transition-all duration-300 group cursor-grab active:cursor-grabbing relative",
+      expanded 
+        ? "flex-row items-center gap-3 px-4 py-2.5" 
+        : "flex-col items-center justify-center px-0 py-3 items-center",
       active 
         ? "bg-proton-accent/10 text-proton-accent shadow-[inset_0_0_15px_rgba(0,242,255,0.05)]" 
         : "text-proton-muted hover:bg-proton-accent/5 hover:text-proton-text"
     )}
+    onClick={onClick}
   >
     <div className="shrink-0 flex items-center justify-center w-8 h-8 rounded-xl bg-proton-bg border border-proton-border shadow-sm group-hover:border-proton-accent/30 transition-colors">
       <PersonaAvatar avatar={avatar} className="w-6 h-6 rounded-lg text-sm" />
     </div>
     
     {expanded && (
-      <div className="flex-1 min-w-0 text-left select-none" onClick={onClick}>
+      <div className="flex-1 min-w-0 text-left select-none">
         <div className="flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-proton-accent">
             {persona.name}
@@ -1045,7 +1051,7 @@ const OrganizerView = ({
   onDeleteTask: (id: string) => void,
   onEditTask: (id: string, updates: Partial<Task>) => void,
   onAiSuggest: () => void,
-  uiMode: 'operator' | 'artisan'
+  uiMode: 'business' | 'creative'
 }) => {
   const t = translations[language].organizer;
   const [newTaskInput, setNewTaskInput] = useState('');
@@ -1401,11 +1407,11 @@ const DashboardView = ({
   chatHistory: PersonaHistory,
   language: 'en' | 'ka',
   user: any,
-  uiMode: 'operator' | 'artisan',
+  uiMode: 'business' | 'creative',
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
-  isArtisanSystemActive: boolean,
+  isCreativeMode: boolean,
   theme: Theme,
   setTheme: (t: Theme) => void
 }) => {
@@ -1418,7 +1424,7 @@ const DashboardView = ({
     )}>
       <div className={cn(
         "p-8 rounded-[40px] border shadow-2xl relative overflow-hidden transition-all duration-500",
-        uiMode === 'artisan' 
+        uiMode === 'creative' 
           ? "bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20" 
           : "bg-gradient-to-br from-proton-accent/10 via-proton-accent/5 to-transparent border-proton-accent/20"
       )}>
@@ -1426,25 +1432,25 @@ const DashboardView = ({
           <div className="space-y-2 text-center md:text-left flex-1">
             <div className={cn(
               "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2",
-              uiMode === 'artisan' ? "bg-amber-500/20 text-amber-500" : "bg-proton-accent/20 text-proton-accent"
+              uiMode === 'creative' ? "bg-amber-500/20 text-amber-500" : "bg-proton-accent/20 text-proton-accent"
             )}>
-              {uiMode === 'artisan' ? (language === 'ka' ? 'ოსტატის რეჟიმი' : 'Artisan Mode') : (language === 'ka' ? 'ოპერატორის რეჟიმი' : 'Operator Mode')}
+              {uiMode === 'creative' ? (language === 'ka' ? 'შემოქმედებითი რეჟიმი' : 'Creative Mode') : (language === 'ka' ? 'ბიზნეს რეჟიმი' : 'Business Mode')}
             </div>
             <h1 className={cn(
               "font-black tracking-tighter uppercase leading-none",
-              uiMode === 'artisan' ? "text-4xl md:text-6xl text-amber-500" : "text-4xl md:text-6xl text-proton-accent"
+              uiMode === 'creative' ? "text-4xl md:text-6xl text-amber-500" : "text-4xl md:text-6xl text-proton-accent"
             )}>
-              {uiMode === 'artisan' ? (language === 'ka' ? 'ხელოსნის ცენტრი' : "Artisan Hub") : (language === 'ka' ? 'ბიზნეს მართვა' : 'Business Control')}
+              {uiMode === 'creative' ? (language === 'ka' ? 'შემოქმედებითი ჰაბი' : "Creative Hub") : (language === 'ka' ? 'ბიზნეს ჰაბი' : 'Business Control')}
             </h1>
             <p className="text-proton-muted font-medium max-w-xl text-base">
-              {uiMode === 'artisan' 
+              {uiMode === 'creative' 
                 ? (language === 'ka' ? 'თქვენი პრაქტიკული სამუშაო სივრცე და ტექნიკური ხელსაწყოები.' : 'Your practical workspace and technical toolset.')
                 : (language === 'ka' ? 'სტრატეგიული ანალიტიკა და ბიზნეს პროცესების მართვის ცენტრი.' : 'Strategic analytics and business process management center.')}
             </p>
           </div>
           
           <div className="flex shrink-0">
-             {uiMode === 'artisan' ? (
+             {uiMode === 'creative' ? (
                 <div className="w-24 h-24 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
                   <Wrench className="text-amber-500" size={40} />
                 </div>
@@ -1515,10 +1521,10 @@ const DashboardView = ({
             <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
               <Zap className="text-amber-500 mb-6" size={32} />
               <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
-                {language === 'ka' ? 'ინსტრუმენტარიუმი' : 'Toolbox'}
+                {language === 'ka' ? 'ხელსაწყოები' : 'Tools'}
               </h3>
               <p className="text-xs text-proton-muted font-medium">
-                {language === 'ka' ? 'აქტიური ინსტრუმენტები და ტექნოლოგიური მართვა.' : 'Active tools and technological management.'}
+                {language === 'ka' ? 'აქტიური ხელსაწყოები და მართვა.' : 'Active tools and management.'}
               </p>
             </div>
 
@@ -1536,10 +1542,10 @@ const DashboardView = ({
           <div className="bg-amber-500/5 p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
              <div className="flex-1 space-y-4">
                 <h3 className="text-3xl font-black text-proton-text uppercase tracking-tighter">
-                  {language === 'ka' ? 'ხელოსნის ინსტრუმენტარიუმი' : 'Digital Craftsmanship'}
+                  {language === 'ka' ? 'შემოქმედებითი ხელსაწყოები' : 'Creative Tools'}
                 </h3>
                 <p className="text-proton-muted font-medium">
-                  {language === 'ka' ? 'გამოიყენეთ ხელოვნური ინტელექტი თქვენი ყოველდღიური სამუშაოს ოპტიმიზაციისთვის. ჩვენი სისტემა დაგეხმარებათ რთული ტექნიკური პრობლემების მარტივად გადაჭრაში.' : 'Use AI to optimize your daily work. Our system will help you solve complex technical problems with ease.'}
+                  {language === 'ka' ? 'გამოიყენეთ ხელოვნური ინტელექტი თქვენი ყოველდღიური სამუშაოს გამარტივებისთვის. ჩვენი სისტემა დაგეხმარებათ რთული პრობლემების მარტივად გადაჭრაში.' : 'Use AI to simplify your daily work. Our system will help you solve complex problems with ease.'}
                 </p>
                 <button 
                   onClick={() => setActiveView('personas')}
@@ -1570,7 +1576,7 @@ const SystemsView = ({
   setAiSettings: Dispatch<SetStateAction<GlobalAiSettings>>,
   isFirestoreActive: boolean,
   language?: 'en' | 'ka',
-  uiMode: 'operator' | 'artisan'
+  uiMode: 'business' | 'creative'
 }) => {
   const t_raw = translations[language];
   const ts = t_raw.systems;
@@ -1982,7 +1988,7 @@ const PersonasView = ({
   workflows,
   tasks,
   uiMode,
-  isSystemActive,
+  isCreativeMode,
   initialPersonaId,
   favoritePersonaIds,
   onToggleFavorite,
@@ -1999,8 +2005,8 @@ const PersonasView = ({
   setLastGeminiMetadata: (m: any) => void,
   workflows: Workflow[],
   tasks: Task[],
-  uiMode: 'operator' | 'artisan',
-  isSystemActive: boolean,
+  uiMode: 'business' | 'creative',
+  isCreativeMode: boolean,
   initialPersonaId?: string | null,
   favoritePersonaIds: string[],
   onToggleFavorite: (id: string) => void,
@@ -2067,7 +2073,7 @@ const PersonasView = ({
   }, [messages]);
 
   const handleSend = async () => {
-    if (!isSystemActive || !input.trim() || loading) return;
+    if (!isCreativeMode || !input.trim() || loading) return;
 
     const userMessage = input.trim();
     const timestamp = Date.now();
@@ -2237,8 +2243,8 @@ const PersonasView = ({
                </button>
                <div className="h-8 w-px bg-proton-border/50" />
                <div className="flex items-center gap-2">
-                  <div className={cn("w-2 h-2 rounded-full", isSystemActive ? "bg-green-500 animate-pulse" : "bg-proton-muted")} />
-                  <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isSystemActive ? t.available : t.busy}</span>
+                  <div className={cn("w-2 h-2 rounded-full", isCreativeMode ? "bg-green-500 animate-pulse" : "bg-proton-muted")} />
+                  <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{isCreativeMode ? t.available : t.busy}</span>
                </div>
             </div>
          </div>
@@ -2320,12 +2326,12 @@ const PersonasView = ({
                  onChange={(e) => setInput(e.target.value)}
                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                  placeholder={t.chat_placeholder.replace('{name}', language === 'ka' ? selectedPersona.nameGe : selectedPersona.name)}
-                 disabled={!isSystemActive || loading}
+                 disabled={!isCreativeMode || loading}
                  className="w-full bg-proton-card border border-proton-border rounded-2xl px-6 py-4 pr-16 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-proton-accent/20 focus:border-proton-accent transition-all shadow-inner"
                />
                <button 
                  onClick={handleSend}
-                 disabled={!isSystemActive || loading || !input.trim()}
+                 disabled={!isCreativeMode || loading || !input.trim()}
                  className={cn(
                    "absolute right-2 top-2 bottom-2 px-4 rounded-xl bg-proton-accent text-proton-on-accent flex items-center justify-center transition-all shadow-md",
                    loading ? "opacity-50" : "hover:brightness-110 active:scale-95"
@@ -2722,14 +2728,14 @@ const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', langu
 
 
 
-const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'business' | 'creative', isSystemActive?: boolean, language: 'en' | 'ka' }) => {
+const ImageView = ({ uiMode, isCreativeMode = true, language }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka' }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const t = translations[language].image_studio;
 
   const handleGenerate = async () => {
-    if (!isSystemActive || !prompt.trim()) return;
+    if (!isCreativeMode || !prompt.trim()) return;
     setLoading(true);
     try {
       const result = await generateOrEditImage(prompt);
@@ -2757,16 +2763,16 @@ const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'busin
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            disabled={!isSystemActive}
-            placeholder={isSystemActive ? t.placeholder : t.offline}
+            disabled={!isCreativeMode}
+            placeholder={isCreativeMode ? t.placeholder : t.offline}
             className={cn(
               "w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 md:h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30",
-              !isSystemActive && "opacity-50"
+              !isCreativeMode && "opacity-50"
             )}
           />
           <button 
             onClick={handleGenerate}
-            disabled={!isSystemActive || loading}
+            disabled={!isCreativeMode || loading}
             className="w-full py-4 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-proton-accent/20"
           >
             {loading ? (
@@ -2775,7 +2781,7 @@ const ImageView = ({ uiMode, isSystemActive = true, language }: { uiMode: 'busin
                     {t.generating}
                 </>
             ) : (
-                isSystemActive ? (
+                isCreativeMode ? (
                 <>
                     <ImageIcon size={18} />
                     {t.generate_btn}
@@ -2812,7 +2818,7 @@ const WorkflowEditor = ({
   onSave: (workflow: Workflow) => void,
   onClose: () => void,
   personas: Persona[],
-  uiMode: 'operator' | 'artisan',
+  uiMode: 'business' | 'creative',
   language: 'en' | 'ka'
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
@@ -3008,15 +3014,15 @@ const WorkflowsView = ({
   user,
   uiMode,
   language,
-  isSystemActive = true
+  isCreativeMode = true
 }: {
   workflows: Workflow[],
   setWorkflows: React.Dispatch<React.SetStateAction<Workflow[]>>,
   personas: Persona[],
   user: any,
-  uiMode: 'operator' | 'artisan',
+  uiMode: 'business' | 'creative',
   language: 'en' | 'ka',
-  isSystemActive?: boolean
+  isCreativeMode?: boolean
 }) => {
   const t = translations[language].workflows;
   const common = translations[language].common;
@@ -3079,17 +3085,17 @@ const WorkflowsView = ({
         </div>
         <button 
           onClick={() => {
-            if (!isSystemActive) return;
+            if (!isCreativeMode) return;
             setConfirmation({
               message: t.create_confirm,
               action: createWorkflow
             });
           }}
-          disabled={!isSystemActive}
+          disabled={!isCreativeMode}
           className="px-5 py-3 rounded-2xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center gap-2 hover:scale-105 transition-all shadow-lg shadow-proton-accent/20 disabled:opacity-50"
         >
-          {isSystemActive ? <Plus size={20} /> : <Lock size={16} />}
-          {isSystemActive ? t.add_workflow : t.locked}
+          {isCreativeMode ? <Plus size={20} /> : <Lock size={16} />}
+          {isCreativeMode ? t.add_workflow : t.locked}
         </button>
       </div>
       {confirmation && (
@@ -3163,17 +3169,17 @@ const WorkflowsView = ({
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!isSystemActive) return;
+                        if (!isCreativeMode) return;
                         setConfirmation({
                           message: "გსურთ ვორქფლოუს ეფექტურობის ანალიზი Gemini-ს მიერ?",
                           action: () => handleAnalyze(wf)
                         });
                       }}
-                      disabled={!isSystemActive}
+                      disabled={!isCreativeMode}
                       className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border group-hover:shadow-[0_0_15px_rgba(0,242,255,0.1)] disabled:opacity-30 disabled:cursor-not-allowed"
-                      title={isSystemActive ? "Analyze efficiency" : "System in Stasis"}
+                      title={isCreativeMode ? "Analyze efficiency" : "System in Stasis"}
                     >
-                      {isSystemActive ? <Activity size={18} /> : <Lock size={14} />}
+                      {isCreativeMode ? <Activity size={18} /> : <Lock size={14} />}
                     </button>
                   </div>
 
@@ -3239,7 +3245,7 @@ const WorkflowsView = ({
   );
 };
 
-const FlashOverlay = ({ mode }: { mode: 'operator' | 'artisan' }) => (
+const FlashOverlay = ({ mode }: { mode: 'business' | 'creative' }) => (
   <motion.div 
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
@@ -3254,18 +3260,18 @@ const FlashOverlay = ({ mode }: { mode: 'operator' | 'artisan' }) => (
     >
       <div className={cn(
         "px-8 py-3 rounded-2xl border-2 backdrop-blur-2xl shadow-2xl flex items-center gap-4 transition-colors duration-500",
-        mode === 'operator' 
+        mode === 'business' 
           ? "bg-proton-bg/80 border-proton-accent/50 text-proton-accent shadow-proton-accent/20" 
           : "bg-white/80 border-proton-secondary/50 text-proton-secondary shadow-proton-secondary/20"
       )}>
-        {mode === 'operator' ? <Terminal size={24} /> : <Zap size={24} />}
+        {mode === 'business' ? <Terminal size={24} /> : <Zap size={24} />}
         <span className="text-xl font-black uppercase tracking-[0.2em]">
-          {mode === 'operator' ? 'Operator System Engaged' : 'Artisan UX Active'}
+          {mode === 'business' ? 'Business System Engaged' : 'Creative UX Active'}
         </span>
       </div>
       <div className={cn(
         "absolute inset-0 blur-3xl -z-10 opacity-30",
-        mode === 'operator' ? "bg-proton-accent" : "bg-proton-secondary"
+        mode === 'business' ? "bg-proton-accent" : "bg-proton-secondary"
       )} />
     </motion.div>
     <motion.div 
@@ -3274,7 +3280,7 @@ const FlashOverlay = ({ mode }: { mode: 'operator' | 'artisan' }) => (
       exit={{ opacity: 0 }}
       className={cn(
         "absolute inset-0",
-        mode === 'operator' ? "bg-proton-accent" : "bg-proton-secondary"
+        mode === 'business' ? "bg-proton-accent" : "bg-proton-secondary"
       )}
     />
   </motion.div>
@@ -3310,6 +3316,45 @@ const ModeToggle = ({ mode, setMode, language }: { mode: 'business' | 'creative'
     </button>
   </div>
 );
+
+const DarkModeToggle = ({ theme, setTheme, language, minimal = false }: { theme: Theme, setTheme: (t: Theme) => void, language: string, minimal?: boolean }) => {
+  const isDark = ['proton', 'midnight', 'vibrant'].includes(theme);
+  
+  if (minimal) {
+    return (
+      <button
+        onClick={() => setTheme(isDark ? 'light' : 'proton')}
+        className={cn(
+          "w-10 h-10 rounded-xl flex items-center justify-center transition-all border shrink-0",
+          isDark 
+            ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500/20" 
+            : "bg-proton-accent/10 border-proton-accent/20 text-proton-accent hover:bg-proton-accent/20"
+        )}
+        title={language === 'ka' ? 'რეჟიმის შეცვლა' : 'Toggle Dark Mode'}
+      >
+        {isDark ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(isDark ? 'light' : 'proton')}
+      className="flex items-center gap-3 w-full p-3 rounded-2xl bg-proton-bg/50 border border-proton-border/50 group transition-all hover:border-proton-accent/50"
+      title={language === 'ka' ? 'რეჟიმის შეცვლა' : 'Toggle Dark Mode'}
+    >
+      <div className={cn(
+        "w-8 h-8 rounded-xl flex items-center justify-center transition-all shadow-sm",
+        isDark ? "bg-amber-500/10 text-amber-500" : "bg-proton-accent/10 text-proton-accent"
+      )}>
+        {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      </div>
+      <span className="text-[10px] font-black uppercase tracking-widest text-proton-muted group-hover:text-proton-text transition-colors">
+        {isDark ? (language === 'ka' ? 'ნათელი' : 'Light Mode') : (language === 'ka' ? 'ბნელი' : 'Dark Mode')}
+      </span>
+    </button>
+  );
+};
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
   { id: 'light', label: 'Minimalist', icon: <Sun size={18} />, color: 'bg-slate-200' },
@@ -3355,7 +3400,7 @@ export default function App() {
   }, []);
   
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
-  const [isArtisanSystemActive, setIsArtisanSystemActive] = useState<boolean>(false);
+  const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
 
   // Bootstrap system config if missing
   useEffect(() => {
@@ -3366,7 +3411,7 @@ export default function App() {
         if (!snap.exists()) {
           // Note: This might fail if rules are already tightened, 
           // but serves as a one-time helper.
-          await setDoc(configRef, { isArtisanSystemActive: false }, { merge: true });
+          await setDoc(configRef, { isCreativeMode: false }, { merge: true });
         }
       } catch (e) {
         console.log("System config already exists or restricted.");
@@ -3379,12 +3424,12 @@ export default function App() {
     const configRef = doc(db, 'system', 'config');
     const unsubscribe = onSnapshot(configRef, (snapshot) => {
       if (snapshot.exists()) {
-        setIsArtisanSystemActive(snapshot.data().isArtisanSystemActive ?? false);
+        setIsCreativeMode(snapshot.data().isCreativeMode ?? false);
       } else {
-        setIsArtisanSystemActive(false);
+        setIsCreativeMode(false);
       }
     }, (error) => {
-      setIsArtisanSystemActive(false);
+      setIsCreativeMode(false);
     });
     return () => unsubscribe();
   }, []);
@@ -3395,7 +3440,7 @@ export default function App() {
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
 
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
-    if (!isArtisanSystemActive && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
+    if (!isCreativeMode && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
       setShowOptimizationModal(true);
       return;
     }
@@ -3406,7 +3451,7 @@ export default function App() {
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [isArtisanSystemActive, isSafeMode]);
+  }, [isCreativeMode, isSafeMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<Theme>(
@@ -3525,12 +3570,16 @@ export default function App() {
     aiEnergy: number;
     productivity?: number;
     node_id?: string;
+    aiTokens: number;
+    computeTimeHours: number;
   }>({
     storageGB: 1.42,
     workHours: 142.5,
     aiEnergy: 84,
     productivity: 92,
-    node_id: 'PN-4299-GE'
+    node_id: 'PN-4299-GE',
+    aiTokens: 5000,
+    computeTimeHours: 142.5
   });
 
   useEffect(() => {
@@ -3559,7 +3608,7 @@ export default function App() {
         setUserStats(prev => ({
           ...prev,
           aiTokens: profile.ai_tokens || prev.aiTokens,
-          computeCycles: profile.compute_cycles || 0,
+          computeTimeHours: profile.compute_time_hours || prev.computeTimeHours,
           storageGB: profile.storage_gb || prev.storageGB,
           node_id: profile.node_id || `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
         }));
@@ -3861,7 +3910,7 @@ export default function App() {
   };
 
   const handleAiSuggestTasks = async () => {
-    if (!isArtisanSystemActive) return;
+    if (!isCreativeMode) return;
     try {
       const workflowContext = workflows.map(w => `${w.name}: ${w.trigger} -> ${w.action}`).join('; ');
       const existingTasks = tasks.map(t => t.content).join(', ');
@@ -3989,7 +4038,10 @@ export default function App() {
           )}
         </div>
 
-        <nav className="flex-1 px-4 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10">
+        <nav className={cn(
+          "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
+          isSidebarOpen ? "px-4" : "px-0"
+        )}>
           <div className="space-y-1.5">
             {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-widest">{t.sidebar.main}</p>}
             <SidebarItem 
@@ -4095,6 +4147,10 @@ export default function App() {
                 <div className="space-y-2">
                   <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
                   <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'დიზაინი' : 'Appearance'}</p>
+                  <DarkModeToggle theme={theme} setTheme={setTheme} language={language} />
                 </div>
               </div>
             )}
@@ -4267,6 +4323,7 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 ml-auto">
+              <DarkModeToggle theme={theme} setTheme={setTheme} language={language} minimal />
               <div className="h-8 w-px bg-proton-border/50 hidden md:block" />
               <div className="flex items-center gap-2 md:gap-3">
                 <button 
@@ -4304,7 +4361,7 @@ export default function App() {
                   aiSettings={aiSettings}
                   setLastGeminiMetadata={setLastGeminiMetadata}
                   trackFirestore={trackFirestore}
-                  isArtisanSystemActive={isArtisanSystemActive}
+                  isCreativeMode={isCreativeMode}
                   theme={theme}
                   setTheme={setTheme}
                 />
@@ -4348,7 +4405,7 @@ export default function App() {
                   workflows={workflows}
                   tasks={tasks}
                   uiMode={uiMode}
-                  isSystemActive={isArtisanSystemActive}
+                  isCreativeMode={isCreativeMode}
                   initialPersonaId={selectedPersonaId}
                   favoritePersonaIds={favoritePersonaIds}
                   onToggleFavorite={handleToggleFavoritePersona}
@@ -4359,7 +4416,7 @@ export default function App() {
               {activeView === 'finance' && (
                 <Web3View uiMode={uiMode} language={userProfile.language} />
               )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} isSystemActive={isArtisanSystemActive} language={userProfile.language} />}
+              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode} language={userProfile.language} />}
               {activeView === 'blueprints' && (
                 <WorkflowsView 
                   workflows={workflows}
@@ -4368,7 +4425,7 @@ export default function App() {
                   user={user}
                   uiMode={uiMode}
                   language={userProfile.language}
-                  isSystemActive={isArtisanSystemActive}
+                  isCreativeMode={isCreativeMode}
                 />
               )}
 

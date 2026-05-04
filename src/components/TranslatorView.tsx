@@ -19,8 +19,8 @@ import {
 import { GoogleGenAI, Modality } from "@google/genai";
 import { cn } from '../lib/utils';
 
-// --- Artisan Lexicon Grounding ---
-const ARTISAN_LEXICON = {
+// --- Creative Glossary ---
+const CREATIVE_GLOSSARY = {
   ka: [
     { term: "კაკლის ხე", en: "Walnut wood", desc: "High-quality wood used for traditional carving" },
     { term: "მოჭიქვა", en: "Glazing", desc: "The process of applying a glass-like coating to ceramics" },
@@ -34,23 +34,23 @@ const ARTISAN_LEXICON = {
     { term: "ქვევრი", en: "Qvevri", desc: "Large clay vessel for wine" },
     { term: "ჩუქურთმა", en: "Ornamental carving", desc: "Traditional Georgian decorative pattern" },
     { term: "ჭიქა", en: "Glass/Cup", desc: "Drinking vessel" },
-    { term: "დაზგა", en: "Looms/Workbench", desc: "Artisan's workspace or tool" },
-    { term: "ხელით ნაკეთი", en: "Handmade", desc: "Indicates artisanal production" }
+    { term: "დაზგა", en: "Looms/Workbench", desc: "Creative workspace or tool" },
+    { term: "ხელით ნაკეთი", en: "Handmade", desc: "Indicates skilled local production" }
   ]
 };
 
 const SYSTEM_INSTRUCTION = `
-You are a high-performance translation engine specialized for face-to-face communication between local Georgian artisans and tourists. 
+You are a high-performance translation engine specialized for face-to-face communication between local creative professionals and visitors. 
 Your goal is to provide seamless, culturally accurate translations.
 
-Grounded Artisan Lexicon:
-${ARTISAN_LEXICON.ka.map(i => `- ${i.term} (${i.en}): ${i.desc}`).join('\n')}
+Grounded Creative Glossary:
+${CREATIVE_GLOSSARY.ka.map(i => `- ${i.term} (${i.en}): ${i.desc}`).join('\n')}
 
 Guidelines:
-1. Detect the language and context (Tourist vs. Artisan).
-2. If Source is Artisan (Georgian), translate to English.
-3. If Source is Tourist (English), translate to Georgian.
-4. Use the Artisan Lexicon terms whenever contextually appropriate.
+1. Detect the language and context (Visitor vs. Local).
+2. If Source is Local (Georgian), translate to English.
+3. If Source is Visitor (English), translate to Georgian.
+4. Use the glossary terms whenever contextually appropriate.
 5. Keep translations concise and conversational.
 6. If the input is ambiguous, provide the most likely cultural interpretation.
 7. CRITICAL: Return ONLY the translated text. Do not provide any explanations, meta-talk, or original text.
@@ -178,7 +178,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     setStatus('processing');
     try {
-      const sourceRole = activeSide === 'top' ? 'Tourist' : 'Artisan';
+      const sourceRole = activeSide === 'top' ? 'Visitor' : 'Creative';
       const targetLanguage = activeSide === 'top' ? 'Georgian' : 'English';
       
       const response = await ai.current.models.generateContent({
@@ -479,7 +479,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         </div>
       </div>
 
-      {/* Bottom Section - Artisan */}
+      {/* Bottom Section - Local/Creative */}
       <motion.div 
         className={cn(
           "flex-1 relative flex flex-col p-6 lg:p-12 transition-all duration-500",
