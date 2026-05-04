@@ -4235,7 +4235,7 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="min-h-20 h-auto md:h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-0 gap-x-6 flex-wrap md:flex-nowrap z-50 bg-proton-card sticky top-0 backdrop-blur-md">
+        <header className="min-h-20 h-auto md:h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-0 gap-x-8 flex-wrap md:flex-nowrap z-40 bg-proton-card sticky top-0 backdrop-blur-md">
           {/* Left Section: User & Status */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
             <button 
@@ -4250,30 +4250,19 @@ export default function App() {
                 {user.photoURL ? (
                   <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-xs md:text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                  <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
                 )}
               </div>
               <div className="flex flex-col min-w-0">
-                <div className="flex flex-col md:flex-row md:items-center gap-0.5 md:gap-2 min-w-0">
-                  <span className="text-xs md:text-sm font-black text-proton-text uppercase tracking-tight leading-none truncate max-w-[100px] lg:max-w-none">
-                    {user?.displayName || user?.email?.split('@')[0] || 'Explorer'}
-                  </span>
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 transition-all w-fit shrink-0">
-                    <div className={cn("w-1 h-1 md:w-1.5 md:h-1.5 rounded-full", user ? "bg-green-500" : "bg-proton-muted")} />
-                    <span className="text-[7px] md:text-[8px] font-bold text-proton-text uppercase tracking-widest whitespace-nowrap">
-                      {user ? translations[language].common.stable : 'Offline'}
-                    </span>
-                  </div>
-                </div>
-                <div className="hidden sm:flex flex-col min-w-0">
-                  <span className="text-[8px] md:text-[9px] font-bold text-proton-muted uppercase tracking-widest truncate">REGION: <span className="text-proton-accent">{userProfile.region || 'GLOBAL'}</span></span>
-                </div>
+                <span className="text-xs md:text-sm font-black text-proton-text uppercase tracking-tight leading-none truncate max-w-[120px] lg:max-w-none">
+                  {user?.displayName || user?.email?.split('@')[0] || 'Explorer'}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Center Section: Main Navigation */}
-          <nav className="hidden xl:flex items-center justify-center gap-2 md:gap-4 lg:gap-6 flex-1 min-w-0 px-4">
+          {/* Center Section: Main Navigation (Icons Only) */}
+          <nav className="hidden xl:flex items-center justify-center gap-2 md:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
             {[
               { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
               { id: 'personas', label: t.sidebar.agents, icon: Users },
@@ -4283,13 +4272,13 @@ export default function App() {
               <button
                 key={link.id}
                 onClick={() => handleViewChange(link.id as any)}
+                title={link.label}
                 className={cn(
-                  "text-[10px] font-black uppercase tracking-[0.15em] px-4 py-2 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shrink-0",
-                  activeView === link.id ? "bg-proton-accent/10 text-proton-accent" : "text-proton-muted hover:text-proton-text"
+                  "p-3 rounded-xl transition-all flex items-center justify-center shrink-0",
+                  activeView === link.id ? "bg-proton-accent/10 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
                 )}
               >
-                <link.icon size={14} />
-                <span className="hidden lg:inline">{link.label}</span>
+                <link.icon size={18} />
               </button>
             ))}
           </nav>
