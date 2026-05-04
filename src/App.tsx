@@ -2461,14 +2461,15 @@ const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', langu
     address: address,
   });
 
+  const [rates, setRates] = useState({ gels: 2.71, eurs: 0.93, gbps: 0.78 });
 
+  // Native Currency Conversion Helper
+  const getGELValue = (cryptoValue: string | undefined) => {
+    if (!cryptoValue) return '0';
+    const ethPrice = 2650; // Mock ETH Price
+    return (parseFloat(cryptoValue) * ethPrice * rates.gels).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  };
 
-
-
-
-  const [gelRate] = useState(2.72); // Mock NBG Rate
-  const [eurRate] = useState(0.92); // Mock EUR Rate
-  const [gbpRate] = useState(0.79); // Mock GBP Rate
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   return (
@@ -2542,7 +2543,7 @@ const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', langu
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GEL (₾)</p>
-                              <p className="text-lg font-bold">₾ {(parseFloat(balance?.formatted || '0') * 2650 * gelRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg font-bold">₾ {getGELValue(balance?.formatted)}</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">USD ($)</p>
@@ -2550,12 +2551,21 @@ const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', langu
                           </div>
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">EUR (€)</p>
-                              <p className="text-lg font-bold">€ {(parseFloat(balance?.formatted || '0') * 2650 * eurRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg font-bold">€ {(parseFloat(balance?.formatted || '0') * 2650 * rates.eurs).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GBP (£)</p>
-                              <p className="text-lg font-bold">£ {(parseFloat(balance?.formatted || '0') * 2650 * gbpRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg font-bold">£ {(parseFloat(balance?.formatted || '0') * 2650 * rates.gbps).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                           </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                        <button className="flex-1 px-8 py-4 bg-proton-accent text-proton-bg rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(0,242,255,0.3)]">
+                          {t.send_pay}
+                        </button>
+                        <button className="flex-1 px-8 py-4 bg-proton-bg border border-proton-border text-proton-text rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-proton-card transition-all">
+                          {t.history}
+                        </button>
                       </div>
                    </div>
                 </div>
@@ -2584,7 +2594,7 @@ const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', langu
                         </div>
                         <div>
                              <h4 className="font-bold text-lg">{t.nbg_rate}</h4>
-                             <p className="text-xs text-proton-muted">{language === 'ka' ? 'კურსი' : 'Rate'}: $1 = {gelRate} GEL</p>
+                             <p className="text-xs text-proton-muted">{language === 'ka' ? 'კურსი' : 'Rate'}: $1 = {rates.gels} GEL</p>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono text-proton-secondary uppercase tracking-[0.2em] font-bold pt-2">
                              {t.nbg_sync}
@@ -4237,28 +4247,13 @@ export default function App() {
         {/* Dynamic Header */}
         <header className="min-h-20 h-auto md:h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-0 gap-x-8 flex-wrap md:flex-nowrap z-40 bg-proton-card sticky top-0 backdrop-blur-md">
           {/* Left Section: User & Status */}
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0 shrink-0">
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <button 
               onClick={() => setIsSidebarOpen(true)}
               className="md:hidden w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all shrink-0"
             >
               <Grid size={20} />
             </button>
-
-            <div className="flex items-center gap-3 md:gap-4 cursor-pointer group min-w-0" onClick={() => handleViewChange('profile')}>
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-black italic shadow-lg group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs md:text-sm font-black text-proton-text uppercase tracking-tight leading-none truncate max-w-[120px] lg:max-w-none">
-                  {user?.displayName || user?.email?.split('@')[0] || 'Explorer'}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Center Section: Main Navigation (Icons Only) */}

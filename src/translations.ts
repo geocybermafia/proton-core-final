@@ -387,7 +387,9 @@ export const translations = {
       off_ramps: "Withdraw Money",
       off_ramps_notice: "Withdrawals are only possible through licensed providers.",
       ledger: "Record",
-      online: "ONLINE"
+      online: "ONLINE",
+      send_pay: "Send/Pay",
+      history: "History"
     },
     image_studio: {
       title: "Image Studio",
@@ -789,7 +791,9 @@ export const translations = {
       off_ramps: "გატანა",
       off_ramps_notice: "თანხის გატანა შესაძლებელია მხოლოდ ლიცენზირებულ სერვის-პროვაიდერებთან.",
       ledger: "აქტივობის ისტორია",
-      online: "ონლაინ"
+      online: "ონლაინ",
+      send_pay: "გადარიცხვა/გადახდა",
+      history: "ისტორია"
     },
     image_studio: {
       title: "იმიჯ სტუდია",
