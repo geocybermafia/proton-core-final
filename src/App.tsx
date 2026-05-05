@@ -2509,9 +2509,21 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
 
   // Native Currency Conversion Helper
   const getGELValue = (cryptoValue: string | undefined) => {
-    if (!cryptoValue) return '0';
+    if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
     const ethPrice = 2650; // Mock ETH Price
-    return (parseFloat(cryptoValue) * ethPrice * rates.gels).toLocaleString(undefined, { maximumFractionDigits: 0 });
+    return `₾ ${(parseFloat(cryptoValue) * ethPrice * rates.gels).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  };
+
+  const getUSDValue = (cryptoValue: string | undefined) => {
+    if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
+    const ethPrice = 2650; // Mock ETH Price
+    return `$ ${(parseFloat(cryptoValue) * ethPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  };
+
+  const getCurrencyValue = (cryptoValue: string | undefined, rate: number, symbol: string) => {
+    if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
+    const ethPrice = 2650; // Mock ETH Price
+    return `${symbol} ${(parseFloat(cryptoValue) * ethPrice * rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   };
 
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -2576,7 +2588,13 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
                           <div className="space-y-1">
                               <h3 className="text-xs font-bold uppercase tracking-widest text-proton-muted">{t.treasury}</h3>
                               <p className="text-2xl md:text-5xl font-bold tracking-tighter">
-                                  {balance ? parseFloat(balance.formatted).toFixed(4) : '0.0000'} <span className="text-proton-accent">{balance?.symbol}</span>
+                                  {balance && parseFloat(balance.formatted) > 0 ? (
+                                    <>
+                                      {parseFloat(balance.formatted).toFixed(4)} <span className="text-proton-accent">{balance?.symbol}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-proton-muted italic opacity-50">No Activity Detected</span>
+                                  )}
                               </p>
                           </div>
                           <div className="p-3 md:p-4 rounded-2xl bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
@@ -2587,19 +2605,19 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GEL (₾)</p>
-                              <p className="text-lg font-bold">₾ {getGELValue(balance?.formatted)}</p>
+                              <p className="text-lg font-bold">{getGELValue(balance?.formatted)}</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">USD ($)</p>
-                              <p className="text-lg font-bold">$ {(parseFloat(balance?.formatted || '0') * 2650).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg font-bold">{getUSDValue(balance?.formatted)}</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">EUR (€)</p>
-                              <p className="text-lg font-bold">€ {(parseFloat(balance?.formatted || '0') * 2650 * rates.eurs).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg font-bold">{getCurrencyValue(balance?.formatted, rates.eurs, '€')}</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
                               <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GBP (£)</p>
-                              <p className="text-lg font-bold">£ {(parseFloat(balance?.formatted || '0') * 2650 * rates.gbps).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg font-bold">{getCurrencyValue(balance?.formatted, rates.gbps, '£')}</p>
                           </div>
                       </div>
 
