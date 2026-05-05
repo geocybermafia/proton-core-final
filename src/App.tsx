@@ -81,6 +81,7 @@ async function testConnection() {
 }
 testConnection();
 import { TranslatorView } from './components/TranslatorView';
+import { AdminSandbox } from './components/AdminSandbox';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts';
@@ -157,7 +158,8 @@ import {
   LogIn,
   History,
   UserCheck,
-  Languages
+  Languages,
+  ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -1399,7 +1401,8 @@ const DashboardView = ({
   language = 'en',
   uiMode,
   theme,
-  setTheme
+  setTheme,
+  isSystemActive
 }: { 
   personas: Persona[], 
   activeView: View, 
@@ -1413,7 +1416,8 @@ const DashboardView = ({
   trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
   isCreativeMode: boolean,
   theme: Theme,
-  setTheme: (t: Theme) => void
+  setTheme: (t: Theme) => void,
+  isSystemActive: boolean
 }) => {
   const t = translations[language];
 
@@ -1447,18 +1451,45 @@ const DashboardView = ({
                 ? (language === 'ka' ? 'თქვენი პრაქტიკული სამუშაო სივრცე და ტექნიკური ხელსაწყოები.' : 'Your practical workspace and technical toolset.')
                 : (language === 'ka' ? 'სტრატეგიული ანალიტიკა და ბიზნეს პროცესების მართვის ცენტრი.' : 'Strategic analytics and business process management center.')}
             </p>
+            {isSystemActive && (
+              <div className="flex items-center gap-2 mt-4">
+                <div className="relative flex items-center justify-center w-2.5 h-2.5">
+                  <div className="absolute w-full h-full bg-green-500 rounded-full animate-ping opacity-75" />
+                  <div className="relative w-1.5 h-1.5 bg-green-500 rounded-full" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-proton-text/70">
+                  {t.hub.system_status}: <span className="text-green-500">{t.hub.active}</span>
+                </span>
+              </div>
+            )}
           </div>
           
-          <div className="flex shrink-0">
-             {uiMode === 'creative' ? (
-                <div className="w-24 h-24 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                  <Wrench className="text-amber-500" size={40} />
-                </div>
-             ) : (
-                <div className="w-24 h-24 rounded-full bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20">
-                  <Activity className="text-proton-accent" size={40} />
-                </div>
-             )}
+          <div className="flex flex-col sm:flex-row gap-4 shrink-0">
+             <button 
+                onClick={() => setActiveView('organizer')}
+                className="px-6 py-3 bg-proton-bg border border-proton-border rounded-2xl flex items-center gap-2 hover:bg-proton-card transition-all group"
+             >
+                <LayoutDashboard size={16} className="text-proton-accent group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{t.hub.quick_tasks}</span>
+             </button>
+             <button 
+                onClick={() => setActiveView('finance')}
+                className="px-6 py-3 bg-proton-bg border border-proton-border rounded-2xl flex items-center gap-2 hover:bg-proton-card transition-all group"
+             >
+                <Wallet size={16} className="text-proton-accent group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-black uppercase tracking-widest">{t.hub.finance_shortcut}</span>
+             </button>
+             <div className="hidden md:flex">
+                {uiMode === 'creative' ? (
+                   <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 backdrop-blur-sm">
+                     <Wrench className="text-amber-500" size={32} />
+                   </div>
+                ) : (
+                   <div className="w-20 h-20 rounded-full bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20 backdrop-blur-sm">
+                     <Activity className="text-proton-accent" size={32} />
+                   </div>
+                )}
+             </div>
           </div>
         </div>
       </div>
@@ -1508,33 +1539,48 @@ const DashboardView = ({
       ) : (
         <div className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
-              <Compass className="text-amber-500 mb-6" size={32} />
+            <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border group/card hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover/card:opacity-100 transition-all">
+                <ArrowUpRight size={20} className="text-proton-accent" />
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent mb-6 group-hover/card:scale-110 transition-transform">
+                <Compass size={28} />
+              </div>
               <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
                 {language === 'ka' ? 'ტექნიკური ბაზა' : 'Technical Base'}
               </h3>
-              <p className="text-xs text-proton-muted font-medium">
-                {language === 'ka' ? 'წვდომა ყველა სახელმძღვანელოსა და დოკუმენტაციაზე.' : 'Access all manuals and technical documentation.'}
+              <p className="text-xs text-proton-muted font-medium leading-relaxed">
+                {t.hub.technical_base_desc}
               </p>
             </div>
 
-            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
-              <Zap className="text-amber-500 mb-6" size={32} />
+            <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border group/card hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover/card:opacity-100 transition-all">
+                <ArrowUpRight size={20} className="text-proton-accent" />
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent mb-6 group-hover/card:scale-110 transition-transform">
+                <Zap size={28} />
+              </div>
               <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
                 {language === 'ka' ? 'ხელსაწყოები' : 'Tools'}
               </h3>
-              <p className="text-xs text-proton-muted font-medium">
-                {language === 'ka' ? 'აქტიური ხელსაწყოები და მართვა.' : 'Active tools and management.'}
+              <p className="text-xs text-proton-muted font-medium leading-relaxed">
+                {t.hub.tools_desc}
               </p>
             </div>
 
-            <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group">
-              <Sparkles className="text-amber-500 mb-6" size={32} />
+            <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border group/card hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover/card:opacity-100 transition-all">
+                <ArrowUpRight size={20} className="text-proton-accent" />
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent mb-6 group-hover/card:scale-110 transition-transform">
+                <Sparkles size={28} />
+              </div>
               <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
                 {language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant'}
               </h3>
-              <p className="text-xs text-proton-muted font-medium">
-                {language === 'ka' ? 'მიიღეთ რჩევები და გადაჭერით რთული ტექნიკური ამოცანები.' : 'Get advice and solve complex technical tasks.'}
+              <p className="text-xs text-proton-muted font-medium leading-relaxed">
+                {t.hub.ai_assistant_desc}
               </p>
             </div>
           </div>
@@ -2454,14 +2500,12 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
   );
 };
 
-const Web3View = ({ uiMode, language }: { uiMode: 'business' | 'creative', language: 'en' | 'ka' }) => {
+const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative', language: 'en' | 'ka', rates: any }) => {
   const { address, isConnected } = useAccount();
   const t = translations[language].finance;
   const { data: balance } = useBalance({
     address: address,
   });
-
-  const [rates, setRates] = useState({ gels: 2.71, eurs: 0.93, gbps: 0.78 });
 
   // Native Currency Conversion Helper
   const getGELValue = (cryptoValue: string | undefined) => {
@@ -3375,6 +3419,7 @@ const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }
 ];
 
 export default function App() {
+  const [rates, setRates] = useState({ gels: 2.71, eurs: 0.93, gbps: 0.78 });
   const [uiMode, setUiMode] = useState<'business' | 'creative'>(
     (localStorage.getItem('proton_ui_mode') as 'business' | 'creative') || 'business'
   );
@@ -3516,7 +3561,8 @@ export default function App() {
       role: 'Standard',
       phoneNumber: '',
       id: 'default-user',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Darian'
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Darian',
+      balance: 1250
     };
     try {
       const saved = localStorage.getItem('user-profile');
@@ -3572,6 +3618,7 @@ export default function App() {
   });
 
   const [user, setUser] = useState(auth.currentUser);
+  const [isSystemActive] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userStats, setUserStats] = useState<{
@@ -3962,6 +4009,16 @@ export default function App() {
     }
   };
 
+  const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
+  const t = translations[currentLanguage];
+  const isAdmin = user?.email === 'devdarianib@gmail.com';
+
+  useEffect(() => {
+    if (isAdmin && window.location.hash === '#admin-proton-sandbox') {
+      setActiveView('admin-sandbox');
+    }
+  }, [isAdmin]);
+
   if (!authInitialized) {
     return (
       <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
@@ -3975,9 +4032,6 @@ export default function App() {
       <AuthFlow onGoogleSignIn={handleGoogleSignIn} language={userProfile.language} />
     );
   }
-
-  const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
-  const t = translations[currentLanguage];
 
   if (activeView === 'translator') {
     return <TranslatorView onBack={() => setActiveView('dashboard')} />;
@@ -4174,6 +4228,17 @@ export default function App() {
               uiMode={uiMode}
               badge={language === 'ka' ? 'ჰაბი' : 'HUB'}
             />
+            {isAdmin && (
+              <SidebarItem 
+                icon={ShieldAlert} 
+                label="Admin Sandbox" 
+                active={activeView === 'admin-sandbox'} 
+                onClick={() => handleViewChange('admin-sandbox')} 
+                expanded={isSidebarOpen}
+                uiMode={uiMode}
+                badge="ROOT"
+              />
+            )}
           </div>
         </nav>
 
@@ -4345,6 +4410,7 @@ export default function App() {
                   isCreativeMode={isCreativeMode}
                   theme={theme}
                   setTheme={setTheme}
+                  isSystemActive={isSystemActive}
                 />
               )}
               {activeView === 'organizer' && (
@@ -4395,7 +4461,7 @@ export default function App() {
                 />
               )}
               {activeView === 'finance' && (
-                <Web3View uiMode={uiMode} language={userProfile.language} />
+                <Web3View uiMode={uiMode} language={userProfile.language} rates={rates} />
               )}
               {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode} language={userProfile.language} />}
               {activeView === 'blueprints' && (
@@ -4424,6 +4490,7 @@ export default function App() {
                   setUiMode={setUiMode}
                   stats={userStats}
                   onNavigate={handleViewChange}
+                  gelRate={rates.gels}
                 />
               )}
               {activeView === 'settings' && (
@@ -4441,6 +4508,17 @@ export default function App() {
               )}
               {activeView === 'documentation' && (
                 <DocumentationView language={userProfile.language} />
+              )}
+              {activeView === 'admin-sandbox' && isAdmin && (
+                <AdminSandbox 
+                  isSystemActive={isSystemActive}
+                  isCreativeMode={isCreativeMode}
+                  stats={{
+                    ai_tokens: userStats.aiTokens,
+                    compute_cycles: userStats.computeTimeHours
+                  }}
+                  language={userProfile.language}
+                />
               )}
             </motion.div>
           </AnimatePresence>

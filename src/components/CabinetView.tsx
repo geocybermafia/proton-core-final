@@ -3,7 +3,7 @@ import {
   Wallet, Workflow, Cpu, FileText, Settings, LogIn, Zap, CheckCircle2, Bell, LogOut, 
   Grid, Layers, Shield, Activity, Database, History, ChevronRight, ArrowRight, 
   ShieldCheck, Fingerprint, Download, ShieldAlert, Key, UserCheck, Circle,
-  Mail, MapPin, Phone, Globe, CreditCard, RefreshCw, Smartphone, Star, Clock, Lock, User as UserIcon
+  Mail, MapPin, Phone, Globe, CreditCard, RefreshCw, Smartphone, Star, Clock, Lock, User as UserIcon, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -23,19 +23,23 @@ interface CabinetViewProps {
   setUiMode: React.Dispatch<React.SetStateAction<'business' | 'creative'>>;
   stats: { storageGB: number, workHours: number, aiEnergy: number, productivity?: number, node_id?: string, aiTokens: number, computeTimeHours: number };
   onNavigate: (view: any) => void;
+  gelRate: number;
 }
 
 const CabinetView: React.FC<CabinetViewProps> = ({ 
   profile, 
   setProfile, 
   history,
+  customAvatars,
+  personas,
   user,
   onSignIn,
   onSignOut,
   uiMode,
   setUiMode,
   stats: userStats,
-  onNavigate
+  onNavigate,
+  gelRate
 }) => {
   const language = profile.language;
   const common = translations[language].common;
@@ -53,10 +57,10 @@ const CabinetView: React.FC<CabinetViewProps> = ({
   const mainModules = [
     { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance', desc: t.finance_desc, color: 'text-blue-500', border: 'border-blue-500/20', bg: 'bg-blue-500/5', badge: language === 'ka' ? 'აქტიური' : 'Active' },
     { id: 'blueprints', icon: Workflow, label: language === 'ka' ? 'პროცესები' : 'Workflows', desc: t.blueprints_desc, color: 'text-proton-accent', border: 'border-proton-accent/20', bg: 'bg-proton-accent/5', badge: language === 'ka' ? 'Beta' : 'Beta' },
-    { id: 'device', icon: Cpu, label: language === 'ka' ? 'მოწყობილობა' : 'Hardware', desc: language === 'ka' ? 'სისტემური რესურსების მართვა' : 'System resources management', color: 'text-amber-500', border: 'border-amber-500/20', bg: 'bg-amber-500/5', badge: 'v2.4' },
-    { id: 'documentation', icon: FileText, label: language === 'ka' ? 'დოკუმენტაცია' : 'Docs', desc: language === 'ka' ? 'სისტემური სახელმძღვანელო' : 'System documentation', color: 'text-emerald-500', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
-    { id: 'settings', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings', desc: language === 'ka' ? 'ინტერფეისის კონფიგურაცია' : 'Interface configuration', color: 'text-slate-500', border: 'border-slate-500/20', bg: 'bg-slate-500/5' },
-    { id: 'personas', icon: UserCheck, label: language === 'ka' ? 'ასისტენტები' : 'Team', desc: language === 'ka' ? 'ასისტენტების მართვა' : 'Team management', color: 'text-red-500', border: 'border-red-500/20', bg: 'bg-red-500/5' },
+    { id: 'device', icon: Cpu, label: language === 'ka' ? 'ინფრასტრუქტურა' : 'Infrastructure', desc: language === 'ka' ? 'სისტემური რესურსების მართვა' : 'System resources management', color: 'text-amber-500', border: 'border-amber-500/20', bg: 'bg-amber-500/5', badge: 'v2.4' },
+    { id: 'documentation', icon: FileText, label: language === 'ka' ? 'სახელმძღვანელო' : 'Knowledge', desc: language === 'ka' ? 'სისტემური სახელმძღვანელო' : 'Platform documentation', color: 'text-emerald-500', border: 'border-emerald-500/20', bg: 'bg-emerald-500/5' },
+    { id: 'settings', icon: Settings, label: language === 'ka' ? 'გამართვა' : 'Preferences', desc: language === 'ka' ? 'ინტერფეისის კონფიგურაცია' : 'System preferences', color: 'text-slate-500', border: 'border-slate-500/20', bg: 'bg-slate-500/5' },
+    { id: 'personas', icon: UserCheck, label: language === 'ka' ? 'გუნდი' : 'Teams', desc: language === 'ka' ? 'ასისტენტების მართვა' : 'Business agents management', color: 'text-red-500', border: 'border-red-500/20', bg: 'bg-red-500/5' },
   ];
 
   const quickActions = [
@@ -99,11 +103,11 @@ const CabinetView: React.FC<CabinetViewProps> = ({
         
         <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left relative z-10">
           <div className="relative group">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-[40px] bg-proton-bg border border-gray-200/10 flex items-center justify-center overflow-hidden shadow-2xl group-hover:shadow-proton-accent/20 transition-all duration-700 group-hover:rotate-6">
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-[40px] bg-proton-bg border border-proton-border/30 flex items-center justify-center overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-700">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-4xl font-bold text-gray-400">{(user?.displayName || 'U').charAt(0).toUpperCase()}</span>
+                <span className="text-4xl font-bold text-proton-accent/20">{(user?.displayName || 'U').charAt(0).toUpperCase()}</span>
               )}
             </div>
             <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 border-4 border-proton-bg rounded-full shadow-lg" />
@@ -113,16 +117,16 @@ const CabinetView: React.FC<CabinetViewProps> = ({
               <h1 className="text-3xl md:text-5xl font-black text-proton-text tracking-tighter uppercase italic">
                 {user?.displayName || (language === 'ka' ? 'მომხმარებელი' : 'User')}
               </h1>
-              {user && <CheckCircle2 size={24} className="text-proton-accent animate-pulse" />}
+              {user && <CheckCircle2 size={24} className="text-proton-accent" />}
             </div>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
               <p className="text-proton-muted font-bold text-sm md:text-base font-mono">
                 {user?.email || (language === 'ka' ? 'სისტემური იდენტიფიკატორი' : 'System ID')}
               </p>
               {user && (
-                <span className="px-3 py-1 bg-proton-accent/10 text-[9px] font-black text-proton-accent rounded-full uppercase tracking-[0.2em] border border-proton-accent/20 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
-                  ID: {userStats.node_id || user.uid.slice(0, 8)}
+                <span className="px-3 py-1 bg-proton-accent/5 text-[9px] font-black text-proton-accent rounded-full uppercase tracking-[0.2em] border border-proton-border flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-proton-accent" />
+                  Account: {userStats.node_id || user.uid.slice(0, 8)}
                 </span>
               )}
             </div>
@@ -148,24 +152,24 @@ const CabinetView: React.FC<CabinetViewProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 mb-8 bg-proton-card/20 p-1.5 rounded-2xl border border-proton-border/30 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 mb-8 bg-proton-card/20 p-1.5 rounded-3xl border border-proton-border/30 overflow-x-auto no-scrollbar relative z-10">
         {[
-          { id: 'overview', label: language === 'ka' ? 'მიმოხილვა' : 'Overview', icon: Grid },
-          { id: 'modules', label: language === 'ka' ? 'ხელსაწყოები' : 'Tools', icon: Layers },
-          { id: 'settings', label: language === 'ka' ? 'პროფილი' : 'Profile', icon: Settings },
-          { id: 'security', label: language === 'ka' ? 'უსაფრთხოება' : 'Security', icon: Shield },
+          { id: 'overview', label: language === 'ka' ? 'მიმოხილვა' : 'Strategic Overview', icon: Grid },
+          { id: 'modules', label: language === 'ka' ? 'ხელსაწყოები' : 'Business Management', icon: Layers },
+          { id: 'settings', label: language === 'ka' ? 'პროფილი' : 'Individual Profile', icon: Settings },
+          { id: 'security', label: language === 'ka' ? 'უსაფრთხოება' : 'Trust & Security', icon: Shield },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setCabinetTab(tab.id as any)}
             className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-              cabinetTab === tab.id 
-                ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
-                : "text-proton-muted hover:text-proton-text hover:bg-white/5"
+              "flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all whitespace-nowrap",
+              cabinetTab === tab.id
+                ? "bg-proton-text text-proton-bg shadow-xl"
+                : "text-proton-muted hover:text-proton-text hover:bg-proton-text/5"
             )}
           >
-            <tab.icon size={16} />
+            <tab.icon size={16} className={cn(cabinetTab === tab.id ? "text-proton-bg" : "text-proton-muted")} />
             {tab.label}
           </button>
         ))}
@@ -178,379 +182,310 @@ const CabinetView: React.FC<CabinetViewProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+            className="space-y-10"
           >
-            {/* Stats Summary */}
-            <div className="lg:col-span-2 space-y-8">
-              {/* SYSTEM MODE SELECTOR */}
-              <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 relative overflow-hidden">
-                <div className="flex flex-col sm:flex-row items-center justify-between mb-8">
-                   <div>
-                      <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">{language === 'ka' ? 'სამუშაო არჩევანი' : 'System Work Mode'}</h3>
-                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest mt-1">{language === 'ka' ? 'აირჩიეთ თქვენი მიმართულება' : 'Choose your direction'}</p>
-                   </div>
-                   <div className="flex bg-proton-bg p-1.5 rounded-2xl border border-proton-border">
-                      <button 
-                        onClick={() => handleModeChange('business')}
-                        className={cn(
-                          "px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
-                          uiMode === 'business' ? "bg-blue-500 text-white shadow-lg" : "text-proton-muted hover:text-proton-text"
-                        )}
-                      >
-                         {language === 'ka' ? 'ბიზნესი' : 'BUSINESS'}
-                      </button>
-                      <button 
-                        onClick={() => handleModeChange('creative')}
-                        className={cn(
-                          "px-6 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
-                          uiMode === 'creative' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
-                        )}
-                      >
-                         {language === 'ka' ? 'შემოქმედებითი' : 'CREATIVE'}
-                      </button>
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div className={cn(
-                     "p-6 rounded-3xl border transition-all",
-                     uiMode === 'business' ? "bg-blue-500/5 border-blue-500/20" : "bg-proton-bg/20 border-proton-border/50 opacity-40"
-                   )}>
-                      <div className="flex items-center gap-3 mb-4">
-                         <Activity className="text-blue-500" size={20} />
-                         <h4 className="text-sm font-black text-proton-text uppercase tracking-tight">{language === 'ka' ? 'ბიზნესი და მართვა' : 'Business & Management'}</h4>
-                      </div>
-                      <p className="text-[10px] text-proton-muted font-bold leading-relaxed uppercase tracking-wide">
-                        {language === 'ka' 
-                          ? 'ფოკუსირებულია პროცესების მართვაზე, მასშტაბირებაზე და ავტომატიზაციაზე.' 
-                          : 'Focused on process management, scaling, and automation.'}
-                      </p>
-                   </div>
-                   <div className={cn(
-                     "p-6 rounded-3xl border transition-all",
-                     uiMode === 'creative' ? "bg-proton-accent/5 border-proton-accent/20" : "bg-proton-bg/20 border-proton-border/50 opacity-40"
-                   )}>
-                      <div className="flex items-center gap-3 mb-4">
-                         <Zap className="text-proton-accent" size={20} />
-                         <h4 className="text-sm font-black text-proton-text uppercase tracking-tight">{language === 'ka' ? 'შემოქმედება და ხარისხი' : 'Creation & Quality'}</h4>
-                      </div>
-                      <p className="text-[10px] text-proton-muted font-bold leading-relaxed uppercase tracking-wide">
-                        {language === 'ka' 
-                          ? 'ფოკუსირებულია დეტალურ მუშაობაზე, პრეციზიასა და ინდივიდუალურ შემოქმედებაზე.' 
-                          : 'Focused on detailed execution, precision, and individual creativity.'}
-                      </p>
-                   </div>
-                </div>
-              </div>
-
-              <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 shadow-2xl relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
-                <div className="flex flex-col sm:flex-row items-center justify-between mb-10 relative z-10 gap-4">
+            {/* TOP ROW: DAILY SUMMARY & SYSTEM MODE */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Daily Summary Card */}
+              <div className="lg:col-span-2 bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border/30 relative overflow-hidden group">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent">
+                    <Sparkles size={24} />
+                  </div>
                   <div>
-                    <h2 className="text-2xl font-black text-proton-text uppercase tracking-tight italic">{personal.title}</h2>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-[0.3em] font-mono mt-1">{personal.overview}</p>
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-proton-accent/10 rounded-2xl border border-proton-accent/20">
-                    <Activity size={18} className="text-proton-accent animate-pulse" />
-                    <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest">{personal.dash_title}</span>
+                    <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">{t.daily_summary}</h3>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest mt-1">{t.ai_overview}</p>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 relative z-10">
-                  {/* Storage */}
-                  <div className="space-y-3 group">
-                    <div className="flex items-center gap-3 text-proton-muted group-hover:text-blue-400 transition-colors">
-                      <Database size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.storage}</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.storageGB.toFixed(2)}</span>
-                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">GB</span>
-                    </div>
-                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
-                      <div 
-                        className="h-full bg-blue-500 rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
-                        style={{ width: `${Math.min((userStats.storageGB / 5) * 100, 100)}%` }} 
-                      />
-                    </div>
-                  </div>
-
-                  {/* Work Time */}
-                  <div className="space-y-3 group">
-                    <div className="flex items-center gap-3 text-proton-muted group-hover:text-amber-400 transition-colors">
-                      <Clock size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{cab.work_time}</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.workHours.toFixed(1)}</span>
-                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">H</span>
-                    </div>
-                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
-                      <div className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" style={{ width: '72%' }} />
-                    </div>
-                  </div>
-
-                  {/* Productivity */}
-                  <div className="space-y-3 group">
-                    <div className="flex items-center gap-3 text-proton-muted group-hover:text-proton-accent transition-colors">
-                      <Zap size={18} />
-                      <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{language === 'ka' ? 'ეფექტურობა' : 'Efficiency'}</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black text-proton-text italic tracking-tighter">{userStats.productivity || 0}</span>
-                      <span className="text-xs font-black text-proton-muted uppercase tracking-widest italic">%</span>
-                    </div>
-                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-proton-border/30">
-                      <div className="h-full bg-proton-accent rounded-full shadow-[0_0_10px_rgba(0,242,255,0.5)]" style={{ width: `${userStats.productivity || 0}%` }} />
-                    </div>
-                  </div>
+                
+                <div className="prose prose-invert max-w-none">
+                  <p className="text-sm text-proton-text/90 italic font-medium leading-relaxed bg-proton-bg/30 p-6 rounded-[32px] border border-proton-border/20">
+                    {language === 'ka' 
+                      ? `მოგესალმებით, ${user?.displayName || 'მომხმარებელო'}. დღევანდელი ანალიზი აჩვენებს ${userStats.productivity || 0}%-იან ეფექტურობას. თქვენი ფინანსური ბალანსი სტაბილურია ($${(profile.balance || 0).toLocaleString()}), ხოლო რესურსების გამოყენება ოპტიმალურ ფარგლებშია. რეკომენდირებულია გადახედოთ ბოლო დავალებებს და დაასრულოთ სინქრონიზაციის პროცესი.`
+                      : `Welcome back, ${user?.displayName || 'User'}. Today's AI analysis shows a ${userStats.productivity || 0}% efficiency rating. Your financial balance is stable at $${(profile.balance || 0).toLocaleString()}, and resource utilization is within optimal parameters. We recommend reviewing your latest tasks and finalizing the sync process.`}
+                  </p>
                 </div>
 
-                {/* MODES & ROADMAP ENHANCEMENT */}
-                <div className="mt-12 p-8 rounded-[32px] bg-proton-bg/20 border border-proton-border/30 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    {uiMode === 'business' ? <Activity size={120} /> : <Zap size={120} />}
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row items-center justify-between mb-8 relative z-10 gap-4">
-                    <div>
-                      <h3 className="text-lg font-black text-proton-text uppercase tracking-tight italic">
-                        {uiMode === 'business' ? t.business_roadmap : t.creative_roadmap}
-                      </h3>
-                      <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest mt-1 opacity-70">
-                        {t.roadmap_desc}
-                      </p>
-                    </div>
-                    <div className={cn(
-                      "px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest",
-                      uiMode === 'business' ? "bg-blue-500/10 border-blue-500/20 text-blue-500" : "bg-proton-accent/10 border-proton-accent/20 text-proton-accent"
-                    )}>
-                      {uiMode === 'business' ? "Scale Phase: Growth" : "Craft Phase: Mastery"}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 relative z-10">
-                    {(uiMode === 'business' ? t.business_features : t.creative_features).map((feature: string, i: number) => (
-                      <div key={i} className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black text-proton-text uppercase tracking-wider">{feature}</span>
-                          <span className="text-[10px] font-mono text-proton-muted">{15 + i * 25}%</span>
+                <div className="mt-6 flex items-center justify-between">
+                   <div className="flex -space-x-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-8 h-8 rounded-full border-2 border-proton-bg bg-proton-accent/20 flex items-center justify-center text-[10px] font-bold text-proton-accent">
+                          {i}
                         </div>
-                        <div className="h-1 w-full bg-proton-bg/60 rounded-full overflow-hidden">
-                           <motion.div 
-                             initial={{ width: 0 }}
-                             animate={{ width: `${15 + i * 25}%` }}
-                             className={cn("h-full rounded-full", uiMode === 'business' ? "bg-blue-500" : "bg-proton-accent")}
-                           />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* STRATEGIC ADVANCEMENT PLAN */}
-                <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 relative overflow-hidden">
-                   <div className="flex items-center gap-4 mb-10">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-xl">
-                         <Star size={24} className="fill-current animate-pulse" />
-                      </div>
-                      <div>
-                         <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight">
-                            {language === 'ka' ? 'ზრდის გეგმა' : 'Growth & Mastery Plan'}
-                         </h3>
-                         <p className="text-[10px] text-proton-muted font-black uppercase tracking-[0.2em] mt-1">
-                            {language === 'ka' ? 'თქვენი შემდეგი ეტაპები' : 'Your next major milestones'}
-                         </p>
-                      </div>
-                   </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-6">
-                         {[
-                           { label: uiMode === 'business' ? (language === 'ka' ? 'კაპიტალის მოძიება' : 'Capital Sourcing') : (language === 'ka' ? 'ახალი ხელსაწყოები' : 'Digital Crafting Tools'), desc: uiMode === 'business' ? (language === 'ka' ? 'ახალი ფინანსური არხების და რესურსების გახსნა.' : 'Unlock new funding channels and resources.') : (language === 'ka' ? 'მაღალი სიზუსტის ციფრული ხელსაწყოების შეძენა.' : 'Acquire high-precision digital tools.'), status: 'upcoming' },
-                           { label: uiMode === 'business' ? (language === 'ka' ? 'პროცესების სინთეზი' : 'Workflow Synthesis') : (language === 'ka' ? 'სტილის დასრულება' : 'Signature Refinement'), desc: uiMode === 'business' ? (language === 'ka' ? 'რამდენიმე სამუშაო პროცესის ერთიან ნაკადად გაერთიანება.' : 'Combine multiple workflows into a single stream.') : (language === 'ka' ? 'თვეების განმავლობაში შექმნილი სტილის დახვეწა.' : 'Enhance the unique fingerprint of your work.'), status: 'active' },
-                         ].map((goal, i) => (
-                           <div key={i} className="p-6 rounded-3xl bg-proton-bg/40 border border-proton-border/50 relative group hover:border-proton-accent/30 transition-all">
-                              <div className="flex items-start justify-between gap-4">
-                                 <div>
-                                    <h4 className="text-sm font-black text-proton-text uppercase tracking-tight mb-2">{goal.label}</h4>
-                                    <p className="text-[10px] text-proton-muted font-bold tracking-wide uppercase leading-relaxed">{goal.desc}</p>
-                                 </div>
-                                 <div className={cn(
-                                   "px-2 py-1 rounded text-[8px] font-black uppercase whitespace-nowrap",
-                                   goal.status === 'active' ? "bg-proton-accent/10 text-proton-accent" : "bg-proton-bg border border-proton-border text-proton-muted"
-                                 )}>
-                                   {goal.status}
-                                 </div>
-                              </div>
-                           </div>
-                         ))}
-                      </div>
-                      <div className="p-8 rounded-[40px] bg-proton-accent/5 border border-proton-accent/10 flex flex-col items-center justify-center text-center">
-                         <div className="w-20 h-20 rounded-full bg-proton-bg border border-proton-accent flex items-center justify-center text-proton-accent mb-6 shadow-2xl relative">
-                            <div className="absolute inset-0 bg-proton-accent/20 rounded-full animate-ping" />
-                            <Zap size={32} />
-                         </div>
-                         <h4 className="text-lg font-black text-proton-text uppercase italic tracking-tight mb-3">
-                           {language === 'ka' ? 'სტრატეგიული ნახტომი' : 'Next Strategic Jump'}
-                         </h4>
-                         <p className="text-xs text-proton-muted font-bold tracking-tight uppercase leading-relaxed max-w-[200px] mb-8 opacity-70">
-                           {uiMode === 'business' 
-                             ? (language === 'ka' ? 'მიაღწიეთ 1,000 ავტომატიზირებულ ციკლს ახალი შესაძლებლობებისთვის.' : 'Reach 1,000 automated cycles to unlock new features.') 
-                             : (language === 'ka' ? 'დაასრულეთ 5 პრემიუმ პროექტი ოსტატის სტატუსის მისაღებად.' : 'Complete 5 premium projects to reach Master status.')}
-                         </p>
-                         <button className={cn(
-                           "px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl active:scale-95",
-                           uiMode === 'business' ? "bg-blue-600 text-white hover:bg-blue-500" : "bg-proton-accent text-proton-bg hover:scale-105"
-                         )}>
-                            {language === 'ka' ? 'გეგმის გააქტიურება' : 'Deploy Next Step'}
-                         </button>
-                      </div>
-                   </div>
-                </div>
-
-                {/* Quick Actions Hub */}
-                <div className="mt-12">
-                   <h3 className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em] mb-4">{language === 'ka' ? 'სწრაფი წვდომა' : 'Quick Actions'}</h3>
-                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      {quickActions.map(action => (
-                         <button 
-                           key={action.id}
-                           onClick={() => onNavigate(action.id)}
-                           className="flex flex-col items-center gap-3 p-4 rounded-3xl bg-proton-bg/40 border border-proton-border/50 hover:bg-proton-accent/5 hover:border-proton-accent transition-all group"
-                         >
-                            <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-black/20 group-hover:scale-110 transition-all", action.color)}>
-                               <action.icon size={20} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">{action.label}</span>
-                         </button>
                       ))}
                    </div>
+                   <button className="text-[10px] font-black uppercase tracking-widest text-proton-accent hover:underline">
+                      View full analysis →
+                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 {/* Activity Feed */}
-                 <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50">
-                    <div className="flex items-center justify-between mb-8">
-                       <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">{t.activity}</h3>
-                       <History size={18} className="text-proton-muted" />
-                    </div>
-                    <div className="space-y-4">
-                       {recentActivity.map(act => (
-                          <div key={act.id} className="flex items-center justify-between p-4 rounded-2xl border border-proton-border/30 hover:border-proton-accent/30 hover:bg-proton-accent/5 transition-all group">
-                             <div className="flex items-center gap-4 text-left">
-                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center border", act.bg.replace('50', '500/10'), act.color.replace('500', '500'))}>
-                                   <act.icon size={18} />
-                                </div>
-                                <div>
-                                   <p className="text-[11px] font-black text-proton-text uppercase tracking-tight">{act.label}</p>
-                                   <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest font-mono">{act.date} • {act.time}</p>
-                                </div>
-                             </div>
-                             <ChevronRight size={14} className="text-proton-muted group-hover:text-proton-accent transition-colors" />
-                          </div>
-                       ))}
-                    </div>
-                 </div>
-
-                 {/* Profile Progress */}
-                 <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 flex flex-col justify-between">
-                    <div>
-                       <div className="flex items-center justify-between mb-8">
-                          <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">{t.profile_strength}</h3>
-                          <Shield size={18} className="text-proton-accent" />
-                       </div>
-                       <div className="relative pt-1 mb-6">
-                          <div className="flex mb-3 items-center justify-between">
-                             <span className="text-[9px] font-black inline-block py-1 px-3 uppercase rounded-full text-proton-accent bg-proton-accent/10 border border-proton-accent/20 tracking-widest">
-                                {profileStrength === 100 ? (language === 'ka' ? 'დასრულებული' : 'Complete') : (language === 'ka' ? 'მიმდინარეობს' : 'In Progress')}
-                             </span>
-                             <span className="text-xl font-black italic text-proton-accent">
-                                {profileStrength}%
-                             </span>
-                          </div>
-                          <div className="flex h-1.5 overflow-hidden bg-proton-bg/60 rounded-full border border-proton-border/30">
-                             <motion.div 
-                               initial={{ width: 0 }}
-                               animate={{ width: `${profileStrength}%` }}
-                               transition={{ duration: 1.5, ease: 'easeOut' }}
-                               className="flex flex-col justify-center text-center text-white bg-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.6)] whitespace-nowrap"
-                             />
-                          </div>
-                       </div>
-                       <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider leading-relaxed text-left">
-                          {language === 'ka' 
-                            ? 'დაასრულეთ თქვენი პროფილი პერსონალიზებული AI გამოცდილების მისაღებად და კვანძების ოპტიმიზაციისთვის.' 
-                            : 'Complete your profile to unlock more personalized AI interactions and better service distribution.'}
-                       </p>
-                    </div>
+              {/* System Work Mode */}
+              <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border/30 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight mb-2">{language === 'ka' ? 'სამუშაო რეჟიმი' : 'System Work Mode'}</h3>
+                  <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest mb-8">{language === 'ka' ? 'აირჩიეთ მიმართულება' : 'Operational Focus'}</p>
+                  
+                  <div className="grid grid-cols-1 gap-3">
                     <button 
-                      onClick={() => setCabinetTab('settings')}
-                      className="mt-8 py-4 bg-proton-bg border border-proton-border rounded-2xl text-[10px] font-black text-proton-text uppercase tracking-[0.2em] hover:border-proton-accent hover:text-proton-accent transition-all active:scale-95 shadow-inner"
+                      onClick={() => handleModeChange('business')}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all",
+                        uiMode === 'business' ? "bg-blue-500/10 border-blue-500/30 text-blue-500" : "bg-proton-bg/20 border-proton-border/50 text-proton-muted grayscale hover:grayscale-0"
+                      )}
                     >
-                       {language === 'ka' ? 'პროფილის რედაქტირება' : 'Edit Profile'}
+                       <div className="flex items-center gap-3">
+                          <Activity size={18} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>
+                       </div>
+                       {uiMode === 'business' && <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />}
                     </button>
-                 </div>
+                    <button 
+                      onClick={() => handleModeChange('creative')}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all",
+                        uiMode === 'creative' ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" : "bg-proton-bg/20 border-proton-border/50 text-proton-muted grayscale hover:grayscale-0"
+                      )}
+                    >
+                       <div className="flex items-center gap-3">
+                          <Zap size={18} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">{language === 'ka' ? 'კრეატივი' : 'Creative'}</span>
+                       </div>
+                       {uiMode === 'creative' && <div className="w-2 h-2 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.5)]" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-proton-border/20">
+                   <p className="text-[9px] text-proton-muted font-medium italic">
+                      {uiMode === 'business' 
+                        ? (language === 'ka' ? 'ოპტიმიზირებულია ანალიტიკისთვის' : 'Optimized for business analytics')
+                        : (language === 'ka' ? 'ოპტიმიზირებულია შემოქმედებისთვის' : 'Optimized for creative workflows')}
+                   </p>
+                </div>
               </div>
             </div>
 
-            {/* Side Column: Identity & Health */}
-            <div className="space-y-8">
-              <div className="bg-proton-text p-8 sm:p-10 rounded-[40px] text-proton-bg shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-proton-accent/20 rounded-full -translate-y-20 translate-x-20 group-hover:scale-150 transition-transform duration-1000 blur-2xl" />
-                <div className="relative z-10 text-left">
-                  <div className="flex items-center justify-between mb-8">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-proton-bg/60">{language === 'ka' ? 'ვერიფიცირებული კვანძი' : 'VERIFIED NODE'}</span>
-                    <ShieldCheck size={28} className="text-proton-accent" />
-                  </div>
-                  <div className="mb-10">
-                    <p className="text-proton-bg/60 text-[10px] font-black uppercase tracking-widest mb-1">{t.member_since}</p>
-                    <h3 className="text-3xl font-black italic uppercase tracking-tighter">{formattedJoinDate}</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-5 bg-proton-bg/10 rounded-2xl border border-proton-bg/10 backdrop-blur-sm">
-                      <div className="flex items-center gap-3">
-                        <Fingerprint size={18} className="text-proton-accent" />
-                        <span className="text-[10px] font-black uppercase tracking-wider">{cab.two_factor}</span>
-                      </div>
-                      <div className="w-10 h-6 bg-proton-accent rounded-full flex items-center px-1 border border-proton-accent/40 shadow-lg shadow-proton-accent/20">
-                        <div className="w-4 h-4 bg-proton-bg rounded-full ml-auto shadow-sm" />
-                      </div>
+            {/* ZONE 1: FINANCIALS & STORAGE */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Balance Card */}
+              <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 relative group overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
+                <div className="flex items-center justify-between mb-8 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-proton-accent/10 rounded-xl">
+                      <Wallet size={18} className="text-proton-accent" />
                     </div>
-                    <button className="w-full py-5 bg-proton-bg text-proton-text rounded-2xl font-black text-[10px] uppercase tracking-[0.25em] hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-2xl active:scale-95 group">
-                      <Download size={18} className="group-hover:scale-110 transition-transform" />
-                      {language === 'ka' ? 'იდენტობის ექსპორტი' : 'Export Identity'}
-                    </button>
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-proton-muted">Net Liquidity</span>
+                  </div>
+                  <div className="px-3 py-1 bg-proton-accent/5 rounded-full border border-proton-border text-[8px] font-black text-proton-accent uppercase tracking-widest">USD Asset</div>
+                </div>
+                <div className="space-y-2 mb-8 relative z-10">
+                  <h4 className="text-5xl font-black text-proton-text italic tracking-tighter leading-none">
+                    ${(profile.balance || 0).toLocaleString()}
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-proton-accent italic">≈ {( (profile.balance || 0) * gelRate ).toLocaleString()}</span>
+                    <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest opacity-60">GEL (NBG Sync)</span>
+                  </div>
+                </div>
+                <div className="flex gap-3 relative z-10">
+                   <button className="flex-1 py-4 bg-proton-text text-proton-bg rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] transition-all active:scale-95 shadow-lg">Deposit</button>
+                   <button className="flex-1 py-4 bg-white/5 border border-white/10 rounded-2xl text-[9px] font-black text-proton-text uppercase tracking-[0.2em] hover:bg-white/10 transition-all active:scale-95">Withdraw</button>
+                </div>
+              </div>
+
+              {/* Resource Usage */}
+              <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 relative group overflow-hidden">
+                <div className="flex items-center gap-3 mb-10">
+                  <div className="p-2 bg-blue-500/10 rounded-xl">
+                    <Database size={18} className="text-blue-500" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-proton-muted">{t.resource_usage}</span>
+                </div>
+                <div className="space-y-8">
+                  <div>
+                    <div className="flex justify-between items-end mb-3">
+                      <span className="text-[10px] font-black text-proton-text uppercase tracking-widest">{t.storage}</span>
+                      <span className="text-sm font-black text-proton-text font-mono italic">{userStats.storageGB.toFixed(1)} <span className="text-[9px] text-proton-muted">GB</span></span>
+                    </div>
+                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-white/5">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min((userStats.storageGB / 5) * 100, 100)}%` }}
+                        className="h-full bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.3)]" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-end mb-3">
+                      <span className="text-[10px] font-black text-proton-text uppercase tracking-widest">{t.activity_time}</span>
+                      <span className="text-sm font-black text-proton-text font-mono italic">{userStats.workHours.toFixed(1)} <span className="text-[9px] text-proton-muted">H</span></span>
+                    </div>
+                    <div className="h-2 w-full bg-proton-bg/60 rounded-full overflow-hidden border border-white/5">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: '65%' }}
+                        className="h-full bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.3)]" 
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* System Health Status */}
-              <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50 text-left">
+              {/* Account Health */}
+              <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 flex flex-col justify-between relative group overflow-hidden">
+                <div className="absolute bottom-0 right-0 w-32 h-32 bg-green-500/5 rounded-full translate-y-16 translate-x-16 blur-2xl" />
+                <div className="flex items-center gap-3 mb-6 relative z-10">
+                  <div className="p-2 bg-green-500/10 rounded-xl">
+                    <ShieldCheck size={18} className="text-green-500" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-proton-muted">{t.account_health}</span>
+                </div>
+                <div className="text-center py-6 relative z-10 shadow-inner rounded-[32px] bg-white/5 border border-white/5">
+                  <div className="text-5xl font-black text-proton-text italic tracking-tighter mb-1">
+                    {profileStrength}%
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-green-500">Tier: Enterprise</p>
+                  </div>
+                </div>
+                <div className="mt-6 relative z-10">
+                   <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest text-center opacity-60 italic">Your account is fully optimized</p>
+                </div>
+              </div>
+            </div>
+
+            {/* ZONE 2: STRATEGIC GROWTH & MASTERY */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between px-2">
+                 <h3 className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">{language === 'ka' ? 'სტრატეგიული ზრდა' : 'Strategic Growth & Mastery'}</h3>
+                 <span className="text-[9px] font-black text-proton-accent uppercase tracking-widest italic">{language === 'ka' ? 'მიმდინარე ფაზა: ექსპანსია' : 'Current Phase: Expansion'}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                 {[
+                   { label: language === 'ka' ? 'ბაზრის წილი' : 'Market Presence', progress: 15, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                   { label: language === 'ka' ? 'ავტომატიზაცია' : 'Automation Level', progress: 40, color: 'text-proton-accent', bg: 'bg-proton-accent/10' },
+                   { label: language === 'ka' ? 'გუნდის ძალა' : 'Team Synergy', progress: 65, color: 'text-green-500', bg: 'bg-green-500/10' },
+                   { label: language === 'ka' ? 'ინოვაცია' : 'Innovation Index', progress: 85, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                 ].map((stat, i) => (
+                   <div key={i} className="bg-white/5 backdrop-blur-sm p-6 rounded-[32px] border border-white/5 hover:border-white/20 transition-all group">
+                      <div className="flex justify-between items-start mb-4">
+                         <span className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none">{stat.label}</span>
+                         <span className={cn("text-lg font-black italic leading-none", stat.color)}>{stat.progress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-proton-bg/60 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${stat.progress}%` }}
+                          className={cn("h-full rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]", stat.bg.replace('/10', ''))}
+                        />
+                      </div>
+                   </div>
+                 ))}
+              </div>
+            </div>
+
+            {/* ZONE 3: CORE ACTIONS */}
+            <div className="space-y-6">
+              <h3 className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em] ml-2">{language === 'ka' ? 'მთავარი მოქმედებები' : 'Core Business Units'}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { id: 'image', icon: Layers, label: language === 'ka' ? 'სტუდია' : 'Creative Studio', desc: t.studio_desc, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+                  { id: 'finance', icon: CreditCard, label: language === 'ka' ? 'ფინანსები' : 'Financial Hub', desc: t.finance_desc, color: 'text-green-500', bg: 'bg-green-500/10' },
+                  { id: 'translator', icon: Globe, label: language === 'ka' ? 'თარგმნა' : 'Global Comms', desc: language === 'ka' ? 'მულტილინგვალური კომუნიკაცია' : 'Multilingual Communication', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                ].map(action => (
+                  <button 
+                    key={action.id}
+                    onClick={() => onNavigate(action.id)}
+                    className="bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10 hover:border-proton-accent/50 transition-all group text-left flex flex-col justify-between h-64 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-700" />
+                    <div className="relative z-10">
+                      <div className={cn("w-16 h-16 rounded-[24px] flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-xl shadow-black/20", action.bg, action.color)}>
+                        <action.icon size={28} />
+                      </div>
+                      <h4 className="text-2xl font-black text-proton-text uppercase italic tracking-tighter mb-2">{action.label}</h4>
+                      <p className="text-[11px] text-proton-muted font-bold leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">{action.desc}</p>
+                    </div>
+                    <div className="relative z-10 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.25em] text-proton-accent group-hover:gap-4 transition-all pt-4 border-t border-white/5 mt-4">
+                       Launch Unit
+                       <ArrowRight size={14} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ZONE 4: RECENT ACTIVITY & SYSTEM STATUS */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Activity Feed */}
+              <div className="lg:col-span-2 bg-white/5 backdrop-blur-md p-8 rounded-[40px] border border-white/10">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <History size={20} className="text-proton-muted" />
+                    <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">{t.activity}</h3>
+                  </div>
+                  <span className="text-[9px] font-black text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'ბოლო 5 ქმედება' : 'Last 5 Actions'}</span>
+                </div>
+                <div className="space-y-3">
+                  {[...recentActivity, { id: 4, label: t.tasks_completed, time: '18:30', date: '26 APR', icon: CheckCircle2, color: 'text-proton-accent', bg: 'bg-proton-accent/10' }, { id: 5, label: language === 'ka' ? 'სისტემური განახლება' : 'System Sync', time: '17:45', date: '26 APR', icon: RefreshCw, color: 'text-amber-500', bg: 'bg-amber-500/10' }].map(act => (
+                    <div key={act.id} className="flex items-center justify-between p-4 rounded-[28px] bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg", act.bg, act.color)}>
+                          <act.icon size={20} />
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-black text-proton-text uppercase tracking-tight">{act.label}</p>
+                          <p className="text-[10px] text-proton-muted font-bold font-mono opacity-60">{act.time} • {act.date}</p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-2 rounded-xl bg-proton-bg/40 border border-white/5 text-[8px] font-black text-proton-muted uppercase tracking-widest group-hover:text-proton-accent group-hover:border-proton-accent/30 transition-all">
+                         View Details
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* System Stats (Refined Jargon) */}
+              <div className="bg-white/5 backdrop-blur-md p-8 rounded-[40px] border border-white/10">
                  <div className="flex items-center justify-between mb-10">
                     <h3 className="text-xs font-black text-proton-text uppercase tracking-[0.3em] italic">{t.health}</h3>
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
-                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                       <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Active</span>
+                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]" />
+                       <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">{cab.connected || 'Live'}</span>
                     </div>
                  </div>
                  <div className="space-y-6">
-                    <div className="flex items-center justify-between group">
-                       <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider group-hover:text-proton-accent transition-colors">Response Time</span>
-                       <span className="text-sm font-black text-proton-text font-mono italic">14ms</span>
+                    <div className="p-5 rounded-3xl bg-white/5 border border-white/5 space-y-4">
+                       <div className="flex items-center justify-between group">
+                          <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest transition-colors">{t.health}</span>
+                          <span className="text-sm font-black text-proton-text font-mono italic">Optimal</span>
+                       </div>
+                       <div className="flex items-center justify-between group">
+                          <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest transition-colors">{t.tasks_completed}</span>
+                          <span className="text-sm font-black text-proton-text font-mono italic">1,240</span>
+                       </div>
+                       <div className="flex items-center justify-between group">
+                          <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest transition-colors">{t.account_health}</span>
+                          <span className="text-sm font-black text-green-500 font-mono italic">Secure</span>
+                       </div>
                     </div>
-                    <div className="flex items-center justify-between group">
-                       <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider group-hover:text-proton-accent transition-colors">Node Integrity</span>
-                       <span className="text-sm font-black text-proton-text font-mono italic">Secure</span>
+                    
+                    <div className="pt-2">
+                       <button className="w-full py-4 rounded-2xl bg-proton-text text-proton-bg text-[10px] font-black uppercase tracking-[0.2em] hover:scale-[1.02] transition-all shadow-xl active:scale-95">
+                          {language === 'ka' ? 'სრული დიაგნოსტიკა' : 'Full System Audit'}
+                       </button>
                     </div>
-                    <div className="flex items-center justify-between group">
-                       <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider group-hover:text-proton-accent transition-colors">Uptime Target</span>
-                       <span className="text-sm font-black text-green-500 font-mono italic">99.9%</span>
+                 </div>
+                 
+                 <div className="mt-8 p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-proton-accent/10 flex items-center justify-center text-proton-accent">
+                       <Shield size={16} />
                     </div>
-                    <button className="w-full mt-6 py-4 rounded-2xl bg-proton-bg/40 border border-proton-border/50 text-[9px] font-black text-proton-muted uppercase tracking-widest hover:border-proton-accent hover:text-proton-accent transition-all shadow-inner">
-                       {language === 'ka' ? 'სრული დიაგნოსტიკა' : 'Full Diagnostics'}
-                    </button>
+                    <p className="text-[9px] text-proton-muted font-bold leading-tight uppercase tracking-tight">Your data is secured by enterprise-grade encryption protocols.</p>
                  </div>
               </div>
             </div>
@@ -586,7 +521,7 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                   <p className="text-[11px] text-proton-muted font-bold tracking-wide leading-relaxed mb-10 opacity-70 group-hover:opacity-100 transition-opacity">{module.desc}</p>
                 </div>
                 
-                <div className="w-full pt-6 border-t border-proton-border/30 relative z-10 flex items-center justify-between">
+                <div className="w-full pt-6 border-t border-white/10 relative z-10 flex items-center justify-between">
                   <div className="flex items-center gap-3 font-black text-[10px] uppercase tracking-[0.25em] text-proton-accent group-hover:scale-105 transition-transform origin-left">
                     {language === 'ka' ? 'მოდულის გახსნა' : 'Access Hub'}
                     <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform h-3 w-3" />
@@ -608,33 +543,33 @@ const CabinetView: React.FC<CabinetViewProps> = ({
           >
             {/* Profile Overview */}
             <div className="lg:col-span-2 space-y-8">
-               <div className="proton-glass p-8 sm:p-10 rounded-[40px] border border-proton-border/50 text-left">
-                  <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight mb-8">Personal Information</h3>
+               <div className="bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[40px] border border-white/10 text-left">
+                  <h3 className="text-xl font-black text-proton-text uppercase italic tracking-tight mb-8">Account Profile</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                      <div className="space-y-4">
-                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Display Name</label>
-                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-proton-bg/40 border border-proton-border/50 group focus-within:border-proton-accent transition-all">
+                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Full Name</label>
+                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 group focus-within:border-proton-accent transition-all shadow-inner">
                            <UserIcon size={18} className="text-proton-muted group-focus-within:text-proton-accent" />
                            <span className="text-sm font-black text-proton-text">{user?.displayName || 'Not Set'}</span>
                         </div>
                      </div>
                      <div className="space-y-4">
-                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">System Email</label>
-                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-proton-bg/40 border border-proton-border/50">
+                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Work Email</label>
+                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
                            <Mail size={18} className="text-proton-muted" />
                            <span className="text-sm font-black text-proton-text truncate">{user?.email || 'N/A'}</span>
                         </div>
                      </div>
                      <div className="space-y-4">
-                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Phone Number</label>
-                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-proton-bg/40 border border-proton-border/50">
+                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Contact Number</label>
+                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
                            <Phone size={18} className="text-proton-muted" />
                            <span className="text-sm font-black text-proton-text">{profile.phoneNumber || (language === 'ka' ? 'დაუმატებელი' : 'Not Provided')}</span>
                         </div>
                      </div>
                      <div className="space-y-4">
-                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Timezone / Location</label>
-                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-proton-bg/40 border border-proton-border/50">
+                        <label className="text-[10px] font-black text-proton-muted uppercase tracking-widest block ml-1">Primary Location</label>
+                        <div className="flex items-center gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 shadow-inner">
                            <Globe size={18} className="text-proton-muted" />
                            <span className="text-sm font-black text-proton-text italic">UTC+4 / Tbilisi, Georgia</span>
                         </div>
@@ -645,35 +580,35 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                     className="mt-12 px-10 py-5 bg-proton-accent text-proton-bg rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:scale-105 transition-all shadow-xl shadow-proton-accent/20 flex items-center gap-3 active:scale-95"
                   >
                      <Settings size={18} />
-                     {language === 'ka' ? 'პარამეტრების მართვა' : 'Advanced Configuration'}
+                     {language === 'ka' ? 'პარამეტრების მართვა' : 'System Configuration'}
                   </button>
                </div>
             </div>
 
             {/* Account Status Card */}
             <div className="space-y-8 text-left">
-               <div className="proton-glass p-8 rounded-[40px] border border-proton-border/50">
+               <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[40px] border border-white/10">
                   <div className="flex items-center gap-4 mb-8">
                      <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center text-proton-accent">
                         <Star size={24} className="fill-current" />
                      </div>
                      <div>
                         <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">{cab.subscription}</h3>
-                        <p className="text-[10px] text-proton-accent font-black uppercase tracking-widest leading-none">PRIME NODE</p>
+                        <p className="text-[10px] text-proton-accent font-black uppercase tracking-widest leading-none">PRIME SESSION</p>
                      </div>
                   </div>
                   <div className="space-y-4 mb-8">
-                     <div className="flex items-center justify-between p-4 rounded-xl bg-proton-bg/30 border border-proton-border/30">
-                        <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider">Storage Tier</span>
-                        <span className="text-xs font-black text-proton-text italic">Gold Plus</span>
+                     <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider">Service Tier</span>
+                        <span className="text-xs font-black text-proton-text italic">Premium Plus</span>
                      </div>
-                     <div className="flex items-center justify-between p-4 rounded-xl bg-proton-bg/30 border border-proton-border/30">
-                        <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider">AI Priority</span>
-                        <span className="text-xs font-black text-proton-text italic">High</span>
+                     <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-[10px] font-black text-proton-muted uppercase tracking-wider">AI Support</span>
+                        <span className="text-xs font-black text-proton-text italic">Priority</span>
                      </div>
                   </div>
                   <button className="w-full py-4 bg-proton-text text-proton-bg rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:scale-[1.02] transition-all shadow-xl active:scale-95">
-                     {language === 'ka' ? 'აბონემენტის შეცვლა' : 'Upgrade Plan'}
+                     {language === 'ka' ? 'აბონემენტის შეცვლა' : 'Update Subscription'}
                   </button>
                </div>
             </div>
@@ -689,24 +624,24 @@ const CabinetView: React.FC<CabinetViewProps> = ({
             className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left"
           >
             {/* Security Controls */}
-             <div className="proton-glass p-8 sm:p-10 rounded-[40px] border border-proton-border/50 space-y-8">
+             <div className="bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[40px] border border-white/10 space-y-8">
                 <div className="flex items-center gap-4 mb-4">
                    <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-lg shadow-red-500/10">
                       <ShieldAlert size={24} />
                    </div>
                    <div>
                       <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">Access Control</h3>
-                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest leading-none">System Security</p>
+                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest leading-none">Account Privacy</p>
                    </div>
                 </div>
                 <div className="space-y-4">
                    {[
                      { label: 'Cloud Wallet Auth', active: true, icon: Key },
-                     { label: 'Agent Verification', active: true, icon: UserCheck },
-                     { label: 'Device Multi-link', active: false, icon: Smartphone },
+                     { label: 'Identity Verification', active: true, icon: UserCheck },
+                     { label: 'Device Synergy', active: false, icon: Smartphone },
                      { label: 'Privacy Shield', active: false, icon: Shield },
                    ].map((item, i) => (
-                      <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-proton-bg/40 border border-proton-border/50 hover:bg-proton-bg transition-colors">
+                      <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
                          <div className="flex items-center gap-4 text-proton-text">
                             <item.icon size={20} className={item.active ? "text-proton-accent" : "text-proton-muted"} />
                             <span className="text-[11px] font-black uppercase tracking-wider">{item.label}</span>
@@ -719,34 +654,34 @@ const CabinetView: React.FC<CabinetViewProps> = ({
                 </div>
              </div>
 
-             <div className="proton-glass p-8 sm:p-10 rounded-[40px] border border-proton-border/50 flex flex-col justify-between">
+             <div className="bg-white/5 backdrop-blur-xl p-8 sm:p-10 rounded-[40px] border border-white/10 flex flex-col justify-between">
                 <div className="space-y-6">
-                   <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">Identity Cryptography</h3>
+                   <h3 className="text-lg font-black text-proton-text uppercase italic tracking-tight">Security Credentials</h3>
                    <p className="text-[11px] text-proton-muted font-bold leading-relaxed mb-6 italic">
-                      Your decentralized identity is secured via a multi-layered cryptographic shield. You can rotate keys or export your full node reputation at any time.
+                      Your identity is protected by industry-standard encryption. You can refresh your security credentials or export your account audit history at any time.
                    </p>
                    <div className="p-6 rounded-3xl bg-proton-accent/5 border border-proton-accent/10 space-y-4">
                       <div className="flex items-center justify-between">
                          <div className="flex items-center gap-3 text-proton-accent">
                             <Circle size={12} className="fill-current" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Active Keys: 3/3</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">Active Sessions: 3</span>
                          </div>
-                         <span className="text-[8px] font-bold text-proton-muted font-mono">ED25519</span>
+                         <span className="text-[8px] font-bold text-proton-muted font-mono">SECURED</span>
                       </div>
                       <div className="flex items-center gap-3 text-green-500">
                          <Circle size={12} className="fill-current animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Node Reputation: Excellent</span>
+                         <span className="text-[10px] font-black uppercase tracking-widest">Account Health: Excellent</span>
                       </div>
                    </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-4 mt-12">
-                   <button className="flex-1 py-5 px-6 rounded-2xl bg-proton-bg border border-proton-border text-[9px] font-black uppercase tracking-[0.25em] hover:border-proton-accent hover:text-proton-accent transition-all text-center flex items-center justify-center gap-2 active:scale-95">
+                   <button className="flex-1 py-5 px-6 rounded-2xl bg-white/5 border border-white/10 text-[9px] font-black text-proton-text uppercase tracking-[0.25em] hover:bg-white/10 transition-all text-center flex items-center justify-center gap-2 active:scale-95">
                       <RefreshCw size={16} />
-                      Rotate Keys
+                      Refresh Access
                    </button>
                    <button className="flex-1 py-5 px-6 rounded-2xl bg-proton-text text-proton-bg text-[9px] font-black uppercase tracking-[0.25em] hover:opacity-90 transition-all shadow-xl active:scale-95 text-center flex items-center justify-center gap-2">
-                      <Lock size={16} />
-                      Lock Node
+                       <Lock size={16} />
+                       Lock Account
                    </button>
                 </div>
              </div>

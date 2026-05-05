@@ -302,6 +302,15 @@ export const translations = {
       connected_accounts: "Linked Accounts",
       security_events: "Security Alerts",
       health: "System Status",
+      system_security: "System Security",
+      service_latency: "Service Latency",
+      availability: "Availability",
+      resource_usage: "Resource Usage",
+      activity_time: "Activity Time",
+      account_health: "Account Health",
+      daily_summary: "Daily Summary",
+      ai_overview: "AI Strategy Overview",
+      tasks_completed: "Tasks Completed",
       finance_desc: "Money & Accounts",
       studio_desc: "Creative Space",
       blueprints_desc: "Business Planning",
@@ -401,6 +410,15 @@ export const translations = {
       limited: "Limited Mode",
       safety_error: "We couldn't generate that image because it violates safety policies. Please try a different prompt.",
       fail_error: "Failed to generate image. Please try again."
+    },
+    hub: {
+      technical_base_desc: "Central repository for system protocols, documentation, and operational standards.",
+      tools_desc: "High-performance utility suite for real-time analysis and business automation.",
+      ai_assistant_desc: "Advanced cognitive unit for strategic decision support and complex problem solving.",
+      system_status: "System Status",
+      active: "Active",
+      quick_tasks: "Quick Tasks",
+      finance_shortcut: "Finance"
     },
     editor: {
       title: "Edit Workflow",
@@ -706,6 +724,15 @@ export const translations = {
       connected_accounts: "მიბმული გვერდები",
       security_events: "შეტყობინებები",
       health: "სტატუსი",
+      system_security: "სისტემის უსაფრთხოება",
+      service_latency: "სერვისის დაყოვნება",
+      availability: "ხელმისაწვდომობა",
+      resource_usage: "რესურსების გამოყენება",
+      activity_time: "აქტივობის დრო",
+      account_health: "ანგარიშის მდგომარეობა",
+      daily_summary: "დღიური შეჯამება",
+      ai_overview: "AI სტრატეგიული მიმოხილვა",
+      tasks_completed: "დასრულებული დავალებები",
       finance_desc: "ფული და ანგარიშები",
       studio_desc: "შემოქმედებითი სივრცე",
       blueprints_desc: "ბიზნეს გეგმები",
@@ -805,6 +832,15 @@ export const translations = {
       limited: "შეზღუდული რეჟიმი",
       safety_error: "სურათის გენერაცია ვერ მოხერხდა უსაფრთხოების პოლიტიკის გამო. გთხოვთ სცადოთ სხვა ტექსტი.",
       fail_error: "სურათის გენერაცია ვერ მოხერხდა. გთხოვთ სცადოთ მოგვიანებით."
+    },
+    hub: {
+      technical_base_desc: "სისტემის პროტოკოლების, დოკუმენტაციისა და ოპერაციული სტანდარტების ცენტრალური საცავი.",
+      tools_desc: "მაღალი წარმადობის უტილიტები რეალურ დროში ანალიზისა და ბიზნეს ავტომატიზაციისთვის.",
+      ai_assistant_desc: "მოწინავე შემეცნებითი ერთეული სტრატეგიული გადაწყვეტილების მხარდაჭერისა და რთული ამოცანების გადასაჭრელად.",
+      system_status: "სისტემის სტატუსი",
+      active: "აქტიური",
+      quick_tasks: "სწრაფი ამოცანები",
+      finance_shortcut: "ფინანსები"
     },
     editor: {
       title: "რედაქტირება",

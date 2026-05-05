@@ -10,6 +10,7 @@ export type UserProfile = {
   bio?: string;
   avatar?: string;
   role?: string;
+  balance?: number;
 };
 
 export type GlobalAiSettings = {
@@ -26,4 +27,4 @@ export type PersonaHistory = { [personaId: string]: ChatMessage[] };
 
 export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium';
 
-export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
+export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation' | 'admin-sandbox';
