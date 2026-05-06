@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { 
   Workflow, Cpu, FileText, Settings, Zap, CheckCircle2, Bell, LogOut, 
   Grid, Layers, Shield, Activity, Database, History, ArrowRight, 
-  ShieldCheck, UserCheck, CreditCard, Sparkles, User as UserIcon, Star, Lock, Phone, Mail, Globe
+  ShieldCheck, UserCheck, CreditCard, Sparkles, User as UserIcon, Star, Lock, Phone, Mail, Globe,
+  Fingerprint, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';

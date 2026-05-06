@@ -86,7 +86,7 @@ export async function chatWithPersona(
   model: string = "gemini-3.1-flash-preview",
   includeMaps: boolean = false,
   includeSearch: boolean = true,
-  temperature: number = 0.8,
+  temperature: number = 0.9,
   globalInstruction?: string,
   appLanguage: 'en' | 'ka' = 'en'
 ): Promise<{ text: string, metadata: GeminiMetadata }> {
@@ -288,7 +288,7 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
   }
 }
 
-export async function architectTask(project: string, temperature: number = 0.8): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
+export async function architectTask(project: string, temperature: number = 0.9): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
   const startTime = performance.now();
   try {
     const response = await ai.models.generateContent({

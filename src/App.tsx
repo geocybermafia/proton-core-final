@@ -81,7 +81,6 @@ async function testConnection() {
 }
 testConnection();
 import { TranslatorView } from './components/TranslatorView';
-import { AdminSandbox } from './components/AdminSandbox';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts';
@@ -159,7 +158,9 @@ import {
   History,
   UserCheck,
   Languages,
-  ArrowUpRight
+  ArrowUpRight,
+  Camera as CameraIcon,
+  Mic as MicIcon
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -1718,11 +1719,23 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     geolocation: 'geolocation' in navigator,
     battery: 'getBattery' in navigator,
     network: 'connection' in navigator,
-    orientation: 'DeviceOrientationEvent' in window
+    orientation: 'DeviceOrientationEvent' in window,
+    camera: 'mediaDevices' in navigator,
+    mic: 'mediaDevices' in navigator
   });
 
   const requestHardwareAccess = async () => {
     setPermissionRequested(true);
+    
+    // Request Camera/Mic access to trigger prompt
+    if (supported.camera || supported.mic) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately
+      } catch (err) {
+        console.error("Hardware access denied:", err);
+      }
+    }
     
     // iOS DeviceOrientation permission handling
     if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
@@ -1780,7 +1793,9 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       geolocation: 'geolocation' in navigator,
       battery: 'getBattery' in navigator,
       network: 'connection' in navigator,
-      orientation: 'DeviceOrientationEvent' in window
+      orientation: 'DeviceOrientationEvent' in window,
+      camera: 'mediaDevices' in navigator,
+      mic: 'mediaDevices' in navigator
     });
     
     // Automatically try to get some data if permitted or simple
@@ -1969,6 +1984,54 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             </div>
           </div>
         </div>
+
+        {/* Visual Input (Camera) */}
+        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <CameraIcon size={60} />
+          </div>
+          <div className="space-y-4 md:space-y-6 relative z-10">
+            <div className={cn(
+              "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
+              supported.camera ? "bg-amber-400/10 text-amber-400" : "bg-proton-bg text-proton-muted"
+            )}>
+              <CameraIcon size={20} />
+            </div>
+            <div>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.camera}</h4>
+              <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
+                {supported.camera ? 'Ready' : 'Locked'}
+              </p>
+              <p className="mt-2 text-[10px] font-bold text-amber-400 uppercase tracking-tight">
+                {supported.camera ? 'Hardware Active' : 'Access Restricted'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Acoustic sensor (Mic) */}
+        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+            <MicIcon size={60} />
+          </div>
+          <div className="space-y-4 md:space-y-6 relative z-10">
+            <div className={cn(
+              "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
+              supported.mic ? "bg-red-400/10 text-red-400" : "bg-proton-bg text-proton-muted"
+            )}>
+              <MicIcon size={20} />
+            </div>
+            <div>
+              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.mic}</h4>
+              <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
+                {supported.mic ? 'Active' : 'Locked'}
+              </p>
+              <p className="mt-2 text-[10px] font-bold text-red-400 uppercase tracking-tight">
+                {supported.mic ? 'Sensor Streaming' : 'Awaiting Authorization'}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -2057,7 +2120,8 @@ const PersonasView = ({
   favoritePersonaIds: string[],
   onToggleFavorite: (id: string) => void,
   language: 'en' | 'ka',
-  user: any
+  user: any,
+  isAdmin: boolean
 }) => {
   const [selectedPersona, setSelectedPersona] = useState<Persona>(() => {
     if (initialPersonaId) {
@@ -2800,7 +2864,7 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
 
 
 
-const ImageView = ({ uiMode, isCreativeMode = true, language }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka' }) => {
+const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2808,6 +2872,14 @@ const ImageView = ({ uiMode, isCreativeMode = true, language }: { uiMode: 'busin
 
   const handleGenerate = async () => {
     if (!isCreativeMode || !prompt.trim()) return;
+
+    if (!isAdmin) {
+      alert(language === 'ka' 
+        ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
+        : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
+      return;
+    }
+
     setLoading(true);
     try {
       const result = await generateOrEditImage(prompt);
@@ -2884,14 +2956,16 @@ const WorkflowEditor = ({
   onClose,
   personas,
   uiMode,
-  language
+  language,
+  isAdmin
 }: {
   workflow: Workflow,
   onSave: (workflow: Workflow) => void,
   onClose: () => void,
   personas: Persona[],
   uiMode: 'business' | 'creative',
-  language: 'en' | 'ka'
+  language: 'en' | 'ka',
+  isAdmin: boolean
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
   const [editorMode, setEditorMode] = useState<'form' | 'flow'>('form');
@@ -3055,6 +3129,12 @@ const WorkflowEditor = ({
             </div>
             <button 
               onClick={async () => {
+                if (!isAdmin) {
+                  alert(language === 'ka' 
+                    ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
+                    : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
+                  return;
+                }
                 const analysis = await analyzeWorkflow(formData);
                 alert(analysis);
               }}
@@ -3086,7 +3166,8 @@ const WorkflowsView = ({
   user,
   uiMode,
   language,
-  isCreativeMode = true
+  isCreativeMode = true,
+  isAdmin
 }: {
   workflows: Workflow[],
   setWorkflows: React.Dispatch<React.SetStateAction<Workflow[]>>,
@@ -3094,7 +3175,8 @@ const WorkflowsView = ({
   user: any,
   uiMode: 'business' | 'creative',
   language: 'en' | 'ka',
-  isCreativeMode?: boolean
+  isCreativeMode?: boolean,
+  isAdmin: boolean
 }) => {
   const t = translations[language].workflows;
   const common = translations[language].common;
@@ -3130,7 +3212,12 @@ const WorkflowsView = ({
   };
 
   const handleAnalyze = async (wf: Workflow) => {
-
+    if (!isAdmin) {
+      alert(language === 'ka' 
+        ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
+        : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
+      return;
+    }
     const result = await analyzeWorkflow(wf);
     const updatedWorkflow = {
       ...wf,
@@ -3310,6 +3397,7 @@ const WorkflowsView = ({
             personas={personas}
             uiMode={uiMode}
             language={language}
+            isAdmin={isAdmin}
           />
         )}
       </AnimatePresence>
@@ -3616,7 +3704,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('proton_ai_settings');
       return saved ? JSON.parse(saved) : {
-        temperature: 0.8,
+        temperature: 0.9,
         enableSearch: true,
         enableMaps: false,
         zenMode: false,
@@ -3625,7 +3713,7 @@ export default function App() {
       };
     } catch {
       return {
-        temperature: 0.8,
+        temperature: 0.9,
         enableSearch: true,
         enableMaps: false,
         zenMode: false,
@@ -3667,6 +3755,21 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setAuthInitialized(true);
+      
+      if (u) {
+        // Sync userProfile with Firebase user if not already set meaningfully
+        setUserProfile(prev => {
+          const updates: Partial<UserProfile> = {};
+          if (u.displayName && (!prev.name || prev.name === 'Darian B.')) updates.name = u.displayName;
+          if (u.email && (!prev.email || prev.email === 'devdarianib@gmail.com')) updates.email = u.email;
+          if (u.photoURL && (!prev.avatar || prev.avatar.includes('dicebear'))) updates.avatar = u.photoURL;
+          
+          if (Object.keys(updates).length > 0) {
+            return { ...prev, ...updates };
+          }
+          return prev;
+        });
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -3986,6 +4089,12 @@ export default function App() {
 
   const handleAiSuggestTasks = async () => {
     if (!isCreativeMode) return;
+    if (!isAdmin) {
+      alert(language === 'ka' 
+        ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
+        : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
+      return;
+    }
     try {
       const workflowContext = workflows.map(w => `${w.name}: ${w.trigger} -> ${w.action}`).join('; ');
       const existingTasks = tasks.map(t => t.content).join(', ');
@@ -4029,13 +4138,8 @@ export default function App() {
 
   const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
   const t = translations[currentLanguage];
-  const isAdmin = user?.email === 'devdarianib@gmail.com';
-
-  useEffect(() => {
-    if (isAdmin && window.location.hash === '#admin-proton-sandbox') {
-      setActiveView('admin-sandbox');
-    }
-  }, [isAdmin]);
+  const isPlayground = window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost');
+  const isAdmin = user?.email === 'devdarianib@gmail.com' && isPlayground;
 
   if (!authInitialized) {
     return (
@@ -4073,21 +4177,8 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[60]"
+            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[65]"
             onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Backdrop */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsSidebarOpen(false)}
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[65]"
           />
         )}
       </AnimatePresence>
@@ -4246,17 +4337,6 @@ export default function App() {
               uiMode={uiMode}
               badge={language === 'ka' ? 'ჰაბი' : 'HUB'}
             />
-            {isAdmin && (
-              <SidebarItem 
-                icon={ShieldAlert} 
-                label="Admin Sandbox" 
-                active={activeView === 'admin-sandbox'} 
-                onClick={() => handleViewChange('admin-sandbox')} 
-                expanded={isSidebarOpen}
-                uiMode={uiMode}
-                badge="ROOT"
-              />
-            )}
           </div>
         </nav>
 
@@ -4431,6 +4511,44 @@ export default function App() {
                   isSystemActive={isSystemActive}
                 />
               )}
+              {activeView === 'personas' && (
+                <PersonasView 
+                  history={chatHistory} 
+                  onNewMessage={handleNewMessage} 
+                  customAvatars={personaAvatars}
+                  onUpdateAvatar={handleUpdateAvatar}
+                  personas={personas}
+                  onUpdatePersonas={handleUpdatePersonas}
+                  aiSettings={aiSettings}
+                  setLastGeminiMetadata={setLastGeminiMetadata}
+                  workflows={workflows}
+                  tasks={tasks}
+                  uiMode={uiMode}
+                  isCreativeMode={isCreativeMode}
+                  initialPersonaId={selectedPersonaId}
+                  favoritePersonaIds={favoritePersonaIds}
+                  onToggleFavorite={handleToggleFavoritePersona}
+                  language={userProfile.language}
+                  user={user}
+                  isAdmin={isAdmin}
+                />
+              )}
+              {activeView === 'finance' && (
+                <Web3View uiMode={uiMode} language={userProfile.language} rates={rates} />
+              )}
+              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode} language={userProfile.language} isAdmin={isAdmin} />}
+              {activeView === 'blueprints' && (
+                <WorkflowsView 
+                  workflows={workflows}
+                  setWorkflows={setWorkflows}
+                  personas={personas}
+                  user={user}
+                  uiMode={uiMode}
+                  language={userProfile.language}
+                  isCreativeMode={isCreativeMode}
+                  isAdmin={isAdmin}
+                />
+              )}
               {activeView === 'organizer' && (
                 <OrganizerView 
                   language={userProfile.language}
@@ -4456,42 +4574,6 @@ export default function App() {
               )}
               {activeView === 'device' && (
                 <HardwareView language={userProfile.language} />
-              )}
-              {activeView === 'personas' && (
-                <PersonasView 
-                  history={chatHistory} 
-                  onNewMessage={handleNewMessage} 
-                  customAvatars={personaAvatars}
-                  onUpdateAvatar={handleUpdateAvatar}
-                  personas={personas}
-                  onUpdatePersonas={handleUpdatePersonas}
-                  aiSettings={aiSettings}
-                  setLastGeminiMetadata={setLastGeminiMetadata}
-                  workflows={workflows}
-                  tasks={tasks}
-                  uiMode={uiMode}
-                  isCreativeMode={isCreativeMode}
-                  initialPersonaId={selectedPersonaId}
-                  favoritePersonaIds={favoritePersonaIds}
-                  onToggleFavorite={handleToggleFavoritePersona}
-                  language={userProfile.language}
-                  user={user}
-                />
-              )}
-              {activeView === 'finance' && (
-                <Web3View uiMode={uiMode} language={userProfile.language} rates={rates} />
-              )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode} language={userProfile.language} />}
-              {activeView === 'blueprints' && (
-                <WorkflowsView 
-                  workflows={workflows}
-                  setWorkflows={setWorkflows}
-                  personas={personas}
-                  user={user}
-                  uiMode={uiMode}
-                  language={userProfile.language}
-                  isCreativeMode={isCreativeMode}
-                />
               )}
 
               {activeView === 'profile' && (
@@ -4526,17 +4608,6 @@ export default function App() {
               )}
               {activeView === 'documentation' && (
                 <DocumentationView language={userProfile.language} />
-              )}
-              {activeView === 'admin-sandbox' && isAdmin && (
-                <AdminSandbox 
-                  isSystemActive={isSystemActive}
-                  isCreativeMode={isCreativeMode}
-                  stats={{
-                    ai_tokens: userStats.aiTokens,
-                    compute_cycles: userStats.computeTimeHours
-                  }}
-                  language={userProfile.language}
-                />
               )}
             </motion.div>
           </AnimatePresence>

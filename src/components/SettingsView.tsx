@@ -21,7 +21,11 @@ import {
   Sparkles,
   Sun,
   Moon,
-  Circle
+  Circle,
+  Mail,
+  Camera,
+  Phone,
+  Upload
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -62,10 +66,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const common = translations[language].common;
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'appearance' | 'security'>('ai');
   const [isSaved, setIsSaved] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUserProfile(prev => ({ ...prev, avatar: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const tabs = [
@@ -271,46 +287,112 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
 
               {activeTab === 'profile' && (
-                <div className="space-y-8">
+                <div className="space-y-8 pb-10">
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.profile || 'Profile'}</h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.profile_desc}</p>
                   </header>
 
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-8">
+                    {/* Profile Picture Upload */}
+                    <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-proton-secondary/5 rounded-[32px] border border-proton-border/30">
+                      <div className="relative group">
+                        <div className="w-24 h-24 rounded-full bg-proton-bg border-4 border-proton-border flex items-center justify-center overflow-hidden shadow-2xl transition-transform group-hover:scale-105">
+                          {userProfile.avatar ? (
+                            <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <User size={48} className="text-proton-muted" />
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-proton-accent text-proton-bg flex items-center justify-center border-4 border-proton-card shadow-lg hover:bg-white transition-colors"
+                        >
+                          <Camera size={18} />
+                        </button>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          onChange={handleFileChange} 
+                          accept="image/*" 
+                          className="hidden" 
+                        />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <h4 className="text-sm font-black text-proton-text uppercase tracking-widest">{t.profile_picture || 'Profile Picture'}</h4>
+                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider mt-1">{language === 'ka' ? 'ატვირთეთ ფოტო თქვენი იდენტიფიკაციისთვის' : 'Upload a photo for your identification'}</p>
+                        <button 
+                          onClick={() => fileInputRef.current?.click()}
+                          className="mt-4 flex items-center gap-2 px-4 py-2 bg-proton-accent/10 border border-proton-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-proton-accent hover:bg-proton-accent hover:text-proton-bg transition-all"
+                        >
+                          <Upload size={14} />
+                          {t.upload_avatar || 'Upload Avatar'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.region}</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.name || 'Full Name'}</label>
+                        <div className="relative group">
+                          <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
+                          <input 
+                            value={userProfile.name || ''}
+                            onChange={e => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            placeholder="e.g. John Doe"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.email || 'Email Address'}</label>
+                        <div className="relative group">
+                          <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
+                          <input 
+                            value={userProfile.email || ''}
+                            onChange={e => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
+                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            placeholder="e.g. john@example.com"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.region || 'Region'}</label>
                         <div className="relative group">
                           <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
                           <input 
                             value={userProfile.region || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
-                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-sm font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
                             placeholder="e.g. Tbilisi, GE"
                           />
                         </div>
                       </div>
+
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.phone}</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.phone || 'Phone Number'}</label>
                         <div className="relative group">
-                          <Volume2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
+                          <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
                           <input 
                             value={userProfile.phoneNumber || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-sm font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
                             placeholder="+995 ..."
                           />
                         </div>
                       </div>
                     </div>
                     
-                    <div className="p-10 bg-proton-secondary/10 border border-dashed border-proton-border rounded-[32px] flex flex-col items-center justify-center text-center group">
-                       <div className="w-20 h-20 rounded-full bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent mb-4 shadow-xl group-hover:scale-110 transition-transform">
-                        <User size={40} />
+                    <div className="p-8 bg-proton-secondary/5 border border-dashed border-proton-border/50 rounded-[32px] flex items-center gap-5 group">
+                       <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent shadow-xl group-hover:scale-110 transition-transform">
+                        <Shield size={24} />
                        </div>
-                       <p className="text-[10px] text-proton-muted font-black uppercase tracking-[0.2em] mt-2">Biometric Data Matrix Secure</p>
-                       <p className="text-[8px] text-proton-accent opacity-50 font-black uppercase tracking-widest mt-1">E2E Encryption Level 4</p>
+                       <div>
+                        <p className="text-[10px] text-proton-text font-black uppercase tracking-[0.2em]">Biometric Data Matrix Secure</p>
+                        <p className="text-[8px] text-proton-accent opacity-50 font-black uppercase tracking-widest mt-1">E2E Encryption Level 4 • Proton Core V2</p>
+                       </div>
                     </div>
                   </div>
                 </div>
