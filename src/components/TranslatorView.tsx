@@ -272,25 +272,27 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         }
         
         const context = audioContext.current;
-        if (context.state === 'suspended') {
-          await context.resume();
+        if (context) {
+          if (context.state === 'suspended') {
+            await context.resume();
+          }
+
+          // Manual decode 16-bit PCM to Float32
+          // We use DataView to explicitly handle Little Endianness
+          const pcmData = new Int16Array(bytes.buffer);
+          const float32Data = new Float32Array(pcmData.length);
+          for (let i = 0; i < pcmData.length; i++) {
+            float32Data[i] = pcmData[i] / 32768.0; // Normalize Int16 to [-1, 1]
+          }
+
+          const audioBuffer = context.createBuffer(1, float32Data.length, 24000);
+          audioBuffer.getChannelData(0).set(float32Data);
+
+          const source = context.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(context.destination);
+          source.start();
         }
-
-        // Manual decode 16-bit PCM to Float32
-        // We use DataView to explicitly handle Little Endianness
-        const pcmData = new Int16Array(bytes.buffer);
-        const float32Data = new Float32Array(pcmData.length);
-        for (let i = 0; i < pcmData.length; i++) {
-          float32Data[i] = pcmData[i] / 32768.0; // Normalize Int16 to [-1, 1]
-        }
-
-        const audioBuffer = context.createBuffer(1, float32Data.length, 24000);
-        audioBuffer.getChannelData(0).set(float32Data);
-
-        const source = context.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(context.destination);
-        source.start();
       }
     } catch (error) {
       console.error('TTS error:', error);
@@ -302,7 +304,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0A0A0B] text-white flex flex-col lg:flex-row font-sans overflow-hidden">
+    <div className="fixed inset-0 bg-proton-bg text-proton-text flex flex-col lg:flex-row font-sans overflow-hidden">
       {/* Global Back Button */}
       {onBack && (
         <button 
@@ -463,7 +465,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
           isDesktop ? "flex-col" : "flex-row"
         )}>
           <div className={cn(
-            "px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[0.25em] flex items-center gap-3 border bg-[#050505] shadow-2xl transition-all",
+            "px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[0.25em] flex items-center gap-3 border bg-proton-card shadow-2xl transition-all",
             isOnline ? "text-cyan-400 border-cyan-500/30" : "text-amber-400 border-amber-500/30"
           )}>
             {isOnline ? <Zap size={14} className="fill-current animate-pulse text-cyan-400" /> : <WifiOff size={14} />}
@@ -618,7 +620,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       </AnimatePresence>
 
       <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-4">
-        <button className="w-12 h-12 rounded-2xl bg-[#0F0F10] border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group shadow-2xl">
+        <button className="w-12 h-12 rounded-2xl bg-proton-card border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all group shadow-2xl">
           <Info size={22} className="text-white/40 group-hover:text-white" />
         </button>
       </div>

@@ -22,7 +22,7 @@ import {
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { SettingsView } from './components/SettingsView';
 import CabinetView from './components/CabinetView';
-import { UserProfile, GlobalAiSettings, Theme, View, ChatMessage, PersonaHistory } from './types';
+import { Persona, ChatMessage, Workflow, WorkflowStep, View, UserProfile, GlobalAiSettings, Theme, PersonaHistory } from './types';
 
 interface FirestoreErrorInfo {
   error: string;
@@ -91,7 +91,7 @@ import {
   Settings, 
   Activity, 
   Zap, 
-  Workflow,
+  Workflow as WorkflowIcon,
   Globe, 
   Users, 
   ChevronRight, 
@@ -168,30 +168,12 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
-import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type Persona, type TaskPlan, type GeminiMetadata } from './services/gemini';
+import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan, type GeminiMetadata } from './services/gemini';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 
 // --- Types ---
-export type WorkflowStep = {
-  id: string;
-  label: string;
-  description: string;
-};
-
-export type Workflow = {
-  id: string;
-  name: string;
-  trigger: string;
-  action: string;
-  personaId: string;
-  analysisHistory?: { timestamp: number; result: string }[];
-  nodes?: any[];
-  edges?: any[];
-  steps?: WorkflowStep[];
-};
-
 type Task = {
   id: string;
   content: string;
@@ -367,6 +349,7 @@ const SystemDiagnostic = ({ t }: { t: any }) => {
                     strokeWidth="8"
                     fill="transparent"
                     strokeDasharray="377"
+                    initial={{ strokeDashoffset: 377 }}
                     animate={{ strokeDashoffset: 377 - (377 * progress) / 100 }}
                     transition={{ type: "spring", bounce: 0, duration: 0.5 }}
                     className="text-proton-accent"
@@ -411,7 +394,7 @@ const SystemDiagnostic = ({ t }: { t: any }) => {
 const SystemGraph = ({ language }: { language: 'en' | 'ka' }) => {
   const [isReady, setIsReady] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setIsReady(true), 100);
+    const timer = setTimeout(() => setIsReady(true), 500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -429,9 +412,9 @@ const SystemGraph = ({ language }: { language: 'en' | 'ka' }) => {
         <p className="text-xl font-black text-proton-accent tracking-tighter">{language === 'ka' ? 'პირადი-პორტალი' : 'SECURE_HUB_7'}</p>
       </div>
       
-      <div className="flex-1 w-full mt-4 min-h-0 min-w-0 overflow-hidden">
+      <div className="flex-1 w-full mt-10 min-h-[140px] relative overflow-hidden">
         {isReady && (
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={100}>
             <AreaChart data={data}>
               <defs>
                 <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
@@ -1497,6 +1480,11 @@ const DashboardView = ({
 
       {uiMode === 'business' ? (
         <div className="space-y-8">
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SystemDiagnostic t={t} />
+              <SystemGraph language={language} />
+           </div>
+
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div 
                 onClick={() => setActiveView('finance')}
@@ -1522,7 +1510,7 @@ const DashboardView = ({
               >
                  <div className="flex justify-between items-start mb-6">
                     <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                       <Workflow size={28} />
+                       <WorkflowIcon size={28} />
                     </div>
                     <ArrowRight className="text-proton-muted group-hover:text-purple-400 group-hover:translate-x-2 transition-all" size={24} />
                  </div>
@@ -2189,7 +2177,7 @@ const PersonasView = ({
     const timestamp = Date.now();
     setInput('');
     
-    onNewMessage(selectedPersona.id, { role: 'user', content: userMessage, timestamp });
+    onNewMessage(selectedPersona.id, { id: `${timestamp}-${Math.random()}`, role: 'user', content: userMessage, timestamp });
     setLoading(true);
 
     const apiHistory = messages.map(m => ({
@@ -2216,7 +2204,7 @@ const PersonasView = ({
         language
       );
       setLastGeminiMetadata(metadata);
-      onNewMessage(selectedPersona.id, { role: 'model', content: text, timestamp: Date.now() });
+      onNewMessage(selectedPersona.id, { id: `${Date.now()}-${Math.random()}`, role: 'model', content: text, timestamp: Date.now() });
 
       if (user && metadata) {
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
@@ -3668,7 +3656,7 @@ export default function App() {
       phoneNumber: '',
       id: 'default-user',
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Darian',
-      balance: 1250
+      balance: 0
     };
     try {
       const saved = localStorage.getItem('user-profile');
@@ -3677,6 +3665,10 @@ export default function App() {
         // Ensure language is valid
         if (parsed.language !== 'en' && parsed.language !== 'ka') {
           parsed.language = 'en';
+        }
+        // Ensure balance is 0 if it was the legacy fake value
+        if (parsed.balance === 1250 || parsed.balance === '1250') {
+          parsed.balance = 0;
         }
         return { ...defaultProfile, ...parsed };
       }
@@ -3777,7 +3769,37 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     
-    async function fetchUserProfile() {
+    // Unified Profile Listener
+    const profileRef = doc(db, 'users', user.uid);
+    const unsubscribe = onSnapshot(profileRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as Partial<UserProfile>;
+        setUserProfile(prev => {
+          const rawBalance = data.balance;
+          // Robust check for the "1250" fake balance value
+          const isFakeBalance = String(rawBalance).replace(/,/g, '') === '1250';
+          const newBalance = isFakeBalance ? 0 : (typeof rawBalance === 'number' ? rawBalance : prev.balance);
+          
+          return {
+            ...prev,
+            ...data,
+            name: data.name || prev.name,
+            email: data.email || prev.email,
+            language: (data.language as 'en' | 'ka') || prev.language,
+            avatar: data.avatar || prev.avatar,
+            balance: newBalance
+          };
+        });
+      }
+    }, (err) => handleFirestoreError(err, 'get', profileRef.path));
+
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    
+    async function fetchUserStats() {
       const docRef = doc(db, 'profiles', user!.uid);
       const docSnap = await getDoc(docRef);
       
@@ -3807,7 +3829,7 @@ export default function App() {
       }
     }
     
-    fetchUserProfile().catch(err => console.error("Profile fetch error:", err));
+    fetchUserStats().catch(err => console.error("Profile fetch error:", err));
   }, [user]);
 
 
@@ -4161,7 +4183,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden bg-proton-bg text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
       <AnimatePresence>
@@ -4579,18 +4601,8 @@ export default function App() {
               {activeView === 'profile' && (
                 <CabinetView 
                   profile={userProfile} 
-                  setProfile={setUserProfile} 
-                  history={chatHistory} 
-                  customAvatars={personaAvatars}
-                  personas={personas}
-                  user={user}
-                  onSignIn={handleGoogleSignIn}
-                  onSignOut={handleSignOut}
-                  uiMode={uiMode}
-                  setUiMode={setUiMode}
-                  stats={userStats}
-                  onNavigate={handleViewChange}
-                  gelRate={rates.gels}
+                  theme={theme} 
+                  setTheme={setTheme} 
                 />
               )}
               {activeView === 'settings' && (
@@ -4652,7 +4664,7 @@ export default function App() {
                   {[
                     { label: t.sidebar.finance, status: 'Online', color: 'text-green-400', icon: Wallet },
                     { label: t.sidebar.organizer, status: 'Online', color: 'text-green-400', icon: CalendarIcon },
-                    { label: t.sidebar.blueprints, status: 'Restoring', color: 'text-amber-400', icon: Workflow },
+                    { label: t.sidebar.blueprints, status: 'Restoring', color: 'text-amber-400', icon: WorkflowIcon },
                     { label: t.sidebar.personas, status: 'Syncing', color: 'text-proton-accent', icon: Users },
                   ].map((sys, i) => (
                     <div key={sys.label} className="p-4 rounded-3xl bg-proton-bg border border-proton-border flex items-center gap-3">

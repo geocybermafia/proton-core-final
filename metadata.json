@@ -1,6 +1,9 @@
 {
   "name": "Proton Core AI",
-  "description": "Localized LLM ecosystem for the Georgian market, featuring digital personas, Web3 integration, automated business workflows, and real-time hardware diagnostics.",
-  "requestFramePermissions": ["camera", "geolocation", "microphone"],
-  "majorCapabilities": []
+  "description": "Enterprise-grade AI system hub for persona management, neural workflows, and system diagnostics.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
 }

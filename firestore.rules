@@ -1,91 +1,42 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false; // absolute default deny
-    }
-
+    // Helper to check if signed in
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isVerifiedOwner(userId) {
+    // Helper to check ownership
+    function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    function isValidTask(data) {
-      return data.keys().hasAll(['id', 'content', 'contentGe', 'completed']) &&
-             data.id is string && data.id.size() <= 128 &&
-             data.content is string && data.content.size() <= 5000 &&
-             data.contentGe is string && data.contentGe.size() <= 5000 &&
-             data.completed is bool;
-    }
-
-    function isValidProfile(data) {
-      return data.keys().hasAll(['email', 'ai_tokens', 'compute_cycles', 'storage_gb', 'node_id']) &&
-             data.email is string && data.ai_tokens is number &&
-             data.compute_cycles is number && data.storage_gb is number &&
-             data.node_id is string;
-    }
-
-    match /neural_pulse/{pulseId} {
-      allow list: if true;
-      allow create: if isSignedIn() && 
-                    isValidId(pulseId) && 
-                    request.resource.data.projectTitle is string &&
-                    request.resource.data.projectTitle.size() <= 200 &&
-                    request.resource.data.createdAt == request.time;
-    }
-
+    // Profiles collection
     match /profiles/{userId} {
-      allow get, write: if isVerifiedOwner(userId);
+      allow get: if isOwner(userId);
+      allow write: if isOwner(userId);
     }
 
-    match /test/connection {
-      allow get: if true;
-    }
-
-    match /system/config {
-      allow read: if true;
-      allow write: if false; 
-    }
-
+    // Main users collection and its subcollections
     match /users/{userId} {
-      // Allow the user to manage their own profile document
-      allow get, write: if isVerifiedOwner(userId);
-      
-      // Subcollections
-      match /personas/{personaId} {
-        allow read, write: if isVerifiedOwner(userId);
-      }
-      
-      match /workflows/{workflowId} {
-        allow read, write: if isVerifiedOwner(userId);
-      }
-      
-      match /customAvatars/{personaId} {
-        allow read, write: if isVerifiedOwner(userId);
-      }
-      
-      match /chatHistory/{personaId} {
-        allow read, write: if isVerifiedOwner(userId);
-      }
+      allow get: if isOwner(userId);
+      allow write: if isOwner(userId);
 
-      match /tasks/{taskId} {
-        allow list, get: if isVerifiedOwner(userId);
-        allow create, update: if isVerifiedOwner(userId) && isValidId(taskId) && isValidTask(request.resource.data);
-        allow delete: if isVerifiedOwner(userId) && isValidId(taskId);
+      // Deeply nested subcollections (personas, workflows, tasks, stats, etc.)
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId);
       }
+    }
 
-      match /stats/current {
-        allow get, write: if isVerifiedOwner(userId);
-      }
+    // System config
+    match /system/config {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }
-

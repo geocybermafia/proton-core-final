@@ -12,7 +12,7 @@ import ReactFlow, {
   Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Workflow } from '../App';
+import { Workflow } from '../types';
 import { Zap, Cpu, Calculator } from 'lucide-react';
 
 const TriggerNode = ({ data, id }: any) => (

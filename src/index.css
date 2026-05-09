@@ -1,168 +1,163 @@
-@import 'reactflow/dist/style.css';
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
+  --color-proton-accent: var(--proton-accent);
+  --color-proton-accent-hover: var(--proton-accent-hover);
+  --color-proton-bg: var(--proton-bg);
+  --color-proton-card: var(--proton-card);
+  --color-proton-border: var(--proton-border);
+  --color-proton-text: var(--proton-text);
+  --color-proton-muted: var(--proton-muted);
+  --color-proton-on-accent: var(--proton-on-accent);
+  
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
 
-  --breakpoint-xs: 480px;
-  
-  --color-proton-accent: #3b82f6; 
-  --color-proton-secondary: #f43f5e;
-  --color-proton-on-accent: #ffffff;
-  --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
-  
-  --shadow-artisan: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+:root {
+  --proton-accent: #00f2ff;
+  --proton-accent-hover: #00d8e6;
+  --proton-bg: #010409;
+  --proton-card: #0d1117;
+  --proton-border: #30363d;
+  --proton-text: #e6edf3;
+  --proton-muted: #8b949e;
+  --proton-on-accent: #000000;
+  --proton-bg-image: radial-gradient(circle at 50% 50%, #0d1117 0%, #010409 100%), linear-gradient(0deg, transparent 24%, rgba(0, 242, 255, 0.02) 25%, rgba(0, 242, 255, 0.02) 26%, transparent 27%), linear-gradient(90deg, transparent 24%, rgba(0, 242, 255, 0.02) 25%, rgba(0, 242, 255, 0.02) 26%, transparent 27%);
+  --proton-bg-size: auto, 50px 50px;
+}
 
-  --color-proton-bg: #ffffff;
-  --color-proton-card: #ffffff;
-  --color-proton-border: #e4e4e7;
-  --color-proton-text: #09090b;
-  --color-proton-muted: #71717a;
+[data-theme='light'] {
+  --proton-accent: #2563eb;
+  --proton-accent-hover: #1d4ed8;
+  --proton-bg: #f8fafc;
+  --proton-card: #ffffff;
+  --proton-border: #e2e8f0;
+  --proton-text: #0f172a;
+  --proton-muted: #64748b;
+  --proton-on-accent: #ffffff;
+  --proton-bg-image: radial-gradient(at top left, #f1f5f9, #e2e8f0), radial-gradient(at bottom right, #f8fafc, #ffffff);
+  --proton-bg-size: auto;
+}
+
+[data-theme='titanium'] {
+  --proton-accent: #94a3b8;
+  --proton-accent-hover: #cbd5e1;
+  --proton-bg: #0f172a;
+  --proton-card: #1e293b;
+  --proton-border: #334155;
+  --proton-text: #f8fafc;
+  --proton-muted: #94a3b8;
+  --proton-on-accent: #000000;
+  --proton-bg-image: 
+    linear-gradient(135deg, #1e293b 0%, #0f172a 100%),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 10px);
+  --proton-bg-size: cover;
+}
+
+[data-theme='vibrant'] {
+  --proton-accent: #d946ef;
+  --proton-accent-hover: #c026d3;
+  --proton-bg: #1e1b4b;
+  --proton-card: #312e81;
+  --proton-border: #4338ca;
+  --proton-text: #f5f3ff;
+  --proton-muted: #a5b4fc;
+  --proton-on-accent: #ffffff;
+  --proton-bg-image: 
+    radial-gradient(at 0% 0%, #312e81 0%, transparent 70%),
+    radial-gradient(at 100% 100%, #1e1b4b 0%, transparent 70%),
+    radial-gradient(at 50% 50%, #4338ca 0%, transparent 80%),
+    radial-gradient(circle at 20% 80%, rgba(217, 70, 239, 0.05) 0%, transparent 50%);
+  --proton-bg-size: cover;
+}
+
+[data-theme='forest'] {
+  --proton-accent: #10b981;
+  --proton-accent-hover: #059669;
+  --proton-bg: #022c22;
+  --proton-card: #064e3b;
+  --proton-border: #065f46;
+  --proton-text: #ecfdf5;
+  --proton-muted: #a7f3d0;
+  --proton-on-accent: #000000;
+  --proton-bg-image: 
+    radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(5, 150, 105, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(6, 78, 59, 0.4) 0%, #022c22 100%),
+    linear-gradient(to bottom, #022c22, #011c15);
+  --proton-bg-size: cover;
+}
+
+[data-theme='sunset'] {
+  --proton-accent: #f59e0b;
+  --proton-accent-hover: #d97706;
+  --proton-bg: #431407;
+  --proton-card: #7c2d12;
+  --proton-border: #9a3412;
+  --proton-text: #fff7ed;
+  --proton-muted: #fed7aa;
+  --proton-on-accent: #000000;
+  --proton-bg-image: 
+    radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
+    linear-gradient(to bottom, #7c2d12 0%, #431407 100%);
+  --proton-bg-size: cover;
+}
+
+[data-theme='rose'] {
+  --proton-accent: #f43f5e;
+  --proton-accent-hover: #e11d48;
+  --proton-bg: #2d0611;
+  --proton-card: #4c0519;
+  --proton-border: #881337;
+  --proton-text: #fff1f2;
+  --proton-muted: #fecdd3;
+  --proton-on-accent: #ffffff;
+  --proton-bg-image: 
+    radial-gradient(circle at 20% 20%, rgba(244, 63, 94, 0.1) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(190, 18, 60, 0.1) 0%, transparent 40%),
+    linear-gradient(135deg, #4c0519 0%, #2d0611 100%);
+  --proton-bg-size: cover;
+}
+
+[data-theme='midnight'] {
+  --proton-accent: #10b981;
+  --proton-accent-hover: #059669;
+  --proton-bg: #000000;
+  --proton-card: #0a0a0a;
+  --proton-border: #1a1a1a;
+  --proton-text: #ffffff;
+  --proton-muted: #737373;
+  --proton-on-accent: #000000;
+  --proton-bg-image: linear-gradient(to bottom right, #050505, #000000);
+}
+
+.theme-bg-main {
+  background-color: var(--proton-bg);
+  background-image: var(--proton-bg-image);
+  background-size: var(--proton-bg-size, auto);
+  background-attachment: fixed;
 }
 
 @layer base {
-  :root {
-    --color-proton-bg: #f8fafc;
-    --color-proton-card: #ffffff;
-    --color-proton-border: #e2e8f0;
-    --color-proton-text: #0f172a;
-    --color-proton-muted: #64748b;
-    --color-proton-accent: #3b82f6;
-    --color-proton-secondary: #f43f5e;
-    --color-proton-on-accent: #ffffff;
-    --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
-  }
-  
-  :root[data-theme="proton"] {
-    --color-proton-bg: #0a0b10;
-    --color-proton-card: #13141c;
-    --color-proton-border: #232533;
-    --color-proton-text: #f1f1f3;
-    --color-proton-muted: #8a8e9e;
-    --color-proton-accent: #00f2ff;
-    --color-proton-secondary: #ff2d55;
-    --color-proton-on-accent: #000000;
-    --color-proton-on-secondary: #000000;
-    --color-proton-accent-muted: rgba(0, 242, 255, 0.1);
-  }
-
-  :root[data-theme="light"] {
-    --color-proton-bg: #f8fafc;
-    --color-proton-card: #ffffff;
-    --color-proton-border: #e2e8f0;
-    --color-proton-text: #0f172a;
-    --color-proton-muted: #64748b;
-    --color-proton-accent: #3b82f6;
-    --color-proton-secondary: #f43f5e;
-    --color-proton-on-accent: #ffffff;
-    --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
-  }
-
-  :root[data-theme="titanium"] {
-    --color-proton-bg: #f8fafc;
-    --color-proton-card: rgba(255, 255, 255, 0.7);
-    --color-proton-border: rgba(203, 213, 225, 0.5);
-    --color-proton-text: #0f172a;
-    --color-proton-muted: #64748b;
-    --color-proton-accent: #3b82f6;
-    --color-proton-secondary: #94a3b8;
-    --color-proton-on-accent: #ffffff;
-    --color-proton-accent-muted: rgba(59, 130, 246, 0.1);
-  }
-
-  :root[data-theme="titanium"] .proton-glass {
-    @apply bg-white/40 border-slate-200/50 backdrop-blur-2xl shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)];
-  }
-
-  :root[data-theme="titanium"] button:not(.bg-proton-accent) {
-    @apply hover:bg-slate-100/50;
-  }
-
-  :root[data-theme="vibrant"] {
-    --color-proton-bg: #0f172a;
-    --color-proton-card: #1e293b;
-    --color-proton-border: #334155;
-    --color-proton-text: #f8fafc;
-    --color-proton-muted: #94a3b8;
-    --color-proton-accent: #8b5cf6;
-    --color-proton-secondary: #ec4899;
-    --color-proton-on-accent: #ffffff;
-    --color-proton-on-secondary: #ffffff;
-    --color-proton-accent-muted: rgba(139, 92, 246, 0.1);
-  }
-
-  :root[data-theme="midnight"] {
-    --color-proton-bg: #000000;
-    --color-proton-card: #09090b;
-    --color-proton-border: #1d1d20;
-    --color-proton-text: #ffffff;
-    --color-proton-muted: #71717a;
-    --color-proton-accent: #00f2ff;
-    --color-proton-secondary: #2dd4bf;
-    --color-proton-on-accent: #000000;
-    --color-proton-on-secondary: #000000;
-    --color-proton-accent-muted: rgba(0, 242, 255, 0.11);
-  }
-
   body {
-    @apply bg-proton-bg text-proton-text font-sans antialiased selection:bg-proton-accent/30 selection:text-proton-accent overflow-x-hidden;
-    transition: background-color 0.5s ease, color 0.5s ease;
-  }
-  
-  html {
-    @apply overflow-x-hidden;
-  }
-
-  :root[data-ui-mode="creative"] {
-    /* Creative specific tweaks can go here if needed per theme */
-    --shadow-artisan: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    @apply text-proton-text antialiased transition-colors duration-500;
+    background-color: var(--proton-bg);
+    background-image: var(--proton-bg-image);
+    background-attachment: fixed;
+    margin: 0;
   }
 }
 
-.ui-creative .proton-glass {
-  @apply backdrop-blur-[12px] bg-proton-card/75 border-white/5 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)];
-}
-
-:root[data-theme="titanium"] .proton-glass {
-  @apply bg-white/60 border-slate-200/50 backdrop-blur-xl shadow-xl shadow-slate-200/20;
-}
-
-.ui-business .proton-glass {
-  @apply bg-proton-card border-proton-border;
-}
-
-.proton-glass {
-  @apply bg-proton-card border border-proton-border shadow-sm rounded-xl transition-all duration-200;
-}
-
-.proton-glass:hover {
-  @apply shadow-md;
-}
-
-.proton-button {
-  @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2;
-  @apply bg-proton-accent text-proton-on-accent hover:bg-proton-accent/90 focus:ring-2 focus:ring-proton-accent/20;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
+.custom-scrollbar-minimal::-webkit-scrollbar {
   width: 6px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
+.custom-scrollbar-minimal::-webkit-scrollbar-track {
   background: transparent;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-proton-border rounded-full hover:bg-proton-muted/30;
+.custom-scrollbar-minimal::-webkit-scrollbar-thumb {
+  @apply bg-proton-border rounded-full;
 }
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.custom-scrollbar-minimal::-webkit-scrollbar-thumb:hover {
+  @apply bg-proton-muted/30;
 }
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-

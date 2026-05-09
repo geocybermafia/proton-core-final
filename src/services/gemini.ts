@@ -1,16 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-
-export type Persona = {
-  id: string;
-  name: string;
-  nameGe: string;
-  role: string;
-  description: string;
-  descriptionGe: string;
-  systemInstruction: string;
-  avatar: string;
-  language: 'English' | 'Georgian' | 'Mixed';
-};
+import { Persona } from "../types";
 
 export interface TaskPlan {
   materials: { item: string; cost: string }[];
@@ -153,7 +142,7 @@ export async function generateNewPersona(basePersona: Persona, prompt: string): 
     contents: [systemPrompt, prompt]
   });
   
-  const text = response.text.replace(/```json|```/g, '');
+  const text = response.text ? response.text.replace(/```json|```/g, '') : "{}";
   
   const newPersona = JSON.parse(text);
   // Ensure ID is unique and valid
@@ -216,9 +205,12 @@ export async function generatePersonaAvatar(persona: Persona) {
       },
     });
 
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
+    const candidates = response.candidates;
+    if (candidates && candidates[0] && candidates[0].content && candidates[0].content.parts) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
       }
     }
     throw new Error("No image data returned from Gemini API");
@@ -250,9 +242,12 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string) 
       },
     });
 
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        return `data:image/png;base64,${part.inlineData.data}`;
+    const candidates = response.candidates;
+    if (candidates && candidates[0] && candidates[0].content && candidates[0].content.parts) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData) {
+          return `data:image/png;base64,${part.inlineData.data}`;
+        }
       }
     }
     throw new Error("No image data returned from Gemini API");

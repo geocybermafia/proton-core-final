@@ -1,170 +1,43 @@
 {
   "entities": {
-    "Persona": {
-      "title": "Persona",
-      "description": "User created or modified digital personas",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "nameGe": { "type": "string" },
-        "role": { "type": "string" },
-        "language": { "type": "string" },
-        "description": { "type": "string" },
-        "descriptionGe": { "type": "string" },
-        "systemInstruction": { "type": "string" },
-        "avatar": { "type": "string" }
-      },
-      "required": ["id", "name", "role", "systemInstruction", "avatar"]
-    },
-    "Workflow": {
-      "title": "Workflow",
-      "description": "User created workflows",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "trigger": { "type": "string" },
-        "action": { "type": "string" },
-        "personaId": { "type": "string" },
-        "nodes": { "type": "string" },
-        "edges": { "type": "string" },
-        "analysisHistory": { "type": "string" }
-      },
-      "required": ["id", "name"]
-    },
-    "ChatMessage": {
-      "title": "ChatMessage",
-      "description": "History of messages for a persona",
-      "type": "object",
-      "properties": {
-        "timestamp": { "type": "number" },
-        "role": { "type": "string" },
-        "content": { "type": "string" }
-      },
-      "required": ["timestamp", "role", "content"]
-    },
-    "CustomAvatar": {
-      "title": "CustomAvatar",
-      "description": "Custom avatars for personas",
-      "type": "object",
-      "properties": {
-        "avatar": { "type": "string" }
-      },
-      "required": ["avatar"]
-    },
-    "Task": {
-      "title": "Task",
-      "description": "User tasks and AI suggestions",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "content": { "type": "string" },
-        "contentGe": { "type": "string" },
-        "completed": { "type": "boolean" },
-        "isAiSuggested": { "type": "boolean" },
-        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
-        "category": { "type": "string" }
-      },
-      "required": ["id", "content", "contentGe", "completed"]
-    },
     "UserProfile": {
-      "title": "UserProfile",
-      "description": "Main user profile and settings",
+      "title": "User Profile",
+      "description": "User metadata and settings",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
+        "name": { "type": "string" },
         "email": { "type": "string" },
-        "displayName": { "type": "string" },
-        "photoURL": { "type": "string" },
-        "language": { "type": "string" },
-        "region": { "type": "string" }
+        "language": { "type": "string", "enum": ["en", "ka"] },
+        "notifications": { "type": "boolean" }
       },
-      "required": ["uid", "email"]
-    },
-    "StatsProfile": {
-      "title": "StatsProfile",
-      "description": "User resource limits and node info",
-      "type": "object",
-      "properties": {
-        "email": { "type": "string" },
-        "ai_tokens": { "type": "number" },
-        "compute_cycles": { "type": "number" },
-        "storage_gb": { "type": "number" },
-        "node_id": { "type": "string" }
-      }
-    },
-    "SystemConfig": {
-      "title": "SystemConfig",
-      "description": "Global system configuration",
-      "type": "object",
-      "properties": {
-        "isCreativeMode": { "type": "boolean" }
-      },
-      "required": ["isCreativeMode"]
+      "required": ["name", "email", "language"]
     },
     "UserStats": {
-      "title": "UserStats",
-      "description": "User resource usage and statistics",
+      "title": "User Stats",
+      "description": "Operational metrics",
       "type": "object",
       "properties": {
         "storageGB": { "type": "number" },
-        "computeTimeHours": { "type": "number" },
-        "aiTokens": { "type": "number" }
-      },
-      "required": ["storageGB", "computeTimeHours", "aiTokens"]
-    },
-    "NeuralPulseEvent": {
-      "title": "NeuralPulseEvent",
-      "description": "Anonymous project plan generation events for the global feed",
-      "type": "object",
-      "properties": {
-        "projectTitle": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["projectTitle", "createdAt"]
+        "workHours": { "type": "number" }
+      }
     }
   },
   "firestore": {
-    "/profiles/{userId}": {
-      "schema": { "$ref": "StatsProfile" },
-      "description": "User resource allocation and node identity"
-    },
-    "/system/config": {
-      "schema": { "$ref": "SystemConfig" },
-      "description": "Global system configuration"
-    },
-    "/neural_pulse/{pulseId}": {
-      "schema": { "$ref": "NeuralPulseEvent" },
-      "description": "Global anonymous feed of recent activity"
-    },
     "/users/{userId}": {
-      "schema": { "$ref": "UserProfile" },
-      "description": "Main user account information"
-    },
-    "/users/{userId}/personas/{personaId}": {
-      "schema": { "$ref": "Persona" },
-      "description": "Custom Personas of the user"
-    },
-    "/users/{userId}/workflows/{workflowId}": {
-      "schema": { "$ref": "Workflow" },
-      "description": "Saved workflows"
-    },
-    "/users/{userId}/customAvatars/{personaId}": {
-      "schema": { "$ref": "CustomAvatar" },
-      "description": "Saved custom avatars"
-    },
-    "/users/{userId}/chatHistory/{personaId}": {
-      "schema": { "$ref": "ChatMessage" },
-      "description": "We will store history stringified or inside an array. Actual implementation might store as distinct fields."
-    },
-    "/users/{userId}/tasks/{taskId}": {
-      "schema": { "$ref": "Task" },
-      "description": "User tasks and AI suggestions"
+      "schema": "UserProfile",
+      "description": "Main user document"
     },
     "/users/{userId}/stats/current": {
-      "schema": { "$ref": "UserStats" },
-      "description": "Current resource usage stats for the user"
+      "schema": "UserStats",
+      "description": "User statistics"
+    },
+    "/profiles/{userId}": {
+      "schema": "UserProfile",
+      "description": "Profile mirror"
+    },
+    "/users/{userId}/personas/{personaId}": {
+      "schema": "Persona",
+      "description": "User defined personas"
     }
   }
 }
