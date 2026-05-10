@@ -171,30 +171,25 @@ import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan, type GeminiMetadata } from './services/gemini';
 
 import { 
-  ConnectButton,
-  getDefaultConfig,
-  RainbowKitProvider,
-  darkTheme as rainbowDarkTheme
+  ConnectButton
 } from '@rainbow-me/rainbowkit';
-import { WagmiProvider, http } from 'wagmi';
-import { mainnet, polygon, optimism, arbitrum, base } from 'wagmi/chains';
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import '@rainbow-me/rainbowkit/styles.css';
 import { useAccount, useBalance } from 'wagmi';
 
-const queryClient = new QueryClient();
-const config = getDefaultConfig({
-  appName: 'Secure Hub 7',
-  projectId: 'a5c0b933d69b32c63c1a3b1373510e1a', // Placeholder ID
-  chains: [mainnet, polygon, optimism, arbitrum, base],
-  transports: {
-    [mainnet.id]: http(),
-    [polygon.id]: http(),
-    [optimism.id]: http(),
-    [arbitrum.id]: http(),
-    [base.id]: http(),
+// --- Utils ---
+const safeStorage = {
+  get: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      return null;
+    }
   },
-});
+  set: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {}
+  }
+};
 
 // --- Types ---
 type Task = {
@@ -1025,11 +1020,11 @@ const OrganizerView = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [theme, setTheme] = useState<OrganizerTheme>(() => {
-    return (localStorage.getItem('proton_organizer_theme') as OrganizerTheme) || 'executive';
+    return (safeStorage.get('proton_organizer_theme') as OrganizerTheme) || 'executive';
   });
 
   useEffect(() => {
-    localStorage.setItem('proton_organizer_theme', theme);
+    safeStorage.set('proton_organizer_theme', theme);
   }, [theme]);
 
   const themes = {
@@ -2538,13 +2533,13 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
   });
 
   const [preferredCurrency, setPreferredCurrency] = useState<'USD' | 'GEL' | 'EUR' | 'GBP' | 'JPY' | 'CAD'>(
-    (localStorage.getItem('proton_preferred_currency') as any) || 'GEL'
+    (safeStorage.get('proton_preferred_currency') as any) || 'GEL'
   );
 
   const [showCurrencySelector, setShowCurrencySelector] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('proton_preferred_currency', preferredCurrency);
+    safeStorage.set('proton_preferred_currency', preferredCurrency);
   }, [preferredCurrency]);
 
   const currencies = [
@@ -3651,7 +3646,7 @@ export default function App() {
   }, []);
 
   const [uiMode, setUiMode] = useState<'business' | 'creative'>(
-    (localStorage.getItem('proton_ui_mode') as 'business' | 'creative') || 'business'
+    (safeStorage.get('proton_ui_mode') as 'business' | 'creative') || 'business'
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -3664,7 +3659,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-ui-mode', uiMode);
-    localStorage.setItem('proton_ui_mode', uiMode);
+    safeStorage.set('proton_ui_mode', uiMode);
   }, [uiMode]);
 
   // Routing / View logic
@@ -3740,46 +3735,46 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [theme, setTheme] = useState<Theme>(
-    (localStorage.getItem('proton_theme') as Theme) || 'proton'
+    (safeStorage.get('proton_theme') as Theme) || 'proton'
   );
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-ui-mode', uiMode);
-    localStorage.setItem('proton_theme', theme);
+    safeStorage.set('proton_theme', theme);
   }, [theme, uiMode]);
   
   const [chatHistory, setChatHistory] = useState<PersonaHistory>(() => {
     try {
-      const saved = localStorage.getItem('proton_chat_history');
+      const saved = safeStorage.get('proton_chat_history');
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
   const [playingMsgIndex, setPlayingMsgIndex] = useState<number | null>(null);
   const [personaAvatars, setPersonaAvatars] = useState<{ [id: string]: string }>(() => {
     try {
-      const saved = localStorage.getItem('proton_persona_avatars');
+      const saved = safeStorage.get('proton_persona_avatars');
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
   const [personas, setPersonas] = useState<Persona[]>(() => {
     try {
-      const saved = localStorage.getItem('proton_personas');
+      const saved = safeStorage.get('proton_personas');
       return saved ? JSON.parse(saved) : PERSONAS;
     } catch { return PERSONAS; }
   });
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
   useEffect(() => {
-    localStorage.setItem('proton_chat_history', JSON.stringify(chatHistory));
+    safeStorage.set('proton_chat_history', JSON.stringify(chatHistory));
   }, [chatHistory]);
 
   useEffect(() => {
-    localStorage.setItem('proton_persona_avatars', JSON.stringify(personaAvatars));
+    safeStorage.set('proton_persona_avatars', JSON.stringify(personaAvatars));
   }, [personaAvatars]);
 
   useEffect(() => {
-    localStorage.setItem('proton_personas', JSON.stringify(personas));
+    safeStorage.set('proton_personas', JSON.stringify(personas));
   }, [personas]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const defaultProfile: UserProfile = {
@@ -3795,7 +3790,7 @@ export default function App() {
       balance: 0
     };
     try {
-      const saved = localStorage.getItem('user-profile');
+      const saved = safeStorage.get('user-profile');
       if (saved) {
         const parsed = JSON.parse(saved);
         // Ensure language is valid
@@ -3814,12 +3809,12 @@ export default function App() {
     return defaultProfile;
   });
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('proton_favorite_personas');
+    const saved = safeStorage.get('proton_favorite_personas');
     return saved ? JSON.parse(saved) : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('proton_favorite_personas', JSON.stringify(favoritePersonaIds));
+    safeStorage.set('proton_favorite_personas', JSON.stringify(favoritePersonaIds));
   }, [favoritePersonaIds]);
   
   const handleToggleFavoritePersona = (id: string) => {
@@ -3830,7 +3825,7 @@ export default function App() {
 
   const [aiSettings, setAiSettings] = useState<GlobalAiSettings>(() => {
     try {
-      const saved = localStorage.getItem('proton_ai_settings');
+      const saved = safeStorage.get('proton_ai_settings');
       return saved ? JSON.parse(saved) : {
         temperature: 0.9,
         enableSearch: true,
@@ -3874,7 +3869,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('user-profile', JSON.stringify(userProfile));
+    safeStorage.set('user-profile', JSON.stringify(userProfile));
   }, [userProfile]);
 
   const language = userProfile.language;
@@ -3971,7 +3966,7 @@ export default function App() {
 
 
   useEffect(() => {
-    localStorage.setItem('proton_ai_settings', JSON.stringify(aiSettings));
+    safeStorage.set('proton_ai_settings', JSON.stringify(aiSettings));
   }, [aiSettings]);
 
   useEffect(() => {
@@ -4013,7 +4008,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('proton_tasks', JSON.stringify(tasks));
+    safeStorage.set('proton_tasks', JSON.stringify(tasks));
   }, [tasks]);
 
   async function handleTTS(text: string) {
@@ -4299,6 +4294,17 @@ export default function App() {
   const isPlayground = window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost');
   const isAdmin = user?.email === 'devdarianib@gmail.com' && isPlayground;
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
+        <Loader2 className="w-8 h-8 text-proton-accent animate-spin" />
+      </div>
+    );
+  }
+
   if (!authInitialized) {
     return (
       <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
@@ -4318,18 +4324,10 @@ export default function App() {
   }
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={rainbowDarkTheme({
-          accentColor: '#00f2ff',
-          accentColorIdle: '#00f2ff',
-          borderRadius: 'large',
-          overlayBlur: 'small',
-        })}>
-          <div className={cn(
-            "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
-            uiMode === 'creative' ? "ui-creative" : "ui-business"
-          )}>
+    <div className={cn(
+      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      uiMode === 'creative' ? "ui-creative" : "ui-business"
+    )}>
             <AnimatePresence>
               {isTransitioning && (
                 <FlashOverlay mode={uiMode} />
@@ -4940,8 +4938,5 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
   );
 }
