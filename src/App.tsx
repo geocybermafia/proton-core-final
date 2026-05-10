@@ -111,7 +111,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
-import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan, type GeminiMetadata } from './services/gemini';
+import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan, type GeminiMetadata } from './lib/gemini';
 
 import { 
   ConnectButton
@@ -1018,7 +1018,9 @@ const OrganizerView = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [theme, setTheme] = useState<OrganizerTheme>(() => {
-    return (safeStorage.get('proton_organizer_theme') as OrganizerTheme) || 'executive';
+    try {
+      return (safeStorage.get('proton_organizer_theme') as OrganizerTheme) || 'executive';
+    } catch { return 'executive'; }
   });
 
   useEffect(() => {
@@ -2530,9 +2532,11 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
     address: address,
   });
 
-  const [preferredCurrency, setPreferredCurrency] = useState<'USD' | 'GEL' | 'EUR' | 'GBP' | 'JPY' | 'CAD'>(
-    (safeStorage.get('proton_preferred_currency') as any) || 'GEL'
-  );
+  const [preferredCurrency, setPreferredCurrency] = useState<'USD' | 'GEL' | 'EUR' | 'GBP' | 'JPY' | 'CAD'>(() => {
+    try {
+      return (safeStorage.get('proton_preferred_currency') as any) || 'GEL';
+    } catch { return 'GEL'; }
+  });
 
   const [showCurrencySelector, setShowCurrencySelector] = useState(false);
 
@@ -3643,9 +3647,11 @@ export default function App() {
     fetchRates();
   }, []);
 
-  const [uiMode, setUiMode] = useState<'business' | 'creative'>(
-    (safeStorage.get('proton_ui_mode') as 'business' | 'creative') || 'business'
-  );
+  const [uiMode, setUiMode] = useState<'business' | 'creative'>(() => {
+    try {
+      return (safeStorage.get('proton_ui_mode') as 'business' | 'creative') || 'business';
+    } catch { return 'business'; }
+  });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handleModeChange = (newMode: 'business' | 'creative') => {
@@ -3732,9 +3738,11 @@ export default function App() {
   }, [isCreativeMode, isSafeMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
-  const [theme, setTheme] = useState<Theme>(
-    (safeStorage.get('proton_theme') as Theme) || 'proton'
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return (safeStorage.get('proton_theme') as Theme) || 'proton';
+    } catch { return 'proton'; }
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
