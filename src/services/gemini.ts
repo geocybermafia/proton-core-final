@@ -59,7 +59,20 @@ export const PERSONAS: Persona[] = [
   }
 ];
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+let aiInstance: GoogleGenAI | null = null;
+
+function getAi() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.warn("GEMINI_API_KEY is missing. AI features will be disabled.");
+      return null;
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export interface GeminiMetadata {
   promptTokenCount: number;
@@ -88,6 +101,8 @@ export async function chatWithPersona(
       tools.push({ googleMaps: {} });
     }
 
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model,
       contents: [
@@ -129,6 +144,8 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
 }
 
 export async function generateNewPersona(basePersona: Persona, prompt: string): Promise<Persona> {
+  const ai = getAi();
+  if (!ai) throw new Error("AI engine not initialized");
   const systemPrompt = `
     You are a Persona Architect. Create a new digital persona based on the user's prompt.
     The persona must have an ID, Name (EN/GE), Role, Description (EN/GE), System Instruction, and an Emoji Avatar.
@@ -152,6 +169,8 @@ export async function generateNewPersona(basePersona: Persona, prompt: string): 
 
 export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[]) {
   try {
+    const ai = getAi();
+    if (!ai) return "AI engine not initialized.";
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [
@@ -168,6 +187,8 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
 
 export async function analyzeWorkflow(workflow: { name: string, trigger: string, action: string }) {
   try {
+    const ai = getAi();
+    if (!ai) return "AI engine not initialized.";
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
       contents: `Analyze the following workflow and suggest improvements for efficiency and scalability:
@@ -184,6 +205,8 @@ export async function analyzeWorkflow(workflow: { name: string, trigger: string,
 
 export async function generatePersonaAvatar(persona: Persona) {
   try {
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
@@ -222,6 +245,8 @@ export async function generatePersonaAvatar(persona: Persona) {
 
 export async function generateOrEditImage(prompt: string, imageBase64?: string) {
   try {
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized");
     const parts: any[] = [{ text: prompt + "\n\nOUTPUT ONLY THE IMAGE CONTENT." }];
     if (imageBase64) {
       parts.push({
@@ -259,6 +284,8 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string) 
 
 export async function generateSpeech(text: string, voiceName: string = 'Kore') {
   try {
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model: "gemini-3.1-flash-tts-preview",
       contents: [{ parts: [{ text: text }] }],
@@ -286,6 +313,8 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
 export async function architectTask(project: string, temperature: number = 0.9): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
   const startTime = performance.now();
   try {
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Be professional, brief, and structured. Architect an action plan for: ${project}.

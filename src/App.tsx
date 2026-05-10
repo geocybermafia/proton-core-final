@@ -3807,8 +3807,12 @@ export default function App() {
     return defaultProfile;
   });
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
-    const saved = safeStorage.get('proton_favorite_personas');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = safeStorage.get('proton_favorite_personas');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
 
   useEffect(() => {

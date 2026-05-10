@@ -29,13 +29,50 @@ const config = getDefaultConfig({
 
 function Root() {
   const [mounted, setMounted] = React.useState(false);
+  
   React.useEffect(() => {
-    setMounted(true);
+    // Small delay to ensure browser is ready and to avoid hydration flicker
+    const timer = setTimeout(() => {
+      setMounted(true);
+      console.log("App mounted successfully");
+    }, 10);
+    
+    return () => clearTimeout(timer);
   }, []);
 
+  // Show a base layer while mounting to prevent "Black Screen" if something is slow
   if (!mounted) {
     return (
-      <div style={{ backgroundColor: '#010409', height: '100vh', width: '100vw' }} />
+      <div id="loading-overlay" style={{ 
+        backgroundColor: '#010409', 
+        height: '100vh', 
+        width: '100vw',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#00f2ff',
+        fontFamily: 'sans-serif'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '40px', 
+            height: '40px', 
+            border: '2px solid #00f2ff', 
+            borderTopColor: 'transparent', 
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 20px'
+          }} />
+          <style>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+            Initializing Proton-Core
+          </div>
+        </div>
+      </div>
     );
   }
 
