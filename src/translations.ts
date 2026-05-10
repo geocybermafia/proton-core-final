@@ -103,7 +103,14 @@ export const translations = {
       available: "Active",
       busy: "Processing",
       start_convo: "Initialize session with {name}",
-      chat_placeholder: "Communicate with {name}..."
+      chat_placeholder: "Communicate with {name}...",
+      tools: {
+        title: "AI Tools",
+        image: "Generate Visual",
+        summary: "Summarize Text",
+        analysis: "Workflow Analysis",
+        command_prefix: "Executing command: "
+      }
     },
     auth: {
       weak: "Weak",
@@ -192,7 +199,17 @@ export const translations = {
       ledger: "Central Ledger",
       disconnected: "Wallet Disconnected",
       connect_msg: "Connect your neural wallet to see assets.",
-      connect_btn: "Initialize Link"
+      connect_btn: "Initialize Link",
+      preferred_currency: "Preferred Display Currency",
+      select_currency: "Select Currency",
+      currency_names: {
+        GEL: "Georgian Lari",
+        USD: "US Dollar",
+        EUR: "Euro",
+        GBP: "British Pound",
+        JPY: "Japanese Yen",
+        CAD: "Canadian Dollar"
+      }
     },
     workflows: {
       title: "Business Workflows",
@@ -280,6 +297,12 @@ export const translations = {
       get_pro: "Upgrade to PRO",
       pro_active: "PRO Active",
       add_credits: "Top Up Credits",
+      daily_reward_title: "Daily Neural Pulse",
+      daily_reward_desc: "Claim your daily energy credits",
+      claim_button: "Claim Credits",
+      claimed: "Claimed today",
+      insights_title: "Neural Insights",
+      insights_growth: "Your account is growing 15% faster today",
       partners_title: "Partner Network",
       partners_desc: "Featured offers and tools",
       ad_sample: "Ad Space: Promote your product here.",
@@ -456,7 +479,14 @@ export const translations = {
       available: "აქტიური",
       busy: "მუშაობს",
       start_convo: "სესიის ინიციალიზაცია {name}-თან",
-      chat_placeholder: "კომუნიკაცია {name}-თან..."
+      chat_placeholder: "კომუნიკაცია {name}-თან...",
+      tools: {
+        title: "AI ხელსაწყოები",
+        image: "ვიზუალის შექმნა",
+        summary: "ტექსტის შეჯამება",
+        analysis: "პროცესის ანალიზი",
+        command_prefix: "სრულდება ბრძანება: "
+      }
     },
     auth: {
       weak: "სუსტი",
@@ -545,7 +575,17 @@ export const translations = {
       ledger: "ცენტრალური რეესტრი",
       disconnected: "საფულე გათიშულია",
       connect_msg: "დაუკავშირეთ საფულე აქტივების სანახავად.",
-      connect_btn: "დაკავშირება"
+      connect_btn: "დაკავშირება",
+      preferred_currency: "პრიორიტეტული ვალუტა",
+      select_currency: "ვალუტის არჩევა",
+      currency_names: {
+        GEL: "ქართული ლარი",
+        USD: "აშშ დოლარი",
+        EUR: "ევრო",
+        GBP: "ბრიტანული გირვანქა",
+        JPY: "იაპონური იენი",
+        CAD: "კანადური დოლარი"
+      }
     },
     workflows: {
       title: "ბიზნეს პროცესები",
@@ -633,6 +673,12 @@ export const translations = {
       get_pro: "PRO ვერსიაზე გადასვლა",
       pro_active: "PRO აქტიურია",
       add_credits: "კრედიტების შევსება",
+      daily_reward_title: "ყოველდღიური იმპულსი",
+      daily_reward_desc: "მიიღეთ დღიური უფასო კრედიტები",
+      claim_button: "მივიღო კრედიტი",
+      claimed: "დღეს მიღებულია",
+      insights_title: "სისტემური ანალიტიკა",
+      insights_growth: "თქვენი ანგარიში დღეს 15%-ით უფრო აქტიურია",
       partners_title: "პარტნიორების ქსელი",
       partners_desc: "რეკომენდებული შეთავაზებები",
       ad_sample: "სარეკლამო ზონა: განათავსეთ თქვენი პროდუქტი აქ.",

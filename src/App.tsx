@@ -170,8 +170,31 @@ import { cn } from './lib/utils';
 import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan, type GeminiMetadata } from './services/gemini';
 
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { 
+  ConnectButton,
+  getDefaultConfig,
+  RainbowKitProvider,
+  darkTheme as rainbowDarkTheme
+} from '@rainbow-me/rainbowkit';
+import { WagmiProvider, http } from 'wagmi';
+import { mainnet, polygon, optimism, arbitrum, base } from 'wagmi/chains';
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
+import '@rainbow-me/rainbowkit/styles.css';
 import { useAccount, useBalance } from 'wagmi';
+
+const queryClient = new QueryClient();
+const config = getDefaultConfig({
+  appName: 'Secure Hub 7',
+  projectId: 'a5c0b933d69b32c63c1a3b1373510e1a', // Placeholder ID
+  chains: [mainnet, polygon, optimism, arbitrum, base],
+  transports: {
+    [mainnet.id]: http(),
+    [polygon.id]: http(),
+    [optimism.id]: http(),
+    [arbitrum.id]: http(),
+    [base.id]: http(),
+  },
+});
 
 // --- Types ---
 type Task = {
@@ -223,21 +246,29 @@ const SidebarItem = React.memo(({
       )}
     </div>
     
-    {expanded && (
-      <div className="flex items-center justify-between flex-1 min-w-0">
-        <span className={cn(
-          "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-left-4",
-          active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
-        )}>
-          {label}
-        </span>
-        {badge && (
-          <span className="px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[8px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
-            {badge}
+    <AnimatePresence mode="wait">
+      {expanded && (
+        <motion.div 
+          initial={{ opacity: 0, x: -10, width: 0 }}
+          animate={{ opacity: 1, x: 0, width: "auto" }}
+          exit={{ opacity: 0, x: -10, width: 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="flex items-center justify-between flex-1 min-w-0"
+        >
+          <span className={cn(
+            "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500",
+            active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
+          )}>
+            {label}
           </span>
-        )}
-      </div>
-    )}
+          {badge && (
+            <span className="px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[8px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
+              {badge}
+            </span>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
 
     {active && (
       <motion.div 
@@ -391,66 +422,6 @@ const SystemDiagnostic = ({ t }: { t: any }) => {
   );
 };
 
-const SystemGraph = ({ language }: { language: 'en' | 'ka' }) => {
-  const [isReady, setIsReady] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setIsReady(true), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const data = useMemo(() => Array.from({ length: 30 }, (_, i) => ({
-    name: i,
-    val: 30 + Math.random() * 50,
-    load: 10 + Math.random() * 80
-  })), []);
-
-  return (
-    <div className="h-48 w-full bg-proton-bg/40 rounded-3xl border border-proton-border p-4 relative overflow-hidden group flex flex-col">
-      <div className="absolute inset-0 bg-gradient-to-t from-proton-accent/[0.02] to-transparent pointer-events-none" />
-      <div className="absolute top-4 left-4 z-10">
-        <p className="text-[9px] font-black text-proton-muted uppercase tracking-widest leading-none mb-1">System Analysis</p>
-        <p className="text-xl font-black text-proton-accent tracking-tighter">{language === 'ka' ? 'პირადი-პორტალი' : 'SECURE_HUB_7'}</p>
-      </div>
-      
-      <div className="flex-1 w-full mt-10 min-h-[140px] relative overflow-hidden">
-        {isReady && (
-          <ResponsiveContainer width="100%" height="100%" minHeight={100}>
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--proton-accent)" stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor="var(--proton-accent)" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--proton-border)" vertical={false} opacity={0.1} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'rgba(10, 10, 15, 0.9)', 
-                  border: '1px solid var(--proton-border)', 
-                  borderRadius: '16px',
-                  backdropFilter: 'blur(8px)'
-                }}
-                itemStyle={{ color: 'var(--proton-accent)', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase' }}
-                labelStyle={{ display: 'none' }}
-                cursor={{ stroke: 'var(--proton-accent)', strokeWidth: 1, strokeDasharray: '4 4' }}
-              />
-              <Area 
-                type="stepAfter" 
-                dataKey="val" 
-                stroke="var(--proton-accent)" 
-                fillOpacity={1} 
-                fill="url(#colorVal)" 
-                strokeWidth={2}
-                animationDuration={2000}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-    </div>
-  );
-};
-
 const SidebarPersonaItem = React.memo(({ 
   persona, 
   active, 
@@ -482,18 +453,26 @@ const SidebarPersonaItem = React.memo(({
       <PersonaAvatar avatar={avatar} className="w-6 h-6 rounded-lg text-sm" />
     </div>
     
-    {expanded && (
-      <div className="flex-1 min-w-0 text-left select-none">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-proton-accent">
-            {persona.name}
-          </span>
-          <span className="text-[7px] font-bold text-proton-muted uppercase truncate tracking-[0.1em] opacity-60">
-            {persona.role}
-          </span>
-        </div>
-      </div>
-    )}
+    <AnimatePresence mode="wait">
+      {expanded && (
+        <motion.div 
+          initial={{ opacity: 0, x: -10, width: 0 }}
+          animate={{ opacity: 1, x: 0, width: "auto" }}
+          exit={{ opacity: 0, x: -10, width: 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+          className="flex-1 min-w-0 text-left select-none"
+        >
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-proton-accent">
+              {persona.name}
+            </span>
+            <span className="text-[7px] font-bold text-proton-muted uppercase truncate tracking-[0.1em] opacity-60">
+              {persona.role}
+            </span>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
 
     {active && expanded && (
       <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,1)]" />
@@ -1480,9 +1459,8 @@ const DashboardView = ({
 
       {uiMode === 'business' ? (
         <div className="space-y-8">
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+           <div className="grid grid-cols-1 gap-6">
               <SystemDiagnostic t={t} />
-              <SystemGraph language={language} />
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2559,23 +2537,39 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
     address: address,
   });
 
+  const [preferredCurrency, setPreferredCurrency] = useState<'USD' | 'GEL' | 'EUR' | 'GBP' | 'JPY' | 'CAD'>(
+    (localStorage.getItem('proton_preferred_currency') as any) || 'GEL'
+  );
+
+  const [showCurrencySelector, setShowCurrencySelector] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('proton_preferred_currency', preferredCurrency);
+  }, [preferredCurrency]);
+
+  const currencies = [
+    { code: 'GEL', symbol: '₾' },
+    { code: 'USD', symbol: '$' },
+    { code: 'EUR', symbol: '€' },
+    { code: 'GBP', symbol: '£' },
+    { code: 'JPY', symbol: '¥' },
+    { code: 'CAD', symbol: 'C$' },
+  ];
+
   // Native Currency Conversion Helper
-  const getGELValue = (cryptoValue: string | undefined) => {
+  const getConvertedValue = (cryptoValue: string | undefined, currencyCode: string) => {
     if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
-    const ethPrice = 2650; // Mock ETH Price
-    return `₾ ${(parseFloat(cryptoValue) * ethPrice * rates.gels).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  };
-
-  const getUSDValue = (cryptoValue: string | undefined) => {
-    if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
-    const ethPrice = 2650; // Mock ETH Price
-    return `$ ${(parseFloat(cryptoValue) * ethPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  };
-
-  const getCurrencyValue = (cryptoValue: string | undefined, rate: number, symbol: string) => {
-    if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
-    const ethPrice = 2650; // Mock ETH Price
-    return `${symbol} ${(parseFloat(cryptoValue) * ethPrice * rate).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+    const ethPriceInUSD = 2650; 
+    let rate = 1;
+    if (currencyCode !== 'USD') {
+      rate = rates[currencyCode] || 1;
+    }
+    const value = parseFloat(cryptoValue) * ethPriceInUSD * rate;
+    const symbol = currencies.find(c => c.code === currencyCode)?.symbol || '';
+    return `${symbol} ${value.toLocaleString(undefined, { 
+      maximumFractionDigits: currencyCode === 'JPY' ? 0 : 2,
+      minimumFractionDigits: currencyCode === 'JPY' ? 0 : 2
+    })}`;
   };
 
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -2619,12 +2613,120 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
                  {t.description}
               </p>
             </div>
-            <div className="flex items-center gap-3 bg-proton-card p-1.5 pl-4 rounded-2xl border border-proton-border">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-semibold text-green-500 uppercase tracking-[0.2em]">{language === 'ka' ? 'ონლაინ' : 'Online'}</span>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-3 bg-proton-card p-1.5 pl-4 rounded-2xl border border-proton-border text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="font-semibold text-green-500 uppercase tracking-[0.2em]">{language === 'ka' ? 'ონლაინ' : 'Online'}</span>
+                </div>
+                <ConnectButton />
               </div>
-              <ConnectButton />
+              
+              <div className="relative">
+                <button 
+                  onClick={() => setShowCurrencySelector(!showCurrencySelector)}
+                  className={cn(
+                    "p-3 bg-proton-card rounded-2xl border border-proton-border flex items-center gap-2 hover:bg-proton-accent/5 hover:border-proton-accent/40 transition-all duration-300 group",
+                    showCurrencySelector && "border-proton-accent/50 ring-4 ring-proton-accent/5"
+                  )}
+                >
+                  <Globe size={18} className="text-proton-accent group-hover:rotate-12 transition-transform duration-500" />
+                  <span className="text-xs font-black tracking-widest">{preferredCurrency}</span>
+                  <ChevronDown size={14} className={cn("transition-transform duration-300 text-proton-muted", showCurrencySelector && "rotate-180 text-proton-accent")} />
+                </button>
+                
+                <AnimatePresence>
+                  {showCurrencySelector && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowCurrencySelector(false)} />
+                      
+                      <motion.div 
+                        initial={{ opacity: 0, y: 15, scale: 0.92, filter: "blur(12px)" }}
+                        animate={{ 
+                          opacity: 1, 
+                          y: 0, 
+                          scale: 1, 
+                          filter: "blur(0px)",
+                          transition: { type: "spring", damping: 25, stiffness: 400 }
+                        }}
+                        exit={{ 
+                          opacity: 0, 
+                          y: 10, 
+                          scale: 0.95, 
+                          filter: "blur(10px)",
+                          transition: { duration: 0.2 }
+                        }}
+                        className="absolute right-0 mt-4 w-64 backdrop-blur-3xl bg-proton-card/95 border border-proton-border rounded-[28px] shadow-[0_30px_70px_rgba(0,0,0,0.7)] z-50 overflow-hidden"
+                      >
+                        <div className="p-3">
+                          <div className="px-3 py-2 mb-1 flex items-center justify-between border-b border-proton-border/30 pb-3 mx-1">
+                            <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.25em] opacity-60">
+                              {language === 'ka' ? 'ვალუტის არჩევა' : 'Select Currency'}
+                            </span>
+                            <Globe size={10} className="text-proton-accent/40" />
+                          </div>
+
+                          <div className="space-y-1 pt-2">
+                            {currencies.map((curr, idx) => (
+                              <motion.button
+                                initial={{ opacity: 0, x: -12 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.04, ease: "easeOut" }}
+                                key={curr.code}
+                                onClick={() => {
+                                  setPreferredCurrency(curr.code as any);
+                                  setShowCurrencySelector(false);
+                                }}
+                                className={cn(
+                                  "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all group/item relative overflow-hidden",
+                                  preferredCurrency === curr.code 
+                                    ? "bg-proton-accent text-proton-bg shadow-[0_0_20px_rgba(0,242,255,0.3)]" 
+                                    : "hover:bg-proton-accent/10 text-proton-text active:scale-95"
+                                )}
+                              >
+                                <div className="flex items-center gap-4 relative z-10">
+                                  <span className={cn(
+                                    "w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-colors",
+                                    preferredCurrency === curr.code 
+                                      ? "bg-proton-bg/20 border-proton-bg/30 text-white" 
+                                      : "bg-proton-bg border-proton-border group-hover/item:border-proton-accent/30"
+                                  )}>
+                                    {curr.symbol}
+                                  </span>
+                                  <div className="flex flex-col items-start gap-0.5">
+                                    <span className="text-xs">{(t.currency_names as any)?.[curr.code] || curr.code}</span>
+                                    {preferredCurrency !== curr.code && (
+                                      <span className="text-[8px] opacity-40 font-mono tracking-tighter">{curr.code} GATEWAY</span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {preferredCurrency === curr.code && (
+                                  <motion.div layoutId="active-check-currency" className="relative z-10">
+                                    <Check size={16} strokeWidth={4} />
+                                  </motion.div>
+                                )}
+
+                                {preferredCurrency !== curr.code && (
+                                  <div className="opacity-0 group-hover/item:opacity-30 transition-opacity text-[10px] font-mono mr-1">
+                                    {curr.code}
+                                  </div>
+                                )}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="px-4 py-2 bg-proton-accent/5 border-t border-proton-border/30">
+                          <p className="text-[8px] text-center font-bold text-proton-muted/60 uppercase tracking-widest">
+                            Real-time Matrix Rates
+                          </p>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
 
@@ -2639,38 +2741,31 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
                       <div className="flex items-center justify-between">
                           <div className="space-y-1">
                               <h3 className="text-xs font-bold uppercase tracking-widest text-proton-muted">{t.treasury}</h3>
-                              <p className="text-2xl md:text-5xl font-bold tracking-tighter">
-                                  {balance && parseFloat(balance.formatted) > 0 ? (
-                                    <>
-                                      {parseFloat(balance.formatted).toFixed(4)} <span className="text-proton-accent">{balance?.symbol}</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-proton-muted italic opacity-50">No Activity Detected</span>
-                                  )}
+                              <p className="text-3xl md:text-6xl font-black tracking-tighter">
+                                   {balance && parseFloat(balance.formatted) > 0 ? (
+                                     <>
+                                       {parseFloat(balance.formatted).toFixed(4)} <span className="text-proton-accent">{balance?.symbol}</span>
+                                     </>
+                                   ) : (
+                                     <span className="text-proton-muted italic opacity-50">No Activity Detected</span>
+                                   )}
+                              </p>
+                              <p className="text-lg md:text-2xl font-bold text-proton-accent/80 tracking-tight">
+                                {getConvertedValue(balance?.formatted, preferredCurrency)}
                               </p>
                           </div>
-                          <div className="p-3 md:p-4 rounded-2xl bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
-                              <Wallet size={24} className="md:w-8 md:h-8" />
+                          <div className="p-3 md:p-6 rounded-3xl bg-proton-accent/10 text-proton-accent border border-proton-accent/20 shadow-[0_0_20px_rgba(0,242,255,0.1)]">
+                              <Wallet size={24} className="md:w-10 md:h-10" />
                           </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
-                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GEL (₾)</p>
-                              <p className="text-lg font-bold">{getGELValue(balance?.formatted)}</p>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
-                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">USD ($)</p>
-                              <p className="text-lg font-bold">{getUSDValue(balance?.formatted)}</p>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
-                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">EUR (€)</p>
-                              <p className="text-lg font-bold">{getCurrencyValue(balance?.formatted, rates.eurs, '€')}</p>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
-                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">GBP (£)</p>
-                              <p className="text-lg font-bold">{getCurrencyValue(balance?.formatted, rates.gbps, '£')}</p>
-                          </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        {currencies.filter(c => c.code !== preferredCurrency || preferredCurrency !== 'GEL').slice(0, 5).map(curr => (
+                           <div key={curr.code} className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
+                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">{curr.code} ({curr.symbol})</p>
+                              <p className="text-sm md:text-base font-bold truncate">{getConvertedValue(balance?.formatted, curr.code)}</p>
+                           </div>
+                        ))}
                       </div>
 
                       <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -2704,14 +2799,14 @@ const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative'
 
                     <div className="proton-glass p-6 rounded-[32px] border border-proton-border space-y-4 shadow-sm">
                         <div className="w-12 h-12 rounded-2xl bg-proton-secondary/10 text-proton-secondary flex items-center justify-center">
-                            <Globe size={24} />
+                            <RefreshCw size={24} />
                         </div>
                         <div>
-                             <h4 className="font-bold text-lg">{t.nbg_rate}</h4>
-                             <p className="text-xs text-proton-muted">{language === 'ka' ? 'კურსი' : 'Rate'}: $1 = {rates.gels} GEL</p>
+                             <h4 className="font-bold text-lg">Market Sync</h4>
+                             <p className="text-xs text-proton-muted">Refreshed live via Frankfurter API</p>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] font-mono text-proton-secondary uppercase tracking-[0.2em] font-bold pt-2">
-                             {t.nbg_sync}
+                             $1 USD = {rates.GEL} GEL
                         </div>
                     </div>
                 </div>
@@ -3513,7 +3608,48 @@ const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }
 ];
 
 export default function App() {
-  const [rates, setRates] = useState({ gels: 2.71, eurs: 0.93, gbps: 0.78 });
+  const [rates, setRates] = useState<any>({ GEL: 2.71, EUR: 0.93, GBP: 0.78, JPY: 155, CAD: 1.37 });
+  
+  useEffect(() => {
+    const fetchRates = async () => {
+      // Try Frankfurter (Dev mirror is often more reliable)
+      try {
+        const res = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=GEL,EUR,GBP,JPY,CAD');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.rates) {
+            setRates(data.rates);
+            return;
+          }
+        }
+      } catch (error) {
+        // Silent catch for mirror
+      }
+
+      // Fallback to stable Exchange Rate API
+      try {
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.rates) {
+            const filtered = {
+              GEL: data.rates.GEL,
+              EUR: data.rates.EUR,
+              GBP: data.rates.GBP,
+              JPY: data.rates.JPY,
+              CAD: data.rates.CAD
+            };
+            setRates(filtered);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Currency rates fetch failed:", error);
+      }
+    };
+    fetchRates();
+  }, []);
+
   const [uiMode, setUiMode] = useState<'business' | 'creative'>(
     (localStorage.getItem('proton_ui_mode') as 'business' | 'creative') || 'business'
   );
@@ -4182,75 +4318,116 @@ export default function App() {
   }
 
   return (
-    <div className={cn(
-      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
-      uiMode === 'creative' ? "ui-creative" : "ui-business"
-    )}>
-      <AnimatePresence>
-        {isTransitioning && (
-          <FlashOverlay mode={uiMode} />
-        )}
-      </AnimatePresence>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider theme={rainbowDarkTheme({
+          accentColor: '#00f2ff',
+          accentColorIdle: '#00f2ff',
+          borderRadius: 'large',
+          overlayBlur: 'small',
+        })}>
+          <div className={cn(
+            "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+            uiMode === 'creative' ? "ui-creative" : "ui-business"
+          )}>
+            <AnimatePresence>
+              {isTransitioning && (
+                <FlashOverlay mode={uiMode} />
+              )}
+            </AnimatePresence>
 
-      {/* Mobile Backdrop */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[65]"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+            {/* Mobile Backdrop */}
+            <AnimatePresence>
+              {isSidebarOpen && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[65]"
+                  onClick={() => setIsSidebarOpen(false)}
+                />
+              )}
+            </AnimatePresence>
 
-      {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
-      <aside 
-        className={cn(
-          "flex flex-col border-r border-proton-border bg-proton-card transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] z-[70] overflow-x-hidden relative",
-          "fixed inset-y-0 left-0 md:relative",
-          isSidebarOpen 
-            ? "translate-x-0 w-[280px] shadow-2xl" 
-            : "-translate-x-full md:translate-x-0 md:w-20 shadow-none px-0"
-        )}
-      >
-        {/* Sidebar Interior - Glass effect */}
-        <div className="absolute inset-0 bg-gradient-to-b from-proton-accent/[0.03] to-transparent pointer-events-none" />
-        
-        <div className={cn(
-          "h-20 shrink-0 flex items-center gap-4 px-6 border-b border-proton-border/30 overflow-hidden relative z-10 transition-all duration-500",
-          !isSidebarOpen && "md:justify-center md:px-0"
-        )}>
-          <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
-            <Layout size={22} fill="currentColor" />
-          </div>
-          {isSidebarOpen && (
-            <div className="flex flex-col animate-in fade-in slide-in-from-left-4 duration-700">
-              <span className="text-xl font-black tracking-tight text-proton-text uppercase">System</span>
-              <span className="text-[9px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-80">Workspace</span>
-            </div>
-          )}
-        </div>
+            {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
+            <motion.aside 
+              initial={false}
+              animate={{ 
+                width: isSidebarOpen ? 280 : 80,
+                x: isSidebarOpen ? 0 : (window.innerWidth < 768 ? -280 : 0)
+              }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className={cn(
+                "flex flex-col border-r border-proton-border bg-proton-card z-[70] overflow-x-hidden relative",
+                "fixed inset-y-0 left-0 md:relative",
+                isSidebarOpen ? "shadow-2xl" : "shadow-none"
+              )}
+            >
+              {/* Sidebar Interior - Glass effect */}
+              <div className="absolute inset-0 bg-gradient-to-b from-proton-accent/[0.03] to-transparent pointer-events-none" />
+              
+              <div className={cn(
+                "h-20 shrink-0 flex items-center gap-4 px-6 border-b border-proton-border/30 overflow-hidden relative z-10 transition-all duration-500",
+                !isSidebarOpen && "md:justify-center md:px-0"
+              )}>
+                <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
+                  <Layout size={22} fill="currentColor" />
+                </div>
+                <AnimatePresence mode="wait">
+                  {isSidebarOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      className="flex flex-col"
+                    >
+                      <span className="text-xl font-black tracking-tight text-proton-text uppercase">System</span>
+                      <span className="text-[9px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-80">Workspace</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-        <nav className={cn(
-          "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
-          isSidebarOpen ? "px-4" : "px-0"
-        )}>
-          <div className="space-y-1.5">
-            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-widest">{t.sidebar.main}</p>}
-            <SidebarItem 
-              icon={LayoutDashboard} 
-              label={t.sidebar.dashboard} 
-              active={activeView === 'dashboard'} 
-              onClick={() => handleViewChange('dashboard')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-          </div>
+              <nav className={cn(
+                "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
+                isSidebarOpen ? "px-4" : "px-0"
+              )}>
+                <div className="space-y-1.5 min-h-[1.5rem]">
+                  <AnimatePresence mode="wait">
+                    {isSidebarOpen && (
+                      <motion.p 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="text-[10px] font-black text-proton-muted/50 uppercase tracking-widest px-3"
+                      >
+                        {t.sidebar.main}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  <SidebarItem 
+                    icon={LayoutDashboard} 
+                    label={t.sidebar.dashboard} 
+                    active={activeView === 'dashboard'} 
+                    onClick={() => handleViewChange('dashboard')} 
+                    expanded={isSidebarOpen}
+                    uiMode={uiMode}
+                  />
+                </div>
 
           <div className="space-y-1.5 pt-4">
-            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.agents}</p>}
+            <AnimatePresence mode="wait">
+              {isSidebarOpen && (
+                <motion.p 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4"
+                >
+                  {t.sidebar.agents}
+                </motion.p>
+              )}
+            </AnimatePresence>
             
             <Reorder.Group 
               axis="y" 
@@ -4292,7 +4469,18 @@ export default function App() {
           </div>
 
           <div className="space-y-1.5 pt-6">
-            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.creative}</p>}
+            <AnimatePresence mode="wait">
+              {isSidebarOpen && (
+                <motion.p 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4"
+                >
+                  {t.sidebar.creative}
+                </motion.p>
+              )}
+            </AnimatePresence>
             <SidebarItem 
               icon={Image} 
               label={t.sidebar.image} 
@@ -4312,43 +4500,61 @@ export default function App() {
           </div>
 
           <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
-            {isSidebarOpen && <p className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4">{t.sidebar.system}</p>}
+            <AnimatePresence mode="wait">
+              {isSidebarOpen && (
+                <motion.p 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4"
+                >
+                  {t.sidebar.system}
+                </motion.p>
+              )}
+            </AnimatePresence>
             
-            {isSidebarOpen && (
-              <div className="px-3 space-y-4 mb-6">
-                <div className="space-y-2">
-                  <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'ენა' : 'Language'}</p>
-                  <div className="flex bg-proton-bg/50 border border-proton-border/50 rounded-xl p-0.5">
-                    <button 
-                      onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
-                      className={cn(
-                        "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
-                        userProfile.language === 'en' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
-                      )}
-                    >
-                      EN
-                    </button>
-                    <button 
-                      onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
-                      className={cn(
-                        "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
-                        userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
-                      )}
-                    >
-                      GE
-                    </button>
+            <AnimatePresence mode="wait">
+              {isSidebarOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-3 space-y-4 mb-6 overflow-hidden"
+                >
+                  <div className="space-y-2">
+                    <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'ენა' : 'Language'}</p>
+                    <div className="flex bg-proton-bg/50 border border-proton-border/50 rounded-xl p-0.5">
+                      <button 
+                        onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
+                        className={cn(
+                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
+                          userProfile.language === 'en' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
+                        )}
+                      >
+                        EN
+                      </button>
+                      <button 
+                        onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
+                        className={cn(
+                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
+                          userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
+                        )}
+                      >
+                        GE
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
-                  <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'დიზაინი' : 'Appearance'}</p>
-                  <DarkModeToggle theme={theme} setTheme={setTheme} language={language} />
-                </div>
-              </div>
-            )}
+                  <div className="space-y-2">
+                    <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
+                    <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'დიზაინი' : 'Appearance'}</p>
+                    <DarkModeToggle theme={theme} setTheme={setTheme} language={language} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <SidebarItem 
               icon={UserIcon} 
@@ -4375,12 +4581,19 @@ export default function App() {
                   <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
                 )}
               </div>
-              {isSidebarOpen && (
-                <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-4 duration-700">
-                  <span className="text-[11px] font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'User'}</span>
-                  <span className="text-[9px] font-medium text-proton-accent/60 truncate tracking-widest uppercase">Verified Account</span>
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                {isSidebarOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex flex-col min-w-0"
+                  >
+                    <span className="text-[11px] font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'User'}</span>
+                    <span className="text-[9px] font-medium text-proton-accent/60 truncate tracking-widest uppercase">Verified Account</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           
@@ -4393,7 +4606,7 @@ export default function App() {
             </div>
           </button>
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Bottom Nav (Mobile Only) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/80 backdrop-blur-xl border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe">
@@ -4727,5 +4940,8 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }

@@ -1,8 +1,8 @@
 import React from 'react';
 import { UserProfile, Theme } from '../types';
-import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, CreditCard, Star, ExternalLink, ZapOff } from 'lucide-react';
+import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -26,9 +26,28 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
 
 export default function CabinetView({ profile, theme, setTheme }: CabinetViewProps) {
   const [isDesignOpen, setIsDesignOpen] = React.useState(false);
+  const [isClaiming, setIsClaiming] = React.useState(false);
+  const [claimed, setClaimed] = React.useState(false);
+
   if (!profile) return null;
   const lang = profile.language || 'en';
   const t = translations[lang].cabinet;
+
+  const handleClaimReward = async () => {
+    if (claimed || isClaiming) return;
+    setIsClaiming(true);
+    try {
+      const userRef = doc(db, 'users', auth.currentUser!.uid);
+      await updateDoc(userRef, {
+        balance: increment(50)
+      });
+      setClaimed(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const handleUpdate = async (field: string, value: any) => {
     if (!auth.currentUser) return;
@@ -89,6 +108,83 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+         {/* 1.5 ENGAGEMENT ALGORITHM: DAILY PULSE */}
+         <section className="bg-proton-card border border-proton-border rounded-xl p-5 px-6 space-y-4 shadow-sm overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl -mr-10 -mt-10 group-hover:bg-amber-500/20 transition-all duration-700" />
+            
+            <div className="flex items-center justify-between relative z-10">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                     <Gift size={16} />
+                  </div>
+                  <div>
+                     <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{(t as any).daily_reward_title}</h3>
+                     <p className="text-[8px] text-proton-muted font-bold uppercase tracking-tighter opacity-60">{(t as any).daily_reward_desc}</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="relative z-10 flex items-center gap-4">
+               <div className="flex-1 h-1.5 bg-proton-bg/40 rounded-full overflow-hidden border border-proton-border/30">
+                  <motion.div 
+                     initial={{ width: "0%" }}
+                     animate={{ width: claimed ? "100%" : "35%" }}
+                     className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
+                  />
+               </div>
+               <button 
+                  onClick={handleClaimReward}
+                  disabled={claimed || isClaiming}
+                  className={cn(
+                     "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                     claimed 
+                        ? "bg-proton-bg/40 text-proton-muted border border-proton-border cursor-not-allowed" 
+                        : "bg-amber-500 text-black hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(245,158,11,0.2)]"
+                  )}
+               >
+                  {isClaiming ? "..." : claimed ? (t as any).claimed : (t as any).claim_button}
+               </button>
+            </div>
+         </section>
+
+         {/* 1.6 SMART INSIGHTS / ALGORITHM FEED */}
+         <section className="bg-proton-card border border-proton-border rounded-xl p-5 px-6 space-y-4 shadow-sm overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/10 blur-3xl -mr-10 -mt-10 group-hover:bg-proton-accent/20 transition-all duration-700" />
+            
+            <div className="flex items-center justify-between relative z-10">
+               <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-proton-accent/10 text-proton-accent">
+                     <TrendingUp size={16} />
+                  </div>
+                  <div>
+                     <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{(t as any).insights_title}</h3>
+                     <p className="text-[8px] text-proton-accent font-bold uppercase tracking-tighter animate-pulse">{(t as any).insights_growth}</p>
+                  </div>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 relative z-10">
+               <div className="p-2 rounded-lg bg-proton-bg/40 border border-proton-border/30">
+                  <div className="flex items-center justify-between mb-1">
+                     <span className="text-[7px] font-black text-proton-muted uppercase">Retention</span>
+                     <span className="text-[8px] text-emerald-400 font-mono">+4.2%</span>
+                  </div>
+                  <div className="h-1 bg-proton-border/20 rounded-full overflow-hidden">
+                     <div className="h-full w-[85%] bg-emerald-500" />
+                  </div>
+               </div>
+               <div className="p-2 rounded-lg bg-proton-bg/40 border border-proton-border/30">
+                  <div className="flex items-center justify-between mb-1">
+                     <span className="text-[7px] font-black text-proton-muted uppercase">Ad Value</span>
+                     <span className="text-[8px] text-amber-400 font-mono">1.2x</span>
+                  </div>
+                  <div className="h-1 bg-proton-border/20 rounded-full overflow-hidden">
+                     <div className="h-full w-[65%] bg-amber-500" />
+                  </div>
+               </div>
+            </div>
+         </section>
+
          {/* 2. DESIGN / THEME SWITCHER - COLLAPSIBLE */}
          <section className="bg-proton-card border border-proton-border rounded-xl shadow-sm lg:col-span-2 overflow-hidden transition-all duration-300">
             <button 

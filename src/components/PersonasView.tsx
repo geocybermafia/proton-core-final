@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
 import { collection, query, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { Persona, ChatMessage } from '../types';
-import { Send, User, Bot, Plus, Trash2, Edit2, Users } from 'lucide-react';
+import { Send, User, Bot, Plus, Trash2, Edit2, Users, Image as ImageIcon, FileText, Zap, Sparkles, ChevronUp } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,6 +24,14 @@ export default function PersonasView({
   const [messages, setMessages] = useState<ChatMessage[]>(initialHistory || []);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showTools, setShowTools] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<string | null>(null);
+
+  const aiTools = [
+    { id: 'image', icon: ImageIcon, label: t.tools.image, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+    { id: 'summary', icon: FileText, label: t.tools.summary, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+    { id: 'analysis', icon: Zap, label: t.tools.analysis, color: 'text-orange-400', bg: 'bg-orange-500/10' },
+  ];
 
   useEffect(() => {
     if (initialPersonas) {
@@ -68,35 +76,54 @@ export default function PersonasView({
   const handleSendMessage = async () => {
     if (!input.trim() || !selectedPersona || !auth.currentUser) return;
 
+    let finalPrompt = input;
+    if (selectedTool) {
+      const toolLabel = aiTools.find(t => t.id === selectedTool)?.label;
+      finalPrompt = `[${toolLabel?.toUpperCase()}] ${input}`;
+    }
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: finalPrompt,
       timestamp: Date.now()
     };
 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput('');
+    const prevTool = selectedTool;
+    setSelectedTool(null);
+    setShowTools(false);
     setIsSending(true);
 
     try {
        const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
        await setDoc(chatRef, { messages: newMessages }, { merge: true });
        
-       // Simulate AI response for now
+       // AI response simulation
        setTimeout(async () => {
+         let responseContent = `[RECOVERY_MODE] ${selectedPersona.name} is currently optimizing neural pathways. Detailed response capability will be restored shortly.`;
+         
+         if (prevTool === 'image') {
+           responseContent = `🎨 GENERATING VISUAL ASSET: "${input}"\n\nNeural rendering initialized. The requested visualization is being synthesized from matrix flux. Status: 15% complete. [MOCK_OUTPUT_IMAGE_TAG]`;
+         } else if (prevTool === 'summary') {
+           responseContent = `📄 NEURAL SUMMARIZATION:\n\n1. Target data identified.\n2. Semantic nodes extracted.\n3. Core essence: ${input.length > 50 ? input.substring(0, 50) + '...' : input} has been compressed into high-density tokens for immediate consumption.`;
+         } else if (prevTool === 'analysis') {
+           responseContent = `⚡ WORKFLOW ANALYSIS INITIATED:\n\n- Logical consistency: OPTIMAL\n- Efficiency score: 94%\n- Bottleneck detected: Manual node synchronization in phase 3.\n- Recommendation: Automate persona handoff via specific triggers.`;
+         }
+
          const aiMessage: ChatMessage = {
            id: (Date.now() + 1).toString(),
            role: 'model',
-           content: `[RECOVERY_MODE] ${selectedPersona.name} is currently optimizing neural pathways. Detailed response capability will be restored shortly.`,
+           content: responseContent,
            timestamp: Date.now()
          };
          const updatedMessages = [...newMessages, aiMessage];
          setMessages(updatedMessages);
          await setDoc(chatRef, { messages: updatedMessages }, { merge: true });
          setIsSending(false);
-       }, 1000);
+       }, 1500);
 
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -226,22 +253,96 @@ export default function PersonasView({
               </div>
 
               <footer className="p-6 border-t border-proton-border bg-white/5">
-                 <div className="relative max-w-4xl mx-auto">
-                    <input 
-                      type="text" 
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder={t.chat_placeholder.replace('{name}', selectedPersona.name)}
-                      className="w-full bg-proton-bg border border-proton-border rounded-2xl pl-6 pr-16 py-4 focus:outline-none focus:border-proton-accent/50 focus:ring-1 focus:ring-proton-accent/20 transition-all text-sm placeholder:text-proton-muted/50"
-                    />
-                    <button 
-                      onClick={handleSendMessage}
-                      disabled={!input.trim() || isSending}
-                      className="absolute right-2.5 top-2 p-2.5 bg-proton-accent hover:bg-proton-accent-hover disabled:opacity-30 disabled:grayscale text-slate-950 rounded-xl transition-all shadow-lg shadow-proton-accent/20"
-                    >
-                       <Send size={20} strokeWidth={2.5} />
-                    </button>
+                 <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
+                    <AnimatePresence>
+                      {showTools && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute bottom-full mb-4 left-0 w-64 bg-proton-card border border-proton-border rounded-2xl shadow-2xl p-2 z-[60]"
+                        >
+                          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-proton-muted px-3 py-2 mb-1 opacity-60">
+                            {t.tools.title}
+                          </p>
+                          <div className="grid gap-1">
+                            {aiTools.map((tool) => (
+                              <button
+                                key={tool.id}
+                                onClick={() => {
+                                  setSelectedTool(tool.id);
+                                  setShowTools(false);
+                                }}
+                                className={cn(
+                                  "flex items-center gap-3 w-full p-2.5 rounded-xl text-xs font-bold transition-all",
+                                  selectedTool === tool.id ? "bg-proton-accent/10 text-proton-accent" : "hover:bg-white/5 text-proton-muted hover:text-proton-text"
+                                )}
+                              >
+                                <div className={cn("p-2 rounded-lg", tool.bg, tool.color)}>
+                                  <tool.icon size={16} />
+                                </div>
+                                <span>{tool.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <div className="relative group">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        <button 
+                          onClick={() => setShowTools(!showTools)}
+                          className={cn(
+                            "p-2 rounded-xl transition-all border shrink-0",
+                            showTools || selectedTool 
+                              ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent ring-4 ring-proton-accent/5" 
+                              : "bg-white/5 border-white/5 text-proton-muted hover:text-proton-text hover:border-white/10"
+                          )}
+                        >
+                           {selectedTool ? (
+                             <div className="flex items-center gap-2">
+                               {React.createElement(aiTools.find(t => t.id === selectedTool)?.icon || Sparkles, { size: 18 })}
+                             </div>
+                           ) : (
+                             <Sparkles size={18} />
+                           )}
+                        </button>
+                      </div>
+
+                      <input 
+                        type="text" 
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder={selectedTool 
+                          ? `${aiTools.find(t => t.id === selectedTool)?.label}...` 
+                          : t.chat_placeholder.replace('{name}', selectedPersona.name)
+                        }
+                        className={cn(
+                          "w-full bg-proton-bg border border-proton-border rounded-2xl pl-16 pr-16 py-4 focus:outline-none transition-all text-sm placeholder:text-proton-muted/50",
+                          selectedTool ? "border-proton-accent/40 shadow-[0_0_15px_rgba(0,242,255,0.05)]" : "focus:border-proton-accent/50 focus:ring-1 focus:ring-proton-accent/20"
+                        )}
+                      />
+
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        {selectedTool && (
+                          <button 
+                            onClick={() => setSelectedTool(null)}
+                            className="p-2 text-proton-muted hover:text-red-400 text-[10px] font-black uppercase tracking-tighter"
+                          >
+                            ESC
+                          </button>
+                        )}
+                        <button 
+                          onClick={handleSendMessage}
+                          disabled={!input.trim() || isSending}
+                          className="p-2.5 bg-proton-accent hover:bg-proton-accent-hover disabled:opacity-30 disabled:grayscale text-slate-950 rounded-xl transition-all shadow-lg shadow-proton-accent/20"
+                        >
+                           <Send size={20} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    </div>
                  </div>
               </footer>
            </motion.div>
