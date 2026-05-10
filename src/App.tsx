@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, Dispatch, SetStateAction } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction } from 'react';
 import { EnterpriseWorkflowBuilder } from './components/EnterpriseWorkflowBuilder';
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { LocalFileScanner } from './components/LocalFileScanner';
@@ -23,7 +23,26 @@ import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, del
 import { SettingsView } from './components/SettingsView';
 import CabinetView from './components/CabinetView';
 import { TranslatorView } from './components/TranslatorView';
-import { Persona, ChatMessage, Workflow, WorkflowStep, View, UserProfile, GlobalAiSettings, Theme, PersonaHistory } from './types';
+import PersonasViewLocal from './components/PersonasView';
+import { 
+  handleFirestoreError, 
+  OperationType, 
+  FirestoreErrorInfo 
+} from './lib/firebaseUtils';
+import { 
+  Persona, 
+  ChatMessage, 
+  Workflow, 
+  WorkflowStep, 
+  View, 
+  UserProfile, 
+  GlobalAiSettings, 
+  Theme, 
+  PersonaHistory,
+  LogEntry,
+  GeminiMetadata,
+  Task
+} from './types';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts';
@@ -111,57 +130,12 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
-import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan, type GeminiMetadata } from './lib/gemini';
+import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan } from './lib/gemini';
 
 import { 
   ConnectButton
 } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
-  path: string | null;
-  authInfo: {
-    userId: string;
-    email: string;
-    emailVerified: boolean;
-    isAnonymous: boolean;
-    providerInfo: { providerId: string; displayName: string; email: string; }[];
-  }
-}
-
-const handleFirestoreError = (error: any, operationType: FirestoreErrorInfo['operationType'], path: string | null = null) => {
-  if (error.code === 'permission-denied') {
-    const user = auth.currentUser;
-    const errorInfo: FirestoreErrorInfo = {
-      error: error.message,
-      operationType,
-      path,
-      authInfo: {
-        userId: user?.uid || 'unauthenticated',
-        email: user?.email || '',
-        emailVerified: user?.emailVerified || false,
-        isAnonymous: user?.isAnonymous || false,
-        providerInfo: user?.providerData.map(p => ({
-          providerId: p.providerId,
-          displayName: p.displayName || '',
-          email: p.email || ''
-        })) || []
-      }
-    };
-    console.error("Firestore Permission Denied:", errorInfo);
-    throw new Error(JSON.stringify(errorInfo));
-  }
-  
-  if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
-     console.error("Firestore Connection Error:", error.message);
-     // We can just throw a simpler error for the UI to catch or show a toast if we had one
-     throw new Error("Connection request reset. Please try again.");
-  }
-
-  throw error;
-};
 
 // Test connection helper
 async function testConnection() {
@@ -190,15 +164,6 @@ const safeStorage = {
 };
 
 // --- Types ---
-type Task = {
-  id: string;
-  content: string;
-  contentGe: string;
-  completed: boolean;
-  isAiSuggested?: boolean;
-  priority?: 'low' | 'medium' | 'high';
-  category?: string;
-};
 
 // --- Components ---
 
@@ -1096,7 +1061,7 @@ const OrganizerView = ({
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
-      const contentMatch = (language === 'ka' ? task.contentGe : task.content)
+      const contentMatch = (language === 'ka' ? (task.contentGe || task.content) : task.content)
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       
@@ -3737,7 +3702,37 @@ export default function App() {
     }
   }, [isCreativeMode, isSafeMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [showLogs, setShowLogs] = useState(false);
+
+  const addLog = React.useCallback((type: LogEntry['type'], message: string, details?: any) => {
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      type,
+      message,
+      timestamp: Date.now(),
+      data: details
+    };
+    setLogs(prev => [newLog, ...prev].slice(0, 100));
+    console.log(`[SYSTEM ${type.toUpperCase()}] ${message}`, details || '');
+  }, []);
+
+  const trackFirestore = useCallback(async <T,>(
+    promise: Promise<T>, 
+    operationType: OperationType | string = 'write', 
+    path: string | null = null
+  ): Promise<T> => {
+    try {
+      setIsFirestoreActive(true);
+      return await promise;
+    } catch (error: any) {
+      handleFirestoreError(error, operationType, path, addLog);
+      throw error;
+    } finally {
+      setIsFirestoreActive(false);
+    }
+  }, [addLog]);
+
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       return (safeStorage.get('proton_theme') as Theme) || 'proton';
@@ -3905,14 +3900,14 @@ export default function App() {
         try {
           // Fetch Workflows
           const workflowsRef = collection(db, 'users', u.uid, 'workflows');
-          const wfSnapshot = await getDocs(workflowsRef).catch(e => handleFirestoreError(e, 'list', workflowsRef.path));
-          const loadedWorkflows = wfSnapshot.docs.map(doc => doc.data() as Workflow);
+          const wfSnapshot = await trackFirestore(getDocs(workflowsRef), 'list', workflowsRef.path);
+          const loadedWorkflows = wfSnapshot.docs.map((doc: any) => doc.data() as Workflow);
           setWorkflows(loadedWorkflows);
 
           // Fetch Personas
           const personasRef = collection(db, 'users', u.uid, 'personas');
-          const pSnapshot = await getDocs(personasRef).catch(e => handleFirestoreError(e, 'list', personasRef.path));
-          let loadedPersonas = pSnapshot.docs.map(doc => doc.data() as Persona);
+          const pSnapshot = await trackFirestore(getDocs(personasRef), 'list', personasRef.path);
+          let loadedPersonas = pSnapshot.docs.map((doc: any) => doc.data() as Persona);
           
           if (loadedPersonas.length === 0) {
             // Initialize defaults
@@ -3926,29 +3921,29 @@ export default function App() {
 
           // Fetch Chat History
           const chatRef = collection(db, 'users', u.uid, 'chatHistory');
-          const chatSnap = await getDocs(chatRef).catch(e => handleFirestoreError(e, 'list', chatRef.path));
+          const chatSnap = await trackFirestore(getDocs(chatRef), 'list', chatRef.path);
           const historyObj: PersonaHistory = {};
-          chatSnap.docs.forEach(d => {
+          chatSnap.docs.forEach((d: any) => {
             historyObj[d.id] = d.data().messages || [];
           });
           setChatHistory(historyObj);
 
           // Fetch Tasks
           const tasksRef = collection(db, 'users', u.uid, 'tasks');
-          const tasksSnap = await getDocs(tasksRef).catch(e => handleFirestoreError(e, 'list', tasksRef.path));
-          const loadedTasks = tasksSnap.docs.map(doc => doc.data() as Task);
+          const tasksSnap = await trackFirestore(getDocs(tasksRef), 'list', tasksRef.path);
+          const loadedTasks = tasksSnap.docs.map((doc: any) => doc.data() as Task);
           setTasks(loadedTasks.length > 0 ? loadedTasks : []);
 
           // Fetch Custom Avatars
           const avatarRef = collection(db, 'users', u.uid, 'customAvatars');
-          const avatarSnap = await getDocs(avatarRef).catch(e => handleFirestoreError(e, 'list', avatarRef.path));
+          const avatarSnap = await trackFirestore(getDocs(avatarRef), 'list', avatarRef.path);
           const avatarObj: { [id: string]: string } = {};
-          avatarSnap.docs.forEach(d => {
+          avatarSnap.docs.forEach((d: any) => {
             avatarObj[d.id] = d.data().avatar;
           });
           setPersonaAvatars(avatarObj);
         } catch (error) {
-          console.error("Initial load error:", error);
+          addLog('error', 'Initial data load failed', error);
         }
       } else {
         setWorkflows([]);
@@ -4116,25 +4111,32 @@ export default function App() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
+    const handleGoogleSignIn = async () => {
     try {
+      addLog('info', 'Starting Google Sign-In');
       const result = await signInWithPopup(auth, googleProvider);
+      addLog('info', `Signed in as ${result.user.email}`);
       const userDocRef = doc(db, 'users', result.user.uid);
-      const userDoc = await getDoc(userDocRef).catch(e => handleFirestoreError(e, 'get', userDocRef.path));
+      const userDoc = await trackFirestore(getDoc(userDocRef), 'get', userDocRef.path);
       if (!userDoc.exists()) {
-        await setDoc(userDocRef, {
+        await trackFirestore(setDoc(userDocRef, {
           uid: result.user.uid,
           email: result.user.email,
           displayName: result.user.displayName
-        }).catch(e => handleFirestoreError(e, 'create', userDocRef.path));
+        }), 'create', userDocRef.path);
       }
     } catch (error) {
-      console.error('Error signing in:', error);
+      addLog('error', 'Google Sign-In failed', error);
     }
   };
   
   const handleSignOut = async () => {
-    await signOut(auth);
+    try {
+      addLog('info', 'User signing out');
+      await signOut(auth);
+    } catch (e) {
+      addLog('error', 'Sign out error', e);
+    }
   };
 
 
@@ -4180,15 +4182,6 @@ export default function App() {
     }
   };
 
-  async function trackFirestore<T>(promise: Promise<T>): Promise<T> {
-    setIsFirestoreActive(true);
-    try {
-      return await promise;
-    } finally {
-      setTimeout(() => setIsFirestoreActive(false), 800);
-    }
-  }
-
   const handleAddTask = (content: string, priority: 'low' | 'medium' | 'high' = 'medium', category?: string) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
@@ -4201,7 +4194,7 @@ export default function App() {
     setTasks(prev => [...prev, newTask]);
     if (user) {
       const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
-      trackFirestore(setDoc(docRef, newTask)).catch(e => handleFirestoreError(e, 'write', docRef.path));
+      trackFirestore(setDoc(docRef, newTask), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
     }
   };
 
@@ -4211,7 +4204,7 @@ export default function App() {
         const updated = { ...t, ...updates };
         if (user) {
           const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          trackFirestore(setDoc(docRef, updated)).catch(e => handleFirestoreError(e, 'write', docRef.path));
+          trackFirestore(setDoc(docRef, updated), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
         }
         return updated;
       }
@@ -4225,7 +4218,7 @@ export default function App() {
         const updated = { ...t, completed: !t.completed };
         if (user) {
           const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          trackFirestore(setDoc(docRef, updated)).catch(e => handleFirestoreError(e, 'write', docRef.path));
+          trackFirestore(setDoc(docRef, updated), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
         }
         return updated;
       }
@@ -4237,7 +4230,7 @@ export default function App() {
     setTasks(prev => prev.filter(t => t.id !== id));
     if (user) {
       const docRef = doc(db, 'users', user.uid, 'tasks', id);
-      trackFirestore(deleteDoc(docRef)).catch(e => handleFirestoreError(e, 'delete', docRef.path));
+      trackFirestore(deleteDoc(docRef), 'delete', docRef.path).catch((e: any) => handleFirestoreError(e, 'delete', docRef.path));
     }
   };
 
@@ -4286,7 +4279,7 @@ export default function App() {
         }
       }
     } catch (error) {
-      console.error("AI Suggestion Error:", error);
+      addLog('error', 'AI Suggestion failed', error);
     }
   };
 
@@ -4487,9 +4480,30 @@ export default function App() {
             />
           </div>
 
-          <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
-            <AnimatePresence mode="wait">
-              {isSidebarOpen && (
+            <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
+              <button
+                onClick={() => setShowLogs(true)}
+                className={cn(
+                  "flex w-full rounded-2xl transition-all duration-500 group relative",
+                  isSidebarOpen 
+                    ? "flex-row items-center gap-4 px-4 py-3.5" 
+                    : "flex-col items-center justify-center px-0 py-4 items-center",
+                  "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
+                )}
+                title={!isSidebarOpen ? "System Logs" : undefined}
+              >
+                <div className="relative">
+                  <Terminal size={20} className={cn("shrink-0 transition-all duration-500 group-hover:scale-110", "group-hover:text-proton-accent")} />
+                </div>
+                {isSidebarOpen && (
+                  <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500">
+                    System Logs
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence mode="wait">
+                {isSidebarOpen && (
                 <motion.p 
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -4827,6 +4841,93 @@ export default function App() {
         </div>
       </div>
     </main>
+
+      <AnimatePresence>
+        {showLogs && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-proton-bg/90 backdrop-blur-xl flex items-center justify-center p-4 sm:p-8"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="w-full max-w-4xl h-[80vh] proton-glass rounded-[40px] border border-proton-border flex flex-col overflow-hidden shadow-2xl"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-proton-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
+                    <Terminal size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-lg tracking-tight uppercase">System Runtime Logs</h3>
+                    <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest leading-none">Diagnostic Monitoring Output</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setLogs([])}
+                    className="px-4 py-2 rounded-xl border border-proton-border text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 transition-all"
+                  >
+                    Clear Logs
+                  </button>
+                  <button 
+                    onClick={() => setShowLogs(false)}
+                    className="p-3 rounded-xl hover:bg-proton-accent/10 text-proton-muted hover:text-proton-text transition-all"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar font-mono text-[11px] space-y-2">
+                {logs.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-proton-muted opacity-40 italic">
+                    <Database size={40} className="mb-4" />
+                    No runtime events recorded yet.
+                  </div>
+                ) : (
+                  logs.map((log) => (
+                    <div 
+                      key={log.id}
+                      className={cn(
+                        "p-4 rounded-2xl border transition-all hover:bg-white/[0.02]",
+                        log.type === 'error' ? "bg-red-500/5 border-red-500/20 text-red-400" :
+                        log.type === 'warning' ? "bg-amber-500/5 border-amber-500/20 text-amber-400" :
+                        "bg-proton-accent/5 border-proton-accent/20 text-proton-accent"
+                      )}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-black px-2 py-0.5 rounded bg-black/20 text-[9px]">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                        <span className="uppercase font-black text-[9px] tracking-widest">{log.type}</span>
+                      </div>
+                      <p className="font-bold leading-relaxed">{log.message}</p>
+                      {log.data && (
+                        <details className="mt-2 text-proton-text">
+                          <summary className="cursor-pointer hover:underline opacity-60 text-[9px] uppercase font-black tracking-widest">View trace snapshot</summary>
+                          <pre className="mt-2 p-3 bg-black/40 rounded-xl overflow-x-auto text-[10px] opacity-80 border border-white/5 whitespace-pre-wrap">
+                            {JSON.stringify(log.data, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-6 bg-black/20 border-t border-proton-border flex items-center justify-between">
+                <span className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">Active Streams: {logs.length}</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em]">Relay Connected</span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showOptimizationModal && (

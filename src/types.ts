@@ -61,4 +61,31 @@ export type Workflow = {
 
 export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium' | 'forest' | 'sunset' | 'rose';
 
+export type LogEntry = {
+  id: string;
+  timestamp: number;
+  type: 'info' | 'error' | 'warning';
+  message: string;
+  data?: any;
+};
+
+export interface GeminiMetadata {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+  modelName?: string;
+  latency?: number;
+}
+
 export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
+
+export type Task = {
+  id: string;
+  content: string;
+  contentGe?: string;
+  completed: boolean;
+  isAiSuggested?: boolean;
+  priority: 'low' | 'medium' | 'high';
+  category?: string;
+  timestamp?: number;
+};

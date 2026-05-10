@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { Persona } from "../types";
+import { Persona, GeminiMetadata } from "../types";
 
 export interface TaskPlan {
   materials: { item: string; cost: string }[];
@@ -74,12 +74,6 @@ function getAi() {
   return aiInstance;
 }
 
-export interface GeminiMetadata {
-  promptTokenCount: number;
-  candidatesTokenCount: number;
-  totalTokenCount: number;
-  latency: number;
-}
 
 export async function chatWithPersona(
   persona: Persona, 

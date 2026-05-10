@@ -86,7 +86,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     if (!ai.current) {
       const apiKey = process.env.GEMINI_API_KEY;
       if (apiKey) {
-        ai.current = new GoogleGenAI(apiKey);
+        ai.current = new GoogleGenAI({ apiKey });
       }
     }
     return ai.current;
