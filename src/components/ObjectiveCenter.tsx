@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { motion, Reorder } from 'motion/react';
+import { motion, Reorder } from 'framer-motion';
 import { Target, CheckCircle2, Circle, Sparkles, ChevronRight, LayoutGrid, List, RotateCcw } from 'lucide-react';
 import { cn } from '../lib/utils';
 

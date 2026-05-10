@@ -162,7 +162,7 @@ import {
   Camera as CameraIcon,
   Mic as MicIcon
 } from 'lucide-react';
-import { motion, AnimatePresence, Reorder } from 'motion/react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';

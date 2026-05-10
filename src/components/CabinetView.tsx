@@ -1,7 +1,7 @@
 import React from 'react';
 import { UserProfile, Theme } from '../types';
 import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';

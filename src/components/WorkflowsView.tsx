@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 export default function WorkflowsView({ 
   language,

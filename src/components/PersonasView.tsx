@@ -5,7 +5,7 @@ import { Persona, ChatMessage } from '../types';
 import { Send, User, Bot, Plus, Trash2, Edit2, Users, Image as ImageIcon, FileText, Zap, Sparkles, ChevronUp } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PersonasView({ 
   language,
