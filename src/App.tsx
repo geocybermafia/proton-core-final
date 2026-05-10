@@ -22,65 +22,8 @@ import {
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { SettingsView } from './components/SettingsView';
 import CabinetView from './components/CabinetView';
-import { Persona, ChatMessage, Workflow, WorkflowStep, View, UserProfile, GlobalAiSettings, Theme, PersonaHistory } from './types';
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
-  path: string | null;
-  authInfo: {
-    userId: string;
-    email: string;
-    emailVerified: boolean;
-    isAnonymous: boolean;
-    providerInfo: { providerId: string; displayName: string; email: string; }[];
-  }
-}
-
-const handleFirestoreError = (error: any, operationType: FirestoreErrorInfo['operationType'], path: string | null = null) => {
-  if (error.code === 'permission-denied') {
-    const user = auth.currentUser;
-    const errorInfo: FirestoreErrorInfo = {
-      error: error.message,
-      operationType,
-      path,
-      authInfo: {
-        userId: user?.uid || 'unauthenticated',
-        email: user?.email || '',
-        emailVerified: user?.emailVerified || false,
-        isAnonymous: user?.isAnonymous || false,
-        providerInfo: user?.providerData.map(p => ({
-          providerId: p.providerId,
-          displayName: p.displayName || '',
-          email: p.email || ''
-        })) || []
-      }
-    };
-    console.error("Firestore Permission Denied:", errorInfo);
-    throw new Error(JSON.stringify(errorInfo));
-  }
-  
-  if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
-     console.error("Firestore Connection Error:", error.message);
-     // We can just throw a simpler error for the UI to catch or show a toast if we had one
-     throw new Error("Connection request reset. Please try again.");
-  }
-
-  throw error;
-};
-
-// Test connection helper
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();
 import { TranslatorView } from './components/TranslatorView';
+import { Persona, ChatMessage, Workflow, WorkflowStep, View, UserProfile, GlobalAiSettings, Theme, PersonaHistory } from './types';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
 } from 'recharts';
@@ -175,7 +118,62 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 
-// --- Utils ---
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: 'create' | 'update' | 'delete' | 'list' | 'get' | 'write';
+  path: string | null;
+  authInfo: {
+    userId: string;
+    email: string;
+    emailVerified: boolean;
+    isAnonymous: boolean;
+    providerInfo: { providerId: string; displayName: string; email: string; }[];
+  }
+}
+
+const handleFirestoreError = (error: any, operationType: FirestoreErrorInfo['operationType'], path: string | null = null) => {
+  if (error.code === 'permission-denied') {
+    const user = auth.currentUser;
+    const errorInfo: FirestoreErrorInfo = {
+      error: error.message,
+      operationType,
+      path,
+      authInfo: {
+        userId: user?.uid || 'unauthenticated',
+        email: user?.email || '',
+        emailVerified: user?.emailVerified || false,
+        isAnonymous: user?.isAnonymous || false,
+        providerInfo: user?.providerData.map(p => ({
+          providerId: p.providerId,
+          displayName: p.displayName || '',
+          email: p.email || ''
+        })) || []
+      }
+    };
+    console.error("Firestore Permission Denied:", errorInfo);
+    throw new Error(JSON.stringify(errorInfo));
+  }
+  
+  if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+     console.error("Firestore Connection Error:", error.message);
+     // We can just throw a simpler error for the UI to catch or show a toast if we had one
+     throw new Error("Connection request reset. Please try again.");
+  }
+
+  throw error;
+};
+
+// Test connection helper
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if(error instanceof Error && error.message.includes('the client is offline')) {
+      console.error("Please check your Firebase configuration.");
+    }
+  }
+}
+testConnection();
 const safeStorage = {
   get: (key: string) => {
     try {
@@ -3875,9 +3873,8 @@ export default function App() {
   const language = userProfile.language;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      setAuthInitialized(true);
       
       if (u) {
         // Sync userProfile with Firebase user if not already set meaningfully
@@ -3892,7 +3889,63 @@ export default function App() {
           }
           return prev;
         });
+
+        try {
+          // Fetch Workflows
+          const workflowsRef = collection(db, 'users', u.uid, 'workflows');
+          const wfSnapshot = await getDocs(workflowsRef).catch(e => handleFirestoreError(e, 'list', workflowsRef.path));
+          const loadedWorkflows = wfSnapshot.docs.map(doc => doc.data() as Workflow);
+          setWorkflows(loadedWorkflows);
+
+          // Fetch Personas
+          const personasRef = collection(db, 'users', u.uid, 'personas');
+          const pSnapshot = await getDocs(personasRef).catch(e => handleFirestoreError(e, 'list', personasRef.path));
+          let loadedPersonas = pSnapshot.docs.map(doc => doc.data() as Persona);
+          
+          if (loadedPersonas.length === 0) {
+            // Initialize defaults
+            loadedPersonas = PERSONAS;
+            for (const p of PERSONAS) {
+              const pDoc = doc(db, 'users', u.uid, 'personas', p.id);
+              await setDoc(pDoc, p).catch(e => handleFirestoreError(e, 'create', pDoc.path));
+            }
+          }
+          setPersonas(loadedPersonas);
+
+          // Fetch Chat History
+          const chatRef = collection(db, 'users', u.uid, 'chatHistory');
+          const chatSnap = await getDocs(chatRef).catch(e => handleFirestoreError(e, 'list', chatRef.path));
+          const historyObj: PersonaHistory = {};
+          chatSnap.docs.forEach(d => {
+            historyObj[d.id] = d.data().messages || [];
+          });
+          setChatHistory(historyObj);
+
+          // Fetch Tasks
+          const tasksRef = collection(db, 'users', u.uid, 'tasks');
+          const tasksSnap = await getDocs(tasksRef).catch(e => handleFirestoreError(e, 'list', tasksRef.path));
+          const loadedTasks = tasksSnap.docs.map(doc => doc.data() as Task);
+          setTasks(loadedTasks.length > 0 ? loadedTasks : []);
+
+          // Fetch Custom Avatars
+          const avatarRef = collection(db, 'users', u.uid, 'customAvatars');
+          const avatarSnap = await getDocs(avatarRef).catch(e => handleFirestoreError(e, 'list', avatarRef.path));
+          const avatarObj: { [id: string]: string } = {};
+          avatarSnap.docs.forEach(d => {
+            avatarObj[d.id] = d.data().avatar;
+          });
+          setPersonaAvatars(avatarObj);
+        } catch (error) {
+          console.error("Initial load error:", error);
+        }
+      } else {
+        setWorkflows([]);
+        setPersonas(PERSONAS);
+        setChatHistory({});
+        setPersonaAvatars({});
+        setTasks([]);
       }
+      setAuthInitialized(true);
     });
     return () => unsubscribe();
   }, []);
@@ -4050,70 +4103,6 @@ export default function App() {
       console.error("TTS Playback Error:", error);
     }
   }
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          // Fetch Workflows
-          const workflowsRef = collection(db, 'users', currentUser.uid, 'workflows');
-          const wfSnapshot = await getDocs(workflowsRef).catch(e => handleFirestoreError(e, 'list', workflowsRef.path));
-          const loadedWorkflows = wfSnapshot.docs.map(doc => doc.data() as Workflow);
-          setWorkflows(loadedWorkflows);
-
-          // Fetch Personas
-          const personasRef = collection(db, 'users', currentUser.uid, 'personas');
-          const pSnapshot = await getDocs(personasRef).catch(e => handleFirestoreError(e, 'list', personasRef.path));
-          let loadedPersonas = pSnapshot.docs.map(doc => doc.data() as Persona);
-          
-          if (loadedPersonas.length === 0) {
-            // Initialize defaults
-            loadedPersonas = PERSONAS;
-            for (const p of PERSONAS) {
-              const pDoc = doc(db, 'users', currentUser.uid, 'personas', p.id);
-              await setDoc(pDoc, p).catch(e => handleFirestoreError(e, 'create', pDoc.path));
-            }
-          }
-          setPersonas(loadedPersonas);
-
-          // Fetch Chat History
-          const chatRef = collection(db, 'users', currentUser.uid, 'chatHistory');
-          const chatSnap = await getDocs(chatRef).catch(e => handleFirestoreError(e, 'list', chatRef.path));
-          const historyObj: PersonaHistory = {};
-          chatSnap.docs.forEach(d => {
-            historyObj[d.id] = d.data().messages || [];
-          });
-          setChatHistory(historyObj);
-
-          // Fetch Tasks
-          const tasksRef = collection(db, 'users', currentUser.uid, 'tasks');
-          const tasksSnap = await getDocs(tasksRef).catch(e => handleFirestoreError(e, 'list', tasksRef.path));
-          const loadedTasks = tasksSnap.docs.map(doc => doc.data() as Task);
-          setTasks(loadedTasks.length > 0 ? loadedTasks : []);
-
-          // Fetch Custom Avatars
-          const avatarRef = collection(db, 'users', currentUser.uid, 'customAvatars');
-          const avatarSnap = await getDocs(avatarRef).catch(e => handleFirestoreError(e, 'list', avatarRef.path));
-          const avatarObj: { [id: string]: string } = {};
-          avatarSnap.docs.forEach(d => {
-            avatarObj[d.id] = d.data().avatar;
-          });
-          setPersonaAvatars(avatarObj);
-        } catch (error) {
-          console.error("Initial load error:", error);
-        }
-      } else {
-        setWorkflows([]);
-        setPersonas(PERSONAS);
-        setChatHistory({});
-        setPersonaAvatars({});
-        setTasks([]);
-      }
-      setAuthInitialized(true);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const handleGoogleSignIn = async () => {
     try {
