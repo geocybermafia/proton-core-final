@@ -4294,17 +4294,6 @@ export default function App() {
   const isPlayground = window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost');
   const isAdmin = user?.email === 'devdarianib@gmail.com' && isPlayground;
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return (
-      <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
-        <Loader2 className="w-8 h-8 text-proton-accent animate-spin" />
-      </div>
-    );
-  }
-
   if (!authInitialized) {
     return (
       <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">

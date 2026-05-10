@@ -27,18 +27,34 @@ const config = getDefaultConfig({
   },
 });
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+function Root() {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div style={{ backgroundColor: '#010409', height: '100vh', width: '100vw' }} />
+    );
+  }
+
+  return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider theme={rainbowDarkTheme({
           accentColor: '#00f2ff',
           borderRadius: 'large',
-          overlayBlur: 'small',
         })}>
           <App />
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <Root />
   </React.StrictMode>,
 )
