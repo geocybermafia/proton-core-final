@@ -10,7 +10,7 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'priority' | 'progress'>('priority');
 
-  const categories = ['Marketing', 'Operations', 'Product', 'Strategy', 'Infrastructure'];
+  const categories = ['Infrastructure', 'System', 'Interface', 'Security', 'Intelligence'];
   const priorities = ['low', 'medium', 'high'];
 
   const priorityWeight = { high: 3, medium: 2, low: 1 };
@@ -18,41 +18,41 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
   const [objectives, setObjectives] = useState([
     {
       id: 'obj-1',
-      title: language === 'ka' ? 'ბაზრის დომინაცია' : 'Market Domination',
+      title: language === 'ka' ? 'სისტემის ოპტიმიზაცია' : 'System Architecture',
       progress: 68,
       status: 'active',
       priority: 'high',
-      category: 'Marketing',
+      category: 'Infrastructure',
       subtasks: [
-        { label: language === 'ka' ? 'კონკურენტების ანალიზი' : 'Competitor Sync', completed: true },
-        { label: language === 'ka' ? 'ფასების ოპტიმიზაცია' : 'Price Refactoring', completed: true },
-        { label: language === 'ka' ? 'ახალი რეგიონების ათვისება' : 'Regional Expansion', completed: false }
+        { label: language === 'ka' ? 'მონაცემთა ბაზის მიგრაცია' : 'Database Migration', completed: true },
+        { label: language === 'ka' ? 'API ენდპოინტების ოპტიმიზაცია' : 'API Optimization', completed: true },
+        { label: language === 'ka' ? 'უსაფრთხოების აუდიტი' : 'Security Audit', completed: false }
       ]
     },
     {
       id: 'obj-2',
-      title: language === 'ka' ? 'ოპერაციული ეფექტურობა' : 'Operational Efficiency',
+      title: language === 'ka' ? 'ინტერფეისის განახლება' : 'Interface Refactoring',
       progress: 42,
-      status: 'calibrating',
+      status: 'active',
       priority: 'medium',
-      category: 'Operations',
+      category: 'System',
       subtasks: [
-        { label: 'Process Optimization', completed: true },
-        { label: 'Resource Allocation', completed: false },
-        { label: 'Workflow Sync', completed: false }
+        { label: language === 'ka' ? 'კომპონენტების ბიბლიოთეკა' : 'Component Library', completed: true },
+        { label: language === 'ka' ? 'რესპონსიული დიზაინი' : 'Responsive Overhaul', completed: false },
+        { label: language === 'ka' ? 'ხელმისაწვდომობა' : 'Accessibility Sync', completed: false }
       ]
     },
     {
       id: 'obj-3',
-      title: language === 'ka' ? 'ბრენდის არქიტექტურა' : 'Brand Architecture',
+      title: language === 'ka' ? 'AI მოდელის ტრენინგი' : 'Neural Core Training',
       progress: 91,
       status: 'complete',
-      priority: 'low',
-      category: 'Product',
+      priority: 'high',
+      category: 'Intelligence',
       subtasks: [
-        { label: 'Visual ID', completed: true },
-        { label: 'Messaging Matrix', completed: true },
-        { label: 'Investor Deck 4.0', completed: true }
+        { label: 'Data Preprocessing', completed: true },
+        { label: 'Weight Calibration', completed: true },
+        { label: 'Latency Testing', completed: true }
       ]
     }
   ]);
@@ -206,11 +206,11 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
                          </span>
                          <span className="px-2 py-0.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-[8px] font-black uppercase tracking-wider">
                             {language === 'ka' ? (
-                               obj.category === 'Marketing' ? 'მარკეტინგი' :
-                               obj.category === 'Operations' ? 'ოპერაციები' :
-                               obj.category === 'Product' ? 'პროდუქტი' :
-                               obj.category === 'Strategy' ? 'სტრატეგია' :
-                               obj.category === 'Infrastructure' ? 'ინფრასტრუქტურა' : obj.category
+                               obj.category === 'Infrastructure' ? 'ინფრასტრუქტურა' :
+                               obj.category === 'System' ? 'სისტემა' :
+                               obj.category === 'Interface' ? 'ინტერფეისი' :
+                               obj.category === 'Security' ? 'უსაფრთხოება' :
+                               obj.category === 'Intelligence' ? 'ინტელექტი' : obj.category
                              ) : obj.category}
                          </span>
                       </div>

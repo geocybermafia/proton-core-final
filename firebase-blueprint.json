@@ -5,20 +5,45 @@
       "description": "User metadata and settings",
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
+        "uid": { "type": "string" },
         "email": { "type": "string" },
-        "language": { "type": "string", "enum": ["en", "ka"] },
-        "notifications": { "type": "boolean" }
+        "displayName": { "type": "string" },
+        "language": { "type": "string", "enum": ["en", "ka"] }
       },
-      "required": ["name", "email", "language"]
+      "required": ["uid", "email"]
     },
-    "UserStats": {
-      "title": "User Stats",
-      "description": "Operational metrics",
+    "Workflow": {
+      "title": "Workflow",
+      "description": "User automation workflows",
       "type": "object",
       "properties": {
-        "storageGB": { "type": "number" },
-        "workHours": { "type": "number" }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "trigger": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "Persona": {
+      "title": "Persona",
+      "description": "AI Personality settings",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "avatar": { "type": "string" },
+        "systemInstruction": { "type": "string" }
+      }
+    },
+    "Task": {
+      "title": "Task",
+      "description": "User task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "content": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "priority": { "type": "string" }
       }
     }
   },
@@ -27,17 +52,21 @@
       "schema": "UserProfile",
       "description": "Main user document"
     },
-    "/users/{userId}/stats/current": {
-      "schema": "UserStats",
-      "description": "User statistics"
-    },
-    "/profiles/{userId}": {
-      "schema": "UserProfile",
-      "description": "Profile mirror"
+    "/users/{userId}/workflows/{workflowId}": {
+      "schema": "Workflow",
+      "description": "User workflows"
     },
     "/users/{userId}/personas/{personaId}": {
       "schema": "Persona",
-      "description": "User defined personas"
+      "description": "User personas"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User tasks"
+    },
+    "/users/{userId}/chatHistory/{personaId}": {
+      "schema": "object",
+      "description": "Chat messages with a persona"
     }
   }
 }

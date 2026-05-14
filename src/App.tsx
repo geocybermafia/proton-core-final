@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, Set
 import { EnterpriseWorkflowBuilder } from './components/EnterpriseWorkflowBuilder';
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { LocalFileScanner } from './components/LocalFileScanner';
-import { ParallelTimelineSimulator } from './components/ParallelTimelineSimulator';
 import { ObjectiveCenter } from './components/ObjectiveCenter';
 import { auth, db, googleProvider } from './firebase';
 import { supabase } from './lib/supabase';
@@ -23,7 +22,6 @@ import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, del
 import { SettingsView } from './components/SettingsView';
 import CabinetView from './components/CabinetView';
 import { TranslatorView } from './components/TranslatorView';
-import PersonasViewLocal from './components/PersonasView';
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -49,7 +47,6 @@ import {
 import { 
   Cpu, 
   MessageSquare, 
-  Wallet, 
   Settings, 
   Activity, 
   Zap, 
@@ -121,6 +118,7 @@ import {
   UserCheck,
   Languages,
   ArrowUpRight,
+  Repeat,
   Camera as CameraIcon,
   Mic as MicIcon
 } from 'lucide-react';
@@ -132,10 +130,6 @@ import { cn } from './lib/utils';
 import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan } from './lib/gemini';
 
-import { 
-  ConnectButton
-} from '@rainbow-me/rainbowkit';
-import { useAccount, useBalance } from 'wagmi';
 
 // Test connection helper
 async function testConnection() {
@@ -214,13 +208,13 @@ const SidebarItem = React.memo(({
           className="flex items-center justify-between flex-1 min-w-0"
         >
           <span className={cn(
-            "text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500",
+            "text-xs font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500",
             active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
           )}>
             {label}
           </span>
           {badge && (
-            <span className="px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[8px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
+            <span className="px-1.5 py-0.5 rounded-md bg-proton-accent/20 text-proton-accent text-[10px] font-black uppercase tracking-widest border border-proton-accent/30 animate-pulse">
               {badge}
             </span>
           )}
@@ -239,146 +233,6 @@ const SidebarItem = React.memo(({
     )}
   </button>
 ));
-
-const SystemDiagnostic = ({ t }: { t: any }) => {
-  const [state, setState] = useState<'idle' | 'running' | 'complete'>('idle');
-  const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState('');
-  const [score, setScore] = useState(0);
-
-  const diag = t.diagnostic || t;
-
-  const runDiagnostic = async () => {
-    setState('running');
-    setProgress(0);
-    
-    // Step 1: Evaluating core performance
-    setStatusText(diag.evaluating);
-    for (let i = 0; i <= 40; i += 2) {
-      setProgress(i);
-      Math.sqrt(Math.random() * 1000000);
-      await new Promise(r => setTimeout(r, 30));
-    }
-
-    // Step 2: Testing memory latency
-    setStatusText(diag.latency);
-    for (let i = 41; i <= 80; i += 2) {
-      setProgress(i);
-      await new Promise(r => setTimeout(r, 40));
-    }
-
-    // Step 3: Benchmarking
-    setStatusText(diag.matrix || diag.running);
-    const start = performance.now();
-    let evaluations = 0;
-    while (performance.now() - start < 500) {
-      Math.sin(evaluations) * Math.cos(evaluations);
-      evaluations++;
-    }
-    for (let i = 81; i <= 100; i += 2) {
-      setProgress(i);
-      await new Promise(r => setTimeout(r, 20));
-    }
-
-    const finalScore = Math.min(98, 70 + Math.floor(Math.random() * 29));
-    setScore(finalScore);
-    setState('complete');
-  };
-
-  return (
-    <div className="bg-proton-card p-8 rounded-[40px] border border-proton-border shadow-sm flex flex-col h-full group transition-all hover:border-proton-accent/30 relative overflow-hidden">
-      <div className="flex items-center justify-between mb-6 relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
-            <Activity size={20} />
-          </div>
-          <h3 className="font-bold text-lg tracking-tight uppercase">{diag.title}</h3>
-        </div>
-        {state === 'complete' && (
-          <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
-            <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">{score}% Score</span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center items-center py-6 relative z-10">
-        {state === 'idle' && (
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 rounded-full bg-proton-bg border-4 border-proton-border flex items-center justify-center mx-auto group-hover:border-proton-accent/20 transition-all duration-700">
-              <Cpu size={32} className="text-proton-muted group-hover:text-proton-accent transition-colors" />
-            </div>
-            <button 
-              onClick={runDiagnostic}
-              className="px-8 py-3 bg-proton-text text-proton-bg rounded-2xl font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-proton-text/10"
-            >
-              {diag.run}
-            </button>
-          </div>
-        )}
-
-        {state === 'running' && (
-          <div className="w-full space-y-8 flex flex-col items-center">
-             <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="60"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="transparent"
-                    className="text-proton-border"
-                  />
-                  <motion.circle
-                    cx="64"
-                    cy="64"
-                    r="60"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray="377"
-                    initial={{ strokeDashoffset: 377 }}
-                    animate={{ strokeDashoffset: 377 - (377 * progress) / 100 }}
-                    transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                    className="text-proton-accent"
-                  />
-                </svg>
-                <span className="absolute text-xl font-black italic">{progress}%</span>
-             </div>
-             <p className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] animate-pulse">{statusText}</p>
-          </div>
-        )}
-
-        {state === 'complete' && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center space-y-6 w-full"
-          >
-            <div className="flex flex-col items-center">
-               <div className="w-20 h-20 rounded-full bg-green-500/10 border-4 border-green-500/30 flex items-center justify-center mb-4">
-                  <CheckCircle2 size={40} className="text-green-500" />
-               </div>
-               <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em] mb-2">{diag.bench_score || 'Verdict'}</p>
-               <h4 className="text-sm font-black text-proton-text uppercase tracking-tight max-w-[240px] leading-relaxed">
-                 {score > 85 ? diag.status_optimal : diag.status_standard}
-               </h4>
-            </div>
-            <button 
-              onClick={() => setState('idle')}
-              className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline"
-            >
-              Restart Scan
-            </button>
-          </motion.div>
-        )}
-      </div>
-
-      <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-proton-accent/5 rounded-full blur-3xl pointer-events-none group-hover:bg-proton-accent/10 transition-colors" />
-    </div>
-  );
-};
 
 const SidebarPersonaItem = React.memo(({ 
   persona, 
@@ -421,10 +275,10 @@ const SidebarPersonaItem = React.memo(({
           className="flex-1 min-w-0 text-left select-none"
         >
           <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-proton-accent">
+            <span className="text-[11px] font-black uppercase tracking-tight truncate leading-tight group-hover:text-proton-accent">
               {persona.name}
             </span>
-            <span className="text-[7px] font-bold text-proton-muted uppercase truncate tracking-[0.1em] opacity-60">
+            <span className="text-[9px] font-bold text-proton-muted uppercase truncate tracking-[0.1em] opacity-60">
               {persona.role}
             </span>
           </div>
@@ -969,7 +823,14 @@ const OrganizerView = ({
   language: 'en' | 'ka',
   workflows: Workflow[],
   tasks: Task[],
-  onAddTask: (content: string, priority: 'low' | 'medium' | 'high', category?: string) => void,
+  onAddTask: (
+    content: string, 
+    priority: 'low' | 'medium' | 'high', 
+    category?: string,
+    description?: string,
+    dueDate?: number,
+    recurring?: 'none' | 'daily' | 'weekly' | 'monthly'
+  ) => void,
   onToggleTask: (id: string) => void,
   onDeleteTask: (id: string) => void,
   onEditTask: (id: string, updates: Partial<Task>) => void,
@@ -978,7 +839,11 @@ const OrganizerView = ({
 }) => {
   const t = translations[language].organizer;
   const [newTaskInput, setNewTaskInput] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
+  const [taskDueDate, setTaskDueDate] = useState<Date | null>(null);
+  const [taskRecurring, setTaskRecurring] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
   const [taskPriority, setTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [showAdvancedAdd, setShowAdvancedAdd] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
@@ -1054,9 +919,20 @@ const OrganizerView = ({
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskInput.trim()) return;
-    onAddTask(newTaskInput.trim(), taskPriority, undefined);
+    onAddTask(
+      newTaskInput.trim(), 
+      taskPriority, 
+      undefined, 
+      taskDescription || undefined, 
+      taskDueDate ? taskDueDate.getTime() : undefined,
+      taskRecurring
+    );
     setNewTaskInput('');
+    setTaskDescription('');
+    setTaskDueDate(null);
+    setTaskRecurring('none');
     setTaskPriority('medium');
+    setShowAdvancedAdd(false);
   };
 
   const filteredTasks = useMemo(() => {
@@ -1095,14 +971,14 @@ const OrganizerView = ({
               placeholder={language === 'ka' ? 'დავალების ძიება...' : 'Search tasks...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className={cn("pl-10 pr-4 py-3 text-[10px] font-black uppercase tracking-widest rounded-2xl border-2 focus:outline-none transition-all w-64 bg-black/20", currentTheme.input)}
+              className={cn("pl-11 pr-4 py-3.5 text-xs font-black uppercase tracking-widest rounded-2xl border-2 focus:outline-none transition-all w-72 bg-black/20", currentTheme.input)}
             />
           </div>
           
           <div className="flex items-center bg-black/20 p-2 rounded-2xl border border-white/5 h-fit">
-               <div className="flex items-center gap-2 px-3">
-                  <Palette size={16} className={currentTheme.muted} />
-                  <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>{t.workspace_theme}</span>
+               <div className="flex items-center gap-2.5 px-4">
+                  <Palette size={18} className={currentTheme.muted} />
+                  <span className={cn("text-xs font-black uppercase tracking-widest", currentTheme.muted)}>{t.workspace_theme}</span>
                </div>
                <div className="flex p-1 bg-black/40 rounded-xl gap-1">
                   {(['cyberpunk', 'minimalist', 'executive'] as OrganizerTheme[]).map(th => (
@@ -1110,7 +986,7 @@ const OrganizerView = ({
                       key={th}
                       onClick={() => setTheme(th)}
                       className={cn(
-                        "px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all",
+                        "px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all",
                         theme === th 
                           ? "bg-white text-black shadow-lg" 
                           : cn("text-white/40 hover:text-white/70", currentTheme.muted)
@@ -1125,29 +1001,29 @@ const OrganizerView = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
+          <div className={cn("p-8 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
              <div>
-                <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", currentTheme.muted)}>{t.total_completed}</p>
+                <p className={cn("text-xs font-black uppercase tracking-[0.1em] mb-2", currentTheme.muted)}>{t.total_completed}</p>
                 <h4 className="text-3xl font-black">{tasks.filter(t => t.completed).length}<span className="text-sm opacity-30 ml-2">/ {tasks.length}</span></h4>
              </div>
              <div className={cn("p-4 rounded-2xl", currentTheme.accent)}>
                 <Check size={28} />
              </div>
           </div>
-          <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
+          <div className={cn("p-8 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
              <div>
-                <p className={cn("text-[10px] font-black uppercase tracking-[0.2em] mb-1", currentTheme.muted)}>{t.productivity_score}</p>
+                <p className={cn("text-xs font-black uppercase tracking-[0.1em] mb-2", currentTheme.muted)}>{t.productivity_score}</p>
                 <h4 className="text-3xl font-black">{tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0}%</h4>
              </div>
              <div className={cn("p-4 rounded-2xl", currentTheme.accent)}>
                 <Activity size={28} />
              </div>
           </div>
-          <div className={cn("p-6 rounded-[32px] border transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
+          <div className={cn("p-8 rounded-[32px] border transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
              <div className="flex items-center justify-between">
                 <div>
-                   <p className={cn("text-[10px] font-black uppercase tracking-widest mb-1", currentTheme.muted)}>{t.analytics}</p>
-                   <h4 className="text-lg font-black uppercase tracking-tight">{t.subtitle}</h4>
+                   <p className={cn("text-xs font-black uppercase tracking-widest mb-2", currentTheme.muted)}>{t.analytics}</p>
+                   <h4 className="text-xl font-black uppercase tracking-tight">{t.subtitle}</h4>
                 </div>
                 <div className="flex gap-1 h-2 w-32 bg-white/5 rounded-full overflow-hidden">
                    <div 
@@ -1188,17 +1064,79 @@ const OrganizerView = ({
             <div className="space-y-6">
                <form onSubmit={handleAddTask} className="space-y-6">
                   <div className="flex flex-col sm:flex-row gap-4">
-                    <input 
-                      type="text"
-                      placeholder={t.task_placeholder}
-                      value={newTaskInput}
-                      onChange={e => setNewTaskInput(e.target.value)}
-                      className={cn("flex-1 border-2 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none transition-all", currentTheme.input)}
-                    />
-                    <button type="submit" className={cn("px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl", currentTheme.button)}>
+                    <div className="flex-1 relative group">
+                      <input 
+                        type="text"
+                        placeholder={t.task_placeholder}
+                        value={newTaskInput}
+                        onChange={e => setNewTaskInput(e.target.value)}
+                        className={cn("w-full border-2 rounded-2xl px-6 py-4 text-sm font-bold focus:outline-none transition-all", currentTheme.input)}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => setShowAdvancedAdd(!showAdvancedAdd)}
+                        className={cn("absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all", showAdvancedAdd ? "bg-proton-accent text-proton-bg" : currentTheme.muted)}
+                      >
+                         <ChevronDown size={16} className={cn("transition-transform duration-300", showAdvancedAdd && "rotate-180")} />
+                      </button>
+                    </div>
+                    <button type="submit" className={cn("px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl whitespace-nowrap", currentTheme.button)}>
                        {translations[language].common.add}
                     </button>
                   </div>
+                  
+                  <AnimatePresence>
+                    {showAdvancedAdd && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-6 overflow-hidden pt-2"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                           <div className="space-y-2">
+                              <label className={cn("text-xs uppercase tracking-[0.1em] block ml-2", currentTheme.label)}>{t.notes}</label>
+                              <textarea 
+                                placeholder={language === 'ka' ? 'დაამატეთ დეტალები...' : 'Add details...'}
+                                value={taskDescription}
+                                onChange={e => setTaskDescription(e.target.value)}
+                                className={cn("w-full border-2 rounded-2xl px-6 py-3 text-xs font-bold focus:outline-none transition-all min-h-[100px] resize-none", currentTheme.input)}
+                              />
+                           </div>
+                           <div className="space-y-6">
+                              <div className="space-y-2">
+                                <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.due_date}</label>
+                                <input 
+                                  type="date"
+                                  onChange={e => setTaskDueDate(e.target.value ? new Date(e.target.value) : null)}
+                                  className={cn("w-full border-2 rounded-2xl px-6 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.recurring}</label>
+                                <div className="flex gap-2 flex-wrap">
+                                   {(['none', 'daily', 'weekly', 'monthly'] as const).map(r => (
+                                      <button
+                                        key={r}
+                                        type="button"
+                                        onClick={() => setTaskRecurring(r)}
+                                        className={cn(
+                                          "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                                          taskRecurring === r 
+                                            ? "bg-proton-accent border-proton-accent text-proton-bg"
+                                            : cn("border-white/10 text-white/40 hover:border-white/30", currentTheme.muted)
+                                        )}
+                                      >
+                                         {t[`recurring_${r}` as keyof typeof t]}
+                                      </button>
+                                   ))}
+                                </div>
+                              </div>
+                           </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                   
                   <div className="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar-minimal">
                     <span className={cn("text-[10px] font-black uppercase tracking-widest mr-2 shrink-0", currentTheme.muted)}>{t.priority}:</span>
@@ -1223,46 +1161,137 @@ const OrganizerView = ({
                <div className="space-y-3">
                   {filteredTasks.length === 0 ? (
                     <div className="py-20 text-center space-y-4">
-                       <p className={cn("font-black uppercase tracking-widest text-[10px]", currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
-                       <div className={cn("h-px w-20 mx-auto", theme === 'cyberpunk' ? "bg-cyan-400/20" : "bg-slate-200")} />
-                    </div>
-                  ) : (
-                    filteredTasks.map(task => (
+                       <p className={cn("font-black uppercase tracking-widest text-[10px]",currentTheme.muted)}>{translations[language].organizer.no_tasks}</p>
+                        <div className={cn("h-px w-20 mx-auto", theme === 'cyberpunk' ? "bg-cyan-400/20" : "bg-slate-200")} />
+                     </div>
+                   ) : (
+                     filteredTasks.map(task => (
                       <motion.div 
                         layout
                         key={task.id} 
-                        className={cn("flex items-center gap-4 p-5 rounded-2xl border transition-all group", currentTheme.card, theme === 'cyberpunk' ? "hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "hover:border-proton-accent")}
+                        className={cn(
+                          "p-5 rounded-2xl border transition-all group flex flex-col gap-4", 
+                          currentTheme.card, 
+                          theme === 'cyberpunk' ? "hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]" : "hover:border-proton-accent",
+                          task.completed && "opacity-60"
+                        )}
                       >
-                        <button 
-                          onClick={() => onToggleTask(task.id)}
-                          className={cn(
-                            "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
-                            task.completed 
-                              ? (theme === 'cyberpunk' ? "bg-cyan-400 border-cyan-400 text-black" : "bg-slate-900 border-slate-900 text-white")
-                              : (theme === 'cyberpunk' ? "border-cyan-400/50" : "border-slate-200")
-                          )}
-                        >
-                          {task.completed && <Check size={16} strokeWidth={4} />}
-                        </button>
-                        <div className="flex-1 flex flex-col min-w-0">
-                          <span className={cn("text-sm font-bold tracking-tight truncate", task.completed && "opacity-30 line-through")}>
-                            {language === 'ka' ? task.contentGe : task.content}
-                          </span>
-                          {task.priority && (
-                             <span className={cn(
-                               "text-[8px] font-black uppercase tracking-widest mt-1",
-                               task.priority === 'high' ? "text-red-500" : task.priority === 'medium' ? "text-amber-500" : "text-blue-400"
-                             )}>
-                               {t[task.priority]}
-                             </span>
-                          )}
+                        <div className="flex items-start gap-4">
+                          <button 
+                            onClick={() => onToggleTask(task.id)}
+                            className={cn(
+                              "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 mt-1",
+                              task.completed 
+                                ? (theme === 'cyberpunk' ? "bg-cyan-400 border-cyan-400 text-black" : "bg-slate-900 border-slate-900 text-white")
+                                : (theme === 'cyberpunk' ? "border-cyan-400/50" : "border-slate-200")
+                            )}
+                          >
+                            {task.completed && <Check size={16} strokeWidth={4} />}
+                          </button>
+                          
+                          <div className="flex-1 flex flex-col min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn("text-sm font-bold tracking-tight", task.completed && "line-through grayscale")}>
+                                {language === 'ka' ? task.contentGe : task.content}
+                              </span>
+                              {task.recurring && task.recurring !== 'none' && (
+                                <Repeat size={12} className={currentTheme.muted} />
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              {task.priority && (
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                                  task.priority === 'high' ? "text-red-500 border-red-500/20 bg-red-500/5" : task.priority === 'medium' ? "text-amber-500 border-amber-500/20 bg-amber-500/5" : "text-blue-400 border-blue-400/20 bg-blue-400/5"
+                                )}>
+                                  {t[task.priority]}
+                                </span>
+                              )}
+                              {task.dueDate && (
+                                <span className={cn("text-[8px] font-black uppercase tracking-widest flex items-center gap-1", Date.now() > task.dueDate && !task.completed ? "text-red-400" : currentTheme.muted)}>
+                                  <Clock size={10} />
+                                  {new Date(task.dueDate).toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { day: 'numeric', month: 'short' })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <button 
+                            onClick={() => onDeleteTask(task.id)} 
+                            className={cn("opacity-0 group-hover:opacity-100 transition-all hover:scale-125 p-2", theme === 'cyberpunk' ? "text-pink-500" : "text-slate-400 hover:text-red-500")}
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => onDeleteTask(task.id)} 
-                          className={cn("opacity-0 group-hover:opacity-100 transition-all hover:scale-125", theme === 'cyberpunk' ? "text-pink-500" : "text-slate-400 hover:text-red-500")}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+
+                        {task.description && (
+                          <p className={cn("text-xs font-medium ml-10 brightness-90", currentTheme.muted)}>
+                             {task.description}
+                          </p>
+                        )}
+
+                        {/* Subtasks Section */}
+                        <div className="ml-10 space-y-2">
+                           {task.subtasks?.map(sub => (
+                             <div key={sub.id} className="flex items-center gap-3 group/sub">
+                               <button 
+                                 onClick={() => {
+                                   const newSubtasks = task.subtasks?.map(s => s.id === sub.id ? { ...s, completed: !s.completed } : s);
+                                   onEditTask(task.id, { subtasks: newSubtasks });
+                                 }}
+                                 className={cn("w-4 h-4 rounded border flex items-center justify-center transition-all", sub.completed ? "bg-proton-accent border-proton-accent text-proton-bg" : "border-white/10")}
+                               >
+                                 {sub.completed && <Check size={10} strokeWidth={4} />}
+                               </button>
+                               <span className={cn("text-[10px] font-medium transition-all", sub.completed ? "opacity-30 line-through" : "opacity-80")}>
+                                 {sub.content}
+                               </span>
+                               <button 
+                                 onClick={() => {
+                                   const newSubtasks = task.subtasks?.filter(s => s.id !== sub.id);
+                                   onEditTask(task.id, { subtasks: newSubtasks });
+                                 }}
+                                 className="opacity-0 group-hover/sub:opacity-100 p-1 text-white/20 hover:text-red-500 transition-all"
+                               >
+                                 <X size={12} />
+                               </button>
+                             </div>
+                           ))}
+                           
+                           <div className="flex items-center gap-2 pt-2">
+                             <input 
+                               type="text"
+                               placeholder={t.add_subtask}
+                               className={cn("bg-transparent border-b border-white/5 text-[10px] py-1 px-0 flex-1 focus:outline-none focus:border-proton-accent/30 transition-all", currentTheme.muted)}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                                   const content = (e.target as HTMLInputElement).value.trim();
+                                   const newSubtasks = [...(task.subtasks || []), { id: `sub-${Date.now()}`, content, completed: false }];
+                                   onEditTask(task.id, { subtasks: newSubtasks });
+                                   (e.target as HTMLInputElement).value = '';
+                                 }
+                               }}
+                             />
+                           </div>
+
+                           {task.subtasks && task.subtasks.length > 0 && (
+                             <div className="space-y-1 pt-2">
+                                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
+                                   <span className={currentTheme.muted}>{t.progress}</span>
+                                   <span className="text-proton-accent">
+                                     {Math.round((task.subtasks.filter(s => s.completed).length / task.subtasks.length) * 100)}%
+                                   </span>
+                                </div>
+                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                   <div 
+                                     className="h-full bg-proton-accent transition-all duration-500"
+                                     style={{ width: `${(task.subtasks.filter(s => s.completed).length / task.subtasks.length) * 100}%` }}
+                                   />
+                                </div>
+                             </div>
+                           )}
+                        </div>
                       </motion.div>
                     ))
                   )}
@@ -1358,7 +1387,7 @@ const DashboardView = ({
         <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8 relative z-10">
           <div className="space-y-2 text-center md:text-left flex-1">
             <div className={cn(
-              "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2",
+              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-2",
               uiMode === 'creative' ? "bg-amber-500/20 text-amber-500" : "bg-proton-accent/20 text-proton-accent"
             )}>
               {uiMode === 'creative' ? (language === 'ka' ? 'შემოქმედებითი რეჟიმი' : 'Creative Mode') : (language === 'ka' ? 'ბიზნეს რეჟიმი' : 'Business Mode')}
@@ -1380,7 +1409,7 @@ const DashboardView = ({
                   <div className="absolute w-full h-full bg-green-500 rounded-full animate-ping opacity-75" />
                   <div className="relative w-1.5 h-1.5 bg-green-500 rounded-full" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-proton-text/70">
+                <span className="text-xs font-black uppercase tracking-[0.1em] text-proton-text/80">
                   {t.hub.system_status}: <span className="text-green-500">{t.hub.active}</span>
                 </span>
               </div>
@@ -1390,17 +1419,10 @@ const DashboardView = ({
           <div className="flex flex-col sm:flex-row gap-4 shrink-0">
              <button 
                 onClick={() => setActiveView('organizer')}
-                className="px-6 py-3 bg-proton-bg border border-proton-border rounded-2xl flex items-center gap-2 hover:bg-proton-card transition-all group"
+                className="px-6 py-4 bg-proton-bg border border-proton-border rounded-2xl flex items-center gap-3 hover:bg-proton-card transition-all group"
              >
-                <LayoutDashboard size={16} className="text-proton-accent group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{t.hub.quick_tasks}</span>
-             </button>
-             <button 
-                onClick={() => setActiveView('finance')}
-                className="px-6 py-3 bg-proton-bg border border-proton-border rounded-2xl flex items-center gap-2 hover:bg-proton-card transition-all group"
-             >
-                <Wallet size={16} className="text-proton-accent group-hover:scale-110 transition-transform" />
-                <span className="text-[10px] font-black uppercase tracking-widest">{t.hub.finance_shortcut}</span>
+                <LayoutDashboard size={18} className="text-proton-accent group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-black uppercase tracking-widest">{t.hub.quick_tasks}</span>
              </button>
              <div className="hidden md:flex">
                 {uiMode === 'creative' ? (
@@ -1419,26 +1441,22 @@ const DashboardView = ({
 
       {uiMode === 'business' ? (
         <div className="space-y-8">
-           <div className="grid grid-cols-1 gap-6">
-              <SystemDiagnostic t={t} />
-           </div>
-
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div 
-                onClick={() => setActiveView('finance')}
+                onClick={() => setActiveView('organizer')}
                 className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-proton-accent transition-all cursor-pointer group shadow-lg"
               >
                  <div className="flex justify-between items-start mb-6">
                     <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-bg transition-colors">
-                       <Wallet size={28} />
+                       <CalendarIcon size={28} />
                     </div>
                     <ArrowRight className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-2 transition-all" size={24} />
                  </div>
                  <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
-                    {language === 'ka' ? 'ფინანსური ცენტრი' : 'Financial Center'}
+                    {language === 'ka' ? 'დავალებების მმართველი' : 'Task Organizer'}
                  </h3>
                  <p className="text-sm text-proton-muted font-medium">
-                    {language === 'ka' ? 'მართეთ თქვენი ბიზნესის ფულადი ნაკადები და ტრანზაქციები.' : 'Manage your business cash flows and transactions.'}
+                    {language === 'ka' ? 'მართეთ თქვენი ყოველდღიური ამოცანები და პრიორიტეტები.' : 'Manage your daily tasks and priorities.'}
                  </p>
               </div>
 
@@ -1585,7 +1603,7 @@ const SystemsView = ({
                <stat.icon size={24} />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest mb-1">{stat.label}</p>
+              <p className="text-xs font-bold text-proton-muted uppercase tracking-widest mb-1.5">{stat.label}</p>
               <p className="text-xl font-bold text-proton-text">{stat.value}</p>
             </div>
           </div>
@@ -1614,7 +1632,7 @@ const SystemsView = ({
                       onChange={(e) => setAiSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
                       className="w-full h-3 bg-proton-bg rounded-lg appearance-none cursor-pointer accent-proton-accent border border-proton-border shadow-inner"
                     />
-                    <div className="flex justify-between mt-4 text-[10px] font-bold text-proton-muted uppercase tracking-widest px-1">
+                    <div className="flex justify-between mt-5 text-xs font-black text-proton-muted uppercase tracking-widest px-1">
                       <span>{ts.focused}</span>
                       <span>{ts.balanced}</span>
                       <span>{ts.creative}</span>
@@ -2134,7 +2152,7 @@ const PersonasView = ({
         selectedPersona, 
         userMessage, 
         apiHistory, 
-        "gemini-3.1-flash-preview", 
+        "gemini-1.5-flash", 
         aiSettings.enableMaps, 
         aiSettings.enableSearch, 
         aiSettings.temperature, 
@@ -2490,421 +2508,6 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
   );
 };
 
-const Web3View = ({ uiMode, language, rates }: { uiMode: 'business' | 'creative', language: 'en' | 'ka', rates: any }) => {
-  const { address, isConnected } = useAccount();
-  const t = translations[language].finance;
-  const { data: balance } = useBalance({
-    address: address,
-  });
-
-  const [preferredCurrency, setPreferredCurrency] = useState<'USD' | 'GEL' | 'EUR' | 'GBP' | 'JPY' | 'CAD'>(() => {
-    try {
-      return (safeStorage.get('proton_preferred_currency') as any) || 'GEL';
-    } catch { return 'GEL'; }
-  });
-
-  const [showCurrencySelector, setShowCurrencySelector] = useState(false);
-
-  useEffect(() => {
-    safeStorage.set('proton_preferred_currency', preferredCurrency);
-  }, [preferredCurrency]);
-
-  const currencies = [
-    { code: 'GEL', symbol: '₾' },
-    { code: 'USD', symbol: '$' },
-    { code: 'EUR', symbol: '€' },
-    { code: 'GBP', symbol: '£' },
-    { code: 'JPY', symbol: '¥' },
-    { code: 'CAD', symbol: 'C$' },
-  ];
-
-  // Native Currency Conversion Helper
-  const getConvertedValue = (cryptoValue: string | undefined, currencyCode: string) => {
-    if (!cryptoValue || parseFloat(cryptoValue) === 0) return '---';
-    const ethPriceInUSD = 2650; 
-    let rate = 1;
-    if (currencyCode !== 'USD') {
-      rate = rates[currencyCode] || 1;
-    }
-    const value = parseFloat(cryptoValue) * ethPriceInUSD * rate;
-    const symbol = currencies.find(c => c.code === currencyCode)?.symbol || '';
-    return `${symbol} ${value.toLocaleString(undefined, { 
-      maximumFractionDigits: currencyCode === 'JPY' ? 0 : 2,
-      minimumFractionDigits: currencyCode === 'JPY' ? 0 : 2
-    })}`;
-  };
-
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-
-  return (
-    <div className="space-y-12 md:space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {!isConnected ? (
-        <div className="max-w-md mx-auto w-full space-y-8 text-center py-20 px-6 bg-proton-card rounded-[40px] border border-proton-border relative overflow-hidden shadow-xl">
-          <div className="relative z-10 space-y-6">
-            <div className="mx-auto w-20 h-20 rounded-3xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted shadow-sm">
-              <Wallet size={40} className="opacity-20" />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-proton-muted" />
-                <span className="text-xs font-semibold text-proton-muted uppercase tracking-widest">{t.disconnected}</span>
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight">{t.title}</h2>
-              <p className="text-sm text-proton-muted leading-relaxed">
-                {t.connect_msg}
-              </p>
-            </div>
-
-            <div className="pt-4 flex justify-center">
-              <ConnectButton label={t.connect_btn} />
-            </div>
-
-            <p className="text-[10px] text-proton-muted/40 font-semibold uppercase tracking-[0.2em] pt-8">
-              Secured by Platform Infrastructure
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-12 animate-in zoom-in-95 duration-500">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">{t.title}</h2>
-              <p className="text-proton-muted text-sm leading-relaxed max-w-md">
-                 {t.description}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-3 bg-proton-card p-1.5 pl-4 rounded-2xl border border-proton-border text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  <span className="font-semibold text-green-500 uppercase tracking-[0.2em]">{language === 'ka' ? 'ონლაინ' : 'Online'}</span>
-                </div>
-                <ConnectButton />
-              </div>
-              
-              <div className="relative">
-                <button 
-                  onClick={() => setShowCurrencySelector(!showCurrencySelector)}
-                  className={cn(
-                    "p-3 bg-proton-card rounded-2xl border border-proton-border flex items-center gap-2 hover:bg-proton-accent/5 hover:border-proton-accent/40 transition-all duration-300 group",
-                    showCurrencySelector && "border-proton-accent/50 ring-4 ring-proton-accent/5"
-                  )}
-                >
-                  <Globe size={18} className="text-proton-accent group-hover:rotate-12 transition-transform duration-500" />
-                  <span className="text-xs font-black tracking-widest">{preferredCurrency}</span>
-                  <ChevronDown size={14} className={cn("transition-transform duration-300 text-proton-muted", showCurrencySelector && "rotate-180 text-proton-accent")} />
-                </button>
-                
-                <AnimatePresence>
-                  {showCurrencySelector && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowCurrencySelector(false)} />
-                      
-                      <motion.div 
-                        initial={{ opacity: 0, y: 15, scale: 0.92, filter: "blur(12px)" }}
-                        animate={{ 
-                          opacity: 1, 
-                          y: 0, 
-                          scale: 1, 
-                          filter: "blur(0px)",
-                          transition: { type: "spring", damping: 25, stiffness: 400 }
-                        }}
-                        exit={{ 
-                          opacity: 0, 
-                          y: 10, 
-                          scale: 0.95, 
-                          filter: "blur(10px)",
-                          transition: { duration: 0.2 }
-                        }}
-                        className="absolute right-0 mt-4 w-64 backdrop-blur-3xl bg-proton-card/95 border border-proton-border rounded-[28px] shadow-[0_30px_70px_rgba(0,0,0,0.7)] z-50 overflow-hidden"
-                      >
-                        <div className="p-3">
-                          <div className="px-3 py-2 mb-1 flex items-center justify-between border-b border-proton-border/30 pb-3 mx-1">
-                            <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.25em] opacity-60">
-                              {language === 'ka' ? 'ვალუტის არჩევა' : 'Select Currency'}
-                            </span>
-                            <Globe size={10} className="text-proton-accent/40" />
-                          </div>
-
-                          <div className="space-y-1 pt-2">
-                            {currencies.map((curr, idx) => (
-                              <motion.button
-                                initial={{ opacity: 0, x: -12 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.04, ease: "easeOut" }}
-                                key={curr.code}
-                                onClick={() => {
-                                  setPreferredCurrency(curr.code as any);
-                                  setShowCurrencySelector(false);
-                                }}
-                                className={cn(
-                                  "w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all group/item relative overflow-hidden",
-                                  preferredCurrency === curr.code 
-                                    ? "bg-proton-accent text-proton-bg shadow-[0_0_20px_rgba(0,242,255,0.3)]" 
-                                    : "hover:bg-proton-accent/10 text-proton-text active:scale-95"
-                                )}
-                              >
-                                <div className="flex items-center gap-4 relative z-10">
-                                  <span className={cn(
-                                    "w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border transition-colors",
-                                    preferredCurrency === curr.code 
-                                      ? "bg-proton-bg/20 border-proton-bg/30 text-white" 
-                                      : "bg-proton-bg border-proton-border group-hover/item:border-proton-accent/30"
-                                  )}>
-                                    {curr.symbol}
-                                  </span>
-                                  <div className="flex flex-col items-start gap-0.5">
-                                    <span className="text-xs">{(t.currency_names as any)?.[curr.code] || curr.code}</span>
-                                    {preferredCurrency !== curr.code && (
-                                      <span className="text-[8px] opacity-40 font-mono tracking-tighter">{curr.code} GATEWAY</span>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                {preferredCurrency === curr.code && (
-                                  <motion.div layoutId="active-check-currency" className="relative z-10">
-                                    <Check size={16} strokeWidth={4} />
-                                  </motion.div>
-                                )}
-
-                                {preferredCurrency !== curr.code && (
-                                  <div className="opacity-0 group-hover/item:opacity-30 transition-opacity text-[10px] font-mono mr-1">
-                                    {curr.code}
-                                  </div>
-                                )}
-                              </motion.button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className="px-4 py-2 bg-proton-accent/5 border-t border-proton-border/30">
-                          <p className="text-[8px] text-center font-bold text-proton-muted/60 uppercase tracking-widest">
-                            Real-time Matrix Rates
-                          </p>
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Treasury Section */}
-            <div className="lg:col-span-2 space-y-6">
-                <div className="proton-glass p-8 rounded-[32px] md:rounded-[40px] border border-proton-accent/20 relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                       <CreditCard size={120} className="text-proton-accent" />
-                   </div>
-                   <div className="relative z-10 space-y-6 md:space-y-8">
-                      <div className="flex items-center justify-between">
-                          <div className="space-y-1">
-                              <h3 className="text-xs font-bold uppercase tracking-widest text-proton-muted">{t.treasury}</h3>
-                              <p className="text-3xl md:text-6xl font-black tracking-tighter">
-                                   {balance && parseFloat(balance.formatted) > 0 ? (
-                                     <>
-                                       {parseFloat(balance.formatted).toFixed(4)} <span className="text-proton-accent">{balance?.symbol}</span>
-                                     </>
-                                   ) : (
-                                     <span className="text-proton-muted italic opacity-50">No Activity Detected</span>
-                                   )}
-                              </p>
-                              <p className="text-lg md:text-2xl font-bold text-proton-accent/80 tracking-tight">
-                                {getConvertedValue(balance?.formatted, preferredCurrency)}
-                              </p>
-                          </div>
-                          <div className="p-3 md:p-6 rounded-3xl bg-proton-accent/10 text-proton-accent border border-proton-accent/20 shadow-[0_0_20px_rgba(0,242,255,0.1)]">
-                              <Wallet size={24} className="md:w-10 md:h-10" />
-                          </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                        {currencies.filter(c => c.code !== preferredCurrency || preferredCurrency !== 'GEL').slice(0, 5).map(curr => (
-                           <div key={curr.code} className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group/card hover:border-proton-accent/50 transition-all">
-                              <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mb-1">{curr.code} ({curr.symbol})</p>
-                              <p className="text-sm md:text-base font-bold truncate">{getConvertedValue(balance?.formatted, curr.code)}</p>
-                           </div>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                        <button className="flex-1 px-8 py-4 bg-proton-accent text-proton-bg rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_20px_rgba(0,242,255,0.3)]">
-                          {t.send_pay}
-                        </button>
-                        <button className="flex-1 px-8 py-4 bg-proton-bg border border-proton-border text-proton-text rounded-2xl font-black uppercase tracking-widest text-[11px] hover:bg-proton-card transition-all">
-                          {t.history}
-                        </button>
-                      </div>
-                   </div>
-                </div>
-
-                {/* Dashboard Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <button 
-                        onClick={() => setShowInvoiceModal(true)}
-                        className="proton-glass p-6 rounded-[32px] border border-proton-border hover:border-proton-accent/50 transition-all text-left space-y-4 group cursor-pointer"
-                    >
-                        <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <FileText size={24} />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-lg">{t.smart_invoicing}</h4>
-                            <p className="text-xs text-proton-muted uppercase tracking-tighter">{t.invoice_desc}</p>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] font-mono text-proton-accent uppercase tracking-[0.2em] font-bold pt-2">
-                             {t.generate_now} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                        </div>
-                    </button>
-
-                    <div className="proton-glass p-6 rounded-[32px] border border-proton-border space-y-4 shadow-sm">
-                        <div className="w-12 h-12 rounded-2xl bg-proton-secondary/10 text-proton-secondary flex items-center justify-center">
-                            <RefreshCw size={24} />
-                        </div>
-                        <div>
-                             <h4 className="font-bold text-lg">Market Sync</h4>
-                             <p className="text-xs text-proton-muted">Refreshed live via Frankfurter API</p>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] font-mono text-proton-secondary uppercase tracking-[0.2em] font-bold pt-2">
-                             $1 USD = {rates.GEL} GEL
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Sidebar Section: Exchanges & Info */}
-            <div className="space-y-6">
-                <div className="proton-glass p-6 rounded-[32px] border border-white/5 space-y-6">
-                    <h4 className="text-[11px] font-mono font-bold text-proton-muted uppercase tracking-[0.3em]">{t.off_ramps}</h4>
-                    <div className="space-y-4">
-                        {[
-                            { name: 'Cryptal', desc: 'Secure P2P & Instant GEL', url: 'https://cryptal.com' },
-                            { name: 'MyCoins', desc: 'Direct BOG/TBC Integration', url: 'https://mycoins.ge' },
-                            { name: 'Emoney', desc: 'Digital Wallet Ecosystem', url: 'https://emoney.ge' }
-                        ].map((ex, i) => (
-                            <a 
-                                key={i} 
-                                href={ex.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-between p-3 rounded-2xl bg-proton-bg/40 border border-proton-border hover:border-proton-accent/30 transition-all group"
-                            >
-                                <div>
-                                    <p className="font-bold text-sm group-hover:text-proton-accent transition-colors">{ex.name}</p>
-                                    <p className="text-[9px] text-proton-muted uppercase">{ex.desc}</p>
-                                </div>
-                                <ArrowRight size={14} className="text-proton-muted group-hover:text-proton-accent" />
-                            </a>
-                        ))}
-                    </div>
-                    <div className="p-4 rounded-2xl bg-proton-accent/5 border border-proton-accent/10">
-                        <p className="text-[10px] leading-relaxed text-proton-muted italic">
-                             {t.off_ramps_notice}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="proton-glass p-6 rounded-[32px] border border-white/5 space-y-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
-                           <Activity size={16} />
-                        </div>
-                        <h4 className="font-bold text-sm">{t.ledger}</h4>
-                    </div>
-                    <div className="space-y-3">
-                        <div className="flex justify-between text-[10px] opacity-60">
-                            <span className="font-mono">TX_ID: 0x4f...a12</span>
-                            <span className="text-green-400">+0.012 ETH</span>
-                        </div>
-                        <div className="flex justify-between text-[10px] opacity-60">
-                            <span className="font-mono">TX_ID: 0x9b...e4f</span>
-                            <span className="text-red-400">-0.005 ETH</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {showInvoiceModal && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-proton-bg/95 backdrop-blur-xl">
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="proton-glass p-8 rounded-[40px] max-w-2xl w-full border border-proton-border/80 shadow-2xl space-y-8 relative overflow-hidden"
-                    >
-                         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
-                         
-                         <div className="flex items-center justify-between relative z-10">
-                             <div className="flex items-center gap-4">
-                                <div className="p-3 rounded-2xl bg-proton-accent/10 text-proton-accent">
-                                    <FileText size={28} />
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-bold tracking-tight">Smart Invoicing</h3>
-                                    <p className="text-xs text-proton-muted font-mono uppercase tracking-widest">Generate Settlement Document</p>
-                                </div>
-                             </div>
-                             <button onClick={() => setShowInvoiceModal(false)} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
-                                 <Plus size={24} className="rotate-45 text-proton-muted" />
-                             </button>
-                         </div>
-
-                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
-                             <div className="space-y-2">
-                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Client Name / კლიენტი</label>
-                                 <input type="text" placeholder="e.g. Acme Tech Corp" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
-                             </div>
-                             <div className="space-y-2">
-                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Service Type / სერვისი</label>
-                                 <select className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none cursor-pointer">
-                                     <option>AI Analysis & Automation</option>
-                                     <option>Smart Contract Audit</option>
-                                     <option>Compute Cluster Lease</option>
-                                     <option>Digital Persona Concierge</option>
-                                 </select>
-                             </div>
-                             <div className="space-y-2">
-                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Currency / ვალუტა</label>
-                                 <select className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none cursor-pointer">
-                                     <option>ETH (Ethereum Native)</option>
-                                     <option>GEL (NBG Fixed Rate)</option>
-                                     <option>USD (International)</option>
-                                     <option>EUR (European)</option>
-                                 </select>
-                             </div>
-                             <div className="space-y-2">
-                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Amount / თანხა</label>
-                                 <input type="number" placeholder="0.05" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
-                             </div>
-                             <div className="space-y-2 sm:col-span-2">
-                                 <label className="text-[10px] font-sans text-proton-muted uppercase tracking-widest font-bold">Due Date / ვადა</label>
-                                 <input type="date" className="w-full bg-proton-bg border border-proton-border rounded-2xl px-4 py-3 text-sm focus:border-proton-accent outline-none" />
-                             </div>
-                         </div>
-
-                         <div className="pt-4 relative z-10">
-                            <button className="w-full py-4 rounded-2xl bg-proton-accent text-proton-bg font-bold shadow-xl shadow-proton-accent/20 hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2">
-                                <Receipt size={18} />
-                                Generate & Finalize Invoice
-                            </button>
-                         </div>
-
-                         <p className="text-[9px] text-center text-proton-muted relative z-10 italic">
-                             ინვოისი ავტომატურად დაუკავშირდება თქვენს ამჟამინდელ Wallet მისამართს: {address?.slice(0,6)}...{address?.slice(-4)}
-                         </p>
-                    </motion.div>
-                </div>
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-    </div>
-  );
-};
 
 
 
@@ -3570,47 +3173,6 @@ const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }
 ];
 
 export default function App() {
-  const [rates, setRates] = useState<any>({ GEL: 2.71, EUR: 0.93, GBP: 0.78, JPY: 155, CAD: 1.37 });
-  
-  useEffect(() => {
-    const fetchRates = async () => {
-      // Try Frankfurter (Dev mirror is often more reliable)
-      try {
-        const res = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=GEL,EUR,GBP,JPY,CAD');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.rates) {
-            setRates(data.rates);
-            return;
-          }
-        }
-      } catch (error) {
-        // Silent catch for mirror
-      }
-
-      // Fallback to stable Exchange Rate API
-      try {
-        const res = await fetch('https://open.er-api.com/v6/latest/USD');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.rates) {
-            const filtered = {
-              GEL: data.rates.GEL,
-              EUR: data.rates.EUR,
-              GBP: data.rates.GBP,
-              JPY: data.rates.JPY,
-              CAD: data.rates.CAD
-            };
-            setRates(filtered);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Currency rates fetch failed:", error);
-      }
-    };
-    fetchRates();
-  }, []);
 
   const [uiMode, setUiMode] = useState<'business' | 'creative'>(() => {
     try {
@@ -3705,6 +3267,18 @@ export default function App() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showLogs, setShowLogs] = useState(false);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle logs with Ctrl + Shift + L
+      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'L') {
+        e.preventDefault();
+        setShowLogs(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const addLog = React.useCallback((type: LogEntry['type'], message: string, details?: any) => {
     const newLog: LogEntry = {
       id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -3779,16 +3353,15 @@ export default function App() {
   }, [personas]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const defaultProfile: UserProfile = {
-      name: 'Darian B.',
+      name: 'Cyber Master',
       email: 'devdarianib@gmail.com',
       language: 'en',
       region: 'Tbilisi',
       notifications: true,
-      role: 'Standard',
+      role: 'System Architect',
       phoneNumber: '',
       id: 'default-user',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Darian',
-      balance: 0
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Cyber'
     };
     try {
       const saved = safeStorage.get('user-profile');
@@ -3797,10 +3370,6 @@ export default function App() {
         // Ensure language is valid
         if (parsed.language !== 'en' && parsed.language !== 'ka') {
           parsed.language = 'en';
-        }
-        // Ensure balance is 0 if it was the legacy fake value
-        if (parsed.balance === 1250 || parsed.balance === '1250') {
-          parsed.balance = 0;
         }
         return { ...defaultProfile, ...parsed };
       }
@@ -3966,19 +3535,13 @@ export default function App() {
       if (snap.exists()) {
         const data = snap.data() as Partial<UserProfile>;
         setUserProfile(prev => {
-          const rawBalance = data.balance;
-          // Robust check for the "1250" fake balance value
-          const isFakeBalance = String(rawBalance).replace(/,/g, '') === '1250';
-          const newBalance = isFakeBalance ? 0 : (typeof rawBalance === 'number' ? rawBalance : prev.balance);
-          
           return {
             ...prev,
             ...data,
             name: data.name || prev.name,
             email: data.email || prev.email,
             language: (data.language as 'en' | 'ka') || prev.language,
-            avatar: data.avatar || prev.avatar,
-            balance: newBalance
+            avatar: data.avatar || prev.avatar
           };
         });
       }
@@ -4182,14 +3745,25 @@ export default function App() {
     }
   };
 
-  const handleAddTask = (content: string, priority: 'low' | 'medium' | 'high' = 'medium', category?: string) => {
+  const handleAddTask = (
+    content: string, 
+    priority: 'low' | 'medium' | 'high' = 'medium', 
+    category?: string, 
+    description?: string, 
+    dueDate?: number,
+    recurring: 'none' | 'daily' | 'weekly' | 'monthly' = 'none'
+  ) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
       content,
       contentGe: content,
       completed: false,
       priority,
-      category
+      category,
+      description,
+      dueDate,
+      recurring,
+      timestamp: Date.now()
     };
     setTasks(prev => [...prev, newTask]);
     if (user) {
@@ -4250,7 +3824,7 @@ export default function App() {
       Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]
       Ensure the content is specific to the user's business niche.`;
       
-      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3.1-flash-preview", false, true, 0.8, "", language);
+      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-1.5-flash", false, true, 0.8, "", language);
       setLastGeminiMetadata(outcome.metadata);
       const suggestions = JSON.parse(outcome.text.replace(/```json|```/g, '').trim());
       
@@ -4286,7 +3860,7 @@ export default function App() {
   const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
   const t = translations[currentLanguage];
   const isPlayground = window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost');
-  const isAdmin = user?.email === 'devdarianib@gmail.com' && isPlayground;
+  const isAdmin = (user?.email === 'devdarianib@gmail.com' || isPlayground) && !!user;
 
   if (!authInitialized) {
     return (
@@ -4363,7 +3937,7 @@ export default function App() {
                       className="flex flex-col"
                     >
                       <span className="text-xl font-black tracking-tight text-proton-text uppercase">System</span>
-                      <span className="text-[9px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-80">Workspace</span>
+                      <span className="text-[10px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90">Workspace</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -4380,7 +3954,7 @@ export default function App() {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="text-[10px] font-black text-proton-muted/50 uppercase tracking-widest px-3"
+                        className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
                       >
                         {t.sidebar.main}
                       </motion.p>
@@ -4403,7 +3977,7 @@ export default function App() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4"
+                  className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
                 >
                   {t.sidebar.agents}
                 </motion.p>
@@ -4431,7 +4005,7 @@ export default function App() {
             {isSidebarOpen && personas.length > 8 && (
               <button 
                 onClick={() => handleViewChange('personas')}
-                className="w-full text-center py-2 text-[8px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
+                className="w-full text-center py-2 text-[10px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
               >
                 + {personas.length - 8} More Agents
               </button>
@@ -4456,7 +4030,7 @@ export default function App() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4"
+                  className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
                 >
                   {t.sidebar.creative}
                 </motion.p>
@@ -4481,34 +4055,13 @@ export default function App() {
           </div>
 
             <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
-              <button
-                onClick={() => setShowLogs(true)}
-                className={cn(
-                  "flex w-full rounded-2xl transition-all duration-500 group relative",
-                  isSidebarOpen 
-                    ? "flex-row items-center gap-4 px-4 py-3.5" 
-                    : "flex-col items-center justify-center px-0 py-4 items-center",
-                  "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
-                )}
-                title={!isSidebarOpen ? "System Logs" : undefined}
-              >
-                <div className="relative">
-                  <Terminal size={20} className={cn("shrink-0 transition-all duration-500 group-hover:scale-110", "group-hover:text-proton-accent")} />
-                </div>
-                {isSidebarOpen && (
-                  <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500">
-                    System Logs
-                  </span>
-                )}
-              </button>
-
               <AnimatePresence mode="wait">
                 {isSidebarOpen && (
                 <motion.p 
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
-                  className="text-[10px] font-black text-proton-muted/50 uppercase tracking-[0.3em] px-3 mb-4"
+                  className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
                 >
                   {t.sidebar.system}
                 </motion.p>
@@ -4524,12 +4077,12 @@ export default function App() {
                   className="px-3 space-y-4 mb-6 overflow-hidden"
                 >
                   <div className="space-y-2">
-                    <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'ენა' : 'Language'}</p>
+                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'ენა' : 'Language'}</p>
                     <div className="flex bg-proton-bg/50 border border-proton-border/50 rounded-xl p-0.5">
                       <button 
                         onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
                         className={cn(
-                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
+                          "flex-1 py-1.5 text-xs font-black rounded-lg transition-all",
                           userProfile.language === 'en' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
                         )}
                       >
@@ -4538,7 +4091,7 @@ export default function App() {
                       <button 
                         onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
                         className={cn(
-                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all",
+                          "flex-1 py-1.5 text-xs font-black rounded-lg transition-all",
                           userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
                         )}
                       >
@@ -4547,11 +4100,11 @@ export default function App() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
+                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
                     <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-[8px] font-black text-proton-muted/40 uppercase tracking-[0.2em]">{language === 'ka' ? 'დიზაინი' : 'Appearance'}</p>
+                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'დიზაინი' : 'Appearance'}</p>
                     <DarkModeToggle theme={theme} setTheme={setTheme} language={language} />
                   </div>
                 </motion.div>
@@ -4591,8 +4144,8 @@ export default function App() {
                     exit={{ opacity: 0, x: -20 }}
                     className="flex flex-col min-w-0"
                   >
-                    <span className="text-[11px] font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'User'}</span>
-                    <span className="text-[9px] font-medium text-proton-accent/60 truncate tracking-widest uppercase">Verified Account</span>
+                    <span className="text-xs font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'User'}</span>
+                    <span className="text-[10px] font-medium text-proton-accent/70 truncate tracking-widest uppercase">Verified Account</span>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -4615,7 +4168,7 @@ export default function App() {
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
-          { id: 'finance', icon: Wallet, label: language === 'ka' ? 'ფინანსები' : 'Finance' },
+          { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'დავალებები' : 'Tasks' },
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
           { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
         ].map((item) => (
@@ -4628,7 +4181,7 @@ export default function App() {
             )}
           >
             <item.icon size={20} className={cn(activeView === item.id && "animate-pulse")} />
-            <span className="text-[9px] font-sans font-bold uppercase">{item.label}</span>
+            <span className="text-xs font-sans font-bold uppercase">{item.label}</span>
             {activeView === item.id && (
               <motion.div 
                 layoutId="activeBottomTab"
@@ -4661,7 +4214,7 @@ export default function App() {
             {[
               { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
               { id: 'personas', label: t.sidebar.agents, icon: Users },
-              { id: 'finance', label: language === 'ka' ? 'ფინანსები' : 'Finance', icon: Wallet },
+              { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
             ].map((link) => (
               <button
@@ -4684,7 +4237,7 @@ export default function App() {
               <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
             </div>
 
-            <div className="flex items-center gap-1.5 md:gap-2 bg-proton-bg border border-proton-border p-1 rounded-2xl shrink-0 text-[10px] font-black">
+            <div className="flex items-center gap-1.5 md:gap-2 bg-proton-bg border border-proton-border p-1 rounded-2xl shrink-0 text-xs font-black">
               <button 
                 onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
                 className={cn(
@@ -4769,9 +4322,6 @@ export default function App() {
                   user={user}
                   isAdmin={isAdmin}
                 />
-              )}
-              {activeView === 'finance' && (
-                <Web3View uiMode={uiMode} language={userProfile.language} rates={rates} />
               )}
               {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode} language={userProfile.language} isAdmin={isAdmin} />}
               {activeView === 'blueprints' && (
@@ -4964,7 +4514,7 @@ export default function App() {
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { label: t.sidebar.finance, status: 'Online', color: 'text-green-400', icon: Wallet },
+                    { label: t.sidebar.dashboard, status: 'Online', color: 'text-green-400', icon: LayoutDashboard },
                     { label: t.sidebar.organizer, status: 'Online', color: 'text-green-400', icon: CalendarIcon },
                     { label: t.sidebar.blueprints, status: 'Restoring', color: 'text-amber-400', icon: WorkflowIcon },
                     { label: t.sidebar.personas, status: 'Syncing', color: 'text-proton-accent', icon: Users },

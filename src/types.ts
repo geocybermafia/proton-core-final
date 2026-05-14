@@ -10,8 +10,6 @@ export type UserProfile = {
   bio?: string;
   avatar?: string;
   role?: string;
-  balance?: number;
-  isPro?: boolean;
 };
 
 export type GlobalAiSettings = {
@@ -77,7 +75,7 @@ export interface GeminiMetadata {
   latency?: number;
 }
 
-export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'finance' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
+export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
 
 export type Task = {
   id: string;
@@ -88,4 +86,8 @@ export type Task = {
   priority: 'low' | 'medium' | 'high';
   category?: string;
   timestamp?: number;
+  description?: string;
+  dueDate?: number;
+  subtasks?: { id: string; content: string; completed: boolean }[];
+  recurring?: 'none' | 'daily' | 'weekly' | 'monthly';
 };

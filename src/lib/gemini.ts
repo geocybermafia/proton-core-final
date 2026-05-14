@@ -79,7 +79,7 @@ export async function chatWithPersona(
   persona: Persona, 
   message: string, 
   history: { role: 'user' | 'model', parts: { text: string }[] }[] = [],
-  model: string = "gemini-3.1-flash-preview",
+  model: string = "gemini-1.5-flash",
   includeMaps: boolean = false,
   includeSearch: boolean = true,
   temperature: number = 0.9,
@@ -149,7 +149,7 @@ export async function generateNewPersona(basePersona: Persona, prompt: string): 
   `;
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: "gemini-1.5-flash",
     contents: [systemPrompt, prompt]
   });
   
@@ -166,7 +166,7 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
     const ai = getAi();
     if (!ai) return "AI engine not initialized.";
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: [
         ...history,
         { role: 'user', parts: [{ text: "Summarize this conversation in a concise way, highlighting key points and actionable items." }] }
@@ -184,7 +184,7 @@ export async function analyzeWorkflow(workflow: { name: string, trigger: string,
     const ai = getAi();
     if (!ai) return "AI engine not initialized.";
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-1.5-pro",
       contents: `Analyze the following workflow and suggest improvements for efficiency and scalability:
       Name: ${workflow.name}
       Trigger: ${workflow.trigger}
@@ -202,7 +202,7 @@ export async function generatePersonaAvatar(persona: Persona) {
     const ai = getAi();
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-1.5-flash',
       contents: {
         parts: [
           {
@@ -252,7 +252,7 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string) 
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-1.5-flash',
       contents: { parts },
       config: {
         imageConfig: {
@@ -281,7 +281,7 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
     const ai = getAi();
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
+      model: "gemini-1.5-flash",
       contents: [{ parts: [{ text: text }] }],
       config: {
         responseModalities: [Modality.AUDIO],
@@ -310,7 +310,7 @@ export async function architectTask(project: string, temperature: number = 0.9):
     const ai = getAi();
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: `Be professional, brief, and structured. Architect an action plan for: ${project}.
       Respond EXCLUSIVELY in the user's language (e.g. Georgian for Georgian, English for English).`,
       config: {

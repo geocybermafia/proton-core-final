@@ -26,28 +26,10 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
 
 export default function CabinetView({ profile, theme, setTheme }: CabinetViewProps) {
   const [isDesignOpen, setIsDesignOpen] = React.useState(false);
-  const [isClaiming, setIsClaiming] = React.useState(false);
-  const [claimed, setClaimed] = React.useState(false);
 
   if (!profile) return null;
   const lang = profile.language || 'en';
   const t = translations[lang].cabinet;
-
-  const handleClaimReward = async () => {
-    if (claimed || isClaiming) return;
-    setIsClaiming(true);
-    try {
-      const userRef = doc(db, 'users', auth.currentUser!.uid);
-      await updateDoc(userRef, {
-        balance: increment(50)
-      });
-      setClaimed(true);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsClaiming(false);
-    }
-  };
 
   const handleUpdate = async (field: string, value: any) => {
     if (!auth.currentUser) return;
@@ -67,124 +49,37 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       <section className="relative overflow-hidden">
          <div className="absolute inset-0 bg-proton-card border border-proton-border rounded-xl shadow-md" />
          
-         <div className="relative p-4 px-6 flex flex-col md:flex-row gap-4 items-center">
+         <div className="relative p-6 px-8 flex flex-col md:flex-row gap-6 items-center">
             <div className="relative shrink-0">
-               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-proton-accent to-blue-600 p-[1.5px]">
-                  <div className="w-full h-full bg-proton-bg rounded-[10px] flex items-center justify-center overflow-hidden">
+               <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-proton-accent to-blue-600 p-[2px]">
+                  <div className="w-full h-full bg-proton-bg rounded-[14px] flex items-center justify-center overflow-hidden">
                      {profile.avatar && isUrl(profile.avatar) ? (
                         <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                      ) : (
-                        <span className="text-lg font-black text-proton-accent">{profile.name.charAt(0)}</span>
+                        <span className="text-2xl font-black text-proton-accent">{profile.name.charAt(0)}</span>
                      )}
                   </div>
                </div>
-               <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded flex items-center justify-center border border-proton-card shadow-lg text-white">
-                  <Shield size={6} />
+               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center border-2 border-proton-card shadow-lg text-white">
+                  <Shield size={10} />
                </div>
             </div>
 
             <div className="flex-1 text-center md:text-left min-w-0">
-               <h2 className="text-lg md:text-xl font-black tracking-tight uppercase text-proton-text truncate">{profile.name}</h2>
-               <div className="flex items-center justify-center md:justify-start gap-2 text-proton-muted font-bold text-[9px] mt-0.5">
-                  <span className="flex items-center gap-1 opacity-70"><Mail size={10} className="text-proton-accent" /> {profile.email}</span>
+               <h2 className="text-2xl md:text-3xl font-black tracking-tight uppercase text-proton-text truncate">{profile.name}</h2>
+               <div className="flex items-center justify-center md:justify-start gap-2 text-proton-muted font-bold text-xs mt-1">
+                  <span className="flex items-center gap-1.5 opacity-80"><Mail size={14} className="text-proton-accent" /> {profile.email}</span>
                </div>
-               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-1.5">
-                  <div className="px-1.5 py-0.5 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-[7px] font-black rounded uppercase tracking-wider">
+               <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-3">
+                  <div className="px-2 py-1 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-xs font-black rounded uppercase tracking-wider">
                      {t.verified}
-                  </div>
-               </div>
-            </div>
-
-            <div className="w-full md:w-auto">
-               <div className="bg-proton-bg/40 backdrop-blur-xl p-2 px-5 rounded-lg border border-white/5 shadow-inner flex flex-col items-center justify-center gap-0">
-                  <span className="text-[7px] font-black text-proton-muted uppercase tracking-widest opacity-60">{t.balance_label}</span>
-                  <div className="text-lg font-black tracking-tighter text-proton-text flex items-center gap-1">
-                     <span className="text-proton-accent font-medium text-sm">{lang === 'ka' ? '₾' : '$'}</span>
-                     {profile.balance || 0}
                   </div>
                </div>
             </div>
          </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-         {/* 1.5 ENGAGEMENT ALGORITHM: DAILY PULSE */}
-         <section className="bg-proton-card border border-proton-border rounded-xl p-5 px-6 space-y-4 shadow-sm overflow-hidden relative group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-3xl -mr-10 -mt-10 group-hover:bg-amber-500/20 transition-all duration-700" />
-            
-            <div className="flex items-center justify-between relative z-10">
-               <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
-                     <Gift size={16} />
-                  </div>
-                  <div>
-                     <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{(t as any).daily_reward_title}</h3>
-                     <p className="text-[8px] text-proton-muted font-bold uppercase tracking-tighter opacity-60">{(t as any).daily_reward_desc}</p>
-                  </div>
-               </div>
-            </div>
-
-            <div className="relative z-10 flex items-center gap-4">
-               <div className="flex-1 h-1.5 bg-proton-bg/40 rounded-full overflow-hidden border border-proton-border/30">
-                  <motion.div 
-                     initial={{ width: "0%" }}
-                     animate={{ width: claimed ? "100%" : "35%" }}
-                     className="h-full bg-gradient-to-r from-amber-500 to-orange-500"
-                  />
-               </div>
-               <button 
-                  onClick={handleClaimReward}
-                  disabled={claimed || isClaiming}
-                  className={cn(
-                     "px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                     claimed 
-                        ? "bg-proton-bg/40 text-proton-muted border border-proton-border cursor-not-allowed" 
-                        : "bg-amber-500 text-black hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(245,158,11,0.2)]"
-                  )}
-               >
-                  {isClaiming ? "..." : claimed ? (t as any).claimed : (t as any).claim_button}
-               </button>
-            </div>
-         </section>
-
-         {/* 1.6 SMART INSIGHTS / ALGORITHM FEED */}
-         <section className="bg-proton-card border border-proton-border rounded-xl p-5 px-6 space-y-4 shadow-sm overflow-hidden relative group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/10 blur-3xl -mr-10 -mt-10 group-hover:bg-proton-accent/20 transition-all duration-700" />
-            
-            <div className="flex items-center justify-between relative z-10">
-               <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-proton-accent/10 text-proton-accent">
-                     <TrendingUp size={16} />
-                  </div>
-                  <div>
-                     <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{(t as any).insights_title}</h3>
-                     <p className="text-[8px] text-proton-accent font-bold uppercase tracking-tighter animate-pulse">{(t as any).insights_growth}</p>
-                  </div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 relative z-10">
-               <div className="p-2 rounded-lg bg-proton-bg/40 border border-proton-border/30">
-                  <div className="flex items-center justify-between mb-1">
-                     <span className="text-[7px] font-black text-proton-muted uppercase">Retention</span>
-                     <span className="text-[8px] text-emerald-400 font-mono">+4.2%</span>
-                  </div>
-                  <div className="h-1 bg-proton-border/20 rounded-full overflow-hidden">
-                     <div className="h-full w-[85%] bg-emerald-500" />
-                  </div>
-               </div>
-               <div className="p-2 rounded-lg bg-proton-bg/40 border border-proton-border/30">
-                  <div className="flex items-center justify-between mb-1">
-                     <span className="text-[7px] font-black text-proton-muted uppercase">Ad Value</span>
-                     <span className="text-[8px] text-amber-400 font-mono">1.2x</span>
-                  </div>
-                  <div className="h-1 bg-proton-border/20 rounded-full overflow-hidden">
-                     <div className="h-full w-[65%] bg-amber-500" />
-                  </div>
-               </div>
-            </div>
-         </section>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
          {/* 2. DESIGN / THEME SWITCHER - COLLAPSIBLE */}
          <section className="bg-proton-card border border-proton-border rounded-xl shadow-sm lg:col-span-2 overflow-hidden transition-all duration-300">
             <button 
@@ -196,8 +91,8 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
                      <Palette size={16} />
                   </div>
                   <div className="text-left">
-                     <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{(t as any).design_title}</h3>
-                     <p className="text-[8px] text-proton-muted font-bold uppercase tracking-tighter opacity-60">
+                     <h3 className="text-xs font-black uppercase tracking-widest text-proton-text">{(t as any).design_title}</h3>
+                     <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tight opacity-70">
                         {isDesignOpen ? (lang === 'ka' ? 'აირჩიეთ ფერი' : 'CHOOSE A MOOD') : (t as any).design_desc}
                      </p>
                   </div>
@@ -241,7 +136,7 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
                                     <opt.icon size={20} />
                                  </div>
                                  <span className={cn(
-                                    "text-[10px] font-black uppercase tracking-widest leading-none",
+                                    "text-xs font-black uppercase tracking-widest leading-none",
                                     theme === opt.id ? "text-proton-accent" : "text-white/60 group-hover:text-white"
                                  )}>
                                     {(t as any)[`theme_${opt.id}`] || opt.label}
@@ -264,150 +159,74 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
             </AnimatePresence>
          </section>
 
-         {/* 3. MONETIZATION / BILLING */}
-         <section className="bg-proton-card border border-proton-border rounded-xl p-5 px-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-               <div className="flex items-center gap-2">
-                  <CreditCard size={14} className="text-emerald-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-proton-text">{(t as any).billing_title}</h3>
-               </div>
-               <div className={cn(
-                  "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest",
-                  profile.isPro ? "bg-amber-500/20 text-amber-500 border border-amber-500/30" : "bg-proton-muted/20 text-proton-muted border border-proton-border"
-               )}>
-                  {profile.isPro ? (t as any).pro_active : "BASIC"}
-               </div>
-            </div>
-
-            <div className="space-y-3">
-               {/* Balance Display */}
-               <div className="bg-proton-bg/40 border border-proton-border rounded-lg p-3 flex items-center justify-between">
-                  <div>
-                     <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest">{(t as any).credits_balance}</p>
-                     <p className="text-lg font-mono font-bold text-proton-accent">{profile.balance || 0} ⚡</p>
-                  </div>
-                  <button className="p-2 px-3 rounded-lg bg-proton-accent text-proton-bg text-[9px] font-black uppercase tracking-widest hover:brightness-110 transition-all flex items-center gap-2">
-                     <Wallet size={12} />
-                     {(t as any).add_credits}
-                  </button>
-               </div>
-
-               {/* Membership Upgrade */}
-               {!profile.isPro && (
-                  <button className="w-full group relative overflow-hidden p-3 rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-transparent hover:from-amber-500/20 transition-all">
-                     <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-2">
-                           <Star size={14} className="text-amber-500 fill-amber-500 animate-pulse" />
-                           <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">{(t as any).get_pro}</span>
-                        </div>
-                        <ExternalLink size={12} className="text-amber-500/50" />
-                     </div>
-                     <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </button>
-               )}
-            </div>
-         </section>
-
-         {/* 4. PARTNER HUB / AD SPACE */}
-         <section className="bg-proton-card border border-proton-border rounded-xl p-5 px-6 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between">
-               <div className="flex items-center gap-2">
-                  <Globe size={14} className="text-blue-500" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-proton-text">{(t as any).partners_title}</h3>
-               </div>
-               <span className="text-[8px] text-proton-muted font-bold uppercase tracking-widest opacity-60">PROMOTED</span>
-            </div>
-
-            <div className="space-y-2">
-               {/* AD CARD 1 */}
-               <div className="group cursor-pointer rounded-lg border border-proton-border bg-proton-bg/20 p-3 hover:border-proton-accent/30 transition-all">
-                  <div className="flex gap-3">
-                     <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                        <Zap size={18} className="text-blue-400" />
-                     </div>
-                     <div className="space-y-1">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-proton-text flex items-center gap-2">
-                           CyberVPN Pro
-                           <span className="px-1 py-0.5 rounded-sm bg-blue-500/20 text-blue-400 text-[6px]">OFFER</span>
-                        </h4>
-                        <p className="text-[9px] text-proton-muted font-medium line-clamp-1">Secure your neural uplink with 256-bit encryption.</p>
-                     </div>
-                  </div>
-               </div>
-
-               {/* GENERIC AD SPACE */}
-               <div className="rounded-lg border border-dashed border-proton-border p-3 text-center transition-colors hover:bg-proton-bg/30">
-                  <p className="text-[8px] text-proton-muted font-bold uppercase tracking-wider italic">{(t as any).ad_sample}</p>
-               </div>
-            </div>
-         </section>
-
          {/* 5. SETTINGS */}
-         <section className="bg-proton-card border border-proton-border rounded-xl p-4 px-6 space-y-3 shadow-sm">
-            <div className="flex items-center gap-2">
-               <Settings size={12} className="text-amber-500" />
-               <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{t.config_title}</h3>
+         <section className="bg-proton-card border border-proton-border rounded-xl p-6 space-y-4 shadow-sm">
+            <div className="flex items-center gap-3">
+               <Settings size={16} className="text-amber-500" />
+               <h3 className="text-xs font-black uppercase tracking-widest text-proton-text">{t.config_title}</h3>
             </div>
 
-            <div className="grid grid-cols-1 gap-2">
-               <div className="flex items-center justify-between p-2.5 bg-proton-bg/20 rounded-lg border border-proton-border">
-                  <div className="space-y-0 text-[10px]">
-                     <div className="font-black uppercase text-proton-text leading-tight">{t.language_label}</div>
-                     <div className="text-[8px] text-proton-muted font-bold opacity-60">{t.language_desc}</div>
+            <div className="grid grid-cols-1 gap-3">
+               <div className="flex items-center justify-between p-4 bg-proton-bg/20 rounded-xl border border-proton-border">
+                  <div className="space-y-1">
+                     <div className="text-xs font-black uppercase text-proton-text leading-tight">{t.language_label}</div>
+                     <div className="text-[10px] text-proton-muted font-bold opacity-70">{t.language_desc}</div>
                   </div>
                   <select 
                      value={profile.language}
                      onChange={(e) => handleUpdate('language', e.target.value)}
-                     className="bg-proton-bg border border-proton-border rounded-md px-2 py-1 text-[9px] font-black text-proton-text focus:outline-none focus:border-proton-accent cursor-pointer"
+                     className="bg-proton-bg border border-proton-border rounded-lg px-3 py-1.5 text-xs font-black text-proton-text focus:outline-none focus:border-proton-accent cursor-pointer"
                   >
                      <option value="en">EN</option>
                      <option value="ka">KA</option>
                   </select>
                </div>
 
-               <div className="flex items-center justify-between p-2.5 bg-proton-bg/20 rounded-lg border border-proton-border">
-                  <div className="space-y-0 text-[10px]">
-                     <div className="font-black uppercase text-proton-text leading-tight">{t.notifications_label}</div>
-                     <div className="text-[8px] text-proton-muted font-bold opacity-60">{t.notifications_desc}</div>
+               <div className="flex items-center justify-between p-4 bg-proton-bg/20 rounded-xl border border-proton-border">
+                  <div className="space-y-1">
+                     <div className="text-xs font-black uppercase text-proton-text leading-tight">{t.notifications_label}</div>
+                     <div className="text-[10px] text-proton-muted font-bold opacity-70">{t.notifications_desc}</div>
                   </div>
                   <button 
                      onClick={() => handleUpdate('notifications', !profile.notifications)}
                      className={cn(
-                        "w-7 h-3.5 rounded-full transition-all relative flex items-center",
+                        "w-10 h-5 rounded-full transition-all relative flex items-center",
                         profile.notifications ? "bg-proton-accent" : "bg-white/10"
                      )}
                   >
                      <motion.div 
-                        animate={{ x: profile.notifications ? 16 : 2 }}
-                        className={cn("w-2.5 h-2.5 rounded-full bg-white shadow-sm", profile.notifications ? "bg-black" : "bg-proton-muted")} 
-                     />
+                        animate={{ x: profile.notifications ? 22 : 2 }}
+                        className={cn("w-4 h-4 rounded-full bg-white shadow-sm flex items-center justify-center")}
+                     >
+                        <div className={cn("w-1.5 h-1.5 rounded-full", profile.notifications ? "bg-proton-bg" : "bg-proton-muted")} />
+                     </motion.div>
                   </button>
                </div>
             </div>
          </section>
 
          {/* 4. NETWORK */}
-         <section className="bg-proton-card border border-proton-border rounded-xl p-4 px-6 space-y-3 shadow-sm">
+         <section className="bg-proton-card border border-proton-border rounded-xl p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
-               <div className="flex items-center gap-2">
-                  <Globe size={12} className="text-green-500" />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-text">{t.connection_title}</h3>
+               <div className="flex items-center gap-3">
+                  <Globe size={16} className="text-green-500" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-proton-text">{t.connection_title}</h3>
                </div>
-               <button className="text-proton-muted hover:text-proton-accent transition-colors">
-                  <RefreshCw size={10} />
+               <button className="text-proton-muted hover:text-proton-accent transition-colors p-1">
+                  <RefreshCw size={12} />
                </button>
             </div>
             
-            <div className="grid grid-cols-2 gap-2">
-               <div className="p-2 bg-proton-bg/20 border border-proton-border rounded-lg">
-                  <span className="text-[7px] font-black text-proton-muted uppercase tracking-widest block mb-0.5">{t.region_label}</span>
-                  <div className="text-[9px] font-mono font-bold text-white">UK-LON</div>
+            <div className="grid grid-cols-2 gap-3">
+               <div className="p-3 bg-proton-bg/20 border border-proton-border rounded-xl">
+                  <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest block mb-1 opacity-70">{t.region_label}</span>
+                  <div className="text-xs font-mono font-bold text-white tracking-wider">UK-LON</div>
                </div>
-               <div className="p-2 bg-proton-bg/20 border border-proton-border rounded-lg">
-                  <span className="text-[7px] font-black text-proton-muted uppercase tracking-widest block mb-0.5">{t.status_label}</span>
-                  <div className="flex items-center gap-1">
-                     <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                     <span className="text-[8px] text-green-500 font-black uppercase">{t.optimal}</span>
+               <div className="p-3 bg-proton-bg/20 border border-proton-border rounded-xl">
+                  <span className="text-[10px] font-black text-proton-muted uppercase tracking-widest block mb-1 opacity-70">{t.status_label}</span>
+                  <div className="flex items-center gap-2">
+                     <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_#22c55e]" />
+                     <span className="text-xs text-green-500 font-black uppercase tracking-wide">{t.optimal}</span>
                   </div>
                </div>
             </div>

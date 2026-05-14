@@ -196,7 +196,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       if (!aiInstance) throw new Error("AI engine not initialized");
 
       const response = await aiInstance.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: `Translate this for the ${targetLanguage} speaker. Input from ${sourceRole}: ${textToTranslate}`,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION
@@ -261,7 +261,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       if (!aiInstance) throw new Error("AI engine not initialized");
 
       const response = await aiInstance.models.generateContent({
-        model: "gemini-3.1-flash-tts-preview",
+        model: "gemini-1.5-flash",
         contents: [{ parts: [{ text: `Say in ${lang === 'ka' ? 'Georgian' : 'English'}: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
