@@ -31,7 +31,8 @@ import {
   doc, 
   updateDoc,
   where,
-  Timestamp 
+  Timestamp,
+  serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
@@ -127,6 +128,41 @@ const EXCHANGE_RATES: Record<string, number> = {
   CNY: 7.24,
 };
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -139,8 +175,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit'>('browse');
+  const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
+  const [orders, setOrders] = useState<any[]>([]);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -160,17 +199,39 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const currentTheme = MARKET_THEMES[themeId] || MARKET_THEMES.industrial;
 
   useEffect(() => {
-    const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const qListings = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
+    const unsubscribeListings = onSnapshot(qListings, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Listing[];
       setListings(data);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'listings');
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeListings();
+  }, []);
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const qOrders = query(
+      collection(db, 'orders'), 
+      where('buyerId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
+    const unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setOrders(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'orders');
+    });
+
+    return () => unsubscribeOrders();
   }, []);
 
   const clearFilters = () => {
@@ -187,7 +248,12 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     
     // Filter by View Mode
     if (viewMode === 'my-listings') {
-      result = result.filter(l => l.sellerId === auth.currentUser?.uid);
+      if (profileSubMode === 'selling') {
+        result = result.filter(l => l.sellerId === auth.currentUser?.uid);
+      } else {
+        // Handled by different UI section
+        return [];
+      }
     }
 
     // Filter by Category
@@ -236,6 +302,45 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     return inUSD * (EXCHANGE_RATES[to] || 1);
   };
 
+  const handleBuyNow = async (listing: Listing) => {
+    if (!auth.currentUser) return;
+    if (listing.sellerId === auth.currentUser.uid) {
+      alert("You cannot buy your own item.");
+      return;
+    }
+
+    if (window.confirm(`${t.market.buy_now}?`)) {
+      try {
+        await addDoc(collection(db, 'orders'), {
+          listingId: listing.id,
+          buyerId: auth.currentUser.uid,
+          sellerId: listing.sellerId,
+          amount: listing.price,
+          currency: listing.currency || 'USD',
+          itemTitle: listing.title,
+          status: 'completed',
+          createdAt: serverTimestamp()
+        });
+        alert(language === 'ka' ? "შეკვეთა გაფორმდა!" : "Order placed successfully!");
+        setViewMode('my-listings');
+        setProfileSubMode('buying');
+      } catch (error) {
+        console.error("Error creating order:", error);
+      }
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) return;
@@ -256,12 +361,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         country: formData.country,
         city: formData.city,
         image: formData.image || '',
-        createdAt: Date.now(),
+        createdAt: serverTimestamp(),
         status: 'active'
       };
 
       if (viewMode === 'edit' && editingListing) {
-        await updateDoc(doc(db, 'listings', editingListing.id), listingData);
+        // Remove createdAt from updates to keep it immutable
+        const { createdAt, ...updateData } = listingData;
+        await updateDoc(doc(db, 'listings', editingListing.id), updateData);
       } else {
         await addDoc(collection(db, 'listings'), listingData);
       }
@@ -461,11 +568,35 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
             <h2 className="text-4xl font-black mb-2 tracking-tight uppercase text-white">
               <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
             </h2>
-            <p className={cn("font-bold tracking-wide uppercase text-xs opacity-60", currentTheme.muted)}>
-              {viewMode === 'browse' ? t.market.subtitle : 
-               viewMode === 'my-listings' ? t.market.my_listings :
-               viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
-            </p>
+            <div className="flex items-center gap-4">
+              <p className={cn("font-bold tracking-wide uppercase text-xs opacity-60", currentTheme.muted)}>
+                {viewMode === 'browse' ? t.market.subtitle : 
+                 viewMode === 'my-listings' ? t.market.my_listings :
+                 viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
+              </p>
+              {viewMode === 'my-listings' && (
+                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl">
+                  <button 
+                    onClick={() => setProfileSubMode('selling')}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                      profileSubMode === 'selling' ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                    )}
+                  >
+                    {t.market.selling_mode}
+                  </button>
+                  <button 
+                    onClick={() => setProfileSubMode('buying')}
+                    className={cn(
+                      "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                      profileSubMode === 'buying' ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                    )}
+                  >
+                    {t.market.buying_mode}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -549,7 +680,40 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
               <AnimatePresence mode="popLayout">
-                {filteredListings.map((listing, idx) => (
+                {viewMode === 'my-listings' && profileSubMode === 'buying' ? (
+                  orders.map((order, idx) => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      key={order.id}
+                      className={cn("p-6 rounded-[32px] border border-white/5", currentTheme.card)}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 bg-white/5 rounded-2xl">
+                          <ShoppingBag size={20} className={currentTheme.accent} />
+                        </div>
+                        <div className="text-right">
+                          <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 block", currentTheme.muted)}>
+                            {new Date(order.createdAt).toLocaleDateString()}
+                          </span>
+                          <span className="text-[10px] font-black text-[#2e5bff] uppercase tracking-widest">
+                            {order.status}
+                          </span>
+                        </div>
+                      </div>
+                      <h4 className="text-sm font-black text-white mb-1 uppercase tracking-tight">{order.itemTitle}</h4>
+                      <p className={cn("text-xs font-bold", currentTheme.muted)}>Price: {order.amount} {order.currency}</p>
+                      <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                         <span className={cn("text-[9px] font-bold", currentTheme.muted)}>ID: {order.id.substring(0, 12)}</span>
+                         <button className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:underline">
+                           View Details
+                         </button>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  filteredListings.map((listing, idx) => (
                 <motion.div 
                   layout
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -663,7 +827,10 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                           {t.market.edit_listing}
                         </button>
                       ) : (
-                        <button className={cn("w-full py-4 bg-transparent border border-[#2e5bff]/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#2e5bff] hover:bg-[#2e5bff] hover:text-white transition-all flex items-center justify-center gap-2 group/btn")}>
+                        <button 
+                          onClick={() => handleBuyNow(listing)}
+                          className={cn("w-full py-4 bg-transparent border border-[#2e5bff]/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#2e5bff] hover:bg-[#2e5bff] hover:text-white transition-all flex items-center justify-center gap-2 group/btn")}
+                        >
                           {t.market.buy_now}
                           <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
                         </button>
@@ -671,7 +838,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     </div>
                   </div>
                 </motion.div>
-              ))}
+                ))
+              )}
             </AnimatePresence>
 
             {!loading && filteredListings.length === 0 && (
@@ -842,19 +1010,58 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                  />
               </div>
 
-              <div className="space-y-2">
-                 <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.image_url}</label>
-                 <div className="relative">
-                    <Camera size={14} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-50", currentTheme.accent)} />
+               <div className="space-y-4">
+                  <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>
+                    {t.market.form.image_url}
+                  </label>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className={cn(
+                      "w-full h-48 rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center gap-4 cursor-pointer transition-all hover:bg-white/5",
+                      currentTheme.input,
+                      formData.image ? "border-transparent bg-black/40" : "border-white/10"
+                    )}
+                  >
+                    {formData.image ? (
+                      <div className="relative w-full h-full p-2">
+                        <img 
+                          src={formData.image} 
+                          className="w-full h-full object-cover rounded-[24px]" 
+                          alt="Preview" 
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-[24px]">
+                          <Camera className="text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className={cn("p-4 rounded-full bg-white/5", currentTheme.accent)}>
+                          <Camera size={32} />
+                        </div>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", currentTheme.muted)}>
+                          {t.market.form.upload_button}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <div className="relative">
+                    <div className="absolute left-6 top-1/2 -translate-y-1/2 opacity-30 text-[10px] font-black">URL</div>
                     <input 
                        type="url"
                        value={formData.image}
                        onChange={e => setFormData({...formData, image: e.target.value})}
-                       placeholder="https://images.unsplash.com/..."
+                       placeholder="...or paste an external link"
                        className={cn("w-full pl-14 pr-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
                     />
-                 </div>
-              </div>
+                  </div>
+               </div>
 
               <div className="space-y-2">
                  <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.location}</label>

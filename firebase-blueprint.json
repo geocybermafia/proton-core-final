@@ -71,12 +71,32 @@
         "status": { "type": "string" }
       },
       "required": ["id", "title", "price", "sellerId", "category", "country", "city"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Purchase records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "listingId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "itemTitle": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "number" }
+      }
     }
   },
   "firestore": {
     "/listings/{listingId}": {
       "schema": "Listing",
       "description": "Global marketplace listings"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Global purchase records"
     },
     "/users/{userId}": {
       "schema": "UserProfile",
