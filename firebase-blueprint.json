@@ -62,11 +62,15 @@
         "sellerName": { "type": "string" },
         "category": { "type": "string" },
         "location": { "type": "string" },
+        "country": { "type": "string" },
+        "city": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
         "image": { "type": "string" },
         "createdAt": { "type": "number" },
         "status": { "type": "string" }
       },
-      "required": ["id", "title", "price", "sellerId", "category"]
+      "required": ["id", "title", "price", "sellerId", "category", "country", "city"]
     }
   },
   "firestore": {

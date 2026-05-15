@@ -107,6 +107,10 @@ export type Listing = {
   image?: string;
   category: string;
   location: string;
+  country: string;
+  city: string;
+  lat?: number;
+  lng?: number;
   createdAt: number;
   status: 'active' | 'sold';
 };
