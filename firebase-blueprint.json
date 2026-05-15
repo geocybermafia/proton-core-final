@@ -45,9 +45,35 @@
         "completed": { "type": "boolean" },
         "priority": { "type": "string" }
       }
+    },
+    "Listing": {
+      "title": "Listing",
+      "description": "Marketplace item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "titleGe": { "type": "string" },
+        "description": { "type": "string" },
+        "descriptionGe": { "type": "string" },
+        "price": { "type": "number" },
+        "currency": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "category": { "type": "string" },
+        "location": { "type": "string" },
+        "image": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title", "price", "sellerId", "category"]
     }
   },
   "firestore": {
+    "/listings/{listingId}": {
+      "schema": "Listing",
+      "description": "Global marketplace listings"
+    },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "Main user document"

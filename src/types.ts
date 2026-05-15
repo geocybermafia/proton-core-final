@@ -75,7 +75,7 @@ export interface GeminiMetadata {
   latency?: number;
 }
 
-export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation';
+export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation' | 'market';
 
 export type Task = {
   id: string;
@@ -90,4 +90,23 @@ export type Task = {
   dueDate?: number;
   subtasks?: { id: string; content: string; completed: boolean }[];
   recurring?: 'none' | 'daily' | 'weekly' | 'monthly';
+  energyCost?: 'low' | 'medium' | 'high';
+  estimatedTime?: number; // in minutes
+};
+
+export type Listing = {
+  id: string;
+  title: string;
+  titleGe?: string;
+  description: string;
+  descriptionGe?: string;
+  price: number;
+  currency: string;
+  sellerId: string;
+  sellerName: string;
+  image?: string;
+  category: string;
+  location: string;
+  createdAt: number;
+  status: 'active' | 'sold';
 };

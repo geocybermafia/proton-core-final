@@ -22,6 +22,7 @@ import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, del
 import { SettingsView } from './components/SettingsView';
 import CabinetView from './components/CabinetView';
 import { TranslatorView } from './components/TranslatorView';
+import { MarketView } from './components/MarketView';
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -98,6 +99,8 @@ import {
   Plus,
   Trash2,
   Image,
+  ShoppingBag,
+  Info,
   Volume2,
   LayoutDashboard,
   Receipt,
@@ -573,7 +576,7 @@ const PersonaEditor = ({
             onChange={e => setFormData(prev => ({ ...prev, systemInstruction: e.target.value }))}
             onBlur={() => handleBlur('systemInstruction')}
             className={cn(
-              "w-full bg-proton-bg border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors h-40 resize-none text-sm font-mono",
+              "w-full bg-proton-bg border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-colors h-40 min-h-[10rem] resize-y text-sm font-mono",
               errors.systemInstruction ? "border-red-500" : "border-proton-border"
             )}
             placeholder="Define how the AI should behave, its tone, knowledge base, and specific rules..."
@@ -829,7 +832,9 @@ const OrganizerView = ({
     category?: string,
     description?: string,
     dueDate?: number,
-    recurring?: 'none' | 'daily' | 'weekly' | 'monthly'
+    recurring?: 'none' | 'daily' | 'weekly' | 'monthly',
+    energyCost?: 'low' | 'medium' | 'high',
+    estimatedTime?: number
   ) => void,
   onToggleTask: (id: string) => void,
   onDeleteTask: (id: string) => void,
@@ -842,7 +847,10 @@ const OrganizerView = ({
   const [taskDescription, setTaskDescription] = useState('');
   const [taskDueDate, setTaskDueDate] = useState<Date | null>(null);
   const [taskRecurring, setTaskRecurring] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
+  const [taskEnergy, setTaskEnergy] = useState<'low' | 'medium' | 'high'>('medium');
+  const [taskEstTime, setTaskEstTime] = useState<number>(30);
   const [taskPriority, setTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [showAdvancedAdd, setShowAdvancedAdd] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -925,12 +933,16 @@ const OrganizerView = ({
       undefined, 
       taskDescription || undefined, 
       taskDueDate ? taskDueDate.getTime() : undefined,
-      taskRecurring
+      taskRecurring,
+      taskEnergy,
+      taskEstTime
     );
     setNewTaskInput('');
     setTaskDescription('');
     setTaskDueDate(null);
     setTaskRecurring('none');
+    setTaskEnergy('medium');
+    setTaskEstTime(30);
     setTaskPriority('medium');
     setShowAdvancedAdd(false);
   };
@@ -945,9 +957,13 @@ const OrganizerView = ({
         ? true 
         : filterStatus === 'completed' ? task.completed : !task.completed;
       
-      return contentMatch && statusMatch;
+      const energyMatch = energyFilter === 'all'
+        ? true
+        : task.energyCost === energyFilter;
+      
+      return contentMatch && statusMatch && energyMatch;
     });
-  }, [tasks, searchQuery, filterStatus, language]);
+  }, [tasks, searchQuery, filterStatus, language, energyFilter]);
 
   const handleAiSuggest = async () => {
     setIsSuggesting(true);
@@ -1010,13 +1026,34 @@ const OrganizerView = ({
                 <Check size={28} />
              </div>
           </div>
-          <div className={cn("p-8 rounded-[32px] border transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
-             <div>
-                <p className={cn("text-xs font-black uppercase tracking-[0.1em] mb-2", currentTheme.muted)}>{t.productivity_score}</p>
-                <h4 className="text-3xl font-black">{tasks.length > 0 ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0}%</h4>
+          <div className={cn("p-8 rounded-[32px] border transition-all duration-500 flex flex-col justify-center", currentTheme.card)}>
+             <div className="flex justify-between items-center mb-4">
+                <div className="space-y-1">
+                   <p className={cn("text-xs font-black uppercase tracking-[0.1em]", currentTheme.muted)}>{t.daily_budget}</p>
+                   <p className="text-[9px] font-bold opacity-30 uppercase">{language === 'ka' ? 'დარჩენილი საქმეები' : 'Pending tasks by difficulty'}</p>
+                </div>
+                <Zap size={16} className="text-proton-accent" />
              </div>
-             <div className={cn("p-4 rounded-2xl", currentTheme.accent)}>
-                <Activity size={28} />
+             <div className="space-y-3">
+                {([['high', 'text-red-500'], ['medium', 'text-amber-500'], ['low', 'text-blue-400']] as const).map(([lev, color]) => {
+                  const count = tasks.filter(tk => tk.energyCost === lev && !tk.completed).length;
+                  const total = tasks.filter(tk => tk.energyCost === lev).length;
+                  return (
+                    <div key={lev} className="space-y-1">
+                      <div className="flex justify-between text-[10px] font-black uppercase">
+                        <span className={color}>{t[`energy_${lev}` as keyof typeof t]}</span>
+                        <span className="opacity-40">{count} {language === 'ka' ? 'დარჩა' : 'left'}</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${total > 0 ? (count / total) * 100 : 0}%` }}
+                          className={cn("h-full", lev === 'high' ? "bg-red-500" : lev === 'medium' ? "bg-amber-500" : "bg-blue-400")}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
              </div>
           </div>
           <div className={cn("p-8 rounded-[32px] border transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
@@ -1104,14 +1141,51 @@ const OrganizerView = ({
                               />
                            </div>
                            <div className="space-y-6">
-                              <div className="space-y-2">
-                                <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.due_date}</label>
-                                <input 
-                                  type="date"
-                                  onChange={e => setTaskDueDate(e.target.value ? new Date(e.target.value) : null)}
-                                  className={cn("w-full border-2 rounded-2xl px-6 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
-                                />
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.due_date}</label>
+                                  <input 
+                                    type="date"
+                                    onChange={e => setTaskDueDate(e.target.value ? new Date(e.target.value) : null)}
+                                    className={cn("w-full border-2 rounded-2xl px-6 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.estimated_time}</label>
+                                  <div className="flex items-center gap-2">
+                                     <input 
+                                       type="number"
+                                       value={taskEstTime}
+                                       onChange={e => setTaskEstTime(parseInt(e.target.value) || 0)}
+                                       className={cn("w-full border-2 rounded-2xl px-6 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                                     />
+                                     <span className="text-[10px] font-bold opacity-30">MIN</span>
+                                  </div>
+                                </div>
                               </div>
+
+                              <div className="space-y-2">
+                                <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.energy_level}</label>
+                                <div className="flex gap-2 flex-wrap">
+                                   {(['low', 'medium', 'high'] as const).map(lev => (
+                                      <button
+                                        key={lev}
+                                        type="button"
+                                        onClick={() => setTaskEnergy(lev)}
+                                        className={cn(
+                                          "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2",
+                                          taskEnergy === lev 
+                                            ? "bg-proton-accent border-proton-accent text-proton-bg"
+                                            : cn("border-white/10 text-white/40 hover:border-white/30", currentTheme.muted)
+                                        )}
+                                      >
+                                         <Zap size={10} className={taskEnergy === lev ? "text-proton-bg" : (lev === 'high' ? "text-red-500" : lev === 'medium' ? "text-amber-500" : "text-blue-400")} />
+                                         {t[`energy_${lev}` as keyof typeof t]}
+                                      </button>
+                                   ))}
+                                </div>
+                              </div>
+
                               <div className="space-y-2">
                                 <label className={cn("text-[10px] uppercase tracking-[0.2em] block ml-2", currentTheme.label)}>{t.recurring}</label>
                                 <div className="flex gap-2 flex-wrap">
@@ -1157,6 +1231,57 @@ const OrganizerView = ({
                     ))}
                   </div>
                </form>
+
+               <div className="flex flex-col gap-4 py-4 border-y border-white/5 relative z-20">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                     <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+                        <span className={cn("text-[10px] font-black uppercase tracking-widest mr-2 shrink-0 flex items-center gap-2", currentTheme.muted)}>
+                           <Zap size={14} className="text-proton-accent" />
+                           {t.energy_filter}
+                        </span>
+                        {(['all', 'low', 'medium', 'high'] as const).map(eLev => (
+                          <button
+                            key={eLev}
+                            onClick={() => setEnergyFilter(eLev)}
+                            className={cn(
+                              "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border flex items-center gap-2 shrink-0",
+                              energyFilter === eLev 
+                                ? "bg-proton-accent border-proton-accent text-proton-bg shadow-[0_0_15px_rgba(34,211,238,0.4)]"
+                                : cn("border-white/5 text-white/40 hover:border-white/20 hover:bg-white/5")
+                            )}
+                          >
+                            {eLev !== 'all' && <Zap size={10} className={energyFilter === eLev ? "text-proton-bg" : (eLev === 'high' ? "text-red-500" : eLev === 'medium' ? "text-amber-500" : "text-blue-400")} />}
+                            {eLev === 'all' ? (language === 'ka' ? 'ყველა' : 'All') : t[`energy_${eLev}` as keyof typeof t]}
+                          </button>
+                        ))}
+                     </div>
+                     <div className="flex items-center gap-2 px-3 py-1 bg-proton-accent/5 border border-proton-accent/10 rounded-xl">
+                        <Info size={12} className="text-proton-accent opacity-50" />
+                        <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">
+                           {language === 'ka' ? 'ამოარჩიე რამდენად რთული საქმეებისთვის ხარ მზად' : 'Choose how much focus you have right now'}
+                        </p>
+                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+                     {(['all', 'pending', 'completed'] as const).map(status => (
+                        <button
+                          key={status}
+                          onClick={() => setFilterStatus(status)}
+                          className={cn(
+                            "px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border shrink-0",
+                            filterStatus === status 
+                              ? "bg-proton-text text-proton-bg"
+                              : cn("border-white/5 text-white/40 hover:border-white/20 hover:bg-white/5")
+                          )}
+                        >
+                          {status === 'all' ? (language === 'ka' ? 'ყველა ტიპი' : 'All Tasks') : 
+                           status === 'pending' ? (language === 'ka' ? 'შესასრულებელი' : 'To Do') :
+                           (language === 'ka' ? 'შესრულებული' : 'Done')}
+                        </button>
+                     ))}
+                  </div>
+               </div>
 
                <div className="space-y-3">
                   {filteredTasks.length === 0 ? (
@@ -1206,6 +1331,21 @@ const OrganizerView = ({
                                   task.priority === 'high' ? "text-red-500 border-red-500/20 bg-red-500/5" : task.priority === 'medium' ? "text-amber-500 border-amber-500/20 bg-amber-500/5" : "text-blue-400 border-blue-400/20 bg-blue-400/5"
                                 )}>
                                   {t[task.priority]}
+                                </span>
+                              )}
+                              {task.energyCost && (
+                                <span className={cn(
+                                  "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border flex items-center gap-1",
+                                  task.energyCost === 'high' ? "text-red-500 border-red-500/10" : task.energyCost === 'medium' ? "text-amber-500 border-amber-500/10" : "text-blue-400 border-blue-400/10"
+                                )}>
+                                  <Zap size={8} />
+                                  {t[`energy_${task.energyCost}` as keyof typeof t]}
+                                </span>
+                              )}
+                              {task.estimatedTime && (
+                                <span className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1 opacity-40">
+                                  <Clock size={8} />
+                                  {task.estimatedTime}m
                                 </span>
                               )}
                               {task.dueDate && (
@@ -2307,41 +2447,57 @@ const PersonasView = ({
             <AnimatePresence>
                {isEditingInstructions && (
                  <motion.div 
-                   initial={{ opacity: 0, y: -20 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   exit={{ opacity: 0, y: -20 }}
-                   className="absolute inset-x-0 top-0 z-20 p-8 bg-proton-card/95 backdrop-blur shadow-xl border-b border-proton-border space-y-4"
+                   initial={{ height: 0, opacity: 0 }}
+                   animate={{ height: 'auto', opacity: 1 }}
+                   exit={{ height: 0, opacity: 0 }}
+                   className="overflow-hidden mb-6"
                  >
-                    <div className="flex items-center justify-between">
-                       <h4 className="text-[10px] font-black uppercase tracking-widest text-proton-accent">
-                          {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'System Instructions'}
-                       </h4>
-                       <button onClick={() => setIsEditingInstructions(false)} className="text-proton-muted">
-                          <X size={18} />
-                       </button>
-                    </div>
-                    <textarea 
-                      value={tempInstructions}
-                      onChange={(e) => setTempInstructions(e.target.value)}
-                      className="w-full h-48 bg-proton-bg border border-proton-border rounded-2xl p-4 text-xs font-medium focus:ring-1 focus:ring-proton-accent outline-none resize-none custom-scrollbar"
-                    />
-                    <div className="flex justify-end gap-3">
-                       <button 
-                         onClick={() => {
-                           setTempInstructions(selectedPersona.systemInstruction);
-                           setIsEditingInstructions(false);
-                         }}
-                         className="px-6 py-2 rounded-xl text-[10px] font-black uppercase text-proton-muted hover:text-proton-text transition-all"
-                       >
-                         {language === 'ka' ? 'გაუქმება' : 'Cancel'}
-                       </button>
-                       <button 
-                         onClick={handleSaveInstructions}
-                         className="flex items-center gap-2 px-6 py-2 rounded-xl bg-proton-accent text-proton-bg text-[10px] font-black uppercase shadow-lg shadow-proton-accent/20 hover:brightness-110 active:scale-95 transition-all"
-                       >
-                         <Save size={14} />
-                         {language === 'ka' ? 'შენახვა' : 'Save Changes'}
-                       </button>
+                    <div className="p-6 bg-proton-accent/5 rounded-[32px] border border-proton-accent/20 space-y-4 shadow-inner">
+                        <div className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <Zap size={14} className="text-proton-accent animate-pulse" />
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-proton-accent">
+                                 {language === 'ka' ? 'აგენტის „ტვინის“ კონფიგურაცია' : 'Neural Configuration'}
+                              </h4>
+                           </div>
+                           <button onClick={() => setIsEditingInstructions(false)} className="text-proton-muted hover:text-proton-accent transition-colors">
+                              <X size={16} />
+                           </button>
+                        </div>
+                        <div className="relative group">
+                            <textarea 
+                              value={tempInstructions}
+                              onChange={(e) => setTempInstructions(e.target.value)}
+                              className="w-full h-40 bg-proton-bg/50 border border-proton-border rounded-2xl p-4 text-[11px] font-mono leading-relaxed focus:ring-1 focus:ring-proton-accent/50 focus:border-proton-accent/50 outline-none resize-y custom-scrollbar transition-all"
+                              placeholder={language === 'ka' ? 'ჩაწერეთ აგენტის წესები აქ...' : 'Define agent rules and constraints...'}
+                            />
+                            <div className="absolute bottom-3 right-3 opacity-20 group-hover:opacity-100 transition-opacity">
+                                <Edit3 size={12} className="text-proton-muted" />
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center gap-4">
+                           <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight opacity-60">
+                               {language === 'ka' ? 'ცვლილება დაუყოვნებლივ აისახება აგენტის ლოგიკაზე' : 'Changes apply immediately to agent logic'}
+                           </p>
+                           <div className="flex gap-2">
+                              <button 
+                                onClick={() => {
+                                  setTempInstructions(selectedPersona.systemInstruction);
+                                  setIsEditingInstructions(false);
+                                }}
+                                className="px-4 py-2 rounded-xl text-[9px] font-black uppercase text-proton-muted hover:bg-proton-bg transition-all"
+                              >
+                                {language === 'ka' ? 'გაუქმება' : 'Reset'}
+                              </button>
+                              <button 
+                                onClick={handleSaveInstructions}
+                                className="flex items-center gap-2 px-6 py-2 rounded-xl bg-proton-accent text-proton-bg text-[9px] font-black uppercase shadow-lg shadow-proton-accent/20 hover:brightness-110 active:scale-95 transition-all"
+                              >
+                                <Save size={12} />
+                                {language === 'ka' ? 'განახლება' : 'Sync Brain'}
+                              </button>
+                           </div>
+                        </div>
                     </div>
                  </motion.div>
                )}
@@ -3751,7 +3907,9 @@ export default function App() {
     category?: string, 
     description?: string, 
     dueDate?: number,
-    recurring: 'none' | 'daily' | 'weekly' | 'monthly' = 'none'
+    recurring: 'none' | 'daily' | 'weekly' | 'monthly' = 'none',
+    energyCost: 'low' | 'medium' | 'high' = 'medium',
+    estimatedTime: number = 30
   ) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
@@ -3763,6 +3921,8 @@ export default function App() {
       description,
       dueDate,
       recurring,
+      energyCost,
+      estimatedTime,
       timestamp: Date.now()
     };
     setTasks(prev => [...prev, newTask]);
@@ -4037,6 +4197,14 @@ export default function App() {
               )}
             </AnimatePresence>
             <SidebarItem 
+              icon={ShoppingBag} 
+              label={t.sidebar.market} 
+              active={activeView === 'market'} 
+              onClick={() => handleViewChange('market')} 
+              expanded={isSidebarOpen}
+              uiMode={uiMode}
+            />
+            <SidebarItem 
               icon={Image} 
               label={t.sidebar.image} 
               active={activeView === 'image'} 
@@ -4167,6 +4335,7 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/80 backdrop-blur-xl border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
+          { id: 'market', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'დავალებები' : 'Tasks' },
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
@@ -4213,8 +4382,9 @@ export default function App() {
           <nav className="hidden xl:flex items-center justify-center gap-2 md:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
             {[
               { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
-              { id: 'personas', label: t.sidebar.agents, icon: Users },
-              { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
+              {id: 'personas', label: t.sidebar.agents, icon: Users},
+              {id: 'market', label: t.sidebar.market, icon: ShoppingBag},
+              {id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon},
               { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
             ].map((link) => (
               <button
@@ -4361,6 +4531,13 @@ export default function App() {
               )}
               {activeView === 'device' && (
                 <HardwareView language={userProfile.language} />
+              )}
+              {activeView === 'market' && (
+                <MarketView 
+                  language={userProfile.language} 
+                  t={t} 
+                  themeId={theme} 
+                />
               )}
 
               {activeView === 'profile' && (
