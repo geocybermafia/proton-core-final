@@ -137,5 +137,21 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if false; // Only via admin (not implemented here)
     }
+
+    // ======================================================
+    // 5. AI OPTIMIZATION (PILLAR 8)
+    // ======================================================
+    match /shared_specs/{specId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() 
+        && incoming().spec is string && incoming().spec.size() <= 2000
+        && incoming().createdAt == request.time;
+    }
+
+    match /users/{userId}/usage/ai {
+      allow get: if isOwner(userId);
+      allow write: if isOwner(userId)
+        && incoming().lastAiGen == request.time;
+    }
   }
 }

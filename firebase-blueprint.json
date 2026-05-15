@@ -87,9 +87,24 @@
         "status": { "type": "string" },
         "createdAt": { "type": "number" }
       }
+    },
+    "SharedSpec": {
+      "title": "Shared Spec",
+      "description": "Cached AI generated descriptions",
+      "type": "object",
+      "properties": {
+        "spec": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "number" }
+      }
     }
   },
   "firestore": {
+    "/shared_specs/{specId}": {
+      "schema": "SharedSpec",
+      "description": "Global cache for AI specs"
+    },
     "/listings/{listingId}": {
       "schema": "Listing",
       "description": "Global marketplace listings"
@@ -101,6 +116,10 @@
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "Main user document"
+    },
+    "/users/{userId}/usage/{usageId}": {
+      "schema": "object",
+      "description": "User usage tracking (rate limits)"
     },
     "/users/{userId}/workflows/{workflowId}": {
       "schema": "Workflow",

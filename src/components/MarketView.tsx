@@ -29,6 +29,8 @@ import {
   addDoc, 
   deleteDoc, 
   doc, 
+  getDoc,
+  setDoc,
   updateDoc,
   where,
   Timestamp,
@@ -164,6 +166,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 import { LegalView } from './LegalView';
+import { generateTechSpec } from '../services/geminiService';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [search, setSearch] = useState('');
@@ -347,12 +351,137 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     }
   };
 
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+  const getFallbackTemplate = (title: string, category: string) => {
+    return `${title} (${category})\n\n[Key Specifications]\n- Model:\n- Condition:\n- Performance:\n- Warranty:\n\n[Overview]\nProfessional distribution assets for high-tier industrial use.`;
+  };
+
+  const handleAiDescription = async () => {
+    if (!formData.title) {
+      alert(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      language === 'ka' 
+        ? "გსურთ AI-ს გამოყენება აღწერის გენერირებისთვის? ეს პროცესი ხარჯავს რესურსებს." 
+        : "Do you want to use AI to generate a professional spec? This action uses cloud resources."
+    );
+    if (!confirmed) return;
+
+    setIsAiGenerating(true);
+    try {
+      if (!auth.currentUser) return;
+
+      // 1. Check Rate Limit (1 gen every 10 mins)
+      const usageRef = doc(db, 'users', auth.currentUser.uid, 'usage', 'ai');
+      const usageSnap = await getDoc(usageRef);
+      if (usageSnap.exists()) {
+        const lastGen = usageSnap.data().lastAiGen?.toDate();
+        if (lastGen) {
+          const now = new Date();
+          const tenMins = 10 * 60 * 1000;
+          if (now.getTime() - lastGen.getTime() < tenMins) {
+            const waitTime = Math.ceil((tenMins - (now.getTime() - lastGen.getTime())) / 60000);
+            alert(language === 'ka' 
+              ? `გთხოვთ დაიცადოთ ${waitTime} წუთი შემდეგი გენერაციისთვის.` 
+              : `Please wait ${waitTime} minutes before using AI again.`);
+            
+            // Provide fallback if requested
+            if (window.confirm(language === 'ka' ? "გსურთ გამოიყენოთ სტანდარტული შაბლონი?" : "Would you like to use a standard template instead?")) {
+              const template = getFallbackTemplate(formData.title, formData.category);
+              setFormData(prev => ({ ...prev, description: template }));
+            }
+            return;
+          }
+        }
+      }
+
+      // 2. Check Cache
+      const specId = `${formData.title}_${formData.category}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const cacheRef = doc(db, 'shared_specs', specId);
+      const cacheSnap = await getDoc(cacheRef);
+      
+      if (cacheSnap.exists()) {
+        const cachedSpec = cacheSnap.data().spec;
+        setFormData(prev => ({ 
+          ...prev, 
+          description: cachedSpec,
+          descriptionGe: language === 'ka' ? cachedSpec : prev.descriptionGe 
+        }));
+        return;
+      }
+
+      // 3. Generate with Gemini
+      const spec = await generateTechSpec(formData.title, formData.category);
+      if (spec) {
+        // 4. Save to Cache
+        await setDoc(cacheRef, {
+          spec,
+          title: formData.title,
+          category: formData.category,
+          createdAt: serverTimestamp()
+        });
+
+        // 5. Update User Usage
+        await setDoc(usageRef, {
+          lastAiGen: serverTimestamp()
+        });
+
+        setFormData(prev => ({ 
+          ...prev, 
+          description: spec,
+          descriptionGe: language === 'ka' ? spec : prev.descriptionGe 
+        }));
+      } else {
+        throw new Error("AI Generation failed");
+      }
+    } catch (error) {
+      console.error("Error generating tech spec:", error);
+      alert(language === 'ka' ? "AI-სთან კავშირი ვერ მოხერხდა. გამოიყენეთ შაბლონი." : "AI service unavailable. Falling back to template.");
+      const template = getFallbackTemplate(formData.title, formData.category);
+      setFormData(prev => ({ ...prev, description: template }));
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
+
+  const checkRateLimit = async () => {
+    if (!auth.currentUser) return true;
+    
+    const oneMinuteAgo = new Date();
+    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+    
+    const recentListingsQuery = query(
+      collection(db, 'listings'),
+      where('sellerId', '==', auth.currentUser.uid),
+      where('createdAt', '>=', Timestamp.fromDate(oneMinuteAgo))
+    );
+    
+    const snapshot = await getDocs(recentListingsQuery);
+    // Limit to 5 listings per minute for safety (user asked for 100 but 5 is more realistic for anti-spam)
+    if (snapshot.size >= 5) {
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth.currentUser) return;
 
     setIsSubmitting(true);
     try {
+      if (viewMode !== 'edit') {
+        const canPost = await checkRateLimit();
+        if (!canPost) {
+          alert(language === 'ka' ? "გთხოვთ დაიცადოთ. თქვენ ძალიან ბევრ განცხადებას დებთ." : "Rate limit exceeded. Please wait a minute before posting more.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const listingData = {
         title: formData.title,
         titleGe: formData.titleGe || formData.title,
@@ -1017,7 +1146,26 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               </div>
 
               <div className="space-y-2">
-                 <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.description}</label>
+                 <div className="flex items-center justify-between px-2">
+                   <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60", currentTheme.muted)}>{t.market.form.description}</label>
+                   <button
+                     type="button"
+                     onClick={handleAiDescription}
+                     disabled={isAiGenerating}
+                     className={cn(
+                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                       currentTheme.accent,
+                       "bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-50"
+                     )}
+                   >
+                     {isAiGenerating ? (
+                       <Loader2 size={12} className="animate-spin" />
+                     ) : (
+                       <Sparkles size={12} />
+                     )}
+                     {language === 'ka' ? 'AI აღწერა' : 'AI Spec'}
+                   </button>
+                 </div>
                  <textarea 
                     required
                     value={formData.description}

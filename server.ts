@@ -39,15 +39,19 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Production settings
+    // Production settings with Edge Caching orientation
     const distPath = path.join(process.cwd(), "dist");
+    
+    // Cache static assets (JS, CSS, Images) for 1 year
     app.use(express.static(distPath, {
-      maxAge: '0', // Disable static asset caching
-      setHeaders: (res) => {
-        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-      }
+      maxAge: '1y',
+      immutable: true,
+      index: false
     }));
+
+    // Handle SPA routing - no cache for index.html to ensure users get latest version
     app.get("*", (req, res) => {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
