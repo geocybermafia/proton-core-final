@@ -76,7 +76,7 @@ service cloud.firestore {
     }
 
     // ======================================================
-    // 1. PROFILES
+    // 1. PROFILES & USERS
     // ======================================================
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -84,11 +84,19 @@ service cloud.firestore {
         && incoming().uid == userId
         && incoming().email is string;
       allow update: if isOwner(userId)
-        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'language', 'avatar']);
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'language', 'avatar', 'email']);
       
       match /{allSubcollections=**} {
         allow read, write: if isOwner(userId);
       }
+    }
+
+    match /profiles/{userId} {
+      allow get, create, update: if isOwner(userId);
+    }
+
+    match /test/connection {
+      allow get: if true;
     }
 
     // ======================================================

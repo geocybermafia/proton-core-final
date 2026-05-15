@@ -163,6 +163,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+import { LegalView } from './LegalView';
+
 export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -174,7 +176,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit'>('browse');
+  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
+
+  useEffect(() => {
+    document.title = t.market.seo_title;
+  }, [t, language]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
   const [orders, setOrders] = useState<any[]>([]);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
@@ -572,6 +578,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               <p className={cn("font-bold tracking-wide uppercase text-xs opacity-60", currentTheme.muted)}>
                 {viewMode === 'browse' ? t.market.subtitle : 
                  viewMode === 'my-listings' ? t.market.my_listings :
+                 viewMode === 'privacy' ? t.market.legal.privacy_policy :
+                 viewMode === 'terms' ? t.market.legal.terms_of_service :
                  viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
               </p>
               {viewMode === 'my-listings' && (
@@ -650,7 +658,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         )}
       </div>
 
-      {viewMode === 'browse' || viewMode === 'my-listings' ? (
+      {viewMode === 'privacy' || viewMode === 'terms' ? (
+        <LegalView 
+          type={viewMode}
+          language={language}
+          t={t}
+          currentTheme={currentTheme}
+          onBack={() => setViewMode('browse')}
+        />
+      ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Desktop Sidebar */}
           {viewMode === 'browse' && (
@@ -1096,6 +1112,37 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
            </form>
         </motion.div>
       )}
+      {/* Footer */}
+      <footer className="border-t border-white/5 py-12 mt-24">
+        <div className="max-w-[1600px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="flex flex-col items-center md:items-start gap-2">
+              <h3 className="text-white font-black uppercase tracking-tighter text-xl">
+                <span className={currentTheme.accent}>PROTON</span> MARKET
+              </h3>
+              <p className={cn("text-[10px] font-bold uppercase tracking-[0.2em] opacity-40", currentTheme.muted)}>
+                © {new Date().getFullYear()} PROTON INDUSTRIAL SOLUTIONS
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
+              <button 
+                onClick={() => setViewMode('privacy')}
+                className={cn("transition-colors hover:text-white", viewMode === 'privacy' ? "text-white" : "text-white/40")}
+              >
+                {t.market.legal.privacy_policy}
+              </button>
+              <button 
+                onClick={() => setViewMode('terms')}
+                className={cn("transition-colors hover:text-white", viewMode === 'terms' ? "text-white" : "text-white/40")}
+              >
+                {t.market.legal.terms_of_service}
+              </button>
+              <a href="#" className="text-white/40 hover:text-white transition-colors">Support</a>
+              <a href="#" className="text-white/40 hover:text-white transition-colors">Contact</a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </motion.div>
   );
 }

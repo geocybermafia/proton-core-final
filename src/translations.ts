@@ -119,6 +119,7 @@ export const translations = {
     },
     market: {
       title: "Global Marketplace",
+      seo_title: "Proton Global Marketplace - Trade Assets & Services",
       subtitle: "Professional distribution of products and services",
       search_placeholder: "Search for products...",
       all_categories: "All Categories",
@@ -168,6 +169,12 @@ export const translations = {
         business: "Business & Equity",
         automotive: "Automotive",
         artisanal: "Artisanal"
+      },
+      legal: {
+        privacy_policy: "Privacy Policy",
+        terms_of_service: "Terms of Service",
+        privacy_content: "This Privacy Policy describes how your personal information is collected, used, and shared when you visit or make a purchase from Proton Marketplace. We collect Device Information using 'Cookies', 'Log files', and 'Web beacons'. Additionally when you make a purchase or attempt to make a purchase through the Site, we collect certain information from you, including your name, billing address, shipping address, payment information, and email address.",
+        terms_content: "By accessing this marketplace, you agree to be bound by these terms of service, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws. The materials contained in this website are protected by applicable copyright and trademark law. In no event shall Proton or its suppliers be liable for any damages arising out of the use or inability to use the materials on Proton's website."
       }
     },
     personas: {
@@ -524,6 +531,7 @@ export const translations = {
     },
     market: {
       title: "გლობალური მარკეტი",
+      seo_title: "Proton გლობალური მარკეტი - აქტივებითა და სერვისებით ვაჭრობა",
       subtitle: "პროდუქტებისა და სერვისების პროფესიონალური დისტრიბუცია",
       search_placeholder: "მოძებნე პროდუქტი...",
       all_categories: "ყველა კატეგორია",
@@ -573,6 +581,12 @@ export const translations = {
         business: "ბიზნესი და წილები",
         automotive: "ავტომობილები",
         artisanal: "ხელნაკეთი ნივთები"
+      },
+      legal: {
+        privacy_policy: "კონფიდენციალურობის პოლიტიკა",
+        terms_of_service: "მომსახურების პირობები",
+        privacy_content: "წინამდებარე კონფიდენციალურობის პოლიტიკა აღწერს, თუ როგორ ხდება თქვენი პერსონალური ინფორმაციის შეგროვება, გამოყენება და გაზიარება Proton Marketplace-ის მონახულებისას ან მისგან შეძენისას. ჩვენ ვაგროვებთ ინფორმაციას მოწყობილობის შესახებ 'Cookies-ის', 'Log ფაილების' და 'ვებ შუქურების' გამოყენებით. გარდა ამისა, როდესაც თქვენ ყიდულობთ ან ცდილობთ განახორციელოთ შესყიდვა საიტის მეშვეობით, ჩვენ ვაგროვებთ თქვენგან გარკვეულ ინფორმაციას, მათ შორის თქვენს სახელს, ბილინგის მისამართს, მიწოდების მისამართს, გადახდის ინფორმაციას და ელფოსტის მისამართს.",
+        terms_content: "ამ პლატფორმაზე წვდომით თქვენ ეთანხმებით მომსახურების ამ პირობებს, ყველა მოქმედ კანონსა და რეგულაციას და აცნობიერებთ, რომ პასუხისმგებელი ხართ ნებისმიერი მოქმედი ადგილობრივი კანონის დაცვაზე. ამ ვებსაიტზე განთავსებული მასალები დაცულია მოქმედი საავტორო უფლებებისა და სასაქონლო ნიშნების შესახებ კანონმდებლობით. არავითარ შემთხვევაში Proton ან მისი მომწოდებლები არ არიან პასუხისმგებელნი რაიმე სახის ზიანზე, რომელიც გამოწვეულია Proton-ის ვებსაიტზე არსებული მასალების გამოყენებით ან გამოყენების შეუძლებლობით."
       }
     },
     personas: {
