@@ -226,14 +226,17 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     if (!auth.currentUser) return;
     const qOrders = query(
       collection(db, 'orders'), 
-      where('buyerId', '==', auth.currentUser.uid),
-      orderBy('createdAt', 'desc')
+      where('buyerId', '==', auth.currentUser.uid)
     );
     const unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).sort((a: any, b: any) => {
+        const at = a.createdAt?.seconds || 0;
+        const bt = b.createdAt?.seconds || 0;
+        return bt - at;
+      });
       setOrders(data);
     }, (error) => {
       handleFirestoreError(error, OperationType.GET, 'orders');
@@ -502,13 +505,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     
     const recentListingsQuery = query(
       collection(db, 'listings'),
-      where('sellerId', '==', auth.currentUser.uid),
-      where('createdAt', '>=', Timestamp.fromDate(oneMinuteAgo))
+      where('sellerId', '==', auth.currentUser.uid)
     );
     
     const snapshot = await getDocs(recentListingsQuery);
-    // Limit to 5 listings per minute for safety (user asked for 100 but 5 is more realistic for anti-spam)
-    if (snapshot.size >= 5) {
+    const recentCount = snapshot.docs.filter(doc => {
+      const createdAt = doc.data().createdAt;
+      if (!createdAt) return false;
+      const date = createdAt instanceof Timestamp ? createdAt.toDate() : new Date(createdAt);
+      return date >= oneMinuteAgo;
+    }).length;
+
+    // Limit to 5 listings per minute for safety
+    if (recentCount >= 5) {
       return false;
     }
     return true;
