@@ -349,7 +349,20 @@ export const translations = {
       theme_sunset: "Sunset",
       theme_rose: "Rose",
       theme_vibrant: "Nebula",
-      theme_midnight: "Dark"
+      theme_midnight: "Dark",
+      seller_dashboard: "Seller Dashboard",
+      total_sales: "Total Sales",
+      active_listings: "Active Listings",
+      revenue: "Revenue",
+      recent_orders: "Recent Orders",
+      order_id: "ID",
+      buyer: "Buyer",
+      status: "Status",
+      action: "Action",
+      analytics_desc: "Your sales statistics and order management",
+      no_orders: "No orders yet",
+      ship_order: "Ship",
+      complete_order: "Complete"
     },
     settings: {
       title: "Neural Settings",
@@ -761,7 +774,20 @@ export const translations = {
       theme_sunset: "მზის ჩასვლა",
       theme_rose: "ვარდი",
       theme_vibrant: "ნებულა",
-      theme_midnight: "ბნელი"
+      theme_midnight: "ბნელი",
+      seller_dashboard: "გამყიდველის პანელი",
+      total_sales: "ჯამური გაყიდვები",
+      active_listings: "აქტიური განცხადებები",
+      revenue: "შემოსავალი",
+      recent_orders: "ბოლო შეკვეთები",
+      order_id: "ID",
+      buyer: "მყიდველი",
+      status: "სტატუსი",
+      action: "მოქმედება",
+      analytics_desc: "თქვენი გაყიდვების სტატისტიკა და შეკვეთების მართვა",
+      no_orders: "შეკვეთები ჯერ არ გაქვთ",
+      ship_order: "გაგზავნა",
+      complete_order: "დასრულება"
     },
     settings: {
       title: "სისტემის პარამეტრები",
