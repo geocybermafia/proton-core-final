@@ -29,18 +29,31 @@ const config = getDefaultConfig({
 
 function Root() {
   const [mounted, setMounted] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   
   React.useEffect(() => {
-    // Small delay to ensure browser is ready and to avoid hydration flicker
-    const timer = setTimeout(() => {
-      setMounted(true);
-      console.log("App mounted successfully");
-    }, 10);
-    
-    return () => clearTimeout(timer);
+    try {
+      const timer = setTimeout(() => {
+        setMounted(true);
+        console.log("App mounted successfully");
+      }, 50);
+      return () => clearTimeout(timer);
+    } catch (e: any) {
+      setError(e.message);
+    }
   }, []);
 
-  // Show a base layer while mounting to prevent "Black Screen" if something is slow
+  if (error) {
+    return (
+      <div style={{ backgroundColor: '#010409', height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff4444', fontFamily: 'monospace', padding: '20px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Boot Failure</h2>
+          <pre style={{ fontSize: '10px', marginTop: '10px', opacity: 0.8 }}>{error}</pre>
+        </div>
+      </div>
+    );
+  }
+
   if (!mounted) {
     return (
       <div id="loading-overlay" style={{ 
@@ -55,21 +68,19 @@ function Root() {
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
-            width: '40px', 
-            height: '40px', 
+            width: '32px', 
+            height: '32px', 
             border: '2px solid #00f2ff', 
             borderTopColor: 'transparent', 
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
+            margin: '0 auto 16px'
           }} />
           <style>{`
-            @keyframes spin {
-              to { transform: rotate(360deg); }
-            }
+            @keyframes spin { to { transform: rotate(360deg); } }
           `}</style>
-          <div style={{ fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-            Initializing Proton-Core
+          <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.8 }}>
+            Proton Core Loading...
           </div>
         </div>
       </div>

@@ -16,7 +16,9 @@ const firebaseConfig = {
 // Handle potential missing config during build/runtime
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const db = initializeFirestore(app, {}, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, firebaseConfig.firestoreDatabaseId || "(default)");
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
