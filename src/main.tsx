@@ -27,77 +27,51 @@ const config = getDefaultConfig({
   },
 });
 
-function Root() {
-  const [mounted, setMounted] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  
-  React.useEffect(() => {
-    try {
-      const timer = setTimeout(() => {
-        setMounted(true);
-        console.log("App mounted successfully");
-      }, 50);
-      return () => clearTimeout(timer);
-    } catch (e: any) {
-      setError(e.message);
-    }
-  }, []);
-
-  if (error) {
-    return (
-      <div style={{ backgroundColor: '#010409', height: '100vh', width: '100vw', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff4444', fontFamily: 'monospace', padding: '20px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '14px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Boot Failure</h2>
-          <pre style={{ fontSize: '10px', marginTop: '10px', opacity: 0.8 }}>{error}</pre>
-        </div>
-      </div>
-    );
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
   }
 
-  if (!mounted) {
-    return (
-      <div id="loading-overlay" style={{ 
-        backgroundColor: '#010409', 
-        height: '100vh', 
-        width: '100vw',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#00f2ff',
-        fontFamily: 'sans-serif'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '32px', 
-            height: '32px', 
-            border: '2px solid #00f2ff', 
-            borderTopColor: 'transparent', 
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }} />
-          <style>{`
-            @keyframes spin { to { transform: rotate(360deg); } }
-          `}</style>
-          <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.8 }}>
-            Proton Core Loading...
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', backgroundColor: '#010409', color: '#ff4444', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
+          <div style={{ maxWidth: '600px', width: '100%' }}>
+            <h1 style={{ fontSize: '18px', borderBottom: '1px solid #ff4444', paddingBottom: '10px', marginBottom: '10px' }}>Application Error</h1>
+            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', opacity: 0.8 }}>{this.state.error?.toString()}</pre>
+            <p style={{ marginTop: '20px', fontSize: '10px', color: '#888' }}>Check browser console for more details.</p>
+            <button onClick={() => window.location.reload()} style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Reload App</button>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
+    return this.props.children;
   }
+}
 
+function Root() {
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={rainbowDarkTheme({
-          accentColor: '#00f2ff',
-          borderRadius: 'large',
-        })}>
-          <App />
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      <WagmiProvider config={config}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider theme={rainbowDarkTheme({
+            accentColor: '#00f2ff',
+            borderRadius: 'large',
+          })}>
+            <App />
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   );
 }
 

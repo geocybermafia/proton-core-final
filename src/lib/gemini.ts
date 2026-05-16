@@ -64,9 +64,12 @@ let aiInstance: GoogleGenAI | null = null;
 
 function getAi() {
   if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    // Safely access environment variables with fallbacks for both Node and Vite
+    const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
+                   (import.meta as any).env?.VITE_GEMINI_API_KEY;
+                   
     if (!apiKey) {
-      console.warn("GEMINI_API_KEY is missing. AI features will be disabled.");
+      console.warn("AI configuration missing. AI features will be limited.");
       return null;
     }
     aiInstance = new GoogleGenAI({ apiKey });

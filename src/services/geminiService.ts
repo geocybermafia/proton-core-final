@@ -1,9 +1,22 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: any = null;
+
+function getAi() {
+  if (!aiInstance) {
+    const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
+                   (import.meta as any).env?.VITE_GEMINI_API_KEY;
+    if (!apiKey) return null;
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 export async function generateTechSpec(title: string, category: string): Promise<string> {
   try {
+    const ai = getAi();
+    if (!ai) return "";
+    
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Generate a professional, concise "Tech Spec" or detailed description for a marketplace listing.

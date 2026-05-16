@@ -4,7 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI System Hub</title>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8331194876938687" crossorigin="anonymous"></script>
+    <script>
+      // Global fix for 'fetch' property assignment errors
+      (function() {
+        try {
+          if (typeof window !== 'undefined' && window.fetch) {
+            const originalFetch = window.fetch;
+            const descriptor = Object.getOwnPropertyDescriptor(window, 'fetch');
+            if (descriptor && !descriptor.set && descriptor.configurable) {
+              Object.defineProperty(window, 'fetch', {
+                get: function() { return originalFetch; },
+                set: function() { /* Ignore attempts to overwrite fetch */ },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          }
+        } catch (e) {
+          // Fallback or ignore if cannot modify
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
