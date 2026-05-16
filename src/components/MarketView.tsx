@@ -19,7 +19,8 @@ import {
   Camera,
   Loader2,
   Globe,
-  Coins
+  Coins,
+  Sparkles
 } from 'lucide-react';
 import { 
   collection, 
@@ -27,6 +28,7 @@ import {
   query, 
   orderBy, 
   addDoc, 
+  getDocs,
   deleteDoc, 
   doc, 
   getDoc,
@@ -39,6 +41,8 @@ import {
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { Listing } from '../types';
+import { LegalView } from './LegalView';
+import { generateTechSpec } from '../services/geminiService';
 
 interface MarketViewProps {
   language: 'en' | 'ka';
@@ -165,10 +169,6 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-import { LegalView } from './LegalView';
-import { generateTechSpec } from '../services/geminiService';
-import { Sparkles, Loader2 } from 'lucide-react';
-
 export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -189,8 +189,6 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [orders, setOrders] = useState<any[]>([]);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-
   // Form State
   const [formData, setFormData] = useState({
     title: '',
@@ -340,12 +338,61 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     }
   };
 
+  const [isResizing, setIsResizing] = useState(false);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert(language === 'ka' ? "გთხოვთ აირჩიოთ ფოტოს ფაილი." : "Please select an image file.");
+        return;
+      }
+
+      setIsResizing(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, image: reader.result as string }));
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Canvas resizing logic
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimensions
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Get base64 with quality reduction
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          setFormData(prev => ({ ...prev, image: dataUrl }));
+          setIsResizing(false);
+        };
+        img.onerror = () => {
+          setIsResizing(false);
+          alert(language === 'ka' ? "ფოტოს დამუშავებისას მოხდა შეცდომა." : "Error processing image.");
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => {
+        setIsResizing(false);
+        alert(language === 'ka' ? "ფაილის წაკითხვისას მოხდა შეცდომა." : "Error reading file.");
       };
       reader.readAsDataURL(file);
     }
@@ -1178,15 +1225,27 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>
                     {t.market.form.image_url}
                   </label>
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
+                  <label 
                     className={cn(
                       "w-full h-48 rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center gap-4 cursor-pointer transition-all hover:bg-white/5",
                       currentTheme.input,
-                      formData.image ? "border-transparent bg-black/40" : "border-white/10"
+                      (formData.image || isResizing) ? "border-transparent bg-black/40" : "border-white/10"
                     )}
                   >
-                    {formData.image ? (
+                    <input 
+                      type="file" 
+                      onChange={handleFileUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    {isResizing ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className={cn("w-10 h-10 animate-spin", currentTheme.accent)} />
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", currentTheme.muted)}>
+                          {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                        </span>
+                      </div>
+                    ) : formData.image ? (
                       <div className="relative w-full h-full p-2">
                         <img 
                           src={formData.image} 
@@ -1207,14 +1266,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         </span>
                       </>
                     )}
-                  </div>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
+                   </label>
                   <div className="relative">
                     <div className="absolute left-6 top-1/2 -translate-y-1/2 opacity-30 text-[10px] font-black">URL</div>
                     <input 
