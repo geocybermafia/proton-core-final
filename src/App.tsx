@@ -134,17 +134,6 @@ import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan } from './lib/gemini';
 
 
-// Test connection helper
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-testConnection();
 const safeStorage = {
   get: (key: string) => {
     try {
@@ -3710,32 +3699,40 @@ export default function App() {
     if (!user) return;
     
     async function fetchUserStats() {
-      const docRef = doc(db, 'profiles', user!.uid);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        const profile = docSnap.data();
-        setUserStats(prev => ({
-          ...prev,
-          aiTokens: profile.ai_tokens || prev.aiTokens,
-          computeTimeHours: profile.compute_time_hours || prev.computeTimeHours,
-          storageGB: profile.storage_gb || prev.storageGB,
-          node_id: profile.node_id || `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
-        }));
-      } else {
-        // Create default profile in Firestore
-        const defaultProfile = {
-          email: user!.email,
-          ai_tokens: 5000,
-          compute_cycles: 100,
-          storage_gb: 0.5,
-          node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
-        };
-        await setDoc(docRef, defaultProfile).catch(e => handleFirestoreError(e, 'create', docRef.path));
-        setUserStats(prev => ({
-          ...prev,
-          node_id: defaultProfile.node_id
-        }));
+      try {
+        const docRef = doc(db, 'users', user!.uid);
+        // Use default getDoc which handles cache/server automatically and is more resilient
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const profile = docSnap.data();
+          setUserStats(prev => ({
+            ...prev,
+            aiTokens: profile.ai_tokens || prev.aiTokens,
+            computeTimeHours: profile.compute_time_hours || prev.computeTimeHours,
+            storageGB: profile.storage_gb || prev.storageGB,
+            node_id: profile.node_id || `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
+          }));
+        } else {
+          // Create default profile in Firestore
+          const defaultProfile = {
+            email: user!.email,
+            ai_tokens: 5000,
+            compute_cycles: 100,
+            storage_gb: 0.5,
+            node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
+          };
+          await setDoc(docRef, defaultProfile).catch(e => {
+            console.warn("Could not create profile, might be offline or permissions issue", e);
+          });
+          setUserStats(prev => ({
+            ...prev,
+            node_id: defaultProfile.node_id
+          }));
+        }
+      } catch (err) {
+        console.warn("Profile fetch failed, using local fallback", err);
+        // Don't throw to avoid crashing the effect
       }
     }
     

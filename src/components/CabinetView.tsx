@@ -63,8 +63,11 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
   }, []);
 
   if (!profile) return null;
-  const lang = profile.language || 'en';
-  const t = translations[lang].cabinet;
+  const rawLang = profile.language?.toLowerCase() || 'ka';
+  const lang = (rawLang === 'ka' || rawLang === 'georgian') ? 'ka' : 'en';
+  
+  // Safe translation access
+  const t = translations[lang as keyof typeof translations]?.cabinet || translations.en.cabinet;
 
   const handleUpdate = async (field: string, value: any) => {
     if (!auth.currentUser) return;
