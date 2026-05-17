@@ -1,6 +1,7 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAawNki7fRFS_ZQGiAiXh4dmFNOH0OpZDM",
@@ -9,12 +10,17 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "proton-core-ai.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "770674231164",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:770674231164:web:10476d47ce81ea56b486f9",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-WTE6YHHYFC",
   firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)"
 };
 
 // Handle potential missing config during build/runtime
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Initialize Analytics conditionally (only in browser and if supported)
+export const analytics = typeof window !== 'undefined' ? 
+  isSupported().then(yes => yes ? getAnalytics(app) : null).catch(() => null) : 
+  null;
 
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,

@@ -16,7 +16,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 const queryClient = new QueryClient();
 const config = getDefaultConfig({
   appName: 'Secure Hub 7',
-  projectId: 'a5c0b933d69b32c63c1a3b1373510e1a', // Recommended: use your own project ID from https://cloud.walletconnect.com
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'a5c0b933d69b32c63c1a3b1373510e1a', // Recommended: use your own project ID from https://cloud.reown.com
   chains: [mainnet, polygon, optimism, arbitrum, base],
   transports: {
     [mainnet.id]: http(),
