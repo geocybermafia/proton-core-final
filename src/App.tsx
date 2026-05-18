@@ -2399,8 +2399,8 @@ const PersonasView = ({
   const t = translations[language].personas;
 
   return (
-    <div className="flex flex-col lg:flex-row h-full gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <div className="w-full lg:w-80 space-y-6 flex flex-col h-full">
+    <div className="flex flex-col lg:flex-row h-full w-full gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700 overflow-hidden">
+      <div className="w-full lg:w-80 space-y-6 flex flex-col h-full min-h-0">
          <div className="space-y-4">
             <div className="flex items-center justify-between">
                <h2 className="text-3xl font-black tracking-tighter">{t.title}</h2>
@@ -2496,7 +2496,7 @@ const PersonasView = ({
          </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-proton-card rounded-[40px] border border-proton-border shadow-2xl overflow-hidden min-h-[500px]">
+      <div className="flex-1 flex flex-col bg-proton-card rounded-[40px] border border-proton-border shadow-2xl overflow-hidden min-h-0">
          <div className="px-8 py-6 border-b border-proton-border flex items-center justify-between bg-proton-bg/50">
             <div className="flex items-center gap-4">
                <div className="text-3xl">{currentAvatar}</div>
@@ -4161,7 +4161,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      "flex h-full max-h-screen overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
             <AnimatePresence>
@@ -4476,7 +4476,7 @@ export default function App() {
         ))}
       </nav>
 
-      <main className="flex-1 min-w-0 flex flex-col relative overflow-hidden pb-16 md:pb-0 bg-proton-bg">
+      <main className="flex-1 min-w-0 flex flex-col relative overflow-hidden bg-proton-bg h-full">
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[150px] pointer-events-none -mr-40 -mt-40 z-0" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
@@ -4564,7 +4564,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                className="h-full overflow-hidden"
+                className="h-full w-full overflow-hidden"
               >
               {activeView === 'dashboard' && (
                 <DashboardView 
