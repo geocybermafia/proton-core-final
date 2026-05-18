@@ -212,6 +212,19 @@ export const translations = {
       dont_have_account: "New user?",
       already_have_account: "Existing user?"
     },
+    landing: {
+      hero_title: "Master Your Business with AI Intelligence",
+      hero_subtitle: "The all-in-one ecosystem for professional automation, marketplace trading, and strategic project management.",
+      cta_start: "Get Started Free",
+      cta_login: "Sign In",
+      feature_1_title: "AI Council",
+      feature_1_desc: "A group of specialized AI agents working for your business 24/7.",
+      feature_2_title: "Global Market",
+      feature_2_desc: "Trade assets, services and physical products in a high-tech ecosystem.",
+      feature_3_title: "Node Logic",
+      feature_3_desc: "Automate complex workflows with our visual strategy architect.",
+      footer_text: "© 2026 Proton Intelligence Systems. All rights reserved."
+    },
     hardware: {
       title: "Neural Hardware Info",
       description: "Hardware telemetry and sensor diagnostics.",
@@ -636,6 +649,19 @@ export const translations = {
       back_to_login: "უკან ავტორიზაციაზე",
       dont_have_account: "არ გაქვთ ანგარიში?",
       already_have_account: "უკვე გაქვთ ანგარიში?"
+    },
+    landing: {
+      hero_title: "მართე შენი ბიზნესი AI ინტელექტით",
+      hero_subtitle: "ყველაფერი ერთ სივრცეში: ავტომატიზაცია, გლობალური მარკეტი და სტრატეგიული მართვა.",
+      cta_start: "დაიწყე უფასოდ",
+      cta_login: "შესვლა",
+      feature_1_title: "AI საბჭო",
+      feature_1_desc: "სპეციალიზებული AI აგენტები, რომლებიც მუშაობენ შენი ბიზნესისთვის 24/7.",
+      feature_2_title: "გლობალური მარკეტი",
+      feature_2_desc: "ივაჭრე აქტივებით, სერვისებითა და ნივთებით მაღალტექნოლოგიურ გარემოში.",
+      feature_3_title: "ნოდური ლოგიკა",
+      feature_3_desc: "ავტომატიზირება გაუკეთე რთულ პროცესებს ჩვენი ვიზუალური არქიტექტორით.",
+      footer_text: "© 2026 Proton Intelligence Systems. ყველა უფლება დაცულია."
     },
     hardware: {
       title: "აპარატურის ინფო",

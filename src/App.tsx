@@ -21,6 +21,7 @@ import {
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { SettingsView } from './components/SettingsView';
 import CabinetView from './components/CabinetView';
+import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
 import { MarketView } from './components/MarketView';
 import { 
@@ -55,6 +56,7 @@ import {
   Globe, 
   Users, 
   ChevronRight, 
+  ChevronLeft,
   ChevronDown,
   Heart,
   Terminal, 
@@ -596,7 +598,7 @@ const PersonaEditor = ({
   );
 };
 
-const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, language: 'en' | 'ka' }) => {
+const AuthFlow = ({ onGoogleSignIn, onBack, language }: { onGoogleSignIn: () => void, onBack?: () => void, language: 'en' | 'ka' }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [isResetting, setIsResetting] = useState(false);
   const [email, setEmail] = useState('');
@@ -682,7 +684,16 @@ const AuthFlow = ({ onGoogleSignIn, language }: { onGoogleSignIn: () => void, la
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-proton-bg p-4">
+    <div className="min-h-screen flex items-center justify-center bg-proton-bg p-4 relative">
+      {onBack && (
+        <button 
+          onClick={onBack}
+          className="absolute top-8 left-8 p-3 rounded-xl bg-proton-card border border-proton-border text-proton-muted hover:text-proton-text transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+        >
+          <ChevronLeft size={16} />
+          {language === 'ka' ? 'უკან' : 'Back'}
+        </button>
+      )}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -3466,6 +3477,7 @@ export default function App() {
     }
   }, [isCreativeMode, isSafeMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showLogs, setShowLogs] = useState(false);
 
@@ -4138,8 +4150,21 @@ export default function App() {
   }
 
   if (!user) {
+    if (showAuth) {
+      return (
+        <AuthFlow 
+          onGoogleSignIn={handleGoogleSignIn} 
+          onBack={() => setShowAuth(false)}
+          language={userProfile.language} 
+        />
+      );
+    }
     return (
-      <AuthFlow onGoogleSignIn={handleGoogleSignIn} language={userProfile.language} />
+      <LandingPage 
+        onGetStarted={() => setShowAuth(true)} 
+        onLogin={() => setShowAuth(true)} 
+        language={userProfile.language} 
+      />
     );
   }
 
