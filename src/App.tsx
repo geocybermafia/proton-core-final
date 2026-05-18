@@ -1001,8 +1001,7 @@ const OrganizerView = ({
   };
 
   return (
-    <div className={cn("h-full overflow-y-auto custom-scrollbar-minimal transition-colors duration-500", currentTheme.container)}>
-      <div className="max-w-7xl mx-auto px-4 md:px-10 py-6 md:py-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+    <div className={cn("space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
       <div className="flex flex-col xl:flex-row items-center justify-between gap-6">
         <div className="text-center xl:text-left">
           <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">{t.title}</h2>
@@ -1561,7 +1560,6 @@ const OrganizerView = ({
       </>
      )}
     </div>
-  </div>
   );
 };
 
@@ -1592,10 +1590,9 @@ const DashboardView = ({
 
   return (
     <div className={cn(
-      "h-full overflow-y-auto custom-scrollbar-minimal",
+      "space-y-6 animate-in fade-in duration-300 pb-20",
       uiMode === 'creative' ? "creative-mode" : "business-mode"
     )}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 space-y-6 animate-in fade-in duration-300 pb-20">
       <div className={cn(
         "p-8 rounded-[40px] border shadow-2xl relative overflow-hidden transition-all duration-500",
         uiMode === 'creative' 
@@ -1770,7 +1767,6 @@ const DashboardView = ({
         </div>
       )}
     </div>
-  </div>
   );
 };
 
@@ -1799,8 +1795,7 @@ const SystemsView = ({
   ];
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-minimal">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
       <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-4">
         <div className="space-y-3 text-center md:text-left">
           <h1 className="text-4xl md:text-6xl font-black tracking-tighter text-proton-text">
@@ -1863,7 +1858,6 @@ const SystemsView = ({
         </div>
       </div>
     </div>
-  </div>
   );
 };
 
@@ -2679,8 +2673,7 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
       };
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-minimal">
-      <div className="max-w-7xl mx-auto px-4 md:px-12 py-6 md:py-12 space-y-8 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-proton-bg p-4 md:p-12 space-y-8 animate-in fade-in duration-700 overflow-y-auto">
       {/* Simple Header */}
       <div className="border-b border-proton-border pb-6">
         <div className="flex items-center gap-2 text-proton-accent mb-2">
@@ -2743,7 +2736,6 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
         </div>
       </div>
     </div>
-  </div>
   );
 };
 
@@ -2784,8 +2776,7 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin }: { uiMod
   };
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-minimal">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h2 className="text-2xl font-bold tracking-tight">{t.title}</h2>
         <p className="text-proton-muted text-sm mt-1">{t.subtitle}</p>
@@ -2835,7 +2826,6 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin }: { uiMod
         )}
       </div>
     </div>
-  </div>
   );
 };
 
@@ -3124,8 +3114,7 @@ const WorkflowsView = ({
   };
 
   return (
-    <div className="h-full overflow-y-auto custom-scrollbar-minimal">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
         <div>
@@ -3292,7 +3281,6 @@ const WorkflowsView = ({
         )}
       </AnimatePresence>
     </div>
-  </div>
   );
 };
 
@@ -4555,8 +4543,8 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative z-10">
-          <div className="flex-1 min-h-0 h-full">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 relative z-10 custom-scrollbar-minimal">
+          <div className="max-w-7xl mx-auto px-1">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
@@ -4564,7 +4552,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                className="h-full w-full overflow-hidden"
+                className="h-full"
               >
               {activeView === 'dashboard' && (
                 <DashboardView 

@@ -777,9 +777,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="h-full overflow-y-auto custom-scrollbar-minimal px-4 sm:px-6 md:px-10 py-6 md:py-10 space-y-8"
+      className="space-y-8 p-1 px-4 lg:px-0 bg-transparent min-h-screen"
     >
-      <div className="max-w-7xl mx-auto space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex items-center gap-6">
           {viewMode !== 'browse' && (
@@ -1493,7 +1492,6 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           </div>
         )}
       </AnimatePresence>
-      </div>
     </motion.div>
   );
 }
