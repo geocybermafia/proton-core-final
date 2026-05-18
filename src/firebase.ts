@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -18,11 +18,13 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Analytics - DISABLED to avoid "403 Permission Denied" error from Installations API
-// This error occurs because Analytics requires the Firebase Installations service to be fully authorized.
-// Since the app doesn't currently use event logging, we can safely keep this disabled.
 export const analytics = null;
 
+// Initialize Firestore with persistent cache for better offline support
 export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  }),
   experimentalForceLongPolling: true,
 }, firebaseConfig.firestoreDatabaseId);
 

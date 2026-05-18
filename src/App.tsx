@@ -3068,7 +3068,7 @@ const WorkflowsView = ({
     setEditingWorkflow(null);
     if (user && db) {
       const docRef = doc(db, 'users', user.uid, 'workflows', updatedWorkflow.id);
-      await setDoc(docRef, updatedWorkflow).catch(e => handleFirestoreError(e, 'update', docRef.path));
+      await setDoc(docRef, sanitizeForFirestore(updatedWorkflow)).catch(e => handleFirestoreError(e, 'update', docRef.path));
     }
   };
 
@@ -3086,7 +3086,7 @@ const WorkflowsView = ({
     setWorkflows([...workflows, newWorkflow]);
     if (user && db) {
       const docRef = doc(db, 'users', user.uid, 'workflows', newWorkflow.id);
-      await setDoc(docRef, newWorkflow).catch(e => handleFirestoreError(e, 'create', docRef.path));
+      await setDoc(docRef, sanitizeForFirestore(newWorkflow)).catch(e => handleFirestoreError(e, 'create', docRef.path));
     }
   };
 
@@ -3355,6 +3355,24 @@ const ModeToggle = ({ mode, setMode, language }: { mode: 'business' | 'creative'
     </button>
   </div>
 );
+
+const sanitizeForFirestore = (data: any): any => {
+  if (data === null || data === undefined) return null;
+  if (Array.isArray(data)) {
+    return data.map(v => sanitizeForFirestore(v));
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const newObj: any = {};
+    for (const key in data) {
+      const val = data[key];
+      if (val !== undefined) {
+        newObj[key] = sanitizeForFirestore(val);
+      }
+    }
+    return newObj;
+  }
+  return data;
+};
 
 export default function App() {
 
@@ -3751,7 +3769,7 @@ export default function App() {
     
     // Unified Profile Listener
     const profileRef = doc(db, 'users', user.uid);
-    const unsubscribe = onSnapshot(profileRef, (snap) => {
+    const unsubscribe = onSnapshot(profileRef, { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const data = snap.data() as Partial<UserProfile>;
         setUserProfile(prev => {
@@ -3765,7 +3783,14 @@ export default function App() {
           };
         });
       }
-    }, (err) => handleFirestoreError(err, 'get', profileRef.path));
+    }, (err) => {
+      // Don't log "offline" errors as critical failures
+      if (err.code === 'unavailable' || err.message.includes('offline')) {
+        console.warn("Firestore profile listener is offline, using cache", err.message);
+        return;
+      }
+      handleFirestoreError(err, 'get', profileRef.path);
+    });
 
     return () => unsubscribe();
   }, [user]);
@@ -3776,7 +3801,7 @@ export default function App() {
     async function fetchUserStats() {
       try {
         const docRef = doc(db, 'users', user!.uid);
-        // Use default getDoc which handles cache/server automatically and is more resilient
+        // Try to get from cache first if possible, otherwise use normal getDoc
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
@@ -3795,19 +3820,25 @@ export default function App() {
             ai_tokens: 5000,
             compute_cycles: 100,
             storage_gb: 0.5,
-            node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`
+            node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`,
+            language: userProfile.language
           };
-          await setDoc(docRef, defaultProfile).catch(e => {
-            console.warn("Could not create profile, might be offline or permissions issue", e);
+          await setDoc(docRef, sanitizeForFirestore(defaultProfile)).catch(e => {
+            if (e.code !== 'unavailable') {
+              console.warn("Could not create profile, might be offline or permissions issue", e);
+            }
           });
           setUserStats(prev => ({
             ...prev,
             node_id: defaultProfile.node_id
           }));
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err.code === 'unavailable' || err.message?.includes('offline')) {
+          // Silent failure for offline
+          return;
+        }
         console.warn("Profile fetch failed, using local fallback", err);
-        // Don't throw to avoid crashing the effect
       }
     }
     
@@ -3841,6 +3872,10 @@ export default function App() {
         }, { merge: true }).catch(err => handleFirestoreError(err, 'write', statsRef.path));
       }
     }, (err) => {
+      if (err.code === 'unavailable' || err.message.includes('offline')) {
+        console.warn("Firestore stats listener is offline", err.message);
+        return;
+      }
       handleFirestoreError(err, 'get', statsRef.path);
     });
     return () => unsubscribe();
@@ -4000,7 +4035,7 @@ export default function App() {
     setTasks(prev => [...prev, newTask]);
     if (user) {
       const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
-      trackFirestore(setDoc(docRef, newTask), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
+      trackFirestore(setDoc(docRef, sanitizeForFirestore(newTask)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
     }
   };
 
@@ -4010,7 +4045,7 @@ export default function App() {
         const updated = { ...t, ...updates };
         if (user) {
           const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          trackFirestore(setDoc(docRef, updated), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
+          trackFirestore(setDoc(docRef, sanitizeForFirestore(updated)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
         }
         return updated;
       }
@@ -4024,7 +4059,7 @@ export default function App() {
         const updated = { ...t, completed: !t.completed };
         if (user) {
           const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          trackFirestore(setDoc(docRef, updated), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
+          trackFirestore(setDoc(docRef, sanitizeForFirestore(updated)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
         }
         return updated;
       }

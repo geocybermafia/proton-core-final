@@ -1,5 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+
+// Suppress Lit development mode warnings
+(globalThis as any).litDisableBundleAnalyzer = true;
+(globalThis as any).litDevMode = false;
+
 import App from './App'
 import './index.css'
 
