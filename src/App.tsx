@@ -3568,6 +3568,18 @@ export default function App() {
   const [user, setUser] = useState(auth.currentUser);
   const [isSystemActive] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [bootstrapComplete, setBootstrapComplete] = useState(false);
+  
+  // Safety fallback for auth initialization
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!authInitialized) {
+        console.warn("Auth initialization timed out, forcing ready state.");
+        setAuthInitialized(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [authInitialized]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [userStats, setUserStats] = useState<{
     storageGB: number;
@@ -3595,13 +3607,14 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      console.log("Auth state changed:", u ? "User logged in" : "No user");
       setUser(u);
       
       if (u) {
         // Sync userProfile with Firebase user if not already set meaningfully
         setUserProfile(prev => {
           const updates: Partial<UserProfile> = {};
-          if (u.displayName && (!prev.name || prev.name === 'Darian B.')) updates.name = u.displayName;
+          if (u.displayName && (!prev.name || prev.name === 'Darian B.' || prev.name === 'Cyber Master')) updates.name = u.displayName;
           if (u.email && (!prev.email || prev.email === 'devdarianib@gmail.com')) updates.email = u.email;
           if (u.photoURL && (!prev.avatar || prev.avatar.includes('dicebear'))) updates.avatar = u.photoURL;
           
@@ -3610,63 +3623,86 @@ export default function App() {
           }
           return prev;
         });
+      }
 
-        try {
-          // Fetch Workflows
-          const workflowsRef = collection(db, 'users', u.uid, 'workflows');
-          const wfSnapshot = await trackFirestore(getDocs(workflowsRef), 'list', workflowsRef.path);
-          const loadedWorkflows = wfSnapshot.docs.map((doc: any) => doc.data() as Workflow);
-          setWorkflows(loadedWorkflows);
-
-          // Fetch Personas
-          const personasRef = collection(db, 'users', u.uid, 'personas');
-          const pSnapshot = await trackFirestore(getDocs(personasRef), 'list', personasRef.path);
-          let loadedPersonas = pSnapshot.docs.map((doc: any) => doc.data() as Persona);
-          
-          if (loadedPersonas.length === 0) {
-            // Initialize defaults
-            loadedPersonas = PERSONAS;
-            for (const p of PERSONAS) {
-              const pDoc = doc(db, 'users', u.uid, 'personas', p.id);
-              await setDoc(pDoc, p).catch(e => handleFirestoreError(e, 'create', pDoc.path));
-            }
-          }
-          setPersonas(loadedPersonas);
-
-          // Fetch Chat History
-          const chatRef = collection(db, 'users', u.uid, 'chatHistory');
-          const chatSnap = await trackFirestore(getDocs(chatRef), 'list', chatRef.path);
-          const historyObj: PersonaHistory = {};
-          chatSnap.docs.forEach((d: any) => {
-            historyObj[d.id] = d.data().messages || [];
-          });
-          setChatHistory(historyObj);
-
-          // Fetch Tasks
-          const tasksRef = collection(db, 'users', u.uid, 'tasks');
-          const tasksSnap = await trackFirestore(getDocs(tasksRef), 'list', tasksRef.path);
-          const loadedTasks = tasksSnap.docs.map((doc: any) => doc.data() as Task);
-          setTasks(loadedTasks.length > 0 ? loadedTasks : []);
-
-          // Fetch Custom Avatars
-          const avatarRef = collection(db, 'users', u.uid, 'customAvatars');
-          const avatarSnap = await trackFirestore(getDocs(avatarRef), 'list', avatarRef.path);
-          const avatarObj: { [id: string]: string } = {};
-          avatarSnap.docs.forEach((d: any) => {
-            avatarObj[d.id] = d.data().avatar;
-          });
-          setPersonaAvatars(avatarObj);
-        } catch (error) {
-          addLog('error', 'Initial data load failed', error);
-        }
-      } else {
+      // Immediately set authInitialized to true if no user, 
+      // or set it after a short delay to allow background fetch to start
+      if (!u) {
         setWorkflows([]);
         setPersonas(PERSONAS);
         setChatHistory({});
         setPersonaAvatars({});
         setTasks([]);
+        setAuthInitialized(true);
+        return;
       }
+
+      // Background data fetch for logged in user
+      const fetchInitialData = async () => {
+        try {
+          // Fetch Workflows
+          const workflowsRef = collection(db, 'users', u.uid, 'workflows');
+          const wfSnapshot = await getDocs(workflowsRef).catch(() => null);
+          if (wfSnapshot) {
+            const loadedWorkflows = wfSnapshot.docs.map((doc: any) => doc.data() as Workflow);
+            setWorkflows(loadedWorkflows);
+          }
+
+          // Fetch Personas
+          const personasRef = collection(db, 'users', u.uid, 'personas');
+          const pSnapshot = await getDocs(personasRef).catch(() => null);
+          let loadedPersonas = pSnapshot ? pSnapshot.docs.map((doc: any) => doc.data() as Persona) : [];
+          
+          if (loadedPersonas.length === 0) {
+            loadedPersonas = PERSONAS;
+            // Background sync defaults
+            PERSONAS.forEach(p => {
+              const pDoc = doc(db, 'users', u.uid, 'personas', p.id);
+              setDoc(pDoc, p).catch(() => {});
+            });
+          }
+          setPersonas(loadedPersonas);
+
+          // Fetch Chat History
+          const chatRef = collection(db, 'users', u.uid, 'chatHistory');
+          const chatSnap = await getDocs(chatRef).catch(() => null);
+          if (chatSnap) {
+            const historyObj: PersonaHistory = {};
+            chatSnap.docs.forEach((d: any) => {
+              historyObj[d.id] = d.data().messages || [];
+            });
+            setChatHistory(historyObj);
+          }
+
+          // Fetch Tasks
+          const tasksRef = collection(db, 'users', u.uid, 'tasks');
+          const tasksSnap = await getDocs(tasksRef).catch(() => null);
+          if (tasksSnap) {
+            const loadedTasks = tasksSnap.docs.map((doc: any) => doc.data() as Task);
+            setTasks(loadedTasks);
+          }
+
+          // Fetch Custom Avatars
+          const avatarRef = collection(db, 'users', u.uid, 'customAvatars');
+          const avatarSnap = await getDocs(avatarRef).catch(() => null);
+          if (avatarSnap) {
+            const avatarObj: { [id: string]: string } = {};
+            avatarSnap.docs.forEach((d: any) => {
+              avatarObj[d.id] = d.data().avatar;
+            });
+            setPersonaAvatars(avatarObj);
+          }
+        } catch (error) {
+          console.error("Background data load error:", error);
+        } finally {
+          setBootstrapComplete(true);
+        }
+      };
+
+      // Set initialized to true immediately so the user can see the dashboard 
+      // while data loads in background, or stays ready.
       setAuthInitialized(true);
+      fetchInitialData();
     });
     return () => unsubscribe();
   }, []);

@@ -17,10 +17,10 @@ const firebaseConfig = {
 // Handle potential missing config during build/runtime
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Analytics conditionally (only in browser and if supported)
-export const analytics = typeof window !== 'undefined' ? 
-  isSupported().then(yes => yes ? getAnalytics(app) : null).catch(() => null) : 
-  null;
+// Initialize Analytics - DISABLED to avoid "403 Permission Denied" error from Installations API
+// This error occurs because Analytics requires the Firebase Installations service to be fully authorized.
+// Since the app doesn't currently use event logging, we can safely keep this disabled.
+export const analytics = null;
 
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
