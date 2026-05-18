@@ -103,7 +103,8 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
   const isUrl = (str: string) => str.startsWith('http') || str.startsWith('data:image');
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 max-w-7xl mx-auto">
+    <div className="h-full overflow-y-auto custom-scrollbar-minimal px-4 sm:px-6 md:px-10 py-6 md:py-10">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 max-w-7xl mx-auto">
       {/* 1. COMPACT HEADER */}
       <section className="relative overflow-hidden group">
          <div className="absolute inset-0 bg-proton-card border border-proton-border rounded-2xl shadow-xl transition-all duration-500 group-hover:border-proton-accent/30" />
@@ -460,6 +461,7 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
                </div>
             </div>
          </section>
+      </div>
       </div>
     </div>
   );

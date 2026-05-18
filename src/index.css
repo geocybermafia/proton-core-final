@@ -141,6 +141,10 @@
   background-attachment: fixed;
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 @layer base {
   body {
     @apply text-proton-text antialiased transition-colors duration-500;
@@ -148,6 +152,7 @@
     background-image: var(--proton-bg-image);
     background-attachment: fixed;
     margin: 0;
+    overflow: hidden;
   }
 }
 
