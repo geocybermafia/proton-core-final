@@ -69,31 +69,55 @@ const MARKET_THEMES: Record<string, { card: string; input: string; accent: strin
   },
   titanium: {
     card: "bg-[#141414] border-white/10 shadow-2xl",
-    input: "bg-[#0a0a0a] border-white/10 focus:border-[#2e5bff]/60",
-    accent: "text-[#2e5bff]",
-    accentBg: "bg-[#2e5bff]",
+    input: "bg-[#0a0a0a] border-white/10 focus:border-slate-400",
+    accent: "text-slate-300",
+    accentBg: "bg-slate-600",
     border: "border-white/10",
     muted: "text-[#a0a0a0]"
   },
+  forest: {
+    card: "bg-[#022c22]/80 border-emerald-500/20 backdrop-blur-xl shadow-2xl shadow-emerald-900/20",
+    input: "bg-black/40 border-emerald-500/20 focus:border-emerald-500/50",
+    accent: "text-emerald-400",
+    accentBg: "bg-emerald-600",
+    border: "border-emerald-500/20",
+    muted: "text-emerald-200/50"
+  },
+  sunset: {
+    card: "bg-[#431407]/80 border-orange-500/20 backdrop-blur-xl shadow-2xl shadow-orange-900/20",
+    input: "bg-black/40 border-orange-500/20 focus:border-orange-500/50",
+    accent: "text-orange-400",
+    accentBg: "bg-orange-600",
+    border: "border-orange-500/20",
+    muted: "text-orange-200/50"
+  },
+  rose: {
+    card: "bg-[#2d0611]/80 border-rose-500/20 backdrop-blur-xl shadow-2xl shadow-rose-900/20",
+    input: "bg-black/40 border-rose-500/20 focus:border-rose-500/50",
+    accent: "text-rose-400",
+    accentBg: "bg-rose-600",
+    border: "border-rose-500/20",
+    muted: "text-rose-200/50"
+  },
   vibrant: {
-    card: "bg-[#141414] border-[#2e5bff]/20 shadow-2xl shadow-[#2e5bff]/5",
-    input: "bg-[#0a0a0a] border-[#2e5bff]/20 focus:border-[#2e5bff]/50",
-    accent: "text-[#2e5bff]",
-    accentBg: "bg-[#2e5bff]",
-    border: "border-[#2e5bff]/20",
-    muted: "text-[#a0a0a0]"
+    card: "bg-[#1e1b4b]/80 border-purple-500/20 backdrop-blur-xl shadow-2xl shadow-purple-900/20",
+    input: "bg-black/40 border-purple-500/20 focus:border-purple-500/50",
+    accent: "text-purple-400",
+    accentBg: "bg-purple-600",
+    border: "border-purple-500/20",
+    muted: "text-purple-200/50"
   },
   midnight: {
-    card: "bg-[#111111] border-white/5 shadow-2xl",
-    input: "bg-[#080808] border-white/5 focus:border-[#2e5bff]/50",
-    accent: "text-[#2e5bff]",
-    accentBg: "bg-[#2e5bff]",
+    card: "bg-[#0a0a0a] border-white/5 shadow-2xl",
+    input: "bg-black border-white/10 focus:border-white/30",
+    accent: "text-white",
+    accentBg: "bg-zinc-800",
     border: "border-white/5",
-    muted: "text-[#a0a0a0]"
+    muted: "text-zinc-500"
   },
   industrial: {
     card: "bg-[#0d0d0d] border-white/10 shadow-2xl",
-    input: "bg-[#080808] border-white/10 focus:border-[#2e5bff]/50",
+    input: "bg-[#080808] border-white/10 focus:border-[#3b82f6]/50",
     accent: "text-[#3b82f6]",
     accentBg: "bg-[#3b82f6]",
     border: "border-white/10",
@@ -181,6 +205,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
+  const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   useEffect(() => {
     document.title = t.market.seo_title;
@@ -316,28 +342,36 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const handleBuyNow = async (listing: Listing) => {
     if (!auth.currentUser) return;
     if (listing.sellerId === auth.currentUser.uid) {
-      alert("You cannot buy your own item.");
+      alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
       return;
     }
+    setCheckoutItem(listing);
+  };
 
-    if (window.confirm(`${t.market.buy_now}?`)) {
-      try {
-        await addDoc(collection(db, 'orders'), {
-          listingId: listing.id,
-          buyerId: auth.currentUser.uid,
-          sellerId: listing.sellerId,
-          amount: listing.price,
-          currency: listing.currency || 'USD',
-          itemTitle: listing.title,
-          status: 'completed',
-          createdAt: serverTimestamp()
-        });
-        alert(language === 'ka' ? "შეკვეთა გაფორმდა!" : "Order placed successfully!");
-        setViewMode('my-listings');
-        setProfileSubMode('buying');
-      } catch (error) {
-        console.error("Error creating order:", error);
-      }
+  const processPurchase = async () => {
+    if (!auth.currentUser || !checkoutItem) return;
+
+    setIsCheckingOut(true);
+    try {
+      await addDoc(collection(db, 'orders'), {
+        listingId: checkoutItem.id,
+        buyerId: auth.currentUser.uid,
+        sellerId: checkoutItem.sellerId,
+        amount: checkoutItem.price,
+        currency: checkoutItem.currency || 'USD',
+        itemTitle: checkoutItem.title,
+        status: 'completed',
+        createdAt: serverTimestamp()
+      });
+      
+      setCheckoutItem(null);
+      setViewMode('my-listings');
+      setProfileSubMode('buying');
+    } catch (error) {
+      console.error("Error creating order:", error);
+      alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.");
+    } finally {
+      setIsCheckingOut(false);
     }
   };
 
@@ -743,7 +777,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8 p-1 px-4 lg:px-0 bg-[#0a0a0a] min-h-screen"
+      className="space-y-8 p-1 px-4 lg:px-0 bg-transparent min-h-screen"
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex items-center gap-6">
@@ -928,12 +962,13 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     "border-white/5 hover:border-white/20"
                   )}
                 >
-                  <div className="h-48 bg-[#0a0a0a] overflow-hidden relative">
+                  <div className="h-48 bg-black/40 overflow-hidden relative">
                     {listing.image ? (
-                      <img 
+                      <motion.img 
                         src={listing.image} 
                         alt={listing.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-700"
+                        whileHover={{ scale: 1.1 }}
                         referrerPolicy="no-referrer"
                       />
                     ) : (
@@ -941,8 +976,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         <ShoppingBag size={48} className={cn("opacity-20", currentTheme.accent)} />
                       </div>
                     )}
-                    <div className="absolute top-4 left-4">
-                      <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2">
+                    <div className="absolute top-4 left-4 z-10">
+                      <div className="px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2">
                         <Tag size={10} className={currentTheme.accent} />
                         <span className="text-[10px] font-black text-white uppercase tracking-widest">
                           {t.market.categories[listing.category as keyof typeof t.market.categories]}
@@ -950,7 +985,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       </div>
                     </div>
                     {listing.sellerId === auth.currentUser?.uid && (
-                      <div className="absolute top-4 right-4 flex gap-2">
+                      <div className="absolute top-4 right-4 flex gap-2 z-10">
                         <button 
                           onClick={() => startEdit(listing)}
                           className={cn("p-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-[#2e5bff] hover:text-white")}
@@ -967,54 +1002,53 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     )}
                   </div>
 
-                  <div className="p-6 flex-1 flex flex-col">
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className={cn("text-lg font-black tracking-tight leading-tight transition-colors text-white group-hover:text-[#2e5bff]")}>
+                  <div className="p-6 flex-1 flex flex-col relative overflow-hidden">
+                    {/* Theme Decoration */}
+                    <div className={cn("absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20", currentTheme.accent.replace('text-', 'bg-'))} />
+                    
+                    <div className="flex justify-between items-start mb-2 relative">
+                      <h4 className={cn("text-lg font-black tracking-tight leading-tight transition-colors text-white group-hover:text-proton-accent")}>
                         {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                       </h4>
                     </div>
-                    <p className={cn("text-xs font-bold leading-relaxed mb-6 line-clamp-2", currentTheme.muted)}>
+                    <p className={cn("text-xs font-bold leading-relaxed mb-6 line-clamp-2 relative", currentTheme.muted)}>
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
-                    <div className="mt-auto space-y-4">
-                      <div className="flex items-center justify-between">
+                    <div className="mt-auto space-y-4 relative">
+                      <div className="flex items-center justify-between py-4 border-y border-white/5">
                         <div className="flex flex-col">
                           <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-50", currentTheme.muted)}>{t.market.price}</span>
-                          <span className="text-xl font-black text-white">
-                            {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 2 })} {displayCurrency}
+                          <span className="text-xl font-black text-white flex items-center gap-1">
+                            {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            <span className="text-[10px] opacity-60 ml-0.5">{displayCurrency}</span>
                           </span>
-                          {listing.currency !== displayCurrency && (
-                            <span className={cn("text-[9px] font-bold opacity-40 italic", currentTheme.muted)}>
-                              Original: {listing.price} {listing.currency}
-                            </span>
-                          )}
                         </div>
                         <div className="flex flex-col items-end">
                           <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-50", currentTheme.muted)}>{t.market.location}</span>
-                          <span className="text-[10px] font-bold text-white flex items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-white flex items-center gap-1.5 opacity-80">
                             <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-                            <span className="uppercase tracking-tighter opacity-70">{listing.country}</span>
+                            <span className="uppercase tracking-tighter">{listing.country}</span>
                             <span className="w-1 h-1 rounded-full bg-white/20" />
                             {listing.city}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+                      <div className="flex items-center gap-3">
                         <div className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-xs", currentTheme.accent)}>
                           {listing.sellerName.substring(0, 2).toUpperCase()}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[11px] font-black uppercase text-white tracking-wide">{listing.sellerName}</span>
-                            <ShieldCheck size={12} className="text-[#2e5bff]" />
+                            <ShieldCheck size={12} className={currentTheme.accent} />
                           </div>
                           <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={8} className="fill-[#2e5bff] text-[#2e5bff]" />)}
+                            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={8} className={cn("fill-current", currentTheme.accent)} />)}
                           </div>
                         </div>
-                        <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-[#2e5bff] hover:border-[#2e5bff]/30 transition-all">
+                        <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-proton-accent hover:border-proton-accent/30 transition-all">
                           <MessageCircle size={18} />
                         </button>
                       </div>
@@ -1352,6 +1386,112 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           </div>
         </div>
       </footer>
+
+      <AnimatePresence>
+        {checkoutItem && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isCheckingOut && setCheckoutItem(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 100, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.95 }}
+              className={cn(
+                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden",
+                currentTheme.card
+              )}
+            >
+              <div className="p-8 sm:p-10 space-y-8">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-black uppercase tracking-tight text-white">
+                    {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
+                  </h3>
+                  <button 
+                    onClick={() => setCheckoutItem(null)}
+                    disabled={isCheckingOut}
+                    className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors disabled:opacity-50"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="bg-white/5 rounded-[32px] p-6 border border-white/5 flex items-center gap-6">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                    {checkoutItem.image ? (
+                      <img src={checkoutItem.image} alt={checkoutItem.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ShoppingBag size={24} className={currentTheme.accent} />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className={cn("text-[9px] font-black uppercase tracking-widest opacity-50 mb-1", currentTheme.muted)}>
+                      {t.market.categories[checkoutItem.category as keyof typeof t.market.categories]}
+                    </p>
+                    <h4 className="text-base font-bold text-white uppercase tracking-tight line-clamp-1">{checkoutItem.title}</h4>
+                    <p className="text-xl font-black text-white mt-1">
+                      {convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                    <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 mb-2", currentTheme.muted)}>Seller</p>
+                    <div className="flex items-center gap-2">
+                       <ShieldCheck size={14} className={currentTheme.accent} />
+                       <span className="text-[11px] font-black text-white uppercase">{checkoutItem.sellerName}</span>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                    <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 mb-2", currentTheme.muted)}>Location</p>
+                    <div className="flex items-center gap-2">
+                       <MapPin size={12} className={currentTheme.accent} />
+                       <span className="text-[11px] font-black text-white uppercase">{checkoutItem.city}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 space-y-4">
+                  <p className={cn("text-[10px] font-bold text-center px-8 leading-relaxed", currentTheme.muted)}>
+                    {language === 'ka' 
+                      ? 'ღილაკზე დაჭერით თქვენ ეთანხმებით მომსახურების პირობებს და კონფიდენციალურობის პოლიტიკას.'
+                      : 'By clicking complete, you agree to the Terms of Service and data processing policies.'}
+                  </p>
+                  
+                  <button 
+                    onClick={processPurchase}
+                    disabled={isCheckingOut}
+                    className={cn(
+                      "w-full py-6 rounded-3xl text-[12px] font-black uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group",
+                      currentTheme.accentBg, "text-white hover:brightness-110 active:scale-95 disabled:opacity-70 disabled:active:scale-100"
+                    )}
+                  >
+                    {isCheckingOut ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={20} />
+                        {language === 'ka' ? 'დადასტურება' : 'Confirm & Buy'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -87,6 +87,7 @@ export type Task = {
   category?: string;
   timestamp?: number;
   description?: string;
+  descriptionGe?: string;
   dueDate?: number;
   subtasks?: { id: string; content: string; completed: boolean }[];
   recurring?: 'none' | 'daily' | 'weekly' | 'monthly';

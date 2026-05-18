@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { UserProfile, Theme } from '../types';
-import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment, collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -16,11 +16,11 @@ interface CabinetViewProps {
 
 const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: string }[] = [
   { id: 'light', label: 'Light', icon: Sun, color: 'bg-slate-200', bg: 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-800' },
-  { id: 'titanium', label: 'Titanium', icon: Circle, color: 'bg-sky-400', bg: 'bg-gradient-to-br from-slate-700 to-slate-900 border-slate-500' },
+  { id: 'titanium', label: 'Titanium', icon: Circle, color: 'bg-slate-400', bg: 'bg-gradient-to-br from-slate-400 to-slate-600 border-slate-300' },
   { id: 'proton', label: 'Cyber', icon: Zap, color: 'bg-cyan-400', bg: 'bg-[radial-gradient(circle_at_50%_50%,#0d1117_0%,#010409_100%)] border-cyan-500/20' },
-  { id: 'forest', label: 'Forest', icon: Layers, color: 'bg-emerald-500', bg: 'bg-gradient-to-br from-emerald-900 via-emerald-950 to-black border-emerald-500/20' },
-  { id: 'sunset', label: 'Sunset', icon: Sparkles, color: 'bg-orange-400', bg: 'bg-gradient-to-br from-orange-900 via-red-950 to-black border-orange-500/20' },
-  { id: 'rose', label: 'Rose', icon: Sparkles, color: 'bg-rose-500', bg: 'bg-gradient-to-br from-rose-900 via-rose-950 to-black border-rose-500/20' },
+  { id: 'forest', label: 'Forest', icon: Trees, color: 'bg-emerald-500', bg: 'bg-gradient-to-br from-emerald-900 via-emerald-950 to-black border-emerald-500/20' },
+  { id: 'sunset', label: 'Sunset', icon: Sunrise, color: 'bg-orange-400', bg: 'bg-gradient-to-br from-orange-600 via-red-950 to-black border-orange-500/20' },
+  { id: 'rose', label: 'Rose', icon: Heart, color: 'bg-rose-500', bg: 'bg-gradient-to-br from-rose-600 via-rose-950 to-black border-rose-500/20' },
   { id: 'vibrant', label: 'Nebula', icon: Sparkles, color: 'bg-purple-500', bg: 'bg-gradient-to-br from-indigo-900 via-purple-950 to-black border-purple-500/20' },
   { id: 'midnight', label: 'Dark', icon: Moon, color: 'bg-slate-900', bg: 'bg-gradient-to-br from-neutral-900 to-black border-neutral-800' },
 ];

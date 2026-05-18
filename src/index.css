@@ -36,13 +36,13 @@
   --proton-text: #0f172a;
   --proton-muted: #64748b;
   --proton-on-accent: #ffffff;
-  --proton-bg-image: radial-gradient(at top left, #f1f5f9, #e2e8f0), radial-gradient(at bottom right, #f8fafc, #ffffff);
-  --proton-bg-size: auto;
+  --proton-bg-image: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0%, transparent 50%), radial-gradient(at 100% 0%, rgba(30, 209, 219, 0.03) 0%, transparent 50%), radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.03) 0%, transparent 50%), radial-gradient(at 0% 100%, rgba(30, 209, 219, 0.03) 0%, transparent 50%), #f8fafc;
+  --proton-bg-size: cover;
 }
 
 [data-theme='titanium'] {
-  --proton-accent: #94a3b8;
-  --proton-accent-hover: #cbd5e1;
+  --proton-accent: #64748b;
+  --proton-accent-hover: #94a3b8;
   --proton-bg: #0f172a;
   --proton-card: #1e293b;
   --proton-border: #334155;
@@ -50,8 +50,9 @@
   --proton-muted: #94a3b8;
   --proton-on-accent: #000000;
   --proton-bg-image: 
-    linear-gradient(135deg, #1e293b 0%, #0f172a 100%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 10px);
+    radial-gradient(at 0% 0%, rgba(148, 163, 184, 0.1) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(15, 23, 42, 1) 0%, #020617 100%),
+    linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   --proton-bg-size: cover;
 }
 
@@ -65,10 +66,11 @@
   --proton-muted: #a5b4fc;
   --proton-on-accent: #ffffff;
   --proton-bg-image: 
-    radial-gradient(at 0% 0%, #312e81 0%, transparent 70%),
-    radial-gradient(at 100% 100%, #1e1b4b 0%, transparent 70%),
-    radial-gradient(at 50% 50%, #4338ca 0%, transparent 80%),
-    radial-gradient(circle at 20% 80%, rgba(217, 70, 239, 0.05) 0%, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(217, 70, 239, 0.15) 0%, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(217, 70, 239, 0.15) 0%, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    linear-gradient(to bottom right, #1e1b4b, #2e1065);
   --proton-bg-size: cover;
 }
 
@@ -82,10 +84,9 @@
   --proton-muted: #a7f3d0;
   --proton-on-accent: #000000;
   --proton-bg-image: 
-    radial-gradient(circle at 10% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 90% 10%, rgba(5, 150, 105, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(6, 78, 59, 0.4) 0%, #022c22 100%),
-    linear-gradient(to bottom, #022c22, #011c15);
+    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(5, 150, 105, 0.1) 0%, transparent 50%),
+    linear-gradient(to bottom right, #022c22, #042f2e);
   --proton-bg-size: cover;
 }
 
@@ -99,8 +100,9 @@
   --proton-muted: #fed7aa;
   --proton-on-accent: #000000;
   --proton-bg-image: 
-    radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.15) 0%, transparent 50%),
-    linear-gradient(to bottom, #7c2d12 0%, #431407 100%);
+    radial-gradient(at 50% 0%, rgba(245, 158, 11, 0.2) 0%, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(220, 38, 38, 0.15) 0%, transparent 50%),
+    linear-gradient(to bottom, #431407, #450a0a);
   --proton-bg-size: cover;
 }
 
@@ -114,9 +116,9 @@
   --proton-muted: #fecdd3;
   --proton-on-accent: #ffffff;
   --proton-bg-image: 
-    radial-gradient(circle at 20% 20%, rgba(244, 63, 94, 0.1) 0%, transparent 40%),
-    radial-gradient(circle at 80% 80%, rgba(190, 18, 60, 0.1) 0%, transparent 40%),
-    linear-gradient(135deg, #4c0519 0%, #2d0611 100%);
+    radial-gradient(at 0% 0%, rgba(244, 63, 94, 0.15) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(190, 18, 60, 0.15) 0%, transparent 50%),
+    linear-gradient(135deg, #2d0611, #4c0519);
   --proton-bg-size: cover;
 }
 
@@ -129,7 +131,7 @@
   --proton-text: #ffffff;
   --proton-muted: #737373;
   --proton-on-accent: #000000;
-  --proton-bg-image: linear-gradient(to bottom right, #050505, #000000);
+  --proton-bg-image: radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 100%), #000000;
 }
 
 .theme-bg-main {

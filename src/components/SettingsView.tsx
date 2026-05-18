@@ -22,6 +22,9 @@ import {
   Sun,
   Moon,
   Circle,
+  Trees,
+  Sunrise,
+  Heart,
   Mail,
   Camera,
   Phone,
@@ -44,11 +47,14 @@ interface SettingsViewProps {
 }
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: 'light', label: 'Minimalist', icon: <Sun size={18} />, color: 'bg-slate-200' },
-  { id: 'titanium', label: 'Titanium', icon: <Circle size={18} />, color: 'bg-sky-400' },
-  { id: 'proton', label: 'Cyberpunk', icon: <Zap size={18} />, color: 'bg-cyan-400' },
+  { id: 'light', label: 'Light', icon: <Sun size={18} />, color: 'bg-slate-200' },
+  { id: 'titanium', label: 'Titanium', icon: <Circle size={18} />, color: 'bg-slate-400' },
+  { id: 'proton', label: 'Cyber', icon: <Zap size={18} />, color: 'bg-cyan-400' },
+  { id: 'forest', label: 'Forest', icon: <Trees size={18} />, color: 'bg-emerald-500' },
+  { id: 'sunset', label: 'Sunset', icon: <Sunrise size={18} />, color: 'bg-orange-500' },
+  { id: 'rose', label: 'Rose', icon: <Heart size={18} />, color: 'bg-rose-500' },
   { id: 'vibrant', label: 'Nebula', icon: <Sparkles size={18} />, color: 'bg-purple-500' },
-  { id: 'midnight', label: 'Executive', icon: <Moon size={18} />, color: 'bg-slate-900' },
+  { id: 'midnight', label: 'Dark', icon: <Moon size={18} />, color: 'bg-slate-900' },
 ];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
