@@ -119,7 +119,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent mb-8">
               <Star size={14} fill="currentColor" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                {language === 'ka' ? 'შემდეგი თაობის AI პლატფორმა' : 'Next Generation AI Platform'}
+                {t.badge_text}
               </span>
             </div>
             
@@ -190,12 +190,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight mb-4">
-              {language === 'ka' ? 'ტექნოლოგიური ეკოსისტემა' : 'Technological Ecosystem'}
+              {t.ecosystem_title}
             </h2>
             <p className="text-proton-muted max-w-xl mx-auto font-medium">
-              {language === 'ka' 
-                ? 'შრომაზე ორიენტირებული პლატფორმა, რომელიც გაძლევთ ინსტრუმენტებს ზრდისთვის.' 
-                : 'A labor-oriented platform providing you the tools for real growth.'}
+              {t.ecosystem_subtitle}
             </p>
           </div>
           

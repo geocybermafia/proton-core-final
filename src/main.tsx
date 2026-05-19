@@ -7,6 +7,7 @@ import ReactDOM from 'react-dom/client'
 
 import App from './App'
 import './index.css'
+import { AuthProvider } from './contexts/AuthContext';
 
 import { 
   getDefaultConfig,
@@ -72,7 +73,9 @@ function Root() {
             accentColor: '#00f2ff',
             borderRadius: 'large',
           })}>
-            <App />
+            <AuthProvider>
+              <App />
+            </AuthProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>

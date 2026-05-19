@@ -16,6 +16,8 @@ import {
   LayoutGrid,
   User,
   ArrowLeft,
+  ArrowRight,
+  Link,
   Camera,
   Loader2,
   Globe,
@@ -640,11 +642,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   };
 
   const FilterContent = (
-    <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-6">
-        <h3 className={cn("text-base font-black uppercase tracking-tighter flex items-center gap-3", currentTheme.accent)}>
-          <LayoutGrid size={18} />
-          {language === 'ka' ? 'ფილტრაცია' : 'Refine Results'}
+    <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className={cn("text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2", currentTheme.muted)}>
+          <LayoutGrid size={14} className={currentTheme.accent} />
+          {language === 'ka' ? 'ფილტრაცია' : 'Refine'}
         </h3>
         <button 
           onClick={() => setIsFiltersOpen(false)} 
@@ -654,122 +656,121 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         </button>
       </div>
 
-      <div className="space-y-3">
-        <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ml-1 font-mono", currentTheme.muted)}>
-          {t.market.filters.country}
-        </label>
-        <div className="relative group">
-          <Globe size={12} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-40", currentTheme.accent)} />
-          <select 
-            value={activeCountry}
-            onChange={(e) => setActiveCountry(e.target.value)}
-            className={cn(
-              "w-full pl-10 pr-4 py-3 border rounded-xl text-[11px] font-bold appearance-none focus:outline-none transition-all text-white",
-              currentTheme.input
-            )}
-          >
-            {WORLD_COUNTRIES.map(country => (
-              <option key={country.code} value={country.code}>
-                {country.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ml-1 font-mono", currentTheme.muted)}>
-          {t.market.filters.city}
-        </label>
-        <div className="relative group">
-          <MapPin size={12} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-40", currentTheme.accent)} />
-          <input 
-            type="text"
-            value={activeCity}
-            onChange={(e) => setActiveCity(e.target.value)}
-            placeholder={language === 'ka' ? 'შეიყვანეთ ქალაქი...' : 'Enter city...'}
-            className={cn(
-              "w-full pl-10 pr-4 py-3 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-30 text-white",
-              currentTheme.input
-            )}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ml-1 font-mono", currentTheme.muted)}>
-          {t.market.form.category}
-        </label>
-        <div className="flex flex-col gap-2">
-          <button 
-            onClick={() => setActiveCategory('all')}
-            className={cn(
-              "flex items-center justify-between px-5 py-3 rounded-[16px] text-[10px] font-black uppercase tracking-widest transition-all border",
-              activeCategory === 'all' 
-                ? cn(currentTheme.accentBg, "border-transparent text-white shadow-lg shadow-blue-500/20")
-                : "bg-white/5 border-white/5 text-white/40 hover:border-white/10 hover:bg-white/10"
-            )}
-          >
-            <span>{t.market.all_categories}</span>
-            {activeCategory === 'all' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-          </button>
-          {Object.entries(t.market.categories).map(([key, label]) => (
-            <button 
-              key={key}
-              onClick={() => setActiveCategory(key)}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+            {t.market.filters.country}
+          </label>
+          <div className="relative group">
+            <Globe size={12} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-40", currentTheme.accent)} />
+            <select 
+              value={activeCountry}
+              onChange={(e) => setActiveCountry(e.target.value)}
               className={cn(
-                "flex items-center justify-between px-5 py-3 rounded-[16px] text-[10px] font-black uppercase tracking-widest transition-all border",
-                activeCategory === key 
-                  ? cn(currentTheme.accentBg, "border-transparent text-white shadow-lg shadow-blue-500/20")
-                  : "bg-white/5 border-white/5 text-white/40 hover:border-white/10 hover:bg-white/10"
+                "w-full pl-10 pr-4 py-2.5 border rounded-xl text-[11px] font-bold appearance-none focus:outline-none transition-all text-white",
+                currentTheme.input
               )}
             >
-              <span>{label as string}</span>
-              {activeCategory === key && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-            </button>
-          ))}
+              {WORLD_COUNTRIES.map(country => (
+                <option key={country.code} value={country.code}>
+                  {country.name}
+                </option>
+              ))}
+            </select>
+            <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-60 ml-1 font-mono", currentTheme.muted)}>
-          {t.market.price} (USD)
-        </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+            {t.market.filters.city}
+          </label>
           <div className="relative group">
+            <MapPin size={12} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-40", currentTheme.accent)} />
+            <input 
+              type="text"
+              value={activeCity}
+              onChange={(e) => setActiveCity(e.target.value)}
+              placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. New York'}
+              className={cn(
+                "w-full pl-10 pr-4 py-2.5 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-20 text-white",
+                currentTheme.input
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+            {t.market.form.category}
+          </label>
+          <div className="flex flex-col gap-1.5">
+            <button 
+              onClick={() => setActiveCategory('all')}
+              className={cn(
+                "flex items-center justify-between px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                activeCategory === 'all' 
+                  ? cn(currentTheme.accentBg, "border-transparent text-white shadow-lg shadow-blue-500/20")
+                  : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
+              )}
+            >
+              <span>{t.market.all_categories}</span>
+              {activeCategory === 'all' && <Star size={10} fill="currentColor" />}
+            </button>
+            {Object.entries(t.market.categories).map(([key, label]) => (
+              <button 
+                key={key}
+                onClick={() => setActiveCategory(key)}
+                className={cn(
+                  "flex items-center justify-between px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                  activeCategory === key 
+                    ? cn(currentTheme.accentBg, "border-transparent text-white shadow-lg shadow-blue-500/20")
+                    : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
+                )}
+              >
+                <span>{label as string}</span>
+                {activeCategory === key && <Star size={10} fill="currentColor" />}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+            {t.market.price} (USD)
+          </label>
+          <div className="grid grid-cols-2 gap-2">
             <input 
               type="number"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              placeholder={t.market.filters.price_min}
+              placeholder="Min"
               className={cn(
-                "w-full px-4 py-3 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-30 text-white",
+                "w-full px-3 py-2 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-20 text-white",
                 currentTheme.input
               )}
             />
-          </div>
-          <div className="relative group">
             <input 
               type="number"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder={t.market.filters.price_max}
+              placeholder="Max"
               className={cn(
-                "w-full px-4 py-3 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-30 text-white",
+                "w-full px-3 py-2 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-20 text-white",
                 currentTheme.input
               )}
             />
           </div>
         </div>
-      </div>
 
-      <button 
-        onClick={clearFilters}
-        className={cn("w-full py-4 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2", currentTheme.muted)}
-      >
-        <Trash2 size={12} />
-        {t.market.filters.clear_all}
-      </button>
+        <button 
+          onClick={clearFilters}
+          className={cn("w-full py-3 mt-4 rounded-xl bg-white/5 border border-white/5 text-[9px] font-black uppercase tracking-[0.2em] hover:text-white hover:bg-red-500/10 hover:border-red-500/20 transition-all flex items-center justify-center gap-2", currentTheme.muted)}
+        >
+          <Trash2 size={12} />
+          {t.market.filters.clear_all}
+        </button>
+      </div>
     </div>
   );
 
@@ -777,37 +778,40 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8 p-1 px-4 lg:px-0 bg-transparent min-h-screen"
+      className="space-y-12 p-1 px-4 lg:px-0 bg-transparent min-h-screen pb-40"
     >
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="flex items-center gap-6">
           {viewMode !== 'browse' && (
             <button 
               onClick={() => setViewMode('browse')}
-              className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors"
+              className="p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors border border-white/5"
             >
               <ArrowLeft size={20} />
             </button>
           )}
           <div>
-            <h2 className="text-4xl font-black mb-2 tracking-tight uppercase text-white">
+            <h2 className="text-4xl md:text-5xl font-black mb-3 tracking-tighter uppercase text-white leading-none">
               <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
             </h2>
             <div className="flex items-center gap-4">
-              <p className={cn("font-bold tracking-wide uppercase text-xs opacity-60", currentTheme.muted)}>
-                {viewMode === 'browse' ? t.market.subtitle : 
-                 viewMode === 'my-listings' ? t.market.my_listings :
-                 viewMode === 'privacy' ? t.market.legal.privacy_policy :
-                 viewMode === 'terms' ? t.market.legal.terms_of_service :
-                 viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
-              </p>
+              <div className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className={cn("font-black tracking-widest uppercase text-[9px] opacity-80", currentTheme.muted)}>
+                  {viewMode === 'browse' ? t.market.subtitle : 
+                   viewMode === 'my-listings' ? t.market.my_listings :
+                   viewMode === 'privacy' ? t.market.legal.privacy_policy :
+                   viewMode === 'terms' ? t.market.legal.terms_of_service :
+                   viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
+                </span>
+              </div>
               {viewMode === 'my-listings' && (
-                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl">
+                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5">
                   <button 
                     onClick={() => setProfileSubMode('selling')}
                     className={cn(
-                      "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
-                      profileSubMode === 'selling' ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                      "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                      profileSubMode === 'selling' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
                     )}
                   >
                     {t.market.selling_mode}
@@ -815,8 +819,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   <button 
                     onClick={() => setProfileSubMode('buying')}
                     className={cn(
-                      "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
-                      profileSubMode === 'buying' ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60"
+                      "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                      profileSubMode === 'buying' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
                     )}
                   >
                     {t.market.buying_mode}
@@ -828,43 +832,43 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         </div>
 
         {viewMode === 'browse' && (
-          <div className="flex items-center gap-4">
-             <div className="relative w-full md:w-64 group">
-                <div className={cn("absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:scale-110 transition-transform", currentTheme.accent)}>
-                  <Search size={16} />
-                </div>
+          <div className="flex flex-wrap items-center gap-3">
+             <div className="relative flex-1 md:flex-none md:w-80 group">
+                <Search size={14} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-30 group-focus-within:opacity-100 transition-opacity", currentTheme.accent)} />
                 <input 
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t.market.search_placeholder}
                   className={cn(
-                    "w-full pl-11 pr-4 py-3 rounded-[20px] text-[11px] font-bold uppercase tracking-wider focus:outline-none transition-all shadow-inner",
+                    "w-full pl-11 pr-4 py-3.5 rounded-2xl text-[11px] font-bold uppercase tracking-wider focus:outline-none transition-all shadow-inner border border-transparent focus:border-white/10",
                     currentTheme.input
                   )}
                 />
              </div>
-             <button 
-               onClick={() => setViewMode('my-listings')}
-               className={cn("p-3 bg-white/5 rounded-2xl transition-all", `hover:${currentTheme.accentBg.replace('bg-', 'bg-')} hover:text-white`)}
-               title={t.market.my_listings}
-             >
-               <User size={20} />
-             </button>
-             <button 
-               onClick={() => setViewMode('create')}
-               className={cn("p-3 rounded-2xl shadow-lg shadow-blue-500/20 hover:brightness-110 active:scale-95 transition-all text-white", currentTheme.accentBg)}
-             >
-               <Plus size={20} />
-             </button>
-             <div className="h-10 w-[1px] bg-white/10 mx-2 hidden md:block" />
+             
+             <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setViewMode('my-listings')}
+                  className={cn("p-3.5 bg-white/5 rounded-2xl transition-all border border-white/5", `hover:bg-white/10 hover:text-white`)}
+                  title={t.market.my_listings}
+                >
+                  <User size={20} />
+                </button>
+                <button 
+                  onClick={() => setViewMode('create')}
+                  className={cn("p-3.5 rounded-2xl shadow-xl shadow-blue-500/10 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
+                >
+                  <Plus size={20} />
+                </button>
+             </div>
+
              <div className="relative group">
-                <Coins size={14} className={cn("absolute left-3 top-1/2 -translate-y-1/2 opacity-50", currentTheme.accent)} />
                 <select 
                   value={displayCurrency}
                   onChange={(e) => setDisplayCurrency(e.target.value)}
                   className={cn(
-                    "pl-9 pr-4 py-3 rounded-xl border appearance-none text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all text-white cursor-pointer",
+                    "pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all text-white cursor-pointer bg-white/5",
                     currentTheme.input
                   )}
                 >
@@ -872,6 +876,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     <option key={curr.code} value={curr.code}>{curr.code}</option>
                   ))}
                 </select>
+                <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
              </div>
           </div>
         )}
@@ -890,7 +895,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           {/* Desktop Sidebar */}
           {viewMode === 'browse' && (
             <aside className="hidden lg:block w-72 shrink-0 space-y-8 animate-in fade-in slide-in-from-left duration-700">
-               <div className={cn("p-8 rounded-[40px] border border-white/5 sticky top-32 backdrop-blur-[20px]", currentTheme.card)}>
+               <div className={cn("p-6 rounded-3xl border border-white/5 sticky top-30 backdrop-blur-xl", currentTheme.card)}>
                  {FilterContent}
                </div>
             </aside>
@@ -913,36 +918,39 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
               <AnimatePresence mode="popLayout">
                 {viewMode === 'my-listings' && profileSubMode === 'buying' ? (
                   orders.map((order, idx) => (
                     <motion.div 
                       layout
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       key={order.id}
-                      className={cn("p-6 rounded-[32px] border border-white/5", currentTheme.card)}
+                      className={cn("p-8 rounded-[40px] border border-white/5 group relative overflow-hidden", currentTheme.card)}
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-white/5 rounded-2xl">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 blur-3xl rounded-full -mr-16 -mt-16" />
+                      <div className="flex items-center justify-between mb-6 relative">
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 group-hover:bg-proton-accent/10 transition-colors">
                           <ShoppingBag size={20} className={currentTheme.accent} />
                         </div>
                         <div className="text-right">
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 block", currentTheme.muted)}>
+                          <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 block mb-1", currentTheme.muted)}>
                             {new Date(order.createdAt).toLocaleDateString()}
                           </span>
-                          <span className="text-[10px] font-black text-[#2e5bff] uppercase tracking-widest">
+                          <span className="inline-flex px-3 py-1 bg-green-500/10 border border-green-500/20 text-[9px] font-black text-green-500 uppercase tracking-[0.1em] rounded-lg">
                             {order.status}
                           </span>
                         </div>
                       </div>
-                      <h4 className="text-sm font-black text-white mb-1 uppercase tracking-tight">{order.itemTitle}</h4>
-                      <p className={cn("text-xs font-bold", currentTheme.muted)}>Price: {order.amount} {order.currency}</p>
-                      <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
-                         <span className={cn("text-[9px] font-bold", currentTheme.muted)}>ID: {order.id.substring(0, 12)}</span>
-                         <button className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:underline">
-                           View Details
+                      <h4 className="text-lg font-black text-white mb-2 uppercase tracking-tight leading-tight">{order.itemTitle}</h4>
+                      <p className={cn("text-xs font-bold font-mono", currentTheme.muted)}>
+                        {order.amount} {order.currency}
+                      </p>
+                      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between relative">
+                         <span className={cn("text-[9px] font-bold opacity-30 font-mono", currentTheme.muted)}>#{order.id.substring(0, 12).toUpperCase()}</span>
+                         <button className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:opacity-80 transition-opacity">
+                           Details <ChevronRight size={14} />
                          </button>
                       </div>
                     </motion.div>
@@ -951,125 +959,127 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   filteredListings.map((listing, idx) => (
                 <motion.div 
                   layout
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
                   key={listing.id}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ delay: idx * 0.04 }}
                   className={cn(
-                    "group rounded-[32px] overflow-hidden transition-all flex flex-col",
+                    "group rounded-3xl overflow-hidden transition-all flex flex-col relative",
                     currentTheme.card,
-                    "border-white/5 hover:border-white/20"
+                    "border-white/5 hover:border-white/20 hover:shadow-2xl hover:shadow-proton-accent/5"
                   )}
                 >
-                  <div className="h-48 bg-black/40 overflow-hidden relative">
+                  <div className="h-52 bg-black/60 overflow-hidden relative">
                     {listing.image ? (
                       <motion.img 
                         src={listing.image} 
                         alt={listing.title} 
-                        className="w-full h-full object-cover transition-transform duration-700"
-                        whileHover={{ scale: 1.1 }}
+                        className="w-full h-full object-cover transition-transform duration-1000 ease-out"
+                        whileHover={{ scale: 1.05 }}
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className={cn("w-full h-full flex items-center justify-center bg-gradient-to-br from-white/5 to-white/10")}>
-                        <ShoppingBag size={48} className={cn("opacity-20", currentTheme.accent)} />
+                      <div className={cn("w-full h-full flex items-center justify-center bg-[#0a0a0a]")}>
+                        <ShoppingBag size={40} className={cn("opacity-10", currentTheme.accent)} />
                       </div>
                     )}
-                    <div className="absolute top-4 left-4 z-10">
-                      <div className="px-3 py-1.5 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 flex items-center gap-2">
+                    
+                    {/* Badge Overlay */}
+                    <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
+                      <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
                         <Tag size={10} className={currentTheme.accent} />
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                        <span className="text-[9px] font-black text-white uppercase tracking-wider">
                           {t.market.categories[listing.category as keyof typeof t.market.categories]}
                         </span>
                       </div>
+                      <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
+                        <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
+                        <span className="text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
+                      </div>
                     </div>
+
                     {listing.sellerId === auth.currentUser?.uid && (
                       <div className="absolute top-4 right-4 flex gap-2 z-10">
                         <button 
                           onClick={() => startEdit(listing)}
-                          className={cn("p-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-[#2e5bff] hover:text-white")}
+                          className={cn("p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
                         >
                           <Edit3 size={14} />
                         </button>
                         <button 
                           onClick={() => handleDeleteListing(listing.id)}
-                          className="p-2 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
+                          className="p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     )}
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-6 flex-1 flex flex-col relative overflow-hidden">
-                    {/* Theme Decoration */}
-                    <div className={cn("absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-20", currentTheme.accent.replace('text-', 'bg-'))} />
-                    
-                    <div className="flex justify-between items-start mb-2 relative">
-                      <h4 className={cn("text-lg font-black tracking-tight leading-tight transition-colors text-white group-hover:text-proton-accent")}>
-                        {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
-                      </h4>
-                    </div>
-                    <p className={cn("text-xs font-bold leading-relaxed mb-6 line-clamp-2 relative", currentTheme.muted)}>
+                  <div className="p-6 flex-1 flex flex-col relative">
+                    <h4 className="text-lg font-black tracking-tight text-white mb-2 uppercase group-hover:text-proton-accent transition-colors">
+                      {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
+                    </h4>
+                    <p className={cn("text-xs font-medium leading-relaxed mb-6 line-clamp-2 opacity-60", currentTheme.muted)}>
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
-                    <div className="mt-auto space-y-4 relative">
-                      <div className="flex items-center justify-between py-4 border-y border-white/5">
+                    <div className="mt-auto pt-4 border-t border-white/5">
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex flex-col">
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-50", currentTheme.muted)}>{t.market.price}</span>
-                          <span className="text-xl font-black text-white flex items-center gap-1">
+                          <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 mb-1", currentTheme.muted)}>{t.market.price}</span>
+                          <span className="text-2xl font-black text-white tracking-tighter">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-[10px] opacity-60 ml-0.5">{displayCurrency}</span>
-                          </span>
-                        </div>
-                        <div className="flex flex-col items-end">
-                          <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-50", currentTheme.muted)}>{t.market.location}</span>
-                          <span className="text-[10px] font-bold text-white flex items-center gap-1.5 opacity-80">
-                            <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-                            <span className="uppercase tracking-tighter">{listing.country}</span>
-                            <span className="w-1 h-1 rounded-full bg-white/20" />
-                            {listing.city}
+                            <span className="text-[10px] font-black opacity-30 ml-1.5 tracking-wider">{displayCurrency}</span>
                           </span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-xs", currentTheme.accent)}>
+                        <div className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs relative", currentTheme.accent)}>
                           {listing.sellerName.substring(0, 2).toUpperCase()}
+                          <div className="absolute -top-0.5 -right-0.5 w-2 bg-green-500 rounded-full border-2 border-[#141414]" />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-black uppercase text-white tracking-wide">{listing.sellerName}</span>
+                            <span className="text-[10px] font-black uppercase text-white tracking-wider truncate">{listing.sellerName}</span>
                             <ShieldCheck size={12} className={currentTheme.accent} />
                           </div>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map(s => <Star key={s} size={8} className={cn("fill-current", currentTheme.accent)} />)}
-                          </div>
+                          <span className={cn("text-[8px] font-bold uppercase tracking-widest opacity-40 block mt-0.5", currentTheme.muted)}>Verified Vendor</span>
                         </div>
-                        <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-proton-accent hover:border-proton-accent/30 transition-all">
-                          <MessageCircle size={18} />
+                        <button className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                          <MessageCircle size={16} />
                         </button>
                       </div>
 
-                      {listing.sellerId === auth.currentUser?.uid ? (
-                        <button 
-                          onClick={() => startEdit(listing)}
-                          className={cn("w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2", currentTheme.accentBg)}
-                        >
-                          <Edit3 size={14} />
-                          {t.market.edit_listing}
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => handleBuyNow(listing)}
-                          className={cn("w-full py-4 bg-transparent border border-[#2e5bff]/30 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#2e5bff] hover:bg-[#2e5bff] hover:text-white transition-all flex items-center justify-center gap-2 group/btn")}
-                        >
-                          {t.market.buy_now}
-                          <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                        </button>
-                      )}
+                      <div className="mt-6">
+                        {listing.sellerId === auth.currentUser?.uid ? (
+                          <button 
+                            onClick={() => startEdit(listing)}
+                            className={cn(
+                              "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
+                              currentTheme.accentBg
+                            )}
+                          >
+                            <Edit3 size={14} />
+                            {t.market.edit_listing}
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleBuyNow(listing)}
+                            className={cn(
+                              "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-proton-accent/20 active:scale-[0.98]",
+                              currentTheme.accentBg, "text-white"
+                            )}
+                          >
+                            <ShoppingBag size={14} />
+                            {t.market.buy_now}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1137,140 +1147,147 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           animate={{ opacity: 1, x: 0 }}
           className={cn("max-w-2xl mx-auto p-10 rounded-[40px] border", currentTheme.card, currentTheme.border)}
         >
-           <form onSubmit={handleSubmitListing} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.title} (EN)</label>
+           <form onSubmit={handleSubmitListing} className="space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.title} (EN)</label>
                     <input 
                        required
                        type="text"
                        value={formData.title}
                        onChange={e => setFormData({...formData, title: e.target.value})}
-                       className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
+                       placeholder="e.g. Industrial Control Unit v3"
+                       className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
                  </div>
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.title} (GE)</label>
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.title} (GE)</label>
                     <input 
                        type="text"
                        value={formData.titleGe}
                        onChange={e => setFormData({...formData, titleGe: e.target.value})}
-                       className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
+                       placeholder="მაგ: ინდუსტრიული კონტროლერი"
+                       className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.category}</label>
-                    <select 
-                       value={formData.category}
-                       onChange={e => setFormData({...formData, category: e.target.value})}
-                       className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold appearance-none text-white", currentTheme.input)}
-                    >
-                       {Object.entries(t.market.categories).map(([key, label]) => (
-                         <option key={key} value={key}>{label as string}</option>
-                       ))}
-                    </select>
-                 </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.price}</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.category}</label>
                     <div className="relative group">
-                       <Coins size={14} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-50", currentTheme.accent)} />
-                       <input 
-                          required
-                          type="number"
-                          value={formData.price}
-                          onChange={e => setFormData({...formData, price: e.target.value})}
-                          className={cn("w-full pl-14 pr-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
-                       />
+                      <select 
+                         value={formData.category}
+                         onChange={e => setFormData({...formData, category: e.target.value})}
+                         className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                      >
+                         {Object.entries(t.market.categories).map(([key, label]) => (
+                           <option key={key} value={key}>{label as string}</option>
+                         ))}
+                      </select>
+                      <ChevronRight size={14} className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
                     </div>
                  </div>
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.currency}</label>
-                    <select 
-                       value={formData.currency}
-                       onChange={e => setFormData({...formData, currency: e.target.value})}
-                       className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold appearance-none text-white", currentTheme.input)}
-                    >
-                       {CURRENCIES.map(curr => (
-                         <option key={curr.code} value={curr.code}>{curr.code} ({curr.symbol})</option>
-                       ))}
-                    </select>
-                    {formData.price && formData.currency !== 'USD' && (
-                       <p className={cn("text-[10px] font-bold opacity-50 px-2 italic mt-1", currentTheme.muted)}>
-                         ≈ {convertPrice(parseFloat(formData.price), formData.currency, 'USD').toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                       </p>
-                    )}
+
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-3">
+                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.price}</label>
+                     <div className="relative group">
+                       <Coins size={14} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-30", currentTheme.accent)} />
+                       <input 
+                           required
+                           type="number"
+                           value={formData.price}
+                           onChange={e => setFormData({...formData, price: e.target.value})}
+                           className={cn("w-full pl-14 pr-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                       />
+                     </div>
+                   </div>
+                   <div className="space-y-3">
+                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.currency}</label>
+                     <div className="relative">
+                       <select 
+                           value={formData.currency}
+                           onChange={e => setFormData({...formData, currency: e.target.value})}
+                           className={cn("w-full px-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                       >
+                           {CURRENCIES.map(curr => (
+                             <option key={curr.code} value={curr.code}>{curr.code} ({curr.symbol})</option>
+                           ))}
+                       </select>
+                       <ChevronRight size={14} className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+                     </div>
+                   </div>
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.country}</label>
-                    <select 
-                       value={formData.country}
-                       onChange={e => setFormData({...formData, country: e.target.value})}
-                       className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold appearance-none text-white", currentTheme.input)}
-                    >
-                       {WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL').map(country => (
-                         <option key={country.code} value={country.code}>
-                           {country.flag} {country.name}
-                         </option>
-                       ))}
-                    </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.country}</label>
+                    <div className="relative">
+                      <select 
+                         value={formData.country}
+                         onChange={e => setFormData({...formData, country: e.target.value})}
+                         className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                      >
+                         {WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL').map(country => (
+                           <option key={country.code} value={country.code}>
+                             {country.flag} {country.name}
+                           </option>
+                         ))}
+                      </select>
+                      <ChevronRight size={14} className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+                    </div>
                  </div>
-                 <div className="space-y-2">
-                    <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.city}</label>
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.city}</label>
                     <input 
                        required
                        type="text"
                        value={formData.city}
                        onChange={e => setFormData({...formData, city: e.target.value})}
-                       placeholder="Enter city..."
-                       className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
+                       placeholder="e.g. Tbilisi"
+                       className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
                  </div>
               </div>
 
-              <div className="space-y-2">
-                 <div className="flex items-center justify-between px-2">
-                   <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60", currentTheme.muted)}>{t.market.form.description}</label>
-                   <button
-                     type="button"
-                     onClick={handleAiDescription}
-                     disabled={isAiGenerating}
-                     className={cn(
-                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
-                       currentTheme.accent,
-                       "bg-white/5 border border-white/5 hover:bg-white/10 disabled:opacity-50"
-                     )}
-                   >
-                     {isAiGenerating ? (
-                       <Loader2 size={12} className="animate-spin" />
-                     ) : (
-                       <Sparkles size={12} />
-                     )}
-                     {language === 'ka' ? 'AI აღწერა' : 'AI Spec'}
-                   </button>
-                 </div>
-                 <textarea 
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-2">
+                  <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", currentTheme.muted)}>{t.market.form.description}</label>
+                  <button
+                    type="button"
+                    onClick={handleAiDescription}
+                    disabled={isAiGenerating}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all",
+                      "bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-50 text-white"
+                    )}
+                  >
+                    {isAiGenerating ? (
+                      <Loader2 size={12} className="animate-spin text-[#2e5bff]" />
+                    ) : (
+                      <Sparkles size={12} className="text-[#2e5bff]" />
+                    )}
+                    {language === 'ka' ? 'AI სპეციფიკაცია' : 'AI Generate Spec'}
+                  </button>
+                </div>
+                <textarea 
                     required
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
-                    className={cn("w-full px-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold h-32 resize-none text-white", currentTheme.input)}
-                 />
+                    placeholder="Technical specifications and details..."
+                    className={cn("w-full px-8 py-6 rounded-[32px] border focus:outline-none transition-all text-xs font-medium h-48 resize-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                />
               </div>
 
-               <div className="space-y-4">
-                  <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>
+               <div className="space-y-6">
+                  <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
                     {t.market.form.image_url}
                   </label>
                   <label 
                     className={cn(
-                      "w-full h-48 rounded-[32px] border-2 border-dashed flex flex-col items-center justify-center gap-4 cursor-pointer transition-all hover:bg-white/5",
+                      "w-full h-64 rounded-[48px] border-2 border-dashed flex flex-col items-center justify-center gap-6 cursor-pointer transition-all hover:bg-white/5 overflow-hidden group",
                       currentTheme.input,
                       (formData.image || isResizing) ? "border-transparent bg-black/40" : "border-white/10"
                     )}
@@ -1282,73 +1299,76 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       className="hidden"
                     />
                     {isResizing ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <Loader2 className={cn("w-10 h-10 animate-spin", currentTheme.accent)} />
-                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", currentTheme.muted)}>
-                          {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader2 className={cn("w-12 h-12 animate-spin text-[#2e5bff]")} />
+                        <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>
+                          {language === 'ka' ? 'ინფორმაცია მუშავდება...' : 'Optimizing Visual...'}
                         </span>
                       </div>
                     ) : formData.image ? (
-                      <div className="relative w-full h-full p-2">
+                      <div className="relative w-full h-full p-4">
                         <img 
                           src={formData.image} 
-                          className="w-full h-full object-cover rounded-[24px]" 
+                          className="w-full h-full object-cover rounded-[32px] transition-transform duration-700 group-hover:scale-105" 
                           alt="Preview" 
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-[24px]">
-                          <Camera className="text-white" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[32px] backdrop-blur-sm">
+                          <div className="p-4 bg-white/10 rounded-2xl border border-white/20">
+                            <Camera className="text-white" size={32} />
+                          </div>
                         </div>
                       </div>
                     ) : (
-                      <>
-                        <div className={cn("p-4 rounded-full bg-white/5", currentTheme.accent)}>
-                          <Camera size={32} />
+                      <div className="flex flex-col items-center gap-4">
+                        <div className={cn("p-6 rounded-[32px] bg-white/5 border border-white/10 group-hover:scale-110 transition-transform", currentTheme.accent)}>
+                          <Camera size={40} />
                         </div>
-                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", currentTheme.muted)}>
+                        <span className={cn("text-[10px] font-black uppercase tracking-[0.2em]", currentTheme.muted)}>
                           {t.market.form.upload_button}
                         </span>
-                      </>
+                      </div>
                     )}
-                   </label>
-                  <div className="relative">
-                    <div className="absolute left-6 top-1/2 -translate-y-1/2 opacity-30 text-[10px] font-black">URL</div>
+                  </label>
+                  <div className="relative group">
+                 <Link size={14} className="absolute left-6 top-1/2 -translate-y-1/2 opacity-20" />
                     <input 
                        type="url"
                        value={formData.image}
                        onChange={e => setFormData({...formData, image: e.target.value})}
-                       placeholder="...or paste an external link"
-                       className={cn("w-full pl-14 pr-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
+                       placeholder="...or paste external secure URL"
+                       className={cn("w-full pl-14 pr-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
                   </div>
                </div>
 
-              <div className="space-y-2">
-                 <label className={cn("text-[10px] font-black uppercase tracking-widest opacity-60 ml-2", currentTheme.muted)}>{t.market.form.location}</label>
-                 <div className="relative">
-                    <MapPin size={14} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-50", currentTheme.accent)} />
+              <div className="space-y-3">
+                 <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.location}</label>
+                 <div className="relative group">
+                    <MapPin size={16} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-30", currentTheme.accent)} />
                     <input 
                        type="text"
                        value={formData.location}
                        onChange={e => setFormData({...formData, location: e.target.value})}
-                       placeholder="Detailed address (Street, Apt, etc.)"
-                       className={cn("w-full pl-14 pr-6 py-4 rounded-2xl border focus:outline-none transition-all text-xs font-bold text-white", currentTheme.input)}
+                       placeholder="Detailed operational address"
+                       className={cn("w-full pl-14 pr-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
                  </div>
               </div>
 
-              <div className="flex gap-4 pt-6">
+              <div className="flex flex-col sm:flex-row gap-6 pt-10">
                  <button 
                    type="button"
                    onClick={() => setViewMode('browse')}
-                   className="flex-1 py-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-white"
+                   className="flex-1 py-6 bg-white/5 hover:bg-white/10 border border-white/10 rounded-[24px] text-[10px] font-black uppercase tracking-[0.3em] transition-all text-white flex items-center justify-center gap-2"
                  >
+                   <ArrowLeft size={16} />
                    {t.common.cancel}
                  </button>
                  <button 
                    disabled={isSubmitting}
-                   className={cn("flex-[2] py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2", currentTheme.accentBg)}
+                   className={cn("flex-[2] py-6 text-white rounded-[24px] text-[10px] font-black uppercase tracking-[0.3em] shadow-2xl shadow-blue-500/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/10", currentTheme.accentBg)}
                  >
-                   {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
+                   {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
                    {viewMode === 'edit' ? t.market.form.update : t.market.form.submit}
                  </button>
               </div>
@@ -1356,32 +1376,32 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         </motion.div>
       )}
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12 mt-24">
+      <footer className="border-t border-white/5 py-20 mt-24">
         <div className="max-w-[1600px] mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex flex-col items-center md:items-start gap-2">
-              <h3 className="text-white font-black uppercase tracking-tighter text-xl">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="flex flex-col items-center md:items-start gap-4">
+              <h3 className="text-white font-black uppercase tracking-tighter text-3xl">
                 <span className={currentTheme.accent}>PROTON</span> MARKET
               </h3>
-              <p className={cn("text-[10px] font-bold uppercase tracking-[0.2em] opacity-40", currentTheme.muted)}>
-                © {new Date().getFullYear()} PROTON INDUSTRIAL SOLUTIONS
+              <p className={cn("text-[10px] font-black uppercase tracking-[0.4em] opacity-40", currentTheme.muted)}>
+                © {new Date().getFullYear()} PROTON INDUSTRIAL SYSTEMS GROUP
               </p>
             </div>
-            <div className="flex flex-wrap justify-center gap-8 text-[10px] font-black uppercase tracking-[0.2em]">
+            <div className="flex flex-wrap justify-center gap-10 text-[10px] font-black uppercase tracking-[0.3em]">
               <button 
                 onClick={() => setViewMode('privacy')}
-                className={cn("transition-colors hover:text-white", viewMode === 'privacy' ? "text-white" : "text-white/40")}
+                className={cn("transition-all hover:text-white pb-1 border-b border-transparent hover:border-white/20", viewMode === 'privacy' ? "text-white border-white/20" : "text-white/40")}
               >
                 {t.market.legal.privacy_policy}
               </button>
               <button 
                 onClick={() => setViewMode('terms')}
-                className={cn("transition-colors hover:text-white", viewMode === 'terms' ? "text-white" : "text-white/40")}
+                className={cn("transition-all hover:text-white pb-1 border-b border-transparent hover:border-white/20", viewMode === 'terms' ? "text-white border-white/20" : "text-white/40")}
               >
                 {t.market.legal.terms_of_service}
               </button>
-              <a href="#" className="text-white/40 hover:text-white transition-colors">Support</a>
-              <a href="#" className="text-white/40 hover:text-white transition-colors">Contact</a>
+              <a href="#" className="text-white/40 hover:text-white transition-all pb-1 border-b border-transparent hover:border-white/20">Security Protocol</a>
+              <a href="#" className="text-white/40 hover:text-white transition-all pb-1 border-b border-transparent hover:border-white/20">System Support</a>
             </div>
           </div>
         </div>
