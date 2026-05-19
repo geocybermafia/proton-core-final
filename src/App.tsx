@@ -4164,6 +4164,7 @@ export default function App() {
         onGetStarted={() => setShowAuth(true)} 
         onLogin={() => setShowAuth(true)} 
         language={userProfile.language} 
+        onLanguageChange={(lang) => setUserProfile(prev => ({ ...prev, language: lang }))}
       />
     );
   }
