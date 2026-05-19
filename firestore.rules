@@ -50,13 +50,13 @@ service cloud.firestore {
         && (data.get('country', '') is string && data.get('country', '').size() <= 50)
         && (data.get('city', '') is string && data.get('city', '').size() <= 50)
         && (data.get('status', 'active') in ['active', 'sold'])
-        && (data.get('description', '') is string && data.get('description', '').size() <= 2000)
-        && (data.get('image', '') is string && data.get('image', '').size() <= 1000);
+        && (data.get('description', '') is string && data.get('description', '').size() <= 5000)
+        && (data.get('image', '') is string && data.get('image', '').size() <= 2000000); // Allow up to 2MB for base64
     }
 
     function isValidListingCreate(data) {
       return data.keys().hasAll(['title', 'price', 'sellerId', 'category', 'country', 'city', 'createdAt', 'status'])
-        && data.keys().size() >= 8 && data.keys().size() <= 16
+        && data.keys().size() >= 8 && data.keys().size() <= 32
         && data.sellerId == request.auth.uid
         && data.createdAt == request.time
         && isValidListingShape(data);
