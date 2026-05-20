@@ -125,7 +125,7 @@ async function startServer() {
     console.log("  - GEMINI_API_KEY:", gk ? `Present (starts with ${gk.substring(0, 6)}..., Length: ${gk.length})` : "Missing");
     console.log("  - VITE_GEMINI_API_KEY:", vgk ? `Present (starts with ${vgk.substring(0, 6)}..., Length: ${vgk.length})` : "Missing");
     if (gk && vgk && gk !== vgk) {
-      console.warn("  - Warning: Both keys are present but different! GEMINI_API_KEY takes direct precedence.");
+      console.warn("  - Warning: Both keys are present but different! VITE_GEMINI_API_KEY takes precedence.");
     }
   });
 }
