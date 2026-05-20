@@ -1,8 +1,10 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
 import { 
   chatWithPersona, 
   generateNewPersona, 
@@ -15,8 +17,6 @@ import {
   translateText,
   generateTechSpec
 } from "./src/lib/gemini-server.js";
-
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -116,6 +116,17 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Secure check of keys at server startup to prevent accidental exposures
+    const gk = process.env.GEMINI_API_KEY;
+    const vgk = process.env.VITE_GEMINI_API_KEY;
+    
+    console.log("[CONFIG SECURE CHECK] Security environment state on startup:");
+    console.log("  - GEMINI_API_KEY:", gk ? `Present (starts with ${gk.substring(0, 6)}..., Length: ${gk.length})` : "Missing");
+    console.log("  - VITE_GEMINI_API_KEY:", vgk ? `Present (starts with ${vgk.substring(0, 6)}..., Length: ${vgk.length})` : "Missing");
+    if (gk && vgk && gk !== vgk) {
+      console.warn("  - Warning: Both keys are present but different! GEMINI_API_KEY takes direct precedence.");
+    }
   });
 }
 

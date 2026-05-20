@@ -9,15 +9,23 @@ export interface TaskPlan {
 }
 
 let aiInstance: GoogleGenAI | null = null;
+let lastApiKey: string | null = null;
 
 function getAi() {
-  if (!aiInstance) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn("Server-side GEMINI_API_KEY and VITE_GEMINI_API_KEY environment variables are missing.");
-      console.log("Available environment keys:", Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY") && !k.includes("PASSWORD")));
-      return null;
-    }
+  // Prioritize the secure, server-side GEMINI_API_KEY over VITE_GEMINI_API_KEY to prevent accidental client exposure
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("Secure Config Alert: Server-side GEMINI_API_KEY and VITE_GEMINI_API_KEY environment variables are missing.");
+    console.log("Available environment keys:", Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY") && !k.includes("PASSWORD")));
+    return null;
+  }
+  
+  if (!aiInstance || lastApiKey !== apiKey) {
+    // Log the detection of a key secure change
+    const maskedKey = apiKey.substring(0, 6) + "..." + apiKey.substring(apiKey.length - 4);
+    console.log(`[CONFIG SECURE RE-LOAD] Activating Gemini API Key: ${maskedKey} (Length: ${apiKey.length})`);
+    
+    lastApiKey = apiKey;
     aiInstance = new GoogleGenAI({ 
       apiKey,
       httpOptions: {
