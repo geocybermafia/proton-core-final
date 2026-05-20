@@ -4124,7 +4124,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      "flex h-[100dvh] overflow-hidden overscroll-none theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
             <AnimatePresence>
@@ -4396,7 +4396,7 @@ export default function App() {
       </motion.aside>
 
       {/* Bottom Nav (Mobile Only) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/80 backdrop-blur-xl border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'market', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
@@ -4417,7 +4417,9 @@ export default function App() {
             <span className="text-xs font-sans font-bold uppercase">{item.label}</span>
             {activeView === item.id && (
               <motion.div 
-                layoutId="activeBottomTab"
+                initial={{ scaleX: 0, opacity: 0 }}
+                animate={{ scaleX: 1, opacity: 1 }}
+                exit={{ scaleX: 0, opacity: 0 }}
                 className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]"
               />
             )}
@@ -4493,7 +4495,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12 relative z-10 custom-scrollbar-minimal">
+        <div className="flex-1 overflow-y-auto overscroll-y-none px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12 relative z-10 custom-scrollbar-minimal">
           <div className="max-w-7xl mx-auto px-1">
             <AnimatePresence mode="wait">
               <motion.div
