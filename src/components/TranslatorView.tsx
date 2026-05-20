@@ -16,7 +16,7 @@ import {
   ArrowLeft,
   Zap
 } from 'lucide-react';
-import { GoogleGenAI, Modality } from "@google/genai";
+import { translateText, generateSpeech } from '../lib/gemini';
 import { cn } from '../lib/utils';
 
 // --- Creative Glossary ---
@@ -80,19 +80,6 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   const [topLang] = useState('English');
   const [bottomLang] = useState('Georgian');
   
-  const ai = useRef<GoogleGenAI | null>(null);
-  
-  const getAi = () => {
-    if (!ai.current) {
-      const apiKey = (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
-                     (import.meta as any).env?.VITE_GEMINI_API_KEY;
-      if (apiKey) {
-        ai.current = new GoogleGenAI({ apiKey });
-      }
-    }
-    return ai.current;
-  };
-
   const recognition = useRef<any>(null);
   const audioContext = useRef<AudioContext | null>(null);
   const lastTranscript = useRef('');
@@ -193,18 +180,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       const sourceRole = activeSide === 'top' ? 'Visitor' : 'Creative';
       const targetLanguage = activeSide === 'top' ? 'Georgian' : 'English';
       
-      const aiInstance = getAi();
-      if (!aiInstance) throw new Error("AI engine not initialized");
-
-      const response = await aiInstance.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: `Translate this for the ${targetLanguage} speaker. Input from ${sourceRole}: ${textToTranslate}`,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION
-        }
-      });
-
-      const translated = response.text || '';
+      const translated = await translateText(textToTranslate, sourceRole, targetLanguage, SYSTEM_INSTRUCTION);
       
       const newMessage: Message = {
         id: Math.random().toString(36).substr(2, 9),
@@ -258,23 +234,10 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
   const playTTS = async (text: string, lang: 'ka' | 'en') => {
     try {
-      const aiInstance = getAi();
-      if (!aiInstance) throw new Error("AI engine not initialized");
-
-      const response = await aiInstance.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: [{ parts: [{ text: `Say in ${lang === 'ka' ? 'Georgian' : 'English'}: ${text}` }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: lang === 'ka' ? 'Kore' : 'Zephyr' },
-            },
-          },
-        },
-      });
-
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      const prompt = `Say in ${lang === 'ka' ? 'Georgian' : 'English'}: ${text}`;
+      const voiceName = lang === 'ka' ? 'Kore' : 'Zephyr';
+      
+      const base64Audio = await generateSpeech(prompt, voiceName);
       if (base64Audio) {
         // Convert base64 to binary safely
         const binaryString = atob(base64Audio);

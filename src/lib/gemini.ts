@@ -136,6 +136,15 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
   return callServerGemini<string>('generateSpeech', [text, voiceName]);
 }
 
+export async function translateText(
+  text: string,
+  sourceRole: 'Visitor' | 'Creative',
+  targetLanguage: 'Georgian' | 'English',
+  systemInstruction: string
+): Promise<string> {
+  return callServerGemini<string>('translateText', [text, sourceRole, targetLanguage, systemInstruction]);
+}
+
 export async function architectTask(project: string, temperature: number = 0.9): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
   return callServerGemini<{ data: TaskPlan, metadata: GeminiMetadata }>('architectTask', [project, temperature]);
 }

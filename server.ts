@@ -11,7 +11,9 @@ import {
   generatePersonaAvatar, 
   generateOrEditImage, 
   generateSpeech, 
-  architectTask 
+  architectTask,
+  translateText,
+  generateTechSpec
 } from "./src/lib/gemini-server.js";
 
 dotenv.config();
@@ -67,6 +69,12 @@ async function startServer() {
           break;
         case "architectTask":
           result = await architectTask(args[0], args[1]);
+          break;
+        case "translateText":
+          result = await translateText(args[0], args[1], args[2], args[3]);
+          break;
+        case "generateTechSpec":
+          result = await generateTechSpec(args[0], args[1]);
           break;
         default:
           return res.status(400).send(`Unknown action: ${action}`);

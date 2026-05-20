@@ -18,7 +18,14 @@ function getAi() {
       console.log("Available environment keys:", Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY") && !k.includes("PASSWORD")));
       return null;
     }
-    aiInstance = new GoogleGenAI({ apiKey });
+    aiInstance = new GoogleGenAI({ 
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
   }
   return aiInstance;
 }
@@ -311,3 +318,56 @@ export async function architectTask(project: string, temperature: number = 0.9):
     };
   }
 }
+
+export async function translateText(
+  text: string,
+  sourceRole: 'Visitor' | 'Creative',
+  targetLanguage: 'Georgian' | 'English',
+  systemInstruction: string
+): Promise<string> {
+  try {
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `Translate this for the ${targetLanguage} speaker. Input from ${sourceRole}: ${text}`,
+      config: {
+        systemInstruction: systemInstruction
+      }
+    });
+    return response.text || '';
+  } catch (error) {
+    console.error("Gemini API Error in translateText:", error);
+    throw error;
+  }
+}
+
+export async function generateTechSpec(title: string, category: string): Promise<string> {
+  try {
+    const ai = getAi();
+    if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `Generate a professional, concise "Tech Spec" or detailed description for a marketplace listing.
+      Product Title: ${title}
+      Category: ${category}
+      
+      Requirements:
+      - Use professional language.
+      - Include technical details if applicable.
+      - Format with clear sections or bullet points if necessary.
+      - Maximum 500 characters.
+      - Return only the description text.`,
+      config: {
+        temperature: 0.7,
+      }
+    });
+
+    return response.text || "";
+  } catch (error) {
+    console.error("Error generating tech spec:", error);
+    return "";
+  }
+}
+
