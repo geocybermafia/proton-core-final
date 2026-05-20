@@ -3,6 +3,16 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import { 
+  chatWithPersona, 
+  generateNewPersona, 
+  summarizeConversation, 
+  analyzeWorkflow, 
+  generatePersonaAvatar, 
+  generateOrEditImage, 
+  generateSpeech, 
+  architectTask 
+} from "./src/lib/gemini-server.js";
 
 dotenv.config();
 
@@ -26,6 +36,46 @@ async function startServer() {
   // Health check or other dynamic API routes can go here
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Gemini API Proxy
+  app.post("/api/gemini", async (req, res) => {
+    const { action, args } = req.body;
+    try {
+      let result;
+      switch (action) {
+        case "chatWithPersona":
+          result = await chatWithPersona(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
+          break;
+        case "generateNewPersona":
+          result = await generateNewPersona(args[0], args[1]);
+          break;
+        case "summarizeConversation":
+          result = await summarizeConversation(args[0]);
+          break;
+        case "analyzeWorkflow":
+          result = await analyzeWorkflow(args[0]);
+          break;
+        case "generatePersonaAvatar":
+          result = await generatePersonaAvatar(args[0]);
+          break;
+        case "generateOrEditImage":
+          result = await generateOrEditImage(args[0], args[1]);
+          break;
+        case "generateSpeech":
+          result = await generateSpeech(args[0], args[1]);
+          break;
+        case "architectTask":
+          result = await architectTask(args[0], args[1]);
+          break;
+        default:
+          return res.status(400).send(`Unknown action: ${action}`);
+      }
+      res.json(result);
+    } catch (error: any) {
+      console.error(`Error in /api/gemini [action: ${action}]:`, error);
+      res.status(500).send(error.message || String(error));
+    }
   });
 
   // Vite middleware for development

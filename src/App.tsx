@@ -3246,7 +3246,9 @@ export default function App() {
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
 
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
-    if (!isCreativeMode && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
+    const isUserAdmin = (auth.currentUser?.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
+    const isCreativeActive = isCreativeMode || isUserAdmin;
+    if (!isCreativeActive && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
       setShowOptimizationModal(true);
       return;
     }
@@ -4352,7 +4354,7 @@ export default function App() {
                   aiSettings={aiSettings}
                   setLastGeminiMetadata={setLastGeminiMetadata}
                   trackFirestore={trackFirestore}
-                  isCreativeMode={isCreativeMode}
+                  isCreativeMode={isCreativeMode || isAdmin}
                   theme={theme}
                   setTheme={setTheme}
                   isSystemActive={isSystemActive}
@@ -4371,7 +4373,7 @@ export default function App() {
                   workflows={workflows}
                   tasks={tasks}
                   uiMode={uiMode}
-                  isCreativeMode={isCreativeMode}
+                  isCreativeMode={isCreativeMode || isAdmin}
                   initialPersonaId={selectedPersonaId}
                   favoritePersonaIds={favoritePersonaIds}
                   onToggleFavorite={handleToggleFavoritePersona}
@@ -4380,7 +4382,7 @@ export default function App() {
                   isAdmin={isAdmin}
                 />
               )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode} language={userProfile.language} isAdmin={isAdmin} />}
+              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} />}
               {activeView === 'blueprints' && (
                 <WorkflowsView 
                   workflows={workflows}
@@ -4389,7 +4391,7 @@ export default function App() {
                   user={user}
                   uiMode={uiMode}
                   language={userProfile.language}
-                  isCreativeMode={isCreativeMode}
+                  isCreativeMode={isCreativeMode || isAdmin}
                   isAdmin={isAdmin}
                 />
               )}

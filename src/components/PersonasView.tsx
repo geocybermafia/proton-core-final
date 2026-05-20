@@ -27,6 +27,48 @@ export default function PersonasView({
   const [showTools, setShowTools] = useState(false);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
 
+  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
+  const [editingInstructions, setEditingInstructions] = useState('');
+  const [isSavingInstructions, setIsSavingInstructions] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedPersona) {
+      setEditingInstructions(selectedPersona.systemInstruction || '');
+    } else {
+      setEditingInstructions('');
+    }
+    setIsEditingInstructions(false);
+    setSaveSuccess(false);
+    setSaveError(null);
+  }, [selectedPersona]);
+
+  const handleSaveInstructions = async () => {
+    if (!selectedPersona || !auth.currentUser) return;
+    setIsSavingInstructions(true);
+    setSaveSuccess(false);
+    setSaveError(null);
+
+    try {
+      const personaDocRef = doc(db, 'users', auth.currentUser.uid, 'personas', selectedPersona.id);
+      await setDoc(personaDocRef, { systemInstruction: editingInstructions }, { merge: true });
+      
+      setSelectedPersona({
+        ...selectedPersona,
+        systemInstruction: editingInstructions
+      });
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("Error saving persona instructions:", err);
+      setSaveError(err.message || 'Error occurred');
+    } finally {
+      setIsSavingInstructions(false);
+    }
+  };
+
   const aiTools = [
     { id: 'image', icon: ImageIcon, label: t.tools.image, color: 'text-purple-400', bg: 'bg-purple-500/10' },
     { id: 'summary', icon: FileText, label: t.tools.summary, color: 'text-blue-400', bg: 'bg-blue-500/10' },
@@ -203,7 +245,16 @@ export default function PersonasView({
                     </div>
                  </div>
                  <div className="flex gap-2">
-                    <button className="p-2.5 hover:bg-white/5 rounded-xl text-proton-muted transition-all border border-transparent hover:border-white/10">
+                    <button 
+                       onClick={() => setIsEditingInstructions(!isEditingInstructions)}
+                       className={cn(
+                          "p-2.5 rounded-xl text-proton-muted transition-all border border-transparent",
+                          isEditingInstructions 
+                            ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" 
+                            : "hover:bg-white/5 hover:border-white/10"
+                       )}
+                       title={language === 'ka' ? 'სისტემური ინსტრუქციების რედაქტირება' : 'Edit System Instructions'}
+                    >
                        <Edit2 size={18} />
                     </button>
                     <button className="p-2.5 hover:bg-red-500/10 hover:text-red-400 rounded-xl text-proton-muted transition-all border border-transparent hover:border-red-500/10">
@@ -211,6 +262,69 @@ export default function PersonasView({
                     </button>
                  </div>
               </header>
+
+              {/* System Instructions Editor Accordion/Panel */}
+              <AnimatePresence>
+                {isEditingInstructions && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden border-b border-proton-border bg-white/[0.02]"
+                  >
+                    <div className="p-6 space-y-4">
+                      <div className="flex justify-between items-center">
+                        <label className="text-xs font-black uppercase tracking-widest text-proton-accent flex items-center gap-2">
+                          <Sparkles size={14} />
+                          {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'System Instructions'}
+                        </label>
+                        <span className="text-[10px] text-proton-muted uppercase font-mono tracking-wider opacity-60">
+                           {selectedPersona.role}
+                        </span>
+                      </div>
+                      
+                      <textarea
+                        value={editingInstructions}
+                        onChange={(e) => setEditingInstructions(e.target.value)}
+                        className="w-full h-32 p-4 bg-proton-bg border border-proton-border rounded-xl text-sm text-white placeholder-proton-muted/50 focus:outline-none focus:border-proton-accent/50 focus:ring-1 focus:ring-proton-accent/20 transition-all font-mono"
+                        placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუმენტი ან ინსტრუქცია...' : 'Enter system prompt rules or instructions...'}
+                      />
+
+                      <div className="flex justify-between items-center">
+                        <div>
+                          {saveSuccess && (
+                            <span className="text-sm text-emerald-400 font-bold animate-pulse flex items-center gap-1">
+                              ✓ {language === 'ka' ? 'წარმატებით შეინახა!' : 'Saved successfully!'}
+                            </span>
+                          )}
+                          {saveError && (
+                            <span className="text-sm text-red-500 font-bold">
+                              ✗ {saveError}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setIsEditingInstructions(false)}
+                            className="px-4 py-2 hover:bg-white/5 border border-transparent hover:border-white/10 rounded-xl text-xs font-bold text-proton-muted transition-colors"
+                          >
+                            {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                          </button>
+                          <button
+                            onClick={handleSaveInstructions}
+                            disabled={isSavingInstructions}
+                            className="px-4 py-2 bg-proton-accent hover:bg-proton-accent-hover text-slate-950 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                          >
+                            {isSavingInstructions 
+                              ? (language === 'ka' ? 'ინახება...' : 'Saving...')
+                              : (language === 'ka' ? 'შენახვა' : 'Save')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
                  {messages.map((m) => (
