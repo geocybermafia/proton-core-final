@@ -20,6 +20,7 @@ export type GlobalAiSettings = {
   systemInstruction?: string;
   voice: string;
   customApiKey?: string;
+  useSimulatedAi?: boolean;
 };
 
 export type ChatMessage = { id: string, role: 'user' | 'model', content: string, timestamp: number };
@@ -94,6 +95,7 @@ export type Task = {
   recurring?: 'none' | 'daily' | 'weekly' | 'monthly';
   energyCost?: 'low' | 'medium' | 'high';
   estimatedTime?: number; // in minutes
+  elapsedTime?: number; // in seconds
 };
 
 export type Listing = {

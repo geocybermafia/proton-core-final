@@ -21,6 +21,7 @@ import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
 import { MarketView } from './components/MarketView';
 import { AuthFlow } from './components/AuthFlow';
+import { OrganizerView } from './components/OrganizerView';
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -110,6 +111,7 @@ import {
   Calendar as CalendarIcon,
   Check,
   CheckCircle2,
+  Copy,
   ShieldAlert,
   Search,
   Bell,
@@ -124,7 +126,10 @@ import {
   ArrowUpRight,
   Repeat,
   Camera as CameraIcon,
-  Mic as MicIcon
+  Mic as MicIcon,
+  Play,
+  Pause,
+  Tag
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -597,7 +602,7 @@ const PersonaEditor = ({
 
 type OrganizerTheme = Theme;
 
-const OrganizerView = ({
+const LegacyOrganizerView = ({
   language,
   workflows,
   tasks,
@@ -1362,7 +1367,9 @@ const DashboardView = ({
   uiMode,
   theme,
   setTheme,
-  isSystemActive
+  isSystemActive,
+  aiSettings,
+  setAiSettings
 }: { 
   personas: Persona[], 
   activeView: View, 
@@ -1377,13 +1384,54 @@ const DashboardView = ({
   isCreativeMode: boolean,
   theme: Theme,
   setTheme: (t: Theme) => void,
-  isSystemActive: boolean
+  isSystemActive: boolean,
+  setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>
 }) => {
   const t = translations[language];
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const templates = [
+    {
+      id: 'template-1',
+      title: language === 'ka' ? '🎨 ქართული რეწვის სტარტაპის გეგმა' : '🎨 Georgia Artisan Craft Startup Plan',
+      desc: language === 'ka' 
+        ? 'ბიზნესის სამოქმედო გეგმა, მასალების მოპოვება და ექსპორტი.' 
+        : 'Business action plan, sources, and exporting local crafts.',
+      prompt: language === 'ka'
+        ? 'გამარჯობა! მე ვგეგმავ ქართული ტრადიციული თიხის ჭურჭლისა და კერამიკის სახელოსნოს გაფართოებას და პროდუქციის ექსპორტზე გატანას. შეგიძლია შემიდგინო დეტალური ბიზნეს გეგმა, მასალების ხარჯებისა და მარკეტინგული არხების ჩათვლით?'
+        : 'Hello! I am planning to expand a traditional Georgian pottery and ceramics workshop and export our products. Can you draft a comprehensive business plan, including material costs, automation suggestions, and marketing channels?'
+    },
+    {
+      id: 'template-2',
+      title: language === 'ka' ? '📈 ლიდების ავტომატიზაცია Tbilisi კაფეებისთვის' : '📈 Lead Gen Automation for Tbilisi Cafe',
+      desc: language === 'ka'
+        ? 'ონლაინ შეკვეთების სინქრონიზაცია და ინსტაგრამით ლიდების მოზიდვა.'
+        : 'Syncing online inquiries and utilizing Instagram Reels for local customer acquisition.',
+      prompt: language === 'ka'
+        ? 'როგორ შემიძლია Proton Workflows-ის დახმარებით ავტომატურად შევაგროვო და დავამუშაო ინსტაგრამიდან შემოსული კლიენტების მონაცემები ჩემი კაფესთვის თბილისში, რათა შევამცირო ხელით წერა და გავზარდო ლოიალურობა?'
+        : 'How can I utilize automated Proton Workflows to capture customer leads from Instagram, sync them to a local CRM for my cafe in Tbilisi, and eliminate manual entry?'
+    },
+    {
+      id: 'template-3',
+      title: language === 'ka' ? '⛓️ Web3 და კრიპტო გადახდები ტურიზმში' : '⛓️ Web3 & Crypto Payments in Local Tourism',
+      desc: language === 'ka'
+        ? 'დეცენტრალიზებული გადახდების ინტეგრაცია ქართული საოჯახო სასტუმროებისთვის.'
+        : 'Integrating decentralized wallet payments directly for Georgian guest-houses.',
+      prompt: language === 'ka'
+        ? 'მე ვარ Web3 ენთუზიასტი და მინდა ქართულ საოჯახო სასტუმროებში (Kakheti-სა და Svaneti-ში) დავნერგო კრიპტო და Web3 გადახდები ტურისტებისთვის. რა არის ამის საუკეთესო და მარტივი ტექნოლოგიური სტრატეგია?'
+        : 'I want to integrate crypto and decentralized Web3 payments for tourists visiting local guest-houses in Kakheti and Svaneti. What is the most seamless engineering and regulatory strategy for this in Georgia?'
+    }
+  ];
 
   return (
     <div className={cn(
-      "space-y-6 animate-in fade-in duration-300 pb-20",
+      "space-y-8 animate-in fade-in duration-300 pb-20",
       uiMode === 'creative' ? "creative-mode" : "business-mode"
     )}>
       <div className={cn(
@@ -1444,6 +1492,117 @@ const DashboardView = ({
                 )}
              </div>
           </div>
+        </div>
+      </div>
+
+      {/* Simulation Info & Instant Mode Toggler */}
+      <div className={cn(
+        "p-6 rounded-[32px] border transition-all select-none relative overflow-hidden shadow-xl flex flex-col md:flex-row items-center justify-between gap-6",
+        aiSettings.useSimulatedAi 
+          ? "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/40 shadow-amber-500/5" 
+          : "bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent border-proton-border/80"
+      )}>
+        <div className="flex items-center gap-5">
+          <div className={cn(
+            "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0",
+            aiSettings.useSimulatedAi ? "bg-amber-500 text-proton-bg shadow-lg shadow-amber-500/20" : "bg-cyan-500 text-proton-bg shadow-lg shadow-cyan-500/20"
+          )}>
+            <Sparkles className={cn(aiSettings.useSimulatedAi && "animate-pulse")} size={22} />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-black uppercase tracking-wider text-proton-text flex items-center gap-2">
+              {language === 'ka' ? 'ინტელექტის მართვის რეჟიმი' : 'AI Intelligence Engine'}
+              <span className={cn(
+                "text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
+                aiSettings.useSimulatedAi 
+                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" 
+                  : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+              )}>
+                {aiSettings.useSimulatedAi ? (language === 'ka' ? 'სიმულაცია' : 'Simulation Mode') : (language === 'ka' ? 'ღრუბლოვანი' : 'Cloud Live')}
+              </span>
+            </h4>
+            <p className="text-[11px] text-proton-muted font-bold leading-relaxed max-w-xl">
+              {aiSettings.useSimulatedAi 
+                ? (language === 'ka' 
+                  ? 'აქტიურია პორტატული საცდელი რეჟიმი. პასუხები გენერირდება ლოკალურად — API კვოტების შეზღუდვისა და დაყოვნების გარეშე.' 
+                  : 'Playground Active. AI responses are processed locally with 0 delay, completely avoiding quota rate limits.')
+                : (language === 'ka' 
+                   ? 'აქტიურია Google Gemini ღრუბლოვანი სერვერი. თუ მიიღებთ 429 შეცდომას, შეგიძლიათ ნებისმიერ დროს გადახვიდეთ სიმულაციურ რეჟიმში.' 
+                   : 'Direct Google Gemini cloud API connection. If you experience quota exhaustion, toggle simulation mode to resume instantly.')}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAiSettings(prev => ({ ...prev, useSimulatedAi: !prev.useSimulatedAi }))}
+          className={cn(
+            "w-full md:w-auto px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 active:scale-95 shadow-md",
+            aiSettings.useSimulatedAi 
+              ? "bg-amber-500 border-amber-500 text-proton-bg hover:bg-amber-600 shadow-amber-500/20"
+              : "bg-transparent border-proton-border text-proton-muted hover:border-cyan-405 hover:text-cyan-400"
+          )}
+        >
+          {aiSettings.useSimulatedAi 
+            ? (language === 'ka' ? 'გადართე Live რეჟიმში' : 'Switch to Live Cloud') 
+            : (language === 'ka' ? 'ჩართე საცდელი რეჟიმი' : 'Enable Simulation')}
+        </button>
+      </div>
+
+      {/* Quick Start Business Templates & Prompts */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-black text-proton-text uppercase tracking-tight flex items-center gap-2">
+            <ClipboardList className="text-proton-accent" size={18} />
+            {language === 'ka' ? 'სწრაფი ტესტირების შაბლონები' : 'Quick Start Playbook'}
+          </h3>
+          <p className="text-[10px] text-proton-muted font-black uppercase tracking-wider mt-1">
+            {language === 'ka' 
+              ? 'დააკოპირეთ მზა ბიზნეს იდეები და მარკეტინგული კითხვები, რომლებიც მორგებულია ქართულ რეალობაზე' 
+              : 'Copy tested product requests and marketing templates specifically adapted to the local market'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {templates.map((tpl) => (
+            <div 
+              key={tpl.id}
+              className="bg-proton-card/40 backdrop-blur-sm p-6 rounded-[32px] border border-proton-border/80 flex flex-col justify-between gap-4 group/tpl hover:border-proton-accent/40 transition-all shadow-md relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent opacity-0 group-hover/tpl:opacity-100 transition-opacity pointer-events-none" />
+              <div className="space-y-2 relative z-10 w-full">
+                <h4 className="text-xs font-black uppercase tracking-wider text-proton-text">{tpl.title}</h4>
+                <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">{tpl.desc}</p>
+                <div className="bg-proton-bg/60 p-3.5 rounded-2xl border border-proton-border/40 max-h-[100px] overflow-y-auto font-medium text-[10px] text-proton-text/70 italic select-all custom-scrollbar-minimal">
+                  "{tpl.prompt}"
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 relative z-10">
+                <button
+                  type="button"
+                  onClick={() => handleCopy(tpl.id, tpl.prompt)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
+                    copiedId === tpl.id 
+                      ? "bg-green-500 border-green-500 text-white" 
+                      : "bg-proton-secondary/20 border-proton-border/60 text-proton-muted hover:border-proton-accent hover:text-proton-accent hover:bg-proton-accent/5"
+                  )}
+                >
+                  {copiedId === tpl.id ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedId === tpl.id ? (language === 'ka' ? 'დაკოპირდა!' : 'Copied!') : (language === 'ka' ? 'კოპირება' : 'Copy Prompt')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('personas');
+                  }}
+                  className="px-4 py-2.5 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent hover:bg-proton-accent hover:text-proton-bg rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+                >
+                  {language === 'ka' ? 'გახსნა' : 'Open Chat'}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -4395,6 +4554,7 @@ export default function App() {
                   theme={theme}
                   setTheme={setTheme}
                   isSystemActive={isSystemActive}
+                  setAiSettings={setAiSettings}
                 />
               )}
               {activeView === 'personas' && (

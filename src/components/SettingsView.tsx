@@ -279,6 +279,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
+                    {/* Simulated Demo Mode Block */}
+                    <div className={cn(
+                      "p-7 rounded-[32px] border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 transition-all select-none",
+                      aiSettings.useSimulatedAi ? "bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5 animate-pulse" : "bg-proton-secondary/10 border-proton-border"
+                    )}>
+                      <div className="flex items-center gap-5">
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0",
+                          aiSettings.useSimulatedAi ? "bg-amber-500 text-proton-bg shadow-lg shadow-amber-500/20" : "bg-proton-secondary/20 text-proton-muted"
+                        )}>
+                          <Sparkles className={cn(aiSettings.useSimulatedAi && "animate-spin")} size={28} />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-xs font-black uppercase tracking-widest block text-proton-text">
+                            {language === 'ka' ? 'AI სიმულაციური რეჟიმი' : 'AI Simulation Mode'}
+                          </label>
+                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1 leading-relaxed">
+                            {language === 'ka' 
+                              ? 'ჩართეთ საცდელი რეჟიმი API შეცდომებისა და კვოტის ამოწურვის (429) სრულად ასარიდებლად. პასუხები გენერირდება მყისიერად.' 
+                              : 'Bypass any 429 quota exhaustion or environment key errors. Get realistic answers instantly.'}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAiSettings(prev => ({ ...prev, useSimulatedAi: !prev.useSimulatedAi }))}
+                        className={cn(
+                          "w-full sm:w-auto px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 active:scale-95",
+                          aiSettings.useSimulatedAi 
+                            ? "bg-amber-500 border-amber-500 text-proton-bg hover:bg-amber-600 shadow-lg shadow-amber-500/10 font-bold"
+                            : "bg-transparent border-proton-border text-proton-muted hover:border-proton-accent hover:text-proton-accent"
+                        )}
+                      >
+                        {aiSettings.useSimulatedAi 
+                          ? (language === 'ka' ? 'ჩართულია' : 'Enabled') 
+                          : (language === 'ka' ? 'გამორთულია' : 'Disabled')}
+                      </button>
+                    </div>
+
                     <div className="space-y-3 pt-6 border-t border-proton-border/50">
                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
                          {t.system_prompt || 'Custom AI Instructions'}

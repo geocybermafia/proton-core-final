@@ -89,10 +89,35 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
   } catch (error: any) {
     console.error("Gemini API Error in chatWithPersona:", error);
     const endTime = performance.now();
+    const errStr = error.message || String(error);
+    
+    let text = "";
+    if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.toLowerCase().includes("resource_exhausted")) {
+      text = appLanguage === 'ka'
+        ? `⚠️ **კვოტა ამოიწურა / ლიმიტის გადაჭარბება (შეცდომა 429)**
+        
+გაზიარებულმა ან თქვენმა პერსონალურმა Gemini API გასაღებმა მიაღწია Google-ის მიერ დაწესებულ მოთხოვნების ლიმიტს:
+1. **თუ იყენებთ უფასო (Free) API გასაღებს:** Google-ის უფასო ტარიფს აქვს მკაცრი შეზღუდვები (წუთში მაქსიმუმ 15 მოთხოვნა). სწრაფი ან ხშირი გამოყენებისას, განსაკუთრებით თუ საუბრობთ რამდენიმე პერსონასთან ან გამოსცემთ სერვისებს, ეს ლიმიტი მარტივად ივსება.
+2. **როგორ მოვაგვაროთ:** 
+   * გთხოვთ, **დაელოდოთ 1 წუთი** და სცადოთ ხელახლა.
+   * დარწმუნდით, რომ თქვენს Google AI Studio ბილინგზე ჩართულია **"Pay-as-you-go"** ფასიანი გეგმა (რომელიც ასევე გთავაზობთ ფართო უფასო ლიმიტებს სტაბილური მუშაობისთვის).
+   * შეამოწმეთ, რომ შეყვანილი API გასაღები ნამდვილად აქტიური და სწორია ზედა მარჯვენა კუთხეში არსებული ⚙️ პარამეტრების პანელიდან.`
+        : `⚠️ **Quota Exceeded / Rate Limit Reached (Error 429)**
+        
+The shared environment key or your personal Gemini API key has exceeded Google's service limits:
+1. **If you are using a Free API Key:** Google's Free tier keys have strict rate-limit constraints (typically 15 requests per minute). Rapid or continuous use can exhaust this limit immediately.
+2. **How to resolve:**
+   * Please **wait 1 minute** before trying your request again.
+   * Ensure your Google AI Studio account is upgraded to a **"Pay-as-you-go"** billing plan (which offers much higher rate limits and generous free tiers).
+   * Confirm that your custom API key in the System Settings panel (⚙️ icon in the top-right) is active and correct.`;
+    } else {
+      text = appLanguage === 'ka'
+        ? `⚠️ **კავშირის შეცდომა:** სასურველი პასუხის მიღება ვერ მოხერხდა. (${errStr}). გთხოვთ სცადოთ მოგვიანებით.`
+        : `⚠️ **Connection Error:** Failed to generate response. (${errStr}). Please try again later.`;
+    }
+
     return { 
-      text: appLanguage === 'ka' 
-        ? `კავშირის შეცდომა: ${error.message || error}. გთხოვთ, სცადოთ მოგვიანებით.` 
-        : `Connection Error: ${error.message || error}. Please check your connection and try again.`, 
+      text, 
       metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: Math.round(endTime - startTime) } 
     };
   }
