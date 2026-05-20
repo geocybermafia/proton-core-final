@@ -62,11 +62,25 @@ export const PERSONAS: Persona[] = [
 
 
 async function callServerGemini<T>(action: string, args: any[]): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  
+  try {
+    const saved = localStorage.getItem('proton_ai_settings');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.customApiKey) {
+        headers['x-custom-api-key'] = parsed.customApiKey;
+      }
+    }
+  } catch (e) {
+    console.warn("Could not load customApiKey from storage, using environment fallback.", e);
+  }
+
   const response = await fetch('/api/gemini', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify({ action, args })
   });
   if (!response.ok) {

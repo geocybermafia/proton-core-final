@@ -1449,7 +1449,7 @@ const DashboardView = ({
 
       {uiMode === 'business' ? (
         <div className="space-y-8">
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div 
                 onClick={() => setActiveView('organizer')}
                 className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-proton-accent transition-all cursor-pointer group shadow-lg"
@@ -1483,6 +1483,24 @@ const DashboardView = ({
                  </h3>
                  <p className="text-sm text-proton-muted font-medium">
                     {language === 'ka' ? 'დაგეგმეთ და მოახდინეთ ბიზნეს ოპერაციების ავტომატიზაცია.' : 'Plan and automate your business operations.'}
+                 </p>
+              </div>
+
+              <div 
+                onClick={() => setActiveView('settings')}
+                className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-proton-accent transition-all cursor-pointer group shadow-lg"
+              >
+                 <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-bg transition-colors">
+                       <Settings size={28} />
+                    </div>
+                    <ArrowRight className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-2 transition-all" size={24} />
+                 </div>
+                 <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
+                    {language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}
+                 </h3>
+                 <p className="text-sm text-proton-muted font-medium">
+                    {language === 'ka' ? 'შეცვალეთ AI პარამეტრები, განაახლეთ Gemini API გასაღები და გამოასწორეთ შეცდომები.' : 'Configure global system settings, update Gemini API keys, and fix environment errors.'}
                  </p>
               </div>
            </div>
@@ -4179,6 +4197,15 @@ export default function App() {
               uiMode={uiMode}
               badge={language === 'ka' ? 'ჰაბი' : 'HUB'}
             />
+            <SidebarItem 
+              icon={Settings} 
+              label={language === 'ka' ? 'პარამეტრები' : 'System Settings'} 
+              active={activeView === 'settings'} 
+              onClick={() => handleViewChange('settings')} 
+              expanded={isSidebarOpen}
+              uiMode={uiMode}
+              badge="AI"
+            />
           </div>
         </nav>
 
@@ -4320,6 +4347,16 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              <button 
+                onClick={() => handleViewChange('settings')}
+                className={cn(
+                  "w-10 h-10 rounded-xl bg-proton-bg border flex items-center justify-center transition-all shrink-0",
+                  activeView === 'settings' ? "border-proton-accent text-proton-accent bg-proton-accent/5 shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent/50"
+                )}
+                title={language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}
+              >
+                <Settings size={18} />
+              </button>
               <button 
                 onClick={handleSignOut}
                 className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0"

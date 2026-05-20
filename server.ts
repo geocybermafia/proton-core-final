@@ -43,38 +43,42 @@ async function startServer() {
   // Gemini API Proxy
   app.post("/api/gemini", async (req, res) => {
     const { action, args } = req.body;
+    const customApiKey = req.headers['x-custom-api-key'] as string | undefined;
+    
     try {
       let result;
       switch (action) {
         case "chatWithPersona":
-          result = await chatWithPersona(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8]);
+          result = await chatWithPersona(
+            args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7], args[8], customApiKey
+          );
           break;
         case "generateNewPersona":
-          result = await generateNewPersona(args[0], args[1]);
+          result = await generateNewPersona(args[0], args[1], customApiKey);
           break;
         case "summarizeConversation":
-          result = await summarizeConversation(args[0]);
+          result = await summarizeConversation(args[0], customApiKey);
           break;
         case "analyzeWorkflow":
-          result = await analyzeWorkflow(args[0]);
+          result = await analyzeWorkflow(args[0], customApiKey);
           break;
         case "generatePersonaAvatar":
-          result = await generatePersonaAvatar(args[0]);
+          result = await generatePersonaAvatar(args[0], customApiKey);
           break;
         case "generateOrEditImage":
-          result = await generateOrEditImage(args[0], args[1]);
+          result = await generateOrEditImage(args[0], args[1], customApiKey);
           break;
         case "generateSpeech":
-          result = await generateSpeech(args[0], args[1]);
+          result = await generateSpeech(args[0], args[1], customApiKey);
           break;
         case "architectTask":
-          result = await architectTask(args[0], args[1]);
+          result = await architectTask(args[0], args[1], customApiKey);
           break;
         case "translateText":
-          result = await translateText(args[0], args[1], args[2], args[3]);
+          result = await translateText(args[0], args[1], args[2], args[3], customApiKey);
           break;
         case "generateTechSpec":
-          result = await generateTechSpec(args[0], args[1]);
+          result = await generateTechSpec(args[0], args[1], customApiKey);
           break;
         default:
           return res.status(400).send(`Unknown action: ${action}`);

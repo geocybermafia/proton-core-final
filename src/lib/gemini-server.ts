@@ -8,25 +8,21 @@ export interface TaskPlan {
   firstSteps: string[];
 }
 
-let aiInstance: GoogleGenAI | null = null;
-let lastApiKey: string | null = null;
+const aiInstances = new Map<string, GoogleGenAI>();
 
-function getAi() {
-  // Prioritize VITE_GEMINI_API_KEY because the user manually configures it in settings to override the default/expired GEMINI_API_KEY.
-  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+function getAi(apiKeyOverride?: string) {
+  // Respect user-specified custom API key first, then fall back to environment configurations
+  const apiKey = apiKeyOverride || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.warn("Secure Config Alert: Server-side VITE_GEMINI_API_KEY and GEMINI_API_KEY environment variables are missing.");
-    console.log("Available environment keys:", Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY") && !k.includes("PASSWORD")));
     return null;
   }
   
-  if (!aiInstance || lastApiKey !== apiKey) {
-    // Log the detection of a key secure change
+  if (!aiInstances.has(apiKey)) {
     const maskedKey = apiKey.substring(0, 6) + "..." + apiKey.substring(apiKey.length - 4);
-    console.log(`[CONFIG SECURE RE-LOAD] Activating Gemini API Key: ${maskedKey} (Length: ${apiKey.length})`);
+    console.log(`[CONFIG SECURE MAP ACTIVATION] Initialized Gemini API Key: ${maskedKey} (Length: ${apiKey.length})`);
     
-    lastApiKey = apiKey;
-    aiInstance = new GoogleGenAI({ 
+    const instance = new GoogleGenAI({ 
       apiKey,
       httpOptions: {
         headers: {
@@ -34,8 +30,9 @@ function getAi() {
         }
       }
     });
+    aiInstances.set(apiKey, instance);
   }
-  return aiInstance;
+  return aiInstances.get(apiKey)!;
 }
 
 export async function chatWithPersona(
@@ -47,7 +44,8 @@ export async function chatWithPersona(
   includeSearch: boolean = true,
   temperature: number = 0.9,
   globalInstruction?: string,
-  appLanguage: 'en' | 'ka' = 'en'
+  appLanguage: 'en' | 'ka' = 'en',
+  apiKeyOverride?: string
 ): Promise<{ text: string, metadata: GeminiMetadata }> {
   const startTime = performance.now();
   try {
@@ -58,7 +56,7 @@ export async function chatWithPersona(
       tools.push({ googleMaps: {} });
     }
 
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
     const response = await ai.models.generateContent({
       model,
@@ -100,8 +98,8 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
   }
 }
 
-export async function generateNewPersona(basePersona: Persona, prompt: string): Promise<Persona> {
-  const ai = getAi();
+export async function generateNewPersona(basePersona: Persona, prompt: string, apiKeyOverride?: string): Promise<Persona> {
+  const ai = getAi(apiKeyOverride);
   if (!ai) throw new Error("AI engine not initialized");
   const systemPrompt = `
     You are a Persona Architect. Create a new digital persona based on the user's prompt.
@@ -123,9 +121,9 @@ export async function generateNewPersona(basePersona: Persona, prompt: string): 
   return newPersona;
 }
 
-export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[]) {
+export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[], apiKeyOverride?: string) {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) return "AI engine not initialized.";
     const response = await ai.models.generateContent({
       model: "gemini-1.5-flash",
@@ -141,9 +139,9 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
   }
 }
 
-export async function analyzeWorkflow(workflow: { name: string, trigger: string, action: string }) {
+export async function analyzeWorkflow(workflow: { name: string, trigger: string, action: string }, apiKeyOverride?: string) {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) return "AI engine not initialized.";
     const response = await ai.models.generateContent({
       model: "gemini-1.5-pro",
@@ -159,9 +157,9 @@ export async function analyzeWorkflow(workflow: { name: string, trigger: string,
   }
 }
 
-export async function generatePersonaAvatar(persona: Persona) {
+export async function generatePersonaAvatar(persona: Persona, apiKeyOverride?: string) {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model: 'gemini-1.5-flash',
@@ -199,9 +197,9 @@ export async function generatePersonaAvatar(persona: Persona) {
   }
 }
 
-export async function generateOrEditImage(prompt: string, imageBase64?: string) {
+export async function generateOrEditImage(prompt: string, imageBase64?: string, apiKeyOverride?: string) {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized");
     const parts: any[] = [{ text: prompt + "\n\nOUTPUT ONLY THE IMAGE CONTENT." }];
     if (imageBase64) {
@@ -238,9 +236,9 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string) 
   }
 }
 
-export async function generateSpeech(text: string, voiceName: string = 'Kore') {
+export async function generateSpeech(text: string, voiceName: string = 'Kore', apiKeyOverride?: string) {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model: "gemini-1.5-flash",
@@ -266,10 +264,10 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
   }
 }
 
-export async function architectTask(project: string, temperature: number = 0.9): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
+export async function architectTask(project: string, temperature: number = 0.9, apiKeyOverride?: string): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
   const startTime = performance.now();
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
       model: "gemini-1.5-flash",
@@ -331,10 +329,11 @@ export async function translateText(
   text: string,
   sourceRole: 'Visitor' | 'Creative',
   targetLanguage: 'Georgian' | 'English',
-  systemInstruction: string
+  systemInstruction: string,
+  apiKeyOverride?: string
 ): Promise<string> {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -350,9 +349,9 @@ export async function translateText(
   }
 }
 
-export async function generateTechSpec(title: string, category: string): Promise<string> {
+export async function generateTechSpec(title: string, category: string, apiKeyOverride?: string): Promise<string> {
   try {
-    const ai = getAi();
+    const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
     
     const response = await ai.models.generateContent({

@@ -18,6 +18,7 @@ import {
   Save,
   CheckCircle2,
   Lock,
+  Key,
   Sparkles,
   Sun,
   Moon,
@@ -72,6 +73,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const common = translations[language].common;
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'appearance' | 'security'>('ai');
   const [isSaved, setIsSaved] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleSave = () => {
@@ -287,6 +289,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                          className="w-full bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
                          placeholder="Example: Be professional and concise..."
                        />
+                    </div>
+
+                    <div className="space-y-3 pt-6 border-t border-proton-border/50">
+                       <div className="flex justify-between items-center">
+                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
+                           {language === 'ka' ? 'Gemini API გასაღები (გასაახლებლად)' : 'Gemini API Key (For Renewal)'}
+                         </label>
+                         <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-proton-accent/10 text-proton-accent shrink-0 select-none">
+                           {aiSettings.customApiKey 
+                             ? (language === 'ka' ? 'აქტიურია პერსონალური გასაღები' : 'Custom Overridden Key Active') 
+                             : (language === 'ka' ? 'გამოიყენება ავტომატური გასაღები' : 'Using Environment Default')}
+                         </span>
+                       </div>
+                       <div className="relative flex items-center">
+                         <input
+                           type={showApiKey ? "text" : "password"}
+                           value={aiSettings.customApiKey || ""}
+                           onChange={e => setAiSettings(prev => ({ ...prev, customApiKey: e.target.value }))}
+                           placeholder="AIzaSy..."
+                           className="w-full bg-proton-secondary/20 pl-5 pr-12 py-4 rounded-2xl border border-proton-border text-sm font-mono font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all shadow-inner placeholder:text-proton-muted/30"
+                         />
+                         <button
+                           type="button"
+                           onClick={() => setShowApiKey(!showApiKey)}
+                           className="absolute right-4 text-proton-muted hover:text-proton-text transition-colors p-1"
+                         >
+                           {showApiKey ? <EyeOff size={16} /> : <Key size={16} />}
+                         </button>
+                       </div>
+                       <p className="text-[10px] text-proton-muted/70 italic font-medium leading-relaxed">
+                         {language === 'ka' 
+                           ? 'თუ მიიღებთ შეცდომას "API key expired", გთხოვთ შეიყვანოთ თქვენი საკუთარი მოქმედი Gemini API გასაღები სისტემის სტაბილური მუშაობისთვის.' 
+                           : 'If you encounter an "API key expired" error, paste your own valid Gemini API Key here to instantly override the environment configurations.'}
+                       </p>
                     </div>
                   </div>
                 </div>

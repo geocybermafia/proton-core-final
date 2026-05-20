@@ -19,6 +19,7 @@ export type GlobalAiSettings = {
   zenMode: boolean;
   systemInstruction?: string;
   voice: string;
+  customApiKey?: string;
 };
 
 export type ChatMessage = { id: string, role: 'user' | 'model', content: string, timestamp: number };
