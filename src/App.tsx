@@ -3488,6 +3488,16 @@ export default function App() {
     } catch { return 'proton'; }
   });
 
+  const [organizerTheme, setOrganizerTheme] = useState<Theme>(() => {
+    try {
+      return (safeStorage.get('proton_organizer_theme') as Theme) || 'midnight';
+    } catch { return 'midnight'; }
+  });
+
+  useEffect(() => {
+    safeStorage.set('proton_organizer_theme', organizerTheme);
+  }, [organizerTheme]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-ui-mode', uiMode);
@@ -4317,29 +4327,6 @@ export default function App() {
                   className="px-3 space-y-4 mb-6 overflow-hidden"
                 >
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'ენა' : 'Language'}</p>
-                    <div className="flex bg-proton-bg/50 border border-proton-border/50 rounded-xl p-0.5">
-                      <button 
-                        onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
-                        className={cn(
-                          "flex-1 py-1.5 text-xs font-black rounded-lg transition-all",
-                          userProfile.language === 'en' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
-                        )}
-                      >
-                        EN
-                      </button>
-                      <button 
-                        onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
-                        className={cn(
-                          "flex-1 py-1.5 text-xs font-black rounded-lg transition-all",
-                          userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg" : "text-proton-muted"
-                        )}
-                      >
-                        GE
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
                     <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
                     <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
                   </div>
@@ -4484,27 +4471,6 @@ export default function App() {
               <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
             </div>
 
-            <div className="flex items-center gap-1.5 md:gap-2 bg-proton-bg border border-proton-border p-1 rounded-2xl shrink-0 text-xs font-black">
-              <button 
-                onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
-                className={cn(
-                  "px-2 md:px-3 py-1.5 rounded-xl transition-all",
-                  userProfile.language === 'en' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
-                )}
-              >
-                EN
-              </button>
-              <button 
-                onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
-                className={cn(
-                  "px-2 md:px-3 py-1.5 rounded-xl transition-all",
-                  userProfile.language === 'ka' ? "bg-proton-accent text-proton-bg shadow-lg" : "text-proton-muted hover:text-proton-text"
-                )}
-              >
-                GE
-              </button>
-            </div>
-
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <button 
                 onClick={() => handleViewChange('settings')}
@@ -4603,6 +4569,8 @@ export default function App() {
                   onEditTask={handleEditTask}
                   onAiSuggest={handleAiSuggestTasks}
                   uiMode={uiMode}
+                  theme={organizerTheme}
+                  setTheme={setOrganizerTheme}
                 />
               )}
               {activeView === 'compute' && (
@@ -4644,6 +4612,8 @@ export default function App() {
                   language={userProfile.language}
                   uiMode={uiMode}
                   setUiMode={handleModeChange}
+                  organizerTheme={organizerTheme}
+                  setOrganizerTheme={setOrganizerTheme}
                 />
               )}
               {activeView === 'documentation' && (

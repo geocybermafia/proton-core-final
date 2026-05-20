@@ -50,6 +50,8 @@ interface OrganizerViewProps {
   onEditTask: (id: string, updates: Partial<Task>) => void;
   onAiSuggest: () => void;
   uiMode: 'business' | 'creative';
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
 }
 
 export const OrganizerView = ({
@@ -62,6 +64,8 @@ export const OrganizerView = ({
   onEditTask,
   onAiSuggest,
   uiMode,
+  theme,
+  setTheme,
 }: OrganizerViewProps) => {
   const t = translations[language].organizer;
   const commonT = translations[language].common || { add: language === 'ka' ? 'დამატება' : 'Add' };
@@ -93,20 +97,6 @@ export const OrganizerView = ({
 
   // Timer/Stopwatch states
   const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
-
-  // Theme selection
-  const [theme, setTheme] = useState<OrganizerTheme>(() => {
-    try {
-      const stored = localStorage.getItem('proton_organizer_theme');
-      const legacyThemes = ['executive', 'cyberpunk', 'minimalist'];
-      if (!stored || legacyThemes.includes(stored)) return 'midnight';
-      return stored as OrganizerTheme;
-    } catch { return 'midnight'; }
-  });
-
-  useEffect(() => {
-    localStorage.setItem('proton_organizer_theme', theme);
-  }, [theme]);
 
   // Stopwatch ticking logic
   useEffect(() => {
@@ -408,21 +398,6 @@ export const OrganizerView = ({
 
         {/* Visual theme customizer for organizer workspace */}
         <div className="flex flex-wrap items-center justify-center gap-2">
-          <div className="flex bg-proton-secondary/10 p-1.5 rounded-2xl border border-proton-border/30 gap-1.5 overflow-x-auto max-w-xs md:max-w-md">
-            {(['light', 'titanium', 'proton', 'forest', 'sunset', 'rose', 'midnight'] as const).map(th => (
-              <button
-                key={th}
-                onClick={() => setTheme(th)}
-                className={cn(
-                  "px-3 py-1.5 text-[8px] font-black uppercase tracking-widest rounded-xl transition-all",
-                  theme === th ? "bg-white text-black shadow-sm" : "opacity-50 text-proton-text hover:opacity-100"
-                )}
-                title={`Theme: ${th}`}
-              >
-                {th}
-              </button>
-            ))}
-          </div>
           
           <div className="relative group shrink-0">
             <Search size={14} className={cn("absolute left-4 top-1/2 -translate-y-1/2 transition-colors", currentTheme.muted, "group-focus-within:text-proton-accent")} />

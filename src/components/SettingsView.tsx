@@ -45,6 +45,8 @@ interface SettingsViewProps {
   language: 'en' | 'ka';
   uiMode: 'business' | 'creative';
   setUiMode: (mode: 'business' | 'creative') => void;
+  organizerTheme: Theme;
+  setOrganizerTheme: (theme: Theme) => void;
 }
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
@@ -67,11 +69,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setTheme,
   language,
   uiMode,
-  setUiMode
+  setUiMode,
+  organizerTheme,
+  setOrganizerTheme
 }) => {
   const t = translations[language].settings;
   const common = translations[language].common;
-  const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'appearance' | 'security'>('ai');
+  const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -93,9 +97,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const tabs = [
+    { id: 'preferences', label: language === 'ka' ? 'პრეფერენციები' : 'Preferences', icon: Palette },
     { id: 'ai', label: t.ai_config || 'AI Assistant', icon: Cpu },
     { id: 'profile', label: t.profile || 'Profile', icon: User },
-    { id: 'appearance', label: t.appearance || 'Design', icon: Palette },
     { id: 'security', label: t.security || 'Security', icon: Shield },
   ];
 
@@ -479,42 +483,91 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               )}
 
-              {activeTab === 'appearance' && (
-                <div className="space-y-8">
+              {activeTab === 'preferences' && (
+                <div className="space-y-8 animate-in fade-in duration-300">
                   <header className="pb-6 border-b border-proton-border/50">
-                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.appearance}</h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.appearance_desc}</p>
+                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">
+                      {language === 'ka' ? 'ინტერფეისის პარამეტრები' : 'User Preferences'}
+                    </h3>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                      {language === 'ka' ? 'მართეთ საიტის ენა, გლობალური ფერები და ორგანიზატორი ერთ სივრცეში' : 'Manage interface language, global theme settings and planner accents'}
+                    </p>
                   </header>
 
                   <div className="space-y-8">
-                    <div>
-                      <label className="text-[11px] font-black uppercase tracking-wider mb-5 block text-proton-muted">Color Palette</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                    {/* 1. Language Sector */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-4">
+                      <div>
+                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
+                          {language === 'ka' ? 'სისტემის ენა' : 'System Language'}
+                        </label>
+                        <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
+                          {language === 'ka' ? 'აირჩიეთ სასურველი ლოკალიზაცია ინტერფეისისთვის' : 'Choose default system localization'}
+                        </p>
+                      </div>
+
+                      <div className="flex bg-proton-bg border border-proton-border/50 rounded-2xl p-1 max-w-sm">
+                        <button 
+                          type="button"
+                          onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
+                          className={cn(
+                            "flex-1 py-3 text-xs font-black rounded-xl transition-all uppercase tracking-widest",
+                            language === 'en' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
+                          )}
+                        >
+                          English (EN)
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
+                          className={cn(
+                            "flex-1 py-3 text-xs font-black rounded-xl transition-all uppercase tracking-widest",
+                            language === 'ka' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
+                          )}
+                        >
+                          ქართული (GE)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. Global Site Theme Accent */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-5">
+                      <div>
+                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
+                          {language === 'ka' ? 'გლობალური პალიტრა' : 'Global Color Palette'}
+                        </label>
+                        <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
+                          {language === 'ka' ? 'საიტის ძირითადი ფერების და აქცენტების მართვა' : 'Configure main interface background gradient and accent layers'}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {THEMES.map((tInfo) => (
                           <button
                             key={tInfo.id}
+                            type="button"
                             onClick={() => setTheme(tInfo.id)}
                             className={cn(
-                              "flex flex-col items-center gap-3 p-5 rounded-[32px] transition-all border-2 group relative overflow-hidden",
+                              "flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
                               theme === tInfo.id 
-                                ? "bg-proton-card border-proton-accent shadow-2xl ring-4 ring-proton-accent/5 scale-[1.02]" 
+                                ? "bg-proton-card border-proton-accent shadow-xl ring-4 ring-proton-accent/5 scale-[1.02]" 
                                 : "border-proton-border bg-proton-secondary/5 hover:bg-proton-secondary/10 hover:border-proton-accent/30"
                             )}
                           >
                             <div className={cn(
-                              "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
+                              "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-md",
                               theme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/10 text-proton-muted"
                             )}>
                               {tInfo.icon}
                             </div>
                             <span className={cn(
-                              "text-[10px] font-black uppercase tracking-widest",
+                              "text-[9px] font-black uppercase tracking-widest",
                               theme === tInfo.id ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
                             )}>{tInfo.label}</span>
                             {theme === tInfo.id && (
                               <motion.div 
                                 layoutId="active-theme-dot"
-                                className="absolute top-3 right-3 w-2 h-2 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
+                                className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
                               />
                             )}
                           </button>
@@ -522,6 +575,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
+                    {/* 3. Space Planner Accord Theme */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-5">
+                      <div>
+                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
+                          {language === 'ka' ? 'ორგანიზატორის ვიზუალი' : 'Workspace Planner Theme'}
+                        </label>
+                        <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
+                          {language === 'ka' ? 'პლანერის და საქმეების კალენდრის ინდივიდუალური გაფორმება' : 'Stylize layout modules and cards in your tasks dashboard'}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {THEMES.map((tInfo) => (
+                          <button
+                            key={tInfo.id}
+                            type="button"
+                            onClick={() => setOrganizerTheme(tInfo.id)}
+                            className={cn(
+                              "flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
+                              organizerTheme === tInfo.id 
+                                ? "bg-proton-card border-proton-accent shadow-xl ring-4 ring-proton-accent/5 scale-[1.02]" 
+                                : "border-proton-border bg-proton-secondary/5 hover:bg-proton-secondary/10 hover:border-proton-accent/30"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-md",
+                              organizerTheme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/10 text-proton-muted"
+                            )}>
+                              {tInfo.icon}
+                            </div>
+                            <span className={cn(
+                              "text-[9px] font-black uppercase tracking-widest",
+                              organizerTheme === tInfo.id ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
+                            )}>{tInfo.label}</span>
+                            {organizerTheme === tInfo.id && (
+                              <motion.div 
+                                layoutId="active-organizer-theme-dot"
+                                className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
+                              />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 4. Zen Mode and system states */}
                     <div className={cn(
                       "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
                       aiSettings.zenMode ? "bg-amber-500/5 border-amber-500/30 shadow-lg shadow-amber-500/5" : "bg-proton-secondary/10 border-proton-border"
@@ -534,8 +633,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <EyeOff size={28} />
                         </div>
                         <div>
-                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">{t.zen || 'Zen Mode'}</label>
-                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">De-clutter the interface matrix</p>
+                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">
+                            {language === 'ka' ? 'ზენ რეჟიმი' : 'Zen Mode'}
+                          </label>
+                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">
+                            {language === 'ka' ? 'ინტერფეისის მაქსიმალური განტვირთვა' : 'De-clutter the interface matrix for maximum focus'}
+                          </p>
                         </div>
                       </div>
                       <div className={cn(
