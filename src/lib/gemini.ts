@@ -94,7 +94,7 @@ export async function chatWithPersona(
   persona: Persona, 
   message: string, 
   history: { role: 'user' | 'model', parts: { text: string }[] }[] = [],
-  model: string = "gemini-1.5-flash",
+  model: string = "gemini-3.5-flash",
   includeMaps: boolean = false,
   includeSearch: boolean = true,
   temperature: number = 0.9,
@@ -107,10 +107,29 @@ export async function chatWithPersona(
     ]);
   } catch (error: any) {
     console.error("Gemini API Client Proxy Error:", error);
+    let displayMessage = error.message || String(error);
+    
+    // Attempt to parse dynamic server-side errors
+    try {
+      if (displayMessage.startsWith("Error: ")) {
+        displayMessage = displayMessage.substring(7);
+      }
+      const parsed = JSON.parse(displayMessage);
+      if (parsed && (parsed.isQuotaError || parsed.isModelError)) {
+        displayMessage = appLanguage === 'ka' ? parsed.messageKa : parsed.messageEn;
+      }
+    } catch (e) {
+      // Check for presence of common quota/excess cues in raw string
+      const errLower = displayMessage.toLowerCase();
+      if (errLower.includes("429") || errLower.includes("quota") || errLower.includes("resource_exhausted")) {
+        displayMessage = appLanguage === 'ka'
+          ? `ლიმიტის გადაჭარბება (შეცდომა 429): გაზიარებულმა API გასაღებმა მიაღწია კვოტას. გთხოვთ გააქტიუროთ თქვენი საკუთარი Gemini API გასაღები "პარამეტრებიდან" (ზედა მარჯვენა კუთხეში ⚙️) მუშაობის გასაგრძელებლად.`
+          : `Quota Exceeded (Error 429): The shared environment API key has reached its limits. Please configure your custom Gemini API Key in "System Settings" (icon in the top-right ⚙️) to resume operations immediately.`;
+      }
+    }
+
     return {
-      text: appLanguage === 'ka' 
-        ? `კავშირის შეცდომა: ${error.message || error}. გთხოვთ, სცადოთ მოგვიანებით.` 
-        : `Connection Error: ${error.message || error}. Please check your connection and try again.`, 
+      text: displayMessage,
       metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: 0 } 
     };
   }

@@ -86,7 +86,25 @@ async function startServer() {
       res.json(result);
     } catch (error: any) {
       console.error(`Error in /api/gemini [action: ${action}]:`, error);
-      res.status(500).send(error.message || String(error));
+      const errStr = error.message || String(error);
+      
+      if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.includes("RESOURCE_EXHAUSTED")) {
+        const errorMsg = JSON.stringify({
+          isQuotaError: true,
+          messageEn: `Quota Exceeded (Error 429). The shared environment API key has reached its direct rate limit. Please navigate to the "System Settings" panel in the top-right ⚙️ and configure your own custom Gemini API Key to bypass this shared limit immediately. Thanks for your understanding!`,
+          messageKa: `კვოტა ამოიწურა (შეცდომა 429). გაზიარებულმა გარემოს API გასაღებმა მიაღწია ლიმიტს. გთხოვთ, გახსნათ "პარამეტრები" პანელი ზედა მარჯვენა კუთხეში ⚙️ და შეიყვანოთ თქვენი საკუთარი Gemini API გასაღები მუშაობის შეუფერხებლად გასაგრძელებლად! მადლობა გაგებისთვის!`
+        });
+        res.status(429).send(errorMsg);
+      } else if (errStr.includes("404") || errStr.toLowerCase().includes("not found")) {
+        const errorMsg = JSON.stringify({
+          isModelError: true,
+          messageEn: `Model request failed. A legacy model may have been defined. Returning default setup fallback. Please configure a modern Gemini model.`,
+          messageKa: `მოდელის მოთხოვნა ვერ მოხერხდა. შესაძლოა ძველი მოდელი იყო განსაზღვრული. გთხოვთ გამოიყენოთ თანამედროვე Gemini მოდელი.`
+        });
+        res.status(404).send(errorMsg);
+      } else {
+        res.status(500).send(errStr);
+      }
     }
   });
 

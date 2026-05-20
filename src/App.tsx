@@ -2178,7 +2178,7 @@ const PersonasView = ({
         selectedPersona, 
         userMessage, 
         apiHistory, 
-        "gemini-1.5-flash", 
+        "gemini-3.5-flash", 
         aiSettings.enableMaps, 
         aiSettings.enableSearch, 
         aiSettings.temperature, 
@@ -3883,7 +3883,7 @@ export default function App() {
       Return ONLY valid JSON in format: [{"content": "string", "contentGe": "string"}]
       Ensure the content is specific to the user's business niche.`;
       
-      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-1.5-flash", false, true, 0.8, "", language);
+      const outcome = await chatWithPersona(PERSONAS[0], prompt, [], "gemini-3.5-flash", false, true, 0.8, "", language);
       setLastGeminiMetadata(outcome.metadata);
       const suggestions = JSON.parse(outcome.text.replace(/```json|```/g, '').trim());
       
