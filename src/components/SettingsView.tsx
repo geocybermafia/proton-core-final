@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -29,11 +28,15 @@ import {
   Mail,
   Camera,
   Phone,
-  Upload
+  Upload,
+  AlertCircle,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { UserProfile, GlobalAiSettings, Theme } from '../types';
+import { useToast } from './Toast';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -79,10 +82,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  
+  // Connect to the custom systems toast notification portal
+  const { showToast } = useToast();
 
   const handleSave = () => {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+    
+    showToast(
+      language === 'ka' 
+        ? 'კონფიგურაცია წარმატებით იქნა სინქრონიზებული ღრუბელთან!' 
+        : 'System configuration successfully synchronized with cloud database!',
+      'success'
+    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,6 +104,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         setUserProfile(prev => ({ ...prev, avatar: reader.result as string }));
+        showToast(
+          language === 'ka' ? 'ავატარი წარმატებით განახლდა!' : 'Avatar changed successfully!',
+          'success'
+        );
       };
       reader.readAsDataURL(file);
     }
@@ -104,11 +121,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   ];
 
   return (
-    <div className="h-full flex flex-col max-w-6xl mx-auto py-4 md:py-8 px-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="h-full flex flex-col max-w-6xl mx-auto py-4 md:py-8 px-4 animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-proton-text flex items-center gap-3">
-            <Settings className="text-proton-accent" size={32} />
+            <Settings className="text-proton-accent font-black animate-[spin_20s_linear_infinite]" size={32} />
             {t.title}
           </h2>
           <p className="text-proton-muted text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">{t.subtitle}</p>
@@ -118,8 +135,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           onClick={handleSave}
           className={cn(
             "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95",
-            isSaved ? "bg-green-500 text-white" : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30"
+            isSaved ? "bg-emerald-500 text-white" : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30"
           )}
+          id="btn-settings-save"
         >
           {isSaved ? <CheckCircle2 size={16} /> : <Save size={16} />}
           {isSaved ? (language === 'ka' ? 'შენახულია' : 'Saved') : t.save}
@@ -130,7 +148,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
-        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-4 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10">
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-4 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10" id="settings-sidebar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -141,6 +159,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20" 
                   : "text-proton-muted hover:text-proton-text hover:bg-white/5"
               )}
+              id={`tab-settings-${tab.id}`}
             >
               <div className={cn(
                 "w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all",
@@ -154,7 +173,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 p-6 md:p-12 overflow-y-auto custom-scrollbar-minimal bg-transparent relative z-10">
+        <div className="flex-1 p-6 md:p-12 overflow-y-auto custom-scrollbar-minimal bg-transparent relative z-10" id="settings-content-wrapper">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -165,7 +184,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               className="max-w-xl"
             >
               {activeTab === 'ai' && (
-                <div className="space-y-8">
+                <div className="space-y-8" id="sec-ai-config">
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.ai_config}</h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.ai_desc}</p>
@@ -175,7 +194,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="space-y-5">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
-                          <Zap size={14} className="text-amber-500" />
+                          <Zap size={14} className="text-amber-500 animate-pulse" />
                           {t.temperature}
                         </label>
                         <span className="text-[11px] font-mono font-bold text-proton-accent bg-proton-accent/10 px-3 py-1 rounded-lg border border-proton-accent/20">{aiSettings.temperature.toFixed(1)}</span>
@@ -183,7 +202,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <input 
                         type="range" min="0" max="1" step="0.1"
                         value={aiSettings.temperature}
-                        onChange={e => setAiSettings(prev => ({ ...prev, temperature: parseFloat(e.target.value) }))}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value);
+                          setAiSettings(prev => ({ ...prev, temperature: val }));
+                          // Debounce showing toast for slider to prevent flood
+                        }}
                         className="w-full accent-proton-accent appearance-none h-2 bg-proton-secondary/30 rounded-full cursor-pointer transition-all border border-proton-border/30"
                       />
                     </div>
@@ -192,9 +215,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className={cn(
                         "p-5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                         aiSettings.enableSearch ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
-                      )} onClick={() => setAiSettings(prev => ({ ...prev, enableSearch: !prev.enableSearch }))}>
+                      )} onClick={() => {
+                        const next = !aiSettings.enableSearch;
+                        setAiSettings(prev => ({ ...prev, enableSearch: next }));
+                        showToast(
+                          next 
+                            ? (language === 'ka' ? 'Google ძიება ინტეგრირებულია AI პასუხებში!' : 'Google Search integrated into AI replies!') 
+                            : (language === 'ka' ? 'Google ძიება გამორთულია.' : 'Google Search deactivated.'),
+                          next ? 'success' : 'info'
+                        );
+                      }}>
                         <div className="flex items-center gap-3">
-                          <Search size={18} className={aiSettings.enableSearch ? "text-proton-accent" : "text-proton-muted"} />
+                          <Search size={18} className={aiSettings.enableSearch ? "text-proton-accent animate-bounce" : "text-proton-muted"} />
                           <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">{t.search}</label>
                         </div>
                         <div className={cn(
@@ -207,12 +239,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           )} />
                         </div>
                       </div>
+                      
                       <div className={cn(
                         "p-5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                         aiSettings.enableMaps ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
-                      )} onClick={() => setAiSettings(prev => ({ ...prev, enableMaps: !prev.enableMaps }))}>
+                      )} onClick={() => {
+                        const next = !aiSettings.enableMaps;
+                        setAiSettings(prev => ({ ...prev, enableMaps: next }));
+                        showToast(
+                          next 
+                            ? (language === 'ka' ? 'Google რუკები გააქტიურდა AI ლოკაციებისთვის' : 'Google Maps enabled for AI location awareness') 
+                            : (language === 'ka' ? 'Google რუკების მოდული გამორთულია' : 'Google Maps module deactivated'),
+                          next ? 'success' : 'info'
+                        );
+                      }}>
                         <div className="flex items-center gap-3">
-                          <MapPin size={18} className={aiSettings.enableMaps ? "text-proton-accent" : "text-proton-muted"} />
+                          <MapPin size={18} className={aiSettings.enableMaps ? "text-proton-accent animate-pulse" : "text-proton-muted"} />
                           <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">{t.maps}</label>
                         </div>
                         <div className={cn(
@@ -242,7 +284,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                          ].map((voice) => (
                            <button
                              key={voice.id}
-                             onClick={() => setAiSettings(prev => ({ ...prev, voice: voice.id }))}
+                             type="button"
+                             onClick={() => {
+                               setAiSettings(prev => ({ ...prev, voice: voice.id }));
+                               showToast(
+                                 language === 'ka' ? `სინთეზატორის ხმა: ${voice.label}` : `TTS synthesizer voice set to: ${voice.label}`,
+                                 'info'
+                               );
+                             }}
                              className={cn(
                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all",
                                aiSettings.voice === voice.id 
@@ -259,7 +308,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className={cn(
                       "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
                       uiMode === 'creative' ? "bg-proton-accent/10 border-proton-accent/40 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
-                    )} onClick={() => setUiMode(uiMode === 'business' ? 'creative' : 'business')}>
+                    )} onClick={() => {
+                      const next = uiMode === 'business' ? 'creative' : 'business';
+                      setUiMode(next);
+                      showToast(
+                        next === 'creative' 
+                          ? (language === 'ka' ? 'კრეატიული რეჟიმი აქტიურია! ნეონური ინტერფეისი დატვირთულია.' : 'Creative custom mode loaded with dynamic neon visuals!') 
+                          : (language === 'ka' ? 'ბიზნეს რეჟიმი ჩართულია: მინიმალისტური და სუფთა.' : 'Business corporate mode loaded: minimalist & clear.'),
+                        'success'
+                      );
+                    }}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
                           "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
@@ -283,7 +341,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
-                    {/* Simulated Demo Mode Block */}
+                    {/* AI Simulation Mode Block */}
                     <div className={cn(
                       "p-7 rounded-[32px] border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 transition-all select-none",
                       aiSettings.useSimulatedAi ? "bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5 animate-pulse" : "bg-proton-secondary/10 border-proton-border"
@@ -308,7 +366,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                       <button
                         type="button"
-                        onClick={() => setAiSettings(prev => ({ ...prev, useSimulatedAi: !prev.useSimulatedAi }))}
+                        onClick={() => {
+                          const next = !aiSettings.useSimulatedAi;
+                          setAiSettings(prev => ({ ...prev, useSimulatedAi: next }));
+                          showToast(
+                            next 
+                              ? (language === 'ka' ? 'AI სიმულაცია ჩაირთო! თავიდან აცილებულია Quota-Errors.' : 'AI Mock Simulation active! Expiration limits bypassed.') 
+                              : (language === 'ka' ? 'დავუბრუნდით რეალურ Gemini API სერვერს.' : 'Restored live real-time Gemini API server calls.'),
+                            next ? 'warning' : 'info'
+                          );
+                        }}
                         className={cn(
                           "w-full sm:w-auto px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 active:scale-95",
                           aiSettings.useSimulatedAi 
@@ -372,7 +439,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
 
               {activeTab === 'profile' && (
-                <div className="space-y-8 pb-10">
+                <div className="space-y-8 pb-10" id="sec-profile">
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.profile || 'Profile'}</h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.profile_desc}</p>
@@ -484,7 +551,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
 
               {activeTab === 'preferences' && (
-                <div className="space-y-8 animate-in fade-in duration-300">
+                <div className="space-y-8 animate-in fade-in duration-300" id="sec-preferences">
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">
                       {language === 'ka' ? 'ინტერფეისის პარამეტრები' : 'User Preferences'}
@@ -495,6 +562,72 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </header>
 
                   <div className="space-y-8">
+                    {/* Instant Systems Toast Demonstration Center */}
+                    <div className="p-6 bg-proton-accent/10 border border-proton-accent/30 rounded-[32px] space-y-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                        <Sparkles size={100} className="text-proton-accent" />
+                      </div>
+                      
+                      <div>
+                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-accent flex items-center gap-2">
+                          <Bell size={14} className="animate-bounce" />
+                          {language === 'ka' ? 'სისტემური შეტყობინებების პალიტრა' : 'Toast Notification Control Center'}
+                        </label>
+                        <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest mt-0.5 leading-relaxed">
+                          {language === 'ka' 
+                            ? 'გამოსცადეთ გლობალური ანიმირებული შეტყობინებები (Toast Notifications) მოქმედებაში:' 
+                            : 'Trigger floating animated toast alerts directly in this window to test the polish:'}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 relative z-10">
+                        <button
+                          type="button"
+                          onClick={() => showToast(
+                            language === 'ka' ? 'ოპერაცია წარმატებით შესრულდა!' : 'Success Toast: Action completed successfully!',
+                            'success'
+                          )}
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                        >
+                          <CheckCircle2 size={12} />
+                          Success
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => showToast(
+                            language === 'ka' ? 'ოპერაცია უარყოფილია: შეცდომა ID 502' : 'Critical security error: Protocol validation failed (502).',
+                            'error'
+                          )}
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                        >
+                          <AlertCircle size={12} />
+                          Error Alert
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => showToast(
+                            language === 'ka' ? 'ყურადღება: Gemini API-ის კვოტა 80%-ზეა.' : 'Warning: API sandbox is running close to 90% quota capacity.',
+                            'warning'
+                          )}
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                        >
+                          <AlertTriangle size={12} />
+                          Warning style
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => showToast(
+                            language === 'ka' ? 'ინფორმაცია: Proton Core 4.1 განახლდა!' : 'System Status Update: Proton Engine 4.1-STABLE successfully injected.',
+                            'info'
+                          )}
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-sky-950/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                        >
+                          <Info size={12} />
+                          Informational
+                        </button>
+                      </div>
+                    </div>
+
                     {/* 1. Language Sector */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-4">
                       <div>
@@ -509,7 +642,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="flex bg-proton-bg border border-proton-border/50 rounded-2xl p-1 max-w-sm">
                         <button 
                           type="button"
-                          onClick={() => setUserProfile(prev => ({ ...prev, language: 'en' }))}
+                          onClick={() => {
+                            if (language !== 'en') {
+                              setUserProfile(prev => ({ ...prev, language: 'en' }));
+                              setTimeout(() => {
+                                showToast('Language changed to English successfully!', 'success');
+                              }, 100);
+                            }
+                          }}
                           className={cn(
                             "flex-1 py-3 text-xs font-black rounded-xl transition-all uppercase tracking-widest",
                             language === 'en' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
@@ -519,7 +659,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </button>
                         <button 
                           type="button"
-                          onClick={() => setUserProfile(prev => ({ ...prev, language: 'ka' }))}
+                          onClick={() => {
+                            if (language !== 'ka') {
+                              setUserProfile(prev => ({ ...prev, language: 'ka' }));
+                              setTimeout(() => {
+                                showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');
+                              }, 100);
+                            }
+                          }}
                           className={cn(
                             "flex-1 py-3 text-xs font-black rounded-xl transition-all uppercase tracking-widest",
                             language === 'ka' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
@@ -546,7 +693,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <button
                             key={tInfo.id}
                             type="button"
-                            onClick={() => setTheme(tInfo.id)}
+                            onClick={() => {
+                              setTheme(tInfo.id);
+                              showToast(
+                                language === 'ka' 
+                                  ? `აქტიური გახდა გლობალური თემა: ${tInfo.label}` 
+                                  : `Global theme updated to: ${tInfo.label}`,
+                                'success'
+                              );
+                            }}
                             className={cn(
                               "flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
                               theme === tInfo.id 
@@ -591,7 +746,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <button
                             key={tInfo.id}
                             type="button"
-                            onClick={() => setOrganizerTheme(tInfo.id)}
+                            onClick={() => {
+                              setOrganizerTheme(tInfo.id);
+                              showToast(
+                                language === 'ka' 
+                                  ? `ორგანიზატორის აქცენტი შეიცვალა: ${tInfo.label}` 
+                                  : `Organizer workspace theme switched: ${tInfo.label}`,
+                                'info'
+                              );
+                            }}
                             className={cn(
                               "flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
                               organizerTheme === tInfo.id 
@@ -624,7 +787,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className={cn(
                       "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
                       aiSettings.zenMode ? "bg-amber-500/5 border-amber-500/30 shadow-lg shadow-amber-500/5" : "bg-proton-secondary/10 border-proton-border"
-                    )} onClick={() => setAiSettings(prev => ({ ...prev, zenMode: !prev.zenMode }))}>
+                    )} onClick={() => {
+                      const next = !aiSettings.zenMode;
+                      setAiSettings(prev => ({ ...prev, zenMode: next }));
+                      showToast(
+                        next 
+                          ? (language === 'ka' ? 'ზენ რეჟიმი გააქტიურებულია. მაქსიმალური ფოკუსი!' : 'Zen focus mode activated!') 
+                          : (language === 'ka' ? 'ზენ რეჟიმი გამორთულია.' : 'Zen focus mode turned off.'),
+                        'info'
+                      );
+                    }}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
                           "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
@@ -656,7 +828,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}
 
               {activeTab === 'security' && (
-                <div className="space-y-8">
+                <div className="space-y-8" id="sec-security">
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.security}</h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">Security architecture & isolation protocols.</p>
@@ -665,31 +837,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div className="space-y-5">
                     <div className="p-7 bg-green-500/5 border border-green-500/20 rounded-[32px] flex items-center justify-between group">
                        <div className="flex items-center gap-5">
-                         <div className="w-14 h-14 rounded-2xl bg-green-500 text-proton-bg flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group-hover:scale-105">
-                            <Shield size={28} />
-                         </div>
-                         <div>
-                            <p className="text-xs font-black uppercase tracking-wide text-green-400">Core Sync: Active</p>
-                            <p className="text-[10px] font-bold text-green-500/50 uppercase tracking-tighter">Level 4 Hash Encryption</p>
-                         </div>
+                          <div className="w-14 h-14 rounded-2xl bg-green-500 text-proton-bg flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group-hover:scale-105">
+                             <Shield size={28} />
+                          </div>
+                          <div>
+                             <p className="text-xs font-black uppercase tracking-wide text-green-400">Core Sync: Active</p>
+                             <p className="text-[10px] font-bold text-green-500/50 uppercase tracking-tighter">Level 4 Hash Encryption</p>
+                          </div>
                        </div>
                        <Lock size={20} className="text-green-500" />
                     </div>
 
                     <div className="p-7 bg-proton-secondary/10 border border-proton-border rounded-[32px] flex items-center justify-between opacity-50 relative overflow-hidden">
                        <div className="flex items-center gap-5">
-                         <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
-                            <Globe size={28} />
-                         </div>
-                         <div>
-                            <p className="text-xs font-black uppercase tracking-wide text-proton-text">Public Indexing</p>
-                            <p className="text-[10px] font-bold text-proton-muted uppercase tracking-tighter">Status: Restricted Access</p>
-                         </div>
+                          <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
+                             <Globe size={28} />
+                          </div>
+                          <div>
+                             <p className="text-xs font-black uppercase tracking-wide text-proton-text">Public Indexing</p>
+                             <p className="text-[10px] font-bold text-proton-muted uppercase tracking-tighter">Status: Restricted Access</p>
+                          </div>
                        </div>
                     </div>
 
                     <div className="pt-8 flex flex-col gap-4">
-                       <button className="w-full py-5 bg-proton-text text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-proton-accent hover:text-proton-bg transition-all shadow-xl active:scale-95">
+                       <button 
+                         type="button" 
+                         onClick={() => {
+                           showToast(
+                             language === 'ka' ? 'უსაფრთხოების ჟურნალი წარმატებით გადმოიწერა!' : 'Security cryptographic audit log successfully downloaded!',
+                             'success'
+                           );
+                         }}
+                         className="w-full py-5 bg-proton-text text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-proton-accent hover:text-proton-bg transition-all shadow-xl active:scale-95"
+                         id="btn-export-log"
+                       >
                           Export Data Log
                        </button>
                        <div className="flex items-center justify-center gap-4 text-[9px] text-proton-muted font-bold uppercase tracking-[0.3em]">

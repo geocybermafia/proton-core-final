@@ -8,6 +8,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './components/Toast';
 
 import { 
   getDefaultConfig,
@@ -74,7 +75,9 @@ function Root() {
             borderRadius: 'large',
           })}>
             <AuthProvider>
-              <App />
+              <ToastProvider>
+                <App />
+              </ToastProvider>
             </AuthProvider>
           </RainbowKitProvider>
         </QueryClientProvider>
