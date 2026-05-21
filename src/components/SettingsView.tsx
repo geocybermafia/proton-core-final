@@ -730,59 +730,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
-                    {/* 3. Space Planner Accord Theme */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-5">
-                      <div>
-                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
-                          {language === 'ka' ? 'ორგანიზატორის ვიზუალი' : 'Workspace Planner Theme'}
-                        </label>
-                        <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
-                          {language === 'ka' ? 'პლანერის და საქმეების კალენდრის ინდივიდუალური გაფორმება' : 'Stylize layout modules and cards in your tasks dashboard'}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {THEMES.map((tInfo) => (
-                          <button
-                            key={tInfo.id}
-                            type="button"
-                            onClick={() => {
-                              setOrganizerTheme(tInfo.id);
-                              showToast(
-                                language === 'ka' 
-                                  ? `ორგანიზატორის აქცენტი შეიცვალა: ${tInfo.label}` 
-                                  : `Organizer workspace theme switched: ${tInfo.label}`,
-                                'info'
-                              );
-                            }}
-                            className={cn(
-                              "flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
-                              organizerTheme === tInfo.id 
-                                ? "bg-proton-card border-proton-accent shadow-xl ring-4 ring-proton-accent/5 scale-[1.02]" 
-                                : "border-proton-border bg-proton-secondary/5 hover:bg-proton-secondary/10 hover:border-proton-accent/30"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-md",
-                              organizerTheme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/10 text-proton-muted"
-                            )}>
-                              {tInfo.icon}
-                            </div>
-                            <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest",
-                              organizerTheme === tInfo.id ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
-                            )}>{tInfo.label}</span>
-                            {organizerTheme === tInfo.id && (
-                              <motion.div 
-                                layoutId="active-organizer-theme-dot"
-                                className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
-                              />
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
                     {/* 4. Zen Mode and system states */}
                     <div className={cn(
                       "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",

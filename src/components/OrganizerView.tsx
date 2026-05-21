@@ -194,6 +194,16 @@ export const OrganizerView = ({
       label: "text-zinc-600 font-black uppercase tracking-widest",
       muted: "text-zinc-800",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: white !important; } .react-calendar__tile--active { background: white !important; color: black !important; font-weight: bold; }`
+    },
+    vibrant: {
+      container: "bg-[#160e2e] text-purple-100",
+      card: "bg-black/30 border-purple-500/10 shadow-2xl rounded-[32px] border",
+      accent: "text-purple-400 bg-purple-400/15 border-purple-400/15",
+      button: "bg-purple-600 text-white rounded-2xl shadow-purple-500/20 hover:bg-purple-500",
+      input: "bg-black/30 border-purple-900 text-purple-100 focus:border-purple-500 rounded-2xl border-2",
+      label: "text-purple-500/60 font-black uppercase tracking-tight",
+      muted: "text-purple-900",
+      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #8b5cf6 !important; color: white !important; }`
     }
   };
 
@@ -397,8 +407,36 @@ export const OrganizerView = ({
         </div>
 
         {/* Visual theme customizer for organizer workspace */}
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          
+        <div className="flex flex-wrap items-center gap-4 justify-center md:justify-end">
+          {/* Compact Vibe / Accent Roller */}
+          <div className="flex items-center gap-1.5 bg-black/30 p-2 px-3.5 rounded-2xl border border-white/5 shadow-inner shrink-0">
+            <span className="text-[9px] font-black uppercase tracking-widest opacity-60 mr-1 select-none">
+              {language === 'ka' ? 'აქცენტი:' : 'Theme:'}
+            </span>
+            {[
+              { id: 'light', bg: 'bg-white border-slate-300', title: 'Light' },
+              { id: 'titanium', bg: 'bg-slate-400 border-slate-500', title: 'Titanium' },
+              { id: 'proton', bg: 'bg-cyan-400 border-cyan-500', title: 'Cyber' },
+              { id: 'forest', bg: 'bg-emerald-500 border-emerald-600', title: 'Forest' },
+              { id: 'sunset', bg: 'bg-orange-500 border-orange-600', title: 'Sunset' },
+              { id: 'rose', bg: 'bg-rose-500 border-rose-600', title: 'Rose' },
+              { id: 'vibrant', bg: 'bg-indigo-500 border-purple-600', title: 'Nebula' },
+              { id: 'midnight', bg: 'bg-zinc-800 border-zinc-900', title: 'Dark' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTheme(item.id as Theme)}
+                title={item.title}
+                className={cn(
+                  "w-4 h-4 rounded-full transition-all hover:scale-125 border shadow-sm active:scale-90 relative",
+                  item.bg,
+                  theme === item.id ? "ring-2 ring-proton-accent scale-110 z-10" : "opacity-60 hover:opacity-100"
+                )}
+              />
+            ))}
+          </div>
+
           <div className="relative group shrink-0">
             <Search size={14} className={cn("absolute left-4 top-1/2 -translate-y-1/2 transition-colors", currentTheme.muted, "group-focus-within:text-proton-accent")} />
             <input 

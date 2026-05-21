@@ -16,6 +16,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { SettingsView } from './components/SettingsView';
+import { useToast } from './components/Toast';
 import CabinetView from './components/CabinetView';
 import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
@@ -3345,6 +3346,7 @@ const sanitizeForFirestore = (data: any): any => {
 };
 
 export default function App() {
+  const { showToast } = useToast();
 
   const [uiMode, setUiMode] = useState<'business' | 'creative'>(() => {
     try {
@@ -4327,6 +4329,46 @@ export default function App() {
                   className="px-3 space-y-4 mb-6 overflow-hidden"
                 >
                   <div className="space-y-2">
+                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">
+                      {language === 'ka' ? 'ენა / LANGUAGE' : 'LANG / ენა'}
+                    </p>
+                    <div className="flex bg-proton-bg/60 border border-proton-border/50 rounded-xl p-0.5 w-full">
+                      <button 
+                        onClick={() => {
+                          if (language !== 'en') {
+                            setUserProfile(prev => ({ ...prev, language: 'en' }));
+                            setTimeout(() => {
+                              showToast('Language changed to English successfully!', 'success');
+                            }, 50);
+                          }
+                        }}
+                        className={cn(
+                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider",
+                          language === 'en' ? "bg-proton-accent text-proton-bg shadow-md" : "text-proton-muted hover:text-proton-text-light"
+                        )}
+                      >
+                        EN
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (language !== 'ka') {
+                            setUserProfile(prev => ({ ...prev, language: 'ka' }));
+                            setTimeout(() => {
+                              showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');
+                            }, 50);
+                          }
+                        }}
+                        className={cn(
+                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider",
+                          language === 'ka' ? "bg-proton-accent text-proton-bg shadow-md" : "text-proton-muted hover:text-proton-text-light"
+                        )}
+                      >
+                        KA/ქარ
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
                     <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
                   </div>
@@ -4474,6 +4516,50 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              {/* Elegant Compact Language Selector for 1-click accessibility */}
+              <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (language !== 'en') {
+                      setUserProfile(prev => ({ ...prev, language: 'en' }));
+                      setTimeout(() => {
+                        showToast('Language set to English', 'success');
+                      }, 50);
+                    }
+                  }}
+                  className={cn(
+                    "px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
+                    language === 'en' 
+                      ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
+                      : "text-proton-muted hover:text-proton-text-light"
+                  )}
+                  title="Switch to English"
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (language !== 'ka') {
+                      setUserProfile(prev => ({ ...prev, language: 'ka' }));
+                      setTimeout(() => {
+                        showToast('აქტიური ენა: ქართული', 'success');
+                      }, 50);
+                    }
+                  }}
+                  className={cn(
+                    "px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
+                    language === 'ka' 
+                      ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
+                      : "text-proton-muted hover:text-proton-text-light"
+                  )}
+                  title="გადართვა ქართულზე"
+                >
+                  KA
+                </button>
+              </div>
+
               <button 
                 onClick={() => handleViewChange('settings')}
                 className={cn(
