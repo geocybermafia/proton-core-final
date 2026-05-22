@@ -249,9 +249,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     description: '',
     descriptionGe: '',
     price: '',
-    currency: 'USD',
+    currency: language === 'ka' ? 'GEL' : 'USD',
     category: 'electronics',
-    country: 'USA',
+    country: language === 'ka' ? 'GEO' : 'USA',
     city: '',
     location: '',
     image: ''
@@ -423,8 +423,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           let height = img.height;
 
           // Max dimensions
-          const MAX_WIDTH = 1200;
-          const MAX_HEIGHT = 1200;
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
 
           if (width > height) {
             if (width > MAX_WIDTH) {
@@ -444,7 +444,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           ctx?.drawImage(img, 0, 0, width, height);
 
           // Get base64 with quality reduction
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
           setFormData(prev => ({ ...prev, image: dataUrl }));
           setIsResizing(false);
         };
@@ -628,11 +628,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       setViewMode('browse');
       setFormData({
         title: '', titleGe: '', description: '', descriptionGe: '',
-        price: '', currency: 'USD', category: 'electronics', 
-        country: 'USA', city: '', location: '', image: ''
+        price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
+        country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: ''
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving listing:", error);
+      alert(language === 'ka' 
+        ? `განცხადების განთავსება ვერ მოხერხდა: ${error.message || 'დაუდგენელი შეცდომა'}` 
+        : `Listing placement failed: ${error.message || 'Unknown error'}`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -881,7 +885,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   <User size={20} />
                 </button>
                 <button 
-                  onClick={() => setViewMode('create')}
+                  onClick={() => {
+                    setFormData({
+                      title: '', titleGe: '', description: '', descriptionGe: '',
+                      price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
+                      country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: ''
+                    });
+                    setViewMode('create');
+                  }}
                   className={cn("p-3.5 rounded-2xl shadow-xl shadow-blue-500/10 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
                 >
                   <Plus size={20} />
