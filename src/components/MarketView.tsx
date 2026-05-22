@@ -45,6 +45,9 @@ import { cn } from '../lib/utils';
 import { Listing } from '../types';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
+import { ListingMap } from './ListingMap';
+import { MapPicker } from './MapPicker';
+import 'leaflet/dist/leaflet.css';
 
 interface MarketViewProps {
   language: 'en' | 'ka';
@@ -209,6 +212,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
 
   useEffect(() => {
     let originalTitle = t.market.seo_title || "PROTON — პროფესიონალური ეკოსისტემა";
@@ -243,7 +247,21 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    titleGe: string;
+    description: string;
+    descriptionGe: string;
+    price: string;
+    currency: string;
+    category: string;
+    country: string;
+    city: string;
+    location: string;
+    image: string;
+    lat?: number;
+    lng?: number;
+  }>({
     title: '',
     titleGe: '',
     description: '',
@@ -254,7 +272,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     country: language === 'ka' ? 'GEO' : 'USA',
     city: '',
     location: '',
-    image: ''
+    image: '',
+    lat: undefined,
+    lng: undefined
   });
 
   const currentTheme = MARKET_THEMES[themeId] || MARKET_THEMES.industrial;
@@ -614,7 +634,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         city: formData.city,
         image: formData.image || '',
         createdAt: serverTimestamp(),
-        status: 'active'
+        status: 'active',
+        lat: formData.lat !== undefined ? formData.lat : null,
+        lng: formData.lng !== undefined ? formData.lng : null
       };
 
       if (viewMode === 'edit' && editingListing) {
@@ -629,7 +651,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       setFormData({
         title: '', titleGe: '', description: '', descriptionGe: '',
         price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
-        country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: ''
+        country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
+        lat: undefined, lng: undefined
       });
     } catch (error: any) {
       console.error("Error saving listing:", error);
@@ -665,7 +688,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       country: (listing as any).country || 'USA',
       city: (listing as any).city || '',
       location: listing.location,
-      image: listing.image || ''
+      image: listing.image || '',
+      lat: listing.lat,
+      lng: listing.lng
     });
     setViewMode('edit');
   };
@@ -889,7 +914,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     setFormData({
                       title: '', titleGe: '', description: '', descriptionGe: '',
                       price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
-                      country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: ''
+                      country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
+                      lat: undefined, lng: undefined
                     });
                     setViewMode('create');
                   }}
@@ -898,6 +924,34 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   <Plus size={20} />
                 </button>
              </div>
+
+              {/* Grid / Map View Toggle */}
+              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+                <button 
+                  type="button"
+                  onClick={() => setDisplayMode('grid')}
+                  className={cn(
+                    "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
+                    displayMode === 'grid' ? "bg-white/10 text-white shadow-md border border-white/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                  )}
+                  title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
+                >
+                  <LayoutGrid size={16} />
+                  <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setDisplayMode('map')}
+                  className={cn(
+                    "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
+                    displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                  )}
+                  title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
+                >
+                  <MapPin size={16} />
+                  <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
+                </button>
+              </div>
 
              <div className="relative group">
                 <select 
@@ -954,8 +1008,18 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-              <AnimatePresence mode="popLayout">
+            {viewMode === 'browse' && displayMode === 'map' ? (
+              <ListingMap 
+                listings={filteredListings}
+                onSelectListing={(listing) => {
+                  setCheckoutItem(listing);
+                }}
+                language={language}
+                currentTheme={currentTheme}
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                <AnimatePresence mode="popLayout">
                 {viewMode === 'my-listings' && profileSubMode === 'buying' ? (
                   orders.map((order, idx) => (
                     <motion.div 
@@ -1137,6 +1201,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 ))
               )}
             </AnimatePresence>
+          </div>
+        )}
 
             {!loading && filteredListings.length === 0 && (
               <div className="py-32 text-center space-y-6">
@@ -1153,7 +1219,6 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               </div>
             )}
           </div>
-        </div>
 
           {/* Mobile Filters Drawer */}
           <AnimatePresence>
@@ -1301,6 +1366,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                        className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
                  </div>
+              </div>
+
+              {/* Geographic Coordinates Picker */}
+              <div className="p-1 rounded-[36px] bg-white/5 border border-white/5">
+                <div className="p-6">
+                  <MapPicker 
+                    lat={formData.lat}
+                    lng={formData.lng}
+                    onChange={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
+                    language={language}
+                    currentTheme={currentTheme}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
