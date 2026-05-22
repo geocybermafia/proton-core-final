@@ -994,17 +994,54 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           <div className="flex-1 space-y-8">
             {/* Mobile Filter Toggle */}
             {viewMode === 'browse' && (
-              <div className={cn("lg:hidden flex items-center justify-between p-4 rounded-3xl border border-white/5", currentTheme.card)}>
-                <div className="flex items-center gap-3">
-                  <LayoutGrid size={18} className={currentTheme.accent} />
-                  <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>{t.market.all_categories}</span>
+              <div className={cn("lg:hidden flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-[28px] border border-white/5 gap-4 shadow-xl", currentTheme.card)}>
+                <div className="flex items-center justify-between w-full sm:w-auto gap-4">
+                  <div className="flex items-center gap-3">
+                    <LayoutGrid size={18} className={currentTheme.accent} />
+                    <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>
+                      {activeCategory === 'all' ? t.market.all_categories : t.market.categories[activeCategory as keyof typeof t.market.categories]}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => setIsFiltersOpen(true)}
+                    className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/10 transition-all border border-white/10 shrink-0", currentTheme.accentBg, "text-white")}
+                  >
+                    {language === 'ka' ? 'ფილტრები' : 'Filters'}
+                  </button>
                 </div>
-                <button 
-                  onClick={() => setIsFiltersOpen(true)}
-                  className={cn("px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all", currentTheme.accentBg, "text-white")}
-                >
-                  {language === 'ka' ? 'ფილტრები' : 'Filters'}
-                </button>
+                
+                {/* Mobile view switch */}
+                <div className="flex items-center justify-between w-full sm:w-auto border-t border-white/5 pt-4 sm:pt-0 sm:border-t-0 gap-4">
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", currentTheme.muted)}>
+                    {language === 'ka' ? 'ხედი:' : 'View:'}
+                  </span>
+                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner grow sm:grow-0 justify-end">
+                    <button 
+                      type="button"
+                      onClick={() => setDisplayMode('grid')}
+                      className={cn(
+                        "px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 grow sm:grow-0",
+                        displayMode === 'grid' ? "bg-white/10 text-white shadow-md border border-white/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                      )}
+                      title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
+                    >
+                      <LayoutGrid size={14} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setDisplayMode('map')}
+                      className={cn(
+                        "px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 grow sm:grow-0",
+                        displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                      )}
+                      title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
+                    >
+                      <MapPin size={14} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
