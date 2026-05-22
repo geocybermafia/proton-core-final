@@ -17,6 +17,7 @@ import {
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { SettingsView } from './components/SettingsView';
 import { useToast } from './components/Toast';
+import { useLanguage } from './contexts/LanguageContext';
 import CabinetView from './components/CabinetView';
 import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
@@ -3347,6 +3348,7 @@ const sanitizeForFirestore = (data: any): any => {
 
 export default function App() {
   const { showToast } = useToast();
+  const { language, setLanguage } = useLanguage();
 
   const [uiMode, setUiMode] = useState<'business' | 'creative'>(() => {
     try {
@@ -3634,7 +3636,18 @@ export default function App() {
     safeStorage.set('user-profile', JSON.stringify(userProfile));
   }, [userProfile]);
 
-  const language = userProfile.language;
+  // Synchronize language selection with our global state hook to keep all components aligned
+  useEffect(() => {
+    if (userProfile.language && userProfile.language !== language) {
+      setLanguage(userProfile.language);
+    }
+  }, [userProfile.language, language, setLanguage]);
+
+  useEffect(() => {
+    if (language !== userProfile.language) {
+      setUserProfile(prev => ({ ...prev, language }));
+    }
+  }, [language, userProfile.language]);
 
   // Background data fetch for logged in user
   useEffect(() => {
@@ -4336,6 +4349,7 @@ export default function App() {
                       <button 
                         onClick={() => {
                           if (language !== 'en') {
+                            setLanguage('en');
                             setUserProfile(prev => ({ ...prev, language: 'en' }));
                             setTimeout(() => {
                               showToast('Language changed to English successfully!', 'success');
@@ -4352,6 +4366,7 @@ export default function App() {
                       <button 
                         onClick={() => {
                           if (language !== 'ka') {
+                            setLanguage('ka');
                             setUserProfile(prev => ({ ...prev, language: 'ka' }));
                             setTimeout(() => {
                               showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');
@@ -4522,6 +4537,7 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     if (language !== 'en') {
+                      setLanguage('en');
                       setUserProfile(prev => ({ ...prev, language: 'en' }));
                       setTimeout(() => {
                         showToast('Language set to English', 'success');
@@ -4542,6 +4558,7 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     if (language !== 'ka') {
+                      setLanguage('ka');
                       setUserProfile(prev => ({ ...prev, language: 'ka' }));
                       setTimeout(() => {
                         showToast('აქტიური ენა: ქართული', 'success');

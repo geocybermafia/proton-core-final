@@ -37,6 +37,7 @@ import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { UserProfile, GlobalAiSettings, Theme } from '../types';
 import { useToast } from './Toast';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -85,6 +86,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   
   // Connect to the custom systems toast notification portal
   const { showToast } = useToast();
+  const { setLanguage } = useLanguage();
 
   const handleSave = () => {
     setIsSaved(true);
@@ -644,6 +646,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           type="button"
                           onClick={() => {
                             if (language !== 'en') {
+                              setLanguage('en');
                               setUserProfile(prev => ({ ...prev, language: 'en' }));
                               setTimeout(() => {
                                 showToast('Language changed to English successfully!', 'success');
@@ -661,6 +664,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           type="button"
                           onClick={() => {
                             if (language !== 'ka') {
+                              setLanguage('ka');
                               setUserProfile(prev => ({ ...prev, language: 'ka' }));
                               setTimeout(() => {
                                 showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');

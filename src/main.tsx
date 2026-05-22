@@ -9,6 +9,7 @@ import App from './App'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/Toast';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 import { 
   getDefaultConfig,
@@ -76,7 +77,9 @@ function Root() {
           })}>
             <AuthProvider>
               <ToastProvider>
-                <App />
+                <LanguageProvider>
+                  <App />
+                </LanguageProvider>
               </ToastProvider>
             </AuthProvider>
           </RainbowKitProvider>

@@ -211,8 +211,33 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   useEffect(() => {
-    document.title = t.market.seo_title;
-  }, [t, language]);
+    let originalTitle = t.market.seo_title || "PROTON — პროფესიონალური ეკოსისტემა";
+    let originalMetaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+
+    if (checkoutItem) {
+      const activeTitle = language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title;
+      const activeDesc = language === 'ka' ? (checkoutItem.descriptionGe || checkoutItem.description) : checkoutItem.description;
+      document.title = `${activeTitle} | ${language === 'ka' ? 'მარკეტი' : 'Market'} — PROTON`;
+      
+      let metaDescNode = document.querySelector('meta[name="description"]');
+      if (!metaDescNode) {
+        metaDescNode = document.createElement('meta');
+        metaDescNode.setAttribute('name', 'description');
+        document.head.appendChild(metaDescNode);
+      }
+      metaDescNode.setAttribute('content', activeDesc?.substring(0, 160) || '');
+    } else {
+      document.title = originalTitle;
+    }
+
+    return () => {
+      document.title = originalTitle;
+      const metaDescNode = document.querySelector('meta[name="description"]');
+      if (metaDescNode && originalMetaDesc) {
+        metaDescNode.setAttribute('content', originalMetaDesc);
+      }
+    };
+  }, [t, language, checkoutItem]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
   const [orders, setOrders] = useState<any[]>([]);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
@@ -791,9 +816,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
             </button>
           )}
           <div>
-            <h2 className="text-4xl md:text-5xl font-black mb-3 tracking-tighter uppercase text-white leading-none">
+            <h1 className="text-4xl md:text-5xl font-black mb-3 tracking-tighter uppercase text-white leading-none">
               <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
-            </h2>
+            </h1>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -957,7 +982,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   ))
                 ) : (
                   filteredListings.map((listing, idx) => (
-                <motion.div 
+                <motion.article 
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -970,11 +995,17 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     "border-white/5 hover:border-white/20 hover:shadow-2xl hover:shadow-proton-accent/5"
                   )}
                 >
-                  <div className="h-52 bg-black/60 overflow-hidden relative">
+                  <div 
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('button')) return;
+                      setCheckoutItem(listing);
+                    }}
+                    className="h-52 bg-black/60 overflow-hidden relative cursor-pointer"
+                  >
                     {listing.image ? (
                       <motion.img 
                         src={listing.image} 
-                        alt={listing.title} 
+                        alt={language === 'ka' ? (listing.titleGe || listing.title) : listing.title} 
                         className="w-full h-full object-cover transition-transform duration-1000 ease-out"
                         whileHover={{ scale: 1.05 }}
                         referrerPolicy="no-referrer"
@@ -1002,13 +1033,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     {listing.sellerId === auth.currentUser?.uid && (
                       <div className="absolute top-4 right-4 flex gap-2 z-10">
                         <button 
-                          onClick={() => startEdit(listing)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEdit(listing);
+                          }}
                           className={cn("p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
                         >
                           <Edit3 size={14} />
                         </button>
                         <button 
-                          onClick={() => handleDeleteListing(listing.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteListing(listing.id);
+                          }}
                           className="p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
                         >
                           <Trash2 size={14} />
@@ -1020,9 +1057,12 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </div>
 
                   <div className="p-6 flex-1 flex flex-col relative">
-                    <h4 className="text-lg font-black tracking-tight text-white mb-2 uppercase group-hover:text-proton-accent transition-colors">
+                    <h2 
+                      onClick={() => setCheckoutItem(listing)}
+                      className="text-lg font-black tracking-tight text-white mb-2 uppercase group-hover:text-proton-accent cursor-pointer transition-colors"
+                    >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
-                    </h4>
+                    </h2>
                     <p className={cn("text-xs font-medium leading-relaxed mb-6 line-clamp-2 opacity-60", currentTheme.muted)}>
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
@@ -1082,7 +1122,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </motion.article>
                 ))
               )}
             </AnimatePresence>
@@ -1310,7 +1350,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         <img 
                           src={formData.image} 
                           className="w-full h-full object-cover rounded-[32px] transition-transform duration-700 group-hover:scale-105" 
-                          alt="Preview" 
+                          alt={formData.title ? (language === 'ka' ? `სურათი: ${formData.titleGe || formData.title}` : `Asset preview: ${formData.title}`) : (language === 'ka' ? 'ატვირთული სურათის პრევიუ' : 'Uploaded asset preview')} 
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-[32px] backdrop-blur-sm">
                           <div className="p-4 bg-white/10 rounded-2xl border border-white/20">
@@ -1444,7 +1484,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 <div className="bg-white/5 rounded-[32px] p-6 border border-white/5 flex items-center gap-6">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
                     {checkoutItem.image ? (
-                      <img src={checkoutItem.image} alt={checkoutItem.title} className="w-full h-full object-cover" />
+                      <img src={checkoutItem.image} alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ShoppingBag size={24} className={currentTheme.accent} />
