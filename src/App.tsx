@@ -24,6 +24,7 @@ import { TranslatorView } from './components/TranslatorView';
 import { MarketView } from './components/MarketView';
 import { AuthFlow } from './components/AuthFlow';
 import { OrganizerView } from './components/OrganizerView';
+import { CommercialHub } from './components/CommercialHub';
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -125,6 +126,7 @@ import {
   History,
   UserCheck,
   Languages,
+  TrendingUp,
   ArrowUpRight,
   Repeat,
   Camera as CameraIcon,
@@ -3550,7 +3552,8 @@ export default function App() {
       role: 'System Architect',
       phoneNumber: '',
       id: 'default-user',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Cyber'
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Cyber',
+      showCommercialHub: false
     };
     try {
       const saved = safeStorage.get('user-profile');
@@ -4317,6 +4320,17 @@ export default function App() {
               expanded={isSidebarOpen}
               uiMode={uiMode}
             />
+            {userProfile.showCommercialHub && (
+              <SidebarItem 
+                icon={TrendingUp} 
+                label={t.sidebar.commercial} 
+                active={activeView === 'commercial'} 
+                onClick={() => handleViewChange('commercial')} 
+                expanded={isSidebarOpen}
+                uiMode={uiMode}
+                badge="EXIT"
+              />
+            )}
           </div>
 
             <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
@@ -4509,6 +4523,7 @@ export default function App() {
               {id: 'market', label: t.sidebar.market, icon: ShoppingBag},
               {id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon},
               { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
+              ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
             ].map((link) => (
               <button
                 key={link.id}
@@ -4723,6 +4738,9 @@ export default function App() {
               )}
               {activeView === 'documentation' && (
                 <DocumentationView language={userProfile.language} />
+              )}
+              {activeView === 'commercial' && (
+                <CommercialHub language={userProfile.language} />
               )}
             </motion.div>
           </AnimatePresence>

@@ -10,6 +10,7 @@ export type UserProfile = {
   bio?: string;
   avatar?: string;
   role?: string;
+  showCommercialHub?: boolean;
 };
 
 export type GlobalAiSettings = {
@@ -77,7 +78,7 @@ export interface GeminiMetadata {
   latency?: number;
 }
 
-export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation' | 'market';
+export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation' | 'market' | 'commercial';
 
 export type Task = {
   id: string;

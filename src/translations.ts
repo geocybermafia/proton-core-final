@@ -24,6 +24,7 @@ export const translations = {
       personas: "My Agents",
       settings: "User Account",
       market: "Marketplace",
+      commercial: "SaaS Exit Hub",
       bottom_nav: {
         dashboard: "Home",
         personas: "Agents"
@@ -465,6 +466,7 @@ export const translations = {
       personas: "აგენტები",
       settings: "ანგარიში",
       market: "მარკეტი",
+      commercial: "კომერცია",
       bottom_nav: {
         dashboard: "მთავარი",
         personas: "აგენტები"

@@ -31,7 +31,8 @@ import {
   Upload,
   AlertCircle,
   AlertTriangle,
-  Info
+  Info,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -771,6 +772,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className={cn(
                           "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-md",
                           aiSettings.zenMode ? "right-0.5" : "left-0.5"
+                        )} />
+                      </div>
+                    </div>
+
+                    {/* 5. Commercial SaaS Exit Hub Toggle */}
+                    <div className={cn(
+                      "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
+                      userProfile.showCommercialHub ? "bg-proton-accent/5 border-proton-accent/35 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
+                    )} onClick={() => {
+                      const next = !userProfile.showCommercialHub;
+                      setUserProfile(prev => ({ ...prev, showCommercialHub: next }));
+                      showToast(
+                        next 
+                          ? (language === 'ka' ? 'კომერციული გასხვისების ცენტრი გააქტიურდა გვერდითა მენიუში!' : 'SaaS Exit Hub activated in sidebar!') 
+                          : (language === 'ka' ? 'კომერციული მოდული დამალულია გვერდითა მენიუდან.' : 'SaaS Exit Hub hidden from sidebar.'),
+                        'success'
+                      );
+                    }}>
+                      <div className="flex items-center gap-5">
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                          userProfile.showCommercialHub ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" : "bg-proton-secondary/20 text-proton-muted"
+                        )}>
+                          <TrendingUp size={28} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">
+                            {language === 'ka' ? 'კომერცია & გასხვისება (SaaS Exit)' : 'SaaS Commercial Exit Hub'}
+                          </label>
+                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">
+                            {language === 'ka' ? 'ARR და ბიზნეს-ღირებულების კალკულატორის გამოჩენა გვერდითა მენიუში' : 'Show business valuation & brand tools in current sidebar link list'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={cn(
+                        "w-12 h-6 rounded-full relative transition-all border border-proton-border",
+                        userProfile.showCommercialHub ? "bg-proton-accent border-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-secondary/30"
+                      )}>
+                        <div className={cn(
+                          "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-md",
+                          userProfile.showCommercialHub ? "right-0.5" : "left-0.5"
                         )} />
                       </div>
                     </div>
