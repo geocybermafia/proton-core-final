@@ -3640,15 +3640,25 @@ export default function App() {
   }, [userProfile]);
 
   // Synchronize language selection with our global state hook to keep all components aligned
-  useEffect(() => {
-    if (userProfile.language && userProfile.language !== language) {
-      setLanguage(userProfile.language);
-    }
-  }, [userProfile.language, language, setLanguage]);
+  const prevLangRef = useRef(language);
+  const prevProfileLangRef = useRef(userProfile.language);
 
   useEffect(() => {
-    if (language !== userProfile.language) {
-      setUserProfile(prev => ({ ...prev, language }));
+    if (userProfile.language && userProfile.language !== language && userProfile.language !== prevProfileLangRef.current) {
+      prevLangRef.current = userProfile.language;
+      prevProfileLangRef.current = userProfile.language;
+      setLanguage(userProfile.language);
+    }
+  }, [userProfile.language, language]);
+
+  useEffect(() => {
+    if (language !== userProfile.language && language !== prevLangRef.current) {
+      prevLangRef.current = language;
+      prevProfileLangRef.current = language;
+      setUserProfile(prev => {
+        if (prev.language === language) return prev;
+        return { ...prev, language };
+      });
     }
   }, [language, userProfile.language]);
 

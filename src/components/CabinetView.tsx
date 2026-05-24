@@ -44,15 +44,20 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       setSellerListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    // Fetch Seller Orders (Received)
+    // Fetch Seller Orders (Received) - sorted in client-side memory to avoid composite index requirement
     const qOrders = query(
       collection(db, 'orders'),
-      where('sellerId', '==', auth.currentUser.uid),
-      orderBy('createdAt', 'desc')
+      where('sellerId', '==', auth.currentUser.uid)
     );
 
     const unsubOrders = onSnapshot(qOrders, (snapshot) => {
-      setSellerOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      ordersData.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || a.createdAt || 0;
+        const timeB = b.createdAt?.seconds || b.createdAt || 0;
+        return timeB - timeA;
+      });
+      setSellerOrders(ordersData);
       setLoading(false);
     });
 

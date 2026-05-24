@@ -584,14 +584,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     if (!activeChatListing) return;
     const qMsgs = query(
       collection(db, 'market_messages'),
-      where('listingId', '==', activeChatListing.id),
-      orderBy('createdAt', 'asc')
+      where('listingId', '==', activeChatListing.id)
     );
     const unsubscribe = onSnapshot(qMsgs, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data() as any
       }));
+      // Sort in client-side memory to avoid composite index requirement
+      msgs.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || a.createdAt || 0;
+        const timeB = b.createdAt?.seconds || b.createdAt || 0;
+        return timeA - timeB;
+      });
       setMessagesList(msgs);
     }, (err) => {
       console.error("Error loading messages: ", err);
