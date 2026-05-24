@@ -22,7 +22,8 @@ import {
   Loader2,
   Globe,
   Coins,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { 
   collection, 
@@ -206,6 +207,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service'>('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -213,6 +215,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
+  const [buyerInstructions, setBuyerInstructions] = useState('');
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
 
   useEffect(() => {
     let originalTitle = t.market.seo_title || "PROTON — პროფესიონალური ეკოსისტემა";
@@ -243,7 +248,23 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     };
   }, [t, language, checkoutItem]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
-  const [orders, setOrders] = useState<any[]>([]);
+  const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
+  const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  
+  const orders = useMemo(() => {
+    const merged = [...buyerOrders];
+    sellerOrders.forEach(so => {
+      if (!merged.some(bo => bo.id === so.id)) {
+        merged.push(so);
+      }
+    });
+    return merged.sort((a, b) => {
+      const at = a.createdAt?.seconds || a.createdAt || 0;
+      const bt = b.createdAt?.seconds || b.createdAt || 0;
+      return bt - at;
+    });
+  }, [buyerOrders, sellerOrders]);
+
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Form State
@@ -263,6 +284,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     lng?: number;
     condition: string;
     isNegotiable: boolean;
+    listingType: 'product' | 'service';
+    serviceDuration: string;
+    serviceTerms: string;
   }>({
     title: '',
     titleGe: '',
@@ -278,7 +302,10 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     lat: undefined,
     lng: undefined,
     condition: 'new',
-    isNegotiable: false
+    isNegotiable: false,
+    listingType: 'product',
+    serviceDuration: '',
+    serviceTerms: ''
   });
 
   // Trust & Reviews States
@@ -438,25 +465,39 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   useEffect(() => {
     if (!auth.currentUser) return;
-    const qOrders = query(
+    
+    const qBuyerOrders = query(
       collection(db, 'orders'), 
       where('buyerId', '==', auth.currentUser.uid)
     );
-    const unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
+    const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })).sort((a: any, b: any) => {
-        const at = a.createdAt?.seconds || 0;
-        const bt = b.createdAt?.seconds || 0;
-        return bt - at;
-      });
-      setOrders(data);
+      }));
+      setBuyerOrders(data);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'orders');
+      console.warn("Buyer orders listen failed:", error);
     });
 
-    return () => unsubscribeOrders();
+    const qSellerOrders = query(
+      collection(db, 'orders'), 
+      where('sellerId', '==', auth.currentUser.uid)
+    );
+    const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSellerOrders(data);
+    }, (error) => {
+      console.warn("Seller orders listen failed:", error);
+    });
+
+    return () => {
+      unsubscribeBuyer();
+      unsubscribeSeller();
+    };
   }, []);
 
   const clearFilters = () => {
@@ -466,6 +507,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     setActiveCity('');
     setMinPrice('');
     setMaxPrice('');
+    setActiveListingType('all');
   };
 
   const filteredListings = useMemo(() => {
@@ -478,6 +520,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       } else {
         // Handled by different UI section
         return [];
+      }
+    }
+
+    // Filter by Listing Type (Product vs Service)
+    if (activeListingType !== 'all') {
+      if (activeListingType === 'service') {
+        result = result.filter(l => l.listingType === 'service' || l.category === 'services');
+      } else {
+        result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'services'));
       }
     }
 
@@ -519,7 +570,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     }
 
     return result;
-  }, [listings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, language]);
+  }, [listings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language]);
 
   const convertPrice = (price: number, from: string, to: string) => {
     if (from === to) return price;
@@ -541,6 +592,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
     setIsCheckingOut(true);
     try {
+      const isService = checkoutItem.listingType === 'service' || checkoutItem.category === 'services';
+
       await addDoc(collection(db, 'orders'), {
         listingId: checkoutItem.id,
         buyerId: auth.currentUser.uid,
@@ -548,11 +601,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         amount: checkoutItem.price,
         currency: checkoutItem.currency || 'USD',
         itemTitle: checkoutItem.title,
-        status: 'completed',
+        status: isService ? 'booked' : 'completed',
+        orderType: isService ? 'service' : 'product',
+        buyerInstructions: isService ? buyerInstructions.trim() : '',
         createdAt: serverTimestamp()
       });
       
       setCheckoutItem(null);
+      setBuyerInstructions('');
       setViewMode('my-listings');
       setProfileSubMode('buying');
     } catch (error) {
@@ -560,6 +616,17 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.");
     } finally {
       setIsCheckingOut(false);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: newStatus
+      });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert(language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status.");
     }
   };
 
@@ -825,7 +892,10 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         lat: sanitizedLat,
         lng: sanitizedLng,
         condition: formData.condition || 'new',
-        isNegotiable: formData.isNegotiable ?? false
+        isNegotiable: formData.isNegotiable ?? false,
+        listingType: formData.listingType || (formData.category === 'services' ? 'service' : 'product'),
+        serviceDuration: formData.serviceDuration || '',
+        serviceTerms: formData.serviceTerms || ''
       };
 
       if (viewMode === 'edit' && editingListing) {
@@ -841,7 +911,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         title: '', titleGe: '', description: '', descriptionGe: '',
         price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
         country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
-        lat: undefined, lng: undefined, condition: 'new', isNegotiable: false
+        lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
+        listingType: 'product', serviceDuration: '', serviceTerms: ''
       });
     } catch (error: any) {
       console.error("Error saving listing:", error);
@@ -881,7 +952,10 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       lat: listing.lat,
       lng: listing.lng,
       condition: listing.condition || 'new',
-      isNegotiable: listing.isNegotiable || false
+      isNegotiable: listing.isNegotiable || false,
+      listingType: listing.listingType || (listing.category === 'services' ? 'service' : 'product'),
+      serviceDuration: listing.serviceDuration || '',
+      serviceTerms: listing.serviceTerms || ''
     });
     setViewMode('edit');
   };
@@ -1106,7 +1180,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       title: '', titleGe: '', description: '', descriptionGe: '',
                       price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
                       country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
-                      lat: undefined, lng: undefined, condition: 'new', isNegotiable: false
+                      lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
+                      listingType: 'product', serviceDuration: '', serviceTerms: ''
                     });
                     setViewMode('create');
                   }}
@@ -1159,6 +1234,59 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 </select>
                 <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
              </div>
+          </div>
+        )}
+
+        {viewMode === 'browse' && (
+          <div className="w-full flex flex-wrap items-center justify-between gap-4 mt-6 border-t border-white/5 pt-6 animate-in fade-in duration-300">
+            {/* Listing Type Tabs */}
+            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setActiveListingType('all')}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  activeListingType === 'all' 
+                    ? "bg-white/10 text-white shadow-md border border-white/10" 
+                    : "text-white/40 hover:text-white/60"
+                )}
+              >
+                <span>🌍</span>
+                <span>{language === 'ka' ? 'ყველა' : 'All Listings'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveListingType('product')}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  activeListingType === 'product' 
+                    ? "bg-white/10 text-white shadow-md border border-white/10" 
+                    : "text-white/40 hover:text-white/60"
+                )}
+              >
+                <span>📦</span>
+                <span>{language === 'ka' ? 'პროდუქტები' : 'Products'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveListingType('service')}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  activeListingType === 'service' 
+                    ? "bg-white/10 text-white shadow-md border border-white/10" 
+                    : "text-white/40 hover:text-white/60"
+                )}
+              >
+                <span>⚡</span>
+                <span>{language === 'ka' ? 'სერვისები' : 'Services'}</span>
+              </button>
+            </div>
+            
+            <div className="text-[10px] font-black uppercase tracking-widest opacity-45">
+              {language === 'ka' 
+                ? `ნაპოვნია ${filteredListings.length} განცხადება` 
+                : `${filteredListings.length} listings found`}
+            </div>
           </div>
         )}
       </div>
@@ -1246,45 +1374,178 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 currentTheme={currentTheme}
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                <AnimatePresence mode="popLayout">
-                {viewMode === 'my-listings' && profileSubMode === 'buying' ? (
-                  orders.map((order, idx) => (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      key={order.id}
-                      className={cn("p-8 rounded-[40px] border border-white/5 group relative overflow-hidden", currentTheme.card)}
+              <div className="space-y-8">
+                {viewMode === 'my-listings' && profileSubMode === 'selling' && (
+                  <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner self-start max-w-md animate-in fade-in duration-300">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSellingTab('listings')}
+                      className={cn(
+                        "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center",
+                        activeSellingTab === 'listings' 
+                          ? "bg-white/10 text-white shadow-md border border-white/10" 
+                          : "text-white/40 hover:text-white/60"
+                      )}
                     >
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 blur-3xl rounded-full -mr-16 -mt-16" />
-                      <div className="flex items-center justify-between mb-6 relative">
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 group-hover:bg-proton-accent/10 transition-colors">
-                          <ShoppingBag size={20} className={currentTheme.accent} />
-                        </div>
-                        <div className="text-right">
-                          <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 block mb-1", currentTheme.muted)}>
-                            {new Date(order.createdAt).toLocaleDateString()}
-                          </span>
-                          <span className="inline-flex px-3 py-1 bg-green-500/10 border border-green-500/20 text-[9px] font-black text-green-500 uppercase tracking-[0.1em] rounded-lg">
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-                      <h4 className="text-lg font-black text-white mb-2 uppercase tracking-tight leading-tight">{order.itemTitle}</h4>
-                      <p className={cn("text-xs font-bold font-mono", currentTheme.muted)}>
-                        {order.amount} {order.currency}
-                      </p>
-                      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between relative">
-                         <span className={cn("text-[9px] font-bold opacity-30 font-mono", currentTheme.muted)}>#{order.id.substring(0, 12).toUpperCase()}</span>
-                         <button className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:opacity-80 transition-opacity">
-                           Details <ChevronRight size={14} />
-                         </button>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  filteredListings.map((listing, idx) => (
+                      <span>📦</span>
+                      <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Postings'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSellingTab('incoming-orders')}
+                      className={cn(
+                        "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative",
+                        activeSellingTab === 'incoming-orders' 
+                          ? "bg-white/10 text-white shadow-md border border-white/10" 
+                          : "text-white/40 hover:text-white/60"
+                      )}
+                    >
+                      <span>⚡</span>
+                      <span>{language === 'ka' ? 'შემოსული შეკვეთები' : 'Incoming Books'}</span>
+                      {sellerOrders.length > 0 && (
+                        <span className="px-2 py-0.5 bg-red-500 rounded-full text-[8px] font-black text-white ml-1">
+                          {sellerOrders.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                  <AnimatePresence mode="popLayout">
+                  {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
+                    (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
+                      const isExpanded = expandedOrderId === order.id;
+                      const isService = order.orderType === 'service';
+                      const isSeller = profileSubMode === 'selling';
+
+                      return (
+                        <motion.div 
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          key={order.id}
+                          className={cn("p-8 rounded-[40px] border border-white/5 group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
+                        >
+                          <div>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 blur-3xl rounded-full -mr-16 -mt-16" />
+                            <div className="flex items-center justify-between mb-6 relative">
+                              <div className={cn(
+                                "p-4 rounded-2xl border border-white/5",
+                                isService ? "bg-amber-500/10 text-amber-300" : "bg-white/5 text-white"
+                              )}>
+                                {isService ? <Zap size={20} /> : <ShoppingBag size={20} />}
+                              </div>
+                              <div className="text-right flex flex-col items-end gap-1.5">
+                                <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 block", currentTheme.muted)}>
+                                  {order.createdAt?.seconds 
+                                    ? new Date(order.createdAt.seconds * 1000).toLocaleDateString()
+                                    : order.createdAt instanceof Date 
+                                      ? order.createdAt.toLocaleDateString() 
+                                      : (order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString() : 'Active')}
+                                </span>
+                                
+                                <span className={cn(
+                                  "inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-[0.1em] rounded-lg border",
+                                  order.status === 'completed' 
+                                    ? "bg-green-500/10 border-green-500/20 text-green-400"
+                                    : order.status === 'in_progress'
+                                    ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                                    : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                                )}>
+                                  {order.status === 'booked' 
+                                    ? (language === 'ka' ? '🚀 შეკვეთილია' : '🚀 Booked')
+                                    : order.status === 'in_progress'
+                                    ? (language === 'ka' ? '🛠️ მიმდინარე' : '🛠️ In Progress')
+                                    : order.status === 'completed'
+                                    ? (language === 'ka' ? '🎯 დასრულებული' : '🎯 Completed')
+                                    : order.status}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <h4 className="text-lg font-black text-white mb-2 uppercase tracking-tight leading-tight">{order.itemTitle}</h4>
+                            <p className={cn("text-xs font-bold font-mono mb-4", currentTheme.muted)}>
+                              {order.amount} {order.currency}
+                            </p>
+
+                            {isService && (
+                              <div className="mt-4 bg-white/5 rounded-2xl p-4 border border-white/5 text-xs text-left">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-white/40 block mb-1">
+                                  {language === 'ka' ? 'ტიპი' : 'Service Booking'}
+                                </span>
+                                <p className="text-white/80 font-bold">
+                                  {language === 'ka' ? 'Professional Freelance სერვისი' : 'Professional Service Booking'}
+                                </p>
+                              </div>
+                            )}
+
+                            {isExpanded && (
+                              <motion.div 
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                className="mt-6 pt-6 border-t border-white/5 text-left space-y-4"
+                              >
+                                {isService && order.buyerInstructions && (
+                                  <div className="space-y-1">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block">
+                                      {language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Client Requirements'}
+                                    </span>
+                                    <p className="text-[11px] font-medium text-white bg-black/45 p-3.5 rounded-xl border border-white/5 whitespace-pre-line leading-relaxed shadow-inner">
+                                      {order.buyerInstructions}
+                                    </p>
+                                  </div>
+                                )}
+
+                                <div className="space-y-1 font-mono text-[9px] text-white/45">
+                                  <p>ID: #{order.id}</p>
+                                  <p>Role: {isSeller ? 'Service Provider' : 'Client'}</p>
+                                </div>
+
+                                {isService && isSeller && order.status !== 'completed' && (
+                                  <div className="pt-2 flex flex-wrap gap-2">
+                                    {order.status === 'booked' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
+                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95")}
+                                      >
+                                        🛠️ {language === 'ka' ? 'მუშაობის დაწყება' : 'Begin Work'}
+                                      </button>
+                                    )}
+                                    {order.status === 'in_progress' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-green-400 hover:bg-green-500 transition-all shadow-md active:scale-95")}
+                                      >
+                                        🎯 {language === 'ka' ? 'მზადაა / დასრულება' : 'Mark Completed'}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </div>
+
+                          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between relative">
+                             <span className={cn("text-[9px] font-bold opacity-30 font-mono", currentTheme.muted)}>#{order.id.substring(0, 12).toUpperCase()}</span>
+                             <button 
+                               type="button"
+                               onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
+                               className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:opacity-80 transition-opacity"
+                             >
+                               {isExpanded 
+                                 ? (language === 'ka' ? 'დახურვა' : 'Close Details') 
+                                 : (language === 'ka' ? 'დეტალები' : 'Details')} 
+                               <ChevronRight size={14} className={cn("transition-transform", isExpanded && "rotate-90")} />
+                             </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                  ) : (
+                    filteredListings.map((listing, idx) => (
                 <motion.article 
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -1331,16 +1592,33 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
                         <span className="text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
                       </div>
-                      {listing.condition && (
-                        <div className="px-2.5 py-1 bg-black/80 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5">
-                          <span className="text-[9px] font-black text-white uppercase tracking-wider">
-                            {listing.condition === 'new' 
-                              ? (language === 'ka' ? '✨ ახალი' : '✨ New') 
-                              : listing.condition === 'used' 
-                              ? (language === 'ka' ? '⚙️ მეორადი' : '⚙️ Used')
-                              : (language === 'ka' ? '🛠️ განახლებ.' : '🛠️ Refurbished')}
-                          </span>
-                        </div>
+                      {listing.listingType === 'service' || listing.category === 'services' ? (
+                        <>
+                          <div className="px-2.5 py-1 bg-amber-500/20 backdrop-blur-md rounded-lg border border-amber-400/30 flex items-center gap-1.5">
+                            <span className="text-[9px] font-black text-amber-200 uppercase tracking-wider">
+                              ⚡ {language === 'ka' ? 'სერვისი' : 'Service'}
+                            </span>
+                          </div>
+                          {listing.serviceDuration && (
+                            <div className="px-2.5 py-1 bg-teal-500/20 backdrop-blur-md rounded-lg border border-teal-400/30 flex items-center gap-1.5">
+                              <span className="text-[9px] font-black text-teal-200 uppercase tracking-wider">
+                                ⏱️ {listing.serviceDuration}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        listing.condition && (
+                          <div className="px-2.5 py-1 bg-black/80 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5">
+                            <span className="text-[9px] font-black text-white uppercase tracking-wider">
+                              {listing.condition === 'new' 
+                                ? (language === 'ka' ? '✨ ახალი' : '✨ New') 
+                                : listing.condition === 'used' 
+                                ? (language === 'ka' ? '⚙️ მეორადი' : '⚙️ Used')
+                                : (language === 'ka' ? '🛠️ განახლებ.' : '🛠️ Refurbished')}
+                            </span>
+                          </div>
+                        )
                       )}
                       {listing.isNegotiable && (
                         <div className="px-2.5 py-1 bg-blue-500/30 backdrop-blur-md rounded-lg border border-blue-400/30 flex items-center gap-1.5">
@@ -1490,7 +1768,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               )}
             </AnimatePresence>
           </div>
-        )}
+        </div>
+      )}
 
             {!loading && filteredListings.length === 0 && (
               <div className="py-32 text-center space-y-6">
@@ -1578,6 +1857,82 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  <div className="space-y-3">
+                    {/* Listing Type Selection */}
+                    <div className="md:col-span-2 space-y-4 mb-4">
+                      <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                        {language === 'ka' ? 'განცხადების ტიპი' : 'Listing Type'}
+                      </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              listingType: 'product',
+                              category: prev.category === 'services' ? 'electronics' : prev.category
+                            }));
+                          }}
+                          className={cn(
+                            "py-4 rounded-2xl border transition-all text-xs font-bold flex items-center justify-center gap-2",
+                            formData.listingType === 'product'
+                              ? "bg-white/10 border-white/20 text-white shadow-lg"
+                              : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                          )}
+                        >
+                          <span>📦</span>
+                          <span>{language === 'ka' ? 'პროდუქტი' : 'Physical Product'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              listingType: 'service',
+                              category: 'services'
+                            }));
+                          }}
+                          className={cn(
+                            "py-4 rounded-2xl border transition-all text-xs font-bold flex items-center justify-center gap-2",
+                            formData.listingType === 'service'
+                              ? "bg-white/10 border-white/20 text-white shadow-lg"
+                              : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                          )}
+                        >
+                          <span>⚡</span>
+                          <span>{language === 'ka' ? 'სერვისი' : 'Professional Service'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {formData.listingType === 'service' && (
+                      <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="space-y-3">
+                          <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                            {language === 'ka' ? 'შესრულების ვადა' : 'Delivery Duration'}
+                          </label>
+                          <input 
+                            type="text"
+                            value={formData.serviceDuration || ''}
+                            onChange={e => setFormData({...formData, serviceDuration: e.target.value})}
+                            placeholder={language === 'ka' ? "მაგ: 3 დღე, 2 საათი" : "e.g. 3 days, 1 hour"}
+                            className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                            {language === 'ka' ? 'სამუშაო პირობები კლიენტისთვის' : 'Working Terms (Requirements)'}
+                          </label>
+                          <input 
+                            type="text"
+                            value={formData.serviceTerms || ''}
+                            onChange={e => setFormData({...formData, serviceTerms: e.target.value})}
+                            placeholder={language === 'ka' ? "მაგ: საჭიროა დიზაინის ბრიფი" : "e.g. Design brief required"}
+                            className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.category}</label>
                     <div className="relative group">
                       <select 
@@ -1947,6 +2302,32 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     </div>
                   </div>
                 </div>
+
+                {/* Conditional Service Booking Panel */}
+                {(checkoutItem.listingType === 'service' || checkoutItem.category === 'services') && (
+                  <div className="space-y-4 bg-white/5 rounded-[32px] p-6 border border-white/5 text-left">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white">⚡ {language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Rules'}</h4>
+                    <div className="grid grid-cols-2 gap-4 text-xs font-medium">
+                      <div className="bg-white/5 rounded-xl p-3">
+                        <span className="block text-[8px] uppercase tracking-wider opacity-40 mb-1">{language === 'ka' ? 'შესრულების ვადა' : 'Duration'}</span>
+                        <span className="text-white font-bold">{checkoutItem.serviceDuration || (language === 'ka' ? 'შეთანხმებით' : 'Flexible')}</span>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-3">
+                        <span className="block text-[8px] uppercase tracking-wider opacity-40 mb-1">{language === 'ka' ? 'პირობა' : 'Requirements'}</span>
+                        <span className="text-white font-bold truncate block">{checkoutItem.serviceTerms || (language === 'ka' ? 'სტანდარტული' : 'Standard')}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[9px] font-black uppercase tracking-wider text-white/50 block ml-1">{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Instructions for the Seller'}</label>
+                      <textarea
+                        value={buyerInstructions}
+                        onChange={e => setBuyerInstructions(e.target.value)}
+                        placeholder={language === 'ka' ? "ჩაწერეთ სამუშაოს სპეციფიკაცია..." : "Enter your specific task instructions..."}
+                        className={cn("w-full h-24 px-4 py-3 rounded-2xl border text-xs font-bold text-white focus:outline-none transition-all placeholder:text-white/20 bg-black/20", currentTheme.input)}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-4 space-y-4">
                   <p className={cn("text-[10px] font-bold text-center px-8 leading-relaxed", currentTheme.muted)}>

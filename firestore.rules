@@ -127,7 +127,15 @@ service cloud.firestore {
         // Relational Sync (Pillar 1/7) - Optional: verify listing exists and has correct price
         && exists(/databases/$(database)/documents/listings/$(incoming().listingId));
         
-      allow update, delete: if false; // Orders are immutable records
+      allow update: if isVerified() && (existing().buyerId == request.auth.uid || existing().sellerId == request.auth.uid)
+        && incoming().buyerId == existing().buyerId
+        && incoming().sellerId == existing().sellerId
+        && incoming().listingId == existing().listingId
+        && incoming().amount == existing().amount
+        && incoming().currency == existing().currency
+        && incoming().itemTitle == existing().itemTitle
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if false;
     }
 
     // ======================================================
