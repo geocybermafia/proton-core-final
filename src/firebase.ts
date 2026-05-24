@@ -11,7 +11,7 @@ const firebaseConfig = {
   messagingSenderId: "770674231164",
   appId: "1:770674231164:web:10476d47ce81ea56b486f9",
   measurementId: "G-WTE6YHHYFC",
-  firestoreDatabaseId: "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51"
+  firestoreDatabaseId: "(default)"
 };
 
 // Handle potential missing config during build/runtime
