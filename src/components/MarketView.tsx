@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   ShoppingBag, 
+  ShoppingCart,
   MessageCircle, 
   MapPin, 
   Tag, 
@@ -316,6 +317,81 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [buyerInstructions, setBuyerInstructions] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
+
+  // Shopping Cart state
+  const [cart, setCart] = useState<Listing[]>(() => {
+    try {
+      const saved = localStorage.getItem('proton_market_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  });
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isPlacingCartOrders, setIsPlacingCartOrders] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('proton_market_cart', JSON.stringify(cart));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [cart]);
+
+  const handleAddToCart = (listing: Listing) => {
+    if (!auth.currentUser) {
+      alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.");
+      return;
+    }
+    if (listing.sellerId === auth.currentUser.uid) {
+      alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
+      return;
+    }
+    setCart((prev) => {
+      const exists = prev.some((item) => item.id === listing.id);
+      if (exists) {
+        alert(language === 'ka' ? "ეს ნივთი უკვე დამატებულია კალათაში!" : "This item is already in your cart!");
+        return prev;
+      }
+      return [...prev, listing];
+    });
+  };
+
+  const handleRemoveFromCart = (listingId: string) => {
+    setCart((prev) => prev.filter((item) => item.id !== listingId));
+  };
+
+  const handleCartCheckout = async () => {
+    if (!auth.currentUser || cart.length === 0) return;
+    setIsPlacingCartOrders(true);
+    try {
+      for (const item of cart) {
+        const isService = item.listingType === 'service' || item.category === 'service';
+        await addDoc(collection(db, 'orders'), {
+          listingId: item.id,
+          buyerId: auth.currentUser.uid,
+          sellerId: item.sellerId,
+          amount: item.price,
+          currency: item.currency || 'USD',
+          itemTitle: item.title,
+          status: isService ? 'booked' : 'completed',
+          orderType: isService ? 'service' : 'product',
+          buyerInstructions: '',
+          createdAt: serverTimestamp()
+        });
+      }
+      setCart([]);
+      setIsCartOpen(false);
+      setViewMode('my-listings');
+      setProfileSubMode('buying');
+    } catch (err) {
+      console.error("Cart checkout error:", err);
+      alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.");
+    } finally {
+      setIsPlacingCartOrders(false);
+    }
+  };
 
   useEffect(() => {
     let originalTitle = t.market.seo_title || "PROTON — პროფესიონალური ეკოსისტემა";
@@ -1266,6 +1342,18 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
              
              <div className="flex items-center gap-2">
                 <button 
+                  onClick={() => setIsCartOpen(true)}
+                  className={cn("p-3.5 rounded-2xl transition-all border relative", currentTheme.cardAlt, currentTheme.bgHover)}
+                  title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
+                >
+                  <ShoppingCart size={20} />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-black text-black">
+                      {cart.length}
+                    </span>
+                  )}
+                </button>
+                <button 
                   onClick={() => setViewMode('my-listings')}
                   className={cn("p-3.5 rounded-2xl transition-all border", currentTheme.cardAlt, currentTheme.bgHover)}
                   title={t.market.my_listings}
@@ -1399,10 +1487,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         />
       ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
         <div className="space-y-10 w-full">
-          {/* Horizontal Category Carousel - Only for Browse View */}
+          {/* Horizontal Category Carousel & Sticky mobile subfilters - Only for Browse View */}
           {viewMode === 'browse' && (
-            <div className="w-full relative animate-in fade-in duration-500 pt-2">
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-4 pt-1 px-1 -mx-4 sm:mx-0 sm:px-1 scrollbar-none scroll-smooth">
+            <div className="sticky top-[10px] md:top-[20px] z-[45] -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-[#0c0c0c]/90 backdrop-blur-md border-b border-white/5 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
+              {/* Categories horizontal list */}
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1 px-1 scrollbar-none scroll-smooth">
                 <button
                   type="button"
                   onClick={() => setActiveCategory('all')}
@@ -1433,6 +1522,67 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </button>
                 ))}
               </div>
+
+              {/* Mobile Quick Subfilters & Filters button under category carousel */}
+              <div className="flex items-center justify-between gap-3 mt-2 lg:hidden w-full">
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none grow">
+                  <button
+                    type="button"
+                    onClick={() => setActiveListingType('all')}
+                    className={cn(
+                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      activeListingType === 'all'
+                        ? "bg-white/10 text-white border-white/20"
+                        : "text-white/40 border-transparent hover:text-white/60"
+                    )}
+                  >
+                    {language === 'ka' ? 'ყველა' : 'All'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveListingType('product')}
+                    className={cn(
+                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      activeListingType === 'product'
+                        ? "bg-white/10 text-white border-white/20"
+                        : "text-white/40 border-transparent hover:text-white/60"
+                    )}
+                  >
+                    📦 {language === 'ka' ? 'პროდუქტები' : 'Products'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveListingType('service')}
+                    className={cn(
+                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      activeListingType === 'service'
+                        ? "bg-white/10 text-white border-white/20"
+                        : "text-white/40 border-transparent hover:text-white/60"
+                    )}
+                  >
+                    ⚡ {language === 'ka' ? 'სერვისები' : 'Services'}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => setIsFiltersOpen(true)}
+                    className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-white/10 shadow-lg bg-white/5 text-white active:scale-95")}
+                  >
+                    ⚙️ {language === 'ka' ? 'ფილტრები' : 'Filters'}
+                  </button>
+                  
+                  {/* Grid/Map simple compact button */}
+                  <button
+                    type="button"
+                    onClick={() => setDisplayMode(displayMode === 'grid' ? 'map' : 'grid')}
+                    className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10"
+                    title={displayMode === 'grid' ? (language === 'ka' ? 'რუკა' : 'Map') : (language === 'ka' ? 'ბადე' : 'Grid')}
+                  >
+                    {displayMode === 'grid' ? <MapPin size={14} /> : <LayoutGrid size={14} />}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1447,58 +1597,6 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           )}
 
           <div className="flex-1 space-y-8">
-            {/* Mobile Filter Toggle */}
-            {viewMode === 'browse' && (
-              <div className={cn("lg:hidden flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-[28px] border border-white/5 gap-4 shadow-xl", currentTheme.card)}>
-                <div className="flex items-center justify-between w-full sm:w-auto gap-4">
-                  <div className="flex items-center gap-3">
-                    <LayoutGrid size={18} className={currentTheme.accent} />
-                    <span className={cn("text-[10px] font-black uppercase tracking-widest", currentTheme.muted)}>
-                      {activeCategory === 'all' ? t.market.all_categories : t.market.categories[activeCategory as keyof typeof t.market.categories]}
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => setIsFiltersOpen(true)}
-                    className={cn("px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/10 transition-all border border-white/10 shrink-0", currentTheme.accentBg, "text-white")}
-                  >
-                    {language === 'ka' ? 'ფილტრები' : 'Filters'}
-                  </button>
-                </div>
-                
-                {/* Mobile view switch */}
-                <div className={cn("flex items-center justify-between w-full sm:w-auto border-t pt-4 sm:pt-0 sm:border-t-0 gap-4", currentTheme.border)}>
-                  <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", currentTheme.muted)}>
-                    {language === 'ka' ? 'ხედი:' : 'View:'}
-                  </span>
-                  <div className={cn("flex items-center gap-1 p-1 rounded-2xl border shadow-inner grow sm:grow-0 justify-end", currentTheme.cardAlt)}>
-                    <button 
-                      type="button"
-                      onClick={() => setDisplayMode('grid')}
-                      className={cn(
-                        "px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 grow sm:grow-0",
-                        displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                      )}
-                      title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
-                    >
-                      <LayoutGrid size={14} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
-                    </button>
-                    <button 
-                      type="button"
-                      onClick={() => setDisplayMode('map')}
-                      className={cn(
-                        "px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 grow sm:grow-0",
-                        displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                      )}
-                      title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
-                    >
-                      <MapPin size={14} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {viewMode === 'browse' && displayMode === 'map' ? (
               <ListingMap 
@@ -1547,7 +1645,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
                   <AnimatePresence mode="popLayout">
                   {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
                     (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
@@ -1690,9 +1788,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   key={listing.id}
                   transition={{ delay: idx * 0.04 }}
                   className={cn(
-                    "group rounded-3xl overflow-hidden transition-all flex flex-col relative",
-                    currentTheme.card,
-                    "border-white/5 hover:border-white/20 hover:shadow-2xl hover:shadow-proton-accent/5"
+                    "group rounded-2xl overflow-hidden transition-all flex flex-col relative border border-white/5 hover:border-[#10b981]/20 hover:shadow-[0_0_24px_rgba(16,185,129,0.06)] duration-300",
+                    currentTheme.card
                   )}
                 >
                   <div 
@@ -1700,90 +1797,55 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       if ((e.target as HTMLElement).closest('button')) return;
                       setCheckoutItem(listing);
                     }}
-                    className="h-52 bg-black/60 overflow-hidden relative cursor-pointer"
+                    className="h-36 sm:h-52 bg-black/60 overflow-hidden relative cursor-pointer"
                   >
                     {listing.image ? (
                       <motion.img 
                         src={listing.image} 
                         alt={language === 'ka' ? (listing.titleGe || listing.title) : listing.title} 
-                        className="w-full h-full object-cover transition-transform duration-1000 ease-out"
+                        className="w-full h-full object-cover transition-transform duration-700 ease-out"
                         whileHover={{ scale: 1.05 }}
                         referrerPolicy="no-referrer"
                       />
                     ) : (
                       <div className={cn("w-full h-full flex items-center justify-center bg-[#0a0a0a]")}>
-                        <ShoppingBag size={40} className={cn("opacity-10", currentTheme.accent)} />
+                        <ShoppingBag size={30} className={cn("opacity-10", currentTheme.accent)} />
                       </div>
                     )}
                     
                     {/* Badge Overlay */}
-                    <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
-                      <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-                        <span className="text-[11px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
-                        <span className="text-[9px] font-black text-white uppercase tracking-wider">
+                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex flex-wrap gap-1 sm:gap-2">
+                      <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
+                        <span className="text-[9px] sm:text-[11px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
+                        <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider hidden xs:inline">
                           {t.market.categories[listing.category as keyof typeof t.market.categories]}
                         </span>
                       </div>
-                      <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-                        <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-                        <span className="text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
+                      <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
+                        <span className="text-[9px] sm:text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
+                        <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
                       </div>
-                      {listing.listingType === 'service' || listing.category === 'service' ? (
-                        <>
-                          <div className="px-2.5 py-1 bg-amber-500/20 backdrop-blur-md rounded-lg border border-amber-400/30 flex items-center gap-1.5">
-                            <span className="text-[9px] font-black text-amber-200 uppercase tracking-wider">
-                              ⚡ {language === 'ka' ? 'სერვისი' : 'Service'}
-                            </span>
-                          </div>
-                          {listing.serviceDuration && (
-                            <div className="px-2.5 py-1 bg-teal-500/20 backdrop-blur-md rounded-lg border border-teal-400/30 flex items-center gap-1.5">
-                              <span className="text-[9px] font-black text-teal-200 uppercase tracking-wider">
-                                ⏱️ {listing.serviceDuration}
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        listing.condition && (
-                          <div className="px-2.5 py-1 bg-black/80 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5">
-                            <span className="text-[9px] font-black text-white uppercase tracking-wider">
-                              {listing.condition === 'new' 
-                                ? (language === 'ka' ? '✨ ახალი' : '✨ New') 
-                                : listing.condition === 'used' 
-                                ? (language === 'ka' ? '⚙️ მეორადი' : '⚙️ Used')
-                                : (language === 'ka' ? '🛠️ განახლებ.' : '🛠️ Refurbished')}
-                            </span>
-                          </div>
-                        )
-                      )}
-                      {listing.isNegotiable && (
-                        <div className="px-2.5 py-1 bg-blue-500/30 backdrop-blur-md rounded-lg border border-blue-400/30 flex items-center gap-1.5">
-                          <span className="text-[9px] font-black text-blue-200 uppercase tracking-wider">
-                            {language === 'ka' ? '🤝 შეთანხმებით' : '🤝 Negotiable'}
-                          </span>
-                        </div>
-                      )}
                     </div>
 
                     {listing.sellerId === auth.currentUser?.uid && (
-                      <div className="absolute top-4 right-4 flex gap-2 z-10">
+                      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-1 sm:gap-2 z-10">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             startEdit(listing);
                           }}
-                          className={cn("p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
+                          className={cn("p-1.5 sm:p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
                         >
-                          <Edit3 size={14} />
+                          <Edit3 size={11} className="sm:size-[14px]" />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteListing(listing.id);
                           }}
-                          className="p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
+                          className="p-1.5 sm:p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={11} className="sm:size-[14px]" />
                         </button>
                       </div>
                     )}
@@ -1791,108 +1853,124 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-6 flex-1 flex flex-col relative">
+                  <div className="p-3 sm:p-6 flex-1 flex flex-col relative">
                      <h2 
                       onClick={() => setCheckoutItem(listing)}
-                      className={cn("text-lg font-black tracking-tight mb-2 uppercase group-hover:text-proton-accent cursor-pointer transition-colors", currentTheme.text)}
+                      className={cn("text-[13px] sm:text-lg font-black tracking-tight mb-1 sm:mb-2 uppercase group-hover:text-proton-accent cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
                     >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                     </h2>
-                    <p className={cn("text-xs font-medium leading-relaxed mb-6 line-clamp-2 opacity-60", currentTheme.muted)}>
+                    <p className={cn("text-[10px] sm:text-xs font-medium leading-relaxed mb-4 sm:mb-6 line-clamp-2 opacity-60", currentTheme.muted)}>
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
-                    <div className={cn("mt-auto pt-4 border-t", currentTheme.border)}>
-                      <div className="flex items-center justify-between mb-4">
+                    <div className={cn("mt-auto pt-3 sm:pt-4 border-t", currentTheme.border)}>
+                      <div className="flex items-center justify-between mb-3 sm:mb-4">
                         <div className="flex flex-col">
-                          <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 mb-1", currentTheme.muted)}>{t.market.price}</span>
-                          <span className={cn("text-2xl font-black tracking-tighter", currentTheme.text)}>
+                          <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-40 mb-0.5", currentTheme.muted)}>{t.market.price}</span>
+                          <span className="text-sm sm:text-2xl font-black tracking-tighter text-[#10b981] drop-shadow-[0_0_8px_rgba(16,185,129,0.2)]">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-[10px] font-black opacity-30 ml-1.5 tracking-wider">{displayCurrency}</span>
+                            <span className="text-[8px] sm:text-[10px] font-black opacity-50 ml-1 tracking-wider">{displayCurrency}</span>
                           </span>
                         </div>
+
+                        {/* Product / Service Badge */}
+                        <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] shadow-sm">
+                          {listing.listingType === 'service' || listing.category === 'service'
+                            ? (language === 'ka' ? 'სერვისი' : 'Service')
+                            : (language === 'ka' ? 'ნივთი' : 'Product')}
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
-                          }}
-                          className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs relative cursor-pointer hover:border-white/20 transition-all border", currentTheme.cardAlt, currentTheme.accent)}
-                          title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
-                        >
-                          {listing.sellerName.substring(0, 2).toUpperCase()}
-                          <div className="absolute -top-0.5 -right-0.5 w-2 bg-green-500 rounded-full border-2 border-[#141414]" />
-                        </div>
-                        <div 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
-                          }}
-                          className="flex-1 min-w-0 cursor-pointer group/vendor hover:opacity-80 transition-opacity"
-                          title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className={cn("text-[10px] font-black uppercase tracking-wider truncate group-hover/vendor:text-proton-accent transition-colors", currentTheme.text)}>{listing.sellerName}</span>
-                            <ShieldCheck size={12} className={currentTheme.accent} />
+                      <div className="flex items-center justify-between gap-1.5 sm:gap-2.5">
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
+                            }}
+                            className={cn("w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-[8px] sm:text-[10px] relative cursor-pointer hover:border-white/20 transition-all border shrink-0", currentTheme.cardAlt, currentTheme.accent)}
+                            title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
+                          >
+                            {listing.sellerName.substring(0, 2).toUpperCase()}
+                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-[#141414]" />
                           </div>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
-                              <div className="flex items-center gap-1">
-                                <div className="flex items-center">
-                                  <Star size={8} className="fill-amber-400 text-amber-400" />
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
+                            }}
+                            className="min-w-0 cursor-pointer group/vendor hover:opacity-80 transition-opacity flex-1"
+                            title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-proton-accent transition-colors", currentTheme.text)}>{listing.sellerName}</span>
+                              <ShieldCheck size={9} className="shrink-0 text-emerald-500" />
+                            </div>
+                            <div className="hidden xs:flex items-center mt-0.5">
+                              {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
+                                <div className="flex items-center gap-0.5">
+                                  <Star size={7} className="fill-amber-400 text-amber-400" />
+                                  <span className="text-[7px] font-black text-amber-400">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
                                 </div>
-                                <span className="text-[9px] font-black text-amber-400">
-                                  {sellerRatings[listing.sellerId].avg.toFixed(1)}
-                                </span>
-                                <span className={cn("text-[8px] font-bold opacity-30", currentTheme.muted)}>
-                                  ({sellerRatings[listing.sellerId].count} {language === 'ka' ? 'შეფასება' : 'reviews'})
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1 opacity-40">
-                                <Star size={8} className="text-zinc-600" />
-                                <span className={cn("text-[8px] font-bold uppercase tracking-wider", currentTheme.muted)}>
-                                  {language === 'ka' ? 'ახალი გამყიდველი' : 'New Vendor'}
-                                </span>
-                              </div>
-                            )}
+                              ) : (
+                                <span className="text-[6px] font-bold text-white/35 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveChatListing(listing);
-                          }}
-                          className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-[#2e5bff] hover:text-white hover:bg-[#2e5bff]/25 transition-all"
-                          title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
-                        >
-                          <MessageCircle size={16} />
-                        </button>
+
+                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                          {/* Chat Button */}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveChatListing(listing);
+                            }}
+                            className="p-1.5 sm:p-2 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                            title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
+                          >
+                            <MessageCircle size={12} className="sm:size-[14px]" />
+                          </button>
+
+                          {/* Quick Add to Cart button */}
+                          {listing.sellerId !== auth.currentUser?.uid && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(listing);
+                              }}
+                              className="p-1.5 sm:p-2 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none flex items-center justify-center border border-emerald-400/20"
+                              title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
+                            >
+                              <ShoppingCart size={12} className="sm:size-[14px]" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="mt-6">
+                      <div className="mt-3 sm:mt-4">
                         {listing.sellerId === auth.currentUser?.uid ? (
                           <button 
                             onClick={() => startEdit(listing)}
                             className={cn(
-                              "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
+                              "w-full py-2 sm:py-2.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
                               currentTheme.accentBg
                             )}
                           >
-                            <Edit3 size={14} />
+                            <Edit3 size={11} className="sm:size-[14px]" />
                             {t.market.edit_listing}
                           </button>
                         ) : (
                           <button 
                             onClick={() => handleBuyNow(listing)}
                             className={cn(
-                              "w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-proton-accent/20 active:scale-[0.98]",
+                              "w-full py-2 sm:py-2.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-proton-accent/20 active:scale-[0.98]",
                               currentTheme.accentBg, "text-white"
                             )}
                           >
-                            <ShoppingBag size={14} />
+                            <ShoppingBag size={11} className="sm:size-[14px]" />
                             {t.market.buy_now}
                           </button>
                         )}
@@ -2369,6 +2447,151 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       </footer>
 
       <AnimatePresence>
+        {isCartOpen && (
+          <div className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-end p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isPlacingCartOrders && setIsCartOpen(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 100 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className={cn(
+                "relative w-full max-w-md h-full sm:h-[calc(100vh-32px)] sm:rounded-[40px] border border-white/5 flex flex-col overflow-hidden shadow-2xl z-10",
+                currentTheme.card
+              )}
+            >
+              <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-500">
+                    <ShoppingCart size={18} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight text-white">
+                      {language === 'ka' ? 'კალათა' : 'Shopping Cart'}
+                    </h3>
+                    <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-none mt-1", currentTheme.muted)}>
+                      {cart.length === 1 
+                        ? (language === 'ka' ? '1 ნივთი' : '1 item') 
+                        : (language === 'ka' ? `${cart.length} ნივთი` : `${cart.length} items`)}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsCartOpen(false)}
+                  disabled={isPlacingCartOrders}
+                  className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors disabled:opacity-50 text-white"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Items list */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {cart.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20">
+                    <div className="p-5 bg-white/5 rounded-[30px] border border-white/5 text-white/20">
+                      <ShoppingCart size={32} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black uppercase tracking-wider text-white">
+                        {language === 'ka' ? 'კალათა ცარიელია' : 'Cart is Empty'}
+                      </h4>
+                      <p className={cn("text-[10px] font-medium leading-relaxed max-w-xs mt-1.5", currentTheme.muted)}>
+                        {language === 'ka' 
+                          ? 'დაამატეთ საინტერესო პროდუქტები ან სერვისები მარკეტიდან.' 
+                          : 'Explore the marketplace to add professional products or services.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <motion.div 
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      key={item.id}
+                      className="p-4 rounded-3xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
+                    >
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0">
+                        {item.image ? (
+                          <img src={item.image} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/20">
+                            <ShoppingBag size={20} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0 pr-6">
+                        <span className="inline-block px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] mb-1">
+                          {item.listingType === 'service' || item.category === 'service'
+                            ? (language === 'ka' ? 'სერვისი' : 'Service')
+                            : (language === 'ka' ? 'ნივთი' : 'Product')}
+                        </span>
+                        <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">{language === 'ka' ? (item.titleGe || item.title) : item.title}</h4>
+                        <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
+                          {convertPrice(item.price, item.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                        </p>
+                      </div>
+
+                      <button 
+                        onClick={() => handleRemoveFromCart(item.id)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                        title={language === 'ka' ? 'წაშლა' : 'Remove'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+
+              {/* Action buttons at bottom */}
+              {cart.length > 0 && (
+                <div className="p-6 border-t border-white/5 space-y-4 shrink-0 bg-black/40">
+                  <div className="flex items-center justify-between">
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
+                      {language === 'ka' ? 'ჯამური ღირებულება' : 'Total Price'}
+                    </span>
+                    <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                      {cart.reduce((acc, item) => acc + convertPrice(item.price, item.currency || 'USD', displayCurrency), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
+                    </span>
+                  </div>
+
+                  <button 
+                    onClick={handleCartCheckout}
+                    disabled={isPlacingCartOrders}
+                    className={cn(
+                      "w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] text-black bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50"
+                    )}
+                  >
+                    {isPlacingCartOrders ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={14} />
+                        {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Checkout & Purchase'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+
         {checkoutItem && (
           <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div 
