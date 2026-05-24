@@ -131,6 +131,44 @@ service cloud.firestore {
     }
 
     // ======================================================
+    // 6. SELLER REVIEWS & RATINGS (NEW - TRUST & SAFETY)
+    // ======================================================
+    match /seller_reviews/{reviewId} {
+      allow read: if true; // Publicly viewable reviews
+      allow create: if isVerified() && isValidId(reviewId) 
+        && incoming().buyerId == request.auth.uid 
+        && incoming().sellerId != request.auth.uid 
+        && incoming().rating is number 
+        && incoming().rating >= 1 && incoming().rating <= 5 
+        && incoming().text is string && incoming().text.size() <= 2000
+        && incoming().createdAt == request.time;
+      allow update: if isVerified() && isValidId(reviewId) 
+        && existing().buyerId == request.auth.uid 
+        && incoming().buyerId == request.auth.uid 
+        && incoming().sellerId == existing().sellerId 
+        && incoming().rating is number 
+        && incoming().rating >= 1 && incoming().rating <= 5 
+        && incoming().text is string && incoming().text.size() <= 2000
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isVerified() && isValidId(reviewId) 
+        && existing().buyerId == request.auth.uid;
+    }
+
+    // ======================================================
+    // 7. CHAT MESSAGES BETWEEN TRADERS (NEW)
+    // ======================================================
+    match /market_messages/{messageId} {
+      allow read, list: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid || 
+        resource.data.sellerId == request.auth.uid
+      );
+      allow create: if isVerified() && isValidId(messageId) 
+        && incoming().senderId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ======================================================
     // 4. SYSTEM
     // ======================================================
     match /system/config {

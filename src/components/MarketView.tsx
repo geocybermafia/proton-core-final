@@ -281,6 +281,99 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     isNegotiable: false
   });
 
+  // Trust & Reviews States
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<{ id: string, name: string } | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewText, setReviewText] = useState<string>('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'seller_reviews'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setReviews(list);
+    }, (err) => {
+      console.warn("Firestore reviews read fallback:", err);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const sellerRatings = useMemo(() => {
+    const map: { [sellerId: string]: { avg: number; count: number; ratings: number[] } } = {};
+    reviews.forEach(r => {
+      const sId = r.sellerId;
+      if (!sId) return;
+      if (!map[sId]) {
+        map[sId] = { avg: 0, count: 0, ratings: [] };
+      }
+      map[sId].count += 1;
+      map[sId].ratings.push(r.rating || 5);
+    });
+    Object.keys(map).forEach(sId => {
+      const sum = map[sId].ratings.reduce((a, b) => a + b, 0);
+      map[sId].avg = map[sId].count > 0 ? sum / map[sId].count : 0;
+    });
+    return map;
+  }, [reviews]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser) {
+      alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეფასების დასაწერად." : "Please log in to write a review.");
+      return;
+    }
+    if (!selectedVendor) return;
+    if (auth.currentUser.uid === selectedVendor.id) {
+      alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება." : "You cannot review yourself.");
+      return;
+    }
+    if (reviewRating < 1 || reviewRating > 5) {
+      alert(language === 'ka' ? "გთხოვთ აირჩიოთ რეიტინგი 1-დან 5-მდე." : "Please select a rating between 1 and 5.");
+      return;
+    }
+    if (!reviewText.trim()) {
+      alert(language === 'ka' ? "გთხოვთ დაწეროთ შეფასების ტექსტი." : "Please write a review comment.");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const docId = `rev_${auth.currentUser.uid}_${selectedVendor.id}`;
+      const reviewDocRef = doc(db, 'seller_reviews', docId);
+      
+      await setDoc(reviewDocRef, {
+        buyerId: auth.currentUser.uid,
+        buyerName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Anonymous',
+        sellerId: selectedVendor.id,
+        rating: reviewRating,
+        text: reviewText.trim(),
+        createdAt: serverTimestamp()
+      });
+      
+      setReviewText('');
+      setReviewRating(5);
+      alert(language === 'ka' ? "შეფასება წარმატებით დაემატა!" : "Review added successfully!");
+    } catch (err) {
+      console.error("Error creating review:", err);
+      alert(language === 'ka' ? "შეფასების დამატება ვერ მოხერხდა." : "Could not add your review.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!window.confirm(language === 'ka' ? "ნამდვილად გსურთ შეფასების წაშლა?" : "Are you sure you want to delete this review?")) return;
+    try {
+      await deleteDoc(doc(db, 'seller_reviews', reviewId));
+    } catch (err) {
+      console.error("Error deleting review:", err);
+      alert(language === 'ka' ? "წაშლა ვერ მოხერხდა." : "Could not delete review.");
+    }
+  };
+
   // Vendor Chat State & Actions
   const [activeChatListing, setActiveChatListing] = useState<Listing | null>(null);
   const [chatMessageText, setChatMessageText] = useState('');
@@ -1307,16 +1400,51 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs relative", currentTheme.accent)}>
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
+                          }}
+                          className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs relative cursor-pointer hover:border-white/20 transition-all", currentTheme.accent)}
+                          title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
+                        >
                           {listing.sellerName.substring(0, 2).toUpperCase()}
                           <div className="absolute -top-0.5 -right-0.5 w-2 bg-green-500 rounded-full border-2 border-[#141414]" />
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
+                          }}
+                          className="flex-1 min-w-0 cursor-pointer group/vendor hover:opacity-80 transition-opacity"
+                          title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
+                        >
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase text-white tracking-wider truncate">{listing.sellerName}</span>
+                            <span className="text-[10px] font-black uppercase text-white tracking-wider truncate group-hover/vendor:text-proton-accent transition-colors">{listing.sellerName}</span>
                             <ShieldCheck size={12} className={currentTheme.accent} />
                           </div>
-                          <span className={cn("text-[8px] font-bold uppercase tracking-widest opacity-40 block mt-0.5", currentTheme.muted)}>Verified Vendor</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
+                              <div className="flex items-center gap-1">
+                                <div className="flex items-center">
+                                  <Star size={8} className="fill-amber-400 text-amber-400" />
+                                </div>
+                                <span className="text-[9px] font-black text-amber-400">
+                                  {sellerRatings[listing.sellerId].avg.toFixed(1)}
+                                </span>
+                                <span className={cn("text-[8px] font-bold opacity-30", currentTheme.muted)}>
+                                  ({sellerRatings[listing.sellerId].count} {language === 'ka' ? 'შეფასება' : 'reviews'})
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 opacity-40">
+                                <Star size={8} className="text-zinc-600" />
+                                <span className={cn("text-[8px] font-bold uppercase tracking-wider", currentTheme.muted)}>
+                                  {language === 'ka' ? 'ახალი გამყიდველი' : 'New Vendor'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <button 
                           onClick={(e) => {
@@ -1955,6 +2083,239 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     <span>{language === 'ka' ? 'გაგზავნა' : 'Send'}</span>
                   </button>
                 </form>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {selectedVendor && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedVendor(null)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 100, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.95 }}
+              className={cn(
+                "relative w-full max-w-2xl sm:rounded-[32px] border border-white/10 overflow-hidden",
+                currentTheme.card
+              )}
+            >
+              <div className="p-6 sm:p-8 space-y-6 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-none">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-sm", currentTheme.accent)}>
+                      {selectedVendor.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black uppercase text-white tracking-tight flex items-center gap-2">
+                        {selectedVendor.name}
+                        <ShieldCheck size={16} className={currentTheme.accent} />
+                      </h3>
+                      <p className={cn("text-[10px] uppercase font-black tracking-widest opacity-50", currentTheme.muted)}>
+                        {language === 'ka' ? 'ავტორიზებული გამყიდველი' : 'Authorized Vendor'}
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedVendor(null)}
+                    className="p-2.5 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Score Breakdown Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white/5 rounded-3xl p-6 border border-white/5">
+                  <div className="flex flex-col items-center justify-center text-center p-2 md:border-r border-white/5">
+                    <span className="text-4xl font-black text-white tracking-tighter">
+                      {sellerRatings[selectedVendor.id] ? sellerRatings[selectedVendor.id].avg.toFixed(1) : '0.0'}
+                    </span>
+                    <div className="flex gap-0.5 my-1.5 justify-center">
+                      {[1, 2, 3, 4, 5].map((starIdx) => {
+                        const score = sellerRatings[selectedVendor.id]?.avg || 0;
+                        return (
+                          <Star 
+                            key={starIdx} 
+                            size={14} 
+                            className={cn(
+                              starIdx <= score 
+                                ? "fill-amber-400 text-amber-400" 
+                                : starIdx - 0.5 <= score 
+                                  ? "fill-amber-400/50 text-amber-400"
+                                  : "text-zinc-600"
+                            )} 
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className={cn("text-[9px] font-black uppercase tracking-wider opacity-50", currentTheme.muted)}>
+                      {sellerRatings[selectedVendor.id]?.count || 0} {language === 'ka' ? 'შეფასება' : 'reviews'}
+                    </span>
+                  </div>
+
+                  <div className="md:col-span-2 space-y-2 flex flex-col justify-center">
+                    {[5, 4, 3, 2, 1].map((stars) => {
+                      const list = reviews.filter(r => r.sellerId === selectedVendor.id);
+                      const count = list.filter(r => r.rating === stars).length;
+                      const pct = list.length > 0 ? (count / list.length) * 100 : 0;
+                      return (
+                        <div key={stars} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-wider text-white">
+                          <span className="w-16 text-right text-[9px] opacity-70">{stars} {language === 'ka' ? 'ვარსკვლ.' : 'stars'}</span>
+                          <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                            <div className="h-full bg-amber-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="w-8 opacity-40 text-right">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Reviews Content Area */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-[#2e5bff]">
+                    {language === 'ka' ? 'მყიდველთა გამოხმაურება' : 'Buyer Feedback'}
+                  </h4>
+
+                  <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 scrollbar-none">
+                    {reviews.filter(r => r.sellerId === selectedVendor.id).length === 0 ? (
+                      <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5 text-xs text-white/40">
+                        {language === 'ka' ? 'ჯერ არ არის შეფასებები ამ გამყიდველისთვის.' : 'No reviews left for this seller yet.'}
+                      </div>
+                    ) : (
+                      reviews
+                        .filter(r => r.sellerId === selectedVendor.id)
+                        .map((rev) => {
+                          const isOwnReview = auth.currentUser?.uid === rev.buyerId;
+                          const hasOrder = orders.some(o => o.sellerId === selectedVendor.id && o.buyerId === rev.buyerId);
+                          
+                          return (
+                            <div key={rev.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2">
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase text-white tracking-wider">
+                                      {rev.buyerName}
+                                    </span>
+                                    {hasOrder && (
+                                      <span className="px-1.5 py-0.5 bg-green-500/10 border border-green-500/20 rounded text-[7px] font-black text-green-400 uppercase tracking-widest flex items-center gap-0.5">
+                                        <ShieldCheck size={8} />
+                                        {language === 'ka' ? 'ვერიფიცირებული მყიდველი' : 'Verified Buyer'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-0.5">
+                                    {[1, 2, 3, 4, 5].map((s) => (
+                                      <Star 
+                                        key={s} 
+                                        size={10} 
+                                        className={cn(s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-zinc-700")} 
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className={cn("text-[8px] font-mono opacity-30", currentTheme.muted)}>
+                                    {rev.createdAt?.seconds 
+                                      ? new Date(rev.createdAt.seconds * 1000).toLocaleDateString()
+                                      : 'Just now'}
+                                  </span>
+                                  {isOwnReview && (
+                                    <button 
+                                      onClick={() => handleDeleteReview(rev.id)}
+                                      className="p-1.5 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all"
+                                      title={language === 'ka' ? 'შეფასების წაშლა' : 'Delete review'}
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-xs text-white/70 leading-relaxed font-medium">
+                                {rev.text}
+                              </p>
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+                </div>
+
+                {/* Write Review Form */}
+                {auth.currentUser?.uid !== selectedVendor.id ? (
+                  <form onSubmit={handleSubmitReview} className="border-t border-white/5 pt-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-widest text-[#2e5bff]">
+                        {language === 'ka' ? 'შეაფასეთ გამყიდველი' : 'Write a Review'}
+                      </label>
+                      <div className="flex items-center gap-1 bg-white/5 p-1.5 rounded-xl border border-white/10">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setReviewRating(star)}
+                            className="p-0.5 transition-transform hover:scale-125"
+                          >
+                            <Star 
+                              size={16} 
+                              className={cn(
+                                star <= reviewRating 
+                                  ? "fill-amber-400 text-amber-400" 
+                                  : "text-zinc-650 hover:text-amber-400/65"
+                              )} 
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <textarea
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        placeholder={language === 'ka' ? 'გაგვიზიარეთ თქვენი გამოცდილება ამ გამყიდველთან...' : 'Tell others about your experience trading with this vendor...'}
+                        rows={3}
+                        className={cn(
+                          "w-full px-5 py-4 rounded-2xl border text-xs font-medium text-white focus:outline-none placeholder-white/20 bg-white/5 focus:border-[#2e5bff]/40",
+                          currentTheme.input
+                        )}
+                        required
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmittingReview || !reviewText.trim()}
+                      className={cn(
+                        "w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg transition-all flex items-center justify-center gap-2",
+                        currentTheme.accentBg, "text-white hover:brightness-110 active:scale-95 disabled:opacity-50"
+                      )}
+                    >
+                      {isSubmittingReview ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          {language === 'ka' ? 'იგზავნება...' : 'Submitting...'}
+                        </>
+                      ) : (
+                        <>
+                          <span>{language === 'ka' ? 'შეფასების გამოქვეყნება' : 'Submit Review'}</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="border-t border-white/5 pt-4 text-center text-[10px] text-white/35 font-bold uppercase tracking-widest">
+                    {language === 'ka' ? 'თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება.' : 'You cannot submit a review for yourself.'}
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

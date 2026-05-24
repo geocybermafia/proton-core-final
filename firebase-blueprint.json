@@ -88,6 +88,21 @@
         "createdAt": { "type": "number" }
       }
     },
+    "seller_reviews": {
+      "title": "Seller Review",
+      "description": "Ratings and reviews left by buyers for sellers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "rating": { "type": "number" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["sellerId", "buyerId", "rating", "text"]
+    },
     "SharedSpec": {
       "title": "Shared Spec",
       "description": "Cached AI generated descriptions",
@@ -112,6 +127,14 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Global purchase records"
+    },
+    "/seller_reviews/{reviewId}": {
+      "schema": "seller_reviews",
+      "description": "Ratings and comments left for sellers by purchasers"
+    },
+    "/market_messages/{messageId}": {
+      "schema": "object",
+      "description": "Direct message chat between buyers and sellers"
     },
     "/users/{userId}": {
       "schema": "UserProfile",
