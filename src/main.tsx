@@ -10,6 +10,7 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/Toast';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { BrowserRouter } from 'react-router-dom';
 
 import { 
   getDefaultConfig,
@@ -78,7 +79,9 @@ function Root() {
             <AuthProvider>
               <ToastProvider>
                 <LanguageProvider>
-                  <App />
+                  <BrowserRouter>
+                    <App />
+                  </BrowserRouter>
                 </LanguageProvider>
               </ToastProvider>
             </AuthProvider>

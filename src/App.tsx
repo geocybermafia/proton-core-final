@@ -18,6 +18,7 @@ import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, del
 import { SettingsView } from './components/SettingsView';
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 import CabinetView from './components/CabinetView';
 import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
@@ -2256,6 +2257,7 @@ const PersonasView = ({
   user: any,
   isAdmin: boolean
 }) => {
+  const navigate = useNavigate();
   const [selectedPersona, setSelectedPersona] = useState<Persona>(() => {
     if (initialPersonaId) {
       const found = personas.find(p => p.id === initialPersonaId);
@@ -2270,6 +2272,12 @@ const PersonasView = ({
       if (found) setSelectedPersona(found);
     }
   }, [initialPersonaId, personas]);
+
+  useEffect(() => {
+    if (selectedPersona) {
+      navigate(`/personas/${selectedPersona.id}`, { replace: true });
+    }
+  }, [selectedPersona, navigate]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isEditingInstructions, setIsEditingInstructions] = useState(false);
@@ -3349,6 +3357,7 @@ const sanitizeForFirestore = (data: any): any => {
 };
 
 export default function App() {
+  const { user, loading: authLoading, initialized: authInitialized } = useAuth();
   const { showToast } = useToast();
   const { language, setLanguage } = useLanguage();
 
@@ -3371,22 +3380,65 @@ export default function App() {
     safeStorage.set('proton_ui_mode', uiMode);
   }, [uiMode]);
 
-  // Routing / View logic
-  // Routing / View logic
-  const [activeView, setActiveView] = useState<View>(() => {
-    if (window.location.pathname === '/translator') return 'translator';
-    return 'dashboard';
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const handlePathChange = () => {
-      if (window.location.pathname === '/translator') {
-        setActiveView('translator');
-      }
-    };
-    window.addEventListener('popstate', handlePathChange);
-    return () => window.removeEventListener('popstate', handlePathChange);
+  // Helper mapping pathnames to specific Views
+  const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
+    if (pathname.startsWith('/translator')) return 'translator';
+    if (pathname.startsWith('/market')) return 'market';
+    if (pathname.startsWith('/personas')) return 'personas';
+    if (pathname.startsWith('/blueprints')) return 'blueprints';
+    if (pathname.startsWith('/studio')) return 'image';
+    if (pathname.startsWith('/organizer')) return 'organizer';
+    if (pathname.startsWith('/compute')) return 'compute';
+    if (pathname.startsWith('/device')) return 'device';
+    if (pathname.startsWith('/profile')) return 'profile';
+    if (pathname.startsWith('/settings')) return 'settings';
+    if (pathname.startsWith('/documentation')) return 'documentation';
+    if (pathname.startsWith('/commercial')) return 'commercial';
+    return 'dashboard';
   }, []);
+
+  const activeView = getActiveViewFromPathname(location.pathname);
+
+  // Helper mapping view to router pathnames
+  const getPathnameFromView = React.useCallback((view: View): string => {
+    switch (view) {
+      case 'translator': return '/translator';
+      case 'market': return '/market';
+      case 'personas': return '/personas';
+      case 'blueprints': return '/blueprints';
+      case 'image': return '/studio';
+      case 'organizer': return '/organizer';
+      case 'compute': return '/compute';
+      case 'device': return '/device';
+      case 'profile': return '/profile';
+      case 'settings': return '/settings';
+      case 'documentation': return '/documentation';
+      case 'commercial': return '/commercial';
+      case 'dashboard':
+      default:
+        return '/dashboard';
+    }
+  }, []);
+
+  const setActiveView = React.useCallback((view: View) => {
+    navigate(getPathnameFromView(view));
+  }, [navigate, getPathnameFromView]);
+
+  // Synchronize persona ID from deep-linking URL (/personas/:id)
+  useEffect(() => {
+    if (location.pathname.startsWith('/personas/')) {
+      const parts = location.pathname.split('/');
+      const pId = parts[parts.length - 1];
+      if (pId && pId !== 'personas') {
+        setSelectedPersonaId(pId);
+      }
+    } else if (location.pathname === '/personas') {
+      setSelectedPersonaId(null);
+    }
+  }, [location.pathname]);
   
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
@@ -3429,20 +3481,29 @@ export default function App() {
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
 
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
+    if (!user && view !== 'translator' && view !== 'market') {
+      setShowAuth(true);
+      return;
+    }
+
     const isUserAdmin = (auth.currentUser?.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
     const isCreativeActive = isCreativeMode || isUserAdmin;
     if (!isCreativeActive && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
       setShowOptimizationModal(true);
       return;
     }
-    if (personaId) {
+    
+    if (view === 'personas' && personaId) {
       setSelectedPersonaId(personaId);
+      navigate(`/personas/${personaId}`);
+    } else {
+      setActiveView(view);
     }
-    setActiveView(view);
+
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [isCreativeMode, isSafeMode]);
+  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -3612,7 +3673,6 @@ export default function App() {
     }
   });
 
-  const { user, loading: authLoading, initialized: authInitialized } = useAuth();
   const [isSystemActive] = useState(true);
   const [bootstrapComplete, setBootstrapComplete] = useState(false);
   
@@ -4126,7 +4186,7 @@ export default function App() {
     );
   }
 
-  if (!user) {
+  if (!user && activeView !== 'translator' && activeView !== 'market') {
     if (showAuth) {
       return (
         <AuthFlow 
@@ -4443,10 +4503,14 @@ export default function App() {
           )} onClick={() => handleViewChange('profile')}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-bold shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {user ? (
+                  user.photoURL ? (
+                    <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                  )
                 ) : (
-                  <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
+                  <UserIcon size={18} />
                 )}
               </div>
               <AnimatePresence mode="wait">
@@ -4457,8 +4521,12 @@ export default function App() {
                     exit={{ opacity: 0, x: -20 }}
                     className="flex flex-col min-w-0"
                   >
-                    <span className="text-xs font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">{user.displayName || 'User'}</span>
-                    <span className="text-[10px] font-medium text-proton-accent/70 truncate tracking-widest uppercase">Verified Account</span>
+                    <span className="text-xs font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">
+                      {user ? (user.displayName || 'User') : (language === 'ka' ? 'ავტორიზაცია' : 'Sign In')}
+                    </span>
+                    <span className="text-[10px] font-medium text-proton-accent/70 truncate tracking-widest uppercase">
+                      {user ? 'Verified Account' : (language === 'ka' ? 'კავშირგარეშე' : 'Offline Access')}
+                    </span>
                   </motion.div>
                 )}
               </AnimatePresence>
