@@ -261,6 +261,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     image: string;
     lat?: number;
     lng?: number;
+    condition: string;
+    isNegotiable: boolean;
   }>({
     title: '',
     titleGe: '',
@@ -274,8 +276,54 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     location: '',
     image: '',
     lat: undefined,
-    lng: undefined
+    lng: undefined,
+    condition: 'new',
+    isNegotiable: false
   });
+
+  // Vendor Chat State & Actions
+  const [activeChatListing, setActiveChatListing] = useState<Listing | null>(null);
+  const [chatMessageText, setChatMessageText] = useState('');
+  const [messagesList, setMessagesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!activeChatListing) return;
+    const qMsgs = query(
+      collection(db, 'market_messages'),
+      where('listingId', '==', activeChatListing.id),
+      orderBy('createdAt', 'asc')
+    );
+    const unsubscribe = onSnapshot(qMsgs, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMessagesList(msgs);
+    }, (err) => {
+      console.error("Error loading messages: ", err);
+    });
+    return () => unsubscribe();
+  }, [activeChatListing]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser || !activeChatListing || !chatMessageText.trim()) return;
+
+    try {
+      await addDoc(collection(db, 'market_messages'), {
+        listingId: activeChatListing.id,
+        listingTitle: activeChatListing.title,
+        senderId: auth.currentUser.uid,
+        senderName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User',
+        senderAvatar: auth.currentUser.photoURL || '',
+        text: chatMessageText.trim(),
+        createdAt: serverTimestamp()
+      });
+      setChatMessageText('');
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
+  };
 
   const currentTheme = MARKET_THEMES[themeId] || MARKET_THEMES.industrial;
 
@@ -580,33 +628,40 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const checkRateLimit = async () => {
     if (!auth.currentUser) return true;
-    
-    const oneMinuteAgo = new Date();
-    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
-    
-    const recentListingsQuery = query(
-      collection(db, 'listings'),
-      where('sellerId', '==', auth.currentUser.uid)
-    );
-    
-    const snapshot = await getDocs(recentListingsQuery);
-    const recentCount = snapshot.docs.filter(doc => {
-      const createdAt = doc.data().createdAt;
-      if (!createdAt) return false;
-      const date = createdAt instanceof Timestamp ? createdAt.toDate() : new Date(createdAt);
-      return date >= oneMinuteAgo;
-    }).length;
+    try {
+      const oneMinuteAgo = new Date();
+      oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+      
+      const recentListingsQuery = query(
+        collection(db, 'listings'),
+        where('sellerId', '==', auth.currentUser.uid)
+      );
+      
+      const snapshot = await getDocs(recentListingsQuery);
+      const recentCount = snapshot.docs.filter(doc => {
+        const createdAt = doc.data().createdAt;
+        if (!createdAt) return false;
+        const date = createdAt instanceof Timestamp ? createdAt.toDate() : new Date(createdAt);
+        return date >= oneMinuteAgo;
+      }).length;
 
-    // Limit to 5 listings per minute for safety
-    if (recentCount >= 5) {
-      return false;
+      // Limit to 5 listings per minute for safety
+      if (recentCount >= 5) {
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.warn("Rate limit check query failed, allowing listing to bypass:", e);
+      return true; // Bypass on error to prevent rate limit query failures from blocking additions
     }
-    return true;
   };
 
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად" : "Please log in to post a listing.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -619,24 +674,65 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         }
       }
 
+      // Strong validation and sanitization over inputs (such as replacing comma with dot for Georgian users)
+      const priceStr = String(formData.price || '').trim().replace(',', '.');
+      const parsedPrice = parseFloat(priceStr);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        alert(language === 'ka' 
+          ? "გთხოვთ შეიყვანოთ სწორი ფასი (მხოლოდ დადებითი რიცხვები)." 
+          : "Please enter a valid price (positive numbers only)."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const countryStr = (formData.country || '').trim();
+      const cityStr = (formData.city || '').trim();
+      if (!countryStr || !cityStr) {
+        alert(language === 'ka' 
+          ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი." 
+          : "Please select a country and enter a city."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formData.title.trim()) {
+        alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის სათაური." : "Please fill in the product title.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!formData.description.trim()) {
+        alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა." : "Please fill in the product description.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Safe coordinate assignment (Never send NaN or undefined value directly to firestore fields)
+      const sanitizedLat = (typeof formData.lat === 'number' && !isNaN(formData.lat)) ? formData.lat : null;
+      const sanitizedLng = (typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null;
+
       const listingData = {
-        title: formData.title,
-        titleGe: formData.titleGe || formData.title,
-        description: formData.description,
-        descriptionGe: formData.descriptionGe || formData.description,
-        price: parseFloat(formData.price),
-        currency: formData.currency,
+        title: formData.title.trim(),
+        titleGe: (formData.titleGe || formData.title).trim(),
+        description: formData.description.trim(),
+        descriptionGe: (formData.descriptionGe || formData.description).trim(),
+        price: parsedPrice,
+        currency: formData.currency || 'USD',
         sellerId: auth.currentUser.uid,
         sellerName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Unknown',
-        category: formData.category,
-        location: formData.location || `${formData.city}, ${formData.country}`,
-        country: formData.country,
-        city: formData.city,
+        category: formData.category || 'electronics',
+        location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
+        country: countryStr,
+        city: cityStr,
         image: formData.image || '',
         createdAt: serverTimestamp(),
         status: 'active',
-        lat: formData.lat !== undefined ? formData.lat : null,
-        lng: formData.lng !== undefined ? formData.lng : null
+        lat: sanitizedLat,
+        lng: sanitizedLng,
+        condition: formData.condition || 'new',
+        isNegotiable: formData.isNegotiable ?? false
       };
 
       if (viewMode === 'edit' && editingListing) {
@@ -652,7 +748,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         title: '', titleGe: '', description: '', descriptionGe: '',
         price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
         country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
-        lat: undefined, lng: undefined
+        lat: undefined, lng: undefined, condition: 'new', isNegotiable: false
       });
     } catch (error: any) {
       console.error("Error saving listing:", error);
@@ -690,7 +786,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       location: listing.location,
       image: listing.image || '',
       lat: listing.lat,
-      lng: listing.lng
+      lng: listing.lng,
+      condition: listing.condition || 'new',
+      isNegotiable: listing.isNegotiable || false
     });
     setViewMode('edit');
   };
@@ -915,7 +1013,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       title: '', titleGe: '', description: '', descriptionGe: '',
                       price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
                       country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
-                      lat: undefined, lng: undefined
+                      lat: undefined, lng: undefined, condition: 'new', isNegotiable: false
                     });
                     setViewMode('create');
                   }}
@@ -1140,6 +1238,24 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
                         <span className="text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
                       </div>
+                      {listing.condition && (
+                        <div className="px-2.5 py-1 bg-black/80 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5">
+                          <span className="text-[9px] font-black text-white uppercase tracking-wider">
+                            {listing.condition === 'new' 
+                              ? (language === 'ka' ? '✨ ახალი' : '✨ New') 
+                              : listing.condition === 'used' 
+                              ? (language === 'ka' ? '⚙️ მეორადი' : '⚙️ Used')
+                              : (language === 'ka' ? '🛠️ განახლებ.' : '🛠️ Refurbished')}
+                          </span>
+                        </div>
+                      )}
+                      {listing.isNegotiable && (
+                        <div className="px-2.5 py-1 bg-blue-500/30 backdrop-blur-md rounded-lg border border-blue-400/30 flex items-center gap-1.5">
+                          <span className="text-[9px] font-black text-blue-200 uppercase tracking-wider">
+                            {language === 'ka' ? '🤝 შეთანხმებით' : '🤝 Negotiable'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {listing.sellerId === auth.currentUser?.uid && (
@@ -1202,7 +1318,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                           </div>
                           <span className={cn("text-[8px] font-bold uppercase tracking-widest opacity-40 block mt-0.5", currentTheme.muted)}>Verified Vendor</span>
                         </div>
-                        <button className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveChatListing(listing);
+                          }}
+                          className="p-2.5 rounded-xl bg-white/5 border border-white/5 text-[#2e5bff] hover:text-white hover:bg-[#2e5bff]/25 transition-all"
+                          title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
+                        >
                           <MessageCircle size={16} />
                         </button>
                       </div>
@@ -1402,6 +1525,58 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                        placeholder="e.g. Tbilisi"
                        className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
+                 </div>
+              </div>
+
+              {/* Advanced Condition and Negotiability Toggles */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                      {language === 'ka' ? 'მდგომარეობა' : 'Product Condition'}
+                    </label>
+                    <div className="relative">
+                      <select 
+                        value={formData.condition}
+                        onChange={e => setFormData({...formData, condition: e.target.value})}
+                        className={cn("w-full px-8 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                      >
+                        <option value="new">{language === 'ka' ? '✨ ახალი' : '✨ New'}</option>
+                        <option value="used">{language === 'ka' ? '⚙️ მეორადი' : '⚙️ Used'}</option>
+                        <option value="refurbished">{language === 'ka' ? '🛠️ განახლებული' : '🛠️ Refurbished'}</option>
+                      </select>
+                      <ChevronRight size={14} className="absolute right-6 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+                    </div>
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                      {language === 'ka' ? 'საგარიგებო პოლიტიკა' : 'Pricing Terms'}
+                    </label>
+                    <div 
+                      onClick={() => setFormData({...formData, isNegotiable: !formData.isNegotiable})}
+                      className={cn(
+                        "p-5 rounded-[24px] border flex items-center justify-between transition-all cursor-pointer select-none",
+                        formData.isNegotiable ? "bg-proton-accent/5 border-proton-accent/30 shadow-lg" : "bg-white/5 border-white/5"
+                      )}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-white">
+                          {language === 'ka' ? 'ფასი შეთანხმებით' : 'Price is Negotiable'}
+                        </span>
+                        <span className={cn("text-[9px] font-medium block mt-0.5", currentTheme.muted)}>
+                          {language === 'ka' ? 'მყიდველებს შეუძლიათ შემოგთავაზონ ფასი' : 'Open to custom offers'}
+                        </span>
+                      </div>
+                      <div className={cn(
+                        "w-10 h-5 rounded-full relative transition-all border",
+                        formData.isNegotiable ? "bg-[#2e5bff] border-[#2e5bff] shadow-[0_0_10px_rgba(0,242,255,0.2)]" : "bg-[#1f1f1f] border-white/5"
+                      )}>
+                        <div className={cn(
+                          "absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all",
+                          formData.isNegotiable ? "right-0.5" : "left-0.5"
+                        )} />
+                      </div>
+                    </div>
                  </div>
               </div>
 
@@ -1673,6 +1848,113 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     )}
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {activeChatListing && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setActiveChatListing(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, y: 100, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.95 }}
+              className="relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden bg-[#121212]"
+            >
+              <div className="p-8 sm:p-10 space-y-6 flex flex-col h-[600px] max-h-[85vh]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
+                      {activeChatListing.sellerName.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                        {language === 'ka' ? 'კავშირი გამყიდველთან' : 'Chat with Seller'}
+                      </h3>
+                      <p className="text-[10px] text-white/50">{activeChatListing.sellerName} • {activeChatListing.title}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setActiveChatListing(null)}
+                    className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+
+                {/* Subsystem status/Product terms */}
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-3 flex items-start gap-2.5">
+                  <span className="text-sm">💬</span>
+                  <div className="text-[9px] font-bold text-yellow-500/80 leading-relaxed uppercase">
+                    {language === 'ka' 
+                      ? `შეთანხმება: პროდუქტის მდგომარეობა - "${activeChatListing.condition === 'new' ? 'ახალი' : activeChatListing.condition === 'used' ? 'მეორადი' : 'განახლებული'}". ${activeChatListing.isNegotiable ? 'ფასზე შეგიძლიათ ვაჭრობა!' : 'ფასი ფიქსირებულია.'}`
+                      : `Inquiry terms: item condition is "${activeChatListing.condition || 'new'}". ${activeChatListing.isNegotiable ? 'Custom offers are welcome!' : 'Fixed pricing matches apply.'}`}
+                  </div>
+                </div>
+
+                {/* Messages Body */}
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-black/20 rounded-[24px] p-4 border border-white/5">
+                  {messagesList.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
+                      <span className="text-2xl opacity-40">🤝</span>
+                      <p className="text-xs font-bold text-white uppercase tracking-wider">
+                        {language === 'ka' ? 'მიწერეთ გამყიდველს' : 'No messages yet'}
+                      </p>
+                      <p className="text-[9px] text-white/40 max-w-xs">
+                        {language === 'ka' 
+                          ? 'ჰკითხეთ მდგომარეობის ან საბოლოო ფასის შესახებ და დაიწყეთ პირდაპირი მოლაპარაკება.'
+                          : 'Inquire about item availability, delivery, or state custom quotes.'}
+                      </p>
+                    </div>
+                  ) : (
+                    messagesList.map((msg) => (
+                      <div 
+                        key={msg.id} 
+                        className={cn(
+                          "flex flex-col max-w-[85%] rounded-[24px] p-4 text-xs font-medium space-y-1",
+                          msg.senderId === auth.currentUser?.uid 
+                            ? "bg-[#2e5bff] text-white ml-auto rounded-tr-none shadow-[0_4px_10px_rgba(46,91,255,0.2)]" 
+                            : "bg-white/10 text-white mr-auto rounded-tl-none"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-4 text-[9px] font-black uppercase tracking-wider opacity-65">
+                          <span>{msg.senderName}</span>
+                          <span>
+                            {msg.createdAt?.seconds 
+                              ? new Date(msg.createdAt.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : 'Just now'}
+                          </span>
+                        </div>
+                        <p className="break-all whitespace-pre-wrap">{msg.text}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Send message form */}
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={chatMessageText}
+                    onChange={(e) => setChatMessageText(e.target.value)}
+                    placeholder={language === 'ka' ? 'დაწერეთ შეთავაზება...' : 'Propose price or ask a question...'}
+                    className="flex-1 px-5 py-4 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:border-[#2e5bff] text-xs font-bold text-white placeholder-white/30"
+                  />
+                  <button 
+                    type="submit"
+                    className="px-5 py-4 bg-[#2e5bff] text-white font-black text-xs uppercase tracking-wider rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_12px_rgba(46,91,255,0.3)]"
+                  >
+                    <span>{language === 'ka' ? 'გაგზავნა' : 'Send'}</span>
+                  </button>
+                </form>
               </div>
             </motion.div>
           </div>

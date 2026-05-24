@@ -118,4 +118,6 @@ export type Listing = {
   lng?: number;
   createdAt: number;
   status: 'active' | 'sold';
+  condition?: 'new' | 'used' | 'refurbished' | string;
+  isNegotiable?: boolean;
 };
