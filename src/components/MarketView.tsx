@@ -1013,11 +1013,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         listingType: 'product', serviceDuration: '', serviceTerms: ''
       });
     } catch (error: any) {
-      console.error("Error saving listing:", error);
-      alert(language === 'ka' 
-        ? `განცხადების განთავსება ვერ მოხერხდა: ${error.message || 'დაუდგენელი შეცდომა'}` 
-        : `Listing placement failed: ${error.message || 'Unknown error'}`
-      );
+      console.error(error);
+      alert("Firebase Error: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
