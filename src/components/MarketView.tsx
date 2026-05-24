@@ -56,78 +56,157 @@ interface MarketViewProps {
   themeId: string;
 }
 
-const MARKET_THEMES: Record<string, { card: string; input: string; accent: string; accentBg: string; border: string; muted: string }> = {
+interface MarketTheme {
+  card: string;
+  input: string;
+  accent: string;
+  accentBg: string;
+  border: string;
+  muted: string;
+  text: string;
+  subtext: string;
+  tagMuted: string;
+  cardAlt: string;
+  badgeBg: string;
+  bgHover: string;
+  overlay: string;
+}
+
+const MARKET_THEMES: Record<string, MarketTheme> = {
   light: {
-    card: "bg-white border-slate-200 shadow-xl",
-    input: "bg-slate-100 border-slate-200 focus:border-slate-400",
+    card: "bg-white border-slate-200 shadow-xl text-slate-900",
+    input: "bg-slate-50 border-slate-200 focus:border-slate-400 text-slate-900 placeholder:text-slate-400",
     accent: "text-[#2e5bff]",
     accentBg: "bg-[#2e5bff]",
     border: "border-slate-200",
-    muted: "text-slate-500"
+    muted: "text-slate-500",
+    text: "text-slate-900",
+    subtext: "text-slate-600",
+    tagMuted: "text-slate-400",
+    cardAlt: "bg-slate-50 border border-slate-100 text-slate-800",
+    badgeBg: "bg-slate-100 text-slate-800 border-slate-200/50",
+    bgHover: "hover:bg-slate-100 hover:text-[#2e5bff]",
+    overlay: "bg-white/90 backdrop-blur-md border border-slate-200"
   },
   proton: {
-    card: "bg-[#141414] border-white/5 shadow-2xl",
-    input: "bg-[#0a0a0a] border-white/5 focus:border-[#2e5bff]/50",
+    card: "bg-[#141414] border-white/5 shadow-2xl text-white",
+    input: "bg-[#0a0a0a] border-white/5 focus:border-[#2e5bff]/50 text-white placeholder:text-white/25",
     accent: "text-[#2e5bff]",
     accentBg: "bg-[#2e5bff]",
     border: "border-white/5",
-    muted: "text-[#a0a0a0]"
+    muted: "text-[#a0a0a0]",
+    text: "text-white",
+    subtext: "text-white/70",
+    tagMuted: "text-white/45",
+    cardAlt: "bg-white/5 border border-white/5 text-white",
+    badgeBg: "bg-white/10 text-white border-white/10",
+    bgHover: "hover:bg-white/10 hover:text-white",
+    overlay: "bg-black/60 backdrop-blur-md border border-white/10"
   },
   titanium: {
-    card: "bg-[#141414] border-white/10 shadow-2xl",
-    input: "bg-[#0a0a0a] border-white/10 focus:border-slate-400",
+    card: "bg-[#141414] border-white/10 shadow-2xl text-white",
+    input: "bg-[#0a0a0a] border-white/10 focus:border-slate-400 text-white placeholder:text-white/25",
     accent: "text-slate-300",
     accentBg: "bg-slate-600",
     border: "border-white/10",
-    muted: "text-[#a0a0a0]"
+    muted: "text-[#a0a0a0]",
+    text: "text-white",
+    subtext: "text-white/70",
+    tagMuted: "text-white/40",
+    cardAlt: "bg-white/5 border border-white/10 text-white",
+    badgeBg: "bg-white/10 text-white border-white/10",
+    bgHover: "hover:bg-white/10 hover:text-white",
+    overlay: "bg-black/60 backdrop-blur-md border border-white/10"
   },
   forest: {
-    card: "bg-[#022c22]/80 border-emerald-500/20 backdrop-blur-xl shadow-2xl shadow-emerald-900/20",
-    input: "bg-black/40 border-emerald-500/20 focus:border-emerald-500/50",
+    card: "bg-[#022c22]/80 border-emerald-500/20 backdrop-blur-xl shadow-2xl shadow-emerald-900/20 text-white",
+    input: "bg-black/40 border-emerald-500/20 focus:border-emerald-500/50 text-white placeholder:text-white/25",
     accent: "text-emerald-400",
     accentBg: "bg-emerald-600",
     border: "border-emerald-500/20",
-    muted: "text-emerald-200/50"
+    muted: "text-emerald-200/50",
+    text: "text-white",
+    subtext: "text-emerald-200/70",
+    tagMuted: "text-emerald-200/30",
+    cardAlt: "bg-black/20 border border-emerald-500/10 text-emerald-100",
+    badgeBg: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
+    bgHover: "hover:bg-emerald-500/10 hover:text-emerald-300",
+    overlay: "bg-[#022c22]/80 backdrop-blur-xl border border-emerald-500/25"
   },
   sunset: {
-    card: "bg-[#431407]/80 border-orange-500/20 backdrop-blur-xl shadow-2xl shadow-orange-900/20",
-    input: "bg-black/40 border-orange-500/20 focus:border-orange-500/50",
+    card: "bg-[#431407]/80 border-orange-500/20 backdrop-blur-xl shadow-2xl shadow-orange-900/20 text-white",
+    input: "bg-black/40 border-orange-500/20 focus:border-orange-500/50 text-white placeholder:text-white/25",
     accent: "text-orange-400",
     accentBg: "bg-orange-600",
     border: "border-orange-500/20",
-    muted: "text-orange-200/50"
+    muted: "text-orange-200/50",
+    text: "text-white",
+    subtext: "text-orange-200/70",
+    tagMuted: "text-orange-200/30",
+    cardAlt: "bg-black/20 border border-orange-500/10 text-orange-100",
+    badgeBg: "bg-orange-500/10 text-orange-300 border-orange-500/20",
+    bgHover: "hover:bg-orange-500/10 hover:text-orange-300",
+    overlay: "bg-[#431407]/80 backdrop-blur-xl border border-orange-500/25"
   },
   rose: {
-    card: "bg-[#2d0611]/80 border-rose-500/20 backdrop-blur-xl shadow-2xl shadow-rose-900/20",
-    input: "bg-black/40 border-rose-500/20 focus:border-rose-500/50",
+    card: "bg-[#2d0611]/80 border-rose-500/20 backdrop-blur-xl shadow-2xl shadow-rose-900/20 text-white",
+    input: "bg-black/40 border-rose-500/20 focus:border-rose-500/50 text-white placeholder:text-white/25",
     accent: "text-rose-400",
     accentBg: "bg-rose-600",
     border: "border-rose-500/20",
-    muted: "text-rose-200/50"
+    muted: "text-rose-200/50",
+    text: "text-white",
+    subtext: "text-rose-200/70",
+    tagMuted: "text-rose-200/30",
+    cardAlt: "bg-black/20 border border-rose-500/10 text-rose-100",
+    badgeBg: "bg-rose-500/10 text-rose-300 border-rose-500/20",
+    bgHover: "hover:bg-rose-500/10 hover:text-rose-300",
+    overlay: "bg-[#2d0611]/80 backdrop-blur-xl border border-rose-500/25"
   },
   vibrant: {
-    card: "bg-[#1e1b4b]/80 border-purple-500/20 backdrop-blur-xl shadow-2xl shadow-purple-900/20",
-    input: "bg-black/40 border-purple-500/20 focus:border-purple-500/50",
+    card: "bg-[#1e1b4b]/80 border-purple-500/20 backdrop-blur-xl shadow-2xl shadow-purple-900/20 text-white",
+    input: "bg-black/40 border-purple-500/20 focus:border-purple-500/50 text-white placeholder:text-white/25",
     accent: "text-purple-400",
     accentBg: "bg-purple-600",
     border: "border-purple-500/20",
-    muted: "text-purple-200/50"
+    muted: "text-purple-200/50",
+    text: "text-white",
+    subtext: "text-purple-200/70",
+    tagMuted: "text-purple-200/30",
+    cardAlt: "bg-black/20 border border-purple-500/10 text-purple-100",
+    badgeBg: "bg-purple-500/10 text-purple-300 border-purple-500/20",
+    bgHover: "hover:bg-purple-500/10 hover:text-purple-300",
+    overlay: "bg-[#1e1b4b]/80 backdrop-blur-xl border border-purple-500/25"
   },
   midnight: {
-    card: "bg-[#0a0a0a] border-white/5 shadow-2xl",
-    input: "bg-black border-white/10 focus:border-white/30",
+    card: "bg-[#0a0a0a] border-white/5 shadow-2xl text-white",
+    input: "bg-black border-white/10 focus:border-white/30 text-white placeholder:text-white/25",
     accent: "text-white",
     accentBg: "bg-zinc-800",
     border: "border-white/5",
-    muted: "text-zinc-500"
+    muted: "text-zinc-500",
+    text: "text-white",
+    subtext: "text-zinc-300",
+    tagMuted: "text-[#666666]",
+    cardAlt: "bg-zinc-900 border border-zinc-800 text-zinc-100",
+    badgeBg: "bg-zinc-800 text-zinc-100 border-zinc-800",
+    bgHover: "hover:bg-zinc-850 hover:text-white",
+    overlay: "bg-black/80 backdrop-blur-xl border border-zinc-800"
   },
   industrial: {
-    card: "bg-[#0d0d0d] border-white/10 shadow-2xl",
-    input: "bg-[#080808] border-white/10 focus:border-[#3b82f6]/50",
+    card: "bg-[#0d0d0d] border-white/10 shadow-2xl text-white",
+    input: "bg-[#080808] border-white/10 focus:border-[#3b82f6]/50 text-white placeholder:text-white/25",
     accent: "text-[#3b82f6]",
     accentBg: "bg-[#3b82f6]",
     border: "border-white/10",
-    muted: "text-zinc-500"
+    muted: "text-zinc-500",
+    text: "text-white",
+    subtext: "text-zinc-300",
+    tagMuted: "text-[#555555]",
+    cardAlt: "bg-white/5 border border-white/10 text-white",
+    badgeBg: "bg-white/10 text-white border-white/10",
+    bgHover: "hover:bg-white/10 hover:text-white",
+    overlay: "bg-black/60 backdrop-blur-md border border-white/10"
   }
 };
 
@@ -198,6 +277,25 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+const CATEGORY_EMOJIS: Record<string, string> = {
+  service: "⚡",
+  rent: "🔑",
+  garden: "🏡",
+  "family-technic": "🔌",
+  technics: "💻",
+  hunting: "🏹",
+  music: "🎸",
+  kids: "🧸",
+  fashion: "💄",
+  building: "🔨",
+  village: "🚜",
+  animals: "🐾",
+  sport: "⚽",
+  business: "💼",
+  book: "📚",
+  art: "🎨"
+};
 
 export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [search, setSearch] = useState('');
@@ -294,7 +392,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     descriptionGe: '',
     price: '',
     currency: language === 'ka' ? 'GEL' : 'USD',
-    category: 'electronics',
+    category: 'technics',
     country: language === 'ka' ? 'GEO' : 'USA',
     city: '',
     location: '',
@@ -526,9 +624,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     // Filter by Listing Type (Product vs Service)
     if (activeListingType !== 'all') {
       if (activeListingType === 'service') {
-        result = result.filter(l => l.listingType === 'service' || l.category === 'services');
+        result = result.filter(l => l.listingType === 'service' || l.category === 'service');
       } else {
-        result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'services'));
+        result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'service'));
       }
     }
 
@@ -592,7 +690,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
     setIsCheckingOut(true);
     try {
-      const isService = checkoutItem.listingType === 'service' || checkoutItem.category === 'services';
+      const isService = checkoutItem.listingType === 'service' || checkoutItem.category === 'service';
 
       await addDoc(collection(db, 'orders'), {
         listingId: checkoutItem.id,
@@ -882,7 +980,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         currency: formData.currency || 'USD',
         sellerId: auth.currentUser.uid,
         sellerName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Unknown',
-        category: formData.category || 'electronics',
+        category: formData.category || 'technics',
         location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
         country: countryStr,
         city: cityStr,
@@ -893,7 +991,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         lng: sanitizedLng,
         condition: formData.condition || 'new',
         isNegotiable: formData.isNegotiable ?? false,
-        listingType: formData.listingType || (formData.category === 'services' ? 'service' : 'product'),
+        listingType: formData.listingType || (formData.category === 'service' ? 'service' : 'product'),
         serviceDuration: formData.serviceDuration || '',
         serviceTerms: formData.serviceTerms || ''
       };
@@ -909,7 +1007,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       setViewMode('browse');
       setFormData({
         title: '', titleGe: '', description: '', descriptionGe: '',
-        price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
+        price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
         country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
         lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
         listingType: 'product', serviceDuration: '', serviceTerms: ''
@@ -953,7 +1051,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       lng: listing.lng,
       condition: listing.condition || 'new',
       isNegotiable: listing.isNegotiable || false,
-      listingType: listing.listingType || (listing.category === 'services' ? 'service' : 'product'),
+      listingType: listing.listingType || (listing.category === 'service' ? 'service' : 'product'),
       serviceDuration: listing.serviceDuration || '',
       serviceTerms: listing.serviceTerms || ''
     });
@@ -1019,36 +1117,39 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
             {t.market.form.category}
           </label>
-          <div className="flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1">
             <button 
+              type="button"
               onClick={() => setActiveCategory('all')}
               className={cn(
-                "flex items-center justify-between px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                "col-span-2 flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border text-left",
                 activeCategory === 'all' 
-                  ? cn(currentTheme.accentBg, "border-transparent text-white shadow-lg shadow-blue-500/20")
-                  : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-lg shadow-blue-500/10"
+                  : "bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white"
               )}
             >
-              <span>{t.market.all_categories}</span>
-              {activeCategory === 'all' && <Star size={10} fill="currentColor" />}
+              <span className="text-sm">🌍</span>
+              <span className="truncate">{t.market.all_categories}</span>
             </button>
             {Object.entries(t.market.categories).map(([key, label]) => (
               <button 
                 key={key}
+                type="button"
                 onClick={() => setActiveCategory(key)}
                 className={cn(
-                  "flex items-center justify-between px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border",
+                  "flex items-center gap-2 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border text-left",
                   activeCategory === key 
-                    ? cn(currentTheme.accentBg, "border-transparent text-white shadow-lg shadow-blue-500/20")
-                    : "bg-white/5 border-transparent text-white/40 hover:bg-white/10"
+                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-lg shadow-blue-500/10"
+                    : "bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white"
                 )}
+                title={label as string}
               >
-                <span>{label as string}</span>
-                {activeCategory === key && <Star size={10} fill="currentColor" />}
+                <span className="text-base shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                <span className="truncate text-[8px] font-black uppercase tracking-tight">{label as string}</span>
               </button>
             ))}
           </div>
@@ -1110,11 +1211,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
             </button>
           )}
           <div>
-            <h1 className="text-4xl md:text-5xl font-black mb-3 tracking-tighter uppercase text-white leading-none">
+            <h1 className={cn("text-4xl md:text-5xl font-black mb-3 tracking-tighter uppercase leading-none", currentTheme.text)}>
               <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
             </h1>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-lg border border-white/5">
+              <div className={cn("flex items-center gap-2 px-2 py-1 rounded-lg border", currentTheme.cardAlt)}>
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <span className={cn("font-black tracking-widest uppercase text-[9px] opacity-80", currentTheme.muted)}>
                   {viewMode === 'browse' ? t.market.subtitle : 
@@ -1125,12 +1226,12 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 </span>
               </div>
               {viewMode === 'my-listings' && (
-                <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5">
+                <div className={cn("flex items-center gap-2 p-1 rounded-xl border", currentTheme.cardAlt)}>
                   <button 
                     onClick={() => setProfileSubMode('selling')}
                     className={cn(
                       "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                      profileSubMode === 'selling' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+                      profileSubMode === 'selling' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
                     )}
                   >
                     {t.market.selling_mode}
@@ -1139,7 +1240,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     onClick={() => setProfileSubMode('buying')}
                     className={cn(
                       "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
-                      profileSubMode === 'buying' ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60"
+                      profileSubMode === 'buying' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
                     )}
                   >
                     {t.market.buying_mode}
@@ -1169,7 +1270,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setViewMode('my-listings')}
-                  className={cn("p-3.5 bg-white/5 rounded-2xl transition-all border border-white/5", `hover:bg-white/10 hover:text-white`)}
+                  className={cn("p-3.5 rounded-2xl transition-all border", currentTheme.cardAlt, currentTheme.bgHover)}
                   title={t.market.my_listings}
                 >
                   <User size={20} />
@@ -1178,7 +1279,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   onClick={() => {
                     setFormData({
                       title: '', titleGe: '', description: '', descriptionGe: '',
-                      price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'electronics', 
+                      price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
                       country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
                       lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
                       listingType: 'product', serviceDuration: '', serviceTerms: ''
@@ -1192,13 +1293,13 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
              </div>
 
               {/* Grid / Map View Toggle */}
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+              <div className={cn("flex items-center gap-1 p-1 rounded-2xl border shadow-inner", currentTheme.cardAlt)}>
                 <button 
                   type="button"
                   onClick={() => setDisplayMode('grid')}
                   className={cn(
                     "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
-                    displayMode === 'grid' ? "bg-white/10 text-white shadow-md border border-white/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                    displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                   )}
                   title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
                 >
@@ -1210,7 +1311,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   onClick={() => setDisplayMode('map')}
                   className={cn(
                     "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
-                    displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                    displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                   )}
                   title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
                 >
@@ -1224,7 +1325,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   value={displayCurrency}
                   onChange={(e) => setDisplayCurrency(e.target.value)}
                   className={cn(
-                    "pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all text-white cursor-pointer bg-white/5",
+                    "pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
                     currentTheme.input
                   )}
                 >
@@ -1238,17 +1339,17 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         )}
 
         {viewMode === 'browse' && (
-          <div className="w-full flex flex-wrap items-center justify-between gap-4 mt-6 border-t border-white/5 pt-6 animate-in fade-in duration-300">
+          <div className={cn("w-full flex flex-wrap items-center justify-between gap-4 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
             {/* Listing Type Tabs */}
-            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner">
+            <div className={cn("flex p-1 rounded-2xl border shadow-inner", currentTheme.cardAlt)}>
               <button
                 type="button"
                 onClick={() => setActiveListingType('all')}
                 className={cn(
                   "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
                   activeListingType === 'all' 
-                    ? "bg-white/10 text-white shadow-md border border-white/10" 
-                    : "text-white/40 hover:text-white/60"
+                    ? cn(currentTheme.badgeBg, "shadow-md") 
+                    : cn(currentTheme.muted, "hover:opacity-85")
                 )}
               >
                 <span>🌍</span>
@@ -1260,8 +1361,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 className={cn(
                   "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
                   activeListingType === 'product' 
-                    ? "bg-white/10 text-white shadow-md border border-white/10" 
-                    : "text-white/40 hover:text-white/60"
+                    ? cn(currentTheme.badgeBg, "shadow-md") 
+                    : cn(currentTheme.muted, "hover:opacity-85")
                 )}
               >
                 <span>📦</span>
@@ -1273,8 +1374,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 className={cn(
                   "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
                   activeListingType === 'service' 
-                    ? "bg-white/10 text-white shadow-md border border-white/10" 
-                    : "text-white/40 hover:text-white/60"
+                    ? cn(currentTheme.badgeBg, "shadow-md") 
+                    : cn(currentTheme.muted, "hover:opacity-85")
                 )}
               >
                 <span>⚡</span>
@@ -1300,7 +1401,45 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           onBack={() => setViewMode('browse')}
         />
       ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="space-y-10 w-full">
+          {/* Horizontal Category Carousel - Only for Browse View */}
+          {viewMode === 'browse' && (
+            <div className="w-full relative animate-in fade-in duration-500 pt-2">
+              <div className="flex items-center gap-2.5 overflow-x-auto pb-4 pt-1 px-1 -mx-4 sm:mx-0 sm:px-1 scrollbar-none scroll-smooth">
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory('all')}
+                  className={cn(
+                    "flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                    activeCategory === 'all'
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-xl shadow-blue-500/20 scale-[1.02] -translate-y-0.5"
+                      : cn(currentTheme.cardAlt, currentTheme.bgHover)
+                  )}
+                >
+                  <span className="text-sm">🌍</span>
+                  <span>{t.market.all_categories}</span>
+                </button>
+                {Object.entries(t.market.categories).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveCategory(key)}
+                    className={cn(
+                      "flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                      activeCategory === key
+                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-xl shadow-blue-500/20 scale-[1.02] -translate-y-0.5"
+                        : cn(currentTheme.cardAlt, currentTheme.bgHover)
+                    )}
+                  >
+                    <span className="text-sm shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                    <span>{label as string}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col lg:flex-row gap-8">
           {/* Desktop Sidebar */}
           {viewMode === 'browse' && (
             <aside className="hidden lg:block w-72 shrink-0 space-y-8 animate-in fade-in slide-in-from-left duration-700">
@@ -1330,17 +1469,17 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 </div>
                 
                 {/* Mobile view switch */}
-                <div className="flex items-center justify-between w-full sm:w-auto border-t border-white/5 pt-4 sm:pt-0 sm:border-t-0 gap-4">
+                <div className={cn("flex items-center justify-between w-full sm:w-auto border-t pt-4 sm:pt-0 sm:border-t-0 gap-4", currentTheme.border)}>
                   <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-60", currentTheme.muted)}>
                     {language === 'ka' ? 'ხედი:' : 'View:'}
                   </span>
-                  <div className="flex items-center gap-1 bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner grow sm:grow-0 justify-end">
+                  <div className={cn("flex items-center gap-1 p-1 rounded-2xl border shadow-inner grow sm:grow-0 justify-end", currentTheme.cardAlt)}>
                     <button 
                       type="button"
                       onClick={() => setDisplayMode('grid')}
                       className={cn(
                         "px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 grow sm:grow-0",
-                        displayMode === 'grid' ? "bg-white/10 text-white shadow-md border border-white/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                        displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                       )}
                       title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
                     >
@@ -1352,7 +1491,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       onClick={() => setDisplayMode('map')}
                       className={cn(
                         "px-4 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 grow sm:grow-0",
-                        displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : "text-white/40 hover:text-white/60 border border-transparent"
+                        displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                       )}
                       title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
                     >
@@ -1583,7 +1722,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     {/* Badge Overlay */}
                     <div className="absolute top-4 left-4 z-10 flex flex-wrap gap-2">
                       <div className="px-2.5 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-                        <Tag size={10} className={currentTheme.accent} />
+                        <span className="text-[11px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
                         <span className="text-[9px] font-black text-white uppercase tracking-wider">
                           {t.market.categories[listing.category as keyof typeof t.market.categories]}
                         </span>
@@ -1592,7 +1731,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         <span className="text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
                         <span className="text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
                       </div>
-                      {listing.listingType === 'service' || listing.category === 'services' ? (
+                      {listing.listingType === 'service' || listing.category === 'service' ? (
                         <>
                           <div className="px-2.5 py-1 bg-amber-500/20 backdrop-blur-md rounded-lg border border-amber-400/30 flex items-center gap-1.5">
                             <span className="text-[9px] font-black text-amber-200 uppercase tracking-wider">
@@ -1656,9 +1795,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </div>
 
                   <div className="p-6 flex-1 flex flex-col relative">
-                    <h2 
+                     <h2 
                       onClick={() => setCheckoutItem(listing)}
-                      className="text-lg font-black tracking-tight text-white mb-2 uppercase group-hover:text-proton-accent cursor-pointer transition-colors"
+                      className={cn("text-lg font-black tracking-tight mb-2 uppercase group-hover:text-proton-accent cursor-pointer transition-colors", currentTheme.text)}
                     >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                     </h2>
@@ -1666,11 +1805,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
-                    <div className="mt-auto pt-4 border-t border-white/5">
+                    <div className={cn("mt-auto pt-4 border-t", currentTheme.border)}>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex flex-col">
                           <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 mb-1", currentTheme.muted)}>{t.market.price}</span>
-                          <span className="text-2xl font-black text-white tracking-tighter">
+                          <span className={cn("text-2xl font-black tracking-tighter", currentTheme.text)}>
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             <span className="text-[10px] font-black opacity-30 ml-1.5 tracking-wider">{displayCurrency}</span>
                           </span>
@@ -1683,7 +1822,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                             e.stopPropagation();
                             setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
                           }}
-                          className={cn("w-10 h-10 rounded-xl bg-white/5 border border-white/5 flex items-center justify-center font-black text-xs relative cursor-pointer hover:border-white/20 transition-all", currentTheme.accent)}
+                          className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs relative cursor-pointer hover:border-white/20 transition-all border", currentTheme.cardAlt, currentTheme.accent)}
                           title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
                         >
                           {listing.sellerName.substring(0, 2).toUpperCase()}
@@ -1698,7 +1837,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                           title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-black uppercase text-white tracking-wider truncate group-hover/vendor:text-proton-accent transition-colors">{listing.sellerName}</span>
+                            <span className={cn("text-[10px] font-black uppercase tracking-wider truncate group-hover/vendor:text-proton-accent transition-colors", currentTheme.text)}>{listing.sellerName}</span>
                             <ShieldCheck size={12} className={currentTheme.accent} />
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
@@ -1824,6 +1963,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
             )}
           </AnimatePresence>
         </div>
+        </div>
       ) : (
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
@@ -1869,7 +2009,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                             setFormData(prev => ({ 
                               ...prev, 
                               listingType: 'product',
-                              category: prev.category === 'services' ? 'electronics' : prev.category
+                              category: prev.category === 'service' ? 'technics' : prev.category
                             }));
                           }}
                           className={cn(
@@ -1888,7 +2028,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                             setFormData(prev => ({ 
                               ...prev, 
                               listingType: 'service',
-                              category: 'services'
+                              category: 'service'
                             }));
                           }}
                           className={cn(
@@ -2304,7 +2444,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 </div>
 
                 {/* Conditional Service Booking Panel */}
-                {(checkoutItem.listingType === 'service' || checkoutItem.category === 'services') && (
+                {(checkoutItem.listingType === 'service' || checkoutItem.category === 'service') && (
                   <div className="space-y-4 bg-white/5 rounded-[32px] p-6 border border-white/5 text-left">
                     <h4 className="text-xs font-black uppercase tracking-wider text-white">⚡ {language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Rules'}</h4>
                     <div className="grid grid-cols-2 gap-4 text-xs font-medium">

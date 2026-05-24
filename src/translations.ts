@@ -161,15 +161,12 @@ export const translations = {
         update: "Update Listing"
       },
       categories: {
-        electronics: "Electronics",
-        industrial: "Industrial",
-        real_estate: "Real Estate",
-        art: "Art & Collectibles",
-        services: "Services",
-        logistics: "Logistics",
-        business: "Business & Equity",
-        automotive: "Automotive",
-        artisanal: "Artisanal"
+        service: "Services & Rent",
+        technics: "Tech & Electronics",
+        home: "Home, Garden & Tools",
+        fashion: "Fashion & Family",
+        business: "Business & Agriculture",
+        hobby: "Hobby, Sports & Art"
       },
       legal: {
         privacy_policy: "Privacy Policy",
@@ -603,15 +600,12 @@ export const translations = {
         update: "განცხადების განახლება"
       },
       categories: {
-        electronics: "ელექტრონიკა",
-        industrial: "ინდუსტრიული",
-        real_estate: "უძრავი ქონება",
-        art: "ხელოვნება და კოლექციები",
-        services: "სერვისები",
-        logistics: "ლოგისტიკა",
-        business: "ბიზნესი და წილები",
-        automotive: "ავტომობილები",
-        artisanal: "ხელნაკეთი ნივთები"
+        service: "მომსახურება და გაქირავება",
+        technics: "ტექნიკა და ელექტრონიკა",
+        home: "სახლი, ბაღი და ხელსაწყოები",
+        fashion: "მოდა, სილამაზე და საბავშვო",
+        business: "ბიზნესი და სოფლის მეურნეობა",
+        hobby: "ჰობი, სპორტი და ხელოვნება"
       },
       legal: {
         privacy_policy: "კონფიდენციალურობის პოლიტიკა",

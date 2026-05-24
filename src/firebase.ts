@@ -11,7 +11,7 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "770674231164",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:770674231164:web:10476d47ce81ea56b486f9",
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-WTE6YHHYFC",
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "(default)"
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51"
 };
 
 // Handle potential missing config during build/runtime
