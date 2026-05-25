@@ -1858,20 +1858,20 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-3 sm:p-6 flex-1 flex flex-col relative">
+                  <div className="p-4 sm:p-6 flex-1 flex flex-col relative space-y-3">
                      <h2 
                       onClick={() => setCheckoutItem(listing)}
-                      className={cn("text-[13px] sm:text-lg font-black tracking-tight mb-1 sm:mb-2 uppercase group-hover:text-proton-accent cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
+                      className={cn("text-[13px] sm:text-lg font-black tracking-tight mb-0.5 sm:mb-1 uppercase group-hover:text-proton-accent cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
                     >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                     </h2>
-                    <p className={cn("text-[10px] sm:text-xs font-medium leading-relaxed mb-4 sm:mb-6 line-clamp-2 opacity-60", currentTheme.muted)}>
+                    <p className={cn("text-[10px] sm:text-xs font-medium leading-relaxed mb-2 sm:mb-3 line-clamp-2 opacity-60", currentTheme.muted)}>
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
                     <div className={cn("mt-auto pt-3 sm:pt-4 border-t", currentTheme.border)}>
-                      <div className="flex items-center justify-between mb-3 sm:mb-4">
-                        <div className="flex flex-col">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div className="flex flex-col min-w-0">
                           <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-40 mb-0.5", currentTheme.muted)}>{t.market.price}</span>
                           <span className="text-sm sm:text-2xl font-black tracking-tighter text-[#10b981] drop-shadow-[0_0_8px_rgba(16,185,129,0.2)]">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -1880,14 +1880,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         </div>
 
                         {/* Product / Service Badge */}
-                        <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] shadow-sm">
+                        <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] shadow-sm shrink-0">
                           {listing.listingType === 'service' || listing.category === 'service'
                             ? (language === 'ka' ? 'სერვისი' : 'Service')
                             : (language === 'ka' ? 'ნივთი' : 'Product')}
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between gap-1.5 sm:gap-2.5">
+                      <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 flex-wrap xs:flex-nowrap">
                         <div className="flex items-center gap-1.5 flex-1 min-w-0">
                           <div 
                             onClick={(e) => {
@@ -1908,7 +1908,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                             className="min-w-0 cursor-pointer group/vendor hover:opacity-80 transition-opacity flex-1"
                             title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
                           >
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 min-w-0">
                               <span className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-proton-accent transition-colors", currentTheme.text)}>{listing.sellerName}</span>
                               <ShieldCheck size={9} className="shrink-0 text-emerald-500" />
                             </div>
@@ -1925,7 +1925,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
                           {/* Chat Button */}
                           <button 
                             onClick={(e) => {
