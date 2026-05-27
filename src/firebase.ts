@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -20,8 +20,10 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Analytics - DISABLED to avoid "403 Permission Denied" error from Installations API
 export const analytics = null;
 
-// Initialize Firestore using standard connection which works reliably on both desktop & mobile browsers (preventing tab manager deadlocks in sandboxed iframes)
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Firestore with experimentalForceLongPolling to handle proxy/iframe WebSocket limitations reliably
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true
+}, firebaseConfig.firestoreDatabaseId);
 
 export const auth = getAuth(app);
 
