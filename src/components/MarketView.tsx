@@ -45,6 +45,7 @@ import {
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
 import { Listing } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
@@ -298,7 +299,14 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   art: "🎨"
 };
 
+const convertPrice = (price: number, from: string, to: string) => {
+  if (from === to) return price;
+  const inUSD = price / (EXCHANGE_RATES[from] || 1);
+  return inUSD * (EXCHANGE_RATES[to] || 1);
+};
+
 export function MarketView({ language, t, themeId }: MarketViewProps) {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'newest' | 'priceAsc' | 'priceDesc'>('rating');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -341,11 +349,11 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   }, [cart]);
 
   const handleAddToCart = (listing: Listing) => {
-    if (!auth.currentUser) {
+    if (!user) {
       alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.");
       return;
     }
-    if (listing.sellerId === auth.currentUser.uid) {
+    if (listing.sellerId === user.uid) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
       return;
     }
@@ -364,14 +372,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   };
 
   const handleCartCheckout = async () => {
-    if (!auth.currentUser || cart.length === 0) return;
+    if (!user || cart.length === 0) return;
     setIsPlacingCartOrders(true);
     try {
       for (const item of cart) {
         const isService = item.listingType === 'service' || item.category === 'service';
         await addDoc(collection(db, 'orders'), {
           listingId: item.id,
-          buyerId: auth.currentUser.uid,
+          buyerId: user.uid,
           sellerId: item.sellerId,
           amount: item.price,
           currency: item.currency || 'USD',
@@ -661,11 +669,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   }, []);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!user) {
+      setBuyerOrders([]);
+      setSellerOrders([]);
+      return;
+    }
     
     const qBuyerOrders = query(
       collection(db, 'orders'), 
-      where('buyerId', '==', auth.currentUser.uid)
+      where('buyerId', '==', user.uid)
     );
     const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -679,7 +691,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
     const qSellerOrders = query(
       collection(db, 'orders'), 
-      where('sellerId', '==', auth.currentUser.uid)
+      where('sellerId', '==', user.uid)
     );
     const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -695,7 +707,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       unsubscribeBuyer();
       unsubscribeSeller();
     };
-  }, []);
+  }, [user?.uid]);
 
   const clearFilters = () => {
     setSearch('');
@@ -717,7 +729,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     // Filter by View Mode
     if (viewMode === 'my-listings') {
       if (profileSubMode === 'selling') {
-        result = result.filter(l => l.sellerId === auth.currentUser?.uid);
+        result = result.filter(l => l.sellerId === user?.uid);
       } else {
         // Handled by different UI section
         return [];
@@ -811,13 +823,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     }
 
     return result;
-  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings]);
-
-  const convertPrice = (price: number, from: string, to: string) => {
-    if (from === to) return price;
-    const inUSD = price / (EXCHANGE_RATES[from] || 1);
-    return inUSD * (EXCHANGE_RATES[to] || 1);
-  };
+  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings, user?.uid]);
 
   const handleBuyNow = async (listing: Listing) => {
     if (!auth.currentUser) return;
@@ -1028,21 +1034,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   };
 
   const checkRateLimit = async () => {
-    if (!auth.currentUser) return true;
+    if (!user) return true;
     try {
       const oneMinuteAgo = new Date();
       oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
       
-      const recentListingsQuery = query(
-        collection(db, 'listings'),
-        where('sellerId', '==', auth.currentUser.uid)
-      );
-      
-      const snapshot = await getDocs(recentListingsQuery);
-      const recentCount = snapshot.docs.filter(doc => {
-        const createdAt = doc.data().createdAt;
+      const recentCount = listings.filter(l => {
+        if (l.sellerId !== user.uid) return false;
+        const createdAt = l.createdAt;
         if (!createdAt) return false;
-        const date = createdAt instanceof Timestamp ? createdAt.toDate() : new Date(createdAt);
+        
+        const date = (createdAt as any)?.toDate 
+          ? (createdAt as any).toDate() 
+          : new Date(createdAt as any);
         return date >= oneMinuteAgo;
       }).length;
 
@@ -1052,8 +1056,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       }
       return true;
     } catch (e) {
-      console.warn("Rate limit check query failed, allowing listing to bypass:", e);
-      return true; // Bypass on error to prevent rate limit query failures from blocking additions
+      console.warn("Local rate limit check fallback failed:", e);
+      return true; // Bypass on error to prevent blocking users
     }
   };
 
