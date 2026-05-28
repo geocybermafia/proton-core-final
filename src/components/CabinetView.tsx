@@ -65,7 +65,7 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       unsubListings();
       unsubOrders();
     };
-  }, []);
+  }, [auth.currentUser?.uid]);
 
   if (!profile) return null;
   const rawLang = profile.language?.toLowerCase() || 'ka';

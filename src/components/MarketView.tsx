@@ -2059,19 +2059,21 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
                         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
                           {/* Chat Button */}
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveChatListing(listing);
-                            }}
-                            className="p-1.5 sm:p-2 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
-                            title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
-                          >
-                            <MessageCircle size={12} className="sm:size-[14px]" />
-                          </button>
+                          {listing.sellerId !== user?.uid && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveChatListing(listing);
+                              }}
+                              className="p-1.5 sm:p-2 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                              title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
+                            >
+                              <MessageCircle size={12} className="sm:size-[14px]" />
+                            </button>
+                          )}
 
                           {/* Quick Add to Cart button */}
-                          {listing.sellerId !== auth.currentUser?.uid && (
+                          {listing.sellerId !== user?.uid && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2088,17 +2090,37 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       </div>
 
                       <div className="mt-3 sm:mt-4">
-                        {listing.sellerId === auth.currentUser?.uid ? (
-                          <button 
-                            onClick={() => startEdit(listing)}
-                            className={cn(
-                              "w-full py-2 sm:py-2.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
-                              currentTheme.accentBg
-                            )}
-                          >
-                            <Edit3 size={11} className="sm:size-[14px]" />
-                            {t.market.edit_listing}
-                          </button>
+                        {listing.sellerId === user?.uid ? (
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => startEdit(listing)}
+                              className={cn(
+                                "flex-1 py-2 sm:py-2.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
+                                currentTheme.accentBg
+                              )}
+                            >
+                              <Edit3 size={11} className="sm:size-[14px]" />
+                              {t.market.edit_listing}
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (window.confirm(t.market.delete_confirm)) {
+                                  try {
+                                    await deleteDoc(doc(db, 'listings', listing.id));
+                                    setListings(prev => prev.filter(l => l.id !== listing.id));
+                                  } catch (error) {
+                                    console.error("Failed to delete", error);
+                                  }
+                                }
+                              }}
+                              className="px-2.5 sm:px-3 py-2 sm:py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl text-[8px] sm:text-[9px] font-black transition-all flex items-center justify-center"
+                              title={language === 'ka' ? 'წაშლა' : 'Delete'}
+                            >
+                              <Trash2 size={11} className="sm:size-[14px]" />
+                            </button>
+                          </div>
                         ) : (
                           <button 
                             onClick={() => handleBuyNow(listing)}
