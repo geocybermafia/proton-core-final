@@ -548,12 +548,12 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser) {
+    if (!user) {
       alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეფასების დასაწერად." : "Please log in to write a review.");
       return;
     }
     if (!selectedVendor) return;
-    if (auth.currentUser.uid === selectedVendor.id) {
+    if (user.uid === selectedVendor.id) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება." : "You cannot review yourself.");
       return;
     }
@@ -568,12 +568,12 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
     setIsSubmittingReview(true);
     try {
-      const docId = `rev_${auth.currentUser.uid}_${selectedVendor.id}`;
+      const docId = `rev_${user.uid}_${selectedVendor.id}`;
       const reviewDocRef = doc(db, 'seller_reviews', docId);
       
       await setDoc(reviewDocRef, {
-        buyerId: auth.currentUser.uid,
-        buyerName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Anonymous',
+        buyerId: user.uid,
+        buyerName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         sellerId: selectedVendor.id,
         rating: reviewRating,
         text: reviewText.trim(),
@@ -632,15 +632,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser || !activeChatListing || !chatMessageText.trim()) return;
+    if (!user || !activeChatListing || !chatMessageText.trim()) return;
 
     try {
       await addDoc(collection(db, 'market_messages'), {
         listingId: activeChatListing.id,
         listingTitle: activeChatListing.title,
-        senderId: auth.currentUser.uid,
-        senderName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'User',
-        senderAvatar: auth.currentUser.photoURL || '',
+        senderId: user.uid,
+        senderName: user.displayName || user.email?.split('@')[0] || 'User',
+        senderAvatar: user.photoURL || '',
         text: chatMessageText.trim(),
         createdAt: serverTimestamp()
       });
@@ -826,8 +826,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings, user?.uid]);
 
   const handleBuyNow = async (listing: Listing) => {
-    if (!auth.currentUser) return;
-    if (listing.sellerId === auth.currentUser.uid) {
+    if (!user) return;
+    if (listing.sellerId === user.uid) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
       return;
     }
@@ -835,7 +835,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   };
 
   const processPurchase = async () => {
-    if (!auth.currentUser || !checkoutItem) return;
+    if (!user || !checkoutItem) return;
 
     setIsCheckingOut(true);
     try {
@@ -843,7 +843,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
       await addDoc(collection(db, 'orders'), {
         listingId: checkoutItem.id,
-        buyerId: auth.currentUser.uid,
+        buyerId: user.uid,
         sellerId: checkoutItem.sellerId,
         amount: checkoutItem.price,
         currency: checkoutItem.currency || 'USD',
@@ -958,10 +958,10 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
     setIsAiGenerating(true);
     try {
-      if (!auth.currentUser) return;
+      if (!user) return;
 
       // 1. Check Rate Limit (1 gen every 10 mins)
-      const usageRef = doc(db, 'users', auth.currentUser.uid, 'usage', 'ai');
+      const usageRef = doc(db, 'users', user.uid, 'usage', 'ai');
       const usageSnap = await getDoc(usageRef);
       if (usageSnap.exists()) {
         const lastGen = usageSnap.data().lastAiGen?.toDate();
@@ -1063,7 +1063,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser) {
+    if (!user) {
       alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად" : "Please log in to post a listing.");
       return;
     }
@@ -1125,8 +1125,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         descriptionGe: (formData.descriptionGe || formData.description).trim(),
         price: parsedPrice,
         currency: formData.currency || 'USD',
-        sellerId: auth.currentUser.uid,
-        sellerName: auth.currentUser.displayName || auth.currentUser.email?.split('@')[0] || 'Unknown',
+        sellerId: user.uid,
+        sellerName: user.displayName || user.email?.split('@')[0] || 'Unknown',
         category: formData.category || 'technics',
         location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
         country: countryStr,
@@ -1956,7 +1956,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       )}
                     </div>
 
-                    {listing.sellerId === auth.currentUser?.uid && (
+                    {listing.sellerId === user?.uid && (
                       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-1 sm:gap-2 z-10">
                         <button 
                           onClick={(e) => {
@@ -2967,7 +2967,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         key={msg.id} 
                         className={cn(
                           "flex flex-col max-w-[85%] rounded-[24px] p-4 text-xs font-medium space-y-1",
-                          msg.senderId === auth.currentUser?.uid 
+                          msg.senderId === user?.uid 
                             ? "bg-[#2e5bff] text-white ml-auto rounded-tr-none shadow-[0_4px_10px_rgba(46,91,255,0.2)]" 
                             : "bg-white/10 text-white mr-auto rounded-tl-none"
                         )}
@@ -3113,7 +3113,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       reviews
                         .filter(r => r.sellerId === selectedVendor.id)
                         .map((rev) => {
-                          const isOwnReview = auth.currentUser?.uid === rev.buyerId;
+                          const isOwnReview = user?.uid === rev.buyerId;
                           const hasOrder = orders.some(o => o.sellerId === selectedVendor.id && o.buyerId === rev.buyerId);
                           
                           return (
@@ -3169,7 +3169,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 </div>
 
                 {/* Write Review Form */}
-                {auth.currentUser?.uid !== selectedVendor.id ? (
+                {user?.uid !== selectedVendor.id ? (
                   <form onSubmit={handleSubmitReview} className="border-t border-white/5 pt-6 space-y-4">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-black uppercase tracking-widest text-[#2e5bff]">

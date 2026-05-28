@@ -3,7 +3,8 @@ import { UserProfile, Theme } from '../types';
 import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment, collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
@@ -26,28 +27,68 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
 ];
 
 export default function CabinetView({ profile, theme, setTheme }: CabinetViewProps) {
+  const { user } = useAuth();
   const [isDesignOpen, setIsDesignOpen] = React.useState(false);
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
   const [sellerListings, setSellerListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Diagnostic logging outside effect to capture every render cycle
+  console.log('[DIAGNOSTIC RENDER] CabinetView user:', user?.uid);
+
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!user) {
+      console.log('[DIAGNOSTIC EFFECT] No authenticated user detected in CabinetView context. Skipping subscribe.');
+      setSellerListings([]);
+      setSellerOrders([]);
+      return;
+    }
+
+    const currentUid = user.uid;
+    console.log('[DIAGNOSTIC EFFECT] onSnapshot subscription initiated for UID:', currentUid, 'Length:', currentUid.length);
 
     // Fetch Seller Listings
     const qListings = query(
       collection(db, 'listings'),
-      where('sellerId', '==', auth.currentUser.uid)
+      where('sellerId', '==', currentUid)
     );
 
     const unsubListings = onSnapshot(qListings, (snapshot) => {
-      setSellerListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const rawListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings query with UID:', currentUid);
+      console.log('[DIAGNOSTIC listings] Raw listings received matching sellerId exactly:', rawListings);
+      
+      // Let's also do a debug fetch of ALL listings in the database to see if any listings are missing the sellerId or need trimming!
+      getDocs(collection(db, 'listings')).then((allSnap) => {
+        const allListings = allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+        console.log('[DIAGNOSTIC Data Integrity] Total listings in complete database:', allListings.length);
+        console.log('[DIAGNOSTIC Data Integrity] Full details of ALL db listings:', allListings);
+        
+        // Trim-safe matching check to identify any spacing/casing issues
+        const trimFiltered = allListings.filter(l => {
+          const sId = String(l.sellerId || '').trim();
+          const uId = String(currentUid).trim();
+          return sId === uId && l.sellerId !== undefined;
+        });
+
+        console.log('[DIAGNOSTIC Data Integrity] filteredListings (Trim & Case safe matches found):', trimFiltered);
+
+        if (trimFiltered.length > rawListings.length) {
+          console.warn('[DIAGNOSTIC WARN] Found a string mismatch! The database has listings matching user UID after trimming, but Firestore direct matches failed due to formatting.');
+        }
+      }).catch(err => {
+        console.error('[DIAGNOSTIC ERROR] Failed side-channel debug fetch of all listings:', err);
+      });
+
+      setSellerListings(rawListings);
+    }, (err) => {
+      console.error('[DIAGNOSTIC EVENT ERROR] listings subscription failed:', err);
     });
 
     // Fetch Seller Orders (Received) - sorted in client-side memory to avoid composite index requirement
     const qOrders = query(
       collection(db, 'orders'),
-      where('sellerId', '==', auth.currentUser.uid)
+      where('sellerId', '==', currentUid)
     );
 
     const unsubOrders = onSnapshot(qOrders, (snapshot) => {
@@ -57,15 +98,19 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
         const timeB = b.createdAt?.seconds || b.createdAt || 0;
         return timeB - timeA;
       });
+      console.log('[DIAGNOSTIC Orders Event] Received orders matching sellerId:', currentUid, ordersData);
       setSellerOrders(ordersData);
       setLoading(false);
+    }, (err) => {
+      console.error('[DIAGNOSTIC EVENT ERROR] orders subscription failed:', err);
     });
 
     return () => {
+      console.log('[DIAGNOSTIC EFFECT] Unsubscribing listeners for UID:', currentUid);
       unsubListings();
       unsubOrders();
     };
-  }, [auth.currentUser?.uid]);
+  }, [user?.uid]);
 
   if (!profile) return null;
   const rawLang = profile.language?.toLowerCase() || 'ka';
@@ -75,8 +120,8 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
   const t = translations[lang as keyof typeof translations]?.cabinet || translations.en.cabinet;
 
   const handleUpdate = async (field: string, value: any) => {
-    if (!auth.currentUser) return;
-    const docRef = doc(db, 'users', auth.currentUser.uid);
+    if (!user) return;
+    const docRef = doc(db, 'users', user.uid);
     try {
       await updateDoc(docRef, { [field]: value });
     } catch (e) {
