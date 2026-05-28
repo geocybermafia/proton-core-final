@@ -307,7 +307,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [displayCurrency, setDisplayCurrency] = useState('USD');
-  const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service'>('all');
+  const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -459,7 +459,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     lng?: number;
     condition: string;
     isNegotiable: boolean;
-    listingType: 'product' | 'service';
+    listingType: 'product' | 'service' | 'project';
     serviceDuration: string;
     serviceTerms: string;
   }>({
@@ -724,12 +724,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       }
     }
 
-    // Filter by Listing Type (Product vs Service)
+    // Filter by Listing Type (Product vs Service vs Project)
     if (activeListingType !== 'all') {
       if (activeListingType === 'service') {
         result = result.filter(l => l.listingType === 'service' || l.category === 'service');
+      } else if (activeListingType === 'project') {
+        result = result.filter(l => l.listingType === 'project' || l.category === 'project');
       } else {
-        result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'service'));
+        result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'service' && l.category !== 'project'));
       }
     }
 
@@ -1503,7 +1505,20 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 )}
               >
                 <span>🌍</span>
-                <span>{language === 'ka' ? 'ყველა' : 'All Listings'}</span>
+                <span>{language === 'ka' ? 'ყველა' : 'All'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveListingType('service')}
+                className={cn(
+                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  activeListingType === 'service' 
+                    ? cn(currentTheme.badgeBg, "shadow-md") 
+                    : cn(currentTheme.muted, "hover:opacity-85")
+                )}
+              >
+                <span>⚡</span>
+                <span>{language === 'ka' ? 'სერვისები' : 'Services'}</span>
               </button>
               <button
                 type="button"
@@ -1520,16 +1535,16 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveListingType('service')}
+                onClick={() => setActiveListingType('project')}
                 className={cn(
                   "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
-                  activeListingType === 'service' 
+                  activeListingType === 'project' 
                     ? cn(currentTheme.badgeBg, "shadow-md") 
                     : cn(currentTheme.muted, "hover:opacity-85")
                 )}
               >
-                <span>⚡</span>
-                <span>{language === 'ka' ? 'სერვისები' : 'Services'}</span>
+                <span>🚀</span>
+                <span>{language === 'ka' ? 'პროექტები' : 'Projects'}</span>
               </button>
             </div>
             
@@ -1630,6 +1645,18 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setActiveListingType('service')}
+                    className={cn(
+                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      activeListingType === 'service'
+                        ? "bg-white/10 text-white border-white/20"
+                        : "text-white/40 border-transparent hover:text-white/60"
+                    )}
+                  >
+                    ⚡ {language === 'ka' ? 'სერვისები' : 'Services'}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setActiveListingType('product')}
                     className={cn(
                       "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
@@ -1642,15 +1669,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveListingType('service')}
+                    onClick={() => setActiveListingType('project')}
                     className={cn(
                       "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
-                      activeListingType === 'service'
+                      activeListingType === 'project'
                         ? "bg-white/10 text-white border-white/20"
                         : "text-white/40 border-transparent hover:text-white/60"
                     )}
                   >
-                    ⚡ {language === 'ka' ? 'სერვისები' : 'Services'}
+                    🚀 {language === 'ka' ? 'პროექტები' : 'Projects'}
                   </button>
                 </div>
 
@@ -1972,12 +1999,20 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                           </span>
                         </div>
 
-                        {/* Product / Service Badge */}
-                        <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] shadow-sm shrink-0">
-                          {listing.listingType === 'service' || listing.category === 'service'
-                            ? (language === 'ka' ? 'სერვისი' : 'Service')
-                            : (language === 'ka' ? 'ნივთი' : 'Product')}
-                        </span>
+                        {/* Product / Service / Project Badge */}
+                        {listing.listingType === 'service' || listing.category === 'service' ? (
+                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-sm shrink-0">
+                            {language === 'ka' ? 'სერვისი' : 'Service'}
+                          </span>
+                        ) : listing.listingType === 'project' || listing.category === 'project' ? (
+                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm shrink-0">
+                            {language === 'ka' ? 'პროექტი' : 'Project'}
+                          </span>
+                        ) : (
+                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] shadow-sm shrink-0">
+                            {language === 'ka' ? 'პროდუქტი' : 'Product'}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center justify-between gap-1.5 sm:gap-2.5 flex-wrap xs:flex-nowrap">
@@ -2175,44 +2210,63 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
                         {language === 'ka' ? 'განცხადების ტიპი' : 'Listing Type'}
                       </label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData(prev => ({ 
-                              ...prev, 
-                              listingType: 'product',
-                              category: prev.category === 'service' ? 'technics' : prev.category
-                            }));
-                          }}
-                          className={cn(
-                            "py-4 rounded-2xl border transition-all text-xs font-bold flex items-center justify-center gap-2",
-                            formData.listingType === 'product'
-                              ? "bg-white/10 border-white/20 text-white shadow-lg"
-                              : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
-                          )}
-                        >
-                          <span>📦</span>
-                          <span>{language === 'ka' ? 'პროდუქტი' : 'Physical Product'}</span>
-                        </button>
+                      <div className="grid grid-cols-3 gap-3 sm:gap-4">
                         <button
                           type="button"
                           onClick={() => {
                             setFormData(prev => ({ 
                               ...prev, 
                               listingType: 'service',
-                              category: 'service'
+                              category: prev.category === 'project' ? 'service' : prev.category
                             }));
                           }}
                           className={cn(
-                            "py-4 rounded-2xl border transition-all text-xs font-bold flex items-center justify-center gap-2",
+                            "py-4 rounded-2xl border transition-all text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center",
                             formData.listingType === 'service'
                               ? "bg-white/10 border-white/20 text-white shadow-lg"
                               : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
                           )}
                         >
                           <span>⚡</span>
-                          <span>{language === 'ka' ? 'სერვისი' : 'Professional Service'}</span>
+                          <span className="text-[10px] sm:text-xs">{language === 'ka' ? 'სერვისი' : 'Service'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              listingType: 'product',
+                              category: prev.category === 'service' || prev.category === 'project' ? 'technics' : prev.category
+                            }));
+                          }}
+                          className={cn(
+                            "py-4 rounded-2xl border transition-all text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center",
+                            formData.listingType === 'product'
+                              ? "bg-white/10 border-white/20 text-white shadow-lg"
+                              : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                          )}
+                        >
+                          <span>📦</span>
+                          <span className="text-[10px] sm:text-xs">{language === 'ka' ? 'პროდუქტი' : 'Product'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              listingType: 'project',
+                              category: prev.category === 'service' ? 'technics' : prev.category
+                            }));
+                          }}
+                          className={cn(
+                            "py-4 rounded-2xl border transition-all text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-center",
+                            formData.listingType === 'project'
+                              ? "bg-white/10 border-white/20 text-white shadow-lg"
+                              : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                          )}
+                        >
+                          <span>🚀</span>
+                          <span className="text-[10px] sm:text-xs">{language === 'ka' ? 'პროექტი' : 'Project'}</span>
                         </button>
                       </div>
                     </div>

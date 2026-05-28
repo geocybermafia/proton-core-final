@@ -120,7 +120,7 @@ export type Listing = {
   status: 'active' | 'sold';
   condition?: 'new' | 'used' | 'refurbished' | string;
   isNegotiable?: boolean;
-  listingType?: 'product' | 'service';
+  listingType?: 'product' | 'service' | 'project';
   serviceDuration?: string;
   serviceTerms?: string;
 };
