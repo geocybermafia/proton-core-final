@@ -353,17 +353,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.");
       return;
     }
-    const sellerNameLower = String(listing.sellerName || '').trim().toLowerCase();
-    const userEmailPrefix = user.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
-    const userDisplayName = user.displayName ? String(user.displayName).trim().toLowerCase() : '';
 
-    const isOwnListing = listing.sellerId === user.uid || (
-      sellerNameLower && (
-        sellerNameLower === userEmailPrefix ||
-        sellerNameLower === userDisplayName ||
-        (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
-      )
-    );
+    const isOwnListing = listing.sellerId === user.uid;
 
     if (isOwnListing) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
@@ -772,19 +763,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     if (viewMode === 'my-listings') {
       console.log('Fetching listings for user:', user?.uid);
       if (profileSubMode === 'selling') {
-        result = result.filter(l => {
-          const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
-          const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
-          const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
-          
-          return l.sellerId === user?.uid || (
-            sellerNameLower && (
-              sellerNameLower === userEmailPrefix ||
-              sellerNameLower === userDisplayName ||
-              (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
-            )
-          );
-        });
+        result = result.filter(l => l.sellerId === user?.uid);
       } else {
         // Handled by different UI section
         return [];
@@ -885,17 +864,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const handleBuyNow = async (listing: Listing) => {
     if (!user) return;
-    const sellerNameLower = String(listing.sellerName || '').trim().toLowerCase();
-    const userEmailPrefix = user.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
-    const userDisplayName = user.displayName ? String(user.displayName).trim().toLowerCase() : '';
 
-    const isOwnListing = listing.sellerId === user.uid || (
-      sellerNameLower && (
-        sellerNameLower === userEmailPrefix ||
-        sellerNameLower === userDisplayName ||
-        (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
-      )
-    );
+    const isOwnListing = listing.sellerId === user.uid;
 
     if (isOwnListing) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
@@ -1971,19 +1941,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     })
                   ) : (
                     filteredListings.map((listing, idx) => {
-                      const sellerNameLower = String(listing.sellerName || '').trim().toLowerCase();
-                      const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
-                      const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
-
-                      const isOwnListing = !!user && (
-                        listing.sellerId === user.uid || (
-                          sellerNameLower && (
-                            sellerNameLower === userEmailPrefix ||
-                            sellerNameLower === userDisplayName ||
-                            (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
-                          )
-                        )
-                      );
+                      const isOwnListing = !!user && listing.sellerId === user.uid;
 
                       return (
                 <motion.article 

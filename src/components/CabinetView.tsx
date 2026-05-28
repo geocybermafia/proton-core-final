@@ -56,56 +56,8 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings in CabinetView. UID:', currentUid);
       console.log('[DIAGNOSTIC Data Integrity] Total listings in complete database:', allListings.length);
       
-      // Auto-heal old listings that have desynced master dummy sellerId from restored database JSON archive
-      allListings.forEach((l) => {
-        if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
-          const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
-          const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
-          const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
-          const profileName = profile?.name ? String(profile.name).trim().toLowerCase() : '';
-          const profileUsername = (profile as any)?.username ? String((profile as any).username).trim().toLowerCase() : '';
-
-          const isTargetUser = sellerNameLower && (
-            sellerNameLower === userEmailPrefix ||
-            sellerNameLower === userDisplayName ||
-            sellerNameLower === profileName ||
-            sellerNameLower === profileUsername ||
-            (userEmailPrefix && userEmailPrefix.includes(sellerNameLower)) ||
-            (profileName && profileName.includes(sellerNameLower))
-          );
-
-          if (isTargetUser) {
-            console.log(`[SELF-HEALING] Healing listing '${l.title}' (${l.id}) for user structure. Updating sellerId to modern Auth uid:`, currentUid);
-            updateDoc(doc(db, 'listings', l.id), { sellerId: currentUid })
-              .then(() => {
-                console.log(`[SELF-HEALING] Successfully updated listing '${l.id}' status to modern sellerId.`);
-              })
-              .catch((e) => {
-                console.error(`[SELF-HEALING ERROR] Failed to heal listing '${l.id}':`, e);
-              });
-          }
-        }
-      });
-
-      // Filter locally in perfect sync with the dashboard's flexible matching logic
-      const matchedListings = allListings.filter(l => {
-        const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
-        const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
-        const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
-        const profileName = profile?.name ? String(profile.name).trim().toLowerCase() : '';
-        const profileUsername = (profile as any)?.username ? String((profile as any).username).trim().toLowerCase() : '';
-
-        return l.sellerId === currentUid || (
-          sellerNameLower && (
-            sellerNameLower === userEmailPrefix ||
-            sellerNameLower === userDisplayName ||
-            sellerNameLower === profileName ||
-            sellerNameLower === profileUsername ||
-            (userEmailPrefix && userEmailPrefix.includes(sellerNameLower)) ||
-            (profileName && profileName.includes(sellerNameLower))
-          )
-        );
-      });
+      // Filter locally in perfect sync with authentic strict UID ownership
+      const matchedListings = allListings.filter(l => l.sellerId === currentUid);
 
       console.log('[DIAGNOSTIC Data Integrity] filteredListings for user inside CabinetView:', matchedListings);
       setSellerListings(matchedListings);
