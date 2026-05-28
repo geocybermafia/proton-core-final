@@ -353,7 +353,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.");
       return;
     }
-    if (listing.sellerId === user.uid) {
+    const sellerNameLower = String(listing.sellerName || '').trim().toLowerCase();
+    const userEmailPrefix = user.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
+    const userDisplayName = user.displayName ? String(user.displayName).trim().toLowerCase() : '';
+
+    const isOwnListing = listing.sellerId === user.uid || (
+      sellerNameLower && (
+        sellerNameLower === userEmailPrefix ||
+        sellerNameLower === userDisplayName ||
+        (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
+      )
+    );
+
+    if (isOwnListing) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
       return;
     }
@@ -665,10 +677,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       if (loggedUser) {
         data.forEach((l) => {
           if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
-            const isTargetUser = 
-              loggedUser.email?.toLowerCase().includes('nanuka') || 
-              loggedUser.displayName?.toLowerCase().includes('nanuka') ||
-              loggedUser.email?.toLowerCase().includes('devdarianib');
+            const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
+            const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
+            const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
+
+            const isTargetUser = sellerNameLower && (
+              sellerNameLower === userEmailPrefix ||
+              sellerNameLower === userDisplayName ||
+              (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
+            );
 
             if (isTargetUser) {
               console.log(`[MARKET HEALING] Healing listing '${l.title}' (${l.id}) for user. Updating sellerId to:`, loggedUser.uid);
@@ -753,46 +770,62 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     
     // Filter by View Mode
     if (viewMode === 'my-listings') {
+      console.log('Fetching listings for user:', user?.uid);
       if (profileSubMode === 'selling') {
-        result = result.filter(l => l.sellerId === user?.uid);
+        result = result.filter(l => {
+          const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
+          const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
+          const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
+          
+          return l.sellerId === user?.uid || (
+            sellerNameLower && (
+              sellerNameLower === userEmailPrefix ||
+              sellerNameLower === userDisplayName ||
+              (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
+            )
+          );
+        });
       } else {
         // Handled by different UI section
         return [];
       }
     }
 
-    // Filter by Listing Type (Product vs Service vs Project)
-    if (activeListingType !== 'all') {
-      if (activeListingType === 'service') {
-        result = result.filter(l => l.listingType === 'service' || l.category === 'service');
-      } else if (activeListingType === 'project') {
-        result = result.filter(l => l.listingType === 'project' || l.category === 'project');
-      } else {
-        result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'service' && l.category !== 'project'));
+    // Bypass main marketplace browsing criteria if we are in 'my-listings' mode to ensure all user items remain fully visible
+    if (viewMode !== 'my-listings') {
+      // Filter by Listing Type (Product vs Service vs Project)
+      if (activeListingType !== 'all') {
+        if (activeListingType === 'service') {
+          result = result.filter(l => l.listingType === 'service' || l.category === 'service');
+        } else if (activeListingType === 'project') {
+          result = result.filter(l => l.listingType === 'project' || l.category === 'project');
+        } else {
+          result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'service' && l.category !== 'project'));
+        }
       }
-    }
 
-    // Filter by Category
-    if (activeCategory !== 'all') {
-      result = result.filter(l => l.category === activeCategory);
-    }
+      // Filter by Category
+      if (activeCategory !== 'all') {
+        result = result.filter(l => l.category === activeCategory);
+      }
 
-    // Filter by Country
-    if (activeCountry !== 'GLOBAL') {
-      result = result.filter(l => l.country === activeCountry);
-    }
+      // Filter by Country
+      if (activeCountry !== 'GLOBAL') {
+        result = result.filter(l => l.country === activeCountry);
+      }
 
-    // Filter by City
-    if (activeCity) {
-      result = result.filter(l => l.city.toLowerCase().includes(activeCity.toLowerCase()));
-    }
+      // Filter by City
+      if (activeCity) {
+        result = result.filter(l => l.city.toLowerCase().includes(activeCity.toLowerCase()));
+      }
 
-    // Filter by Price
-    if (minPrice !== '') {
-      result = result.filter(l => convertPrice(l.price, l.currency || 'USD', displayCurrency) >= parseFloat(minPrice));
-    }
-    if (maxPrice !== '') {
-      result = result.filter(l => convertPrice(l.price, l.currency || 'USD', displayCurrency) <= parseFloat(maxPrice));
+      // Filter by Price
+      if (minPrice !== '') {
+        result = result.filter(l => convertPrice(l.price, l.currency || 'USD', displayCurrency) >= parseFloat(minPrice));
+      }
+      if (maxPrice !== '') {
+        result = result.filter(l => convertPrice(l.price, l.currency || 'USD', displayCurrency) <= parseFloat(maxPrice));
+      }
     }
 
     // Filter by Search
@@ -852,7 +885,19 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const handleBuyNow = async (listing: Listing) => {
     if (!user) return;
-    if (listing.sellerId === user.uid) {
+    const sellerNameLower = String(listing.sellerName || '').trim().toLowerCase();
+    const userEmailPrefix = user.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
+    const userDisplayName = user.displayName ? String(user.displayName).trim().toLowerCase() : '';
+
+    const isOwnListing = listing.sellerId === user.uid || (
+      sellerNameLower && (
+        sellerNameLower === userEmailPrefix ||
+        sellerNameLower === userDisplayName ||
+        (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
+      )
+    );
+
+    if (isOwnListing) {
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
       return;
     }
@@ -1925,7 +1970,22 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       );
                     })
                   ) : (
-                    filteredListings.map((listing, idx) => (
+                    filteredListings.map((listing, idx) => {
+                      const sellerNameLower = String(listing.sellerName || '').trim().toLowerCase();
+                      const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
+                      const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
+
+                      const isOwnListing = !!user && (
+                        listing.sellerId === user.uid || (
+                          sellerNameLower && (
+                            sellerNameLower === userEmailPrefix ||
+                            sellerNameLower === userDisplayName ||
+                            (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
+                          )
+                        )
+                      );
+
+                      return (
                 <motion.article 
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -1981,7 +2041,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       )}
                     </div>
 
-                    {listing.sellerId === user?.uid && (
+                    {isOwnListing && (
                       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-1 sm:gap-2 z-10">
                         <button 
                           onClick={(e) => {
@@ -2084,7 +2144,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
                         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
                           {/* Chat Button */}
-                          {listing.sellerId !== user?.uid && (
+                          {!isOwnListing && (
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -2098,7 +2158,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                           )}
 
                           {/* Quick Add to Cart button */}
-                          {listing.sellerId !== user?.uid && (
+                          {!isOwnListing && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2115,7 +2175,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       </div>
 
                       <div className="mt-3 sm:mt-4">
-                        {listing.sellerId === user?.uid ? (
+                        {isOwnListing ? (
                           <div className="flex gap-2">
                             <button 
                               onClick={() => startEdit(listing)}
@@ -2162,8 +2222,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     </div>
                   </div>
                 </motion.article>
-                ))
-              )}
+                );
+              })
+               )}
             </AnimatePresence>
           </div>
         </div>

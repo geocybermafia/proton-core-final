@@ -47,62 +47,68 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
     const currentUid = user.uid;
     console.log('[DIAGNOSTIC EFFECT] onSnapshot subscription initiated for UID:', currentUid, 'Length:', currentUid.length);
 
-    // Fetch Seller Listings
-    const qListings = query(
-      collection(db, 'listings'),
-      where('sellerId', '==', currentUid)
-    );
+    // Fetch Seller Listings with exact synchrony and diagnostic logging as requested by user
+    const qListings = query(collection(db, 'listings'));
 
     const unsubListings = onSnapshot(qListings, (snapshot) => {
-      const rawListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings query with UID:', currentUid);
-      console.log('[DIAGNOSTIC listings] Raw listings received matching sellerId exactly:', rawListings);
+      const allListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      console.log('Fetching listings for user:', user?.uid || currentUid);
+      console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings in CabinetView. UID:', currentUid);
+      console.log('[DIAGNOSTIC Data Integrity] Total listings in complete database:', allListings.length);
       
-      // debug fetch of ALL listings in the database to identify and mend legacy/restored sellerId offsets
-      getDocs(collection(db, 'listings')).then((allSnap) => {
-        const allListings = allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-        console.log('[DIAGNOSTIC Data Integrity] Total listings in complete database:', allListings.length);
-        
-        // Auto-heal old listings that have desynced master dummy sellerId from restored database JSON archive
-        allListings.forEach((l) => {
-          if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
-            const isTargetUser = 
-              profile?.name?.toLowerCase().includes('nanuka') || 
-              profile?.email?.toLowerCase().includes('nanuka') ||
-              profile?.name === 'nanukasabulua' ||
-              user?.email?.toLowerCase().includes('nanuka') ||
-              user?.email?.toLowerCase().includes('devdarianib');
+      // Auto-heal old listings that have desynced master dummy sellerId from restored database JSON archive
+      allListings.forEach((l) => {
+        if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
+          const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
+          const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
+          const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
+          const profileName = profile?.name ? String(profile.name).trim().toLowerCase() : '';
+          const profileUsername = (profile as any)?.username ? String((profile as any).username).trim().toLowerCase() : '';
 
-            if (isTargetUser) {
-              console.log(`[SELF-HEALING] Healing listing '${l.title}' (${l.id}) for user structure. Updating sellerId to modern Auth uid:`, currentUid);
-              updateDoc(doc(db, 'listings', l.id), { sellerId: currentUid })
-                .then(() => {
-                  console.log(`[SELF-HEALING] Successfully updated listing '${l.id}' status to modern sellerId.`);
-                })
-                .catch((e) => {
-                  console.error(`[SELF-HEALING ERROR] Failed to heal listing '${l.id}':`, e);
-                });
-            }
+          const isTargetUser = sellerNameLower && (
+            sellerNameLower === userEmailPrefix ||
+            sellerNameLower === userDisplayName ||
+            sellerNameLower === profileName ||
+            sellerNameLower === profileUsername ||
+            (userEmailPrefix && userEmailPrefix.includes(sellerNameLower)) ||
+            (profileName && profileName.includes(sellerNameLower))
+          );
+
+          if (isTargetUser) {
+            console.log(`[SELF-HEALING] Healing listing '${l.title}' (${l.id}) for user structure. Updating sellerId to modern Auth uid:`, currentUid);
+            updateDoc(doc(db, 'listings', l.id), { sellerId: currentUid })
+              .then(() => {
+                console.log(`[SELF-HEALING] Successfully updated listing '${l.id}' status to modern sellerId.`);
+              })
+              .catch((e) => {
+                console.error(`[SELF-HEALING ERROR] Failed to heal listing '${l.id}':`, e);
+              });
           }
-        });
-
-        // Trim-safe matching check to identify any spacing/casing issues
-        const trimFiltered = allListings.filter(l => {
-          const sId = String(l.sellerId || '').trim();
-          const uId = String(currentUid).trim();
-          return sId === uId && l.sellerId !== undefined;
-        });
-
-        console.log('[DIAGNOSTIC Data Integrity] filteredListings (Trim & Case safe matches found):', trimFiltered);
-
-        if (trimFiltered.length > rawListings.length) {
-          console.warn('[DIAGNOSTIC WARN] Found a string mismatch! The database has listings matching user UID after trimming, but Firestore direct matches failed due to formatting.');
         }
-      }).catch(err => {
-        console.error('[DIAGNOSTIC ERROR] Failed side-channel debug fetch of all listings:', err);
       });
 
-      setSellerListings(rawListings);
+      // Filter locally in perfect sync with the dashboard's flexible matching logic
+      const matchedListings = allListings.filter(l => {
+        const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
+        const userEmailPrefix = user?.email ? String(user.email.split('@')[0]).trim().toLowerCase() : '';
+        const userDisplayName = user?.displayName ? String(user.displayName).trim().toLowerCase() : '';
+        const profileName = profile?.name ? String(profile.name).trim().toLowerCase() : '';
+        const profileUsername = (profile as any)?.username ? String((profile as any).username).trim().toLowerCase() : '';
+
+        return l.sellerId === currentUid || (
+          sellerNameLower && (
+            sellerNameLower === userEmailPrefix ||
+            sellerNameLower === userDisplayName ||
+            sellerNameLower === profileName ||
+            sellerNameLower === profileUsername ||
+            (userEmailPrefix && userEmailPrefix.includes(sellerNameLower)) ||
+            (profileName && profileName.includes(sellerNameLower))
+          )
+        );
+      });
+
+      console.log('[DIAGNOSTIC Data Integrity] filteredListings for user inside CabinetView:', matchedListings);
+      setSellerListings(matchedListings);
     }, (err) => {
       console.error('[DIAGNOSTIC EVENT ERROR] listings subscription failed:', err);
     });
