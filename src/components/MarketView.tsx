@@ -659,6 +659,31 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         id: doc.id,
         ...doc.data()
       })) as Listing[];
+
+      // Active self-healing check on the Marketplace
+      const loggedUser = auth.currentUser;
+      if (loggedUser) {
+        data.forEach((l) => {
+          if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
+            const isTargetUser = 
+              loggedUser.email?.toLowerCase().includes('nanuka') || 
+              loggedUser.displayName?.toLowerCase().includes('nanuka') ||
+              loggedUser.email?.toLowerCase().includes('devdarianib');
+
+            if (isTargetUser) {
+              console.log(`[MARKET HEALING] Healing listing '${l.title}' (${l.id}) for user. Updating sellerId to:`, loggedUser.uid);
+              updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid })
+                .then(() => {
+                  console.log(`[MARKET HEALING] Successfully updated listing '${l.id}' status to modern sellerId.`);
+                })
+                .catch((e) => {
+                  console.error(`[MARKET HEALING ERROR] Failed to heal listing '${l.id}':`, e);
+                });
+            }
+          }
+        });
+      }
+
       setListings(data);
       setLoading(false);
     }, (error) => {

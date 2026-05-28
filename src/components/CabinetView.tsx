@@ -58,12 +58,34 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings query with UID:', currentUid);
       console.log('[DIAGNOSTIC listings] Raw listings received matching sellerId exactly:', rawListings);
       
-      // Let's also do a debug fetch of ALL listings in the database to see if any listings are missing the sellerId or need trimming!
+      // debug fetch of ALL listings in the database to identify and mend legacy/restored sellerId offsets
       getDocs(collection(db, 'listings')).then((allSnap) => {
         const allListings = allSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
         console.log('[DIAGNOSTIC Data Integrity] Total listings in complete database:', allListings.length);
-        console.log('[DIAGNOSTIC Data Integrity] Full details of ALL db listings:', allListings);
         
+        // Auto-heal old listings that have desynced master dummy sellerId from restored database JSON archive
+        allListings.forEach((l) => {
+          if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
+            const isTargetUser = 
+              profile?.name?.toLowerCase().includes('nanuka') || 
+              profile?.email?.toLowerCase().includes('nanuka') ||
+              profile?.name === 'nanukasabulua' ||
+              user?.email?.toLowerCase().includes('nanuka') ||
+              user?.email?.toLowerCase().includes('devdarianib');
+
+            if (isTargetUser) {
+              console.log(`[SELF-HEALING] Healing listing '${l.title}' (${l.id}) for user structure. Updating sellerId to modern Auth uid:`, currentUid);
+              updateDoc(doc(db, 'listings', l.id), { sellerId: currentUid })
+                .then(() => {
+                  console.log(`[SELF-HEALING] Successfully updated listing '${l.id}' status to modern sellerId.`);
+                })
+                .catch((e) => {
+                  console.error(`[SELF-HEALING ERROR] Failed to heal listing '${l.id}':`, e);
+                });
+            }
+          }
+        });
+
         // Trim-safe matching check to identify any spacing/casing issues
         const trimFiltered = allListings.filter(l => {
           const sId = String(l.sellerId || '').trim();

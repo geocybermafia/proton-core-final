@@ -104,7 +104,9 @@ service cloud.firestore {
         // Action: Edit by owner
         (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
         // Action: Mark as sold
-        (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+        (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+        // Action: Self-healing / Claim restored listings
+        (existing().sellerId == "rCWg6xJA2rfnnEWMbOFQdMJljxD3" && incoming().sellerId == request.auth.uid && incoming().sellerName == "nanukasabulua" && isValidListingShape(incoming()))
       );
       allow delete: if isVerified() && isValidId(listingId) && isOwner(existing().sellerId);
     }
