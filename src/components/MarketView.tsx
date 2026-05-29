@@ -663,29 +663,29 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         ...doc.data()
       })) as Listing[];
 
-      // Active self-healing check on the Marketplace
+      // Reclaim / heal corrupted listings where sellerName matches the logged-in user but sellerId is wrong
       const loggedUser = auth.currentUser;
       if (loggedUser) {
         data.forEach((l) => {
-          if (l.sellerId === "rCWg6xJA2rfnnEWMbOFQdMJljxD3") {
-            const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
-            const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
-            const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
+          const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
+          const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
+          const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
 
-            const isTargetUser = sellerNameLower && (
+          // If the logged-in user is NOT the admin 'devdarianib@gmail.com', AND the listing's sellerName matches their name,
+          // but the listing's sellerId is NOT their UID, then it was corrupted! Let's claim it back.
+          if (loggedUser.email !== 'devdarianib@gmail.com') {
+            const isMatch = sellerNameLower && (
               sellerNameLower === userEmailPrefix ||
-              sellerNameLower === userDisplayName ||
-              (userEmailPrefix && userEmailPrefix.includes(sellerNameLower))
+              sellerNameLower === userDisplayName
             );
-
-            if (isTargetUser) {
-              console.log(`[MARKET HEALING] Healing listing '${l.title}' (${l.id}) for user. Updating sellerId to:`, loggedUser.uid);
+            if (isMatch && l.sellerId !== loggedUser.uid) {
+              console.log(`[DATA RECOVERY] Reclaiming listing '${l.title}' (${l.id}) for true owner ${loggedUser.email}. Restoring sellerId to:`, loggedUser.uid);
               updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid })
                 .then(() => {
-                  console.log(`[MARKET HEALING] Successfully updated listing '${l.id}' status to modern sellerId.`);
+                  console.log(`[DATA RECOVERY] Successfully claimed back listing '${l.id}' for user.`);
                 })
                 .catch((e) => {
-                  console.error(`[MARKET HEALING ERROR] Failed to heal listing '${l.id}':`, e);
+                  console.error(`[DATA RECOVERY ERROR] Failed to reclaim listing '${l.id}':`, e);
                 });
             }
           }
@@ -1165,8 +1165,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         descriptionGe: (formData.descriptionGe || formData.description).trim(),
         price: parsedPrice,
         currency: formData.currency || 'USD',
-        sellerId: user.uid,
-        sellerName: user.displayName || user.email?.split('@')[0] || 'Unknown',
+        sellerId: (viewMode === 'edit' && editingListing) ? editingListing.sellerId : user.uid,
+        sellerName: (viewMode === 'edit' && editingListing) ? (editingListing.sellerName || 'Unknown') : (user.displayName || user.email?.split('@')[0] || 'Unknown'),
         category: formData.category || 'technics',
         location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
         country: countryStr,
@@ -1942,6 +1942,8 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   ) : (
                     filteredListings.map((listing, idx) => {
                       const isOwnListing = !!user && listing.sellerId === user.uid;
+                      const isAdminUser = !!user && user.email === 'devdarianib@gmail.com';
+                      const canManageListing = isOwnListing || isAdminUser;
 
                       return (
                 <motion.article 
@@ -1999,7 +2001,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       )}
                     </div>
 
-                    {isOwnListing && (
+                    {canManageListing && (
                       <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-1 sm:gap-2 z-10">
                         <button 
                           onClick={(e) => {
