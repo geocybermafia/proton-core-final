@@ -346,19 +346,103 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               </div>
               
               {/* Mock Interface Content */}
-              <div className="p-8 grid grid-cols-12 gap-6 h-full opacity-40">
-                <div className="col-span-3 space-y-4">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-10 bg-proton-bg rounded-xl border border-proton-border/30" />
+              <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-12 gap-4 lg:gap-6 h-full select-none text-left">
+                {/* Sidebar Mockup */}
+                <div className="col-span-3 border-r border-proton-border/40 pr-4 space-y-3 hidden sm:block">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-2.5 h-2.5 rounded-full bg-proton-accent animate-ping" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">CORE CONSOLE</span>
+                  </div>
+                  {[
+                    { name: 'Dashboard', active: true },
+                    { name: 'AI Assistants', active: false },
+                    { name: 'Process Blueprints', active: false },
+                    { name: 'Marketplace', active: false },
+                    { name: 'Translation Hub', active: false },
+                    { name: 'Organizer System', active: false },
+                  ].map((item, idx) => (
+                    <div 
+                      key={idx} 
+                      className={cn(
+                        "px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between",
+                        item.active 
+                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.05)]" 
+                          : "text-proton-muted hover:text-proton-text border border-transparent"
+                      )}
+                    >
+                      {language === 'ka' 
+                        ? (item.name === 'Dashboard' ? 'დეშბორდი' : 
+                          item.name === 'AI Assistants' ? 'AI ასისტენტები' :
+                          item.name === 'Process Blueprints' ? 'ვიზუალური ბლუპრინტები' :
+                          item.name === 'Marketplace' ? 'მარკეტპლეისი' :
+                          item.name === 'Translation Hub' ? 'მთარგმნელი' : 'კაბინეტი')
+                        : item.name
+                      }
+                      {item.active && <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_#00f2ff]" />}
+                    </div>
                   ))}
+                  
+                  <div className="pt-2">
+                    <div className="p-3 bg-proton-accent/5 border border-proton-accent/10 rounded-xl">
+                      <p className="text-[8px] font-mono text-proton-accent uppercase tracking-widest mb-1">SYSTEM STATE</p>
+                      <p className="text-[9px] font-black text-proton-text uppercase">● SECURED BY FIREBASE</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="col-span-9 space-y-6">
-                  <div className="grid grid-cols-3 gap-6">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-32 bg-proton-bg rounded-3xl border border-proton-border/30" />
+
+                {/* Dashboard Area Mockup */}
+                <div className="col-span-12 sm:col-span-9 flex flex-col justify-between space-y-4">
+                  {/* Top Stats Cards */}
+                  <div className="grid grid-cols-3 gap-3 md:gap-4">
+                    {[
+                      { label: language === 'ka' ? 'აქტიური აგენტები' : 'Active Agents', value: '4 Personas', color: 'text-amber-400 border-amber-500/10 bg-amber-500/5' },
+                      { label: language === 'ka' ? 'შეკვეთები' : 'Live Orders', value: '12 Active', color: 'text-emerald-400 border-emerald-500/10 bg-emerald-500/5' },
+                      { label: language === 'ka' ? 'ბლუპრინტები' : 'Node Workflows', value: '8 Graphs', color: 'text-cyan-400 border-cyan-500/10 bg-cyan-500/5' },
+                    ].map((stat, i) => (
+                      <div key={i} className={cn("p-3 md:p-4 rounded-2xl border transition-all duration-300 hover:scale-105", stat.color)}>
+                        <p className="text-[8px] font-mono uppercase tracking-widest text-proton-muted mb-1">{stat.label}</p>
+                        <p className="text-sm md:text-lg font-black tracking-tight text-proton-text uppercase">{stat.value}</p>
+                      </div>
                     ))}
                   </div>
-                  <div className="flex-1 bg-proton-bg rounded-3xl border border-proton-border/30 h-64" />
+
+                  {/* Main Preview Component (Visual Flow or Interaction Log) */}
+                  <div className="flex-1 bg-proton-bg border border-proton-border/60 rounded-[24px] p-4 flex flex-col justify-between gap-4">
+                    <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                      <div className="flex items-center gap-2">
+                        <Terminal size={12} className="text-proton-accent" />
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'AI აგენტის ლოგი' : 'AI Agent Terminal Logs'}</span>
+                      </div>
+                      <span className="text-[9px] font-mono text-proton-accent">Gemini-2.5-Pro</span>
+                    </div>
+
+                    <div className="space-y-2 font-mono flex-1 text-[9px] leading-relaxed select-text py-2">
+                      <div className="flex gap-2">
+                        <span className="text-proton-accent font-black">PROMPT &gt;</span>
+                        <span className="text-proton-text font-medium">
+                          {language === 'ka' 
+                            ? 'გააანალიზე დღევანდელი გაყიდვების სტატისტიკა და მოამზადე სარეკომენდაციო გეგმა.'
+                            : 'Analyze today\'s sales activity and generate an automated tactical growth matrix.'
+                          }
+                        </span>
+                      </div>
+                      <div className="flex gap-2 text-proton-muted animate-pulse">
+                        <span className="text-proton-accent">&gt;&gt;</span>
+                        <span>[Processing node cycles using Gemini agent...]</span>
+                      </div>
+                      <div className="p-2 bg-proton-accent/5 border border-proton-accent/10 rounded-lg text-proton-accent leading-loose">
+                        {language === 'ka' 
+                          ? '✓ ანალიზი დასრულებულია. მომხმარებლის აქტივობა გაიზარდა 14%-ით. ბაზაში დაფიქსირდა 12 ახალი შეკვეთა.'
+                          : '✓ Analysis complete. Total activity metrics expanded by 14%. 12 new orders verified in secure Firestore.'
+                        }
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[8px] font-mono text-proton-muted border-t border-proton-border/30 pt-2">
+                      <span>STATUS: ONLINE</span>
+                      <span>RESPONSE: 240ms</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
