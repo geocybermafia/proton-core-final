@@ -33,6 +33,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, language, onLanguageChange }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [mockActiveTab, setMockActiveTab] = useState<'dashboard' | 'assistants' | 'blueprints' | 'marketplace' | 'translator' | 'organizer'>('dashboard');
   const currentLang = language;
   
   // @ts-ignore
@@ -346,43 +347,71 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               </div>
               
               {/* Mock Interface Content */}
-              <div className="p-4 sm:p-6 lg:p-8 grid grid-cols-12 gap-4 lg:gap-6 h-full select-none text-left">
-                {/* Sidebar Mockup */}
-                <div className="col-span-3 border-r border-proton-border/40 pr-4 space-y-3 hidden sm:block">
+              <div className="p-4 sm:p-6 lg:p-8 flex flex-col sm:grid sm:grid-cols-12 gap-4 lg:gap-6 h-full select-none text-left">
+                {/* Mobile Tab bar */}
+                <div className="flex sm:hidden overflow-x-auto gap-2 pb-2 border-b border-proton-border/30 whitespace-nowrap scrollbar-none scroll-smooth">
+                  {[
+                    { id: 'dashboard', nameEn: 'Dashboard', nameKa: 'სახლი' },
+                    { id: 'assistants', nameEn: 'AI Agents', nameKa: 'აგენტები' },
+                    { id: 'blueprints', nameEn: 'Blueprints', nameKa: 'სქემები' },
+                    { id: 'marketplace', nameEn: 'Market', nameKa: 'მარკეტი' },
+                    { id: 'translator', nameEn: 'Translator', nameKa: 'მთარგმნელი' },
+                    { id: 'organizer', nameEn: 'Cabinet', nameKa: 'კაბინეტი' },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setMockActiveTab(item.id as any)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                        mockActiveTab === item.id 
+                          ? "bg-proton-accent text-proton-bg font-black" 
+                          : "bg-proton-card text-proton-muted border border-proton-border"
+                      )}
+                    >
+                      {language === 'ka' ? item.nameKa : item.nameEn}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sidebar Mockup (Desktop) */}
+                <div className="col-span-3 border-r border-proton-border/40 pr-4 space-y-2 hidden sm:block">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="w-2.5 h-2.5 rounded-full bg-proton-accent animate-ping" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-proton-accent animate-pulse" />
                     <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">CORE CONSOLE</span>
                   </div>
                   {[
-                    { name: 'Dashboard', active: true },
-                    { name: 'AI Assistants', active: false },
-                    { name: 'Process Blueprints', active: false },
-                    { name: 'Marketplace', active: false },
-                    { name: 'Translation Hub', active: false },
-                    { name: 'Organizer System', active: false },
-                  ].map((item, idx) => (
-                    <div 
-                      key={idx} 
+                    { id: 'dashboard', name: 'Dashboard' },
+                    { id: 'assistants', name: 'AI Assistants' },
+                    { id: 'blueprints', name: 'Process Blueprints' },
+                    { id: 'marketplace', name: 'Marketplace' },
+                    { id: 'translator', name: 'Translation Hub' },
+                    { id: 'organizer', name: 'Organizer System' },
+                  ].map((item) => (
+                    <button 
+                      key={item.id} 
+                      onClick={() => setMockActiveTab(item.id as any)}
                       className={cn(
-                        "px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between",
-                        item.active 
-                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.05)]" 
-                          : "text-proton-muted hover:text-proton-text border border-transparent"
+                        "w-full px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer text-left bg-transparent border border-transparent",
+                        mockActiveTab === item.id 
+                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.05)] font-black" 
+                          : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
                       )}
                     >
-                      {language === 'ka' 
-                        ? (item.name === 'Dashboard' ? 'დეშბორდი' : 
-                          item.name === 'AI Assistants' ? 'AI ასისტენტები' :
-                          item.name === 'Process Blueprints' ? 'ვიზუალური ბლუპრინტები' :
-                          item.name === 'Marketplace' ? 'მარკეტპლეისი' :
-                          item.name === 'Translation Hub' ? 'მთარგმნელი' : 'კაბინეტი')
-                        : item.name
-                      }
-                      {item.active && <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_#00f2ff]" />}
-                    </div>
+                      <span>
+                        {language === 'ka' 
+                          ? (item.name === 'Dashboard' ? 'დეშბორდი' : 
+                            item.name === 'AI Assistants' ? 'AI ასისტენტები' :
+                            item.name === 'Process Blueprints' ? 'ვიზუალური ბლუპრინტები' :
+                            item.name === 'Marketplace' ? 'მარკეტპლეისი' :
+                            item.name === 'Translation Hub' ? 'მთარგმნელი' : 'კაბინეტი')
+                          : item.name
+                        }
+                      </span>
+                      {mockActiveTab === item.id && <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_#00f2ff]" />}
+                    </button>
                   ))}
                   
-                  <div className="pt-2">
+                  <div className="pt-4">
                     <div className="p-3 bg-proton-accent/5 border border-proton-accent/10 rounded-xl">
                       <p className="text-[8px] font-mono text-proton-accent uppercase tracking-widest mb-1">SYSTEM STATE</p>
                       <p className="text-[9px] font-black text-proton-text uppercase">● SECURED BY FIREBASE</p>
@@ -391,58 +420,327 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 </div>
 
                 {/* Dashboard Area Mockup */}
-                <div className="col-span-12 sm:col-span-9 flex flex-col justify-between space-y-4">
-                  {/* Top Stats Cards */}
-                  <div className="grid grid-cols-3 gap-3 md:gap-4">
-                    {[
-                      { label: language === 'ka' ? 'აქტიური აგენტები' : 'Active Agents', value: '4 Personas', color: 'text-amber-400 border-amber-500/10 bg-amber-500/5' },
-                      { label: language === 'ka' ? 'შეკვეთები' : 'Live Orders', value: '12 Active', color: 'text-emerald-400 border-emerald-500/10 bg-emerald-500/5' },
-                      { label: language === 'ka' ? 'ბლუპრინტები' : 'Node Workflows', value: '8 Graphs', color: 'text-cyan-400 border-cyan-500/10 bg-cyan-500/5' },
-                    ].map((stat, i) => (
-                      <div key={i} className={cn("p-3 md:p-4 rounded-2xl border transition-all duration-300 hover:scale-105", stat.color)}>
-                        <p className="text-[8px] font-mono uppercase tracking-widest text-proton-muted mb-1">{stat.label}</p>
-                        <p className="text-sm md:text-lg font-black tracking-tight text-proton-text uppercase">{stat.value}</p>
+                <div className="col-span-12 sm:col-span-9 flex flex-col justify-between space-y-4 min-h-[340px]">
+                  
+                  {/* TAB 1: DASHBOARD PREVIEW */}
+                  {mockActiveTab === 'dashboard' && (
+                    <div className="space-y-4 flex flex-col justify-between h-full flex-1">
+                      {/* Top Stats Cards */}
+                      <div className="grid grid-cols-3 gap-3 md:gap-4">
+                        {[
+                          { label: language === 'ka' ? 'აქტიური აგენტები' : 'Active Agents', value: '4 Personas', color: 'text-amber-400 border-amber-500/10 bg-amber-500/5' },
+                          { label: language === 'ka' ? 'შეკვეთები' : 'Live Orders', value: '12 Active', color: 'text-emerald-400 border-emerald-500/10 bg-emerald-500/5' },
+                          { label: language === 'ka' ? 'ბლუპრინტები' : 'Node Workflows', value: '8 Graphs', color: 'text-cyan-400 border-cyan-500/10 bg-cyan-500/5' },
+                        ].map((stat, i) => (
+                          <div key={i} className="p-2 md:p-3 rounded-xl border border-proton-border/30 bg-proton-card/50">
+                            <p className="text-[8px] font-mono uppercase tracking-widest text-proton-muted mb-1">{stat.label}</p>
+                            <p className={cn("text-[10px] md:text-xs font-black tracking-tight uppercase", stat.color)}>{stat.value}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
 
-                  {/* Main Preview Component (Visual Flow or Interaction Log) */}
-                  <div className="flex-1 bg-proton-bg border border-proton-border/60 rounded-[24px] p-4 flex flex-col justify-between gap-4">
-                    <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
-                      <div className="flex items-center gap-2">
-                        <Terminal size={12} className="text-proton-accent" />
-                        <span className="text-[9px] font-mono uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'AI აგენტის ლოგი' : 'AI Agent Terminal Logs'}</span>
+                      <div className="flex-1 bg-proton-bg border border-proton-border/60 rounded-[24px] p-4 flex flex-col justify-between gap-3">
+                        <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                          <div className="flex items-center gap-2">
+                            <Terminal size={12} className="text-proton-accent" />
+                            <span className="text-[9px] font-mono uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'AI აგენტის ლოგი' : 'AI Agent Terminal Logs'}</span>
+                          </div>
+                          <span className="text-[9px] font-mono text-proton-accent">Gemini-2.5-Pro</span>
+                        </div>
+
+                        <div className="space-y-2 font-mono flex-1 text-[9px] leading-relaxed select-text py-1">
+                          <div className="flex gap-2">
+                            <span className="text-proton-accent font-black">PROMPT &gt;</span>
+                            <span className="text-proton-text font-medium">
+                              {language === 'ka' 
+                                ? 'გააანალიზე დღევანდელი გაყიდვების სტატისტიკა და მოამზადე სარეკომენდაციო გეგმა.'
+                                : 'Analyze today\'s sales activity and generate an automated tactical growth matrix.'
+                              }
+                            </span>
+                          </div>
+                          <div className="flex gap-2 text-proton-muted animate-pulse">
+                            <span className="text-proton-accent">&gt;&gt;</span>
+                            <span>[Processing node cycles using Gemini agent...]</span>
+                          </div>
+                          <div className="p-2 bg-proton-accent/5 border border-proton-accent/10 rounded-lg text-proton-accent leading-loose">
+                            {language === 'ka' 
+                              ? '✓ ანალიზი დასრულებულია. მომხმარებლის აქტივობა გაიზარდა 14%-ით. ბაზაში დაფიქსირდა 12 ახალი შეკვეთა.'
+                              : '✓ Analysis complete. Total activity metrics expanded by 14%. 12 new orders verified in secure Firestore.'
+                            }
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[8px] font-mono text-proton-muted border-t border-proton-border/30 pt-2">
+                          <span>STATUS: ONLINE</span>
+                          <span>RESPONSE: 240ms</span>
+                        </div>
                       </div>
-                      <span className="text-[9px] font-mono text-proton-accent">Gemini-2.5-Pro</span>
                     </div>
+                  )}
 
-                    <div className="space-y-2 font-mono flex-1 text-[9px] leading-relaxed select-text py-2">
-                      <div className="flex gap-2">
-                        <span className="text-proton-accent font-black">PROMPT &gt;</span>
-                        <span className="text-proton-text font-medium">
+                  {/* TAB 2: AI ASSISTANTS PREVIEW */}
+                  {mockActiveTab === 'assistants' && (
+                    <div className="flex flex-col h-full justify-between flex-1 gap-4">
+                      <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="text-amber-400" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">
+                            {language === 'ka' ? 'AI პერსონების სიმულატორი' : 'AI Persona Interactive Space'}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-400/20">AGENT ONLINE</span>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-3 flex-1 items-stretch">
+                        {/* Personas Sidebar */}
+                        <div className="col-span-4 border-r border-proton-border/30 pr-2 space-y-2 hidden sm:block">
+                          {[
+                            { name: 'Marketing Guru', active: true },
+                            { name: 'System Architect', active: false },
+                            { name: 'Legal Copywriter', active: false },
+                          ].map((persona, i) => (
+                            <div key={i} className={cn("p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider text-left border cursor-pointer transition-all", persona.active ? "bg-amber-400/10 text-amber-400 border-amber-400/30 font-black" : "text-proton-muted border-transparent hover:text-proton-text")}>
+                              {persona.name}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Personas Chat Area */}
+                        <div className="col-span-12 sm:col-span-8 flex flex-col justify-between bg-proton-bg-secondary p-3 rounded-2xl border border-proton-border/40 min-h-[180px]">
+                          <div className="space-y-3 flex-1 overflow-y-auto max-h-[160px] text-[10px]">
+                            {/* Message 1 */}
+                            <div className="flex flex-col items-end">
+                              <span className="text-[8px] font-mono text-proton-muted mb-0.5">{language === 'ka' ? 'შენ (მომხმარებელი)' : 'You (User)'}</span>
+                              <div className="bg-proton-accent/15 border border-proton-accent/30 text-proton-text px-3 py-2 rounded-2xl rounded-tr-none text-right max-w-[85%]">
+                                {language === 'ka' ? 'დაგვიწერე მოკლე და მიმზიდველი სლოგანი Proton Core-ისთვის.' : 'Write a short & attractive ad slogan for Proton Core systems.'}
+                              </div>
+                            </div>
+                            {/* Message 2 */}
+                            <div className="flex flex-col items-start">
+                              <span className="text-[8px] font-mono text-proton-accent mb-0.5">Marketing Specialist</span>
+                              <div className="bg-proton-card border border-proton-border text-proton-text px-3 py-2 rounded-2xl rounded-tl-none text-left max-w-[85%] leading-relaxed font-semibold">
+                                {language === 'ka' 
+                                  ? '💡 "Proton Core - მართე შენი ბიზნესი ავტომატურად: ერთიანი AI სივრცე, ვიზუალური პროცესები და გლობალური მარკეტი!"'
+                                  : '💡 "Proton Core - Command your business with perfect autonomy: Unified AI Space, Visual Blueprints, & secure Trade!"'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-2 text-[8px] font-mono text-proton-muted text-center border-t border-proton-border/30 pt-2 animate-pulse">
+                            {language === 'ka' ? '✓ კავშირი Gemini API-სთან სტაბილურია და დაცულია' : '✓ Direct connection to Gemini API is fully operational & encrypted'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: PROCESS BLUEPRINTS PREVIEW */}
+                  {mockActiveTab === 'blueprints' && (
+                    <div className="flex flex-col h-full justify-between flex-1 gap-4">
+                      <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Workflow size={14} className="text-cyan-400" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">
+                            {language === 'ka' ? 'ბლუპრინტების ვიზუალური ნოდები' : 'Visual Process Blueprint Visualizer'}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono bg-cyan-400/10 text-cyan-400 px-2 py-0.5 rounded-full border border-cyan-400/20">COMPILED SUCCESS</span>
+                      </div>
+
+                      {/* Canvas Simulator */}
+                      <div className="bg-proton-bg border border-proton-border/50 rounded-2xl p-4 relative min-h-[180px] flex flex-col justify-center items-center overflow-hidden">
+                        
+                        {/* Background Grid Pattern */}
+                        <div className="absolute inset-0 opacity-5 bg-[linear-gradient(to_right,#00f2ff_1px,transparent_1px),linear-gradient(to_bottom,#00f2ff_1px,transparent_1px)] bg-[size:20px_20px]" />
+
+                        <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10 w-full justify-around max-w-lg">
+                          
+                          {/* Node 1 */}
+                          <div className="p-2 md:p-3 bg-proton-card border border-proton-border hover:border-cyan-400/50 rounded-xl flex items-center gap-2 shadow-lg min-w-[110px] transition-transform duration-300 hover:scale-105">
+                            <div className="w-5 h-5 rounded bg-amber-400 flex items-center justify-center text-proton-bg">
+                              <span className="text-[9px] font-black">GET</span>
+                            </div>
+                            <div className="text-left">
+                              <p className="text-[7px] font-mono text-proton-muted">TRIGGER</p>
+                              <p className="text-[9px] font-bold text-proton-text">{language === 'ka' ? 'შეკვეთისას' : 'New Order'}</p>
+                            </div>
+                          </div>
+
+                          {/* Connection Arrow 1 */}
+                          <div className="w-4 h-4 text-cyan-400 rotate-90 sm:rotate-0 flex items-center justify-center">
+                            <ArrowRight size={14} className="animate-pulse" />
+                          </div>
+
+                          {/* Node 2 */}
+                          <div className="p-2 md:p-3 bg-proton-card border border-cyan-400/40 hover:border-cyan-400 rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-400/5 min-w-[110px] transition-transform duration-300 hover:scale-105">
+                            <div className="w-5 h-5 rounded bg-cyan-400 flex items-center justify-center text-proton-bg">
+                              <Cpu size={12} fill="currentColor" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-[7px] font-mono text-cyan-400 font-bold">AI DECISION</p>
+                              <p className="text-[9px] font-bold text-proton-text">{language === 'ka' ? 'ავტო-მთარგმნელი' : 'Auto-Translate'}</p>
+                            </div>
+                          </div>
+
+                          {/* Connection Arrow 2 */}
+                          <div className="w-4 h-4 text-cyan-400 rotate-90 sm:rotate-0 flex items-center justify-center">
+                            <ArrowRight size={14} className="animate-pulse" />
+                          </div>
+
+                          {/* Node 3 */}
+                          <div className="p-2 md:p-3 bg-proton-card border border-proton-border hover:border-cyan-400/50 rounded-xl flex items-center gap-2 shadow-lg min-w-[110px] transition-transform duration-300 hover:scale-105">
+                            <div className="w-5 h-5 rounded bg-emerald-400 flex items-center justify-center text-proton-bg">
+                              <ShoppingBag size={12} fill="currentColor" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-[7px] font-mono text-proton-muted">ACTION</p>
+                              <p className="text-[9px] font-bold text-proton-text">{language === 'ka' ? 'ინვენტარი' : 'Sync Inventory'}</p>
+                            </div>
+                          </div>
+
+                        </div>
+                        
+                        <div className="absolute bottom-2 left-2 right-2 text-center text-[8px] font-mono text-proton-muted bg-proton-card/90 py-1.5 px-3 rounded-lg border border-proton-border/30">
                           {language === 'ka' 
-                            ? 'გააანალიზე დღევანდელი გაყიდვების სტატისტიკა და მოამზადე სარეკომენდაციო გეგმა.'
-                            : 'Analyze today\'s sales activity and generate an automated tactical growth matrix.'
+                            ? "💡 ეს არის ვიზუალური სამუშაო სექცია, სადაც შენი სურვილისამებრ აკავშირებ ავტომატიზებულ სლოტებს."
+                            : "💡 This is a no-code blueprint engine. Drag trigger items and connect them to Gemini-AI decision blocks."
                           }
-                        </span>
-                      </div>
-                      <div className="flex gap-2 text-proton-muted animate-pulse">
-                        <span className="text-proton-accent">&gt;&gt;</span>
-                        <span>[Processing node cycles using Gemini agent...]</span>
-                      </div>
-                      <div className="p-2 bg-proton-accent/5 border border-proton-accent/10 rounded-lg text-proton-accent leading-loose">
-                        {language === 'ka' 
-                          ? '✓ ანალიზი დასრულებულია. მომხმარებლის აქტივობა გაიზარდა 14%-ით. ბაზაში დაფიქსირდა 12 ახალი შეკვეთა.'
-                          : '✓ Analysis complete. Total activity metrics expanded by 14%. 12 new orders verified in secure Firestore.'
-                        }
+                        </div>
                       </div>
                     </div>
+                  )}
 
-                    <div className="flex items-center justify-between text-[8px] font-mono text-proton-muted border-t border-proton-border/30 pt-2">
-                      <span>STATUS: ONLINE</span>
-                      <span>RESPONSE: 240ms</span>
+                  {/* TAB 4: MARKETPLACE PREVIEW */}
+                  {mockActiveTab === 'marketplace' && (
+                    <div className="flex flex-col h-full justify-between flex-1 gap-4">
+                      <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                        <div className="flex items-center gap-2">
+                          <ShoppingBag size={14} className="text-emerald-400" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">
+                            {language === 'ka' ? 'გლობალური სავაჭრო მარკეტი' : 'Built-in Global Secure Marketplace'}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono bg-emerald-400/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-400/20">FIRESTORE SYNC</span>
+                      </div>
+
+                      {/* Mock Product Cards */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+                        {[
+                          { title: 'Intellectual AI Analytics Bot', titleGe: 'ინტელექტუალური საანალიზო ბოტი', price: '45.00', currency: 'USD', category: 'Software' },
+                          { title: 'Responsive Design Templates Suite', titleGe: 'საიტების დიზაინების ნაკრები', price: '120.00', currency: 'GEL', category: 'Design' },
+                        ].map((prod, idx) => (
+                          <div key={idx} className="p-3 bg-proton-card border border-proton-border hover:border-emerald-400/30 rounded-2xl flex flex-col justify-between gap-2 text-left group transition-all duration-300">
+                            <div>
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="px-1.5 py-0.5 rounded bg-proton-bg text-proton-muted text-[7px] font-bold uppercase tracking-widest">{prod.category}</span>
+                                <span className="text-emerald-400 text-[10px] font-black">{prod.price} {prod.currency}</span>
+                              </div>
+                              <h4 className="text-[10px] font-bold text-proton-text group-hover:text-emerald-400 transition-colors uppercase leading-tight line-clamp-1">
+                                {language === 'ka' ? prod.titleGe : prod.title}
+                              </h4>
+                              <p className="text-[8px] text-proton-muted leading-tight mt-1">
+                                {language === 'ka' ? 'დადასტურებულია რეალური ვაჭრობითა და მოქმედი რეიტინგებით.' : 'Complete technical file and operational instructions included.'}
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => alert(language === 'ka' ? "როლური მოდელი: დააჭირეთ დაწყებას რეალური შესყიდვების გამოსაცდელად!" : "Simulator Notice: Access the workspace to initialize direct sales flow!")}
+                              className="w-full py-1 bg-proton-bg hover:bg-emerald-400/10 border border-proton-border hover:border-emerald-400/30 text-[8px] font-black uppercase tracking-wider text-proton-text rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <ShoppingBag size={10} />
+                              {language === 'ka' ? 'ნივთის შეკვეთა' : 'Purchase Item'}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* TAB 5: TRANSLATOR PREVIEW */}
+                  {mockActiveTab === 'translator' && (
+                    <div className="flex flex-col h-full justify-between flex-1 gap-4">
+                      <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Globe size={14} className="text-proton-accent" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">
+                            {language === 'ka' ? 'ბილინგვური დოკუმენტების მთარგმნელი' : 'Bilingual Document & Text Translation Suite'}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono bg-proton-accent/10 text-proton-accent px-2 py-0.5 rounded-full border border-proton-accent/20">AUTOMATED EN &hArr; KA</span>
+                      </div>
+
+                      {/* Side-by-Side Dual Translation Display */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+                        <div className="p-3 bg-proton-bg rounded-xl border border-proton-border/60 text-left flex flex-col justify-between">
+                          <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest mb-1">ENGLISH (SOURCE)</p>
+                          <p className="text-[10px] font-medium leading-relaxed text-proton-text">
+                            "Proton Core offers complete system operations, specialized AI instruction layers, and unified peer-to-peer commerce under strict client guidelines."
+                          </p>
+                        </div>
+                        <div className="p-3 bg-proton-accent/5 rounded-xl border border-proton-accent/20 text-left flex flex-col justify-between">
+                          <p className="text-[8px] font-mono text-proton-accent uppercase tracking-widest mb-1">GEORGIAN (TRANSLATED BACKEND)</p>
+                          <p className="text-[10px] font-semibold leading-relaxed text-proton-text">
+                            "Proton Core გთავაზობთ სრულ სისტემურ ოპერაციებს, სპეციალიზებულ AI ინსტრუქციების შრეებსა და ერთიან სავაჭრო მარკეტს მომხმარებლის მკაცრი კონტროლის ქვეშ."
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-center text-[8px] font-mono text-proton-muted bg-proton-card py-1 rounded-lg border border-proton-border">
+                        {language === 'ka' ? "✓ მხარდაჭერილია ავტომატური ორმხრივი თარგმნა Firestore შენახვით" : "✓ Active bidirectional text translation with Firebase database caching for zero redundancy"}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 6: CABIN/ORGANIZER PREVIEW */}
+                  {mockActiveTab === 'organizer' && (
+                    <div className="flex flex-col h-full justify-between flex-1 gap-4">
+                      <div className="flex items-center justify-between border-b border-proton-border/30 pb-2">
+                        <div className="flex items-center gap-2">
+                          <UserCheck size={14} className="text-purple-400" />
+                          <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">
+                            {language === 'ka' ? 'სისტემური კაბინეტი & შეკვეთები' : 'Personal Cabinet & Live Task Organizer'}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono bg-purple-400/10 text-purple-400 px-2 py-0.5 rounded-full border border-purple-400/20">PERSISTENT ACCOUNT</span>
+                      </div>
+
+                      <div className="bg-proton-card/40 border border-proton-border/50 rounded-2xl p-3 flex-1">
+                        <div className="flex items-center gap-4 mb-3 pb-2 border-b border-proton-border/30 justify-around text-center">
+                          <div>
+                            <p className="text-[8px] font-mono text-proton-muted uppercase">{language === 'ka' ? 'ჩემი ნივთები' : 'My Listings'}</p>
+                            <p className="text-[10px] font-black text-proton-text">3 ACTIVE</p>
+                          </div>
+                          <div className="w-px h-6 bg-proton-border/40" />
+                          <div>
+                            <p className="text-[8px] font-mono text-proton-muted uppercase">{language === 'ka' ? 'შემოსული მოთხოვნები' : 'Incoming Orders'}</p>
+                            <p className="text-[10px] font-black text-purple-400">4 INCOMING</p>
+                          </div>
+                          <div className="w-px h-6 bg-proton-border/40" />
+                          <div>
+                            <p className="text-[8px] font-mono text-proton-muted uppercase">{language === 'ka' ? 'ჩემი შესყიდვები' : 'Outbound Purchases'}</p>
+                            <p className="text-[10px] font-black text-proton-accent">2 REVIEWS</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 text-[9px] text-left">
+                          <div className="p-2 bg-proton-bg border border-proton-border rounded-xl flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <p className="font-extrabold text-proton-text leading-tight">MacBook Air M2 8GB 256GB</p>
+                              <p className="text-proton-muted text-[8px] font-mono">ORDER ID: pr_82df2a &bull; BUYER: Davit D.</p>
+                            </div>
+                            <span className="px-2 py-0.5 bg-amber-400/10 text-amber-500 rounded text-[8px] border border-amber-400/20 font-bold uppercase tracking-widest">{language === 'ka' ? 'მომზადებაშია' : 'In Progress'}</span>
+                          </div>
+                          <div className="p-2 bg-proton-bg border border-proton-border rounded-xl flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <p className="font-extrabold text-proton-text leading-tight">Enterprise Cloud Deploy Package</p>
+                              <p className="text-proton-muted text-[8px] font-mono">ORDER ID: pr_cf418 &bull; BUYER: Mary S.</p>
+                            </div>
+                            <span className="px-2 py-0.5 bg-emerald-400/10 text-emerald-500 rounded text-[8px] border border-emerald-400/20 font-bold uppercase tracking-widest">{language === 'ka' ? 'მიწოდებულია' : 'Delivered'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </div>
