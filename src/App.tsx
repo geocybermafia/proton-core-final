@@ -1401,7 +1401,41 @@ const DashboardView = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const templates = [
+  const templates = uiMode === 'creative' ? [
+    {
+      id: 'template-creative-1',
+      title: language === 'ka' ? '🎨 სუპრემატისტული თბილისი' : '🎨 Suprematist Tbilisi Artwork',
+      desc: language === 'ka'
+        ? 'ფუტურისტული ხელოვნების დიზაინი და სუპრემატისტული ვიზუალები.'
+        : 'Futuristic art designs and suprematist geometric landscapes.',
+      prompt: language === 'ka'
+        ? 'Generate a futuristic landscape of Tbilisi in the style of avant-garde suprematism, featuring high-contrast geometric towers, Metekhi church silhouette, and neon light vectors, detailed 8k cinematic lighting.'
+        : 'Generate a futuristic landscape of Tbilisi in the style of avant-garde suprematism, featuring high-contrast geometric towers, Metekhi church silhouette, and neon light vectors, detailed 8k cinematic lighting.',
+      targetView: 'image'
+    },
+    {
+      id: 'template-creative-2',
+      title: language === 'ka' ? '✍️ ქართული ღვინის ბრენდინგის პოეზია' : '✍️ Georgian Wine Branding Storytelling',
+      desc: language === 'ka'
+        ? 'სარეკლამო კოპირაიტინგი ქართული ღვინის ახალი ბრენდისთვის.'
+        : 'Creative copywriting & poetic branding for a historic Saperavi brand.',
+      prompt: language === 'ka'
+        ? 'Write a poetic, elegant advertising copy for a premium Saperavi wine from Kakheti, blending Georgian historical winemaking legacy with futuristic neo-tradition aesthetics.'
+        : 'Write a poetic, elegant advertising copy for a premium Saperavi wine from Kakheti, blending Georgian historical winemaking legacy with futuristic neo-tradition aesthetics.',
+      targetView: 'personas'
+    },
+    {
+      id: 'template-creative-3',
+      title: language === 'ka' ? '🌐 ბილინგვური საიტის ლოკალიზაცია' : '🌐 Multilingual UI Content Localization',
+      desc: language === 'ka'
+        ? 'landing გვერდის ტექსტების პროფესიონალური თარგმნა და ადაპტაცია.'
+        : 'Translate and polish a creative agency landing page copy.',
+      prompt: language === 'ka'
+        ? 'Translate and polish the landing page copy of a creative design agency from English to Georgian, maintaining the bold, rebellious, modern technological copywriting tone.'
+        : 'Translate and polish the landing page copy of a creative design agency from English to Georgian, maintaining the bold, rebellious, modern technological copywriting tone.',
+      targetView: 'translator'
+    }
+  ] : [
     {
       id: 'template-1',
       title: language === 'ka' ? '🎨 ქართული რეწვის სტარტაპის გეგმა' : '🎨 Georgia Artisan Craft Startup Plan',
@@ -1410,7 +1444,8 @@ const DashboardView = ({
         : 'Business action plan, sources, and exporting local crafts.',
       prompt: language === 'ka'
         ? 'გამარჯობა! მე ვგეგმავ ქართული ტრადიციული თიხის ჭურჭლისა და კერამიკის სახელოსნოს გაფართოებას და პროდუქციის ექსპორტზე გატანას. შეგიძლია შემიდგინო დეტალური ბიზნეს გეგმა, მასალების ხარჯებისა და მარკეტინგული არხების ჩათვლით?'
-        : 'Hello! I am planning to expand a traditional Georgian pottery and ceramics workshop and export our products. Can you draft a comprehensive business plan, including material costs, automation suggestions, and marketing channels?'
+        : 'Hello! I am planning to expand a traditional Georgian pottery and ceramics workshop and export our products. Can you draft a comprehensive business plan, including material costs, automation suggestions, and marketing channels?',
+      targetView: 'personas'
     },
     {
       id: 'template-2',
@@ -1420,7 +1455,8 @@ const DashboardView = ({
         : 'Syncing online inquiries and utilizing Instagram Reels for local customer acquisition.',
       prompt: language === 'ka'
         ? 'როგორ შემიძლია Proton Workflows-ის დახმარებით ავტომატურად შევაგროვო და დავამუშაო ინსტაგრამიდან შემოსული კლიენტების მონაცემები ჩემი კაფესთვის თბილისში, რათა შევამცირო ხელით წერა და გავზარდო ლოიალურობა?'
-        : 'How can I utilize automated Proton Workflows to capture customer leads from Instagram, sync them to a local CRM for my cafe in Tbilisi, and eliminate manual entry?'
+        : 'How can I utilize automated Proton Workflows to capture customer leads from Instagram, sync them to a local CRM for my cafe in Tbilisi, and eliminate manual entry?',
+      targetView: 'blueprints'
     },
     {
       id: 'template-3',
@@ -1430,7 +1466,8 @@ const DashboardView = ({
         : 'Integrating decentralized wallet payments directly for Georgian guest-houses.',
       prompt: language === 'ka'
         ? 'მე ვარ Web3 ენთუზიასტი და მინდა ქართულ საოჯახო სასტუმროებში (Kakheti-სა და Svaneti-ში) დავნერგო კრიპტო და Web3 გადახდები ტურისტებისთვის. რა არის ამის საუკეთესო და მარტივი ტექნოლოგიური სტრატეგია?'
-        : 'I want to integrate crypto and decentralized Web3 payments for tourists visiting local guest-houses in Kakheti and Svaneti. What is the most seamless engineering and regulatory strategy for this in Georgia?'
+        : 'I want to integrate crypto and decentralized Web3 payments for tourists visiting local guest-houses in Kakheti and Svaneti. What is the most seamless engineering and regulatory strategy for this in Georgia?',
+      targetView: 'personas'
     }
   ];
 
@@ -1553,17 +1590,23 @@ const DashboardView = ({
         </button>
       </div>
 
-      {/* Quick Start Business Templates & Prompts */}
+      {/* Dynamic Themed Templates & Prompts */}
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-black text-proton-text uppercase tracking-tight flex items-center gap-2">
-            <ClipboardList className="text-proton-accent" size={18} />
-            {language === 'ka' ? 'სწრაფი ტესტირების შაბლონები' : 'Quick Start Playbook'}
+            <ClipboardList className={uiMode === 'creative' ? "text-amber-500" : "text-proton-accent"} size={18} />
+            {uiMode === 'creative'
+              ? (language === 'ka' ? 'კრეატიული შთაგონების შაბლონები' : 'Creative Inspiration Hub')
+              : (language === 'ka' ? 'სწრაფი ტესტირების შაბლონები' : 'Quick Start Playbook')}
           </h3>
           <p className="text-[10px] text-proton-muted font-black uppercase tracking-wider mt-1">
-            {language === 'ka' 
-              ? 'დააკოპირეთ მზა ბიზნეს იდეები და მარკეტინგული კითხვები, რომლებიც მორგებულია ქართულ რეალობაზე' 
-              : 'Copy tested product requests and marketing templates specifically adapted to the local market'}
+            {uiMode === 'creative'
+              ? (language === 'ka' 
+                ? 'დააკოპირეთ მზა კრეატიული იდეები, დიზაინის მოთხოვნები და ბრენდინგის პრომტები' 
+                : 'Copy tested art directions, copywriting prompts, and storytelling frameworks adapted for creative work')
+              : (language === 'ka' 
+                ? 'დააკოპირეთ მზა ბიზნეს იდეები და მარკეტინგული კითხვები, რომლებიც მორგებულია ქართულ რეალობაზე' 
+                : 'Copy tested product requests and marketing templates specifically adapted to the local market')}
           </p>
         </div>
 
@@ -1571,18 +1614,21 @@ const DashboardView = ({
           {templates.map((tpl) => (
             <div 
               key={tpl.id}
-              className="bg-proton-card/40 backdrop-blur-sm p-6 rounded-[32px] border border-proton-border/80 flex flex-col justify-between gap-4 group/tpl hover:border-proton-accent/40 transition-all shadow-md relative overflow-hidden"
+              className={cn(
+                "bg-proton-card/40 backdrop-blur-sm p-6 rounded-[32px] border flex flex-col justify-between gap-4 group/tpl transition-all shadow-md relative overflow-hidden",
+                uiMode === 'creative' ? "border-amber-500/10 hover:border-amber-500/30" : "border-proton-border/80 hover:border-proton-accent/30"
+              )}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent opacity-0 group-hover/tpl:opacity-100 transition-opacity pointer-events-none" />
+              <div className={cn(
+                "absolute inset-0 bg-gradient-to-br opacity-0 group-hover/tpl:opacity-100 transition-opacity pointer-events-none",
+                uiMode === 'creative' ? "from-amber-500/5 to-transparent" : "from-proton-accent/5 to-transparent"
+              )} />
               <div className="space-y-2 relative z-10 w-full">
                 <h4 className="text-xs font-black uppercase tracking-wider text-proton-text">{tpl.title}</h4>
                 <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">{tpl.desc}</p>
-                <div className="bg-proton-bg/60 p-3.5 rounded-2xl border border-proton-border/40 max-h-[100px] overflow-y-auto font-medium text-[10px] text-proton-text/70 italic select-all custom-scrollbar-minimal">
-                  "{tpl.prompt}"
-                </div>
               </div>
-
-              <div className="flex items-center gap-2 relative z-10">
+              
+              <div className="flex gap-2 relative z-10 w-full">
                 <button
                   type="button"
                   onClick={() => handleCopy(tpl.id, tpl.prompt)}
@@ -1590,20 +1636,27 @@ const DashboardView = ({
                     "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
                     copiedId === tpl.id 
                       ? "bg-green-500 border-green-500 text-white" 
-                      : "bg-proton-secondary/20 border-proton-border/60 text-proton-muted hover:border-proton-accent hover:text-proton-accent hover:bg-proton-accent/5"
+                      : (uiMode === 'creative'
+                         ? "bg-proton-secondary/20 border-proton-border/60 text-proton-muted hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/5"
+                         : "bg-proton-secondary/20 border-proton-border/60 text-proton-muted hover:border-proton-accent hover:text-proton-accent hover:bg-proton-accent/5")
                   )}
                 >
                   {copiedId === tpl.id ? <Check size={12} /> : <Copy size={12} />}
-                  {copiedId === tpl.id ? (language === 'ka' ? 'დაკოპირდა!' : 'Copied!') : (language === 'ka' ? 'კოპირება' : 'Copy Prompt')}
+                  {copiedId === tpl.id ? (language === 'ka' ? 'კოპირებულია' : 'Copied!') : (language === 'ka' ? 'პრომტის ასლი' : 'Copy Prompt')}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveView('personas');
+                    setActiveView(tpl.targetView as any || 'personas');
                   }}
-                  className="px-4 py-2.5 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent hover:bg-proton-accent hover:text-proton-bg rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95"
+                  className={cn(
+                    "px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border",
+                    uiMode === 'creative'
+                      ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-black"
+                      : "bg-proton-accent/10 border-proton-accent/20 text-proton-accent hover:bg-proton-accent hover:text-proton-bg"
+                  )}
                 >
-                  {language === 'ka' ? 'გახსნა' : 'Open Chat'}
+                  {language === 'ka' ? 'გახსნა' : 'Launch'}
                 </button>
               </div>
             </div>
@@ -1672,73 +1725,126 @@ const DashboardView = ({
            <ObjectiveCenter language={language} />
         </div>
       ) : (
-        <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border group/card hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover/card:opacity-100 transition-all">
-                <ArrowUpRight size={20} className="text-proton-accent" />
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent mb-6 group-hover/card:scale-110 transition-transform">
-                <Compass size={28} />
-              </div>
-              <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
-                {language === 'ka' ? 'ტექნიკური ბაზა' : 'Technical Base'}
-              </h3>
-              <p className="text-xs text-proton-muted font-medium leading-relaxed">
-                {t.hub.technical_base_desc}
-              </p>
-            </div>
+        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+           <div>
+             <h3 className="text-xl font-black text-proton-text uppercase tracking-tight flex items-center gap-2">
+               <Sparkles className="text-amber-500 animate-pulse" size={20} />
+               {language === 'ka' ? 'შემოქმედებითი ინსტრუმენტების ნაკრები' : 'INTEGRATED CREATIVE STUDIO'}
+             </h3>
+             <p className="text-[10px] text-proton-muted font-black uppercase tracking-wider mt-1">
+               {language === 'ka' 
+                 ? 'გააქტიურეთ სასურველი ხელსაწყო შემოქმედებითი პროდუქტიულობის მისაღწევად' 
+                 : 'Select a customized dynamic canvas below to launch productive creative sessions'}
+             </p>
+           </div>
 
-            <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border group/card hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover/card:opacity-100 transition-all">
-                <ArrowUpRight size={20} className="text-proton-accent" />
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Studio Card */}
+              <div 
+                onClick={() => setActiveView('image')}
+                className="bg-proton-card/50 p-10 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group shadow-lg relative overflow-hidden"
+              >
+                 <div className="absolute top-0 right-0 p-6">
+                    <ArrowRight className="text-proton-muted group-hover:text-amber-500 group-hover:translate-x-2 transition-all" size={24} />
+                 </div>
+                 <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-colors">
+                       <ImageIcon size={28} />
+                    </div>
+                 </div>
+                 <div className="space-y-2">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      STUDIO ENGINE
+                    </div>
+                    <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">
+                       {language === 'ka' ? 'ვიზუალური სტუდია' : 'AI Image Studio'}
+                    </h3>
+                    <p className="text-xs text-proton-muted font-semibold leading-relaxed">
+                       {language === 'ka' 
+                         ? 'შექმენით მაღალი ხარისხის ილუსტრაციები, ბანერები და ციფრული ხელოვნება Google Gemini მოდელების საშუალებით.' 
+                         : 'Generate exceptional illustrations, branding materials, and digital graphics powered by advanced Gemini models.'}
+                    </p>
+                 </div>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent mb-6 group-hover/card:scale-110 transition-transform">
-                <Zap size={28} />
-              </div>
-              <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
-                {language === 'ka' ? 'ხელსაწყოები' : 'Tools'}
-              </h3>
-              <p className="text-xs text-proton-muted font-medium leading-relaxed">
-                {t.hub.tools_desc}
-              </p>
-            </div>
 
-            <div className="bg-proton-card/50 backdrop-blur-md p-8 rounded-[40px] border border-proton-border group/card hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-6 opacity-0 group-hover/card:opacity-100 transition-all">
-                <ArrowUpRight size={20} className="text-proton-accent" />
+              {/* Translator Card */}
+              <div 
+                onClick={() => setActiveView('translator')}
+                className="bg-proton-card/50 p-10 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group shadow-lg relative overflow-hidden"
+              >
+                 <div className="absolute top-0 right-0 p-6">
+                    <ArrowRight className="text-proton-muted group-hover:text-amber-500 group-hover:translate-x-2 transition-all" size={24} />
+                 </div>
+                 <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-colors">
+                       <Languages size={28} />
+                    </div>
+                 </div>
+                 <div className="space-y-2">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      LOCALIZATION
+                    </div>
+                    <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">
+                       {language === 'ka' ? 'ენების მთარგმნელი' : 'Bilingual Localizer'}
+                    </h3>
+                    <p className="text-xs text-proton-muted font-semibold leading-relaxed">
+                       {language === 'ka' 
+                         ? 'მძლავრი ორენოვანი თარგმანი და ლოკალიზაციის ხელსაწყო დოკუმენტებისა და ტექსტების ადაპტაციისთვის.' 
+                         : 'Bilingual localization lab for multi-national copy translation, contextual polishing, and precise editing.'}
+                    </p>
+                 </div>
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-proton-accent/10 flex items-center justify-center text-proton-accent mb-6 group-hover/card:scale-110 transition-transform">
-                <Sparkles size={28} />
-              </div>
-              <h3 className="text-xl font-black text-proton-text uppercase tracking-tight mb-2">
-                {language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant'}
-              </h3>
-              <p className="text-xs text-proton-muted font-medium leading-relaxed">
-                {t.hub.ai_assistant_desc}
-              </p>
-            </div>
-          </div>
 
-          <div className="bg-amber-500/5 p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
-             <div className="flex-1 space-y-4">
-                <h3 className="text-3xl font-black text-proton-text uppercase tracking-tighter">
-                  {language === 'ka' ? 'შემოქმედებითი ხელსაწყოები' : 'Creative Tools'}
-                </h3>
-                <p className="text-proton-muted font-medium">
-                  {language === 'ka' ? 'გამოიყენეთ ხელოვნური ინტელექტი თქვენი ყოველდღიური სამუშაოს გამარტივებისთვის. ჩვენი სისტემა დაგეხმარებათ რთული პრობლემების მარტივად გადაჭრაში.' : 'Use AI to simplify your daily work. Our system will help you solve complex problems with ease.'}
-                </p>
-                <button 
-                  onClick={() => setActiveView('personas')}
-                  className="px-8 py-4 bg-amber-500 text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 transition-transform"
-                >
-                  {language === 'ka' ? 'დაიწყე მუშაობა' : 'Get Started'}
-                </button>
-             </div>
-             <div className="w-full md:w-64 h-64 bg-proton-card rounded-[40px] border border-proton-border flex items-center justify-center p-8">
-                <Cpu className="text-amber-500/50 w-full h-full" />
-             </div>
-          </div>
+              {/* Marketplace Card */}
+              <div 
+                onClick={() => setActiveView('market')}
+                className="bg-proton-card/50 p-10 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group shadow-lg relative overflow-hidden"
+              >
+                 <div className="absolute top-0 right-0 p-6">
+                    <ArrowRight className="text-proton-muted group-hover:text-amber-500 group-hover:translate-x-2 transition-all" size={24} />
+                 </div>
+                 <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-colors">
+                       <ShoppingBag size={28} />
+                    </div>
+                 </div>
+                 <div className="space-y-2">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      SECURE EXCHANGE
+                    </div>
+                    <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">
+                       {language === 'ka' ? 'სავაჭრო მარკეტი' : 'Trade Marketplace'}
+                    </h3>
+                    <p className="text-xs text-proton-muted font-semibold leading-relaxed">
+                       {language === 'ka' 
+                         ? 'გააზიარეთ, განათავსეთ ან შეიძინეთ ციფრული აქტივები, დიზაინის ნიმუშები და ინდივიდუალური სერვისები.' 
+                         : 'Trade, procure, and showcase premium creative designs, UI mockups, or freelance digital assets.'}
+                    </p>
+                 </div>
+              </div>
+           </div>
+
+           <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
+              <div className="flex-1 space-y-4">
+                 <h3 className="text-3xl font-black text-proton-text uppercase tracking-tighter">
+                   {language === 'ka' ? 'ექსპრესიული კრიპტო სავაჭრო რეჟიმი' : 'EXPRESSIVE TRADE ACTIVE'}
+                 </h3>
+                 <p className="text-sm text-proton-muted font-medium">
+                   {language === 'ka' 
+                     ? 'გააქტიურებულია კრეატიული მოდულის უნიკალური დიზაინი, რომელიც გაძლევთ წვდომას ხელოვანების, ბილინგვური სააგენტოებისა და ციფრული დიზაინერების გაერთიანებულ პლატფორმასთან.' 
+                     : 'Creative Mode active. Your workspaces, local visual asset registers, and P2P marketplace nodes are synchronizing in real time.'}
+                 </p>
+                 <button 
+                   onClick={() => setActiveView('image')}
+                   className="px-8 py-4 bg-amber-500 text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 hover:bg-amber-600 transition-all"
+                 >
+                   {language === 'ka' ? 'დაიწყე ხატვა' : 'Launch Art Engine'}
+                 </button>
+              </div>
+              <div className="w-full md:w-64 h-64 bg-proton-card rounded-[40px] border border-proton-border flex items-center justify-center p-8 shrink-0">
+                 <Cpu className="text-amber-500/50 w-full h-full animate-pulse" />
+              </div>
+           </div>
         </div>
       )}
     </div>
@@ -2236,7 +2342,9 @@ const PersonasView = ({
   favoritePersonaIds,
   onToggleFavorite,
   language,
-  user
+  user,
+  isAdmin,
+  checkAndIncrementAiQuota
 }: { 
   history: PersonaHistory, 
   onNewMessage: (personaId: string, msg: ChatMessage) => void,
@@ -2255,7 +2363,8 @@ const PersonasView = ({
   onToggleFavorite: (id: string) => void,
   language: 'en' | 'ka',
   user: any,
-  isAdmin: boolean
+  isAdmin: boolean,
+  checkAndIncrementAiQuota: () => Promise<boolean>
 }) => {
   const navigate = useNavigate();
   const [selectedPersona, setSelectedPersona] = useState<Persona>(() => {
@@ -2302,6 +2411,8 @@ const PersonasView = ({
 
   const handleGeneratePersona = async () => {
     if (!personaPrompt.trim()) return;
+    const permitted = await checkAndIncrementAiQuota();
+    if (!permitted) return;
     setLoading(true);
     try {
       const newPersona = await generateNewPersona(selectedPersona, personaPrompt);
@@ -2325,6 +2436,9 @@ const PersonasView = ({
 
   const handleSend = async () => {
     if (!isCreativeMode || !input.trim() || loading) return;
+
+    const permitted = await checkAndIncrementAiQuota();
+    if (!permitted) return;
 
     const userMessage = input.trim();
     const timestamp = Date.now();
@@ -2725,7 +2839,7 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
 
 
 
-const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean }) => {
+const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndIncrementAiQuota }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean, checkAndIncrementAiQuota: () => Promise<boolean> }) => {
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2734,12 +2848,8 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin }: { uiMod
   const handleGenerate = async () => {
     if (!isCreativeMode || !prompt.trim()) return;
 
-    if (!isAdmin) {
-      alert(language === 'ka' 
-        ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
-        : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
-      return;
-    }
+    const permitted = await checkAndIncrementAiQuota();
+    if (!permitted) return;
 
     setLoading(true);
     try {
@@ -2818,7 +2928,8 @@ const WorkflowEditor = ({
   personas,
   uiMode,
   language,
-  isAdmin
+  isAdmin,
+  checkAndIncrementAiQuota
 }: {
   workflow: Workflow,
   onSave: (workflow: Workflow) => void,
@@ -2826,7 +2937,8 @@ const WorkflowEditor = ({
   personas: Persona[],
   uiMode: 'business' | 'creative',
   language: 'en' | 'ka',
-  isAdmin: boolean
+  isAdmin: boolean,
+  checkAndIncrementAiQuota: () => Promise<boolean>
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
   const [editorMode, setEditorMode] = useState<'form' | 'flow'>('form');
@@ -2990,12 +3102,8 @@ const WorkflowEditor = ({
             </div>
             <button 
               onClick={async () => {
-                if (!isAdmin) {
-                  alert(language === 'ka' 
-                    ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
-                    : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
-                  return;
-                }
+                const permitted = await checkAndIncrementAiQuota();
+                if (!permitted) return;
                 const analysis = await analyzeWorkflow(formData);
                 alert(analysis);
               }}
@@ -3028,7 +3136,8 @@ const WorkflowsView = ({
   uiMode,
   language,
   isCreativeMode = true,
-  isAdmin
+  isAdmin,
+  checkAndIncrementAiQuota
 }: {
   workflows: Workflow[],
   setWorkflows: React.Dispatch<React.SetStateAction<Workflow[]>>,
@@ -3037,7 +3146,8 @@ const WorkflowsView = ({
   uiMode: 'business' | 'creative',
   language: 'en' | 'ka',
   isCreativeMode?: boolean,
-  isAdmin: boolean
+  isAdmin: boolean,
+  checkAndIncrementAiQuota: () => Promise<boolean>
 }) => {
   const t = translations[language].workflows;
   const common = translations[language].common;
@@ -3073,12 +3183,9 @@ const WorkflowsView = ({
   };
 
   const handleAnalyze = async (wf: Workflow) => {
-    if (!isAdmin) {
-      alert(language === 'ka' 
-        ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
-        : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
-      return;
-    }
+    const permitted = await checkAndIncrementAiQuota();
+    if (!permitted) return;
+
     const result = await analyzeWorkflow(wf);
     const updatedWorkflow = {
       ...wf,
@@ -3259,6 +3366,7 @@ const WorkflowsView = ({
             uiMode={uiMode}
             language={language}
             isAdmin={isAdmin}
+            checkAndIncrementAiQuota={checkAndIncrementAiQuota}
           />
         )}
       </AnimatePresence>
@@ -3372,6 +3480,10 @@ export default function App() {
     if (newMode === uiMode) return;
     setIsTransitioning(true);
     setUiMode(newMode);
+    
+    // Always navigate to the mode's main Hub (Dashboard) for a custom structured choice deck
+    navigate('/dashboard');
+
     setTimeout(() => setIsTransitioning(false), 2000);
   };
 
@@ -3424,6 +3536,10 @@ export default function App() {
   }, []);
 
   const setActiveView = React.useCallback((view: View) => {
+    if (view === 'personas' || view === 'image' || view === 'blueprints') {
+      setShowBetaModal(true);
+      return;
+    }
     navigate(getPathnameFromView(view));
   }, [navigate, getPathnameFromView]);
 
@@ -3477,8 +3593,18 @@ export default function App() {
 
   const [isFirestoreActive, setIsFirestoreActive] = useState(false);
   const [showOptimizationModal, setShowOptimizationModal] = useState(false);
+  const [showBetaModal, setShowBetaModal] = useState(false);
   const [isSafeMode, setIsSafeMode] = useState(false);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const blockedPaths = ['/personas', '/blueprints', '/studio'];
+    const isBlocked = blockedPaths.some(p => location.pathname.startsWith(p));
+    if (isBlocked) {
+      navigate('/dashboard', { replace: true });
+      setShowBetaModal(true);
+    }
+  }, [location.pathname, navigate]);
 
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
     if (!user && view !== 'translator' && view !== 'market') {
@@ -3486,25 +3612,26 @@ export default function App() {
       return;
     }
 
+    if (view === 'personas' || view === 'image' || view === 'blueprints') {
+      setShowBetaModal(true);
+      return;
+    }
+
     const isUserAdmin = (auth.currentUser?.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
     const isCreativeActive = isCreativeMode || isUserAdmin;
-    if (!isCreativeActive && !isSafeMode && (view === 'personas' || view === 'image' || view === 'blueprints' || view === 'compute')) {
+    if (!isCreativeActive && !isSafeMode && (view === 'compute')) {
       setShowOptimizationModal(true);
       return;
     }
     
-    if (view === 'personas' && personaId) {
-      setSelectedPersonaId(personaId);
-      navigate(`/personas/${personaId}`);
-    } else {
-      setActiveView(view);
-    }
+    setActiveView(view);
 
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
   }, [user, isCreativeMode, isSafeMode, navigate, setActiveView]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showLogs, setShowLogs] = useState(false);
@@ -3685,6 +3812,8 @@ export default function App() {
     node_id?: string;
     aiTokens: number;
     computeTimeHours: number;
+    dailyGenerationsCount?: number;
+    dailyGenerationsDate?: string;
   }>({
     storageGB: 1.42,
     workHours: 142.5,
@@ -3692,7 +3821,9 @@ export default function App() {
     productivity: 92,
     node_id: 'PN-4299-GE',
     aiTokens: 5000,
-    computeTimeHours: 142.5
+    computeTimeHours: 142.5,
+    dailyGenerationsCount: 0,
+    dailyGenerationsDate: ''
   });
 
   useEffect(() => {
@@ -3910,14 +4041,18 @@ export default function App() {
           ...prev,
           storageGB: data.storageGB || prev.storageGB,
           computeTimeHours: data.computeTimeHours || prev.computeTimeHours,
-          aiTokens: data.aiTokens || prev.aiTokens
+          aiTokens: data.aiTokens || prev.aiTokens,
+          dailyGenerationsCount: data.dailyGenerationsCount !== undefined ? data.dailyGenerationsCount : prev.dailyGenerationsCount,
+          dailyGenerationsDate: data.dailyGenerationsDate || prev.dailyGenerationsDate
         }));
       } else {
         // Init stats with some realistic dev data if missing
         setDoc(statsRef, {
           storageGB: 1.2,
           computeTimeHours: 0.1,
-          aiTokens: 150
+          aiTokens: 150,
+          dailyGenerationsCount: 0,
+          dailyGenerationsDate: ''
         }, { merge: true }).catch(err => handleFirestoreError(err, 'write', statsRef.path));
       }
     }, (err) => {
@@ -3942,48 +4077,64 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
+  async function checkAndIncrementAiQuota(): Promise<boolean> {
+    if (!user) return true;
+    if (isAdmin) return true;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+    
+    let currentCount = 0;
+    let currentDate = todayStr;
+    
+    try {
+      const snap = await getDoc(statsRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        currentCount = data.dailyGenerationsCount || 0;
+        currentDate = data.dailyGenerationsDate || '';
+      }
+    } catch (err) {
+      console.warn("Could not fetch stats, permitting anyway as fallback to avoid hard blocking", err);
+      return true;
+    }
+    
+    // Reset count if it's a new day
+    if (currentDate !== todayStr) {
+      currentCount = 0;
+    }
+    
+    if (currentCount >= 20) {
+      const errMsgEn = "AI Quota Exceeded: You have reached your limit of 20 generations per day. Please try again tomorrow!";
+      const errMsgKa = "AI ლიმიტი ამოიწურა: თქვენ მიაღწიეთ დღეში მაქსიმუმ 20 გენერაციის ლიმიტს. გთხოვთ სცადოთ ხვალ!";
+      const errMsg = userProfile.language === 'ka' ? errMsgKa : errMsgEn;
+      
+      addLog('warning', errMsg);
+      alert(errMsg);
+      return false;
+    }
+    
+    // Increment and update in Firebase
+    const nextCount = currentCount + 1;
+    try {
+      await setDoc(statsRef, {
+        dailyGenerationsCount: nextCount,
+        dailyGenerationsDate: todayStr
+      }, { merge: true });
+    } catch (err) {
+      console.warn("Could not write daily stats update to Firebase", err);
+    }
+    
+    return true;
+  };
+
   useEffect(() => {
     safeStorage.set('proton_tasks', JSON.stringify(tasks));
   }, [tasks]);
 
   async function handleTTS(text: string) {
-    try {
-      const base64Audio = await generateSpeech(text, aiSettings.voice);
-      const binary = atob(base64Audio);
-      const dataSize = binary.length;
-      
-      // Create WAV header (WAV header is 44 bytes)
-      const buffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(buffer);
-      
-      const writeString = (offset: number, str: string) => {
-        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-      };
-      
-      writeString(0, 'RIFF');
-      view.setUint32(4, 36 + dataSize, true);
-      writeString(8, 'WAVE');
-      writeString(12, 'fmt ');
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true); // PCM
-      view.setUint16(22, 1, true); // Mono
-      view.setUint32(24, 24000, true); // 24kHz
-      view.setUint32(28, 48000, true); // ByteRate
-      view.setUint16(32, 2, true); // BlockAlign
-      view.setUint16(34, 16, true); // BitsPerSample
-      writeString(36, 'data');
-      view.setUint32(40, dataSize, true);
-      
-      const pcmData = new Uint8Array(buffer, 44);
-      for (let i = 0; i < dataSize; i++) pcmData[i] = binary.charCodeAt(i);
-      
-      const blob = new Blob([buffer], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
-    } catch (error) {
-      console.error("TTS Playback Error:", error);
-    }
+    setShowBetaModal(true);
+    return;
   }
 
     const handleGoogleSignIn = async () => {
@@ -4126,12 +4277,8 @@ export default function App() {
 
   const handleAiSuggestTasks = async () => {
     if (!isCreativeMode) return;
-    if (!isAdmin) {
-      alert(language === 'ka' 
-        ? "ხელოვნურ ინტელექტთან წვდომა შეზღუდულია. გთხოვთ, გამოიყენოთ Google AI Studio-ს გარემო."
-        : "AI access is restricted to the administrator. Please use the Google AI Studio environment.");
-      return;
-    }
+    const permitted = await checkAndIncrementAiQuota();
+    if (!permitted) return;
     try {
       const workflowContext = workflows.map(w => `${w.name}: ${w.trigger} -> ${w.action}`).join('; ');
       const existingTasks = tasks.map(t => t.content).join(', ');
@@ -4175,8 +4322,7 @@ export default function App() {
 
   const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
   const t = translations[currentLanguage];
-  const isPlayground = window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost');
-  const isAdmin = (user?.email === 'devdarianib@gmail.com' || isPlayground) && !!user;
+  const isAdmin = !!user && (userProfile?.role === 'admin' || user.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
 
   if (!authInitialized) {
     return (
@@ -4277,133 +4423,162 @@ export default function App() {
                 "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
                 isSidebarOpen ? "px-4" : "px-0"
               )}>
-                <div className="space-y-1.5 min-h-[1.5rem]">
-                  <AnimatePresence mode="wait">
-                    {isSidebarOpen && (
-                      <motion.p 
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
-                      >
-                        {t.sidebar.main}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                  <SidebarItem 
-                    icon={LayoutDashboard} 
-                    label={t.sidebar.dashboard} 
-                    active={activeView === 'dashboard'} 
-                    onClick={() => handleViewChange('dashboard')} 
-                    expanded={isSidebarOpen}
-                    uiMode={uiMode}
-                  />
-                </div>
+                {uiMode === 'business' ? (
+                  <>
+                    {/* BUSINESS MODE PANELS */}
+                    <div className="space-y-1.5 min-h-[1.5rem]">
+                      <AnimatePresence mode="wait">
+                        {isSidebarOpen && (
+                          <motion.p 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
+                          >
+                            {t.sidebar.main}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                      <SidebarItem 
+                        icon={LayoutDashboard} 
+                        label={t.sidebar.dashboard} 
+                        active={activeView === 'dashboard'} 
+                        onClick={() => handleViewChange('dashboard')} 
+                        expanded={isSidebarOpen}
+                        uiMode={uiMode}
+                      />
+                    </div>
 
-          <div className="space-y-1.5 pt-4">
-            <AnimatePresence mode="wait">
-              {isSidebarOpen && (
-                <motion.p 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
-                >
-                  {t.sidebar.agents}
-                </motion.p>
-              )}
-            </AnimatePresence>
-            
-            <Reorder.Group 
-              axis="y" 
-              values={personas} 
-              onReorder={setPersonas} 
-              className="space-y-1"
-            >
-              {personas.slice(0, isSidebarOpen ? 8 : 4).map((persona) => (
-                <SidebarPersonaItem
-                  key={persona.id}
-                  persona={persona}
-                  avatar={personaAvatars[persona.id] || persona.avatar}
-                  active={activeView === 'personas' && selectedPersonaId === persona.id}
-                  onClick={() => handleViewChange('personas', persona.id)}
-                  expanded={isSidebarOpen}
-                />
-              ))}
-            </Reorder.Group>
+                    <div className="space-y-1.5 pt-4">
+                      <AnimatePresence mode="wait">
+                        {isSidebarOpen && (
+                          <motion.button 
+                            type="button"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            onClick={() => setIsAgentsExpanded(!isAgentsExpanded)}
+                            className="w-full text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-2 flex items-center justify-between hover:text-proton-accent transition-colors select-none text-left"
+                          >
+                            <span>{t.sidebar.agents}</span>
+                            <ChevronDown size={14} className={cn("transition-transform duration-300", isAgentsExpanded ? "rotate-0" : "-rotate-90")} />
+                          </motion.button>
+                        )}
+                      </AnimatePresence>
+                      
+                      {isAgentsExpanded && (
+                        <>
+                          <Reorder.Group 
+                            axis="y" 
+                            values={personas} 
+                            onReorder={setPersonas} 
+                            className="space-y-1"
+                          >
+                            {personas.slice(0, isSidebarOpen ? 8 : 4).map((persona) => (
+                              <SidebarPersonaItem
+                                key={persona.id}
+                                persona={persona}
+                                avatar={personaAvatars[persona.id] || persona.avatar}
+                                active={activeView === 'personas' && selectedPersonaId === persona.id}
+                                onClick={() => handleViewChange('personas', persona.id)}
+                                expanded={isSidebarOpen}
+                              />
+                            ))}
+                          </Reorder.Group>
 
-            {isSidebarOpen && personas.length > 8 && (
-              <button 
-                onClick={() => handleViewChange('personas')}
-                className="w-full text-center py-2 text-[10px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
-              >
-                + {personas.length - 8} More Agents
-              </button>
-            )}
+                          {isSidebarOpen && personas.length > 8 && (
+                            <button 
+                              onClick={() => handleViewChange('personas')}
+                              className="w-full text-center py-2 text-[10px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
+                            >
+                              + {personas.length - 8} More Agents
+                            </button>
+                          )}
+                        </>
+                      )}
 
-            <div className="pt-4">
-              <SidebarItem 
-                icon={CalendarIcon} 
-                label={t.sidebar.organizer} 
-                active={activeView === 'organizer'} 
-                onClick={() => handleViewChange('organizer')} 
-                expanded={isSidebarOpen}
-                uiMode={uiMode}
-              />
-            </div>
-          </div>
+                      <div className="pt-4">
+                        <SidebarItem 
+                          icon={CalendarIcon} 
+                          label={t.sidebar.organizer} 
+                          active={activeView === 'organizer'} 
+                          onClick={() => handleViewChange('organizer')} 
+                          expanded={isSidebarOpen}
+                          uiMode={uiMode}
+                        />
+                      </div>
 
-          <div className="space-y-1.5 pt-6">
-            <AnimatePresence mode="wait">
-              {isSidebarOpen && (
-                <motion.p 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
-                >
-                  {t.sidebar.creative}
-                </motion.p>
-              )}
-            </AnimatePresence>
-            <SidebarItem 
-              icon={ShoppingBag} 
-              label={t.sidebar.market} 
-              active={activeView === 'market'} 
-              onClick={() => handleViewChange('market')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={Image} 
-              label={t.sidebar.image} 
-              active={activeView === 'image'} 
-              onClick={() => handleViewChange('image')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            <SidebarItem 
-              icon={Languages} 
-              label={t.sidebar.translator} 
-              active={(activeView as string) === 'translator'} 
-              onClick={() => handleViewChange('translator')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode}
-            />
-            {userProfile.showCommercialHub && (
-              <SidebarItem 
-                icon={TrendingUp} 
-                label={t.sidebar.commercial} 
-                active={activeView === 'commercial'} 
-                onClick={() => handleViewChange('commercial')} 
-                expanded={isSidebarOpen}
-                uiMode={uiMode}
-                badge="EXIT"
-              />
-            )}
-          </div>
+                      <div className="pt-2">
+                        <SidebarItem 
+                          icon={WorkflowIcon} 
+                          label={t.sidebar.blueprints} 
+                          active={activeView === 'blueprints'} 
+                          onClick={() => handleViewChange('blueprints')} 
+                          expanded={isSidebarOpen}
+                          uiMode={uiMode}
+                        />
+                      </div>
 
-            <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
+                      {userProfile.showCommercialHub && (
+                        <div className="pt-2">
+                          <SidebarItem 
+                            icon={TrendingUp} 
+                            label={t.sidebar.commercial} 
+                            active={activeView === 'commercial'} 
+                            onClick={() => handleViewChange('commercial')} 
+                            expanded={isSidebarOpen}
+                            uiMode={uiMode}
+                            badge="EXIT"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* CREATIVE MODE PANELS */}
+                    <div className="space-y-1.5 min-h-[1.5rem]">
+                      <AnimatePresence mode="wait">
+                        {isSidebarOpen && (
+                          <motion.p 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
+                          >
+                            {language === 'ka' ? 'კრეატიული მოდულები' : 'CREATIVE SUITE'}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                      <SidebarItem 
+                        icon={Image} 
+                        label={t.sidebar.image} 
+                        active={activeView === 'image'} 
+                        onClick={() => handleViewChange('image')} 
+                        expanded={isSidebarOpen}
+                        uiMode={uiMode}
+                      />
+                      <SidebarItem 
+                        icon={Languages} 
+                        label={t.sidebar.translator} 
+                        active={(activeView as string) === 'translator'} 
+                        onClick={() => handleViewChange('translator')} 
+                        expanded={isSidebarOpen}
+                        uiMode={uiMode}
+                      />
+                      <SidebarItem 
+                        icon={ShoppingBag} 
+                        label={t.sidebar.market} 
+                        active={activeView === 'market'} 
+                        onClick={() => handleViewChange('market')} 
+                        expanded={isSidebarOpen}
+                        uiMode={uiMode}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
               <AnimatePresence mode="wait">
                 {isSidebarOpen && (
                 <motion.p 
@@ -4546,14 +4721,17 @@ export default function App() {
 
       {/* Bottom Nav (Mobile Only) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
-        {[
+        {(uiMode === 'business' ? [
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
-          { id: 'market', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
-          { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'დავალებები' : 'Tasks' },
+          { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
+          { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'ჰაბი' : 'Cabinet' },
+        ] : [
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
+          { id: 'translator', icon: Languages, label: language === 'ka' ? 'თარგმანი' : 'Translate' },
+          { id: 'market', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
-        ].map((item) => (
+        ]).map((item) => (
           <button
             key={item.id}
             onClick={() => handleViewChange(item.id as any)}
@@ -4591,18 +4769,47 @@ export default function App() {
             >
               <Grid size={20} />
             </button>
+            
+            <div className="hidden md:flex flex-col select-none">
+              <div className="flex items-center gap-2">
+                {uiMode === 'business' ? (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse shadow-[0_0_8px_var(--proton-accent)]" />
+                    <span className="text-xs font-black tracking-widest text-proton-text uppercase font-mono">
+                      {language === 'ka' ? 'ბიზნეს საოპერაციო პანელი' : 'BUSINESS OPERATIONS DECK'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_#ff9f1c]" />
+                    <span className="text-xs font-black tracking-widest text-proton-text uppercase font-mono">
+                      {language === 'ka' ? 'შემოქმედებითი სივრცე' : 'CREATIVE DESIGN SPACE'}
+                    </span>
+                  </>
+                )}
+              </div>
+              <span className="text-[9px] font-mono text-proton-muted mt-0.5 uppercase tracking-wide">
+                {uiMode === 'business' ? (
+                  language === 'ka' ? 'ავტომატიზაცია, ნოდები და მართვა' : 'Automation, blueprints & multi-agents active'
+                ) : (
+                  language === 'ka' ? 'დიზაინი, მედია და თარგმნის სტუდია' : 'AI studio, interactive localization & art tools active'
+                )}
+              </span>
+            </div>
           </div>
 
           {/* Center Section: Main Navigation (Icons Only) */}
           <nav className="hidden xl:flex items-center justify-center gap-2 md:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
-            {[
+            {(uiMode === 'business' ? [
               { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
-              {id: 'personas', label: t.sidebar.agents, icon: Users},
-              {id: 'market', label: t.sidebar.market, icon: ShoppingBag},
-              {id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon},
-              { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
+              { id: 'personas', label: t.sidebar.agents, icon: Users },
+              { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
-            ].map((link) => (
+            ] : [
+              { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
+              { id: 'translator', icon: Languages, label: language === 'ka' ? 'ინსტრუმენტი' : 'Translator' },
+              { id: 'market', label: t.sidebar.market, icon: ShoppingBag },
+            ]).map((link) => (
               <button
                 key={link.id}
                 onClick={() => handleViewChange(link.id as any)}
@@ -4741,9 +4948,10 @@ export default function App() {
                   language={userProfile.language}
                   user={user}
                   isAdmin={isAdmin}
+                  checkAndIncrementAiQuota={checkAndIncrementAiQuota}
                 />
               )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} />}
+              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} />}
               {activeView === 'blueprints' && (
                 <WorkflowsView 
                   workflows={workflows}
@@ -4754,6 +4962,7 @@ export default function App() {
                   language={userProfile.language}
                   isCreativeMode={isCreativeMode || isAdmin}
                   isAdmin={isAdmin}
+                  checkAndIncrementAiQuota={checkAndIncrementAiQuota}
                 />
               )}
               {activeView === 'organizer' && (
@@ -5008,6 +5217,75 @@ export default function App() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showBetaModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6 select-none font-sans">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowBetaModal(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-2xl"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 30 }}
+              transition={{ type: "spring", duration: 0.5, bounce: 0.15 }}
+              className="relative bg-proton-card/93 w-full max-w-lg rounded-[40px] border border-red-500/35 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden text-center p-8 sm:p-10 space-y-6"
+            >
+              {/* Outer Glowing Accents */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+              
+              <div className="flex flex-col items-center justify-center space-y-4">
+                {/* Microanimated Locked Shield / Core Visual */}
+                <div className="relative">
+                  {/* Decorative rotating/pulsing ring */}
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 15, ease: "linear" }}
+                    className="absolute -inset-4 rounded-full border border-dashed border-red-500/20"
+                  />
+                  <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                    <Lock size={28} className="animate-pulse" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500/80 font-mono">
+                    System Core Security
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black tracking-widest text-proton-text uppercase font-sans">
+                    PROTON-CORE // CLOSED BETA
+                  </h3>
+                </div>
+              </div>
+
+              {/* Message Block with Divider */}
+              <div className="space-y-4 py-4 border-y border-proton-border/40 text-left sm:text-center">
+                {/* Georgian */}
+                <p className="text-sm font-bold text-proton-text leading-relaxed tracking-wide font-sans">
+                  ეს მოდული დროებით შეზღუდულია და იმყოფება დახურულ ტესტირებაში. ფუნქციონალი ხელმისაწვდომი გახდება შემდეგ ფაზაში.
+                </p>
+                {/* English */}
+                <div className="w-8 h-[2px] bg-red-500/20 mx-auto" />
+                <p className="text-xs font-semibold text-proton-muted leading-relaxed tracking-wider font-sans">
+                  This module is temporarily restricted and is undergoing closed beta testing. Full functionality will become available in the next phase.
+                </p>
+              </div>
+
+              {/* Primary Premium Interaction Button */}
+              <button 
+                onClick={() => setShowBetaModal(false)}
+                className="w-full py-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white rounded-3xl font-black text-xs uppercase tracking-[0.25em] shadow-[0_4px_20px_rgba(239,68,68,0.3)] hover:shadow-[0_4px_25px_rgba(239,68,68,0.45)] transition-all active:scale-98 tracking-widest cursor-pointer"
+              >
+                Acknowledge & Sync
+              </button>
             </motion.div>
           </div>
         )}

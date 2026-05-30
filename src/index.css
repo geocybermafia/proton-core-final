@@ -27,6 +27,27 @@
   --proton-bg-size: auto, 50px 50px;
 }
 
+/* Creative Mode Ambient styling overrides */
+[data-ui-mode='creative'] {
+  --proton-accent: #ffaa00; /* Hot Creative Amber/Gold */
+  --proton-accent-hover: #e09000;
+}
+
+[data-ui-mode='creative']:not([data-theme='light']) {
+  --proton-bg: #090601; /* Extra warm base */
+  --proton-card: #140f06; /* Cozy warm dynamic card */
+  --proton-border: #3b2a12; /* Deep warm border */
+  --proton-bg-image: radial-gradient(circle at 50% 50%, #140f06 0%, #090601 100%), linear-gradient(0deg, transparent 24%, rgba(245, 158, 11, 0.02) 25%, rgba(245, 158, 11, 0.02) 26%, transparent 27%), linear-gradient(90deg, transparent 24%, rgba(245, 158, 11, 0.02) 25%, rgba(245, 158, 11, 0.02) 26%, transparent 27%);
+}
+
+[data-ui-mode='creative'][data-theme='light'] {
+  --proton-accent: #ea580c; /* Warm Orange in Light Mode */
+  --proton-accent-hover: #c2410c;
+  --proton-bg: #fffdf9; /* Cream background */
+  --proton-card: #ffffff;
+  --proton-border: #fed7aa; /* Soft amber/orange border */
+}
+
 [data-theme='light'] {
   --proton-accent: #2563eb;
   --proton-accent-hover: #1d4ed8;

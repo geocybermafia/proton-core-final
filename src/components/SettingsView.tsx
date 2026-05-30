@@ -39,6 +39,9 @@ import { translations } from '../translations';
 import { UserProfile, GlobalAiSettings, Theme } from '../types';
 import { useToast } from './Toast';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -80,6 +83,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const t = translations[language].settings;
   const common = translations[language].common;
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -89,9 +93,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { showToast } = useToast();
   const { setLanguage } = useLanguage();
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+    
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        // Sync to cloud Firestore safely
+        await setDoc(userDocRef, {
+          name: userProfile.name || '',
+          email: userProfile.email || '',
+          language: userProfile.language || 'en',
+          region: userProfile.region || '',
+          notifications: !!userProfile.notifications,
+          phoneNumber: userProfile.phoneNumber || '',
+          avatar: userProfile.avatar || '',
+          role: userProfile.role || 'System Architect',
+          showCommercialHub: !!userProfile.showCommercialHub
+        }, { merge: true });
+      } catch (err) {
+        console.error("Failed to sync user profile directly to Firestore:", err);
+      }
+    }
     
     showToast(
       language === 'ka' 
