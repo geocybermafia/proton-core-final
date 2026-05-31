@@ -1827,12 +1827,12 @@ const DashboardView = ({
            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
               <div className="flex-1 space-y-4">
                  <h3 className="text-3xl font-black text-proton-text uppercase tracking-tighter">
-                   {language === 'ka' ? 'ექსპრესიული კრიპტო სავაჭრო რეჟიმი' : 'EXPRESSIVE TRADE ACTIVE'}
+                   {language === 'ka' ? 'ექსპრესიული კრეატიული რეჟიმი' : 'EXPRESSIVE CREATIVE MODE'}
                  </h3>
                  <p className="text-sm text-proton-muted font-medium">
                    {language === 'ka' 
                      ? 'გააქტიურებულია კრეატიული მოდულის უნიკალური დიზაინი, რომელიც გაძლევთ წვდომას ხელოვანების, ბილინგვური სააგენტოებისა და ციფრული დიზაინერების გაერთიანებულ პლატფორმასთან.' 
-                     : 'Creative Mode active. Your workspaces, local visual asset registers, and P2P marketplace nodes are synchronizing in real time.'}
+                     : 'Creative Mode active. Your workspaces, local visual asset registers, and digital design platforms are synchronizing in real time.'}
                  </p>
                  <button 
                    onClick={() => setActiveView('image')}
