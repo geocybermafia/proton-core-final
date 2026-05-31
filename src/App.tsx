@@ -3580,6 +3580,7 @@ export default function App() {
   useEffect(() => {
     const configRef = doc(db, 'system', 'config');
     const unsubscribe = onSnapshot(configRef, (snapshot) => {
+      setIsFirestoreActive(true);
       if (snapshot.exists()) {
         setIsCreativeMode(snapshot.data().isCreativeMode ?? false);
       } else {
@@ -3587,11 +3588,25 @@ export default function App() {
       }
     }, (error) => {
       setIsCreativeMode(false);
+      if (error.code === 'unavailable' || error.message?.includes('offline')) {
+        setIsFirestoreActive(false);
+      }
     });
     return () => unsubscribe();
   }, []);
 
-  const [isFirestoreActive, setIsFirestoreActive] = useState(false);
+  const [isFirestoreActive, setIsFirestoreActive] = useState(() => typeof window !== 'undefined' ? window.navigator.onLine : true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsFirestoreActive(true);
+    const handleOffline = () => setIsFirestoreActive(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [showOptimizationModal, setShowOptimizationModal] = useState(false);
   const [showBetaModal, setShowBetaModal] = useState(false);
   const [isSafeMode, setIsSafeMode] = useState(false);
@@ -3669,10 +3684,11 @@ export default function App() {
       setIsFirestoreActive(true);
       return await promise;
     } catch (error: any) {
+      if (error.code === 'unavailable' || error.message?.includes('offline')) {
+        setIsFirestoreActive(false);
+      }
       handleFirestoreError(error, operationType, path, addLog);
       throw error;
-    } finally {
-      setIsFirestoreActive(false);
     }
   }, [addLog]);
 

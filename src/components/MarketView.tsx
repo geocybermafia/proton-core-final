@@ -212,6 +212,22 @@ const MARKET_THEMES: Record<string, MarketTheme> = {
   }
 };
 
+const PREMIUM_INDUSTRIAL: MarketTheme = {
+  card: "bg-[#0b0b0c]/95 border-zinc-800/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] text-zinc-100 backdrop-blur-2xl transition-all duration-300 hover:shadow-[#dfb257]/5",
+  input: "bg-[#050506]/95 border-zinc-800/80 focus:border-[#d4af37]/45 text-zinc-100 placeholder:text-zinc-600 transition-all font-mono",
+  accent: "text-[#dfb257]",
+  accentBg: "bg-gradient-to-b from-[#e5af37] to-[#b8860b] hover:from-[#f3be4b] hover:to-[#cfa01b]",
+  border: "border-zinc-800/60",
+  muted: "text-zinc-400 font-mono tracking-wider",
+  text: "text-zinc-100",
+  subtext: "text-zinc-300",
+  tagMuted: "text-zinc-500",
+  cardAlt: "bg-[#101012] border border-zinc-800/60 text-zinc-200 backdrop-blur-xl",
+  badgeBg: "bg-gradient-to-b from-zinc-800 to-zinc-900 border-zinc-700/80 shadow-md text-[#dfb257] font-black uppercase tracking-widest",
+  bgHover: "hover:bg-zinc-850 hover:text-[#dfb257]",
+  overlay: "bg-[#060607]/95 backdrop-blur-3xl border border-zinc-800/80 shadow-2xl"
+};
+
 const WORLD_COUNTRIES = [
   { code: 'GLOBAL', name: 'Worldwide', flag: '🌐' },
   { code: 'USA', name: 'United States', flag: '🇺🇸' },
@@ -653,7 +669,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     }
   };
 
-  const currentTheme = MARKET_THEMES[themeId] || MARKET_THEMES.industrial;
+  const currentTheme = PREMIUM_INDUSTRIAL;
 
   useEffect(() => {
     const qListings = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
@@ -1312,7 +1328,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
               className={cn(
                 "col-span-2 flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border text-left",
                 activeCategory === 'all' 
-                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-lg shadow-blue-500/10"
+                  ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/40 text-[#dfb257] shadow-lg shadow-black/60"
                   : "bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white"
               )}
             >
@@ -1327,7 +1343,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 className={cn(
                   "flex items-center gap-2 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border text-left",
                   activeCategory === key 
-                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-lg shadow-blue-500/10"
+                    ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/45 text-[#dfb257] shadow-lg shadow-black/60"
                     : "bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white"
                 )}
                 title={label as string}
@@ -1379,11 +1395,16 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
   );
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-12 p-1 px-4 lg:px-0 bg-transparent min-h-screen pb-40"
-    >
+    <div className="min-h-screen bg-[#070708] rounded-[36px] p-6 lg:p-10 border border-zinc-805/70 shadow-[0_32px_90px_rgba(0,0,0,0.95)] relative overflow-hidden">
+      {/* Heavy Backdrop Solid Gradients / Subtle non-flicker accents as requested */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#dfb257]/[0.015] blur-[155px] pointer-events-none rounded-full" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-zinc-900/[0.1] blur-[180px] pointer-events-none rounded-full" />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-12 bg-transparent pb-40 relative z-10"
+      >
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="flex items-center gap-6">
           {viewMode !== 'browse' && (
@@ -1459,7 +1480,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                 >
                   <ShoppingCart size={20} />
                   {cart.length > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-black text-black">
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#dfb257] text-[10px] font-black text-[#070708]">
                       {cart.length}
                     </span>
                   )}
@@ -1482,7 +1503,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     });
                     setViewMode('create');
                   }}
-                  className={cn("p-3.5 rounded-2xl shadow-xl shadow-blue-500/10 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
+                  className={cn("p-3.5 rounded-2xl shadow-xl shadow-black/80 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
                 >
                   <Plus size={20} />
                 </button>
@@ -1507,7 +1528,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   onClick={() => setDisplayMode('map')}
                   className={cn(
                     "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
-                    displayMode === 'map' ? "bg-[#2e5bff] text-white shadow-md border border-white/10 shadow-blue-500/10" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-md border border-zinc-700/80 shadow-black/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                   )}
                   title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
                 >
@@ -1647,7 +1668,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   className={cn(
                     "flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
                     activeCategory === 'all'
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-xl shadow-blue-500/20 scale-[1.02] -translate-y-0.5"
+                      ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/40 text-[#dfb257] shadow-xl shadow-black/80 scale-[1.02] -translate-y-0.5"
                       : cn(currentTheme.cardAlt, currentTheme.bgHover)
                   )}
                 >
@@ -1662,7 +1683,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                     className={cn(
                       "flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
                       activeCategory === key
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500/30 text-white shadow-xl shadow-blue-500/20 scale-[1.02] -translate-y-0.5"
+                        ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/45 text-[#dfb257] shadow-xl shadow-black/80 scale-[1.02] -translate-y-0.5"
                         : cn(currentTheme.cardAlt, currentTheme.bgHover)
                     )}
                   >
@@ -1954,7 +1975,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   key={listing.id}
                   transition={{ delay: idx * 0.04 }}
                   className={cn(
-                    "group rounded-2xl overflow-hidden transition-all flex flex-col relative border border-white/5 hover:border-[#10b981]/20 hover:shadow-[0_0_24px_rgba(16,185,129,0.06)] duration-300",
+                    "group rounded-2xl overflow-hidden transition-all duration-500 flex flex-col relative border border-zinc-805/70 hover:border-[#dfb257]/35 hover:shadow-[0_12px_45px_rgba(223,178,87,0.07)] hover:-translate-y-1.5",
                     currentTheme.card
                   )}
                 >
@@ -1992,7 +2013,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                         <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
                       </div>
                       {sellerRatings[listing.sellerId]?.avg >= 4.5 && (
-                        <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-gradient-to-r from-amber-500 to-yellow-400 text-black rounded-lg border border-amber-400/50 flex items-center gap-1 shadow-md shadow-amber-500/10">
+                        <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-gradient-to-r from-[#e5af37] to-[#b8860b] text-zinc-950 border border-[#d4af37]/45 rounded-lg flex items-center gap-1 shadow-md">
                           <Star size={8} className="fill-black text-black sm:size-[10px]" />
                           <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-wider">
                             {language === 'ka' ? '✓ ტოპ რეიტინგი' : '✓ TOP VENDOR'}
@@ -2028,9 +2049,9 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   </div>
 
                   <div className="p-4 sm:p-6 flex-1 flex flex-col relative space-y-3">
-                     <h2 
+                    <h2 
                       onClick={() => setCheckoutItem(listing)}
-                      className={cn("text-[13px] sm:text-lg font-black tracking-tight mb-0.5 sm:mb-1 uppercase group-hover:text-proton-accent cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
+                      className={cn("text-[13px] sm:text-lg font-black tracking-tight mb-0.5 sm:mb-1 uppercase group-hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
                     >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                     </h2>
@@ -2042,7 +2063,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                         <div className="flex flex-col min-w-0">
                           <span className={cn("text-[8px] font-black uppercase tracking-widest opacity-40 mb-0.5", currentTheme.muted)}>{t.market.price}</span>
-                          <span className="text-sm sm:text-2xl font-black tracking-tighter text-[#10b981] drop-shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+                          <span className="text-sm sm:text-2xl font-black tracking-tighter text-[#dfb257] drop-shadow-[0_0_6px_rgba(223,178,87,0.15)]">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             <span className="text-[8px] sm:text-[10px] font-black opacity-50 ml-1 tracking-wider">{displayCurrency}</span>
                           </span>
@@ -2050,15 +2071,15 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
                         {/* Product / Service / Project Badge */}
                         {listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-sm shrink-0">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-[#dfb257] shadow-sm shrink-0">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
                         ) : listing.listingType === 'project' || listing.category === 'project' ? (
-                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm shrink-0">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-[#c5a059]/10 border border-[#c5a059]/30 text-[#c5a059] shadow-sm shrink-0">
                             {language === 'ka' ? 'პროექტი' : 'Project'}
                           </span>
                         ) : (
-                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] shadow-sm shrink-0">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-widest bg-[#a88238]/10 border border-[#a88238]/30 text-[#dfb257] shadow-sm shrink-0">
                             {language === 'ka' ? 'პროდუქტი' : 'Product'}
                           </span>
                         )}
@@ -2086,14 +2107,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                             title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
                           >
                             <div className="flex items-center gap-1 min-w-0">
-                              <span className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-proton-accent transition-colors", currentTheme.text)}>{listing.sellerName}</span>
-                              <ShieldCheck size={9} className="shrink-0 text-emerald-500" />
+                              <span className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-[#dfb257] transition-colors", currentTheme.text)}>{listing.sellerName}</span>
+                              <ShieldCheck size={9} className="shrink-0 text-[#dfb257]" />
                             </div>
                             <div className="hidden xs:flex items-center mt-0.5">
                               {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
                                 <div className="flex items-center gap-0.5">
-                                  <Star size={7} className="fill-amber-400 text-amber-400" />
-                                  <span className="text-[7px] font-black text-amber-400">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
+                                  <Star size={7} className="fill-[#dfb257] text-[#dfb257]" />
+                                  <span className="text-[7px] font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
                                 </div>
                               ) : (
                                 <span className="text-[6px] font-bold text-white/35 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
@@ -2110,7 +2131,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                                 e.stopPropagation();
                                 setActiveChatListing(listing);
                               }}
-                              className="p-1.5 sm:p-2 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                              className="p-1.5 sm:p-2 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-[#dfb257] hover:bg-white/10 transition-all"
                               title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
                             >
                               <MessageCircle size={12} className="sm:size-[14px]" />
@@ -2125,7 +2146,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                                 e.stopPropagation();
                                 handleAddToCart(listing);
                               }}
-                              className="p-1.5 sm:p-2 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-emerald-500 text-black hover:bg-emerald-400 focus:outline-none flex items-center justify-center border border-emerald-400/20"
+                              className="p-1.5 sm:p-2 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30"
                               title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                             >
                               <ShoppingCart size={12} className="sm:size-[14px]" />
@@ -2233,7 +2254,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
                   <div className="mt-8">
                     <button 
                       onClick={() => setIsFiltersOpen(false)}
-                      className={cn("w-full py-4 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-500/20", currentTheme.accentBg)}
+                      className={cn("w-full py-4 text-[#070708] rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/80", currentTheme.accentBg)}
                     >
                       {language === 'ka' ? 'შედეგების ჩვენება' : 'Apply Filters'}
                     </button>
@@ -3287,6 +3308,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         )}
       </AnimatePresence>
     </motion.div>
+  </div>
   );
 }
 
