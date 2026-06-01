@@ -112,14 +112,14 @@ service cloud.firestore {
     }
 
     match /test/connection {
-      allow get: if true;
+      allow get: if isSignedIn();
     }
 
     // ======================================================
     // 2. LISTINGS (PILLAR 3 & 8)
     // ======================================================
     match /listings/{listingId} {
-      allow read: if true;
+      allow read: if isSignedIn();
       allow create: if isVerified() && isValidId(listingId) && isValidListingCreate(incoming());
       allow update: if isVerified() && isValidId(listingId) && (
         // Action: Edit by owner
@@ -160,7 +160,7 @@ service cloud.firestore {
     // 6. SELLER REVIEWS & RATINGS (NEW - TRUST & SAFETY)
     // ======================================================
     match /seller_reviews/{reviewId} {
-      allow read: if true; // Publicly viewable reviews
+      allow read: if isSignedIn(); // Viewable only by logged-in users
       allow create: if isVerified() && isValidId(reviewId) 
         && incoming().buyerId == request.auth.uid 
         && incoming().sellerId != request.auth.uid 

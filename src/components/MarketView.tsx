@@ -43,6 +43,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -396,7 +397,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     try {
       for (const item of cart) {
         const isService = item.listingType === 'service' || item.category === 'service';
-        await addDoc(collection(db, 'orders'), {
+        const orderData = {
           listingId: item.id,
           buyerId: user.uid,
           sellerId: item.sellerId,
@@ -406,8 +407,18 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
           status: isService ? 'booked' : 'completed',
           orderType: isService ? 'service' : 'product',
           buyerInstructions: '',
-          createdAt: serverTimestamp()
-        });
+          createdAt: Date.now()
+        };
+
+        if (isSupabaseConfigured()) {
+          const { error } = await supabase.from('orders').insert([orderData]);
+          if (error) console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", error);
+        } else {
+          await addDoc(collection(db, 'orders'), {
+            ...orderData,
+            createdAt: serverTimestamp()
+          });
+        }
       }
       setCart([]);
       setIsCartOpen(false);
@@ -723,39 +734,72 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
       setSellerOrders([]);
       return;
     }
-    
-    const qBuyerOrders = query(
-      collection(db, 'orders'), 
-      where('buyerId', '==', user.uid)
-    );
-    const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setBuyerOrders(data);
-    }, (error) => {
-      console.warn("Buyer orders listen failed:", error);
-    });
 
-    const qSellerOrders = query(
-      collection(db, 'orders'), 
-      where('sellerId', '==', user.uid)
-    );
-    const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSellerOrders(data);
-    }, (error) => {
-      console.warn("Seller orders listen failed:", error);
-    });
+    if (isSupabaseConfigured()) {
+      const fetchSupabaseOrders = async () => {
+        const { data: bData, error: bErr } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('buyerId', user.uid);
+        if (!bErr && bData) setBuyerOrders(bData);
 
-    return () => {
-      unsubscribeBuyer();
-      unsubscribeSeller();
-    };
+        const { data: sData, error: sErr } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('sellerId', user.uid);
+        if (!sErr && sData) setSellerOrders(sData);
+      };
+
+      fetchSupabaseOrders();
+
+      const channel = supabase
+        .channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders' },
+          () => {
+            fetchSupabaseOrders();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      const qBuyerOrders = query(
+        collection(db, 'orders'), 
+        where('buyerId', '==', user.uid)
+      );
+      const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setBuyerOrders(data);
+      }, (error) => {
+        console.warn("Buyer orders listen failed:", error);
+      });
+
+      const qSellerOrders = query(
+        collection(db, 'orders'), 
+        where('sellerId', '==', user.uid)
+      );
+      const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setSellerOrders(data);
+      }, (error) => {
+        console.warn("Seller orders listen failed:", error);
+      });
+
+      return () => {
+        unsubscribeBuyer();
+        unsubscribeSeller();
+      };
+    }
   }, [user?.uid]);
 
   const clearFilters = () => {
@@ -896,8 +940,7 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
     setIsCheckingOut(true);
     try {
       const isService = checkoutItem.listingType === 'service' || checkoutItem.category === 'service';
-
-      await addDoc(collection(db, 'orders'), {
+      const orderData = {
         listingId: checkoutItem.id,
         buyerId: user.uid,
         sellerId: checkoutItem.sellerId,
@@ -907,8 +950,18 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
         status: isService ? 'booked' : 'completed',
         orderType: isService ? 'service' : 'product',
         buyerInstructions: isService ? buyerInstructions.trim() : '',
-        createdAt: serverTimestamp()
-      });
+        createdAt: Date.now()
+      };
+
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.from('orders').insert([orderData]);
+        if (error) throw error;
+      } else {
+        await addDoc(collection(db, 'orders'), {
+          ...orderData,
+          createdAt: serverTimestamp()
+        });
+      }
       
       setCheckoutItem(null);
       setBuyerInstructions('');
@@ -924,9 +977,14 @@ export function MarketView({ language, t, themeId }: MarketViewProps) {
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        status: newStatus
-      });
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+        if (error) throw error;
+      } else {
+        await updateDoc(doc(db, 'orders', orderId), {
+          status: newStatus
+        });
+      }
     } catch (error) {
       console.error("Error updating order status:", error);
       alert(language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status.");

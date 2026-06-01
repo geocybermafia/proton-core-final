@@ -5,7 +5,8 @@ import { LocalFileScanner } from './components/LocalFileScanner';
 import { ObjectiveCenter } from './components/ObjectiveCenter';
 import { auth, db, googleProvider } from './firebase';
 import { useAuth } from './contexts/AuthContext';
-import { supabase } from './lib/supabase';
+import { supabase, isSupabaseConfigured } from './lib/supabase';
+
 import { 
   signInWithPopup, 
   signOut, 
@@ -3673,6 +3674,21 @@ export default function App() {
     };
     setLogs(prev => [newLog, ...prev].slice(0, 100));
     console.log(`[SYSTEM ${type.toUpperCase()}] ${message}`, details || '');
+
+    // Hybrid database routing: High-frequency operational logs run through Supabase
+    if (isSupabaseConfigured()) {
+      supabase.from('operational_logs').insert([{
+        id: newLog.id,
+        type: newLog.type,
+        message: newLog.message,
+        timestamp: newLog.timestamp,
+        data: newLog.data ? (typeof newLog.data === 'string' ? newLog.data : JSON.stringify(newLog.data)) : null
+      }]).then(({ error }) => {
+        if (error) {
+          console.warn("[HYBRID DB] Operational log failed to sync to Supabase:", error.message);
+        }
+      });
+    }
   }, []);
 
   const trackFirestore = useCallback(async <T,>(
