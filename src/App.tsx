@@ -4478,11 +4478,11 @@ export default function App() {
               <div className="absolute inset-0 bg-gradient-to-b from-proton-accent/[0.03] to-transparent pointer-events-none" />
               
               <div className={cn(
-                "h-20 shrink-0 flex items-center gap-4 px-6 border-b border-proton-border/30 overflow-hidden relative z-10 transition-all duration-500",
+                "h-16 shrink-0 flex items-center gap-3 px-5 border-b border-proton-border/30 overflow-hidden relative z-10 transition-all duration-500",
                 !isSidebarOpen && "md:justify-center md:px-0"
               )}>
-                <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
-                  <Layout size={22} fill="currentColor" />
+                <div className="w-8 h-8 rounded-xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
+                  <Layout size={18} fill="currentColor" />
                 </div>
                 <AnimatePresence mode="wait">
                   {isSidebarOpen && (
@@ -4492,8 +4492,8 @@ export default function App() {
                       exit={{ opacity: 0, x: -20 }}
                       className="flex flex-col"
                     >
-                      <span className="text-xl font-black tracking-tight text-proton-text uppercase">System</span>
-                      <span className="text-[10px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90">Workspace</span>
+                      <span className="text-sm font-black tracking-tight text-proton-text uppercase">System</span>
+                      <span className="text-[8px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90 mt-0.5">Workspace</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
