@@ -258,12 +258,13 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
             await context.resume();
           }
 
-          // Manual decode 16-bit PCM to Float32
-          // We use DataView to explicitly handle Little Endianness
-          const pcmData = new Int16Array(bytes.buffer);
-          const float32Data = new Float32Array(pcmData.length);
-          for (let i = 0; i < pcmData.length; i++) {
-            float32Data[i] = pcmData[i] / 32768.0; // Normalize Int16 to [-1, 1]
+          // Manual decode 16-bit PCM to Float32 safely using DataView to handle any alignment, size or endianness issues
+          const length = Math.floor(bytes.byteLength / 2);
+          const float32Data = new Float32Array(length);
+          const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          for (let i = 0; i < length; i++) {
+            const int16Val = dataView.getInt16(i * 2, true); // true for Little Endian
+            float32Data[i] = int16Val / 32768.0; // Normalize Int16 to [-1, 1]
           }
 
           const audioBuffer = context.createBuffer(1, float32Data.length, 24000);

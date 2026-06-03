@@ -116,8 +116,8 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-current">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-proton-text">
               {language === 'ka' ? 'ელ-ფოსტა' : 'Email Address'}
             </label>
             <input
@@ -125,10 +125,10 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
               name="email"
               id="email"
               required
-              placeholder={language === 'ka' ? 'name@example.com' : 'name@example.com'}
+              placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md bg-transparent border-current focus:outline-none focus:ring-2 focus:ring-proton-accent"
+              className="w-full px-4 py-2 bg-proton-bg border border-proton-border rounded-lg outline-none focus:ring-2 focus:ring-proton-accent/20 transition-all text-proton-text"
             />
           </div>
 
