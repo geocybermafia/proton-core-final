@@ -4490,7 +4490,7 @@ export default function App() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      className="flex flex-col"
+                      className="flex flex-col transition-all duration-200 ease-in-out hover:opacity-80 cursor-default select-none"
                     >
                       <span className="text-sm font-black tracking-tight text-proton-text uppercase">System</span>
                       <span className="text-[8px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90 mt-0.5">Workspace</span>
