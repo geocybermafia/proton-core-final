@@ -23,7 +23,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import CabinetView from './components/CabinetView';
 import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
-import { MarketView } from './components/MarketView';
+import { MarketHub } from './components/MarketHub';
 import { AuthFlow } from './components/AuthFlow';
 import { OrganizerView } from './components/OrganizerView';
 import { CommercialHub } from './components/CommercialHub';
@@ -112,6 +112,7 @@ import {
   LayoutDashboard,
   Receipt,
   FileText,
+  FileSpreadsheet,
   Building,
   Calendar as CalendarIcon,
   Check,
@@ -179,7 +180,7 @@ const SidebarItem = React.memo(({
   active: boolean, 
   onClick: () => void,
   expanded?: boolean,
-  uiMode?: 'business' | 'creative',
+  uiMode?: 'business' | 'creative' | 'market',
   badge?: string
 }) => (
   <button
@@ -1739,7 +1740,7 @@ const DashboardView = ({
              </p>
            </div>
 
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Studio Card */}
               <div 
                 onClick={() => setActiveView('image')}
@@ -1796,33 +1797,7 @@ const DashboardView = ({
                  </div>
               </div>
 
-              {/* Marketplace Card */}
-              <div 
-                onClick={() => setActiveView('market')}
-                className="bg-proton-card/50 p-10 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group shadow-lg relative overflow-hidden"
-              >
-                 <div className="absolute top-0 right-0 p-6">
-                    <ArrowRight className="text-proton-muted group-hover:text-amber-500 group-hover:translate-x-2 transition-all" size={24} />
-                 </div>
-                 <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-colors">
-                       <ShoppingBag size={28} />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                      SECURE EXCHANGE
-                    </div>
-                    <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">
-                       {language === 'ka' ? 'სავაჭრო მარკეტი' : 'Trade Marketplace'}
-                    </h3>
-                    <p className="text-xs text-proton-muted font-semibold leading-relaxed">
-                       {language === 'ka' 
-                         ? 'გააზიარეთ, განათავსეთ ან შეიძინეთ ციფრული აქტივები, დიზაინის ნიმუშები და ინდივიდუალური სერვისები.' 
-                         : 'Trade, procure, and showcase premium creative designs, UI mockups, or freelance digital assets.'}
-                    </p>
-                 </div>
-              </div>
+
            </div>
 
            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
@@ -3416,33 +3391,64 @@ const FlashOverlay = ({ mode }: { mode: 'business' | 'creative' }) => (
   </motion.div>
 );
 
-const ModeToggle = ({ mode, setMode, language }: { mode: 'business' | 'creative', setMode: (m: 'business' | 'creative') => void, t: any, language: string }) => (
-  <div className="relative p-1 bg-proton-bg/50 backdrop-blur-md rounded-2xl border border-proton-border shadow-inner flex shrink-0">
+const ModeToggle = ({ 
+  mode, 
+  setMode, 
+  language, 
+  className 
+}: { 
+  mode: 'business' | 'creative' | 'market', 
+  setMode: (m: 'business' | 'creative' | 'market') => void, 
+  t: any, 
+  language: string, 
+  className?: string 
+}) => (
+  <div className={cn(
+    "relative p-1 bg-proton-bg/60 backdrop-blur-subtle rounded-2xl border border-proton-border/80 flex shrink-0 select-none overflow-hidden",
+    className
+  )}>
     <div 
       className={cn(
-        "absolute top-1 bottom-1 w-[calc(50%-4px)] transition-all duration-200 rounded-xl",
-        mode === 'business' ? "left-1 bg-proton-accent" : "left-[calc(50%+2px)] bg-amber-500"
+        "absolute top-1 bottom-1 w-[calc(33.333%-4px)] transition-all duration-300 rounded-xl",
+        mode === 'business' 
+          ? "left-1 bg-proton-accent shadow-[0_0_12px_rgba(0,242,255,0.4)]" 
+          : mode === 'creative' 
+            ? "left-[calc(33.333%+2px)] bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]" 
+            : "left-[calc(66.666%+2px)] bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.4)]"
       )}
     />
     <button 
+      type="button"
       onClick={() => setMode('business')}
       className={cn(
-        "relative z-10 flex-1 px-3 md:px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2",
-        mode === 'business' ? "text-proton-bg" : "text-proton-muted hover:text-proton-text"
+        "relative z-10 flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] transition-all flex items-center justify-center gap-2 min-w-0 select-none whitespace-nowrap",
+        mode === 'business' ? "text-proton-bg font-black" : "text-proton-muted hover:text-proton-text"
       )}
     >
-      <Activity size={14} className="shrink-0" />
-      <span className="hidden sm:inline">{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>
+      <Activity size={12} className={cn("shrink-0", mode === 'business' && "animate-pulse")} />
+      <span>{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>
     </button>
     <button 
+      type="button"
       onClick={() => setMode('creative')}
       className={cn(
-        "relative z-10 flex-1 px-3 md:px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2",
-        mode === 'creative' ? "text-black" : "text-proton-muted hover:text-proton-text"
+        "relative z-10 flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] transition-all flex items-center justify-center gap-2 min-w-0 select-none whitespace-nowrap",
+        mode === 'creative' ? "text-neutral-950 font-black" : "text-proton-muted hover:text-proton-text"
       )}
     >
-       <Sparkles size={14} className="shrink-0" />
-       <span className="hidden sm:inline">{language === 'ka' ? 'შემოქმედი' : 'Creative'}</span>
+      <Sparkles size={12} className="shrink-0" />
+      <span>{language === 'ka' ? 'კრეატივი' : 'Creative'}</span>
+    </button>
+    <button 
+      type="button"
+      onClick={() => setMode('market')}
+      className={cn(
+        "relative z-10 flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] transition-all flex items-center justify-center gap-2 min-w-0 select-none whitespace-nowrap",
+        mode === 'market' ? "text-neutral-950 font-black" : "text-proton-muted hover:text-proton-text"
+      )}
+    >
+      <ShoppingBag size={12} className="shrink-0" />
+      <span>{language === 'ka' ? 'ბაზარი' : 'Market'}</span>
     </button>
   </div>
 );
@@ -3470,20 +3476,24 @@ export default function App() {
   const { showToast } = useToast();
   const { language, setLanguage } = useLanguage();
 
-  const [uiMode, setUiMode] = useState<'business' | 'creative'>(() => {
+  const [uiMode, setUiMode] = useState<'business' | 'creative' | 'market'>(() => {
     try {
-      return (safeStorage.get('proton_ui_mode') as 'business' | 'creative') || 'business';
+      return (safeStorage.get('proton_ui_mode') as 'business' | 'creative' | 'market') || 'business';
     } catch { return 'business'; }
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const handleModeChange = (newMode: 'business' | 'creative') => {
+  const handleModeChange = (newMode: 'business' | 'creative' | 'market') => {
     if (newMode === uiMode) return;
     setIsTransitioning(true);
     setUiMode(newMode);
     
-    // Always navigate to the mode's main Hub (Dashboard) for a custom structured choice deck
-    navigate('/dashboard');
+    // Always navigate to the mode's main Hub (Dashboard or Market-Hub)
+    if (newMode === 'market') {
+      navigate('/market-hub');
+    } else {
+      navigate('/dashboard');
+    }
 
     setTimeout(() => setIsTransitioning(false), 2000);
   };
@@ -3499,7 +3509,8 @@ export default function App() {
   // Helper mapping pathnames to specific Views
   const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
     if (pathname.startsWith('/translator')) return 'translator';
-    if (pathname.startsWith('/market')) return 'market';
+    if (pathname.startsWith('/market-hub')) return 'market-hub';
+    if (pathname.startsWith('/market')) return 'market-hub';
     if (pathname.startsWith('/personas')) return 'personas';
     if (pathname.startsWith('/blueprints')) return 'blueprints';
     if (pathname.startsWith('/studio')) return 'image';
@@ -3519,7 +3530,8 @@ export default function App() {
   const getPathnameFromView = React.useCallback((view: View): string => {
     switch (view) {
       case 'translator': return '/translator';
-      case 'market': return '/market';
+      case 'market-hub': return '/market-hub';
+      case 'market': return '/market-hub';
       case 'personas': return '/personas';
       case 'blueprints': return '/blueprints';
       case 'image': return '/studio';
@@ -3622,8 +3634,32 @@ export default function App() {
     }
   }, [location.pathname, navigate]);
 
+  useEffect(() => {
+    if (location.pathname.startsWith('/market-hub') || location.pathname.startsWith('/market')) {
+      if (uiMode !== 'market') {
+        setUiMode('market');
+      }
+    } else if (location.pathname.startsWith('/translator') || location.pathname.startsWith('/studio')) {
+      if (uiMode !== 'creative') {
+        setUiMode('creative');
+      }
+    } else if (location.pathname.startsWith('/organizer') || location.pathname.startsWith('/blueprints')) {
+      if (uiMode !== 'business') {
+        setUiMode('business');
+      }
+    }
+  }, [location.pathname, uiMode]);
+
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
-    if (!user && view !== 'translator' && view !== 'market') {
+    if (view === 'market-hub' || view === 'market') {
+      setUiMode('market');
+    } else if (view === 'image' || view === 'translator') {
+      setUiMode('creative');
+    } else if (view === 'organizer' || view === 'blueprints' || view === 'commercial') {
+      setUiMode('business');
+    }
+
+    if (!user && view !== 'translator' && view !== 'market' && view !== 'market-hub') {
       setShowAuth(true);
       return;
     }
@@ -3645,7 +3681,7 @@ export default function App() {
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView]);
+  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView, uiMode]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -4395,7 +4431,7 @@ export default function App() {
     )}>
             <AnimatePresence>
               {isTransitioning && (
-                <FlashOverlay mode={uiMode} />
+                <FlashOverlay mode={uiMode === 'market' ? 'business' : uiMode} />
               )}
             </AnimatePresence>
 
@@ -4458,19 +4494,7 @@ export default function App() {
                 {uiMode === 'business' ? (
                   <>
                     {/* BUSINESS MODE PANELS */}
-                    <div className="space-y-1.5 min-h-[1.5rem]">
-                      <AnimatePresence mode="wait">
-                        {isSidebarOpen && (
-                          <motion.p 
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
-                          >
-                            {t.sidebar.main}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
+                    <div className="space-y-3 min-h-[1.5rem]">
                       <SidebarItem 
                         icon={LayoutDashboard} 
                         label={t.sidebar.dashboard} 
@@ -4481,7 +4505,7 @@ export default function App() {
                       />
                     </div>
 
-                    <div className="space-y-1.5 pt-4">
+                    <div className="space-y-3 pt-6">
                       <AnimatePresence mode="wait">
                         {isSidebarOpen && (
                           <motion.button 
@@ -4566,10 +4590,10 @@ export default function App() {
                       )}
                     </div>
                   </>
-                ) : (
+                ) : uiMode === 'creative' ? (
                   <>
                     {/* CREATIVE MODE PANELS */}
-                    <div className="space-y-1.5 min-h-[1.5rem]">
+                    <div className="space-y-3 min-h-[1.5rem]">
                       <AnimatePresence mode="wait">
                         {isSidebarOpen && (
                           <motion.p 
@@ -4598,13 +4622,31 @@ export default function App() {
                         expanded={isSidebarOpen}
                         uiMode={uiMode}
                       />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* MARKET MODE PANELS */}
+                    <div className="space-y-3 min-h-[1.5rem]">
+                      <AnimatePresence mode="wait">
+                        {isSidebarOpen && (
+                          <motion.p 
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
+                          >
+                            {language === 'ka' ? 'კომერციის ჰაბი' : 'COMMERCE MATRIX'}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
                       <SidebarItem 
                         icon={ShoppingBag} 
                         label={t.sidebar.market} 
-                        active={activeView === 'market'} 
-                        onClick={() => handleViewChange('market')} 
+                        active={activeView === 'market-hub'} 
+                        onClick={() => handleViewChange('market-hub')} 
                         expanded={isSidebarOpen}
-                        uiMode={uiMode}
+                        uiMode="business"
                       />
                     </div>
                   </>
@@ -4674,10 +4716,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">{language === 'ka' ? 'რეჟიმი' : 'Mode'}</p>
-                    <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
-                  </div>
+
                 </motion.div>
               )}
             </AnimatePresence>
@@ -4688,7 +4727,7 @@ export default function App() {
               active={activeView === 'profile'} 
               onClick={() => handleViewChange('profile')} 
               expanded={isSidebarOpen}
-              uiMode={uiMode}
+              uiMode={uiMode === 'market' ? 'business' : uiMode}
               badge={language === 'ka' ? 'ჰაბი' : 'HUB'}
             />
             <SidebarItem 
@@ -4697,7 +4736,7 @@ export default function App() {
               active={activeView === 'settings'} 
               onClick={() => handleViewChange('settings')} 
               expanded={isSidebarOpen}
-              uiMode={uiMode}
+              uiMode={uiMode === 'market' ? 'business' : uiMode}
               badge="AI"
             />
           </div>
@@ -4758,10 +4797,12 @@ export default function App() {
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
           { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'ჰაბი' : 'Cabinet' },
-        ] : [
+        ] : uiMode === 'creative' ? [
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
           { id: 'translator', icon: Languages, label: language === 'ka' ? 'თარგმანი' : 'Translate' },
-          { id: 'market', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
+          { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
+        ] : [
+          { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
         ]).map((item) => (
           <button
@@ -4804,43 +4845,48 @@ export default function App() {
             
             <div className="hidden md:flex flex-col select-none">
               <div className="flex items-center gap-2">
-                {uiMode === 'business' ? (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse shadow-[0_0_8px_var(--proton-accent)]" />
-                    <span className="text-xs font-black tracking-widest text-proton-text uppercase font-mono">
-                      {language === 'ka' ? 'ბიზნეს საოპერაციო პანელი' : 'BUSINESS OPERATIONS DECK'}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shadow-[0_0_8px_#ff9f1c]" />
-                    <span className="text-xs font-black tracking-widest text-proton-text uppercase font-mono">
-                      {language === 'ka' ? 'შემოქმედებითი სივრცე' : 'CREATIVE DESIGN SPACE'}
-                    </span>
-                  </>
-                )}
+                <div className={cn(
+                  "w-2 h-2 rounded-full animate-pulse",
+                  uiMode === 'business' 
+                    ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]" 
+                    : uiMode === 'creative' 
+                      ? "bg-amber-500 shadow-[0_0_8px_#ff9f1c]" 
+                      : "bg-sky-500 shadow-[0_0_8px_#0ea5e9]"
+                )} />
+                <span className="text-xs font-black tracking-widest text-proton-text uppercase font-mono">
+                  GLOBAL COMMERCE TERMINAL - {
+                    uiMode === 'business' 
+                      ? (language === 'ka' ? 'ბიზნეს ჰაბი' : 'BUSINESS HUB') 
+                      : uiMode === 'creative' 
+                        ? (language === 'ka' ? 'კრეატიული ჰაბი' : 'CREATIVE HUB') 
+                        : (language === 'ka' ? 'სავაჭრო ჰაბი' : 'MARKET HUB')
+                  }
+                </span>
               </div>
               <span className="text-[9px] font-mono text-proton-muted mt-0.5 uppercase tracking-wide">
                 {uiMode === 'business' ? (
                   language === 'ka' ? 'ავტომატიზაცია, ნოდები და მართვა' : 'Automation, blueprints & multi-agents active'
-                ) : (
+                ) : uiMode === 'creative' ? (
                   language === 'ka' ? 'დიზაინი, მედია და თარგმნის სტუდია' : 'AI studio, interactive localization & art tools active'
+                ) : (
+                  language === 'ka' ? 'სავაჭრო ბირჟის რეესტრი და ფინანსები' : 'Spreadsheet matrices, active ledger, and liquid trade assets'
                 )}
               </span>
             </div>
           </div>
 
           {/* Center Section: Main Navigation (Icons Only) */}
-          <nav className="hidden xl:flex items-center justify-center gap-2 md:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
+          <nav className="hidden xl:flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
             {(uiMode === 'business' ? [
               { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
               { id: 'personas', label: t.sidebar.agents, icon: Users },
               { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
-            ] : [
+            ] : uiMode === 'creative' ? [
               { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
               { id: 'translator', icon: Languages, label: language === 'ka' ? 'ინსტრუმენტი' : 'Translator' },
-              { id: 'market', label: t.sidebar.market, icon: ShoppingBag },
+            ] : [
+              { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
             ]).map((link) => (
               <button
                 key={link.id}
@@ -4859,7 +4905,7 @@ export default function App() {
           {/* Right Section: System Controls & Mode */}
           <div className="flex items-center justify-end gap-3 md:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
             <div className="hidden sm:block">
-              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} />
+              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} className="w-[280px] sm:w-[320px] md:w-[340px]" />
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -4941,125 +4987,134 @@ export default function App() {
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
                 className="w-full"
               >
-              {activeView === 'dashboard' && (
-                <DashboardView 
-                  personas={personas} 
-                  activeView={activeView} 
-                  setActiveView={setActiveView}
-                  chatHistory={chatHistory}
-                  language={userProfile.language}
-                  user={user}
-                  uiMode={uiMode}
-                  aiSettings={aiSettings}
-                  setLastGeminiMetadata={setLastGeminiMetadata}
-                  trackFirestore={trackFirestore}
-                  isCreativeMode={isCreativeMode || isAdmin}
-                  theme={theme}
-                  setTheme={setTheme}
-                  isSystemActive={isSystemActive}
-                  setAiSettings={setAiSettings}
-                />
-              )}
-              {activeView === 'personas' && (
-                <PersonasView 
-                  history={chatHistory} 
-                  onNewMessage={handleNewMessage} 
-                  customAvatars={personaAvatars}
-                  onUpdateAvatar={handleUpdateAvatar}
-                  personas={personas}
-                  onUpdatePersonas={handleUpdatePersonas}
-                  aiSettings={aiSettings}
-                  setLastGeminiMetadata={setLastGeminiMetadata}
-                  workflows={workflows}
-                  tasks={tasks}
-                  uiMode={uiMode}
-                  isCreativeMode={isCreativeMode || isAdmin}
-                  initialPersonaId={selectedPersonaId}
-                  favoritePersonaIds={favoritePersonaIds}
-                  onToggleFavorite={handleToggleFavoritePersona}
-                  language={userProfile.language}
-                  user={user}
-                  isAdmin={isAdmin}
-                  checkAndIncrementAiQuota={checkAndIncrementAiQuota}
-                />
-              )}
-              {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} />}
-              {activeView === 'blueprints' && (
-                <WorkflowsView 
-                  workflows={workflows}
-                  setWorkflows={setWorkflows}
-                  personas={personas}
-                  user={user}
-                  uiMode={uiMode}
-                  language={userProfile.language}
-                  isCreativeMode={isCreativeMode || isAdmin}
-                  isAdmin={isAdmin}
-                  checkAndIncrementAiQuota={checkAndIncrementAiQuota}
-                />
-              )}
-              {activeView === 'organizer' && (
-                <OrganizerView 
-                  language={userProfile.language}
-                  workflows={workflows}
-                  tasks={tasks}
-                  onAddTask={handleAddTask}
-                  onToggleTask={handleToggleTask}
-                  onDeleteTask={handleDeleteTask}
-                  onEditTask={handleEditTask}
-                  onAiSuggest={handleAiSuggestTasks}
-                  uiMode={uiMode}
-                  theme={organizerTheme}
-                  setTheme={setOrganizerTheme}
-                />
-              )}
-              {activeView === 'compute' && (
-                <SystemsView 
-                  metadata={lastGeminiMetadata} 
-                  aiSettings={aiSettings} 
-                  setAiSettings={setAiSettings} 
-                  isFirestoreActive={isFirestoreActive} 
-                  language={userProfile.language}
-                  uiMode={uiMode}
-                />
-              )}
-              {activeView === 'device' && (
-                <HardwareView language={userProfile.language} />
-              )}
-              {activeView === 'market' && (
-                <MarketView 
+              {uiMode === 'market' ? (
+                <MarketHub 
                   language={userProfile.language} 
-                  t={t} 
-                  themeId={theme} 
+                  t={t}
+                  themeId={theme}
                 />
-              )}
-
-              {activeView === 'profile' && (
-                <CabinetView 
-                  profile={userProfile} 
-                  theme={theme} 
-                  setTheme={setTheme} 
-                />
-              )}
-              {activeView === 'settings' && (
-                <SettingsView 
-                  userProfile={userProfile}
-                  setUserProfile={setUserProfile}
-                  aiSettings={aiSettings}
-                  setAiSettings={setAiSettings}
-                  theme={theme}
-                  setTheme={setTheme}
-                  language={userProfile.language}
-                  uiMode={uiMode}
-                  setUiMode={handleModeChange}
-                  organizerTheme={organizerTheme}
-                  setOrganizerTheme={setOrganizerTheme}
-                />
-              )}
-              {activeView === 'documentation' && (
-                <DocumentationView language={userProfile.language} />
-              )}
-              {activeView === 'commercial' && (
-                <CommercialHub language={userProfile.language} />
+              ) : (
+                <>
+                  {activeView === 'dashboard' && (
+                    <DashboardView 
+                      personas={personas} 
+                      activeView={activeView} 
+                      setActiveView={setActiveView}
+                      chatHistory={chatHistory}
+                      language={userProfile.language}
+                      user={user}
+                      uiMode={uiMode}
+                      aiSettings={aiSettings}
+                      setLastGeminiMetadata={setLastGeminiMetadata}
+                      trackFirestore={trackFirestore}
+                      isCreativeMode={isCreativeMode || isAdmin}
+                      theme={theme}
+                      setTheme={setTheme}
+                      isSystemActive={isSystemActive}
+                      setAiSettings={setAiSettings}
+                    />
+                  )}
+                  {activeView === 'personas' && (
+                    <PersonasView 
+                      history={chatHistory} 
+                      onNewMessage={handleNewMessage} 
+                      customAvatars={personaAvatars}
+                      onUpdateAvatar={handleUpdateAvatar}
+                      personas={personas}
+                      onUpdatePersonas={handleUpdatePersonas}
+                      aiSettings={aiSettings}
+                      setLastGeminiMetadata={setLastGeminiMetadata}
+                      workflows={workflows}
+                      tasks={tasks}
+                      uiMode={uiMode}
+                      isCreativeMode={isCreativeMode || isAdmin}
+                      initialPersonaId={selectedPersonaId}
+                      favoritePersonaIds={favoritePersonaIds}
+                      onToggleFavorite={handleToggleFavoritePersona}
+                      language={userProfile.language}
+                      user={user}
+                      isAdmin={isAdmin}
+                      checkAndIncrementAiQuota={checkAndIncrementAiQuota}
+                    />
+                  )}
+                  {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} />}
+                  {activeView === 'blueprints' && (
+                    <WorkflowsView 
+                      workflows={workflows}
+                      setWorkflows={setWorkflows}
+                      personas={personas}
+                      user={user}
+                      uiMode={uiMode}
+                      language={userProfile.language}
+                      isCreativeMode={isCreativeMode || isAdmin}
+                      isAdmin={isAdmin}
+                      checkAndIncrementAiQuota={checkAndIncrementAiQuota}
+                    />
+                  )}
+                  {activeView === 'organizer' && (
+                    <OrganizerView 
+                      language={userProfile.language}
+                      workflows={workflows}
+                      tasks={tasks}
+                      onAddTask={handleAddTask}
+                      onToggleTask={handleToggleTask}
+                      onDeleteTask={handleDeleteTask}
+                      onEditTask={handleEditTask}
+                      onAiSuggest={handleAiSuggestTasks}
+                      uiMode={uiMode}
+                      theme={organizerTheme}
+                      setTheme={setOrganizerTheme}
+                    />
+                  )}
+                  {activeView === 'compute' && (
+                    <SystemsView 
+                      metadata={lastGeminiMetadata} 
+                      aiSettings={aiSettings} 
+                      setAiSettings={setAiSettings} 
+                      isFirestoreActive={isFirestoreActive} 
+                      language={userProfile.language}
+                      uiMode={uiMode}
+                    />
+                  )}
+                  {activeView === 'device' && (
+                    <HardwareView language={userProfile.language} />
+                  )}
+                  {activeView === 'market-hub' && (
+                    <MarketHub 
+                      language={userProfile.language} 
+                      t={t}
+                      themeId={theme}
+                    />
+                  )}
+                  {activeView === 'profile' && (
+                    <CabinetView 
+                      profile={userProfile} 
+                      theme={theme} 
+                      setTheme={setTheme} 
+                    />
+                  )}
+                  {activeView === 'settings' && (
+                    <SettingsView 
+                      userProfile={userProfile}
+                      setUserProfile={setUserProfile}
+                      aiSettings={aiSettings}
+                      setAiSettings={setAiSettings}
+                      theme={theme}
+                      setTheme={setTheme}
+                      language={userProfile.language}
+                      uiMode={uiMode}
+                      setUiMode={handleModeChange}
+                      organizerTheme={organizerTheme}
+                      setOrganizerTheme={setOrganizerTheme}
+                    />
+                  )}
+                  {activeView === 'documentation' && (
+                    <DocumentationView language={userProfile.language} />
+                  )}
+                  {activeView === 'commercial' && (
+                    <CommercialHub language={userProfile.language} />
+                  )}
+                </>
               )}
             </motion.div>
           </AnimatePresence>

@@ -46,6 +46,24 @@
         "priority": { "type": "string" }
       }
     },
+    "LedgerItem": {
+      "title": "Ledger Item",
+      "description": "User transaction ledger on the market hub",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "type": { "type": "string", "enum": ["inbound", "outbound"] },
+        "value": { "type": "number" },
+        "volume": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "completed", "pending"] },
+        "operator": { "type": "string" }
+      },
+      "required": ["id", "description", "category", "type", "value", "volume", "total", "status", "operator"]
+    },
     "Listing": {
       "title": "Listing",
       "description": "Marketplace item",
@@ -155,6 +173,10 @@
     "/users/{userId}/tasks/{taskId}": {
       "schema": "Task",
       "description": "User tasks"
+    },
+    "/users/{userId}/market_ledger/{ledgerId}": {
+      "schema": "LedgerItem",
+      "description": "User market ledger transactions"
     },
     "/users/{userId}/chatHistory/{personaId}": {
       "schema": "object",

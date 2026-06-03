@@ -25,15 +25,14 @@ function fetchJson(url: string): Promise<any> {
 
 async function main() {
   try {
-    const repos = await fetchJson('https://api.github.com/users/devdarianib/repos?per_page=100');
-    if (Array.isArray(repos)) {
-      console.log(`Found ${repos.length} repos:`);
-      repos.forEach(r => {
-        console.log(`- ${r.name}: ${r.html_url} (${r.description})`);
-      });
-    } else {
-      console.log("Invalid response:", repos);
-    }
+    const res = await fetchJson('https://api.github.com/search/users?q=devdarianib');
+    console.log("Search user 'devdarianib':", JSON.stringify(res, null, 2));
+
+    const resEmail = await fetchJson('https://api.github.com/search/users?q=devdarianib@gmail.com');
+    console.log("Search user by email:", JSON.stringify(resEmail, null, 2));
+
+    const resRepos = await fetchJson('https://api.github.com/search/repositories?q=proton-core');
+    console.log("Search repos 'proton-core':", JSON.stringify(resRepos.items?.slice(0, 10).map((r: any) => ({ name: r.full_name, url: r.html_url })), null, 2));
   } catch (err: any) {
     console.error("Error:", err.message);
   }

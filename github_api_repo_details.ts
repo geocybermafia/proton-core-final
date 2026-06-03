@@ -25,15 +25,14 @@ function fetchJson(url: string): Promise<any> {
 
 async function main() {
   try {
-    const repos = await fetchJson('https://api.github.com/users/devdarianib/repos?per_page=100');
-    if (Array.isArray(repos)) {
-      console.log(`Found ${repos.length} repos:`);
-      repos.forEach(r => {
-        console.log(`- ${r.name}: ${r.html_url} (${r.description})`);
-      });
-    } else {
-      console.log("Invalid response:", repos);
-    }
+    const repoInfo = await fetchJson('https://api.github.com/repos/geocybermafia/proton-core-final');
+    console.log("Repo Details:", JSON.stringify(repoInfo, null, 2));
+
+    const branches = await fetchJson('https://api.github.com/repos/geocybermafia/proton-core-final/branches');
+    console.log("Branches:", JSON.stringify(branches, null, 2));
+
+    const contents = await fetchJson('https://api.github.com/repos/geocybermafia/proton-core-final/contents/');
+    console.log("Root Contents:", JSON.stringify(contents?.map((c: any) => ({ name: c.name, type: c.type })), null, 2));
   } catch (err: any) {
     console.error("Error:", err.message);
   }

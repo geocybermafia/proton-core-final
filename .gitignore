@@ -6,3 +6,14 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Migration and local system helper scripts
+check_root.ts
+check_workspace.ts
+download_and_extract.ts
+fetch_repo_check.ts
+find_git_anywhere.ts
+recover-listings.ts
+recovered-listings-backup.json
+test-auth.ts
+test_public_git.ts

@@ -51,12 +51,13 @@ import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
+import { translations } from '../translations';
 import 'leaflet/dist/leaflet.css';
 
-interface MarketViewProps {
+interface MarketHubProps {
   language: 'en' | 'ka';
-  t: any;
-  themeId: string;
+  t?: any;
+  themeId?: string;
 }
 
 interface MarketTheme {
@@ -322,7 +323,9 @@ const convertPrice = (price: number, from: string, to: string) => {
   return inUSD * (EXCHANGE_RATES[to] || 1);
 };
 
-export function MarketView({ language, t, themeId }: MarketViewProps) {
+export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHubProps) {
+  const t = propT || translations[language];
+  const themeId = propThemeId || 'proton';
   const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'rating' | 'newest' | 'priceAsc' | 'priceDesc'>('rating');
