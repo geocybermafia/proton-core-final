@@ -3682,7 +3682,19 @@ export default function App() {
       setIsSidebarOpen(false);
     }
   }, [user, isCreativeMode, isSafeMode, navigate, setActiveView, uiMode]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return false;
+    }
+    const saved = safeStorage.get('proton_sidebar_open');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+      safeStorage.set('proton_sidebar_open', isSidebarOpen.toString());
+    }
+  }, [isSidebarOpen]);
   const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -4781,11 +4793,20 @@ export default function App() {
           
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="mt-4 flex items-center justify-center w-full py-2 text-proton-muted hover:text-proton-accent transition-colors hidden md:flex"
+            className={cn(
+              "mt-4 flex items-center gap-2 justify-center w-full py-2.5 rounded-xl border border-proton-border/40 bg-proton-bg/20 text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 hover:bg-proton-accent/[0.02] transition-all duration-300 hidden md:flex select-none",
+              !isSidebarOpen && "px-0"
+            )}
+            title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Collapse Sidebar') : (language === 'ka' ? 'გაშლა' : 'Expand Sidebar')}
           >
-            <div className={cn("transition-transform duration-700", isSidebarOpen && "rotate-180")}>
+            <div className={cn("transition-transform duration-500", isSidebarOpen ? "rotate-180" : "rotate-0")}>
               <ChevronRight size={18} />
             </div>
+            {isSidebarOpen && (
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {language === 'ka' ? 'აკეცვა' : 'Collapse'}
+              </span>
+            )}
           </button>
         </div>
       </motion.aside>
@@ -4833,43 +4854,43 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="min-h-20 h-auto md:h-20 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 md:py-0 gap-x-8 flex-wrap md:flex-nowrap z-40 bg-proton-card sticky top-0 backdrop-blur-md">
+        <header className="min-h-16 h-auto md:h-16 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 md:py-0 gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
           {/* Left Section: User & Status */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all shrink-0"
+              className="md:hidden w-9 h-9 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all shrink-0"
             >
-              <Grid size={20} />
+              <Grid size={18} />
             </button>
             
             <div className="hidden md:flex flex-col select-none">
               <div className="flex items-center gap-2">
                 <div className={cn(
-                  "w-2 h-2 rounded-full animate-pulse",
+                  "w-1.5 h-1.5 rounded-full animate-pulse",
                   uiMode === 'business' 
                     ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]" 
                     : uiMode === 'creative' 
                       ? "bg-amber-500 shadow-[0_0_8px_#ff9f1c]" 
                       : "bg-sky-500 shadow-[0_0_8px_#0ea5e9]"
                 )} />
-                <span className="text-xs font-black tracking-widest text-proton-text uppercase font-mono">
-                  GLOBAL COMMERCE TERMINAL - {
+                <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono">
+                  PROTON // {
                     uiMode === 'business' 
-                      ? (language === 'ka' ? 'ბიზნეს ჰაბი' : 'BUSINESS HUB') 
+                      ? (language === 'ka' ? 'ბიზნესი' : 'BUSINESS') 
                       : uiMode === 'creative' 
-                        ? (language === 'ka' ? 'კრეატიული ჰაბი' : 'CREATIVE HUB') 
-                        : (language === 'ka' ? 'სავაჭრო ჰაბი' : 'MARKET HUB')
+                        ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE') 
+                        : (language === 'ka' ? 'მარკეტი' : 'MARKET')
                   }
                 </span>
               </div>
-              <span className="text-[9px] font-mono text-proton-muted mt-0.5 uppercase tracking-wide">
+              <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
                 {uiMode === 'business' ? (
-                  language === 'ka' ? 'ავტომატიზაცია, ნოდები და მართვა' : 'Automation, blueprints & multi-agents active'
+                  language === 'ka' ? 'ავტომატიზაცია და მულტი-აგენტები' : 'Automation & Multi-Agents Active'
                 ) : uiMode === 'creative' ? (
-                  language === 'ka' ? 'დიზაინი, მედია და თარგმნის სტუდია' : 'AI studio, interactive localization & art tools active'
+                  language === 'ka' ? 'სტუდია და ლოკალიზაცია' : 'AI Studio & Localization'
                 ) : (
-                  language === 'ka' ? 'სავაჭრო ბირჟის რეესტრი და ფინანსები' : 'Spreadsheet matrices, active ledger, and liquid trade assets'
+                  language === 'ka' ? 'საოპერაციო რეესტრი' : 'Active Ledger & Trading'
                 )}
               </span>
             </div>
@@ -4955,16 +4976,6 @@ export default function App() {
                 </button>
               </div>
 
-              <button 
-                onClick={() => handleViewChange('settings')}
-                className={cn(
-                  "w-10 h-10 rounded-xl bg-proton-bg border flex items-center justify-center transition-all shrink-0",
-                  activeView === 'settings' ? "border-proton-accent text-proton-accent bg-proton-accent/5 shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent/50"
-                )}
-                title={language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}
-              >
-                <Settings size={18} />
-              </button>
               <button 
                 onClick={handleSignOut}
                 className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0"
