@@ -3482,6 +3482,8 @@ export default function App() {
     } catch { return 'business'; }
   });
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isControlExpanded, setIsControlExpanded] = useState(false);
+  const [isMobileControlOpen, setIsMobileControlOpen] = useState(false);
 
   const handleModeChange = (newMode: 'business' | 'creative' | 'market') => {
     if (newMode === uiMode) return;
@@ -4733,24 +4735,67 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            <SidebarItem 
-              icon={UserIcon} 
-              label={language === 'ka' ? 'პირადი კაბინეტი' : 'Personal Cabinet'} 
-              active={activeView === 'profile'} 
-              onClick={() => handleViewChange('profile')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode === 'market' ? 'business' : uiMode}
-              badge={language === 'ka' ? 'ჰაბი' : 'HUB'}
-            />
-            <SidebarItem 
-              icon={Settings} 
-              label={language === 'ka' ? 'პარამეტრები' : 'System Settings'} 
-              active={activeView === 'settings'} 
-              onClick={() => handleViewChange('settings')} 
-              expanded={isSidebarOpen}
-              uiMode={uiMode === 'market' ? 'business' : uiMode}
-              badge="AI"
-            />
+            {/* Consolidated Controls Accordion */}
+            <div className="space-y-1">
+              <SidebarItem 
+                icon={Settings} 
+                label={language === 'ka' ? 'კონტროლის ჰაბი' : 'Control Hub'} 
+                active={activeView === 'profile' || activeView === 'settings'} 
+                onClick={() => {
+                  if (!isSidebarOpen) {
+                    setIsSidebarOpen(true);
+                    setIsControlExpanded(true);
+                  } else {
+                    setIsControlExpanded(!isControlExpanded);
+                  }
+                }} 
+                expanded={isSidebarOpen}
+                uiMode={uiMode === 'market' ? 'business' : uiMode}
+                badge="SYS"
+              />
+              <AnimatePresence>
+                {isControlExpanded && isSidebarOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="pl-5 pr-1 space-y-1 border-l-2 border-proton-border/30 ml-4 mb-2 overflow-hidden"
+                  >
+                    <button
+                      onClick={() => handleViewChange('profile')}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5",
+                        activeView === 'profile'
+                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
+                          : "text-proton-muted hover:text-proton-text-light border border-transparent"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <UserIcon size={14} className={activeView === 'profile' ? "text-proton-accent font-bold" : "text-proton-muted"} />
+                        <span>{language === 'ka' ? 'კაბინეტი' : 'Profile Cabinet'}</span>
+                      </div>
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">HUB</span>
+                    </button>
+                    <button
+                      onClick={() => handleViewChange('settings')}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5",
+                        activeView === 'settings'
+                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
+                          : "text-proton-muted hover:text-proton-text-light border border-transparent"
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Settings size={14} className={activeView === 'settings' ? "text-proton-accent font-bold" : "text-proton-muted"} />
+                        <span>{language === 'ka' ? 'პარამეტრები' : 'Settings'}</span>
+                      </div>
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">AI</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </nav>
 
@@ -4811,41 +4856,148 @@ export default function App() {
         </div>
       </motion.aside>
 
+      {/* Mobile Control Hub Menu Popover */}
+      <AnimatePresence>
+        {isMobileControlOpen && (
+          <>
+            {/* Backdrop to close */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileControlOpen(false)}
+              className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm"
+              style={{ zIndex: 45 }}
+            />
+            
+            {/* Floating Menu Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 350 }}
+              className="md:hidden fixed bottom-20 left-4 right-4 bg-[#0c0d0f]/95 border border-proton-border shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl rounded-[28px] p-5 flex flex-col gap-3"
+              style={{ zIndex: 50 }}
+            >
+              {/* Title Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <Settings size={16} className="text-proton-accent" />
+                  <span className="text-xs font-black uppercase tracking-wider text-proton-text-light">
+                    {language === 'ka' ? 'მართვის პანელი' : 'Control Center'}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setIsMobileControlOpen(false)}
+                  className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-proton-muted"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <button
+                onClick={() => {
+                  handleViewChange('profile');
+                  setIsMobileControlOpen(false);
+                }}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                  activeView === 'profile'
+                    ? "bg-proton-accent/15 border-proton-accent/30 text-proton-accent"
+                    : "bg-white/5 border-white/5 text-proton-text hover:bg-white/10"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <UserIcon size={18} className={activeView === 'profile' ? "text-proton-accent" : "text-proton-muted"} />
+                  <div>
+                    <p className="text-sm font-black leading-none uppercase tracking-wide">
+                      {language === 'ka' ? 'პირადი კაბინეტი' : 'Personal Cabinet'}
+                    </p>
+                    <p className="text-[10px] opacity-60 mt-1 uppercase tracking-widest font-black text-proton-accent">
+                      {language === 'ka' ? 'ჰაბი' : 'HUB'}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight size={16} className="opacity-50 text-proton-text" />
+              </button>
+
+              <button
+                onClick={() => {
+                  handleViewChange('settings');
+                  setIsMobileControlOpen(false);
+                }}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                  activeView === 'settings'
+                    ? "bg-proton-accent/15 border-proton-accent/30 text-proton-accent"
+                    : "bg-white/5 border-white/5 text-proton-text hover:bg-white/10"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings size={18} className={activeView === 'settings' ? "text-proton-accent" : "text-proton-muted"} />
+                  <div>
+                    <p className="text-sm font-black leading-none uppercase tracking-wide">
+                      {language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}
+                    </p>
+                    <p className="text-[10px] opacity-60 mt-1 uppercase tracking-widest font-black text-proton-accent">
+                      AI & Customization
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight size={16} className="opacity-50 text-proton-text" />
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Bottom Nav (Mobile Only) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
         {(uiMode === 'business' ? [
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
-          { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'ჰაბი' : 'Cabinet' },
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
         ] : uiMode === 'creative' ? [
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
           { id: 'translator', icon: Languages, label: language === 'ka' ? 'თარგმანი' : 'Translate' },
-          { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
         ] : [
           { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
-          { id: 'profile', icon: UserIcon, label: language === 'ka' ? 'კაბინეტი' : 'Cabinet' },
-        ]).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => handleViewChange(item.id as any)}
-            className={cn(
-              "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 relative",
-              activeView === item.id ? "text-proton-accent" : "text-proton-muted"
-            )}
-          >
-            <item.icon size={20} className={cn(activeView === item.id && "animate-pulse")} />
-            <span className="text-xs font-sans font-bold uppercase">{item.label}</span>
-            {activeView === item.id && (
-              <motion.div 
-                initial={{ scaleX: 0, opacity: 0 }}
-                animate={{ scaleX: 1, opacity: 1 }}
-                exit={{ scaleX: 0, opacity: 0 }}
-                className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]"
-              />
-            )}
-          </button>
-        ))}
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
+        ]).map((item) => {
+          const isActive = item.id === 'control-hub'
+            ? (activeView === 'profile' || activeView === 'settings' || isMobileControlOpen)
+            : activeView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.id === 'control-hub') {
+                  setIsMobileControlOpen(!isMobileControlOpen);
+                } else {
+                  handleViewChange(item.id as any);
+                }
+              }}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 relative",
+                isActive ? "text-proton-accent" : "text-proton-muted"
+              )}
+            >
+              <item.icon size={20} className={cn(isActive && "animate-pulse")} />
+              <span className="text-[9px] font-sans font-bold uppercase tracking-wider">{item.label}</span>
+              {isActive && (
+                <motion.div 
+                  initial={{ scaleX: 0, opacity: 0 }}
+                  animate={{ scaleX: 1, opacity: 1 }}
+                  exit={{ scaleX: 0, opacity: 0 }}
+                  className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]"
+                />
+              )}
+            </button>
+          );
+        })}
       </nav>
 
       <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg h-full overflow-hidden">
