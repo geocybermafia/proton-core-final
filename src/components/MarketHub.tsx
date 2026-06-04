@@ -324,6 +324,27 @@ const convertPrice = (price: number, from: string, to: string) => {
   return inUSD * (EXCHANGE_RATES[to] || 1);
 };
 
+const safeParseDate = (dateVal: any): number => {
+  if (!dateVal) return Date.now();
+  try {
+    if (typeof dateVal === 'object') {
+      if (typeof dateVal.toDate === 'function') {
+        const d = dateVal.toDate();
+        return d instanceof Date && !isNaN(d.getTime()) ? d.getTime() : Date.now();
+      }
+      if (typeof dateVal.seconds === 'number') {
+        return dateVal.seconds * 1000 + (dateVal.nanoseconds ? Math.floor(dateVal.nanoseconds / 1000000) : 0);
+      }
+    }
+    const d = new Date(dateVal);
+    const ms = d.getTime();
+    return isNaN(ms) ? Date.now() : ms;
+  } catch (e) {
+    console.error("Error parsing date:", e);
+    return Date.now();
+  }
+};
+
 export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
@@ -507,8 +528,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       }
     });
     return merged.sort((a, b) => {
-      const at = a.createdAt?.seconds || a.createdAt || 0;
-      const bt = b.createdAt?.seconds || b.createdAt || 0;
+      const at = safeParseDate(a.createdAt);
+      const bt = safeParseDate(b.createdAt);
       return bt - at;
     });
   }, [buyerOrders, sellerOrders]);
@@ -684,8 +705,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       }));
       // Sort in client-side memory to avoid composite index requirement
       msgs.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || a.createdAt || 0;
-        const timeB = b.createdAt?.seconds || b.createdAt || 0;
+        const timeA = safeParseDate(a.createdAt);
+        const timeB = safeParseDate(b.createdAt);
         return timeA - timeB;
       });
       setMessagesList(msgs);
@@ -930,14 +951,14 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         if (countB !== countA) {
           return countB - countA;
         }
-        const timeA = a.createdAt || 0;
-        const timeB = b.createdAt || 0;
+        const timeA = safeParseDate(a.createdAt);
+        const timeB = safeParseDate(b.createdAt);
         return timeB - timeA;
       });
     } else if (sortBy === 'newest') {
       result.sort((a, b) => {
-        const timeA = a.createdAt || 0;
-        const timeB = b.createdAt || 0;
+        const timeA = safeParseDate(a.createdAt);
+        const timeB = safeParseDate(b.createdAt);
         return timeB - timeA;
       });
     } else if (sortBy === 'priceAsc') {
@@ -1190,13 +1211,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       
       const recentCount = listings.filter(l => {
         if (l.sellerId !== user.uid) return false;
-        const createdAt = l.createdAt;
-        if (!createdAt) return false;
-        
-        const date = (createdAt as any)?.toDate 
-          ? (createdAt as any).toDate() 
-          : new Date(createdAt as any);
-        return date >= oneMinuteAgo;
+        const dMillis = safeParseDate(l.createdAt);
+        return dMillis >= oneMinuteAgo.getTime();
       }).length;
 
       // Limit to 5 listings per minute for safety
@@ -1752,7 +1768,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         <div className="space-y-10 w-full">
           {/* Horizontal Category Carousel & Sticky mobile subfilters - Only for Browse View */}
           {viewMode === 'browse' && (
-            <div className="sticky top-[10px] md:top-[20px] z-[45] -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-[#0c0c0c]/90 backdrop-blur-md border-b border-white/5 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
+            <div className="sticky top-16 z-[45] -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-[#0c0c0c]/90 backdrop-blur-md border-b border-white/5 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
               {/* Categories horizontal list */}
               <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1 px-1 scrollbar-none scroll-smooth">
                 <button
@@ -1865,7 +1881,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
           {/* Desktop Sidebar */}
           {viewMode === 'browse' && (
             <aside className="hidden lg:block w-72 shrink-0 space-y-8 animate-in fade-in slide-in-from-left duration-700">
-               <div className={cn("p-6 rounded-3xl border border-white/5 sticky top-30 backdrop-blur-xl", currentTheme.card)}>
+               <div className={cn("p-6 rounded-3xl border border-white/5 sticky top-16 backdrop-blur-xl", currentTheme.card)}>
                  {FilterContent}
                </div>
             </aside>
@@ -2337,7 +2353,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                   className={cn(
-                    "fixed right-0 top-0 bottom-0 w-[85%] max-w-sm z-[70] p-8 lg:hidden border-l border-white/5 flex flex-col backdrop-blur-[20px]",
+                    "fixed right-0 top-16 bottom-0 w-[85%] max-w-sm z-[70] p-8 lg:hidden border-l border-white/5 flex flex-col backdrop-blur-[20px] max-h-[calc(100vh-theme(spacing.16))] overflow-y-auto",
                     currentTheme.card
                   )}
                 >
