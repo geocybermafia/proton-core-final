@@ -4998,7 +4998,7 @@ export default function App() {
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
                 className="w-full"
               >
-              {uiMode === 'market' ? (
+              {uiMode === 'market' && activeView === 'market-hub' ? (
                 <MarketHub 
                   language={userProfile.language} 
                   t={t}
@@ -5014,7 +5014,7 @@ export default function App() {
                       chatHistory={chatHistory}
                       language={userProfile.language}
                       user={user}
-                      uiMode={uiMode}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                       aiSettings={aiSettings}
                       setLastGeminiMetadata={setLastGeminiMetadata}
                       trackFirestore={trackFirestore}
@@ -5037,7 +5037,7 @@ export default function App() {
                       setLastGeminiMetadata={setLastGeminiMetadata}
                       workflows={workflows}
                       tasks={tasks}
-                      uiMode={uiMode}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                       isCreativeMode={isCreativeMode || isAdmin}
                       initialPersonaId={selectedPersonaId}
                       favoritePersonaIds={favoritePersonaIds}
@@ -5048,14 +5048,14 @@ export default function App() {
                       checkAndIncrementAiQuota={checkAndIncrementAiQuota}
                     />
                   )}
-                  {activeView === 'image' && <ImageView uiMode={uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} />}
+                  {activeView === 'image' && <ImageView uiMode={uiMode === 'market' ? 'business' : uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} />}
                   {activeView === 'blueprints' && (
                     <WorkflowsView 
                       workflows={workflows}
                       setWorkflows={setWorkflows}
                       personas={personas}
                       user={user}
-                      uiMode={uiMode}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                       language={userProfile.language}
                       isCreativeMode={isCreativeMode || isAdmin}
                       isAdmin={isAdmin}
@@ -5072,7 +5072,7 @@ export default function App() {
                       onDeleteTask={handleDeleteTask}
                       onEditTask={handleEditTask}
                       onAiSuggest={handleAiSuggestTasks}
-                      uiMode={uiMode}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                       theme={organizerTheme}
                       setTheme={setOrganizerTheme}
                     />
@@ -5084,7 +5084,7 @@ export default function App() {
                       setAiSettings={setAiSettings} 
                       isFirestoreActive={isFirestoreActive} 
                       language={userProfile.language}
-                      uiMode={uiMode}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                     />
                   )}
                   {activeView === 'device' && (
@@ -5113,7 +5113,7 @@ export default function App() {
                       theme={theme}
                       setTheme={setTheme}
                       language={userProfile.language}
-                      uiMode={uiMode}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                       setUiMode={handleModeChange}
                       organizerTheme={organizerTheme}
                       setOrganizerTheme={setOrganizerTheme}
