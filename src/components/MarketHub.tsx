@@ -468,14 +468,66 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     setIsPlacingCartOrders(true);
     try {
       for (const item of cart) {
+        let freshPrice = item.price;
+        let freshCurrency = item.currency || 'USD';
+        let freshTitle = item.title;
+        let isSold = false;
+
+        if (isSupabaseConfigured()) {
+          const { data: freshList, error } = await supabase
+            .from('listings')
+            .select('*')
+            .eq('id', item.id)
+            .maybeSingle();
+
+          if (error || !freshList) {
+            alert(language === 'ka' 
+              ? `პროდუქტი "${item.title}" აღარ არის ხელმისაწვდომი.` 
+              : `Product "${item.title}" is no longer available.`);
+            setIsPlacingCartOrders(false);
+            return;
+          }
+          if (freshList.status === 'sold' || freshList.isSold) {
+            isSold = true;
+          }
+          freshPrice = freshList.price;
+          freshCurrency = freshList.currency || 'USD';
+          freshTitle = freshList.title || item.title;
+        } else {
+          const docRef = doc(db, 'listings', item.id);
+          const docSnap = await getDoc(docRef);
+          if (!docSnap.exists()) {
+            alert(language === 'ka' 
+              ? `პროდუქტი "${item.title}" აღარ არსებობს ბაზაში.` 
+              : `Product "${item.title}" no longer exists in our database.`);
+            setIsPlacingCartOrders(false);
+            return;
+          }
+          const freshData = docSnap.data();
+          if (freshData.status === 'sold' || freshData.isSold) {
+            isSold = true;
+          }
+          freshPrice = freshData.price;
+          freshCurrency = freshData.currency || 'USD';
+          freshTitle = freshData.title || item.title;
+        }
+
+        if (isSold) {
+          alert(language === 'ka'
+            ? `შეცდომა: პროდუქტი "${freshTitle}" უკვე გაყიდულია და მისი შეძენა შეუძლებელია.`
+            : `Error: Product "${freshTitle}" has already been sold and cannot be purchased.`);
+          setIsPlacingCartOrders(false);
+          return;
+        }
+
         const isService = item.listingType === 'service' || item.category === 'service';
         const orderData = {
           listingId: item.id,
           buyerId: user.uid,
           sellerId: item.sellerId,
-          amount: item.price,
-          currency: item.currency || 'USD',
-          itemTitle: item.title,
+          amount: freshPrice,
+          currency: freshCurrency,
+          itemTitle: freshTitle,
           status: isService ? 'booked' : 'completed',
           orderType: isService ? 'service' : 'product',
           buyerInstructions: '',
