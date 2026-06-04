@@ -992,7 +992,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     }
 
     return result;
-  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings, user?.uid]);
+  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency]);
 
   const handleBuyNow = async (listing: Listing) => {
     if (!user) return;
@@ -2110,18 +2110,18 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       if ((e.target as HTMLElement).closest('button')) return;
                       setCheckoutItem(listing);
                     }}
-                    className="h-36 sm:h-52 bg-black/60 overflow-hidden relative cursor-pointer"
+                    className="w-full aspect-video h-36 sm:h-52 bg-zinc-900/80 overflow-hidden relative cursor-pointer"
                   >
-                    {listing.image ? (
+                    {(listing.images && listing.images.length > 0) || listing.image ? (
                       <motion.img 
-                        src={listing.image} 
+                        src={listing.images && listing.images.length > 0 ? listing.images[0] : (listing.image || '/placeholder-image.jpg')} 
                         alt={language === 'ka' ? (listing.titleGe || listing.title) : listing.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 ease-out"
+                        className="w-full h-full object-cover aspect-video overflow-hidden transition-transform duration-700 ease-out bg-zinc-900/60"
                         whileHover={{ scale: 1.05 }}
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className={cn("w-full h-full flex items-center justify-center bg-[#0a0a0a]")}>
+                      <div className={cn("w-full h-full flex items-center justify-center bg-zinc-900/80")}>
                         <ShoppingBag size={30} className={cn("opacity-10", currentTheme.accent)} />
                       </div>
                     )}
