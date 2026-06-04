@@ -110,6 +110,7 @@ export type Listing = {
   sellerId: string;
   sellerName: string;
   image?: string;
+  images?: string[];
   category: string;
   location: string;
   country: string;

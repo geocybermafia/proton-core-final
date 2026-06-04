@@ -548,7 +548,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     country: string;
     city: string;
     location: string;
-    image: string;
+    images: string[];
     lat?: number;
     lng?: number;
     condition: string;
@@ -567,7 +567,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     country: language === 'ka' ? 'GEO' : 'USA',
     city: '',
     location: '',
-    image: '',
+    images: [],
     lat: undefined,
     lng: undefined,
     condition: 'new',
@@ -1090,7 +1090,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
           // Get base64 with quality reduction
           const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-          setFormData(prev => ({ ...prev, image: dataUrl }));
+          setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
           setIsResizing(false);
         };
         img.onerror = () => {
@@ -1296,7 +1296,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
         country: countryStr,
         city: cityStr,
-        image: formData.image || '',
+        image: (formData.images && formData.images[0]) || '',
+        images: formData.images || [],
         createdAt: serverTimestamp(),
         status: 'active',
         lat: sanitizedLat,
@@ -1320,7 +1321,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       setFormData({
         title: '', titleGe: '', description: '', descriptionGe: '',
         price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-        country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
+        country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
         lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
         listingType: 'product', serviceDuration: '', serviceTerms: ''
       });
@@ -1355,7 +1356,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       country: (listing as any).country || 'USA',
       city: (listing as any).city || '',
       location: listing.location,
-      image: listing.image || '',
+      images: listing.images || (listing.image ? [listing.image] : []),
       lat: listing.lat,
       lng: listing.lng,
       condition: listing.condition || 'new',
@@ -1606,7 +1607,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     setFormData({
                       title: '', titleGe: '', description: '', descriptionGe: '',
                       price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-                      country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', image: '',
+                      country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
                       lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
                       listingType: 'product', serviceDuration: '', serviceTerms: ''
                     });
@@ -2682,7 +2683,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     className={cn(
                       "w-full h-64 rounded-[48px] border-2 border-dashed flex flex-col items-center justify-center gap-6 cursor-pointer transition-all hover:bg-white/5 overflow-hidden group",
                       currentTheme.input,
-                      (formData.image || isResizing) ? "border-transparent bg-black/40" : "border-white/10"
+                      (formData.images?.[0] || isResizing) ? "border-transparent bg-black/40" : "border-white/10"
                     )}
                   >
                     <input 
@@ -2698,10 +2699,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                           {language === 'ka' ? 'ინფორმაცია მუშავდება...' : 'Optimizing Visual...'}
                         </span>
                       </div>
-                    ) : formData.image ? (
+                    ) : formData.images?.[0] ? (
                       <div className="relative w-full h-full p-4">
                         <img 
-                          src={formData.image} 
+                          src={formData.images[0]} 
                           className="w-full h-full object-cover rounded-[32px] transition-transform duration-700 group-hover:scale-105" 
                           alt={formData.title ? (language === 'ka' ? `სურათი: ${formData.titleGe || formData.title}` : `Asset preview: ${formData.title}`) : (language === 'ka' ? 'ატვირთული სურათის პრევიუ' : 'Uploaded asset preview')} 
                         />
@@ -2726,8 +2727,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                  <Link size={14} className="absolute left-6 top-1/2 -translate-y-1/2 opacity-20" />
                     <input 
                        type="url"
-                       value={formData.image}
-                       onChange={e => setFormData({...formData, image: e.target.value})}
+                       value={formData.images?.[0] || ''}
+                       onChange={e => setFormData({...formData, images: [e.target.value]})}
                        placeholder="...or paste external secure URL"
                        className={cn("w-full pl-14 pr-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
                     />
