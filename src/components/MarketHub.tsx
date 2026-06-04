@@ -53,6 +53,7 @@ import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
 import { translations } from '../translations';
 import 'leaflet/dist/leaflet.css';
+import { useSearchParams } from 'react-router-dom';
 
 interface MarketHubProps {
   language: 'en' | 'ka';
@@ -327,7 +328,38 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user } = useAuth();
-  const [search, setSearch] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') || '';
+  const [search, setSearch] = useState(urlSearch);
+
+  // Sync from URL search input if URL changes externally (e.g. back button / direct link)
+  useEffect(() => {
+    setSearch(urlSearch);
+  }, [urlSearch]);
+
+  // Sync to URL search params when search state changes (debounced for input performance)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const current = searchParams.get('search') || '';
+      if (search !== current) {
+        if (search) {
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.set('search', search);
+            return next;
+          }, { replace: true });
+        } else {
+          setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            next.delete('search');
+            return next;
+          }, { replace: true });
+        }
+      }
+    }, 300); // 300ms debounce
+    return () => clearTimeout(timer);
+  }, [search, setSearchParams, searchParams]);
+
   const [sortBy, setSortBy] = useState<'rating' | 'newest' | 'priceAsc' | 'priceDesc'>('rating');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeCountry, setActiveCountry] = useState('GLOBAL');
