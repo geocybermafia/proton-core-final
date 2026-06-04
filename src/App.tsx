@@ -3472,7 +3472,7 @@ const sanitizeForFirestore = (data: any): any => {
 };
 
 export default function App() {
-  const { user, loading: authLoading, initialized: authInitialized } = useAuth();
+  const { user, loading: authLoading, initialized: authInitialized, logout } = useAuth();
   const { showToast } = useToast();
   const { language, setLanguage } = useLanguage();
 
@@ -4239,7 +4239,7 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       addLog('info', 'User signing out');
-      await signOut(auth);
+      await logout();
     } catch (e) {
       addLog('error', 'Sign out error', e);
     }

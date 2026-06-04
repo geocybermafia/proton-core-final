@@ -348,7 +348,8 @@ const safeParseDate = (dateVal: any): number => {
 export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [search, setSearch] = useState(urlSearch);
@@ -399,6 +400,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const [buyerInstructions, setBuyerInstructions] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
+
+  // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
+  if (authLoading) {
+    return (
+      <div className="min-h-[600px] bg-[#070708] rounded-[36px] border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-[#dfb257]/[0.02] blur-[120px] pointer-events-none rounded-full" />
+        <div className="flex flex-col items-center gap-5 relative z-10">
+          <Loader2 className="w-12 h-12 animate-spin text-[#dfb257] opacity-80" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#dfb257]/90 animate-pulse">
+            {language === 'ka' ? 'ავტორიზაცია მოწმდება...' : 'Verifying Identity...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Shopping Cart state
   const [cart, setCart] = useState<Listing[]>(() => {

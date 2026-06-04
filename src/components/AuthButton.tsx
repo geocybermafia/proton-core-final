@@ -1,9 +1,12 @@
 import React from 'react';
 import { auth } from '../firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { LogIn, LogOut, User } from 'lucide-react';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { LogIn, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export function AuthButton({ user }: { user: any }) {
+  const { logout } = useAuth();
+
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -15,7 +18,7 @@ export function AuthButton({ user }: { user: any }) {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await logout();
     } catch (error) {
       console.error("Logout failed:", error);
     }

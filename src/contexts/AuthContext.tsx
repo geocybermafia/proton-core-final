@@ -1,17 +1,19 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, onIdTokenChanged } from 'firebase/auth';
+import { User, onAuthStateChanged, onIdTokenChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   initialized: boolean;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   initialized: false,
+  logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -21,9 +23,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
+  const logout = async () => {
+    try {
+      // Programmatically wipe cart, ledger, and listing form/draft states from localStorage for cross-session safety
+      localStorage.removeItem('proton_market_cart');
+      localStorage.removeItem('proton_market_hub_ledger');
+      
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.includes('form') || 
+          key.includes('draft') || 
+          key.includes('listing') || 
+          key.includes('market') || 
+          key.includes('cart')
+        )) {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (e) {
+      console.warn("Error clearing localStorage during session switch cleanup:", e);
+    } finally {
+      await signOut(auth);
+    }
+  };
+
   useEffect(() => {
     // onAuthStateChanged handles the initial session and subsequent sign-in/sign-out
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        // Backup clearance on unauthenticated state transitions for security coverage
+        try {
+          localStorage.removeItem('proton_market_cart');
+          localStorage.removeItem('proton_market_hub_ledger');
+        } catch (e) {
+          console.warn(e);
+        }
+      }
       setUser(u);
       setLoading(false);
       setInitialized(true);
@@ -43,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, initialized }}>
+    <AuthContext.Provider value={{ user, loading, initialized, logout }}>
       {children}
     </AuthContext.Provider>
   );
