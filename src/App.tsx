@@ -3397,60 +3397,72 @@ const ModeToggle = ({
   mode, 
   setMode, 
   language, 
-  className 
+  className,
+  compact = false
 }: { 
   mode: 'business' | 'creative' | 'market', 
   setMode: (m: 'business' | 'creative' | 'market') => void, 
   t: any, 
   language: string, 
-  className?: string 
+  className?: string,
+  compact?: boolean
 }) => (
   <div className={cn(
-    "relative p-1 bg-proton-bg/60 backdrop-blur-subtle rounded-2xl border border-proton-border/80 flex shrink-0 select-none overflow-hidden",
+    "relative bg-proton-bg/60 backdrop-blur-subtle border border-proton-border/80 flex shrink-0 select-none overflow-hidden",
+    compact ? "p-0.5 rounded-xl" : "p-1 rounded-2xl",
     className
   )}>
     <div 
       className={cn(
-        "absolute top-1 bottom-1 w-[calc(33.333%-4px)] transition-all duration-300 rounded-xl",
+        "absolute transition-all duration-300",
+        compact 
+          ? "top-0.5 bottom-0.5 w-[calc(33.333%-3px)] rounded-lg" 
+          : "top-1 bottom-1 w-[calc(33.333%-4px)] rounded-xl",
         mode === 'business' 
-          ? "left-1 bg-proton-accent shadow-[0_0_12px_rgba(0,242,255,0.4)]" 
+          ? (compact ? "left-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.4)]" : "left-1 bg-proton-accent shadow-[0_0_12px_rgba(0,242,255,0.4)]")
           : mode === 'creative' 
-            ? "left-[calc(33.333%+2px)] bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]" 
-            : "left-[calc(66.666%+2px)] bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.4)]"
+            ? (compact ? "left-[calc(33.333%+1px)] bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" : "left-[calc(33.333%+2px)] bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]") 
+            : (compact ? "left-[calc(66.666%+1px)] bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.4)]" : "left-[calc(66.666%+2px)] bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.4)]")
       )}
     />
     <button 
       type="button"
       onClick={() => setMode('business')}
       className={cn(
-        "relative z-10 flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] transition-all flex items-center justify-center gap-2 min-w-0 select-none whitespace-nowrap",
+        "relative z-10 flex-1 font-black uppercase transition-all flex items-center justify-center min-w-0 select-none whitespace-nowrap",
+        compact ? "px-1.5 py-1.5 gap-1 text-[8px]" : "px-3 py-2.5 gap-2 text-[10px] sm:text-xs tracking-[0.14em]",
         mode === 'business' ? "text-proton-bg font-black" : "text-proton-muted hover:text-proton-text"
       )}
+      title={language === 'ka' ? 'ბიზნეს რეჟიმი' : 'Business Mode'}
     >
-      <Activity size={12} className={cn("shrink-0", mode === 'business' && "animate-pulse")} />
-      <span>{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>
+      <Activity size={compact ? 11 : 12} className={cn("shrink-0", mode === 'business' && "animate-pulse")} />
+      {!compact && <span>{language === 'ka' ? 'ბიზნესი' : 'Business'}</span>}
     </button>
     <button 
       type="button"
       onClick={() => setMode('creative')}
       className={cn(
-        "relative z-10 flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] transition-all flex items-center justify-center gap-2 min-w-0 select-none whitespace-nowrap",
+        "relative z-10 flex-1 font-black uppercase transition-all flex items-center justify-center min-w-0 select-none whitespace-nowrap",
+        compact ? "px-1.5 py-1.5 gap-1 text-[8px]" : "px-3 py-2.5 gap-2 text-[10px] sm:text-xs tracking-[0.14em]",
         mode === 'creative' ? "text-neutral-950 font-black" : "text-proton-muted hover:text-proton-text"
       )}
+      title={language === 'ka' ? 'კრეატიული რეჟიმი' : 'Creative Mode'}
     >
-      <Sparkles size={12} className="shrink-0" />
-      <span>{language === 'ka' ? 'კრეატივი' : 'Creative'}</span>
+      <Sparkles size={compact ? 11 : 12} className="shrink-0" />
+      {!compact && <span>{language === 'ka' ? 'კრეატივი' : 'Creative'}</span>}
     </button>
     <button 
       type="button"
       onClick={() => setMode('market')}
       className={cn(
-        "relative z-10 flex-1 px-3 py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] transition-all flex items-center justify-center gap-2 min-w-0 select-none whitespace-nowrap",
+        "relative z-10 flex-1 font-black uppercase transition-all flex items-center justify-center min-w-0 select-none whitespace-nowrap",
+        compact ? "px-1.5 py-1.5 gap-1 text-[8px]" : "px-3 py-2.5 gap-2 text-[10px] sm:text-xs tracking-[0.14em]",
         mode === 'market' ? "text-neutral-950 font-black" : "text-proton-muted hover:text-proton-text"
       )}
+      title={language === 'ka' ? 'მარკეტის რეჟიმი' : 'Market Mode'}
     >
-      <ShoppingBag size={12} className="shrink-0" />
-      <span>{language === 'ka' ? 'ბაზარი' : 'Market'}</span>
+      <ShoppingBag size={compact ? 11 : 12} className="shrink-0" />
+      {!compact && <span>{language === 'ka' ? 'ბაზარი' : 'Market'}</span>}
     </button>
   </div>
 );
@@ -3477,6 +3489,17 @@ export default function App() {
   const { user, loading: authLoading, initialized: authInitialized, logout } = useAuth();
   const { showToast } = useToast();
   const { language, setLanguage } = useLanguage();
+
+  const [viewportWidth, setViewportWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [uiMode, setUiMode] = useState<'business' | 'creative' | 'market'>(() => {
     try {
@@ -3682,10 +3705,10 @@ export default function App() {
     
     setActiveView(view);
 
-    if (window.innerWidth < 768) {
+    if (viewportWidth < 768) {
       setIsSidebarOpen(false);
     }
-  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView, uiMode]);
+  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView, uiMode, viewportWidth]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       return false;
@@ -3695,10 +3718,10 @@ export default function App() {
   });
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+    if (typeof window !== 'undefined' && viewportWidth >= 768) {
       safeStorage.set('proton_sidebar_open', isSidebarOpen.toString());
     }
-  }, [isSidebarOpen]);
+  }, [isSidebarOpen, viewportWidth]);
   const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -4474,8 +4497,8 @@ export default function App() {
             <motion.aside 
               initial={false}
               animate={{ 
-                width: isSidebarOpen ? 280 : 80,
-                x: isSidebarOpen ? 0 : (window.innerWidth < 768 ? -280 : 0)
+                width: isSidebarOpen ? 280 : (viewportWidth < 768 ? 0 : 80),
+                x: isSidebarOpen ? 0 : (viewportWidth < 768 ? -280 : 0)
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={cn(
@@ -4513,6 +4536,15 @@ export default function App() {
                 "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
                 isSidebarOpen ? "px-4" : "px-0"
               )}>
+                {isSidebarOpen && (
+                  <div className="px-3 pb-6 border-b border-proton-border/30 mb-6 md:hidden">
+                    <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.14em] mb-2.5 font-mono">
+                      {language === 'ka' ? 'სისტემის რეჟიმი' : 'SYSTEM MODE'}
+                    </p>
+                    <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} className="w-full" />
+                  </div>
+                )}
+
                 {uiMode === 'business' ? (
                   <>
                     {/* BUSINESS MODE PANELS */}
@@ -4914,6 +4946,14 @@ export default function App() {
                 </button>
               </div>
 
+              {/* Mode Selection inside Control Center */}
+              <div className="py-2 border-b border-white/5 flex flex-col gap-2">
+                <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.14em] font-mono">
+                  {language === 'ka' ? 'სისტემის რეჟიმი' : 'SYSTEM MODE'}
+                </p>
+                <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} className="w-full" />
+              </div>
+
               {/* Action Buttons */}
               <button
                 onClick={() => {
@@ -5095,9 +5135,20 @@ export default function App() {
           </nav>
           
           {/* Right Section: System Controls & Mode */}
-          <div className="flex items-center justify-end gap-3 md:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
-            <div className="hidden sm:block">
-              <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} className="w-[280px] sm:w-[320px] md:w-[340px]" />
+          <div className="flex items-center justify-end gap-2 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
+            <div>
+              <ModeToggle 
+                mode={uiMode} 
+                setMode={handleModeChange} 
+                t={t} 
+                language={language} 
+                compact={viewportWidth < 640}
+                className={cn(
+                  viewportWidth < 640 
+                    ? "w-[125px]" 
+                    : "w-[280px] sm:w-[320px] md:w-[340px]"
+                )} 
+              />
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 shrink-0">

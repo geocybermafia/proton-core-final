@@ -134,8 +134,10 @@ export function Web3ControlPanel() {
         </div>
 
         {/* Connect Button container wrapper to prevent iframe layout overflows */}
-        <div className="flex items-center gap-3 self-end md:self-center">
-          <ConnectButton />
+        <div className="flex items-center gap-3 self-end md:self-center max-w-full overflow-hidden shrink-0">
+          <div className="max-w-full overflow-x-auto custom-scrollbar-minimal pb-0.5 scrollbar-thin">
+            <ConnectButton />
+          </div>
           {isConnected && (
             <button 
               id="ledger_refresh_btn"
@@ -143,7 +145,7 @@ export function Web3ControlPanel() {
                 refetchBalance();
               }}
               title="Refresh ledger state"
-              className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-[#dfc394]/40 text-zinc-500 hover:text-[#dfc394] rounded-lg transition-all duration-200"
+              className="p-2.5 bg-zinc-900 border border-zinc-800 hover:border-[#dfc394]/40 text-zinc-500 hover:text-[#dfc394] rounded-lg transition-all duration-200 shrink-0"
             >
               <RefreshCw size={12} className={cn(isBalanceLoading && "animate-spin text-[#dfc394]")} />
             </button>
@@ -385,9 +387,9 @@ export function Web3ControlPanel() {
                         key={tx.id} 
                         className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-900/40 transition-all duration-300"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className={cn(
-                            "w-7 h-7 rounded flex items-center justify-center border",
+                            "w-7 h-7 rounded flex items-center justify-center border shrink-0",
                             tx.type === 'DEPOSIT' 
                               ? "bg-zinc-950 border-zinc-800 text-emerald-400" 
                               : "bg-zinc-950 border-zinc-800 text-[#dfc394]"
@@ -395,14 +397,14 @@ export function Web3ControlPanel() {
                             {tx.type === 'DEPOSIT' ? <ArrowDownLeft size={12} /> : <ArrowUpRight size={12} />}
                           </div>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[9px] font-bold text-zinc-300 uppercase tracking-wider">
+                              <span className="text-[9px] font-bold text-zinc-300 uppercase tracking-wider shrink-0">
                                 {tx.type === 'DEPOSIT' ? 'RECEIVE_TRANSACTION' : 'TRANSFER_TRANSACTION'}
                               </span>
-                              <span className="text-[7px] text-zinc-500 font-bold">{formattedDate(tx.timestamp)}</span>
+                              <span className="text-[7px] text-zinc-500 font-bold shrink-0">{formattedDate(tx.timestamp)}</span>
                             </div>
-                            <p className="text-[8px] text-zinc-500 font-bold uppercase max-w-[240px] truncate mt-0.5">
+                            <p className="text-[8px] text-zinc-500 font-bold uppercase max-w-[240px] truncate mt-0.5" title={tx.targetAddress}>
                               target_hash: {tx.targetAddress}
                             </p>
                           </div>
