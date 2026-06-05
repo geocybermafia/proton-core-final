@@ -1644,7 +1644,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={t.market.search_placeholder}
                   className={cn(
-                    "w-full pl-11 pr-4 py-3.5 rounded-2xl text-[11px] font-bold uppercase tracking-wider focus:outline-none transition-all shadow-inner border border-transparent focus:border-white/10",
+                    "w-full pl-11 pr-4 min-h-[48px] rounded-2xl text-base md:text-sm font-bold tracking-wider focus:outline-none transition-all shadow-inner border border-zinc-800 focus:border-white/20",
                     currentTheme.input
                   )}
                 />
@@ -1653,7 +1653,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsCartOpen(true)}
-                  className={cn("p-3.5 rounded-2xl transition-all border relative", currentTheme.cardAlt, currentTheme.bgHover)}
+                  className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl transition-all border relative", currentTheme.cardAlt, currentTheme.bgHover)}
                   title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
                 >
                   <ShoppingCart size={20} />
@@ -1665,7 +1665,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 </button>
                 <button 
                   onClick={() => setViewMode('my-listings')}
-                  className={cn("p-3.5 rounded-2xl transition-all border", currentTheme.cardAlt, currentTheme.bgHover)}
+                  className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl transition-all border", currentTheme.cardAlt, currentTheme.bgHover)}
                   title={t.market.my_listings}
                 >
                   <User size={20} />
@@ -1681,7 +1681,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     });
                     setViewMode('create');
                   }}
-                  className={cn("p-3.5 rounded-2xl shadow-xl shadow-black/80 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
+                  className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl shadow-xl shadow-black/80 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
                 >
                   <Plus size={20} />
                 </button>
@@ -1693,34 +1693,34 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   type="button"
                   onClick={() => setDisplayMode('grid')}
                   className={cn(
-                    "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
+                    "min-h-[48px] px-4 rounded-xl transition-all flex items-center justify-center gap-1.5",
                     displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                   )}
                   title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
                 >
                   <LayoutGrid size={16} />
-                  <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+                  <span className="hidden sm:inline text-xs sm:text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
                 </button>
                 <button 
                   type="button"
                   onClick={() => setDisplayMode('map')}
                   className={cn(
-                    "p-2.5 rounded-xl transition-all flex items-center gap-1.5",
+                    "min-h-[48px] px-4 rounded-xl transition-all flex items-center justify-center gap-1.5",
                     displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-md border border-zinc-700/80 shadow-black/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                   )}
                   title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
                 >
                   <MapPin size={16} />
-                  <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
+                  <span className="hidden sm:inline text-xs sm:text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
                 </button>
               </div>
 
-             <div className="relative group">
+              <div className="relative group shrink-0">
                 <select 
                   value={displayCurrency}
                   onChange={(e) => setDisplayCurrency(e.target.value)}
                   className={cn(
-                    "pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
+                    "min-h-[48px] h-12 pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
                     currentTheme.input
                   )}
                 >
@@ -1729,7 +1729,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   ))}
                 </select>
                 <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
-             </div>
+              </div>
           </div>
         )}
 
@@ -1844,7 +1844,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   type="button"
                   onClick={() => setActiveCategory('all')}
                   className={cn(
-                    "flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                    "flex items-center gap-2.5 px-6 py-4 sm:py-3.5 rounded-2xl text-xs sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border min-h-[48px]",
                     activeCategory === 'all'
                       ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/40 text-[#dfb257] shadow-xl shadow-black/80 scale-[1.02] -translate-y-0.5"
                       : cn(currentTheme.cardAlt, currentTheme.bgHover)
@@ -1859,7 +1859,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     type="button"
                     onClick={() => setActiveCategory(key)}
                     className={cn(
-                      "flex items-center gap-2.5 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border",
+                      "flex items-center gap-2.5 px-6 py-4 sm:py-3.5 rounded-2xl text-xs sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border min-h-[48px]",
                       activeCategory === key
                         ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/45 text-[#dfb257] shadow-xl shadow-black/80 scale-[1.02] -translate-y-0.5"
                         : cn(currentTheme.cardAlt, currentTheme.bgHover)
@@ -1872,13 +1872,13 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
               </div>
 
               {/* Mobile Quick Subfilters & Filters button under category carousel */}
-              <div className="flex items-center justify-between gap-3 mt-2 lg:hidden w-full">
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none grow">
+              <div className="flex items-center justify-between gap-3 mt-3 lg:hidden w-full px-1">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none grow py-1">
                   <button
                     type="button"
                     onClick={() => setActiveListingType('all')}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
                       activeListingType === 'all'
                         ? "bg-white/10 text-white border-white/20"
                         : "text-white/40 border-transparent hover:text-white/60"
@@ -1890,7 +1890,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     type="button"
                     onClick={() => setActiveListingType('service')}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
                       activeListingType === 'service'
                         ? "bg-white/10 text-white border-white/20"
                         : "text-white/40 border-transparent hover:text-white/60"
@@ -1902,7 +1902,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     type="button"
                     onClick={() => setActiveListingType('product')}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
                       activeListingType === 'product'
                         ? "bg-white/10 text-white border-white/20"
                         : "text-white/40 border-transparent hover:text-white/60"
@@ -1914,7 +1914,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     type="button"
                     onClick={() => setActiveListingType('project')}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border shrink-0",
+                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
                       activeListingType === 'project'
                         ? "bg-white/10 text-white border-white/20"
                         : "text-white/40 border-transparent hover:text-white/60"
@@ -1924,10 +1924,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 select-none pb-1">
                   <button
                     onClick={() => setIsFiltersOpen(true)}
-                    className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-white/10 shadow-lg bg-white/5 text-white active:scale-95")}
+                    className={cn("h-12 px-5 rounded-xl text-sm font-black uppercase tracking-widest transition-all border border-white/10 shadow-lg bg-white/5 text-white active:scale-95 flex items-center justify-center")}
                   >
                     ⚙️ {language === 'ka' ? 'ფილტრები' : 'Filters'}
                   </button>
@@ -1936,10 +1936,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   <button
                     type="button"
                     onClick={() => setDisplayMode(displayMode === 'grid' ? 'map' : 'grid')}
-                    className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10"
+                    className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 flex items-center justify-center shrink-0 animate-pulse-subtle"
                     title={displayMode === 'grid' ? (language === 'ka' ? 'რუკა' : 'Map') : (language === 'ka' ? 'ბადე' : 'Grid')}
                   >
-                    {displayMode === 'grid' ? <MapPin size={14} /> : <LayoutGrid size={14} />}
+                    {displayMode === 'grid' ? <MapPin size={18} /> : <LayoutGrid size={18} />}
                   </button>
                 </div>
               </div>
@@ -2005,7 +2005,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                   <AnimatePresence mode="popLayout">
                   {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
                     (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
@@ -2153,7 +2153,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   key={listing.id}
                   transition={{ delay: idx * 0.04 }}
                   className={cn(
-                    "group rounded-2xl overflow-hidden transition-all duration-500 flex flex-col relative border border-zinc-805/70 hover:border-[#dfb257]/35 hover:shadow-[0_12px_45px_rgba(223,178,87,0.07)] hover:-translate-y-1.5",
+                    "group rounded-2xl overflow-hidden transition-all duration-500 flex flex-col relative border border-zinc-850 hover:border-[#dfb257]/35 hover:shadow-[0_12px_45px_rgba(223,178,87,0.07)] hover:-translate-y-1.5",
                     currentTheme.card
                   )}
                 >
@@ -2162,7 +2162,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       if ((e.target as HTMLElement).closest('button')) return;
                       setCheckoutItem(listing);
                     }}
-                    className="w-full aspect-video h-36 sm:h-52 bg-zinc-900/80 overflow-hidden relative cursor-pointer"
+                    className="w-full aspect-video h-56 xs:h-64 sm:h-52 bg-zinc-900/80 overflow-hidden relative cursor-pointer"
                   >
                     {(listing.images && listing.images.length > 0) || listing.image ? (
                       <motion.img 
@@ -2179,21 +2179,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     )}
                     
                     {/* Badge Overlay */}
-                    <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 flex flex-wrap gap-1 sm:gap-2">
-                      <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
-                        <span className="text-[9px] sm:text-[11px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
-                        <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider hidden xs:inline">
+                    <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap gap-1.5 sm:gap-2">
+                      <div className="px-2.5 py-1 sm:px-2.5 sm:py-1 bg-black/75 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
+                        <span className="text-xs sm:text-[11px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
+                        <span className="text-xs sm:text-[9px] font-black text-white uppercase tracking-wider">
                           {t.market.categories[listing.category as keyof typeof t.market.categories]}
                         </span>
                       </div>
-                      <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
-                        <span className="text-[9px] sm:text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-                        <span className="text-[8px] sm:text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
+                      <div className="px-2.5 py-1 sm:px-2.5 sm:py-1 bg-black/75 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
+                        <span className="text-xs sm:text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
+                        <span className="text-xs sm:text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
                       </div>
                       {sellerRatings[listing.sellerId]?.avg >= 4.5 && (
-                        <div className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 bg-gradient-to-r from-[#e5af37] to-[#b8860b] text-zinc-950 border border-[#d4af37]/45 rounded-lg flex items-center gap-1 shadow-md">
-                          <Star size={8} className="fill-black text-black sm:size-[10px]" />
-                          <span className="text-[7px] sm:text-[8px] font-black uppercase tracking-wider">
+                        <div className="px-2 py-1 sm:px-2.5 sm:py-1 bg-gradient-to-r from-[#e5af37] to-[#b8860b] text-zinc-950 border border-[#d4af37]/45 rounded-lg flex items-center gap-1 shadow-md">
+                          <Star size={10} className="fill-black text-black sm:size-[10px]" />
+                          <span className="text-[10px] sm:text-[8px] font-black uppercase tracking-wider">
                             {language === 'ka' ? '✓ ტოპ რეიტინგი' : '✓ TOP VENDOR'}
                           </span>
                         </div>
@@ -2201,24 +2201,24 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     </div>
 
                     {canManageListing && (
-                      <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex gap-1 sm:gap-2 z-10">
+                      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-2 z-10">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             startEdit(listing);
                           }}
-                          className={cn("p-1.5 sm:p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
+                          className={cn("w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center bg-black/75 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
                         >
-                          <Edit3 size={11} className="sm:size-[14px]" />
+                          <Edit3 className="size-5 sm:size-4" />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteListing(listing.id);
                           }}
-                          className="p-1.5 sm:p-2.5 bg-black/60 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
+                          className="w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center bg-black/75 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
                         >
-                          <Trash2 size={11} className="sm:size-[14px]" />
+                          <Trash2 className="size-5 sm:size-4" />
                         </button>
                       </div>
                     )}
@@ -2226,55 +2226,55 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-5 sm:p-6 flex-1 flex flex-col relative space-y-4">
+                  <div className="p-6 sm:p-6 flex-1 flex flex-col relative space-y-4">
                     <h2 
                       onClick={() => setCheckoutItem(listing)}
-                      className={cn("text-[15px] sm:text-lg font-black tracking-tight mb-1 sm:mb-1.5 uppercase group-hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
+                      className={cn("text-lg sm:text-lg font-black tracking-tight mb-2 uppercase group-hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
                     >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                     </h2>
-                    <p className={cn("text-[11px] sm:text-xs font-semibold leading-relaxed mb-3 sm:mb-4 line-clamp-2 opacity-75", currentTheme.muted)}>
+                    <p className={cn("text-base sm:text-xs font-medium leading-relaxed mb-4 line-clamp-3 opacity-90 sm:opacity-75", currentTheme.muted)}>
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
                     <div className={cn("mt-auto pt-4 sm:pt-4 border-t", currentTheme.border)}>
                       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                         <div className="flex flex-col min-w-0">
-                          <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-widest opacity-50 mb-1", currentTheme.muted)}>{t.market.price}</span>
-                          <span className="text-base sm:text-2xl font-black tracking-tighter text-[#dfb257] drop-shadow-[0_0_6px_rgba(223,178,87,0.15)]">
+                          <span className={cn("text-xs sm:text-[10px] font-black uppercase tracking-widest opacity-50 mb-1", currentTheme.muted)}>{t.market.price}</span>
+                          <span className="text-xl sm:text-2xl font-black tracking-tighter text-[#dfb257] drop-shadow-[0_0_6px_rgba(223,178,87,0.15)]">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-[9px] sm:text-[10px] font-black opacity-50 ml-1 tracking-wider">{displayCurrency}</span>
+                            <span className="text-xs sm:text-[10px] font-black opacity-50 ml-1 tracking-wider">{displayCurrency}</span>
                           </span>
                         </div>
 
                         {/* Product / Service / Project Badge */}
                         {listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-[#dfb257] shadow-sm shrink-0">
+                          <span className="inline-flex px-3 py-1.5 sm:px-2 sm:py-1 rounded-md text-xs sm:text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-[#dfb257] shadow-sm shrink-0">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
                         ) : listing.listingType === 'project' || listing.category === 'project' ? (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest bg-[#c5a059]/10 border border-[#c5a059]/30 text-[#c5a059] shadow-sm shrink-0">
+                          <span className="inline-flex px-3 py-1.5 sm:px-2 sm:py-1 rounded-md text-xs sm:text-[9px] font-black uppercase tracking-widest bg-[#c5a059]/10 border border-[#c5a059]/30 text-[#c5a059] shadow-sm shrink-0">
                             {language === 'ka' ? 'პროექტი' : 'Project'}
                           </span>
                         ) : (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-black uppercase tracking-widest bg-[#a88238]/10 border border-[#a88238]/30 text-[#dfb257] shadow-sm shrink-0">
+                          <span className="inline-flex px-3 py-1.5 sm:px-2 sm:py-1 rounded-md text-xs sm:text-[9px] font-black uppercase tracking-widest bg-[#a88238]/10 border border-[#a88238]/30 text-[#dfb257] shadow-sm shrink-0">
                             {language === 'ka' ? 'პროდუქტი' : 'Product'}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 sm:gap-2.5 flex-wrap xs:flex-nowrap">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3 flex-wrap xs:flex-nowrap">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div 
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
                             }}
-                            className={cn("w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-[9px] sm:text-[10px] relative cursor-pointer hover:border-white/20 transition-all border shrink-0", currentTheme.cardAlt, currentTheme.accent)}
+                            className={cn("w-12 h-12 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-xs sm:text-[10px] relative cursor-pointer hover:border-white/20 transition-all border shrink-0", currentTheme.cardAlt, currentTheme.accent)}
                             title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
                           >
                             {listing.sellerName.substring(0, 2).toUpperCase()}
-                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-[#141414]" />
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-1.5 sm:h-1.5 bg-green-500 rounded-full border border-[#141414]" />
                           </div>
                           <div 
                             onClick={(e) => {
@@ -2285,23 +2285,23 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                             title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
                           >
                             <div className="flex items-center gap-1 min-w-0">
-                              <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-[#dfb257] transition-colors", currentTheme.text)}>{listing.sellerName}</span>
-                              <ShieldCheck size={10} className="shrink-0 text-[#dfb257]" />
+                              <span className={cn("text-xs sm:text-[10px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-[#dfb257] transition-colors", currentTheme.text)}>{listing.sellerName}</span>
+                              <ShieldCheck size={11} className="shrink-0 text-[#dfb257]" />
                             </div>
                             <div className="flex items-center mt-0.5">
                               {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
                                 <div className="flex items-center gap-0.5">
-                                  <Star size={9} className="fill-[#dfb257] text-[#dfb257]" />
-                                  <span className="text-[8px] font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
+                                  <Star size={11} className="fill-[#dfb257] text-[#dfb257]" />
+                                  <span className="text-xs font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-[7px] font-bold text-white/35 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
+                                <span className="text-[10px] sm:text-[7px] font-bold text-white/35 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+                        <div className="flex items-center gap-2 shrink-0 ml-auto select-none">
                           {/* Chat Button */}
                           {!isOwnListing && (
                             <button 
@@ -2309,10 +2309,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                 e.stopPropagation();
                                 setActiveChatListing(listing);
                               }}
-                              className="p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center min-w-[34px] min-h-[34px]"
+                              className="w-12 h-12 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center"
                               title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
                             >
-                              <MessageCircle size={14} className="sm:size-[14px]" />
+                              <MessageCircle size={18} className="sm:size-[14px]" />
                             </button>
                           )}
 
@@ -2324,10 +2324,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                 e.stopPropagation();
                                 handleAddToCart(listing);
                               }}
-                              className="p-2 sm:p-2.5 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30 min-w-[34px] min-h-[34px]"
+                              className="w-12 h-12 sm:w-9 sm:h-9 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30"
                               title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                             >
-                              <ShoppingCart size={14} className="sm:size-[14px]" />
+                              <ShoppingCart size={18} className="sm:size-[14px]" />
                             </button>
                           )}
                         </div>
@@ -2339,11 +2339,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                             <button 
                               onClick={() => startEdit(listing)}
                               className={cn(
-                                "flex-1 py-3 sm:py-2.5 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
+                                "flex-1 h-12 sm:h-10 py-3 sm:py-2.5 rounded-xl text-xs sm:text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
                                 currentTheme.accentBg
                               )}
                             >
-                              <Edit3 size={12} className="sm:size-[14px]" />
+                              <Edit3 size={14} className="sm:size-[14px]" />
                               {t.market.edit_listing}
                             </button>
                             <button 
@@ -2359,21 +2359,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                   }
                                 }
                               }}
-                              className="px-2.5 sm:px-3 py-2 sm:py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl text-[8px] sm:text-[9px] font-black transition-all flex items-center justify-center"
+                              className="w-12 h-12 sm:w-10 sm:h-10 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl text-xs sm:text-[9px] font-black transition-all flex items-center justify-center shrink-0"
                               title={language === 'ka' ? 'წაშლა' : 'Delete'}
                             >
-                              <Trash2 size={11} className="sm:size-[14px]" />
+                              <Trash2 size={14} className="sm:size-[14px]" />
                             </button>
                           </div>
                         ) : (
                           <button 
                             onClick={() => handleBuyNow(listing)}
                             className={cn(
-                              "w-full py-2 sm:py-2.5 rounded-xl text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-proton-accent/20 active:scale-[0.98]",
+                              "w-full h-12 sm:h-10 py-3 sm:py-2.5 rounded-xl text-xs sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-proton-accent/20 active:scale-[0.98]",
                               currentTheme.accentBg, "text-white"
                             )}
                           >
-                            <ShoppingBag size={11} className="sm:size-[14px]" />
+                            <ShoppingBag size={14} className="sm:size-[14px]" />
                             {t.market.buy_now}
                           </button>
                         )}
@@ -2452,24 +2452,24 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
            <form onSubmit={handleSubmitListing} className="space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  <div className="space-y-3">
-                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-60 ml-2", currentTheme.muted)}>{t.market.form.title} (EN)</label>
+                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.title} (EN)</label>
                     <input 
                        required
                        type="text"
                        value={formData.title}
                        onChange={e => setFormData({...formData, title: e.target.value})}
                        placeholder="e.g. Industrial Control Unit v3"
-                       className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                       className={cn("w-full min-h-[48px] md:min-h-[56px] px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/90 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                     />
                  </div>
                  <div className="space-y-3">
-                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-60 ml-2", currentTheme.muted)}>{t.market.form.title} (GE)</label>
+                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.title} (GE)</label>
                     <input 
                        type="text"
                        value={formData.titleGe}
                        onChange={e => setFormData({...formData, titleGe: e.target.value})}
                        placeholder="მაგ: ინდუსტრიული კონტროლერი"
-                       className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                       className={cn("w-full min-h-[48px] md:min-h-[56px] px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/90 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                     />
                  </div>
               </div>
@@ -2492,10 +2492,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                              }));
                            }}
                            className={cn(
-                             "py-4 rounded-2xl border transition-all text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center",
+                             "min-h-[48px] sm:min-h-[54px] rounded-2xl border-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center",
                              formData.listingType === 'service'
-                               ? "bg-white/10 border-white/20 text-white shadow-lg"
-                               : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                               ? "bg-[#dfb257]/10 border-[#dfb257] text-[#dfb257] shadow-lg"
+                               : "bg-white/5 border-zinc-700 text-white/70 hover:bg-white/10"
                            )}
                          >
                            <span className="text-sm">⚡</span>
@@ -2511,10 +2511,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                              }));
                            }}
                            className={cn(
-                             "py-4 rounded-2xl border transition-all text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center",
+                             "min-h-[48px] sm:min-h-[54px] rounded-2xl border-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center",
                              formData.listingType === 'product'
-                               ? "bg-white/10 border-white/20 text-white shadow-lg"
-                               : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                               ? "bg-[#dfb257]/10 border-[#dfb257] text-[#dfb257] shadow-lg"
+                               : "bg-white/5 border-zinc-700 text-white/70 hover:bg-white/10"
                            )}
                          >
                            <span className="text-sm">📦</span>
@@ -2530,10 +2530,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                              }));
                            }}
                            className={cn(
-                             "py-4 rounded-2xl border transition-all text-xs font-bold flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center",
+                             "min-h-[48px] sm:min-h-[54px] rounded-2xl border-2 transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center",
                              formData.listingType === 'project'
-                               ? "bg-white/10 border-white/20 text-white shadow-lg"
-                               : "bg-white/5 border-transparent text-white/45 hover:bg-white/10"
+                               ? "bg-[#dfb257]/10 border-[#dfb257] text-[#dfb257] shadow-lg"
+                               : "bg-white/5 border-zinc-700 text-white/70 hover:bg-white/10"
                            )}
                          >
                            <span className="text-sm">🚀</span>
@@ -2545,7 +2545,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     {formData.listingType === 'service' && (
                       <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 mb-4 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div className="space-y-3">
-                          <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                          <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-80 text-[#dfb257] ml-2", currentTheme.muted)}>
                             {language === 'ka' ? 'შესრულების ვადა' : 'Delivery Duration'}
                           </label>
                           <input 
@@ -2553,11 +2553,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                             value={formData.serviceDuration || ''}
                             onChange={e => setFormData({...formData, serviceDuration: e.target.value})}
                             placeholder={language === 'ka' ? "მაგ: 3 დღე, 2 საათი" : "e.g. 3 days, 1 hour"}
-                            className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                            className={cn("w-full min-h-[48px] px-5 py-3.5 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                           />
                         </div>
                         <div className="space-y-3">
-                          <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                          <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-80 text-[#dfb257] ml-2", currentTheme.muted)}>
                             {language === 'ka' ? 'სამუშაო პირობები კლიენტისთვის' : 'Working Terms (Requirements)'}
                           </label>
                           <input 
@@ -2565,18 +2565,18 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                             value={formData.serviceTerms || ''}
                             onChange={e => setFormData({...formData, serviceTerms: e.target.value})}
                             placeholder={language === 'ka' ? "მაგ: საჭიროა დიზაინის ბრიფი" : "e.g. Design brief required"}
-                            className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                            className={cn("w-full min-h-[48px] px-5 py-3.5 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                           />
                         </div>
                       </div>
                     )}
 
-                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-60 ml-2", currentTheme.muted)}>{t.market.form.category}</label>
+                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-80 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.category}</label>
                     <div className="relative group">
                       <select 
                          value={formData.category}
                          onChange={e => setFormData({...formData, category: e.target.value})}
-                         className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                         className={cn("w-full min-h-[48px] px-5 py-3.5 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold appearance-none text-white shadow-inner bg-zinc-950/60", currentTheme.input)}
                       >
                          {Object.entries(t.market.categories).map(([key, label]) => (
                            <option key={key} value={key}>{label as string}</option>
@@ -2588,7 +2588,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
                  <div className="grid grid-cols-2 gap-4">
                    <div className="space-y-3">
-                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.price}</label>
+                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.price}</label>
                      <div className="relative group">
                        <Coins size={14} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-30", currentTheme.accent)} />
                        <input 
@@ -2596,17 +2596,17 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                            type="number"
                            value={formData.price}
                            onChange={e => setFormData({...formData, price: e.target.value})}
-                           className={cn("w-full pl-11 pr-3 py-4 sm:pl-14 sm:pr-6 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                           className={cn("w-full pl-11 pr-3 py-4 sm:pl-14 sm:pr-6 sm:py-5 min-h-[48px] md:min-h-[56px] rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                        />
                      </div>
                    </div>
                    <div className="space-y-3">
-                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.currency}</label>
+                     <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.currency}</label>
                      <div className="relative">
                        <select 
                            value={formData.currency}
                            onChange={e => setFormData({...formData, currency: e.target.value})}
-                           className={cn("w-full px-4 py-4 sm:px-6 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                           className={cn("w-full min-h-[48px] md:min-h-[56px] px-4 py-4 sm:px-6 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold appearance-none text-white shadow-inner bg-zinc-950/60 cursor-pointer", currentTheme.input)}
                        >
                            {CURRENCIES.map(curr => (
                              <option key={curr.code} value={curr.code}>{curr.code} ({curr.symbol})</option>
@@ -2620,12 +2620,12 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                  <div className="space-y-3">
-                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.country}</label>
+                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.country}</label>
                     <div className="relative">
                       <select 
                          value={formData.country}
                          onChange={e => setFormData({...formData, country: e.target.value})}
-                         className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                         className={cn("w-full min-h-[48px] md:min-h-[56px] px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold appearance-none text-white shadow-inner bg-zinc-950/60 cursor-pointer", currentTheme.input)}
                       >
                          {WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL').map(country => (
                            <option key={country.code} value={country.code}>
@@ -2637,14 +2637,14 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     </div>
                  </div>
                  <div className="space-y-3">
-                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-60 ml-2", currentTheme.muted)}>{t.market.form.city}</label>
+                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.15em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.city}</label>
                     <input 
                        required
                        type="text"
                        value={formData.city}
                        onChange={e => setFormData({...formData, city: e.target.value})}
                        placeholder="e.g. Tbilisi"
-                       className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                       className={cn("w-full min-h-[48px] md:min-h-[56px] px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                     />
                  </div>
               </div>
@@ -2659,7 +2659,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       <select 
                         value={formData.condition}
                         onChange={e => setFormData({...formData, condition: e.target.value})}
-                        className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 rounded-[18px] sm:rounded-[24px] border focus:outline-none transition-all text-sm md:text-xs font-bold appearance-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                        className={cn("w-full px-5 py-4 sm:px-8 sm:py-5 min-h-[48px] md:min-h-[56px] rounded-[18px] sm:rounded-[24px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold appearance-none text-white shadow-inner bg-zinc-950/60 cursor-pointer", currentTheme.input)}
                       >
                         <option value="new">{language === 'ka' ? '✨ ახალი' : '✨ New'}</option>
                         <option value="used">{language === 'ka' ? '⚙️ მეორადი' : '⚙️ Used'}</option>
@@ -2670,30 +2670,30 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                  </div>
 
                  <div className="space-y-3">
-                    <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>
+                    <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.25em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>
                       {language === 'ka' ? 'საგარიგებო პოლიტიკა' : 'Pricing Terms'}
                     </label>
                     <div 
                       onClick={() => setFormData({...formData, isNegotiable: !formData.isNegotiable})}
                       className={cn(
-                        "p-5 rounded-[24px] border flex items-center justify-between transition-all cursor-pointer select-none",
-                        formData.isNegotiable ? "bg-proton-accent/5 border-proton-accent/30 shadow-lg" : "bg-white/5 border-white/5"
+                        "p-5 rounded-[24px] border-2 flex items-center justify-between transition-all cursor-pointer select-none min-h-[56px]",
+                        formData.isNegotiable ? "bg-[#dfb257]/10 border-[#dfb257] shadow-lg" : "bg-zinc-950/60 border-zinc-700/80 hover:bg-white/5"
                       )}
                     >
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-white">
+                        <span className="text-sm font-bold text-white">
                           {language === 'ka' ? 'ფასი შეთანხმებით' : 'Price is Negotiable'}
                         </span>
-                        <span className={cn("text-[9px] font-medium block mt-0.5", currentTheme.muted)}>
+                        <span className={cn("text-xs font-semibold block mt-0.5 text-zinc-400")}>
                           {language === 'ka' ? 'მყიდველებს შეუძლიათ შემოგთავაზონ ფასი' : 'Open to custom offers'}
                         </span>
                       </div>
                       <div className={cn(
-                        "w-10 h-5 rounded-full relative transition-all border",
-                        formData.isNegotiable ? "bg-[#2e5bff] border-[#2e5bff] shadow-[0_0_10px_rgba(0,242,255,0.2)]" : "bg-[#1f1f1f] border-white/5"
+                        "w-12 h-6 rounded-full relative transition-all border-2 shrink-0",
+                        formData.isNegotiable ? "bg-[#dfb257] border-[#dfb257] shadow-[0_0_10px_rgba(223,178,87,0.4)]" : "bg-zinc-850 border-zinc-650"
                       )}>
                         <div className={cn(
-                          "absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full transition-all",
+                          "absolute top-0.5 w-4 h-4 bg-zinc-950 rounded-full transition-all",
                           formData.isNegotiable ? "right-0.5" : "left-0.5"
                         )} />
                       </div>
@@ -2716,7 +2716,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
-                  <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40", currentTheme.muted)}>{t.market.form.description}</label>
+                  <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.25em] opacity-85 text-[#dfb257]", currentTheme.muted)}>{t.market.form.description}</label>
                   <button
                     type="button"
                     onClick={handleAiDescription}
@@ -2739,7 +2739,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     value={formData.description}
                     onChange={e => setFormData({...formData, description: e.target.value})}
                     placeholder="Technical specifications and details..."
-                    className={cn("w-full px-5 py-4 sm:px-8 sm:py-6 rounded-[18px] sm:rounded-[32px] border focus:outline-none transition-all text-sm md:text-xs font-semibold h-48 resize-none text-white shadow-inner bg-white/5", currentTheme.input)}
+                    className={cn("w-full px-5 py-3.5 sm:px-8 sm:py-6 rounded-[18px] sm:rounded-[32px] border-2 border-zinc-700/80 focus:border-[#dfb257] focus:outline-none transition-all text-base sm:text-xs font-semibold h-48 resize-none text-white shadow-inner bg-[#0c0c0d]/80 placeholder-zinc-500", currentTheme.input)}
                 />
               </div>
 
@@ -2798,13 +2798,13 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                        value={formData.images?.[0] || ''}
                        onChange={e => setFormData({...formData, images: [e.target.value]})}
                        placeholder="...or paste external secure URL"
-                       className={cn("w-full pl-14 pr-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                       className={cn("w-full min-h-[48px] md:min-h-[56px] pl-14 pr-6 py-5 rounded-[24px] border-2 border-zinc-700/85 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                     />
                   </div>
                </div>
 
               <div className="space-y-3">
-                 <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] opacity-40 ml-2", currentTheme.muted)}>{t.market.form.location}</label>
+                 <label className={cn("text-xs md:text-[10px] font-black uppercase tracking-[0.25em] opacity-85 text-[#dfb257] ml-2", currentTheme.muted)}>{t.market.form.location}</label>
                  <div className="relative group">
                     <MapPin size={16} className={cn("absolute left-6 top-1/2 -translate-y-1/2 opacity-30", currentTheme.accent)} />
                     <input 
@@ -2812,7 +2812,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                        value={formData.location}
                        onChange={e => setFormData({...formData, location: e.target.value})}
                        placeholder="Detailed operational address"
-                       className={cn("w-full pl-14 pr-6 py-5 rounded-[24px] border focus:outline-none transition-all text-xs font-bold text-white shadow-inner bg-white/5", currentTheme.input)}
+                       className={cn("w-full min-h-[48px] md:min-h-[56px] pl-14 pr-6 py-5 rounded-[24px] border-2 border-zinc-700/85 focus:border-[#dfb257] focus:outline-none transition-all text-base md:text-sm font-bold text-white shadow-inner bg-zinc-950/60 placeholder-zinc-500", currentTheme.input)}
                     />
                  </div>
               </div>
