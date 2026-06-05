@@ -154,7 +154,7 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
                </div>
             </div>
 
-            <div className="flex-1 text-center md:text-left min-w-0">
+             <div className="flex-1 text-center md:text-left min-w-0">
                <div className="flex flex-col md:flex-row md:items-center gap-3">
                   <h2 className="text-3xl md:text-5xl font-black tracking-tighter uppercase text-proton-text truncate">{profile.name}</h2>
                   <div className="px-3 py-1 bg-proton-accent/10 border border-proton-accent/20 text-proton-accent text-[10px] font-black rounded-lg uppercase tracking-widest animate-pulse h-fit w-fit mx-auto md:mx-0">

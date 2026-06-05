@@ -21,6 +21,7 @@ import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CabinetView from './components/CabinetView';
+import { Web3ControlPanel } from './components/Web3ControlPanel';
 import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
 import { MarketHub } from './components/MarketHub';
@@ -97,6 +98,7 @@ import {
   Fingerprint,
   PlusCircle,
   CreditCard,
+  Wallet,
   BarChart3,
   User as UserIcon,
   Target,
@@ -3727,17 +3729,23 @@ export default function App() {
 
     // Hybrid database routing: High-frequency operational logs run through Supabase
     if (isSupabaseConfigured()) {
-      supabase.from('operational_logs').insert([{
-        id: newLog.id,
-        type: newLog.type,
-        message: newLog.message,
-        timestamp: newLog.timestamp,
-        data: newLog.data ? (typeof newLog.data === 'string' ? newLog.data : JSON.stringify(newLog.data)) : null
-      }]).then(({ error }) => {
+      Promise.resolve(
+        supabase.from('operational_logs').insert([{
+          id: newLog.id,
+          type: newLog.type,
+          message: newLog.message,
+          timestamp: newLog.timestamp,
+          data: newLog.data ? (typeof newLog.data === 'string' ? newLog.data : JSON.stringify(newLog.data)) : null
+        }])
+      ).then(({ error }) => {
         if (error) {
           console.warn("[HYBRID DB] Operational log failed to sync to Supabase:", error.message);
         }
+      }).catch((err: any) => {
+        console.log("[HYBRID DB] Catch-all: Supabase request error:", err?.message || err);
       });
+    } else {
+      console.log("[HYBRID DB] Telemetry skipped: Supabase not configured.");
     }
   }, []);
 
@@ -4589,6 +4597,17 @@ export default function App() {
                         />
                       </div>
 
+                      <div className="pt-2">
+                        <SidebarItem 
+                          icon={Wallet} 
+                          label={t.sidebar.finance} 
+                          active={activeView === 'finance'} 
+                          onClick={() => handleViewChange('finance')} 
+                          expanded={isSidebarOpen}
+                          uiMode={uiMode}
+                        />
+                      </div>
+
                       {userProfile.showCommercialHub && (
                         <div className="pt-2">
                           <SidebarItem 
@@ -5213,6 +5232,11 @@ export default function App() {
                       isAdmin={isAdmin}
                       checkAndIncrementAiQuota={checkAndIncrementAiQuota}
                     />
+                  )}
+                  {activeView === 'finance' && (
+                    <div className="space-y-6 max-w-7xl mx-auto pb-20">
+                      <Web3ControlPanel />
+                    </div>
                   )}
                   {activeView === 'organizer' && (
                     <OrganizerView 
