@@ -217,19 +217,19 @@ const MARKET_THEMES: Record<string, MarketTheme> = {
 };
 
 const PREMIUM_INDUSTRIAL: MarketTheme = {
-  card: "bg-[#0b0b0c]/95 border-zinc-800/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] text-zinc-100 backdrop-blur-2xl transition-all duration-300 hover:shadow-[#dfb257]/5",
-  input: "bg-[#050506]/95 border-zinc-800/80 focus:border-[#d4af37]/45 text-zinc-100 placeholder:text-zinc-600 transition-all font-mono",
+  card: "bg-zinc-900 border border-zinc-800 shadow-[0_12px_45px_rgba(0,0,0,0.85)] text-zinc-100 backdrop-blur-2xl transition-all duration-305 hover:shadow-[#dfb257]/10 hover:border-zinc-700/80",
+  input: "bg-zinc-950 border border-zinc-800 focus:border-[#dfb257]/80 text-zinc-100 placeholder:text-zinc-550 transition-all font-sans",
   accent: "text-[#dfb257]",
-  accentBg: "bg-gradient-to-b from-[#e5af37] to-[#b8860b] hover:from-[#f3be4b] hover:to-[#cfa01b]",
-  border: "border-zinc-800/60",
-  muted: "text-zinc-400 font-mono tracking-wider",
+  accentBg: "bg-gradient-to-b from-[#dfb257] to-[#b8860b] hover:from-[#ebd083] hover:to-[#dfb257]",
+  border: "border-zinc-800/80",
+  muted: "text-zinc-350 font-sans tracking-wide",
   text: "text-zinc-100",
-  subtext: "text-zinc-300",
-  tagMuted: "text-zinc-500",
-  cardAlt: "bg-[#101012] border border-zinc-800/60 text-zinc-200 backdrop-blur-xl",
-  badgeBg: "bg-gradient-to-b from-zinc-800 to-zinc-900 border-zinc-700/80 shadow-md text-[#dfb257] font-black uppercase tracking-widest",
-  bgHover: "hover:bg-zinc-850 hover:text-[#dfb257]",
-  overlay: "bg-[#060607]/95 backdrop-blur-3xl border border-zinc-800/80 shadow-2xl"
+  subtext: "text-zinc-250",
+  tagMuted: "text-zinc-400",
+  cardAlt: "bg-[#121215] border border-zinc-800 text-zinc-200 backdrop-blur-xl",
+  badgeBg: "bg-gradient-to-b from-zinc-850 to-zinc-900 border-zinc-700/90 shadow-md text-[#dfb257] font-black uppercase tracking-widest",
+  bgHover: "hover:bg-zinc-800 hover:text-[#dfb257]",
+  overlay: "bg-zinc-950/98 backdrop-blur-3xl border border-zinc-800 shadow-2xl"
 };
 
 const WORLD_COUNTRIES = [
@@ -1522,78 +1522,72 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const FilterContent = (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="flex items-center justify-between mb-2">
-        <h3 className={cn("text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2", currentTheme.muted)}>
-          <LayoutGrid size={14} className={currentTheme.accent} />
-          {language === 'ka' ? 'ფილტრაცია' : 'Refine'}
+        <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 text-[#dfb257]">
+          <LayoutGrid size={16} className="text-[#dfb257]" />
+          {language === 'ka' ? 'ფილტრაცია' : 'Refine Search'}
         </h3>
         <button 
           onClick={() => setIsFiltersOpen(false)} 
-          className="lg:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+          className="lg:hidden p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 hover:text-white transition-colors text-zinc-400"
         >
           <X size={18} />
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div className="space-y-2">
-          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
             {t.market.filters.country}
           </label>
           <div className="relative group">
-            <Globe size={12} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-40", currentTheme.accent)} />
+            <Globe size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60" />
             <select 
               value={activeCountry}
               onChange={(e) => setActiveCountry(e.target.value)}
-              className={cn(
-                "w-full pl-10 pr-4 py-2.5 border rounded-xl text-[11px] font-bold appearance-none focus:outline-none transition-all text-white",
-                currentTheme.input
-              )}
+              className="w-full pl-10 pr-10 py-3 bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700/85 rounded-xl text-xs md:text-sm font-bold focus:border-[#dfb257] focus:outline-none transition-all text-white appearance-none cursor-pointer"
             >
               {WORLD_COUNTRIES.map(country => (
-                <option key={country.code} value={country.code}>
+                <option key={country.code} value={country.code} className="bg-zinc-950 text-white">
                   {country.name}
                 </option>
               ))}
             </select>
-            <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+            <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-40 pointer-events-none text-zinc-400" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
             {t.market.filters.city}
           </label>
           <div className="relative group">
-            <MapPin size={12} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-40", currentTheme.accent)} />
+            <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60" />
             <input 
               type="text"
               value={activeCity}
               onChange={(e) => setActiveCity(e.target.value)}
-              placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. New York'}
-              className={cn(
-                "w-full pl-10 pr-4 py-2.5 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-20 text-white",
-                currentTheme.input
-              )}
+              placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
+              className="w-full pl-10 pr-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
             />
           </div>
         </div>
 
         <div className="space-y-3">
-          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
             {t.market.form.category}
           </label>
-          <div className="grid grid-cols-2 gap-1.5 max-h-[340px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-2 gap-2 max-h-[340px] overflow-y-auto pr-1">
             <button 
               type="button"
               onClick={() => setActiveCategory('all')}
               className={cn(
-                "col-span-2 flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border text-left",
+                "col-span-2 flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border text-left",
                 activeCategory === 'all' 
-                  ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/40 text-[#dfb257] shadow-lg shadow-black/60"
-                  : "bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white"
+                  ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow-lg shadow-black/80"
+                  : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white"
               )}
             >
-              <span className="text-sm">🌍</span>
+              <span className="text-base">🌍</span>
               <span className="truncate">{t.market.all_categories}</span>
             </button>
             {Object.entries(t.market.categories).map(([key, label]) => (
@@ -1602,53 +1596,47 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 type="button"
                 onClick={() => setActiveCategory(key)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border text-left",
+                  "flex items-center gap-2 px-3 py-3 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-tight transition-all border text-left",
                   activeCategory === key 
-                    ? "bg-gradient-to-b from-[#2a2a2d] to-[#121213] border-[#d4af37]/45 text-[#dfb257] shadow-lg shadow-black/60"
-                    : "bg-white/5 border-transparent text-white/50 hover:bg-white/10 hover:text-white"
+                    ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow-lg"
+                    : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white"
                 )}
                 title={label as string}
               >
                 <span className="text-base shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                <span className="truncate text-[8px] font-black uppercase tracking-tight">{label as string}</span>
+                <span className="truncate">{label as string}</span>
               </button>
             ))}
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 ml-1", currentTheme.muted)}>
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
             {t.market.price} (USD)
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             <input 
               type="number"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              placeholder="Min"
-              className={cn(
-                "w-full px-3 py-2 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-20 text-white",
-                currentTheme.input
-              )}
+              placeholder="Min Price"
+              className="w-full px-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
             />
             <input 
               type="number"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="Max"
-              className={cn(
-                "w-full px-3 py-2 border rounded-xl text-[11px] font-bold focus:outline-none transition-all placeholder:opacity-20 text-white",
-                currentTheme.input
-              )}
+              placeholder="Max Price"
+              className="w-full px-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
             />
           </div>
         </div>
 
         <button 
           onClick={clearFilters}
-          className={cn("w-full py-3 mt-4 rounded-xl bg-white/5 border border-white/5 text-[9px] font-black uppercase tracking-[0.2em] hover:text-white hover:bg-red-500/10 hover:border-red-500/20 transition-all flex items-center justify-center gap-2", currentTheme.muted)}
+          className="w-full py-3.5 mt-4 rounded-xl bg-red-950/20 border border-red-900/30 text-xs font-black uppercase tracking-[0.25em] hover:text-white hover:bg-red-905 hover:border-red-500/50 transition-all flex items-center justify-center gap-2 text-red-300"
         >
-          <Trash2 size={12} />
+          <Trash2 size={14} className="stroke-[2.5]" />
           {t.market.filters.clear_all}
         </button>
       </div>
@@ -2541,38 +2529,38 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-6 sm:p-6 flex-1 flex flex-col relative space-y-4">
+                  <div className="p-6 flex-1 flex flex-col relative space-y-4">
                     <h2 
                       onClick={() => setCheckoutItem(listing)}
-                      className={cn("text-lg sm:text-lg font-black tracking-tight mb-2 uppercase group-hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-1", currentTheme.text)}
+                      className="text-lg md:text-xl font-extrabold tracking-tight mb-2 uppercase text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[50px] leading-snug"
                     >
                       {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                     </h2>
-                    <p className={cn("text-base sm:text-xs font-medium leading-relaxed mb-4 line-clamp-3 opacity-90 sm:opacity-75", currentTheme.muted)}>
+                    <p className="text-zinc-300 font-sans text-sm md:text-xs font-medium leading-relaxed mb-4 line-clamp-3">
                       {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                     </p>
 
-                    <div className={cn("mt-auto pt-4 sm:pt-4 border-t", currentTheme.border)}>
+                    <div className={cn("mt-auto pt-4 border-t", currentTheme.border)}>
                       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                         <div className="flex flex-col min-w-0">
-                          <span className={cn("text-xs sm:text-[10px] font-black uppercase tracking-widest opacity-50 mb-1", currentTheme.muted)}>{t.market.price}</span>
-                          <span className="text-xl sm:text-2xl font-black tracking-tighter text-[#dfb257] drop-shadow-[0_0_6px_rgba(223,178,87,0.15)]">
+                          <span className="text-xs uppercase tracking-wider text-zinc-400 font-bold mb-1 block">{t.market.price}</span>
+                          <span className="text-2xl font-black tracking-tight text-[#dfb257] drop-shadow-[0_0_6px_rgba(223,178,87,0.15)] flex items-baseline gap-1">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-xs sm:text-[10px] font-black opacity-50 ml-1 tracking-wider">{displayCurrency}</span>
+                            <span className="text-sm font-bold text-zinc-400 font-sans">{displayCurrency}</span>
                           </span>
                         </div>
 
                         {/* Product / Service / Project Badge */}
                         {listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="inline-flex px-3 py-1.5 sm:px-2 sm:py-1 rounded-md text-xs sm:text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-[#dfb257] shadow-sm shrink-0">
+                          <span className="inline-flex px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-[#dfb257] shadow-sm shrink-0">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
                         ) : listing.listingType === 'project' || listing.category === 'project' ? (
-                          <span className="inline-flex px-3 py-1.5 sm:px-2 sm:py-1 rounded-md text-xs sm:text-[9px] font-black uppercase tracking-widest bg-[#c5a059]/10 border border-[#c5a059]/30 text-[#c5a059] shadow-sm shrink-0">
+                          <span className="inline-flex px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-[#c5a059]/10 border border-[#c5a059]/30 text-[#c5a059] shadow-sm shrink-0">
                             {language === 'ka' ? 'პროექტი' : 'Project'}
                           </span>
                         ) : (
-                          <span className="inline-flex px-3 py-1.5 sm:px-2 sm:py-1 rounded-md text-xs sm:text-[9px] font-black uppercase tracking-widest bg-[#a88238]/10 border border-[#a88238]/30 text-[#dfb257] shadow-sm shrink-0">
+                          <span className="inline-flex px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-zinc-100 shadow-sm shrink-0">
                             {language === 'ka' ? 'პროდუქტი' : 'Product'}
                           </span>
                         )}
@@ -2585,11 +2573,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                               e.stopPropagation();
                               setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
                             }}
-                            className={cn("w-12 h-12 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-black text-xs sm:text-[10px] relative cursor-pointer hover:border-white/20 transition-all border shrink-0", currentTheme.cardAlt, currentTheme.accent)}
+                            className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs relative cursor-pointer hover:border-[#dfb257]/50 transition-all border shrink-0 bg-zinc-950 text-white border-zinc-800")}
                             title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
                           >
                             {listing.sellerName.substring(0, 2).toUpperCase()}
-                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-1.5 sm:h-1.5 bg-green-500 rounded-full border border-[#141414]" />
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-zinc-950" />
                           </div>
                           <div 
                             onClick={(e) => {
@@ -2600,8 +2588,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                             title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
                           >
                             <div className="flex items-center gap-1 min-w-0">
-                              <span className={cn("text-xs sm:text-[10px] font-black uppercase tracking-wider truncate block group-hover/vendor:text-[#dfb257] transition-colors", currentTheme.text)}>{listing.sellerName}</span>
-                              <ShieldCheck size={11} className="shrink-0 text-[#dfb257]" />
+                              <span className="text-sm font-bold tracking-wide truncate block text-zinc-100 group-hover/vendor:text-[#dfb257] transition-colors">{listing.sellerName}</span>
+                              <ShieldCheck size={12} className="shrink-0 text-[#dfb257]" />
                             </div>
                             <div className="flex items-center mt-0.5">
                               {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
@@ -2610,7 +2598,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                   <span className="text-xs font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-[10px] sm:text-[7px] font-bold text-white/35 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
+                                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
                               )}
                             </div>
                           </div>
@@ -4081,7 +4069,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   </AnimatePresence>
 
   {/* Mobile Sticky 5-Tab Navigation Bar */}
-  <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/95 backdrop-blur-md border-t border-zinc-900/60 h-16 z-50 flex items-center justify-around px-2">
+  <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/98 backdrop-blur-md border-t border-zinc-900/80 h-16 z-50 flex items-center justify-around px-2">
     {/* Tab 1: Home */}
     <button
       onClick={() => {
@@ -4090,11 +4078,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       }}
       className={cn(
         "flex flex-col items-center justify-center w-12 h-12 transition-colors",
-        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-500"
+        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-400"
       )}
     >
       <LayoutGrid size={18} />
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
         {language === 'ka' ? 'მთავარი' : 'Home'}
       </span>
     </button>
@@ -4106,11 +4094,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       }}
       className={cn(
         "flex flex-col items-center justify-center w-12 h-12 transition-colors",
-        activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-500"
+        activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-400"
       )}
     >
       <Tag size={18} />
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
         {language === 'ka' ? 'კატეგორია' : 'Category'}
       </span>
     </button>
@@ -4124,7 +4112,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     >
       <div className={cn(
         "w-10 h-10 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border transition-all",
-        activeBottomTab === 'categories' ? "border-[#dfb257] scale-105" : "border-zinc-850/80"
+        activeBottomTab === 'categories' ? "border-[#dfb257] scale-105" : "border-zinc-800"
       )}>
         <Plus size={20} className="text-[#070708] font-black" />
       </div>
@@ -4135,7 +4123,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       onClick={() => {
         setIsCartOpen(true);
       }}
-      className="flex flex-col items-center justify-center w-12 h-12 transition-colors text-zinc-500 relative"
+      className="flex flex-col items-center justify-center w-12 h-12 transition-colors text-zinc-400 relative"
     >
       <ShoppingCart size={18} />
       {cart.length > 0 && (
@@ -4143,7 +4131,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
           {cart.length}
         </span>
       )}
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
         {language === 'ka' ? 'კალათა' : 'Cart'}
       </span>
     </button>
@@ -4155,7 +4143,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       }}
       className={cn(
         "flex flex-col items-center justify-center w-12 h-12 transition-colors relative",
-        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-500"
+        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-400"
       )}
     >
       <MessageCircle size={18} />
@@ -4164,7 +4152,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
           {groupedChats.length}
         </span>
       )}
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
         {language === 'ka' ? 'ჩატი' : 'Chat'}
       </span>
     </button>
