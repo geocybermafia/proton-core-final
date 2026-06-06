@@ -24,9 +24,7 @@ import {
   Globe,
   Coins,
   Sparkles,
-  Zap,
-  Heart,
-  Home
+  Zap
 } from 'lucide-react';
 import { 
   collection, 
@@ -356,29 +354,6 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
   const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'categories' | 'messages'>('home');
 
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('proton_market_favorites') || '[]');
-    } catch {
-      return [];
-    }
-  });
-
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem('proton_market_favorites', JSON.stringify(favorites));
-  }, [favorites]);
-
-  const toggleFavorite = (id: string) => {
-    setFavorites(prev => {
-      if (prev.includes(id)) {
-        return prev.filter(p => p !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
-  };
-
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [search, setSearch] = useState(urlSearch);
@@ -474,7 +449,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     }).sort((a, b) => safeParseDate(b.lastTime) - safeParseDate(a.lastTime));
   }, [allUserMessages, listings, user]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms' | 'favorites'>('browse');
+  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
@@ -1060,10 +1035,6 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         // Handled by different UI section
         return [];
       }
-    }
-
-    if (viewMode === 'favorites') {
-      result = result.filter(l => favorites.includes(l.id));
     }
 
     // Bypass main marketplace browsing criteria if we are in 'my-listings' mode to ensure all user items remain fully visible
@@ -1745,7 +1716,6 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <span className={cn("font-black tracking-widest uppercase text-[9px] opacity-80", currentTheme.muted)}>
                   {viewMode === 'browse' ? t.market.subtitle : 
-                   viewMode === 'favorites' ? (language === 'ka' ? 'შენახული განცხადებები' : 'Saved Listings') :
                    viewMode === 'my-listings' ? t.market.my_listings :
                    viewMode === 'privacy' ? t.market.legal.privacy_policy :
                    viewMode === 'terms' ? t.market.legal.terms_of_service :
@@ -1779,22 +1749,36 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         </div>
 
         {viewMode === 'browse' && (
-          <div className="flex flex-wrap items-center gap-3">
-             <div className="relative flex-1 md:flex-none md:w-80 group">
-                <Search size={14} className={cn("absolute left-4 top-1/2 -translate-y-1/2 opacity-30 group-focus-within:opacity-100 transition-opacity", currentTheme.accent)} />
-                <input 
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t.market.search_placeholder}
-                  className={cn(
-                    "w-full pl-11 pr-4 min-h-[48px] rounded-2xl text-base md:text-sm font-bold tracking-wider focus:outline-none transition-all shadow-inner border border-zinc-800 focus:border-white/20",
-                    currentTheme.input
-                  )}
-                />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full mt-2">
+             {/* Styled search bar with yellow outline & AI sparkles exactly like mymarket.ge */}
+             <div className="relative flex-1 group">
+                <div className="relative w-full flex items-center bg-[#101012] rounded-2xl border-2 border-[#dfb257] shadow-lg shadow-[#dfb257]/5 min-h-[50px] overflow-hidden focus-within:border-[#f0c267] transition-all">
+                  <Search size={16} className="absolute left-4 opacity-40 text-[#dfb257]" />
+                  <input 
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა' : 'Type search word'}
+                    className="w-full bg-transparent pl-12 pr-24 py-3 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-base md:text-sm"
+                  />
+                  <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-2">
+                    <div className="h-6 w-[1.5px] bg-zinc-800" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch(language === 'ka' ? 'Apple iPhone' : 'Apple');
+                        setActiveCategory('technics');
+                      }}
+                      className="px-3.5 py-1.5 h-full rounded-xl bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/20 text-[#dfb257] transition-all font-black text-[11px] tracking-widest flex items-center gap-1.5 shrink-0"
+                    >
+                      <Sparkles size={12} className="text-[#dfb257] fill-[#dfb257]/20 animate-pulse" />
+                      <span>AI</span>
+                    </button>
+                  </div>
+                </div>
              </div>
              
-             <div className="flex items-center gap-2">
+             <div className="flex items-center flex-wrap gap-2 md:shrink-0">
                 <button 
                   onClick={() => setIsCartOpen(true)}
                   className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl transition-all border relative", currentTheme.cardAlt, currentTheme.bgHover)}
@@ -1829,51 +1813,51 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 >
                   <Plus size={20} />
                 </button>
+
+                {/* Grid / Map View Toggle */}
+                <div className={cn("flex items-center gap-1 p-1 rounded-2xl border shadow-inner ml-1", currentTheme.cardAlt)}>
+                  <button 
+                    type="button"
+                    onClick={() => setDisplayMode('grid')}
+                    className={cn(
+                      "h-10 px-3.5 rounded-xl transition-all flex items-center justify-center gap-1.5",
+                      displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    )}
+                    title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
+                  >
+                    <LayoutGrid size={15} />
+                    <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setDisplayMode('map')}
+                    className={cn(
+                      "h-10 px-3.5 rounded-xl transition-all flex items-center justify-center gap-1.5",
+                      displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-md border border-zinc-700/80 shadow-black/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    )}
+                    title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
+                  >
+                    <MapPin size={15} />
+                    <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
+                  </button>
+                </div>
+
+                <div className="relative group shrink-0">
+                  <select 
+                    value={displayCurrency}
+                    onChange={(e) => setDisplayCurrency(e.target.value)}
+                    className={cn(
+                      "h-12 pl-4 pr-10 py-3 rounded-2xl border appearance-none text-xs font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
+                      currentTheme.input
+                    )}
+                  >
+                    {CURRENCIES.map(curr => (
+                      <option key={curr.code} value={curr.code}>{curr.code}</option>
+                    ))}
+                  </select>
+                  <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+                </div>
              </div>
-
-              {/* Grid / Map View Toggle */}
-              <div className={cn("flex items-center gap-1 p-1 rounded-2xl border shadow-inner", currentTheme.cardAlt)}>
-                <button 
-                  type="button"
-                  onClick={() => setDisplayMode('grid')}
-                  className={cn(
-                    "min-h-[48px] px-4 rounded-xl transition-all flex items-center justify-center gap-1.5",
-                    displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                  )}
-                  title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
-                >
-                  <LayoutGrid size={16} />
-                  <span className="hidden sm:inline text-xs sm:text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setDisplayMode('map')}
-                  className={cn(
-                    "min-h-[48px] px-4 rounded-xl transition-all flex items-center justify-center gap-1.5",
-                    displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-md border border-zinc-700/80 shadow-black/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                  )}
-                  title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
-                >
-                  <MapPin size={16} />
-                  <span className="hidden sm:inline text-xs sm:text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
-                </button>
-              </div>
-
-              <div className="relative group shrink-0">
-                <select 
-                  value={displayCurrency}
-                  onChange={(e) => setDisplayCurrency(e.target.value)}
-                  className={cn(
-                    "min-h-[48px] h-12 pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-[10px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
-                    currentTheme.input
-                  )}
-                >
-                  {CURRENCIES.map(curr => (
-                    <option key={curr.code} value={curr.code}>{curr.code}</option>
-                  ))}
-                </select>
-                <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
-              </div>
           </div>
         )}
 
@@ -1977,7 +1961,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
           currentTheme={currentTheme}
           onBack={() => setViewMode('browse')}
         />
-      ) : viewMode === 'browse' || viewMode === 'my-listings' || viewMode === 'favorites' ? (
+      ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
         <div className="space-y-10 w-full">
           {/* Horizontal Category Carousel & Sticky mobile subfilters - Only for Browse View */}
           {viewMode === 'browse' && (
@@ -2101,8 +2085,195 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
             )}
 
             <div className="flex-1 min-w-0 space-y-8">
+              {viewMode === 'browse' && displayMode === 'grid' && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                  {/* Bento category highlights exactly like mymarket.ge */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* All Categories */}
+                    <button
+                      type="button"
+                      onClick={() => setActiveBottomTab('categories')}
+                      className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-zinc-900/80 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+                        <LayoutGrid size={18} />
+                      </div>
+                      <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase">
+                        {language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
+                      </p>
+                    </button>
 
-            {viewMode === 'browse' && displayMode === 'map' ? (
+                    {/* Secondary on installment */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveListingType('product');
+                        setSearch(language === 'ka' ? 'მეორადი' : 'Used');
+                      }}
+                      className="bg-gradient-to-br from-blue-700/40 to-blue-600/30 hover:from-blue-700/60 hover:to-blue-600/40 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-blue-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md relative overflow-hidden group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-250">
+                        <Coins size={16} />
+                      </div>
+                      <p className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight uppercase relative z-10">
+                        {language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
+                      </p>
+                    </button>
+
+                    {/* Mobile Phone */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveCategory('technics');
+                        setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
+                      }}
+                      className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-[#dfb257]/10 flex items-center justify-center text-[#dfb257]">
+                        📱
+                      </div>
+                      <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
+                        {language === 'ka' ? 'მობილური ტელეფონი' : 'Mobile Phones'}
+                      </p>
+                    </button>
+
+                    {/* Discounted */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
+                      }}
+                      className="bg-rose-500/5 hover:bg-rose-500/10 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-rose-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-550 font-black text-sm">
+                        %
+                      </div>
+                      <p className="text-xs sm:text-sm font-black text-rose-400 tracking-tight leading-tight uppercase">
+                        {language === 'ka' ? 'ფასდაკლებული' : 'With Discount'}
+                      </p>
+                    </button>
+                  </div>
+
+                  {/* Circular Brands shortcuts like mymarket.ge */}
+                  <div className="flex items-center gap-6 overflow-x-auto pb-4 pt-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none scroll-smooth">
+                    {/* Add shortcut circle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData({
+                          title: '', titleGe: '', description: '', descriptionGe: '',
+                          price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
+                          country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
+                          lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
+                          listingType: 'product', serviceDuration: '', serviceTerms: ''
+                        });
+                        setViewMode('create');
+                      }}
+                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
+                    >
+                      <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#dfb257] flex items-center justify-center bg-transparent group-hover:scale-105 transition-all text-[#dfb257]">
+                        <Plus size={20} className="stroke-[3]" />
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                        {language === 'ka' ? 'დამატება' : 'Add Listing'}
+                      </span>
+                    </button>
+
+                    {/* Apple */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('Apple');
+                        setActiveCategory('technics');
+                      }}
+                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-white font-sans font-black text-base shadow-sm">
+                        
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                        Apple
+                      </span>
+                    </button>
+
+                    {/* Xiaomi */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('Xiaomi');
+                        setActiveCategory('technics');
+                      }}
+                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-[#ff6700] font-mono font-black text-xs shadow-sm">
+                        mi
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                        Xiaomi
+                      </span>
+                    </button>
+
+                    {/* Samsung */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('Samsung');
+                        setActiveCategory('technics');
+                      }}
+                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-blue-400 font-sans font-black text-[9px] shadow-sm uppercase leading-none tracking-tighter">
+                        SMG
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                        Samsung
+                      </span>
+                    </button>
+
+                    {/* Sony */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('Sony');
+                        setActiveCategory('technics');
+                      }}
+                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-indigo-400 font-sans font-black text-[8px] tracking-tight shadow-sm uppercase">
+                        SONY
+                      </div>
+                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                        Sony
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Super VIP Header and badge exactly like mymarket.ge */}
+                  <div className="flex items-center justify-between border-b border-zinc-900/60 pb-3 pt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
+                        🚀
+                      </div>
+                      <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#dfb257] font-sans">
+                        SUPER VIP
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearch('');
+                        setActiveCategory('all');
+                        setActiveListingType('all');
+                      }}
+                      className="text-xs font-bold text-zinc-450 hover:text-white transition-colors"
+                    >
+                      {language === 'ka' ? 'ყველას ნახვა' : 'See All'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {viewMode === 'browse' && displayMode === 'map' ? (
               <ListingMap 
                 listings={filteredListings}
                 onSelectListing={(listing) => {
@@ -2367,23 +2538,6 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       </div>
                     )}
 
-                    {/* Favorite Toggle Heart button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(listing.id);
-                      }}
-                      className={cn(
-                        "absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl backdrop-blur-md border transition-all active:scale-90 shadow-md",
-                        favorites.includes(listing.id)
-                          ? "bg-rose-500/20 border-rose-500/35 text-rose-400"
-                          : "bg-black/75 border-white/10 text-white/60 hover:text-white"
-                      )}
-                    >
-                      <Heart size={16} className={favorites.includes(listing.id) ? "fill-rose-400" : ""} />
-                    </button>
-
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
@@ -2553,24 +2707,9 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
             {!loading && filteredListings.length === 0 && (
               <div className="py-32 text-center space-y-6">
                 <div className="w-20 h-20 bg-white/5 rounded-[40px] flex items-center justify-center mx-auto border border-white/10">
-                  {viewMode === 'favorites' ? (
-                    <Heart size={32} className="opacity-40 text-rose-400" />
-                  ) : (
-                    <Search size={32} className={cn("opacity-20", currentTheme.muted)} />
-                  )}
+                  <Search size={32} className={cn("opacity-20", currentTheme.muted)} />
                 </div>
-                <p className={cn("text-sm font-bold uppercase tracking-widest", currentTheme.muted)}>
-                  {viewMode === 'favorites' 
-                    ? (language === 'ka' ? 'შენახული განცხადებები ცარიელია' : 'No favorites saved yet') 
-                    : t.market.no_results}
-                </p>
-                {viewMode === 'favorites' && (
-                  <p className="text-xs text-zinc-500 font-semibold max-w-xs mx-auto">
-                    {language === 'ka' 
-                      ? 'მოწონებისთვის დააჭირე გულის ხატულას სასურველ განცხადებაზე.' 
-                      : 'Tap the heart icon on any listing card to save it here.'}
-                  </p>
-                )}
+                <p className={cn("text-sm font-bold uppercase tracking-widest", currentTheme.muted)}>{t.market.no_results}</p>
               </div>
             )}
 
@@ -3941,21 +4080,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     )}
   </AnimatePresence>
 
-  {/* Mobile Sticky 5-Tab Navigation Bar formatted exactly like mymarket.ge */}
+  {/* Mobile Sticky 5-Tab Navigation Bar */}
   <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/95 backdrop-blur-md border-t border-zinc-900/60 h-16 z-50 flex items-center justify-around px-2">
-    {/* Tab 1: Home/მთავარი */}
+    {/* Tab 1: Home */}
     <button
       onClick={() => {
-        setViewMode('browse');
         setActiveBottomTab('home');
+        setViewMode('browse');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95",
-        viewMode === 'browse' && activeBottomTab === 'home' ? "text-[#dfb257]" : "text-zinc-500"
+        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
+        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-500"
       )}
     >
-      <Home size={20} className={viewMode === 'browse' && activeBottomTab === 'home' ? "fill-[#dfb257]/10" : ""} />
-      <span className="text-[9px] font-bold mt-1 tracking-wide">
+      <LayoutGrid size={18} />
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
         {language === 'ka' ? 'მთავარი' : 'Home'}
       </span>
     </button>
@@ -3966,71 +4105,67 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         setActiveBottomTab('categories');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95",
+        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
         activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-500"
       )}
     >
-      <LayoutGrid size={20} />
-      <span className="text-[9px] font-bold mt-1 tracking-wide font-sans">
+      <Tag size={18} />
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
         {language === 'ka' ? 'კატეგორია' : 'Category'}
       </span>
     </button>
 
-    {/* Tab 3: დამატება (Add Listing - Prominent Center Plus Button) */}
+    {/* Tab 3: Prominent Central Champagne-Gold [ ➕ ] Button */}
     <button
       onClick={() => {
-        setViewMode('create');
-        setActiveBottomTab('home');
+        setActiveBottomTab(prev => prev === 'categories' ? 'home' : 'categories');
       }}
-      className="flex flex-col items-center justify-center w-14 h-14 -mt-3 relative group"
+      className="flex flex-col items-center justify-center w-12 h-12 transition-all hover:scale-110 active:scale-90"
     >
       <div className={cn(
-        "w-11 h-11 rounded-full bg-[#dfb257] hover:bg-[#dfb257]/90 text-[#070708] flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border border-[#dfb257] transition-all duration-200 active:scale-90",
-        viewMode === 'create' ? "scale-105" : ""
+        "w-10 h-10 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border transition-all",
+        activeBottomTab === 'categories' ? "border-[#dfb257] scale-105" : "border-zinc-850/80"
       )}>
-        <Plus size={22} className="text-zinc-950 stroke-[3]" />
+        <Plus size={20} className="text-[#070708] font-black" />
       </div>
-      <span className="text-[9px] font-bold mt-1 tracking-wide text-[#dfb257]">
-        {language === 'ka' ? 'დამატება' : 'Add'}
-      </span>
     </button>
 
-    {/* Tab 4: ფავორიტები (Favorites) */}
+    {/* Tab 4: Cart */}
     <button
       onClick={() => {
-        setViewMode('favorites');
-        setActiveBottomTab('home');
+        setIsCartOpen(true);
       }}
-      className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95 relative",
-        viewMode === 'favorites' ? "text-[#dfb257]" : "text-zinc-500"
-      )}
+      className="flex flex-col items-center justify-center w-12 h-12 transition-colors text-zinc-500 relative"
     >
-      <Heart size={20} className={viewMode === 'favorites' ? "fill-[#dfb257] text-[#dfb257]" : ""} />
-      {favorites.length > 0 && (
-        <span className="absolute top-1 right-1 inline-flex items-center justify-center h-4 w-4 text-[9px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
-          {favorites.length}
+      <ShoppingCart size={18} />
+      {cart.length > 0 && (
+        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
+          {cart.length}
         </span>
       )}
-      <span className="text-[9px] font-bold mt-1 tracking-wide">
-        {language === 'ka' ? 'ფავორიტები' : 'Favorites'}
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+        {language === 'ka' ? 'კალათა' : 'Cart'}
       </span>
     </button>
 
-    {/* Tab 5: Profile */}
+    {/* Tab 5: Messages */}
     <button
       onClick={() => {
-        setViewMode('my-listings');
-        setActiveBottomTab('home');
+        setActiveBottomTab('messages');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95",
-        viewMode === 'my-listings' ? "text-[#dfb257]" : "text-zinc-500"
+        "flex flex-col items-center justify-center w-12 h-12 transition-colors relative",
+        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-500"
       )}
     >
-      <User size={20} className={viewMode === 'my-listings' ? "fill-[#dfb257]/10" : ""} />
-      <span className="text-[9px] font-bold mt-1 tracking-wide truncate max-w-full">
-        {language === 'ka' ? (user ? 'პროფილი' : 'შესვლა') : (user ? 'Profile' : 'Login')}
+      <MessageCircle size={18} />
+      {groupedChats.length > 0 && (
+        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
+          {groupedChats.length}
+        </span>
+      )}
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+        {language === 'ka' ? 'ჩატი' : 'Chat'}
       </span>
     </button>
   </div>
