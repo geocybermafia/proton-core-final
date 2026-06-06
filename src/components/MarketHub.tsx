@@ -53,7 +53,7 @@ import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
 import { translations } from '../translations';
 import 'leaflet/dist/leaflet.css';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 interface MarketHubProps {
   language: 'en' | 'ka';
@@ -349,6 +349,9 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'categories' | 'messages'>('home');
 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
@@ -392,6 +395,55 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [allUserMessages, setAllUserMessages] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'market_messages'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAllUserMessages(msgs);
+    }, (err) => {
+      console.error("Error reading all market messages:", err);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const groupedChats = useMemo(() => {
+    if (!user) return [];
+    const relevantMsgs = allUserMessages.filter(msg => {
+      const lst = listings.find(l => l.id === msg.listingId);
+      const isSeller = lst && lst.sellerId === user.uid;
+      const isBuyer = msg.senderId === user.uid;
+      return isSeller || isBuyer;
+    });
+
+    const groups: Record<string, { listingId: string; listingTitle: string; lastMessage: string; lastTime: any; messages: any[] }> = {};
+    relevantMsgs.forEach(msg => {
+      const lid = msg.listingId;
+      if (!groups[lid]) {
+        groups[lid] = {
+          listingId: lid,
+          listingTitle: msg.listingTitle || 'Unknown Listing',
+          lastMessage: '',
+          lastTime: null,
+          messages: []
+        };
+      }
+      groups[lid].messages.push(msg);
+    });
+
+    return Object.values(groups).map(g => {
+      g.messages.sort((a, b) => safeParseDate(a.createdAt) - safeParseDate(b.createdAt));
+      const last = g.messages[g.messages.length - 1];
+      g.lastMessage = last ? last.text : '';
+      g.lastTime = last ? last.createdAt : null;
+      return g;
+    }).sort((a, b) => safeParseDate(b.lastTime) - safeParseDate(a.lastTime));
+  }, [allUserMessages, listings, user]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
@@ -1573,16 +1625,45 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   );
 
   return (
-    <div className="min-h-screen bg-[#070708] rounded-[36px] p-6 lg:p-10 border border-zinc-805/70 shadow-[0_32px_90px_rgba(0,0,0,0.95)] relative overflow-hidden">
-      {/* Heavy Backdrop Solid Gradients / Subtle non-flicker accents as requested */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#dfb257]/[0.015] blur-[155px] pointer-events-none rounded-full" />
-      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-zinc-900/[0.1] blur-[180px] pointer-events-none rounded-full" />
+    <div className="min-h-screen bg-[#0a0a0c] text-zinc-100 relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-16 md:pb-0">
+      {/* Top Escape Navigation Bar */}
+      <div className="w-full bg-[#0a0a0c] border-b border-zinc-900/40 py-4 px-6 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
+        <div className="flex items-center gap-2 select-none">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#dfb257] shadow-[0_0_8px_#dfb257]" />
+          <span className="text-[#dfb257] font-black tracking-[0.25em] text-[10px] sm:text-xs uppercase font-mono">
+            {language === 'ka' ? 'მარკეტი' : 'MARKET SPACE'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/studio')}
+            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-zinc-800/60 bg-zinc-950/40 text-[9px] sm:text-xs font-black font-sans tracking-widest text-[#dfb257] hover:border-[#dfb257]/60 transition-all flex items-center gap-1.5 uppercase bg-transparent"
+          >
+            <span>🎨</span>
+            <span>{language === 'ka' ? 'კრეატივი' : 'Creative Hub'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-zinc-800/60 bg-zinc-950/40 text-[9px] sm:text-xs font-black font-sans tracking-widest text-[#dfb257] hover:border-[#dfb257]/60 transition-all flex items-center gap-1.5 uppercase bg-transparent"
+          >
+            <span>💼</span>
+            <span>{language === 'ka' ? 'ბიზნესი' : 'Business Hub'}</span>
+          </button>
+        </div>
+      </div>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-12 bg-transparent pb-40 relative z-10"
-      >
+      <div className="p-6 lg:p-10 grow relative">
+        {/* Heavy Backdrop Solid Gradients / Subtle non-flicker accents as requested */}
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#dfb257]/[0.015] blur-[155px] pointer-events-none rounded-full" />
+        <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-zinc-900/[0.1] blur-[180px] pointer-events-none rounded-full" />
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-12 bg-transparent pb-40 relative z-10"
+        >
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
         <div className="flex items-center gap-6">
           {viewMode !== 'browse' && (
@@ -3487,6 +3568,384 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       </AnimatePresence>
     </motion.div>
   </div>
+
+  {/* Categories smooth slide-up accordion/overlay */}
+  <AnimatePresence>
+    {activeBottomTab === 'categories' && (
+      <motion.div 
+        initial={{ opacity: 0, y: "100%" }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="fixed inset-x-0 bottom-16 top-[60px] bg-[#0a0a0c]/98 backdrop-blur-lg z-40 overflow-y-auto px-6 py-8 border-t border-zinc-805/70"
+      >
+        <div className="max-w-md mx-auto space-y-8">
+          <div className="flex items-center justify-between border-b border-zinc-900/40 pb-4">
+            <h2 className="text-sm font-black uppercase tracking-wider text-[#dfb257] flex items-center gap-2 font-sans">
+              <span>📂</span> {language === 'ka' ? 'კატეგორიები' : 'Browse Categories'}
+            </h2>
+            <button 
+              onClick={() => setActiveBottomTab('home')}
+              className="text-[10px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
+            >
+              {language === 'ka' ? 'დახურვა' : 'Close'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveCategory('all');
+                setActiveBottomTab('home');
+                setViewMode('browse');
+              }}
+              className={cn(
+                "w-full flex items-center justify-between p-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border text-left min-h-[52px]",
+                activeCategory === 'all'
+                  ? "bg-[#dfb257] text-[#070708] border-[#dfb257]"
+                  : "bg-zinc-900/40 text-white border-zinc-805/70 hover:border-[#dfb257]/30 hover:bg-zinc-900/80"
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-base">🌍</span>
+                <span>{language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}</span>
+              </span>
+              {activeCategory === 'all' && <span className="text-xs">●</span>}
+            </button>
+            {Object.entries(t.market.categories).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  setActiveCategory(key);
+                  setActiveBottomTab('home');
+                  setViewMode('browse');
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between p-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border text-left min-h-[52px]",
+                  activeCategory === key
+                    ? "bg-[#dfb257] text-[#070708] border-[#dfb257]"
+                    : "bg-zinc-900/40 text-white border-zinc-805/70 hover:border-[#dfb257]/30 hover:bg-zinc-900/80"
+                )}
+              >
+                <span className="flex items-center gap-2.5">
+                  <span className="text-base shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                  <span>{label as string}</span>
+                </span>
+                {activeCategory === key && <span className="text-xs">●</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  {/* Mobile Special Messages/Chat/Orders View Overlay */}
+  <AnimatePresence>
+    {activeBottomTab === 'messages' && (
+      <motion.div 
+        initial={{ opacity: 0, y: "100%" }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="fixed inset-x-0 bottom-16 top-[60px] bg-[#0a0a0c] z-40 overflow-y-auto px-4 py-6 md:hidden"
+      >
+        <div className="max-w-md mx-auto space-y-6">
+          {/* Top Selector Panel: Chats vs. Orders */}
+          <div className="flex items-center justify-between border-b border-zinc-905/70 pb-3">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-[#dfb257] flex items-center gap-2 font-sans">
+              <span>💬</span> {language === 'ka' ? 'კავშირი' : 'Communications'}
+            </h2>
+            <button 
+              onClick={() => setActiveBottomTab('home')}
+              className="text-[9px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
+            >
+              {language === 'ka' ? 'დახურვა' : 'Close'}
+            </button>
+          </div>
+
+          {/* Inner active screen selector or dual panel */}
+          <div className="space-y-6">
+            {activeChatListing ? (
+              // Active Chat Thread
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 bg-zinc-950/40 p-3 rounded-xl border border-zinc-900">
+                  <button 
+                    onClick={() => setActiveChatListing(null)}
+                    className="p-1 px-2.5 rounded-lg bg-zinc-900 border border-zinc-850 text-[10px] font-black uppercase text-zinc-300 hover:text-white"
+                  >
+                    ← {language === 'ka' ? 'უკან' : 'Back'}
+                  </button>
+                  <div className="truncate">
+                    <span className="text-[9px] font-bold text-zinc-500 block uppercase font-mono tracking-wider">
+                      {language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Chatting about:'}
+                    </span>
+                    <h4 className="text-xs font-black text-white truncate">{activeChatListing.title}</h4>
+                  </div>
+                </div>
+
+                {/* Chat Messages Log */}
+                <div className="bg-zinc-950/20 rounded-2xl p-4 border border-zinc-900/60 h-[280px] overflow-y-auto space-y-3 flex flex-col">
+                  {messagesList.length === 0 ? (
+                    <div className="text-center my-auto py-8">
+                      <p className="text-[10px] uppercase font-black tracking-widest text-zinc-650">
+                        {language === 'ka' ? 'შეტყობინებები არ არის' : 'No messages yet'}
+                      </p>
+                      <span className="text-[9px] text-zinc-500 mt-1 block font-semibold">
+                        {language === 'ka' ? 'მისწერეთ შეკითხვა გამყიდველს.' : 'Send a friendly query.'}
+                      </span>
+                    </div>
+                  ) : (
+                    messagesList.map((msg) => {
+                      const isMe = msg.senderId === user?.uid;
+                      return (
+                        <div 
+                          key={msg.id}
+                          className={cn(
+                            "max-w-[85%] p-3 rounded-2xl text-xs flex flex-col gap-1",
+                            isMe 
+                              ? "bg-[#dfb257] text-[#070708] self-end rounded-tr-none font-bold" 
+                              : "bg-zinc-900 text-zinc-100 self-start rounded-tl-none font-medium border border-zinc-800"
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5 justify-between">
+                            <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-[#070708]/70" : "text-zinc-500")}>
+                              {msg.senderName}
+                            </span>
+                          </div>
+                          <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Chat Input */}
+                <form onSubmit={handleSendMessage} className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={chatMessageText}
+                    onChange={(e) => setChatMessageText(e.target.value)}
+                    placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
+                    className="flex-1 bg-zinc-900 border border-zinc-805/70 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={!chatMessageText.trim()}
+                    className="px-4 py-2 bg-[#dfb257] hover:bg-opacity-90 disabled:opacity-40 transition-all rounded-xl text-xs font-black text-[#070708] uppercase tracking-wider"
+                  >
+                    {language === 'ka' ? 'გაგზავნა' : 'Send'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              // Chats and Orders List
+              <div className="space-y-6">
+                {/* Conversations */}
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]/70">
+                    {language === 'ka' ? 'ჩატების სია' : 'Direct Messages'}
+                  </h3>
+                  {groupedChats.length === 0 ? (
+                    <div className="bg-zinc-900/40 border border-zinc-805/40 p-6 rounded-xl text-center">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                        {language === 'ka' ? 'აქტიური საუბრები არ არის' : 'No active chats found'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {groupedChats.map((chat) => {
+                        const relatedListing = listings.find(l => l.id === chat.listingId);
+                        return (
+                          <button
+                            key={chat.listingId}
+                            onClick={() => {
+                              if (relatedListing) {
+                                setActiveChatListing(relatedListing);
+                              }
+                            }}
+                            className="w-full text-left bg-zinc-950/40 hover:bg-zinc-900 border border-zinc-805/70 p-3 rounded-xl flex items-center justify-between transition-all"
+                          >
+                            <div className="truncate flex-1 pr-3">
+                              <span className="text-[10px] font-black text-[#dfb257] block truncate">
+                                {chat.listingTitle}
+                              </span>
+                              <p className="text-xs text-zinc-300 truncate font-semibold mt-0.5">
+                                {chat.lastMessage}
+                              </p>
+                            </div>
+                            <ChevronRight size={14} className="text-zinc-500 block shrink-0" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Orders Status */}
+                <div className="space-y-3">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]/70 flex items-center gap-1.5">
+                    <span>📦</span> {language === 'ka' ? 'თქვენი შეკვეთები' : 'Transactions & Orders'}
+                  </h3>
+
+                  {buyerOrders.length === 0 && sellerOrders.length === 0 ? (
+                    <div className="bg-zinc-900/40 border border-zinc-805/40 p-6 rounded-xl text-center">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                        {language === 'ka' ? 'შეკვეთები არ ფიქსირდება' : 'No purchase orders yet'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {/* Purchases */}
+                      {buyerOrders.map((order, idx) => (
+                        <div key={order.id || idx} className="bg-zinc-950/40 border border-zinc-805/70 p-3 rounded-2xl flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2 py-0.5 rounded bg-zinc-900 text-[8px] font-black text-[#dfb257] border border-zinc-805/70 font-mono uppercase">
+                              {language === 'ka' ? 'შესყიდვა' : 'PURCHASE'}
+                            </span>
+                            <span className="text-[9px] font-bold text-green-400 uppercase font-mono tracking-widest">
+                              {order.status || 'Success'}
+                            </span>
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-black text-white">{order.listingTitle || 'Proton Asset'}</h5>
+                            <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
+                              Total: <span className="text-white font-black">{order.price} {order.currency}</span>
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Sales */}
+                      {sellerOrders.map((order, idx) => (
+                        <div key={order.id || idx} className="bg-zinc-950/40 border border-zinc-805/70 p-3 rounded-2xl flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="px-2 py-0.5 rounded bg-[#dfb257]/10 text-[8px] font-black text-[#dfb257] border border-[#dfb257]/20 font-mono uppercase">
+                              {language === 'ka' ? 'გაყიდვა' : 'SALE'}
+                            </span>
+                            <span className="text-[9px] font-bold text-green-400 uppercase font-mono tracking-widest">
+                              {order.status || 'Received'}
+                            </span>
+                          </div>
+                          <div>
+                            <h5 className="text-xs font-black text-white">{order.listingTitle || 'Proton Asset'}</h5>
+                            <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
+                              Incoming: <span className="text-[#dfb257] font-black">{order.price} {order.currency}</span>
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+
+  {/* Mobile Sticky 5-Tab Navigation Bar */}
+  <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/95 backdrop-blur-md border-t border-zinc-900/60 h-16 z-50 flex items-center justify-around px-2">
+    {/* Tab 1: Home */}
+    <button
+      onClick={() => {
+        setActiveBottomTab('home');
+        setViewMode('browse');
+      }}
+      className={cn(
+        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
+        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-500"
+      )}
+    >
+      <LayoutGrid size={18} />
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+        {language === 'ka' ? 'მთავარი' : 'Home'}
+      </span>
+    </button>
+
+    {/* Tab 2: Categories */}
+    <button
+      onClick={() => {
+        setActiveBottomTab('categories');
+      }}
+      className={cn(
+        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
+        activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-500"
+      )}
+    >
+      <Tag size={18} />
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+        {language === 'ka' ? 'კატეგორია' : 'Category'}
+      </span>
+    </button>
+
+    {/* Tab 3: Create (Add Form) */}
+    <button
+      onClick={() => {
+        setFormData({
+          title: '', titleGe: '', description: '', descriptionGe: '',
+          price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
+          country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
+          lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
+          listingType: 'product', serviceDuration: '', serviceTerms: ''
+        });
+        setViewMode('create');
+        setActiveBottomTab('home');
+      }}
+      className={cn(
+        "flex flex-col items-center justify-center w-12 h-12 transition-all hover:scale-105 active:scale-95",
+        viewMode === 'create' ? "text-[#dfb257]" : "text-zinc-500"
+      )}
+    >
+      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 text-[#070708] flex items-center justify-center shadow-md">
+        <Plus size={16} />
+      </div>
+    </button>
+
+    {/* Tab 4: Cart */}
+    <button
+      onClick={() => {
+        setIsCartOpen(true);
+      }}
+      className="flex flex-col items-center justify-center w-12 h-12 transition-colors text-zinc-500 relative"
+    >
+      <ShoppingCart size={18} />
+      {cart.length > 0 && (
+        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
+          {cart.length}
+        </span>
+      )}
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+        {language === 'ka' ? 'კალათა' : 'Cart'}
+      </span>
+    </button>
+
+    {/* Tab 5: Messages */}
+    <button
+      onClick={() => {
+        setActiveBottomTab('messages');
+      }}
+      className={cn(
+        "flex flex-col items-center justify-center w-12 h-12 transition-colors relative",
+        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-500"
+      )}
+    >
+      <MessageCircle size={18} />
+      {groupedChats.length > 0 && (
+        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
+          {groupedChats.length}
+        </span>
+      )}
+      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+        {language === 'ka' ? 'ჩატი' : 'Chat'}
+      </span>
+    </button>
+  </div>
+</div>
   );
 }
 
