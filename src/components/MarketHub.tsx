@@ -399,7 +399,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, 'market_messages'));
+    const q = query(
+      collection(db, 'market_messages'),
+      where('participants', 'array-contains', user.uid)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -705,6 +708,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
 
   useEffect(() => {
+    if (!user || authLoading) return;
     const unsubscribe = onSnapshot(collection(db, 'seller_reviews'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -715,7 +719,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       console.warn("Firestore reviews read fallback:", err);
     });
     return () => unsubscribe();
-  }, []);
+  }, [user, authLoading]);
 
   const sellerRatings = useMemo(() => {
     const map: { [sellerId: string]: { avg: number; count: number; ratings: number[] } } = {};
@@ -813,10 +817,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const [messagesList, setMessagesList] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!activeChatListing) return;
+    if (!activeChatListing || !user) return;
     const qMsgs = query(
       collection(db, 'market_messages'),
-      where('listingId', '==', activeChatListing.id)
+      where('listingId', '==', activeChatListing.id),
+      where('participants', 'array-contains', user.uid)
     );
     const unsubscribe = onSnapshot(qMsgs, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({
@@ -834,13 +839,33 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       console.error("Error loading messages: ", err);
     });
     return () => unsubscribe();
-  }, [activeChatListing]);
+  }, [activeChatListing, user]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !activeChatListing || !chatMessageText.trim()) return;
 
     try {
+      const sellerId = activeChatListing.sellerId;
+      const isSeller = sellerId === user.uid;
+      let buyerId = '';
+      if (isSeller) {
+        const buyerMsg = messagesList.find(m => m.senderId !== user.uid);
+        if (buyerMsg) {
+          buyerId = buyerMsg.senderId;
+        }
+      } else {
+        buyerId = user.uid;
+      }
+
+      const participants = [user.uid];
+      if (sellerId && !participants.includes(sellerId)) {
+        participants.push(sellerId);
+      }
+      if (buyerId && !participants.includes(buyerId)) {
+        participants.push(buyerId);
+      }
+
       await addDoc(collection(db, 'market_messages'), {
         listingId: activeChatListing.id,
         listingTitle: activeChatListing.title,
@@ -848,7 +873,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         senderName: user.displayName || user.email?.split('@')[0] || 'User',
         senderAvatar: user.photoURL || '',
         text: chatMessageText.trim(),
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        sellerId: sellerId || '',
+        buyerId: buyerId || '',
+        receiverId: isSeller ? (buyerId || '') : (sellerId || ''),
+        participants
       });
       setChatMessageText('');
     } catch (err) {
@@ -859,6 +888,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   const currentTheme = PREMIUM_INDUSTRIAL;
 
   useEffect(() => {
+    if (!user || authLoading) return;
     const qListings = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
     const unsubscribeListings = onSnapshot(qListings, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -902,7 +932,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     });
 
     return () => unsubscribeListings();
-  }, []);
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (!user) {
