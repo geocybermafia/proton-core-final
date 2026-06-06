@@ -47,6 +47,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useMarketHub } from '../contexts/MarketHubContext';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
@@ -1654,6 +1655,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     </div>
   );
 
+
+
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-zinc-100 relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-16 md:pb-0">
       {/* Top Escape Navigation Bar */}
@@ -2057,17 +2060,17 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
             </div>
           )}
 
-          <div className="flex flex-col lg:flex-row gap-8">
-          {/* Desktop Sidebar */}
-          {viewMode === 'browse' && (
-            <aside className="hidden lg:block w-72 shrink-0 space-y-8 animate-in fade-in slide-in-from-left duration-700">
-               <div className={cn("p-6 rounded-3xl border border-white/5 sticky top-16 backdrop-blur-xl", currentTheme.card)}>
-                 {FilterContent}
-               </div>
-            </aside>
-          )}
+          <div className="flex flex-col md:flex-row gap-8 items-start w-full">
+            {/* Desktop Left Sidebar: Categories/Filters */}
+            {viewMode === 'browse' && (
+              <aside className="hidden md:block w-72 shrink-0 space-y-6 sticky top-20 animate-in fade-in slide-in-from-left duration-300">
+                <div className={cn("p-6 rounded-3xl border border-zinc-800/60 backdrop-blur-xl", currentTheme.card)}>
+                  {FilterContent}
+                </div>
+              </aside>
+            )}
 
-          <div className="flex-1 space-y-8">
+            <div className="flex-1 min-w-0 space-y-8">
 
             {viewMode === 'browse' && displayMode === 'map' ? (
               <ListingMap 
@@ -2116,7 +2119,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
                   <AnimatePresence mode="popLayout">
                   {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
                     (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
@@ -2515,6 +2518,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
               </div>
             )}
           </div>
+
+
 
           {/* Mobile Filters Drawer */}
           <AnimatePresence>
@@ -3622,7 +3627,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-2.5">
+          <div className="grid grid-cols-2 gap-3 pb-6">
             <button
               type="button"
               onClick={() => {
@@ -3631,17 +3636,15 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 setViewMode('browse');
               }}
               className={cn(
-                "w-full flex items-center justify-between p-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border text-left min-h-[52px]",
+                "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat",
                 activeCategory === 'all'
-                  ? "bg-[#dfb257] text-[#070708] border-[#dfb257]"
-                  : "bg-zinc-900/40 text-white border-zinc-805/70 hover:border-[#dfb257]/30 hover:bg-zinc-900/80"
+                  ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-lg shadow-[#dfb257]/20"
+                  : "bg-zinc-900/30 text-white border-zinc-800/60 hover:border-[#dfb257]/30 hover:bg-zinc-900/60"
               )}
             >
-              <span className="flex items-center gap-2">
-                <span className="text-base">🌍</span>
-                <span>{language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}</span>
-              </span>
-              {activeCategory === 'all' && <span className="text-xs">●</span>}
+              <span className="text-xl">🌍</span>
+              <span className="mt-2 text-[9px] font-bold tracking-wider leading-none">{language === 'ka' ? 'ყველა' : 'All Goods'}</span>
+              {activeCategory === 'all' && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-zinc-950" />}
             </button>
             {Object.entries(t.market.categories).map(([key, label]) => (
               <button
@@ -3653,17 +3656,15 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   setViewMode('browse');
                 }}
                 className={cn(
-                  "w-full flex items-center justify-between p-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all border text-left min-h-[52px]",
+                  "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat",
                   activeCategory === key
-                    ? "bg-[#dfb257] text-[#070708] border-[#dfb257]"
-                    : "bg-zinc-900/40 text-white border-zinc-805/70 hover:border-[#dfb257]/30 hover:bg-zinc-900/80"
+                    ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-lg shadow-[#dfb257]/20"
+                    : "bg-zinc-900/30 text-white border-zinc-800/60 hover:border-[#dfb257]/30 hover:bg-zinc-900/60"
                 )}
               >
-                <span className="flex items-center gap-2.5">
-                  <span className="text-base shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                  <span>{label as string}</span>
-                </span>
-                {activeCategory === key && <span className="text-xs">●</span>}
+                <span className="text-xl shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                <span className="mt-2 text-[9px] font-bold tracking-wider leading-none truncate w-full" title={label as string}>{label as string}</span>
+                {activeCategory === key && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-zinc-950" />}
               </button>
             ))}
           </div>
@@ -3913,26 +3914,18 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       </span>
     </button>
 
-    {/* Tab 3: Create (Add Form) */}
+    {/* Tab 3: Prominent Central Champagne-Gold [ ➕ ] Button */}
     <button
       onClick={() => {
-        setFormData({
-          title: '', titleGe: '', description: '', descriptionGe: '',
-          price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-          country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
-          lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
-          listingType: 'product', serviceDuration: '', serviceTerms: ''
-        });
-        setViewMode('create');
-        setActiveBottomTab('home');
+        setActiveBottomTab(prev => prev === 'categories' ? 'home' : 'categories');
       }}
-      className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-all hover:scale-105 active:scale-95",
-        viewMode === 'create' ? "text-[#dfb257]" : "text-zinc-500"
-      )}
+      className="flex flex-col items-center justify-center w-12 h-12 transition-all hover:scale-110 active:scale-90"
     >
-      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 text-[#070708] flex items-center justify-center shadow-md">
-        <Plus size={16} />
+      <div className={cn(
+        "w-10 h-10 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border transition-all",
+        activeBottomTab === 'categories' ? "border-[#dfb257] scale-105" : "border-zinc-850/80"
+      )}>
+        <Plus size={20} className="text-[#070708] font-black" />
       </div>
     </button>
 
