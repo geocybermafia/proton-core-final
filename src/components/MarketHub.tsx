@@ -24,7 +24,9 @@ import {
   Globe,
   Coins,
   Sparkles,
-  Zap
+  Zap,
+  Heart,
+  Home
 } from 'lucide-react';
 import { 
   collection, 
@@ -354,6 +356,29 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
   const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'categories' | 'messages'>('home');
 
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('proton_market_favorites') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  // Sync to local storage
+  useEffect(() => {
+    localStorage.setItem('proton_market_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (id: string) => {
+    setFavorites(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(p => p !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
   const [searchParams, setSearchParams] = useSearchParams();
   const urlSearch = searchParams.get('search') || '';
   const [search, setSearch] = useState(urlSearch);
@@ -449,7 +474,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     }).sort((a, b) => safeParseDate(b.lastTime) - safeParseDate(a.lastTime));
   }, [allUserMessages, listings, user]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
+  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms' | 'favorites'>('browse');
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
@@ -1035,6 +1060,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         // Handled by different UI section
         return [];
       }
+    }
+
+    if (viewMode === 'favorites') {
+      result = result.filter(l => favorites.includes(l.id));
     }
 
     // Bypass main marketplace browsing criteria if we are in 'my-listings' mode to ensure all user items remain fully visible
@@ -1716,6 +1745,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 <span className={cn("font-black tracking-widest uppercase text-[9px] opacity-80", currentTheme.muted)}>
                   {viewMode === 'browse' ? t.market.subtitle : 
+                   viewMode === 'favorites' ? (language === 'ka' ? 'შენახული განცხადებები' : 'Saved Listings') :
                    viewMode === 'my-listings' ? t.market.my_listings :
                    viewMode === 'privacy' ? t.market.legal.privacy_policy :
                    viewMode === 'terms' ? t.market.legal.terms_of_service :
@@ -1947,7 +1977,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
           currentTheme={currentTheme}
           onBack={() => setViewMode('browse')}
         />
-      ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
+      ) : viewMode === 'browse' || viewMode === 'my-listings' || viewMode === 'favorites' ? (
         <div className="space-y-10 w-full">
           {/* Horizontal Category Carousel & Sticky mobile subfilters - Only for Browse View */}
           {viewMode === 'browse' && (
@@ -2337,6 +2367,23 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       </div>
                     )}
 
+                    {/* Favorite Toggle Heart button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(listing.id);
+                      }}
+                      className={cn(
+                        "absolute bottom-3 right-3 sm:bottom-4 sm:right-4 z-20 w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl backdrop-blur-md border transition-all active:scale-90 shadow-md",
+                        favorites.includes(listing.id)
+                          ? "bg-rose-500/20 border-rose-500/35 text-rose-400"
+                          : "bg-black/75 border-white/10 text-white/60 hover:text-white"
+                      )}
+                    >
+                      <Heart size={16} className={favorites.includes(listing.id) ? "fill-rose-400" : ""} />
+                    </button>
+
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                   </div>
 
@@ -2506,9 +2553,24 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
             {!loading && filteredListings.length === 0 && (
               <div className="py-32 text-center space-y-6">
                 <div className="w-20 h-20 bg-white/5 rounded-[40px] flex items-center justify-center mx-auto border border-white/10">
-                  <Search size={32} className={cn("opacity-20", currentTheme.muted)} />
+                  {viewMode === 'favorites' ? (
+                    <Heart size={32} className="opacity-40 text-rose-400" />
+                  ) : (
+                    <Search size={32} className={cn("opacity-20", currentTheme.muted)} />
+                  )}
                 </div>
-                <p className={cn("text-sm font-bold uppercase tracking-widest", currentTheme.muted)}>{t.market.no_results}</p>
+                <p className={cn("text-sm font-bold uppercase tracking-widest", currentTheme.muted)}>
+                  {viewMode === 'favorites' 
+                    ? (language === 'ka' ? 'შენახული განცხადებები ცარიელია' : 'No favorites saved yet') 
+                    : t.market.no_results}
+                </p>
+                {viewMode === 'favorites' && (
+                  <p className="text-xs text-zinc-500 font-semibold max-w-xs mx-auto">
+                    {language === 'ka' 
+                      ? 'მოწონებისთვის დააჭირე გულის ხატულას სასურველ განცხადებაზე.' 
+                      : 'Tap the heart icon on any listing card to save it here.'}
+                  </p>
+                )}
               </div>
             )}
 
@@ -3879,21 +3941,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     )}
   </AnimatePresence>
 
-  {/* Mobile Sticky 5-Tab Navigation Bar */}
+  {/* Mobile Sticky 5-Tab Navigation Bar formatted exactly like mymarket.ge */}
   <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/95 backdrop-blur-md border-t border-zinc-900/60 h-16 z-50 flex items-center justify-around px-2">
-    {/* Tab 1: Home */}
+    {/* Tab 1: Home/მთავარი */}
     <button
       onClick={() => {
-        setActiveBottomTab('home');
         setViewMode('browse');
+        setActiveBottomTab('home');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
-        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-500"
+        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95",
+        viewMode === 'browse' && activeBottomTab === 'home' ? "text-[#dfb257]" : "text-zinc-500"
       )}
     >
-      <LayoutGrid size={18} />
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+      <Home size={20} className={viewMode === 'browse' && activeBottomTab === 'home' ? "fill-[#dfb257]/10" : ""} />
+      <span className="text-[9px] font-bold mt-1 tracking-wide">
         {language === 'ka' ? 'მთავარი' : 'Home'}
       </span>
     </button>
@@ -3904,67 +3966,71 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         setActiveBottomTab('categories');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
+        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95",
         activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-500"
       )}
     >
-      <Tag size={18} />
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
+      <LayoutGrid size={20} />
+      <span className="text-[9px] font-bold mt-1 tracking-wide font-sans">
         {language === 'ka' ? 'კატეგორია' : 'Category'}
       </span>
     </button>
 
-    {/* Tab 3: Prominent Central Champagne-Gold [ ➕ ] Button */}
+    {/* Tab 3: დამატება (Add Listing - Prominent Center Plus Button) */}
     <button
       onClick={() => {
-        setActiveBottomTab(prev => prev === 'categories' ? 'home' : 'categories');
+        setViewMode('create');
+        setActiveBottomTab('home');
       }}
-      className="flex flex-col items-center justify-center w-12 h-12 transition-all hover:scale-110 active:scale-90"
+      className="flex flex-col items-center justify-center w-14 h-14 -mt-3 relative group"
     >
       <div className={cn(
-        "w-10 h-10 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border transition-all",
-        activeBottomTab === 'categories' ? "border-[#dfb257] scale-105" : "border-zinc-850/80"
+        "w-11 h-11 rounded-full bg-[#dfb257] hover:bg-[#dfb257]/90 text-[#070708] flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border border-[#dfb257] transition-all duration-200 active:scale-90",
+        viewMode === 'create' ? "scale-105" : ""
       )}>
-        <Plus size={20} className="text-[#070708] font-black" />
+        <Plus size={22} className="text-zinc-950 stroke-[3]" />
       </div>
-    </button>
-
-    {/* Tab 4: Cart */}
-    <button
-      onClick={() => {
-        setIsCartOpen(true);
-      }}
-      className="flex flex-col items-center justify-center w-12 h-12 transition-colors text-zinc-500 relative"
-    >
-      <ShoppingCart size={18} />
-      {cart.length > 0 && (
-        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
-          {cart.length}
-        </span>
-      )}
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
-        {language === 'ka' ? 'კალათა' : 'Cart'}
+      <span className="text-[9px] font-bold mt-1 tracking-wide text-[#dfb257]">
+        {language === 'ka' ? 'დამატება' : 'Add'}
       </span>
     </button>
 
-    {/* Tab 5: Messages */}
+    {/* Tab 4: ფავორიტები (Favorites) */}
     <button
       onClick={() => {
-        setActiveBottomTab('messages');
+        setViewMode('favorites');
+        setActiveBottomTab('home');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-colors relative",
-        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-500"
+        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95 relative",
+        viewMode === 'favorites' ? "text-[#dfb257]" : "text-zinc-500"
       )}
     >
-      <MessageCircle size={18} />
-      {groupedChats.length > 0 && (
-        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
-          {groupedChats.length}
+      <Heart size={20} className={viewMode === 'favorites' ? "fill-[#dfb257] text-[#dfb257]" : ""} />
+      {favorites.length > 0 && (
+        <span className="absolute top-1 right-1 inline-flex items-center justify-center h-4 w-4 text-[9px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
+          {favorites.length}
         </span>
       )}
-      <span className="text-[8px] font-black mt-1 uppercase tracking-wider">
-        {language === 'ka' ? 'ჩატი' : 'Chat'}
+      <span className="text-[9px] font-bold mt-1 tracking-wide">
+        {language === 'ka' ? 'ფავორიტები' : 'Favorites'}
+      </span>
+    </button>
+
+    {/* Tab 5: Profile */}
+    <button
+      onClick={() => {
+        setViewMode('my-listings');
+        setActiveBottomTab('home');
+      }}
+      className={cn(
+        "flex flex-col items-center justify-center w-12 h-12 transition-all active:scale-95",
+        viewMode === 'my-listings' ? "text-[#dfb257]" : "text-zinc-500"
+      )}
+    >
+      <User size={20} className={viewMode === 'my-listings' ? "fill-[#dfb257]/10" : ""} />
+      <span className="text-[9px] font-bold mt-1 tracking-wide truncate max-w-full">
+        {language === 'ka' ? (user ? 'პროფილი' : 'შესვლა') : (user ? 'Profile' : 'Login')}
       </span>
     </button>
   </div>
