@@ -1953,7 +1953,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         <div className="space-y-10 w-full">
           {/* Horizontal Category Carousel & Sticky mobile subfilters - Only for Browse View */}
           {viewMode === 'browse' && (
-            <div className="sticky top-16 z-[45] -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-[#0c0c0c]/90 backdrop-blur-md border-b border-white/5 lg:static lg:bg-transparent lg:backdrop-blur-none lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
+            <div className="relative -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-transparent border-b border-zinc-900/40 lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
               {/* Categories horizontal list */}
               <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1 px-1 scrollbar-none scroll-smooth">
                 <button
@@ -4069,7 +4069,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
   </AnimatePresence>
 
   {/* Mobile Sticky 5-Tab Navigation Bar */}
-  <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/98 backdrop-blur-md border-t border-zinc-900/80 h-16 z-50 flex items-center justify-around px-2">
+  <div className="md:hidden fixed bottom-0 inset-x-0 bg-[#0a0a0c]/98 backdrop-blur-md border-t border-zinc-900/80 h-16 z-50 grid grid-cols-5 items-center w-full shadow-[0_-4px_12px_rgba(0,0,0,0.55)] px-1">
     {/* Tab 1: Home */}
     <button
       onClick={() => {
@@ -4077,12 +4077,12 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         setViewMode('browse');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
-        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-400"
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        activeBottomTab === 'home' && viewMode === 'browse' ? "text-[#dfb257]" : "text-zinc-400 font-medium"
       )}
     >
-      <LayoutGrid size={18} />
-      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
+      <LayoutGrid size={20} className="stroke-[2]" />
+      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'მთავარი' : 'Home'}
       </span>
     </button>
@@ -4093,67 +4093,91 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         setActiveBottomTab('categories');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-colors",
-        activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-400"
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        activeBottomTab === 'categories' ? "text-[#dfb257]" : "text-zinc-400 font-medium"
       )}
     >
-      <Tag size={18} />
-      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
+      <Tag size={20} className="stroke-[2]" />
+      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'კატეგორია' : 'Category'}
       </span>
     </button>
 
-    {/* Tab 3: Prominent Central Champagne-Gold [ ➕ ] Button */}
+    {/* Tab 3: Balanced Add [➕] Listing Button */}
     <button
       onClick={() => {
-        setActiveBottomTab(prev => prev === 'categories' ? 'home' : 'categories');
+        setFormData({
+          title: '',
+          titleGe: '',
+          description: '',
+          descriptionGe: '',
+          price: '',
+          currency: language === 'ka' ? 'GEL' : 'USD',
+          category: 'technics',
+          country: language === 'ka' ? 'GEO' : 'USA',
+          city: '',
+          location: '',
+          images: [],
+          lat: undefined,
+          lng: undefined,
+          condition: 'new',
+          isNegotiable: false,
+          listingType: 'product',
+          serviceDuration: '',
+          serviceTerms: ''
+        });
+        setViewMode('create');
+        setActiveBottomTab('home');
       }}
-      className="flex flex-col items-center justify-center w-12 h-12 transition-all hover:scale-110 active:scale-90"
-    >
-      <div className={cn(
-        "w-10 h-10 rounded-full bg-gradient-to-tr from-[#dfb257] to-[#dfb257]/80 flex items-center justify-center shadow-lg shadow-[#dfb257]/20 border transition-all",
-        activeBottomTab === 'categories' ? "border-[#dfb257] scale-105" : "border-zinc-800"
-      )}>
-        <Plus size={20} className="text-[#070708] font-black" />
-      </div>
-    </button>
-
-    {/* Tab 4: Cart */}
-    <button
-      onClick={() => {
-        setIsCartOpen(true);
-      }}
-      className="flex flex-col items-center justify-center w-12 h-12 transition-colors text-zinc-400 relative"
-    >
-      <ShoppingCart size={18} />
-      {cart.length > 0 && (
-        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
-          {cart.length}
-        </span>
+      className={cn(
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        viewMode === 'create' ? "text-[#dfb257]" : "text-zinc-400 font-medium"
       )}
-      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
-        {language === 'ka' ? 'კალათა' : 'Cart'}
+      title={language === 'ka' ? 'განცხადების დამატება' : 'Add Listing'}
+    >
+      <Plus size={20} className="stroke-[2.5]" />
+      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+        {language === 'ka' ? 'დამატება' : 'Add'}
       </span>
     </button>
 
-    {/* Tab 5: Messages */}
+    {/* Tab 4: Chat messages */}
     <button
       onClick={() => {
         setActiveBottomTab('messages');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-12 h-12 transition-colors relative",
-        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-400"
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 relative",
+        activeBottomTab === 'messages' ? "text-[#dfb257]" : "text-zinc-400 font-medium"
       )}
     >
-      <MessageCircle size={18} />
-      {groupedChats.length > 0 && (
-        <span className="absolute top-1.5 right-2 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
-          {groupedChats.length}
-        </span>
-      )}
-      <span className="text-[8px] font-bold mt-1 uppercase tracking-wider">
+      <div className="relative">
+        <MessageCircle size={20} className="stroke-[2]" />
+        {groupedChats.length > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-[#070708] bg-[#dfb257] rounded-full">
+            {groupedChats.length}
+          </span>
+        )}
+      </div>
+      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'ჩატი' : 'Chat'}
+      </span>
+    </button>
+
+    {/* Tab 5: My cabinet / Profile */}
+    <button
+      onClick={() => {
+        setActiveBottomTab('home');
+        setViewMode('my-listings');
+      }}
+      className={cn(
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        viewMode === 'my-listings' ? "text-[#dfb257]" : "text-zinc-400 font-medium"
+      )}
+    >
+      <User size={20} className="stroke-[2]" />
+      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+        {language === 'ka' ? 'კაბინეტი' : 'Profile'}
       </span>
     </button>
   </div>
