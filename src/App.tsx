@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction } from 'react';
-import { EnterpriseWorkflowBuilder } from './components/EnterpriseWorkflowBuilder';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
+const EnterpriseWorkflowBuilder = lazy(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
 import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
 import { LocalFileScanner } from './components/LocalFileScanner';
 import { ObjectiveCenter } from './components/ObjectiveCenter';
@@ -21,12 +21,12 @@ import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import CabinetView from './components/CabinetView';
-import { Web3ControlPanel } from './components/Web3ControlPanel';
+const Web3ControlPanel = lazy(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
 import { TranslatorView } from './components/TranslatorView';
 import { MarketHub } from './components/MarketHub';
 import { AuthFlow } from './components/AuthFlow';
-import { OrganizerView } from './components/OrganizerView';
+const OrganizerView = lazy(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 import { CommercialHub } from './components/CommercialHub';
 import { 
   handleFirestoreError, 
@@ -3093,7 +3093,14 @@ const WorkflowEditor = ({
           </div>
         ) : (
           <div className="h-[500px] w-full mt-4 shrink-0">
-            <EnterpriseWorkflowBuilder workflow={formData} onSave={setFormData} language={language} />
+            <Suspense fallback={
+              <div className="h-full w-full flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                <Loader2 className="animate-spin text-proton-accent" size={24} />
+                <span className="uppercase tracking-widest">Loading Builder...</span>
+              </div>
+            }>
+              <EnterpriseWorkflowBuilder workflow={formData} onSave={setFormData} language={language} />
+            </Suspense>
           </div>
         )}
 
@@ -5286,23 +5293,37 @@ export default function App() {
                   )}
                   {activeView === 'finance' && (
                     <div className="space-y-6 max-w-7xl mx-auto pb-20">
-                      <Web3ControlPanel />
+                      <Suspense fallback={
+                        <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                          <Loader2 className="animate-spin text-proton-accent" size={24} />
+                          <span className="uppercase tracking-widest">Loading Web3 Panel...</span>
+                        </div>
+                      }>
+                        <Web3ControlPanel />
+                      </Suspense>
                     </div>
                   )}
                   {activeView === 'organizer' && (
-                    <OrganizerView 
-                      language={userProfile.language}
-                      workflows={workflows}
-                      tasks={tasks}
-                      onAddTask={handleAddTask}
-                      onToggleTask={handleToggleTask}
-                      onDeleteTask={handleDeleteTask}
-                      onEditTask={handleEditTask}
-                      onAiSuggest={handleAiSuggestTasks}
-                      uiMode={uiMode === 'market' ? 'business' : uiMode}
-                      theme={organizerTheme}
-                      setTheme={setOrganizerTheme}
-                    />
+                    <Suspense fallback={
+                      <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest">Loading Organizer...</span>
+                      </div>
+                    }>
+                      <OrganizerView 
+                        language={userProfile.language}
+                        workflows={workflows}
+                        tasks={tasks}
+                        onAddTask={handleAddTask}
+                        onToggleTask={handleToggleTask}
+                        onDeleteTask={handleDeleteTask}
+                        onEditTask={handleEditTask}
+                        onAiSuggest={handleAiSuggestTasks}
+                        uiMode={uiMode === 'market' ? 'business' : uiMode}
+                        theme={organizerTheme}
+                        setTheme={setOrganizerTheme}
+                      />
+                    </Suspense>
                   )}
                   {activeView === 'compute' && (
                     <SystemsView 
