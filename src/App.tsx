@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
 const EnterpriseWorkflowBuilder = lazy(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
-import { WorkflowFlowEditor } from './components/WorkflowFlowEditor';
+// Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
 import { LocalFileScanner } from './components/LocalFileScanner';
 import { ObjectiveCenter } from './components/ObjectiveCenter';
 import { auth, db, googleProvider } from './firebase';
@@ -16,18 +16,18 @@ import {
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { SettingsView } from './components/SettingsView';
+const SettingsView = lazy(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-import CabinetView from './components/CabinetView';
+const CabinetView = lazy(() => import('./components/CabinetView'));
 const Web3ControlPanel = lazy(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
-import { TranslatorView } from './components/TranslatorView';
-import { MarketHub } from './components/MarketHub';
+const TranslatorView = lazy(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView })));
+const MarketHub = lazy(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
 import { AuthFlow } from './components/AuthFlow';
 const OrganizerView = lazy(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
-import { CommercialHub } from './components/CommercialHub';
+const CommercialHub = lazy(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -47,9 +47,7 @@ import {
   GeminiMetadata,
   Task
 } from './types';
-import { 
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell
-} from 'recharts';
+// Removed unused/unreferenced recharts import for bundle size reduction
 import { 
   Cpu, 
   MessageSquare, 
@@ -4473,7 +4471,16 @@ export default function App() {
   }
 
   if (activeView === 'translator') {
-    return <TranslatorView onBack={() => setActiveView('dashboard')} />;
+    return (
+      <Suspense fallback={
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+          <Loader2 className="animate-spin text-proton-accent" size={24} />
+          <span className="uppercase tracking-widest">Loading Translator...</span>
+        </div>
+      }>
+        <TranslatorView onBack={() => setActiveView('dashboard')} />
+      </Suspense>
+    );
   }
 
   return (
@@ -5228,11 +5235,18 @@ export default function App() {
                 className="w-full"
               >
               {uiMode === 'market' && activeView === 'market-hub' ? (
-                <MarketHub 
-                  language={userProfile.language} 
-                  t={t}
-                  themeId={theme}
-                />
+                <Suspense fallback={
+                  <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                    <Loader2 className="animate-spin text-proton-accent" size={24} />
+                    <span className="uppercase tracking-widest">Loading Market Hub...</span>
+                  </div>
+                }>
+                  <MarketHub 
+                    language={userProfile.language} 
+                    t={t}
+                    themeId={theme}
+                  />
+                </Suspense>
               ) : (
                 <>
                   {activeView === 'dashboard' && (
@@ -5339,39 +5353,67 @@ export default function App() {
                     <HardwareView language={userProfile.language} />
                   )}
                   {activeView === 'market-hub' && (
-                    <MarketHub 
-                      language={userProfile.language} 
-                      t={t}
-                      themeId={theme}
-                    />
+                    <Suspense fallback={
+                      <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest font-bold">Loading Market Hub...</span>
+                      </div>
+                    }>
+                      <MarketHub 
+                        language={userProfile.language} 
+                        t={t}
+                        themeId={theme}
+                      />
+                    </Suspense>
                   )}
                   {activeView === 'profile' && (
-                    <CabinetView 
-                      profile={userProfile} 
-                      theme={theme} 
-                      setTheme={setTheme} 
-                    />
+                    <Suspense fallback={
+                      <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest font-bold">Loading Profile...</span>
+                      </div>
+                    }>
+                      <CabinetView 
+                        profile={userProfile} 
+                        theme={theme} 
+                        setTheme={setTheme} 
+                      />
+                    </Suspense>
                   )}
                   {activeView === 'settings' && (
-                    <SettingsView 
-                      userProfile={userProfile}
-                      setUserProfile={setUserProfile}
-                      aiSettings={aiSettings}
-                      setAiSettings={setAiSettings}
-                      theme={theme}
-                      setTheme={setTheme}
-                      language={userProfile.language}
-                      uiMode={uiMode === 'market' ? 'business' : uiMode}
-                      setUiMode={handleModeChange}
-                      organizerTheme={organizerTheme}
-                      setOrganizerTheme={setOrganizerTheme}
-                    />
+                    <Suspense fallback={
+                      <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest font-bold">Loading Settings...</span>
+                      </div>
+                    }>
+                      <SettingsView 
+                        userProfile={userProfile}
+                        setUserProfile={setUserProfile}
+                        aiSettings={aiSettings}
+                        setAiSettings={setAiSettings}
+                        theme={theme}
+                        setTheme={setTheme}
+                        language={userProfile.language}
+                        uiMode={uiMode === 'market' ? 'business' : uiMode}
+                        setUiMode={handleModeChange}
+                        organizerTheme={organizerTheme}
+                        setOrganizerTheme={setOrganizerTheme}
+                      />
+                    </Suspense>
                   )}
                   {activeView === 'documentation' && (
                     <DocumentationView language={userProfile.language} />
                   )}
                   {activeView === 'commercial' && (
-                    <CommercialHub language={userProfile.language} />
+                    <Suspense fallback={
+                      <div className="min-h-[450px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest font-bold">Loading Commercial Hub...</span>
+                      </div>
+                    }>
+                      <CommercialHub language={userProfile.language} />
+                    </Suspense>
                   )}
                 </>
               )}
