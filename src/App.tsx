@@ -4805,7 +4805,7 @@ export default function App() {
             <div className="space-y-1">
               <SidebarItem 
                 icon={Settings} 
-                label={language === 'ka' ? 'კონტროლის ჰაბი' : 'Control Hub'} 
+                label={language === 'ka' ? 'პარამეტრები' : 'Settings'} 
                 active={activeView === 'profile' || activeView === 'settings'} 
                 onClick={() => {
                   if (!isSidebarOpen) {
@@ -4839,7 +4839,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-2.5">
                         <UserIcon size={14} className={activeView === 'profile' ? "text-proton-accent font-bold" : "text-proton-muted"} />
-                        <span>{language === 'ka' ? 'კაბინეტი' : 'Profile Cabinet'}</span>
+                        <span>{language === 'ka' ? 'კაბინეტი' : 'Personal Cabinet'}</span>
                       </div>
                       <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">HUB</span>
                     </button>
@@ -4854,9 +4854,9 @@ export default function App() {
                     >
                       <div className="flex items-center gap-2.5">
                         <Settings size={14} className={activeView === 'settings' ? "text-proton-accent font-bold" : "text-proton-muted"} />
-                        <span>{language === 'ka' ? 'პარამეტრები' : 'Settings'}</span>
+                        <span>{language === 'ka' ? 'სისტემა და AI' : 'System & AI'}</span>
                       </div>
-                      <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">AI</span>
+                      <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">CFG</span>
                     </button>
                   </motion.div>
                 )}
@@ -4950,7 +4950,7 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <Settings size={16} className="text-proton-accent" />
                   <span className="text-xs font-black uppercase tracking-wider text-proton-text-light">
-                    {language === 'ka' ? 'მართვის პანელი' : 'Control Center'}
+                    {language === 'ka' ? 'პარამეტრები' : 'Settings'}
                   </span>
                 </div>
                 <button 
@@ -5032,14 +5032,14 @@ export default function App() {
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ] : uiMode === 'creative' ? [
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
           { id: 'translator', icon: Languages, label: language === 'ka' ? 'თარგმანი' : 'Translate' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ] : [
           { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ]).map((item) => {
           const isActive = item.id === 'control-hub'
             ? (activeView === 'profile' || activeView === 'settings' || isMobileControlOpen)
