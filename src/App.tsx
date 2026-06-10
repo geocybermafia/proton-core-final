@@ -3667,6 +3667,7 @@ export default function App() {
   }, [location.pathname, navigate]);
 
   useEffect(() => {
+    if (isTransitioning) return;
     if (location.pathname.startsWith('/market-hub') || location.pathname.startsWith('/market')) {
       if (uiMode !== 'market') {
         setUiMode('market');
@@ -3680,7 +3681,7 @@ export default function App() {
         setUiMode('business');
       }
     }
-  }, [location.pathname, uiMode]);
+  }, [location.pathname, uiMode, isTransitioning]);
 
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
     if (view === 'market-hub' || view === 'market') {
