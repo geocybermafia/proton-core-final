@@ -3547,6 +3547,7 @@ export default function App() {
     if (pathname.startsWith('/blueprints')) return 'blueprints';
     if (pathname.startsWith('/studio')) return 'image';
     if (pathname.startsWith('/organizer')) return 'organizer';
+    if (pathname.startsWith('/finance')) return 'finance';
     if (pathname.startsWith('/compute')) return 'compute';
     if (pathname.startsWith('/device')) return 'device';
     if (pathname.startsWith('/profile')) return 'profile';
@@ -3568,6 +3569,7 @@ export default function App() {
       case 'blueprints': return '/blueprints';
       case 'image': return '/studio';
       case 'organizer': return '/organizer';
+      case 'finance': return '/finance';
       case 'compute': return '/compute';
       case 'device': return '/device';
       case 'profile': return '/profile';
@@ -3676,7 +3678,14 @@ export default function App() {
       if (uiMode !== 'creative') {
         setUiMode('creative');
       }
-    } else if (location.pathname.startsWith('/organizer') || location.pathname.startsWith('/blueprints')) {
+    } else if (
+      location.pathname.startsWith('/organizer') || 
+      location.pathname.startsWith('/blueprints') ||
+      location.pathname.startsWith('/finance') ||
+      location.pathname.startsWith('/compute') ||
+      location.pathname.startsWith('/device') ||
+      location.pathname.startsWith('/commercial')
+    ) {
       if (uiMode !== 'business') {
         setUiMode('business');
       }
@@ -3688,7 +3697,14 @@ export default function App() {
       setUiMode('market');
     } else if (view === 'image' || view === 'translator') {
       setUiMode('creative');
-    } else if (view === 'organizer' || view === 'blueprints' || view === 'commercial') {
+    } else if (
+      view === 'organizer' || 
+      view === 'blueprints' || 
+      view === 'commercial' || 
+      view === 'finance' || 
+      view === 'compute' || 
+      view === 'device'
+    ) {
       setUiMode('business');
     }
 
