@@ -400,6 +400,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
   useEffect(() => {
     if (!user) return;
+
+    // Check if on Chat Tab (Tab 5 mapping representing the messages view)
+    const activeTab = activeBottomTab === 'messages' ? 5 : 0;
+    if (activeTab !== 5) return;
+
     const q = query(
       collection(db, 'market_messages'),
       where('participants', 'array-contains', user.uid)
@@ -414,7 +419,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
       console.error("Error reading all market messages:", err);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, activeBottomTab]);
 
   const groupedChats = useMemo(() => {
     if (!user) return [];
