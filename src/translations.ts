@@ -212,8 +212,8 @@ export const translations = {
       already_have_account: "Existing user?"
     },
     landing: {
-      hero_title: "Master Your Business with AI Intelligence",
-      hero_subtitle: "The all-in-one ecosystem for professional automation, marketplace trading, and strategic project management.",
+      hero_title: "Unified Autonomy Engine, Visual Blueprint Networks & Asset Economies",
+      hero_subtitle: "Proton merges high-performance AI persona routing, interactive process engineering, and real-time community commerce into one bulletproof ecosystem.",
       cta_start: "Get Started Free",
       cta_login: "Sign In",
       badge_text: "Next Generation AI Platform",
@@ -652,8 +652,8 @@ export const translations = {
       already_have_account: "უკვე გაქვთ ანგარიში?"
     },
     landing: {
-      hero_title: "მართე შენი ბიზნესი AI ინტელექტით",
-      hero_subtitle: "ინოვაციური ეკოსისტემა პროფესიონალური ავტომატიზაციისთვის, გლობალური ვაჭრობისა და სტრატეგიული მართვისთვის.",
+      hero_title: "ავტონომიური ძრავი, ვიზუალური ბლუპრინტები და აქტივების ეკონომიკა",
+      hero_subtitle: "Proton-ი აერთიანებს მაღალტექნოლოგიურ AI ასისტენტებს, პროცესების ვიზუალურ ინჟინერიასა და დაცულ სავაჭრო მარკეტს ერთიან ეკოსისტემაში.",
       cta_start: "დაიწყე უფასოდ",
       cta_login: "შესვლა",
       badge_text: "შემდეგი თაობის AI პლატფორმა",
