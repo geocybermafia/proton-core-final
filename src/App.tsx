@@ -5330,7 +5330,7 @@ export default function App() {
                           <span className="uppercase tracking-widest">Loading Web3 Panel...</span>
                         </div>
                       }>
-                        <Web3ControlPanel />
+                        <Web3ControlPanel language={userProfile.language} />
                       </Suspense>
                     </div>
                   )}

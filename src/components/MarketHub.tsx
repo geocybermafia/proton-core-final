@@ -1134,6 +1134,47 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
     return result;
   }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency]);
 
+  const marketMetrics = useMemo(() => {
+    const total = listings.length;
+    const active = listings.filter(l => l.status !== 'sold').length;
+    const sold = listings.filter(l => l.status === 'sold' || (l as any).isSold).length + orders.length;
+    const currencySymbol = CURRENCIES.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
+    
+    // Average price calculation (coerced with safe guards)
+    const validPrices = listings.map(l => {
+      try {
+        return convertPrice(l.price || 0, l.currency || 'USD', displayCurrency);
+      } catch {
+        return 0;
+      }
+    });
+    const avgPrice = validPrices.length ? Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length) : 0;
+    
+    // Most popular category
+    const catCounts: Record<string, number> = {};
+    listings.forEach(l => {
+      if (l.category) {
+        catCounts[l.category] = (catCounts[l.category] || 0) + 1;
+      }
+    });
+    let topCat = 'technics';
+    let maxVal = 0;
+    Object.entries(catCounts).forEach(([cat, val]) => {
+      if (val > maxVal) {
+        maxVal = val;
+        topCat = cat;
+      }
+    });
+    
+    return {
+      total,
+      active,
+      sold,
+      avgPrice: `${currencySymbol}${avgPrice}`,
+      topCat: topCat.toUpperCase()
+    };
+  }, [listings, orders, displayCurrency]);
+
   const handleBuyNow = async (listing: Listing) => {
     if (!user) return;
 
@@ -1660,24 +1701,6 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
             {language === 'ka' ? 'მარკეტი' : 'MARKET SPACE'}
           </span>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/studio')}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-zinc-800/60 bg-zinc-950/40 text-[9px] sm:text-xs font-black font-sans tracking-widest text-[#dfb257] hover:border-[#dfb257]/60 transition-all flex items-center gap-1.5 uppercase bg-transparent"
-          >
-            <span>🎨</span>
-            <span>{language === 'ka' ? 'კრეატივი' : 'Creative Hub'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard')}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-zinc-800/60 bg-zinc-950/40 text-[9px] sm:text-xs font-black font-sans tracking-widest text-[#dfb257] hover:border-[#dfb257]/60 transition-all flex items-center gap-1.5 uppercase bg-transparent"
-          >
-            <span>💼</span>
-            <span>{language === 'ka' ? 'ბიზნესი' : 'Business Hub'}</span>
-          </button>
-        </div>
       </div>
 
       <div className="p-6 lg:p-10 grow relative">
@@ -1690,24 +1713,24 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
           animate={{ opacity: 1, y: 0 }}
           className="space-y-12 bg-transparent pb-40 relative z-10"
         >
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-zinc-900/40">
+        <div className="flex items-center gap-4">
           {viewMode !== 'browse' && (
             <button 
               onClick={() => setViewMode('browse')}
-              className="p-4 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors border border-white/5"
+              className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
             </button>
           )}
           <div>
-            <h1 className={cn("text-4xl md:text-5xl font-black mb-3 tracking-tighter uppercase leading-none", currentTheme.text)}>
+            <h1 className={cn("text-3xl md:text-4xl font-black mb-1.5 tracking-tighter uppercase leading-none", currentTheme.text)}>
               <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
             </h1>
-            <div className="flex items-center gap-4">
-              <div className={cn("flex items-center gap-2 px-2 py-1 rounded-lg border", currentTheme.cardAlt)}>
+            <div className="flex items-center gap-3">
+              <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className={cn("font-black tracking-widest uppercase text-[9px] opacity-80", currentTheme.muted)}>
+                <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80", currentTheme.muted)}>
                   {viewMode === 'browse' ? t.market.subtitle : 
                    viewMode === 'my-listings' ? t.market.my_listings :
                    viewMode === 'privacy' ? t.market.legal.privacy_policy :
@@ -1716,11 +1739,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 </span>
               </div>
               {viewMode === 'my-listings' && (
-                <div className={cn("flex items-center gap-2 p-1 rounded-xl border", currentTheme.cardAlt)}>
+                <div className={cn("flex items-center gap-1.5 p-0.5 rounded-lg border", currentTheme.cardAlt)}>
                   <button 
                     onClick={() => setProfileSubMode('selling')}
                     className={cn(
-                      "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                      "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
                       profileSubMode === 'selling' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
                     )}
                   >
@@ -1729,7 +1752,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   <button 
                     onClick={() => setProfileSubMode('buying')}
                     className={cn(
-                      "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all",
+                      "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
                       profileSubMode === 'buying' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
                     )}
                   >
@@ -1742,130 +1765,97 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
         </div>
 
         {viewMode === 'browse' && (
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full mt-2">
-             {/* Styled search bar with yellow outline & AI sparkles exactly like mymarket.ge */}
-             <div className="relative flex-1 group">
-                <div className="relative w-full flex items-center bg-[#101012] rounded-2xl border-2 border-[#dfb257] shadow-lg shadow-[#dfb257]/5 min-h-[50px] overflow-hidden focus-within:border-[#f0c267] transition-all">
-                  <Search size={16} className="absolute left-4 opacity-40 text-[#dfb257]" />
-                  <input 
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა' : 'Type search word'}
-                    className="w-full bg-transparent pl-12 pr-24 py-3 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-base md:text-sm"
-                  />
-                  <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-2">
-                    <div className="h-6 w-[1.5px] bg-zinc-800" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch(language === 'ka' ? 'Apple iPhone' : 'Apple');
-                        setActiveCategory('technics');
-                      }}
-                      className="px-3.5 py-1.5 h-full rounded-xl bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/20 text-[#dfb257] transition-all font-black text-[11px] tracking-widest flex items-center gap-1.5 shrink-0"
-                    >
-                      <Sparkles size={12} className="text-[#dfb257] fill-[#dfb257]/20 animate-pulse" />
-                      <span>AI</span>
-                    </button>
-                  </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full pt-1">
+            {/* Elegant AI Powered Search Panel */}
+            <div className="relative flex-1 group">
+              <div className="relative w-full flex items-center bg-[#101012] rounded-2xl border border-zinc-800/80 focus-within:border-[#dfb257] transition-all min-h-[46px] overflow-hidden shadow-inner">
+                <Search size={15} className="absolute left-4 opacity-40 text-[#dfb257]" />
+                <input 
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Type search word...'}
+                  className="w-full bg-transparent pl-11 pr-20 py-2.5 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-sm"
+                />
+                <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-1.5">
+                  <div className="h-4 w-[1px] bg-zinc-800" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch(language === 'ka' ? 'Apple iPhone' : 'Apple');
+                      setActiveCategory('technics');
+                    }}
+                    className="px-2.5 py-1 h-full rounded-lg bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/20 text-[#dfb257] transition-all font-black text-[9px] tracking-widest flex items-center gap-1 shrink-0"
+                  >
+                    <Sparkles size={10} className="text-[#dfb257] fill-[#dfb257]/20" />
+                    <span>AI</span>
+                  </button>
                 </div>
-             </div>
-             
-             <div className="flex items-center flex-wrap gap-2 md:shrink-0">
+              </div>
+            </div>
+
+            {/* Display / Map option switchers alongside selected Display Currency picker */}
+            <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0">
+              {/* Grid / Map View Toggle */}
+              <div className={cn("flex items-center gap-1 p-0.5 rounded-xl border shadow-inner", currentTheme.cardAlt)}>
                 <button 
-                  onClick={() => setIsCartOpen(true)}
-                  className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl transition-all border relative", currentTheme.cardAlt, currentTheme.bgHover)}
-                  title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
-                >
-                  <ShoppingCart size={20} />
-                  {cart.length > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#dfb257] text-[10px] font-black text-[#070708]">
-                      {cart.length}
-                    </span>
+                  type="button"
+                  onClick={() => setDisplayMode('grid')}
+                  className={cn(
+                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
+                    displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-sm") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
                   )}
+                  title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
+                >
+                  <LayoutGrid size={13} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
                 </button>
                 <button 
-                  onClick={() => setViewMode('my-listings')}
-                  className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl transition-all border", currentTheme.cardAlt, currentTheme.bgHover)}
-                  title={t.market.my_listings}
+                  type="button"
+                  onClick={() => setDisplayMode('map')}
+                  className={cn(
+                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
+                    displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-sm border border-zinc-700/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                  )}
+                  title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
                 >
-                  <User size={20} />
+                  <MapPin size={13} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
                 </button>
-                <button 
-                  onClick={() => {
-                    setFormData({
-                      title: '', titleGe: '', description: '', descriptionGe: '',
-                      price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-                      country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
-                      lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
-                      listingType: 'product', serviceDuration: '', serviceTerms: ''
-                    });
-                    setViewMode('create');
-                  }}
-                  className={cn("w-12 h-12 flex items-center justify-center shrink-0 rounded-2xl shadow-xl shadow-black/80 hover:brightness-110 active:scale-95 transition-all text-white border border-white/10", currentTheme.accentBg)}
+              </div>
+
+              {/* Display Currency Menu Selector */}
+              <div className="relative group shrink-0">
+                <select 
+                  value={displayCurrency}
+                  onChange={(e) => setDisplayCurrency(e.target.value)}
+                  className={cn(
+                    "h-9 pl-3 pr-8 py-1.5 rounded-xl border appearance-none text-[9px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
+                    currentTheme.input
+                  )}
                 >
-                  <Plus size={20} />
-                </button>
-
-                {/* Grid / Map View Toggle */}
-                <div className={cn("flex items-center gap-1 p-1 rounded-2xl border shadow-inner ml-1", currentTheme.cardAlt)}>
-                  <button 
-                    type="button"
-                    onClick={() => setDisplayMode('grid')}
-                    className={cn(
-                      "h-10 px-3.5 rounded-xl transition-all flex items-center justify-center gap-1.5",
-                      displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-md") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                    )}
-                    title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
-                  >
-                    <LayoutGrid size={15} />
-                    <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setDisplayMode('map')}
-                    className={cn(
-                      "h-10 px-3.5 rounded-xl transition-all flex items-center justify-center gap-1.5",
-                      displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-md border border-zinc-700/80 shadow-black/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                    )}
-                    title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
-                  >
-                    <MapPin size={15} />
-                    <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
-                  </button>
-                </div>
-
-                <div className="relative group shrink-0">
-                  <select 
-                    value={displayCurrency}
-                    onChange={(e) => setDisplayCurrency(e.target.value)}
-                    className={cn(
-                      "h-12 pl-4 pr-10 py-3 rounded-2xl border appearance-none text-xs font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
-                      currentTheme.input
-                    )}
-                  >
-                    {CURRENCIES.map(curr => (
-                      <option key={curr.code} value={curr.code}>{curr.code}</option>
-                    ))}
-                  </select>
-                  <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
-                </div>
-             </div>
+                  {CURRENCIES.map(curr => (
+                    <option key={curr.code} value={curr.code}>{curr.code}</option>
+                  ))}
+                </select>
+                <ChevronRight size={12} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+              </div>
+            </div>
           </div>
         )}
 
         {viewMode === 'browse' && (
-          <div className={cn("w-full flex flex-wrap items-center justify-between gap-4 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
-            {/* Listing Type Tabs */}
-            <div className={cn("flex p-1 rounded-2xl border shadow-inner", currentTheme.cardAlt)}>
+          <div className={cn("w-full flex flex-col md:flex-row md:items-center justify-between gap-5 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
+            {/* Listing Type Selection Tabs */}
+            <div className={cn("flex p-0.5 rounded-xl border shadow-inner w-fit select-none", currentTheme.cardAlt)}>
               <button
                 type="button"
                 onClick={() => setActiveListingType('all')}
                 className={cn(
-                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
                   activeListingType === 'all' 
-                    ? cn(currentTheme.badgeBg, "shadow-md") 
-                    : cn(currentTheme.muted, "hover:opacity-85")
+                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
                 )}
               >
                 <span>🌍</span>
@@ -1875,10 +1865,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 type="button"
                 onClick={() => setActiveListingType('service')}
                 className={cn(
-                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
                   activeListingType === 'service' 
-                    ? cn(currentTheme.badgeBg, "shadow-md") 
-                    : cn(currentTheme.muted, "hover:opacity-85")
+                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
                 )}
               >
                 <span>⚡</span>
@@ -1888,10 +1878,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 type="button"
                 onClick={() => setActiveListingType('product')}
                 className={cn(
-                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
                   activeListingType === 'product' 
-                    ? cn(currentTheme.badgeBg, "shadow-md") 
-                    : cn(currentTheme.muted, "hover:opacity-85")
+                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
                 )}
               >
                 <span>📦</span>
@@ -1901,10 +1891,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                 type="button"
                 onClick={() => setActiveListingType('project')}
                 className={cn(
-                  "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2",
+                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
                   activeListingType === 'project' 
-                    ? cn(currentTheme.badgeBg, "shadow-md") 
-                    : cn(currentTheme.muted, "hover:opacity-85")
+                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
                 )}
               >
                 <span>🚀</span>
@@ -2047,6 +2037,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
                 <div className="flex items-center gap-2 shrink-0 select-none pb-1">
                   <button
+                    type="button"
                     onClick={() => setIsFiltersOpen(true)}
                     className={cn("h-12 px-5 rounded-xl text-sm font-black uppercase tracking-widest transition-all border border-white/10 shadow-lg bg-white/5 text-white active:scale-95 flex items-center justify-center")}
                   >
@@ -2079,169 +2070,247 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
 
             <div className="flex-1 min-w-0 space-y-8">
               {viewMode === 'browse' && displayMode === 'grid' && (
-                <div className="space-y-8 animate-in fade-in duration-500">
-                  {/* Bento category highlights exactly like mymarket.ge */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* All Categories */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveBottomTab('categories')}
-                      className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-zinc-900/80 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
-                        <LayoutGrid size={18} />
+                <div className="space-y-12 animate-in fade-in duration-500">
+                  {/* Section 1: Real-time Marketplace Dynamics & Valuation Deck */}
+                  <div className="p-6 bg-gradient-to-b from-zinc-950 to-zinc-950/40 border border-[#dfb257]/10 rounded-[28px] space-y-5 shadow-lg shadow-black/80">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-[#dfb257]">
+                          {language === 'ka' ? 'ბაზრის ანალიტიკა და ფასები' : 'MARKET ANALYTICS & VALUATIONS'}
+                        </span>
                       </div>
-                      <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase">
-                        {language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
-                      </p>
-                    </button>
+                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{language === 'ka' ? 'ცოცხალი რეჟიმი' : 'Live Feed'}</span>
+                    </div>
 
-                    {/* Secondary on installment */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveListingType('product');
-                        setSearch(language === 'ka' ? 'მეორადი' : 'Used');
-                      }}
-                      className="bg-gradient-to-br from-blue-700/40 to-blue-600/30 hover:from-blue-700/60 hover:to-blue-600/40 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-blue-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md relative overflow-hidden group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-250">
-                        <Coins size={16} />
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Stat 1: Active Listings */}
+                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold block mb-2">
+                          {language === 'ka' ? 'აქტიური' : 'Active Assets'}
+                        </span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl sm:text-2xl font-black text-white">{marketMetrics.active}</span>
+                          <span className="text-[10px] text-zinc-500 font-black uppercase tracking-wider">units</span>
+                        </div>
                       </div>
-                      <p className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight uppercase relative z-10">
-                        {language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
-                      </p>
-                    </button>
 
-                    {/* Mobile Phone */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveCategory('technics');
-                        setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
-                      }}
-                      className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-[#dfb257]/10 flex items-center justify-center text-[#dfb257]">
-                        📱
+                      {/* Stat 2: Completed Transactions / Sold */}
+                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-[#dfb257] font-bold block mb-2">
+                          {language === 'ka' ? 'შესრულებული გარიგებები' : 'Deals Closed'}
+                        </span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl sm:text-2xl font-black text-[#dfb257]">{marketMetrics.sold}</span>
+                          <span className="text-[10px] text-zinc-400 font-bold font-sans">✓</span>
+                        </div>
                       </div>
-                      <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
-                        {language === 'ka' ? 'მობილური ტელეფონი' : 'Mobile Phones'}
-                      </p>
-                    </button>
 
-                    {/* Discounted */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
-                      }}
-                      className="bg-rose-500/5 hover:bg-rose-500/10 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-rose-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-550 font-black text-sm">
-                        %
+                      {/* Stat 3: Average Valuation */}
+                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold block mb-2">
+                          {language === 'ka' ? 'საშუალო ფასი' : 'Avg Valuation'}
+                        </span>
+                        <span className="text-xl sm:text-2xl font-black text-zinc-100">{marketMetrics.avgPrice}</span>
                       </div>
-                      <p className="text-xs sm:text-sm font-black text-rose-400 tracking-tight leading-tight uppercase">
-                        {language === 'ka' ? 'ფასდაკლებული' : 'With Discount'}
-                      </p>
-                    </button>
+
+                      {/* Stat 4: Top Category */}
+                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
+                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold block mb-2">
+                          {language === 'ka' ? 'პოპულარული კატეგორია' : 'Hot Category'}
+                        </span>
+                        <div className="flex items-center">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-[#dfb257] truncate bg-[#dfb257]/5 px-2.5 py-1 rounded border border-[#dfb257]/10">
+                            {marketMetrics.topCat}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Circular Brands shortcuts like mymarket.ge */}
-                  <div className="flex items-center gap-6 overflow-x-auto pb-4 pt-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none scroll-smooth">
-                    {/* Add shortcut circle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData({
-                          title: '', titleGe: '', description: '', descriptionGe: '',
-                          price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-                          country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
-                          lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
-                          listingType: 'product', serviceDuration: '', serviceTerms: ''
-                        });
-                        setViewMode('create');
-                      }}
-                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
-                    >
-                      <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#dfb257] flex items-center justify-center bg-transparent group-hover:scale-105 transition-all text-[#dfb257]">
-                        <Plus size={20} className="stroke-[3]" />
-                      </div>
-                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                        {language === 'ka' ? 'დამატება' : 'Add Listing'}
-                      </span>
-                    </button>
+                  {/* Section 2: Quick Highlights Navigation */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 px-1">
+                      <span className="text-sm">⚡</span>
+                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
+                        {language === 'ka' ? 'სწრაფი ნავიგაცია' : 'QUICK NAVIGATOR'}
+                      </h3>
+                    </div>
 
-                    {/* Apple */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch('Apple');
-                        setActiveCategory('technics');
-                      }}
-                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
-                    >
-                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-white font-sans font-black text-base shadow-sm">
-                        
-                      </div>
-                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                        Apple
-                      </span>
-                    </button>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* All Categories */}
+                      <button
+                        type="button"
+                        onClick={() => setActiveBottomTab('categories')}
+                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-zinc-900/80 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+                          <LayoutGrid size={18} />
+                        </div>
+                        <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase">
+                          {language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
+                        </p>
+                      </button>
 
-                    {/* Xiaomi */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch('Xiaomi');
-                        setActiveCategory('technics');
-                      }}
-                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
-                    >
-                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-[#ff6700] font-mono font-black text-xs shadow-sm">
-                        mi
-                      </div>
-                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                        Xiaomi
-                      </span>
-                    </button>
+                      {/* Secondary on installment */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveListingType('product');
+                          setSearch(language === 'ka' ? 'მეორადი' : 'Used');
+                        }}
+                        className="bg-gradient-to-br from-blue-700/40 to-blue-600/30 hover:from-blue-700/60 hover:to-blue-600/40 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-blue-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md relative overflow-hidden group"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-200">
+                          <Coins size={16} />
+                        </div>
+                        <p className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight uppercase relative z-10">
+                          {language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
+                        </p>
+                      </button>
 
-                    {/* Samsung */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch('Samsung');
-                        setActiveCategory('technics');
-                      }}
-                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
-                    >
-                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-blue-400 font-sans font-black text-[9px] shadow-sm uppercase leading-none tracking-tighter">
-                        SMG
-                      </div>
-                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                        Samsung
-                      </span>
-                    </button>
+                      {/* Mobile Phone */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveCategory('technics');
+                          setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
+                        }}
+                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-[#dfb257]/10 flex items-center justify-center text-[#dfb257]">
+                          📱
+                        </div>
+                        <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
+                          {language === 'ka' ? 'მობილური ტელეფონი' : 'Mobile Phones'}
+                        </p>
+                      </button>
 
-                    {/* Sony */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch('Sony');
-                        setActiveCategory('technics');
-                      }}
-                      className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
-                    >
-                      <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-indigo-400 font-sans font-black text-[8px] tracking-tight shadow-sm uppercase">
-                        SONY
-                      </div>
-                      <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                        Sony
-                      </span>
-                    </button>
+                      {/* Discounted */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
+                        }}
+                        className="bg-rose-500/5 hover:bg-rose-500/10 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-rose-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-450 font-black text-sm">
+                          %
+                        </div>
+                        <p className="text-xs sm:text-sm font-black text-rose-400 tracking-tight leading-tight uppercase">
+                          {language === 'ka' ? 'ფასდაკლებული' : 'With Discount'}
+                        </p>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Super VIP Header and badge exactly like mymarket.ge */}
+                  {/* Section 3: Popular Brand Shortcuts */}
+                  <div className="p-6 bg-zinc-950/40 border border-zinc-900/80 rounded-[28px] space-y-4">
+                    <div className="flex items-center justify-between border-b border-zinc-900/40 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🏷️</span>
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 font-mono">
+                          {language === 'ka' ? 'პოპულარული ბრენდები' : 'SHOP BY BRANDS'}
+                        </h3>
+                      </div>
+                      <span className="text-[9px] font-mono text-zinc-650 uppercase tracking-widest bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">shortcuts</span>
+                    </div>
+
+                    <div className="flex items-center gap-5 overflow-x-auto pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none scroll-smooth">
+                      {/* Add shortcut circle */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            title: '', titleGe: '', description: '', descriptionGe: '',
+                            price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
+                            country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
+                            lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
+                            listingType: 'product', serviceDuration: '', serviceTerms: ''
+                          });
+                          setViewMode('create');
+                        }}
+                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                      >
+                        <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#dfb257] flex items-center justify-center bg-[#dfb257]/5 group-hover:bg-[#dfb257]/10 group-hover:scale-105 transition-all text-[#dfb257]">
+                          <Plus size={20} className="stroke-[3]" />
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                          {language === 'ka' ? 'დამატება' : 'Add Listing'}
+                        </span>
+                      </button>
+
+                      {/* Apple */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Apple');
+                          setActiveCategory('technics');
+                        }}
+                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-white font-sans font-black text-base shadow-sm">
+                          
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                          Apple
+                        </span>
+                      </button>
+
+                      {/* Xiaomi */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Xiaomi');
+                          setActiveCategory('technics');
+                        }}
+                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-[#ff6700] font-mono font-black text-xs shadow-sm">
+                          mi
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                          Xiaomi
+                        </span>
+                      </button>
+
+                      {/* Samsung */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Samsung');
+                          setActiveCategory('technics');
+                        }}
+                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-blue-400 font-sans font-black text-[9px] shadow-sm uppercase leading-none tracking-tighter">
+                          SMG
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                          Samsung
+                        </span>
+                      </button>
+
+                      {/* Sony */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Sony');
+                          setActiveCategory('technics');
+                        }}
+                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                      >
+                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-850 flex items-center justify-center group-hover:scale-105 transition-all text-indigo-400 font-sans font-black text-[8px] tracking-tight shadow-sm uppercase">
+                          SONY
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
+                          Sony
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Section 4: Super VIP Listings Feed */}
                   <div className="flex items-center justify-between border-b border-zinc-900/60 pb-3 pt-4">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
@@ -2313,7 +2382,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6">
                   <AnimatePresence mode="popLayout">
                   {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
                     (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
@@ -2455,13 +2524,13 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       return (
                 <motion.article 
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
                   key={listing.id}
-                  transition={{ delay: idx * 0.04 }}
+                  transition={{ delay: idx * 0.03 }}
                   className={cn(
-                    "group rounded-2xl overflow-hidden transition-all duration-500 flex flex-col relative border border-zinc-850 hover:border-[#dfb257]/35 hover:shadow-[0_12px_45px_rgba(223,178,87,0.07)] hover:-translate-y-1.5",
+                    "group rounded-2xl overflow-hidden transition-all duration-300 flex flex-col relative border border-zinc-900/40 bg-zinc-950/40 hover:border-[#dfb257]/30 hover:shadow-[0_8px_30px_rgba(223,178,87,0.05)] hover:-translate-y-1 hover:bg-zinc-950/60",
                     currentTheme.card
                   )}
                 >
@@ -2470,146 +2539,148 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                       if ((e.target as HTMLElement).closest('button')) return;
                       setCheckoutItem(listing);
                     }}
-                    className="w-full aspect-video h-56 xs:h-64 sm:h-52 bg-zinc-900/80 overflow-hidden relative cursor-pointer"
+                    className="w-full h-44 sm:h-48 bg-zinc-900/80 overflow-hidden relative cursor-pointer"
                   >
                     {(listing.images && listing.images.length > 0) || listing.image ? (
                       <motion.img 
                         src={listing.images && listing.images.length > 0 ? listing.images[0] : (listing.image || '/placeholder-image.jpg')} 
                         alt={language === 'ka' ? (listing.titleGe || listing.title) : listing.title} 
-                        className="w-full h-full object-cover aspect-video overflow-hidden transition-transform duration-700 ease-out bg-zinc-900/60"
+                        className="w-full h-full object-cover transition-transform duration-500 ease-out bg-zinc-950"
                         whileHover={{ scale: 1.05 }}
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className={cn("w-full h-full flex items-center justify-center bg-zinc-900/80")}>
-                        <ShoppingBag size={30} className={cn("opacity-10", currentTheme.accent)} />
+                      <div className={cn("w-full h-full flex items-center justify-center bg-zinc-900/90")}>
+                        <ShoppingBag size={24} className={cn("opacity-10", currentTheme.accent)} />
                       </div>
                     )}
                     
                     {/* Badge Overlay */}
-                    <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex flex-wrap gap-1.5 sm:gap-2">
-                      <div className="px-2.5 py-1 sm:px-2.5 sm:py-1 bg-black/75 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
-                        <span className="text-xs sm:text-[11px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
-                        <span className="text-xs sm:text-[9px] font-black text-white uppercase tracking-wider">
+                    <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
+                      <div className="px-2 py-0.5 bg-black/80 backdrop-blur-md rounded-lg border border-white/5 flex items-center gap-1 shadow-sm">
+                        <span className="text-[10px] sm:text-[9px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
+                        <span className="text-[9px] font-black text-[#dfb257] uppercase tracking-wider">
                           {t.market.categories[listing.category as keyof typeof t.market.categories]}
                         </span>
                       </div>
-                      <div className="px-2.5 py-1 sm:px-2.5 sm:py-1 bg-black/75 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1">
-                        <span className="text-xs sm:text-xs">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-                        <span className="text-xs sm:text-[9px] font-black text-white uppercase tracking-wider">{listing.city}</span>
+                      <div className="px-2 py-0.5 bg-black/80 backdrop-blur-md rounded-lg border border-white/5 flex items-center gap-1 shadow-sm">
+                        <span className="text-[10px] sm:text-[9px]">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
+                        <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">{listing.city}</span>
                       </div>
                       {sellerRatings[listing.sellerId]?.avg >= 4.5 && (
-                        <div className="px-2 py-1 sm:px-2.5 sm:py-1 bg-gradient-to-r from-[#e5af37] to-[#b8860b] text-zinc-950 border border-[#d4af37]/45 rounded-lg flex items-center gap-1 shadow-md">
-                          <Star size={10} className="fill-black text-black sm:size-[10px]" />
-                          <span className="text-[10px] sm:text-[8px] font-black uppercase tracking-wider">
-                            {language === 'ka' ? '✓ ტოპ რეიტინგი' : '✓ TOP VENDOR'}
+                        <div className="px-2 py-0.5 bg-gradient-to-r from-[#dfb257] to-[#b8860b] text-zinc-950 rounded-lg flex items-center gap-1 shadow-sm border border-yellow-500/20">
+                          <Star size={8} className="fill-current text-zinc-950" />
+                          <span className="text-[8px] font-black uppercase tracking-wider">
+                            {language === 'ka' ? '✓ ტოპ გამყიდველი' : '✓ TOP VENDOR'}
                           </span>
                         </div>
                       )}
                     </div>
 
                     {canManageListing && (
-                      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-2 z-10">
+                      <div className="absolute top-3 right-3 flex gap-1.5 z-10">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             startEdit(listing);
                           }}
-                          className={cn("w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center bg-black/75 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-white hover:text-black")}
+                          className={cn("w-9 h-9 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white transition-all hover:bg-white hover:text-black")}
                         >
-                          <Edit3 className="size-5 sm:size-4" />
+                          <Edit3 className="size-4" />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteListing(listing.id);
                           }}
-                          className="w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center bg-black/75 backdrop-blur-md rounded-xl border border-white/10 transition-all hover:bg-red-500 hover:text-white"
+                          className="w-9 h-9 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white transition-all hover:bg-rose-500 hover:border-rose-500/30"
                         >
-                          <Trash2 className="size-5 sm:size-4" />
+                          <Trash2 className="size-4" />
                         </button>
                       </div>
                     )}
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-6 flex-1 flex flex-col relative space-y-4">
-                    <h2 
-                      onClick={() => setCheckoutItem(listing)}
-                      className="text-lg md:text-xl font-extrabold tracking-tight mb-2 uppercase text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[50px] leading-snug"
-                    >
-                      {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
-                    </h2>
-                    <p className="text-zinc-300 font-sans text-sm md:text-xs font-medium leading-relaxed mb-4 line-clamp-3">
-                      {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
-                    </p>
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <h2 
+                        onClick={() => setCheckoutItem(listing)}
+                        className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 leading-snug mb-1.5"
+                      >
+                        {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
+                      </h2>
+                      <p className="text-xs font-sans text-zinc-400 font-medium leading-relaxed line-clamp-2">
+                        {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
+                      </p>
+                    </div>
 
-                    <div className={cn("mt-auto pt-4 border-t", currentTheme.border)}>
-                      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs uppercase tracking-wider text-zinc-400 font-bold mb-1 block">{t.market.price}</span>
-                          <span className="text-2xl font-black tracking-tight text-[#dfb257] drop-shadow-[0_0_6px_rgba(223,178,87,0.15)] flex items-baseline gap-1">
+                    <div className={cn("pt-3 border-t", currentTheme.border)}>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block">{t.market.price}</span>
+                          <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#dfb257] flex items-baseline gap-0.5">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-sm font-bold text-zinc-400 font-sans">{displayCurrency}</span>
+                            <span className="text-xs font-bold text-zinc-400 font-sans ml-1">{displayCurrency}</span>
                           </span>
                         </div>
 
                         {/* Product / Service / Project Badge */}
                         {listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="inline-flex px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-[#dfb257] shadow-sm shrink-0">
+                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-sm shrink-0">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
                         ) : listing.listingType === 'project' || listing.category === 'project' ? (
-                          <span className="inline-flex px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-[#c5a059]/10 border border-[#c5a059]/30 text-[#c5a059] shadow-sm shrink-0">
+                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm shrink-0">
                             {language === 'ka' ? 'პროექტი' : 'Project'}
                           </span>
                         ) : (
-                          <span className="inline-flex px-3 py-1.5 rounded-lg text-[10px] font-extrabold uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/30 text-zinc-100 shadow-sm shrink-0">
+                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/20 text-zinc-200 shadow-sm shrink-0">
                             {language === 'ka' ? 'პროდუქტი' : 'Product'}
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between gap-3 flex-wrap xs:flex-nowrap">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-3 pt-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
                           <div 
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
                             }}
-                            className={cn("w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs relative cursor-pointer hover:border-[#dfb257]/50 transition-all border shrink-0 bg-zinc-950 text-white border-zinc-800")}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative cursor-pointer hover:border-[#dfb257]/50 transition-all border shrink-0 bg-zinc-900 text-white border-zinc-800"
                             title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
                           >
                             {listing.sellerName.substring(0, 2).toUpperCase()}
-                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-zinc-950" />
+                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-zinc-950" />
                           </div>
                           <div 
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
                             }}
-                            className="min-w-0 cursor-pointer group/vendor hover:opacity-80 transition-opacity flex-1"
+                            className="min-w-0 cursor-pointer group/vendor flex-1"
                             title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
                           >
                             <div className="flex items-center gap-1 min-w-0">
-                              <span className="text-sm font-bold tracking-wide truncate block text-zinc-100 group-hover/vendor:text-[#dfb257] transition-colors">{listing.sellerName}</span>
-                              <ShieldCheck size={12} className="shrink-0 text-[#dfb257]" />
+                              <span className="text-xs font-bold tracking-wide truncate block text-zinc-200 group-hover/vendor:text-[#dfb257] transition-colors">{listing.sellerName}</span>
+                              <ShieldCheck size={11} className="shrink-0 text-[#dfb257]" />
                             </div>
-                            <div className="flex items-center mt-0.5">
+                            <div className="flex items-center mt-0.5 min-w-0">
                               {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
                                 <div className="flex items-center gap-0.5">
-                                  <Star size={11} className="fill-[#dfb257] text-[#dfb257]" />
-                                  <span className="text-xs font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
+                                  <Star size={9} className="fill-[#dfb257] text-[#dfb257]" />
+                                  <span className="text-[10px] font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
                                 </div>
                               ) : (
-                                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'New'}</span>
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{language === 'ka' ? 'ახალი' : 'New'}</span>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0 ml-auto select-none">
+                        <div className="flex items-center gap-1.5 shrink-0 select-none">
                           {/* Chat Button */}
                           {!isOwnListing && (
                             <button 
@@ -2617,10 +2688,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                 e.stopPropagation();
                                 setActiveChatListing(listing);
                               }}
-                              className="w-12 h-12 sm:w-9 sm:h-9 rounded-xl bg-white/5 border border-white/5 text-white/60 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center"
+                              className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center"
                               title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
                             >
-                              <MessageCircle size={18} className="sm:size-[14px]" />
+                              <MessageCircle size={14} />
                             </button>
                           )}
 
@@ -2632,26 +2703,26 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                 e.stopPropagation();
                                 handleAddToCart(listing);
                               }}
-                              className="w-12 h-12 sm:w-9 sm:h-9 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30"
+                              className="w-8 h-8 rounded-lg transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30"
                               title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                             >
-                              <ShoppingCart size={18} className="sm:size-[14px]" />
+                              <ShoppingCart size={14} />
                             </button>
                           )}
                         </div>
                       </div>
 
-                      <div className="mt-4 sm:mt-4">
+                      <div className="mt-3">
                         {isOwnListing ? (
-                          <div className="flex gap-2.5">
+                          <div className="flex gap-1.5">
                             <button 
                               onClick={() => startEdit(listing)}
                               className={cn(
-                                "flex-1 h-12 sm:h-10 py-3 sm:py-2.5 rounded-xl text-xs sm:text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border border-white/10 hover:bg-white/10 text-white",
+                                "flex-1 h-9 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 border border-white/5 hover:bg-white/10 text-white",
                                 currentTheme.accentBg
                               )}
                             >
-                              <Edit3 size={14} className="sm:size-[14px]" />
+                              <Edit3 size={12} />
                               {t.market.edit_listing}
                             </button>
                             <button 
@@ -2667,21 +2738,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId }: MarketHu
                                   }
                                 }
                               }}
-                              className="w-12 h-12 sm:w-10 sm:h-10 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl text-xs sm:text-[9px] font-black transition-all flex items-center justify-center shrink-0"
+                              className="w-9 h-9 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-lg text-[9px] font-black transition-all flex items-center justify-center shrink-0"
                               title={language === 'ka' ? 'წაშლა' : 'Delete'}
                             >
-                              <Trash2 size={14} className="sm:size-[14px]" />
+                              <Trash2 size={12} />
                             </button>
                           </div>
                         ) : (
                           <button 
                             onClick={() => handleBuyNow(listing)}
                             className={cn(
-                              "w-full h-12 sm:h-10 py-3 sm:py-2.5 rounded-xl text-xs sm:text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 sm:gap-2 shadow-lg hover:shadow-proton-accent/20 active:scale-[0.98]",
+                              "w-full h-9 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-md hover:shadow-proton-accent/20 active:scale-[0.98]",
                               currentTheme.accentBg, "text-white"
                             )}
                           >
-                            <ShoppingBag size={14} className="sm:size-[14px]" />
+                            <ShoppingBag size={12} />
                             {t.market.buy_now}
                           </button>
                         )}
