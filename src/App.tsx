@@ -4500,6 +4500,27 @@ export default function App() {
     );
   }
 
+  if (activeView === 'market-hub') {
+    return (
+      <Suspense fallback={
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+          <Loader2 className="animate-spin text-proton-accent" size={24} />
+          <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
+        </div>
+      }>
+        <MarketHub 
+          language={userProfile.language} 
+          t={t}
+          themeId={theme}
+          onBack={() => {
+            setUiMode('business');
+            setActiveView('dashboard');
+          }}
+        />
+      </Suspense>
+    );
+  }
+
   return (
     <div className={cn(
       "flex h-[100dvh] overflow-hidden overscroll-none theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
@@ -4739,8 +4760,8 @@ export default function App() {
                       <SidebarItem 
                         icon={ShoppingBag} 
                         label={t.sidebar.market} 
-                        active={activeView === 'market-hub'} 
-                        onClick={() => handleViewChange('market-hub')} 
+                        active={(activeView as string) === 'market-hub'} 
+                        onClick={() => handleViewChange('market-hub' as any)} 
                         expanded={isSidebarOpen}
                         uiMode="business"
                       />
@@ -5251,7 +5272,7 @@ export default function App() {
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
                 className="w-full"
               >
-              {uiMode === 'market' && activeView === 'market-hub' ? (
+              {uiMode === 'market' && (activeView as string) === 'market-hub' ? (
                 <Suspense fallback={
                   <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
                     <Loader2 className="animate-spin text-proton-accent" size={24} />
@@ -5369,7 +5390,7 @@ export default function App() {
                   {activeView === 'device' && (
                     <HardwareView language={userProfile.language} />
                   )}
-                  {activeView === 'market-hub' && (
+                  {(activeView as string) === 'market-hub' && (
                     <Suspense fallback={
                       <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
                         <Loader2 className="animate-spin text-proton-accent" size={24} />
