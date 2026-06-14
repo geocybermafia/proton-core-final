@@ -3990,6 +3990,16 @@ export default function App() {
     }
   }, [language, userProfile.language]);
 
+  // Instantly write user-selected language to Firestore when changed by the user to avoid race conditions
+  useEffect(() => {
+    if (user && language) {
+      const userDocRef = doc(db, 'users', user.uid);
+      setDoc(userDocRef, { language }, { merge: true }).catch(err => {
+        console.error("Error writing changed language to Firestore:", err);
+      });
+    }
+  }, [language, user]);
+
   // Background data fetch for logged in user
   useEffect(() => {
     if (!user) {
@@ -4089,13 +4099,16 @@ export default function App() {
     const unsubscribe = onSnapshot(profileRef, { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
         const data = snap.data() as Partial<UserProfile>;
+        const dbLanguage = data.language as 'en' | 'ka';
+        const isStale = snap.metadata.fromCache;
         setUserProfile(prev => {
+          const targetLanguage = (dbLanguage && !isStale) ? dbLanguage : (prev.language || language);
           return {
             ...prev,
             ...data,
             name: data.name || prev.name,
             email: data.email || prev.email,
-            language: (data.language as 'en' | 'ka') || prev.language,
+            language: targetLanguage,
             avatar: data.avatar || prev.avatar
           };
         });
@@ -4110,7 +4123,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, language]);
 
   useEffect(() => {
     if (!user) return;

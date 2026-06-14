@@ -842,6 +842,46 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
     serviceTerms: ''
   });
 
+  // Synchronize listing draft with localStorage to prevent data loss on tab switches
+  useEffect(() => {
+    if (viewMode === 'create' || viewMode === 'edit') {
+      const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || (formData.images && formData.images.length > 0);
+      if (hasContent) {
+        localStorage.setItem('proton_markethub_draft_form_data', JSON.stringify({
+          mode: viewMode,
+          editingId: editingListing?.id || null,
+          data: formData
+        }));
+      } else {
+        localStorage.removeItem('proton_markethub_draft_form_data');
+      }
+    }
+  }, [formData, viewMode, editingListing]);
+
+  // Restore draft when returning to create/edit view modes
+  useEffect(() => {
+    if (viewMode === 'create' || viewMode === 'edit') {
+      try {
+        const savedRaw = localStorage.getItem('proton_markethub_draft_form_data');
+        if (savedRaw) {
+          const parsed = JSON.parse(savedRaw);
+          if (parsed && parsed.data) {
+            if (parsed.mode === viewMode) {
+              if (viewMode === 'create' || (viewMode === 'edit' && editingListing && parsed.editingId === editingListing.id)) {
+                setFormData(prev => ({
+                  ...prev,
+                  ...parsed.data
+                }));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load form draft from localStorage:", err);
+      }
+    }
+  }, [viewMode, editingListing]);
+
   // Trust & Reviews States
   const [reviews, setReviews] = useState<any[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<{ id: string, name: string } | null>(null);
@@ -1655,6 +1695,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
         await addDoc(collection(db, 'listings'), listingData);
       }
 
+      localStorage.removeItem('proton_markethub_draft_form_data');
       setViewMode('browse');
       setFormData({
         title: '', titleGe: '', description: '', descriptionGe: '',
