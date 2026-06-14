@@ -350,6 +350,78 @@ const safeParseDate = (dateVal: any): number => {
   }
 };
 
+interface FastInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  value: string;
+  onCommit: (val: string | any) => void;
+}
+
+const FastInput = React.forwardRef<HTMLInputElement, FastInputProps>(({ value, onCommit, ...props }, ref) => {
+  const [localVal, setLocalVal] = useState(value);
+
+  useEffect(() => {
+    setLocalVal(value);
+  }, [value]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localVal !== value) {
+        onCommit(localVal);
+      }
+    }, 150); // Fast 150ms state commit to minimize lag completely while capturing fast typing batches
+    return () => clearTimeout(timer);
+  }, [localVal, value, onCommit]);
+
+  return (
+    <input
+      ref={ref}
+      {...props}
+      value={localVal}
+      onChange={(e) => setLocalVal(e.target.value)}
+      onBlur={() => {
+        if (localVal !== value) {
+          onCommit(localVal);
+        }
+      }}
+    />
+  );
+});
+
+interface FastTextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
+  value: string;
+  onCommit: (val: string | any) => void;
+}
+
+const FastTextarea = React.forwardRef<HTMLTextAreaElement, FastTextareaProps>(({ value, onCommit, ...props }, ref) => {
+  const [localVal, setLocalVal] = useState(value);
+
+  useEffect(() => {
+    setLocalVal(value);
+  }, [value]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localVal !== value) {
+        onCommit(localVal);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [localVal, value, onCommit]);
+
+  return (
+    <textarea
+      ref={ref}
+      {...props}
+      value={localVal}
+      onChange={(e) => setLocalVal(e.target.value)}
+      onBlur={() => {
+        if (localVal !== value) {
+          onCommit(localVal);
+        }
+      }}
+    />
+  );
+});
+
 export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
@@ -390,6 +462,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       return '';
     }
   });
+
+  const [searchRaw, setSearchRaw] = useState(search);
+
+  // Keep searchRaw in sync if search changes externally (e.g. from popstate)
+  useEffect(() => {
+    setSearchRaw(search);
+  }, [search]);
+
+  // Debounce searchRaw changes to the functional search state (300ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchRaw);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchRaw]);
 
   // Sync from URL search input if URL changes externally (e.g. back button / direct link)
   useEffect(() => {
@@ -1798,14 +1885,14 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 text-[#dfb257]" />
               <input 
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchRaw}
+                onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
                 className="w-full bg-[#121214] border border-zinc-800 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-xs transition-colors"
               />
-              {search && (
+              {searchRaw && (
                 <button 
-                  onClick={() => setSearch('')}
+                  onClick={() => { setSearch(''); setSearchRaw(''); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white font-bold text-xs"
                 >
                   ✕
@@ -1920,8 +2007,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-[#dfb257]" />
             <input 
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchRaw}
+              onChange={(e) => setSearchRaw(e.target.value)}
               placeholder={language === 'ka' ? 'ძებნა...' : 'Search...'}
               className="w-full bg-[#121214] border border-zinc-800 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-8 pr-4 py-2 rounded-xl text-[10px] transition-colors"
             />
@@ -1998,8 +2085,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                 <Search size={15} className="absolute left-4 opacity-40 text-[#dfb257]" />
                 <input 
                   type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  value={searchRaw}
+                  onChange={(e) => setSearchRaw(e.target.value)}
                   placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Type search word...'}
                   className="w-full bg-transparent pl-11 pr-20 py-2.5 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-sm"
                 />
@@ -2008,7 +2095,9 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                   <button
                     type="button"
                     onClick={() => {
-                      setSearch(language === 'ka' ? 'Apple iPhone' : 'Apple');
+                      const val = language === 'ka' ? 'Apple iPhone' : 'Apple';
+                      setSearch(val);
+                      setSearchRaw(val);
                       setActiveCategory('technics');
                     }}
                     className="px-2.5 py-1 h-full rounded-lg bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/20 text-[#dfb257] transition-all font-black text-[9px] tracking-widest flex items-center gap-1 shrink-0"
@@ -3290,11 +3379,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              <span className="text-[8px] font-mono text-zinc-650">{language === 'ka' ? 'სავალდებულო' : 'Required'}</span>
                           </div>
                           <div className="relative">
-                             <input 
+                             <FastInput 
                                 required
                                 type="text"
                                 value={formData.title}
-                                onChange={e => setFormData({...formData, title: e.target.value})}
+                                onCommit={val => setFormData(p => ({ ...p, title: val }))}
                                 placeholder={language === 'ka' ? 'მაგ: ინდუსტრიული მართვის პულტი v3' : 'e.g. Industrial Control Unit v3'}
                                 className={cn(
                                    "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
@@ -3314,10 +3403,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              <span className="text-[8px] font-mono text-zinc-650">{language === 'ka' ? 'თარგმანი არჩევითია' : 'Optional Translation'}</span>
                           </div>
                           <div className="relative">
-                             <input 
+                             <FastInput 
                                 type="text"
                                 value={formData.titleGe}
-                                onChange={e => setFormData({...formData, titleGe: e.target.value})}
+                                onCommit={val => setFormData(p => ({ ...p, titleGe: val }))}
                                 placeholder={language === 'ka' ? 'მაგ: ინდუსტრიული მართვის პულტი' : 'e.g. Industrial Control Unit (GE)'}
                                 className={cn(
                                    "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
@@ -3350,11 +3439,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              <div className="absolute left-4.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                                 <Coins size={14} className="text-[#dfb257] opacity-70 group-focus-within:opacity-100 transition-opacity" />
                              </div>
-                             <input 
+                             <FastInput 
                                 required
                                 type="number"
                                 value={formData.price}
-                                onChange={e => setFormData({...formData, price: e.target.value})}
+                                onCommit={val => setFormData(p => ({ ...p, price: val }))}
                                 placeholder="0.00"
                                 className={cn(
                                    "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
@@ -3464,10 +3553,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              <label className="text-[9px] font-black uppercase tracking-wider text-[#dfb257] flex items-center gap-1 ml-0.5">
                                 <span className="text-[10px]">⏱️</span> {language === 'ka' ? 'შესრულების ვადა' : 'Delivery Lead Time'}
                              </label>
-                             <input 
+                             <FastInput 
                                 type="text"
                                 value={formData.serviceDuration || ''}
-                                onChange={e => setFormData({...formData, serviceDuration: e.target.value})}
+                                onCommit={val => setFormData(p => ({ ...p, serviceDuration: val }))}
                                 placeholder={language === 'ka' ? "მაგ: 3 დღე" : "e.g. 3 business days"}
                                 className={cn(
                                    "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder-zinc-650",
@@ -3481,10 +3570,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              <label className="text-[9px] font-black uppercase tracking-wider text-[#dfb257] flex items-center gap-1 ml-0.5">
                                 <span className="text-[10px]">📋</span> {language === 'ka' ? 'სამუშაო პირობები' : 'Technical Specifications Requirement'}
                              </label>
-                             <input 
+                             <FastInput 
                                 type="text"
                                 value={formData.serviceTerms || ''}
-                                onChange={e => setFormData({...formData, serviceTerms: e.target.value})}
+                                onCommit={val => setFormData(p => ({ ...p, serviceTerms: val }))}
                                 placeholder={language === 'ka' ? "მაგ: სრული ტექნიკური დავალება" : "e.g. Detailed project specs"}
                                 className={cn(
                                    "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder-zinc-650",
@@ -3538,11 +3627,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              <span>🏙️</span> {t.market.form.city}
                           </label>
                           <div className="relative">
-                             <input 
+                             <FastInput 
                                 required
                                 type="text"
                                 value={formData.city}
-                                onChange={e => setFormData({...formData, city: e.target.value})}
+                                onCommit={val => setFormData(p => ({ ...p, city: val }))}
                                 placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
                                 className={cn(
                                    "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder-zinc-550",
@@ -3561,10 +3650,10 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                        </label>
                        <div className="relative group">
                           <MapPin size={14} className="absolute left-4.5 top-1/2 -translate-y-1/2 text-zinc-550 group-focus-within:text-[#dfb257] transition-colors" />
-                          <input 
+                          <FastInput 
                              type="text"
                              value={formData.location}
-                             onChange={e => setFormData({...formData, location: e.target.value})}
+                             onCommit={val => setFormData(p => ({ ...p, location: val }))}
                              placeholder={language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...'}
                              className={cn(
                                 "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder-zinc-550",
