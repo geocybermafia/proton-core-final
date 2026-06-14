@@ -1719,14 +1719,14 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
               type="number"
               value={minPrice}
               onChange={(e) => setMinPrice(e.target.value)}
-              placeholder="Min Price"
+              placeholder={language === 'ka' ? 'მინ. ფასი' : 'Min Price'}
               className="w-full px-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
             />
             <input 
               type="number"
               value={maxPrice}
               onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="Max Price"
+              placeholder={language === 'ka' ? 'მაქს. ფასი' : 'Max Price'}
               className="w-full px-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
             />
           </div>
@@ -3287,7 +3287,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                                 <span className="text-xs">🇬🇧</span>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t.market.form.title} (EN)</label>
                              </div>
-                             <span className="text-[8px] font-mono text-zinc-650">Required</span>
+                             <span className="text-[8px] font-mono text-zinc-650">{language === 'ka' ? 'სავალდებულო' : 'Required'}</span>
                           </div>
                           <div className="relative">
                              <input 
@@ -3295,7 +3295,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                                 type="text"
                                 value={formData.title}
                                 onChange={e => setFormData({...formData, title: e.target.value})}
-                                placeholder="e.g. Industrial Control Unit v3"
+                                placeholder={language === 'ka' ? 'მაგ: ინდუსტრიული მართვის პულტი v3' : 'e.g. Industrial Control Unit v3'}
                                 className={cn(
                                    "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
                                    "bg-[#09090b]/90 border-zinc-850/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-550",
@@ -3311,14 +3311,14 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                                 <span className="text-xs">🇬🇪</span>
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]">{t.market.form.title} (GE)</label>
                              </div>
-                             <span className="text-[8px] font-mono text-zinc-650">Optional Translation</span>
+                             <span className="text-[8px] font-mono text-zinc-650">{language === 'ka' ? 'თარგმანი არჩევითია' : 'Optional Translation'}</span>
                           </div>
                           <div className="relative">
                              <input 
                                 type="text"
                                 value={formData.titleGe}
                                 onChange={e => setFormData({...formData, titleGe: e.target.value})}
-                                placeholder="მაგ: ინდუსტრიული მართვის პულტი"
+                                placeholder={language === 'ka' ? 'მაგ: ინდუსტრიული მართვის პულტი' : 'e.g. Industrial Control Unit (GE)'}
                                 className={cn(
                                    "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
                                    "bg-[#09090b]/90 border-zinc-850/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-600",
@@ -3543,7 +3543,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                                 type="text"
                                 value={formData.city}
                                 onChange={e => setFormData({...formData, city: e.target.value})}
-                                placeholder="e.g. Tbilisi"
+                                placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
                                 className={cn(
                                    "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder-zinc-550",
                                    "bg-[#09090b]/90 border-zinc-850/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10",
@@ -3565,7 +3565,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              type="text"
                              value={formData.location}
                              onChange={e => setFormData({...formData, location: e.target.value})}
-                             placeholder="Detailed address directions..."
+                             placeholder={language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...'}
                              className={cn(
                                 "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder-zinc-550",
                                 "bg-[#09090b]/90 border-zinc-850/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10",
@@ -3636,7 +3636,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                           required
                           value={formData.description}
                           onChange={e => setFormData({...formData, description: e.target.value})}
-                          placeholder="Provide highly detailed product technical specifications..."
+                          placeholder={language === 'ka' ? 'მიუთითეთ დეტალური ტექნიკური სპეციფიკაციები...' : 'Provide highly detailed product technical specifications...'}
                           className={cn(
                              "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-semibold h-36 resize-none text-white shadow-inner transition-all",
                              "bg-[#09090b]/95 border-zinc-850/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-650",
@@ -3725,7 +3725,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                              type="url"
                              value={formData.images?.[0] || ''}
                              onChange={e => setFormData({...formData, images: [e.target.value]})}
-                             placeholder="...or paste external image link URL"
+                             placeholder={language === 'ka' ? '...ან ჩასვით სურათის გარე ბმული (URL)' : '...or paste external image link URL'}
                              className={cn(
                                 "w-full pl-10.5 pr-4 py-3 rounded-2xl border text-[11px] font-bold text-white shadow-inner transition-all placeholder-zinc-650",
                                 "bg-[#09090b]/90 border-zinc-850/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10",
