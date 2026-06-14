@@ -58,7 +58,6 @@ import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
 import { translations } from '../translations';
 import 'leaflet/dist/leaflet.css';
-import { useSearchParams, useNavigate } from 'react-router-dom';
 
 interface MarketHubProps {
   language: 'en' | 'ka';
@@ -355,7 +354,6 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
 
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
@@ -384,37 +382,51 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
 
   const [activeBottomTab, setActiveBottomTab] = useState<'home' | 'categories' | 'messages'>('home');
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const urlSearch = searchParams.get('search') || '';
-  const [search, setSearch] = useState(urlSearch);
+  const [search, setSearch] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('search') || '';
+    } catch {
+      return '';
+    }
+  });
 
   // Sync from URL search input if URL changes externally (e.g. back button / direct link)
   useEffect(() => {
-    setSearch(urlSearch);
-  }, [urlSearch]);
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        setSearch(params.get('search') || '');
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Sync to URL search params when search state changes (debounced for input performance)
   useEffect(() => {
     const timer = setTimeout(() => {
-      const current = searchParams.get('search') || '';
-      if (search !== current) {
-        if (search) {
-          setSearchParams(prev => {
-            const next = new URLSearchParams(prev);
-            next.set('search', search);
-            return next;
-          }, { replace: true });
-        } else {
-          setSearchParams(prev => {
-            const next = new URLSearchParams(prev);
-            next.delete('search');
-            return next;
-          }, { replace: true });
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const current = params.get('search') || '';
+        if (search !== current) {
+          if (search) {
+            params.set('search', search);
+          } else {
+            params.delete('search');
+          }
+          const newSearch = params.toString();
+          const newPath = window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+          window.history.replaceState(null, '', newPath);
         }
+      } catch (e) {
+        console.error(e);
       }
     }, 300); // 300ms debounce
     return () => clearTimeout(timer);
-  }, [search, setSearchParams, searchParams]);
+  }, [search]);
 
   const [sortBy, setSortBy] = useState<'rating' | 'newest' | 'priceAsc' | 'priceDesc'>('rating');
   const [activeCategory, setActiveCategory] = useState('all');
