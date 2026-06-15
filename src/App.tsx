@@ -3684,9 +3684,7 @@ export default function App() {
       location.pathname.startsWith('/finance') ||
       location.pathname.startsWith('/compute') ||
       location.pathname.startsWith('/device') ||
-      location.pathname.startsWith('/commercial') ||
-      location.pathname === '/dashboard' ||
-      location.pathname === '/'
+      location.pathname.startsWith('/commercial')
     ) {
       if (uiMode !== 'business') {
         setUiMode('business');
