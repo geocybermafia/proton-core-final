@@ -639,6 +639,11 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
       return;
     }
+
+    if (listing.status === 'sold' || listing.isSold) {
+      alert(language === 'ka' ? "ეს ნივთი უკვე გაყიდულია." : "This item is already sold.");
+      return;
+    }
     setCart((prev) => {
       const exists = prev.some((item) => item.id === listing.id);
       if (exists) {
@@ -726,12 +731,26 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
 
         if (isSupabaseConfigured()) {
           const { error } = await supabase.from('orders').insert([orderData]);
-          if (error) console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", error);
+          if (error) {
+            console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", error);
+          } else if (!isService) {
+            const { error: updateErr } = await supabase
+              .from('listings')
+              .update({ status: 'sold', isSold: true })
+              .eq('id', item.id);
+            if (updateErr) console.error("[SUPABASE ERROR] Failed to update listing status:", updateErr);
+          }
         } else {
           await addDoc(collection(db, 'orders'), {
             ...orderData,
             createdAt: serverTimestamp()
           });
+          if (!isService) {
+            await updateDoc(doc(db, 'listings', item.id), {
+              status: 'sold',
+              isSold: true
+            });
+          }
         }
       }
       setCart([]);
@@ -1220,6 +1239,9 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
 
     // Bypass main marketplace browsing criteria if we are in 'my-listings' mode to ensure all user items remain fully visible
     if (viewMode !== 'my-listings') {
+      // Filter out sold items from public browsing
+      result = result.filter(l => l.status !== 'sold' && !l.isSold);
+
       // Filter by Listing Type (Product vs Service vs Project)
       if (activeListingType !== 'all') {
         if (activeListingType === 'service') {
@@ -1390,11 +1412,24 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       if (isSupabaseConfigured()) {
         const { error } = await supabase.from('orders').insert([orderData]);
         if (error) throw error;
+        if (!isService) {
+          const { error: updateErr } = await supabase
+            .from('listings')
+            .update({ status: 'sold', isSold: true })
+            .eq('id', checkoutItem.id);
+          if (updateErr) console.error("[SUPABASE ERROR] Failed to update listing status:", updateErr);
+        }
       } else {
         await addDoc(collection(db, 'orders'), {
           ...orderData,
           createdAt: serverTimestamp()
         });
+        if (!isService) {
+          await updateDoc(doc(db, 'listings', checkoutItem.id), {
+            status: 'sold',
+            isSold: true
+          });
+        }
       }
       
       setCheckoutItem(null);
@@ -2427,62 +2462,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
             <div className="flex-1 min-w-0 space-y-8">
               {viewMode === 'browse' && displayMode === 'grid' && (
                 <div className="space-y-12 animate-in fade-in duration-500">
-                  {/* Section 1: Real-time Marketplace Dynamics & Valuation Deck */}
-                  <div className="p-6 bg-gradient-to-b from-zinc-950 to-zinc-950/40 border border-[#dfb257]/10 rounded-[28px] space-y-5 shadow-lg shadow-black/80">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-[#dfb257]">
-                          {language === 'ka' ? 'ბაზრის ანალიტიკა და ფასები' : 'MARKET ANALYTICS & VALUATIONS'}
-                        </span>
-                      </div>
-                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">{language === 'ka' ? 'ცოცხალი რეჟიმი' : 'Live Feed'}</span>
-                    </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {/* Stat 1: Active Listings */}
-                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
-                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold block mb-2">
-                          {language === 'ka' ? 'აქტიური' : 'Active Assets'}
-                        </span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-xl sm:text-2xl font-black text-white">{marketMetrics.active}</span>
-                          <span className="text-[10px] text-zinc-500 font-black uppercase tracking-wider">units</span>
-                        </div>
-                      </div>
-
-                      {/* Stat 2: Completed Transactions / Sold */}
-                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
-                        <span className="text-[9px] font-mono uppercase tracking-widest text-[#dfb257] font-bold block mb-2">
-                          {language === 'ka' ? 'შესრულებული გარიგებები' : 'Deals Closed'}
-                        </span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-xl sm:text-2xl font-black text-[#dfb257]">{marketMetrics.sold}</span>
-                          <span className="text-[10px] text-zinc-400 font-bold font-sans">✓</span>
-                        </div>
-                      </div>
-
-                      {/* Stat 3: Average Valuation */}
-                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
-                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold block mb-2">
-                          {language === 'ka' ? 'საშუალო ფასი' : 'Avg Valuation'}
-                        </span>
-                        <span className="text-xl sm:text-2xl font-black text-zinc-100">{marketMetrics.avgPrice}</span>
-                      </div>
-
-                      {/* Stat 4: Top Category */}
-                      <div className="p-4 bg-zinc-900/40 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-colors duration-200">
-                        <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500 font-bold block mb-2">
-                          {language === 'ka' ? 'პოპულარული კატეგორია' : 'Hot Category'}
-                        </span>
-                        <div className="flex items-center">
-                          <span className="text-[10px] font-black uppercase tracking-wider text-[#dfb257] truncate bg-[#dfb257]/5 px-2.5 py-1 rounded border border-[#dfb257]/10">
-                            {marketMetrics.topCat}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Section 2: Quick Highlights Navigation */}
                   <div className="space-y-4">
@@ -3068,7 +3048,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                           )}
 
                           {/* Quick Add to Cart button */}
-                          {!isOwnListing && (
+                          {!isOwnListing && !(listing.status === 'sold' || listing.isSold) && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -3116,6 +3096,13 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
                               <Trash2 size={12} />
                             </button>
                           </div>
+                        ) : listing.status === 'sold' || listing.isSold ? (
+                          <button 
+                            disabled
+                            className="w-full h-9 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider bg-zinc-800 text-zinc-500 border border-zinc-700/50 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                          >
+                            {language === 'ka' ? 'გაყიდულია' : 'SOLD'}
+                          </button>
                         ) : (
                           <button 
                             onClick={() => handleBuyNow(listing)}

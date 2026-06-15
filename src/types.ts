@@ -119,6 +119,7 @@ export type Listing = {
   lng?: number;
   createdAt: number;
   status: 'active' | 'sold';
+  isSold?: boolean;
   condition?: 'new' | 'used' | 'refurbished' | string;
   isNegotiable?: boolean;
   listingType?: 'product' | 'service' | 'project';
