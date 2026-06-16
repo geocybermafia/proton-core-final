@@ -44,7 +44,8 @@ import {
   updateDoc,
   where,
   Timestamp,
-  serverTimestamp 
+  serverTimestamp,
+  limit 
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -864,16 +865,20 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
   // Synchronize listing draft with localStorage to prevent data loss on tab switches
   useEffect(() => {
     if (viewMode === 'create' || viewMode === 'edit') {
-      const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || (formData.images && formData.images.length > 0);
-      if (hasContent) {
-        localStorage.setItem('proton_markethub_draft_form_data', JSON.stringify({
-          mode: viewMode,
-          editingId: editingListing?.id || null,
-          data: formData
-        }));
-      } else {
-        localStorage.removeItem('proton_markethub_draft_form_data');
-      }
+      const timer = setTimeout(() => {
+        const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || (formData.images && formData.images.length > 0);
+        if (hasContent) {
+          localStorage.setItem('proton_markethub_draft_form_data', JSON.stringify({
+            mode: viewMode,
+            editingId: editingListing?.id || null,
+            data: formData
+          }));
+        } else {
+          localStorage.removeItem('proton_markethub_draft_form_data');
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
   }, [formData, viewMode, editingListing]);
 
@@ -910,7 +915,8 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
 
   useEffect(() => {
     if (!user || authLoading) return;
-    const unsubscribe = onSnapshot(collection(db, 'seller_reviews'), (snapshot) => {
+    const qReviews = query(collection(db, 'seller_reviews'), limit(20));
+    const unsubscribe = onSnapshot(qReviews, (snapshot) => {
       const list = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -1090,7 +1096,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
 
   useEffect(() => {
     if (!user || authLoading) return;
-    const qListings = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
+    const qListings = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(24));
     const unsubscribeListings = onSnapshot(qListings, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
