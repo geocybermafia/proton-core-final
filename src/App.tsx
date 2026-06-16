@@ -4345,48 +4345,44 @@ export default function App() {
     );
   }
 
-  if (activeView === 'translator') {
-    return (
-      <Suspense fallback={
-        <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
-          <Loader2 className="animate-spin text-proton-accent" size={24} />
-          <span className="uppercase tracking-widest">Loading Translator...</span>
-        </div>
-      }>
-        <TranslatorView onBack={() => {
-          setUiMode('business');
-          setActiveView('dashboard');
-        }} />
-      </Suspense>
-    );
-  }
-
-  if (activeView === 'market-hub') {
-    return (
-      <Suspense fallback={
-        <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
-          <Loader2 className="animate-spin text-proton-accent" size={24} />
-          <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
-        </div>
-      }>
-        <MarketHub 
-          language={userProfile.language} 
-          t={t}
-          themeId={theme}
-          onBack={() => {
-            setUiMode('business');
-            setActiveView('dashboard');
-          }}
-        />
-      </Suspense>
-    );
-  }
-
   return (
     <div className={cn(
       "flex h-[100dvh] overflow-hidden overscroll-none theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
+      {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
+      <div className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}>
+        <Suspense fallback={
+          <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+            <Loader2 className="animate-spin text-proton-accent" size={24} />
+            <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
+          </div>
+        }>
+          <MarketHub 
+            language={userProfile.language} 
+            t={t}
+            themeId={theme}
+            onBack={() => {
+              setUiMode('business');
+              setActiveView('dashboard');
+            }}
+          />
+        </Suspense>
+      </div>
+
+      <div className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}>
+        <Suspense fallback={
+          <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+            <Loader2 className="animate-spin text-proton-accent" size={24} />
+            <span className="uppercase tracking-widest">Loading Live Translator...</span>
+          </div>
+        }>
+          <TranslatorView onBack={() => {
+            setUiMode('business');
+            setActiveView('dashboard');
+          }} />
+        </Suspense>
+      </div>
             <AnimatePresence>
               {isTransitioning && (
                 <FlashOverlay mode={uiMode === 'market' ? 'business' : uiMode} />
@@ -5128,18 +5124,10 @@ export default function App() {
                 className="w-full"
               >
               {uiMode === 'market' && (activeView as string) === 'market-hub' ? (
-                <Suspense fallback={
-                  <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
-                    <Loader2 className="animate-spin text-proton-accent" size={24} />
-                    <span className="uppercase tracking-widest">Loading Market Hub...</span>
-                  </div>
-                }>
-                  <MarketHub 
-                    language={userProfile.language} 
-                    t={t}
-                    themeId={theme}
-                  />
-                </Suspense>
+                <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                  <Loader2 className="animate-spin text-proton-accent" size={24} />
+                  <span className="uppercase tracking-widest font-black text-proton-accent/90 animate-pulse">Initializing Commerce Matrix...</span>
+                </div>
               ) : (
                 <>
                   {activeView === 'dashboard' && (
@@ -5245,20 +5233,6 @@ export default function App() {
                   )}
                   {activeView === 'device' && (
                     <HardwareView language={userProfile.language} />
-                  )}
-                  {(activeView as string) === 'market-hub' && (
-                    <Suspense fallback={
-                      <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
-                        <Loader2 className="animate-spin text-proton-accent" size={24} />
-                        <span className="uppercase tracking-widest font-bold">Loading Market Hub...</span>
-                      </div>
-                    }>
-                      <MarketHub 
-                        language={userProfile.language} 
-                        t={t}
-                        themeId={theme}
-                      />
-                    </Suspense>
                   )}
                   {activeView === 'profile' && (
                     <Suspense fallback={
