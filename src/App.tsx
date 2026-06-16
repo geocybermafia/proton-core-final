@@ -4446,20 +4446,11 @@ export default function App() {
               </div>
 
               <nav className={cn(
-                "flex-1 py-6 space-y-6 mt-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
+                "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
                 isSidebarOpen ? "px-4" : "px-0"
               )}>
-                {isSidebarOpen && (
-                  <div className="px-3 pb-6 border-b border-proton-border/30">
-                    <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.14em] mb-2.5 font-mono">
-                      {language === 'ka' ? 'სისტემის რეჟიმი' : 'SYSTEM MODE'}
-                    </p>
-                    <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} className="w-full" />
-                  </div>
-                )}
-
                 {/* Permanent Home Navigation */}
-                <div className="min-h-[1.5rem]">
+                <div className="space-y-3 min-h-[1.5rem]">
                   <SidebarItem 
                     icon={LayoutDashboard} 
                     label={t.sidebar.dashboard} 
@@ -4473,11 +4464,13 @@ export default function App() {
                   />
                 </div>
 
+                <div className="pt-2"></div>
+
                 {uiMode === 'business' ? (
                   <>
                     {/* BUSINESS MODE PANELS */}
 
-                    <div className="space-y-3">
+                    <div className="space-y-3 pt-6">
                       <AnimatePresence mode="wait">
                         {isSidebarOpen && (
                           <motion.button 
@@ -4864,14 +4857,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Mode Selection inside Control Center */}
-              <div className="py-2 border-b border-white/5 flex flex-col gap-2">
-                <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.14em] font-mono">
-                  {language === 'ka' ? 'სისტემის რეჟიმი' : 'SYSTEM MODE'}
-                </p>
-                <ModeToggle mode={uiMode} setMode={handleModeChange} t={t} language={language} className="w-full" />
-              </div>
-
               {/* Action Buttons */}
               <button
                 onClick={() => {
@@ -4988,7 +4973,7 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="h-16 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-8 gap-x-6 z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md select-none">
+        <header className="min-h-16 h-auto md:h-16 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 md:py-0 gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
           {/* Left Section: User & Status */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <button 
@@ -4997,6 +4982,20 @@ export default function App() {
             >
               <Grid size={18} />
             </button>
+
+            {activeView !== 'dashboard' && (
+              <button
+                onClick={() => {
+                  setUiMode('business');
+                  handleViewChange('dashboard');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[10px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0"
+                title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
+              >
+                <ArrowLeft size={13} className="stroke-[2.5]" />
+                <span>{language === 'ka' ? 'მთავარი' : 'Home'}</span>
+              </button>
+            )}
             
             <div className="hidden md:flex flex-col select-none">
               <div className="flex items-center gap-2">
@@ -5060,20 +5059,6 @@ export default function App() {
           {/* Right Section: System Controls */}
           <div className="flex items-center justify-end gap-2 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
-              {activeView !== 'dashboard' && (
-                <button
-                  onClick={() => {
-                    setUiMode('business');
-                    handleViewChange('dashboard');
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[10px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0"
-                  title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
-                >
-                  <ArrowLeft size={13} className="stroke-[2.5]" />
-                  <span className="hidden sm:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
-                </button>
-              )}
-
               {/* Elegant Compact Language Selector for 1-click accessibility */}
               <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
                 <button

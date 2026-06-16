@@ -1446,8 +1446,16 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
+      if (!user) {
+        alert(language === 'ka' ? "ავტორიზაცია აუცილებელია." : "Authentication is required.");
+        return;
+      }
       if (isSupabaseConfigured()) {
-        const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', orderId);
+        const { error } = await supabase
+          .from('orders')
+          .update({ status: newStatus })
+          .eq('id', orderId)
+          .or(`buyerId.eq.${user.uid},sellerId.eq.${user.uid}`);
         if (error) throw error;
       } else {
         await updateDoc(doc(db, 'orders', orderId), {
