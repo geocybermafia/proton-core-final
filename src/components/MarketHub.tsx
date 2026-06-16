@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -423,10 +423,19 @@ const FastTextarea = React.forwardRef<HTMLTextAreaElement, FastTextareaProps>(({
   );
 });
 
-export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
+export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (aiAbortControllerRef.current) {
+        aiAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
@@ -1148,19 +1157,21 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       return;
     }
 
+    let active = true;
+
     if (isSupabaseConfigured()) {
       const fetchSupabaseOrders = async () => {
         const { data: bData, error: bErr } = await supabase
           .from('orders')
           .select('*')
           .eq('buyerId', user.uid);
-        if (!bErr && bData) setBuyerOrders(bData);
+        if (active && !bErr && bData) setBuyerOrders(bData);
 
         const { data: sData, error: sErr } = await supabase
           .from('orders')
           .select('*')
           .eq('sellerId', user.uid);
-        if (!sErr && sData) setSellerOrders(sData);
+        if (active && !sErr && sData) setSellerOrders(sData);
       };
 
       fetchSupabaseOrders();
@@ -1171,12 +1182,13 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
           'postgres_changes',
           { event: '*', schema: 'public', table: 'orders' },
           () => {
-            fetchSupabaseOrders();
+            if (active) fetchSupabaseOrders();
           }
         )
         .subscribe();
 
       return () => {
+        active = false;
         supabase.removeChannel(channel);
       };
     } else {
@@ -1185,6 +1197,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
         where('buyerId', '==', user.uid)
       );
       const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
+        if (!active) return;
         const data = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -1199,6 +1212,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
         where('sellerId', '==', user.uid)
       );
       const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
+        if (!active) return;
         const data = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -1209,6 +1223,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       });
 
       return () => {
+        active = false;
         unsubscribeBuyer();
         unsubscribeSeller();
       };
@@ -1553,6 +1568,12 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
     );
     if (!confirmed) return;
 
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    aiAbortControllerRef.current = controller;
+
     setIsAiGenerating(true);
     try {
       if (!user) return;
@@ -1560,6 +1581,7 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       // 1. Check Rate Limit (1 gen every 10 mins)
       const usageRef = doc(db, 'users', user.uid, 'usage', 'ai');
       const usageSnap = await getDoc(usageRef);
+      if (controller.signal.aborted) return;
       if (usageSnap.exists()) {
         const lastGen = usageSnap.data().lastAiGen?.toDate();
         if (lastGen) {
@@ -1574,7 +1596,9 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
             // Provide fallback if requested
             if (window.confirm(language === 'ka' ? "გსურთ გამოიყენოთ სტანდარტული შაბლონი?" : "Would you like to use a standard template instead?")) {
               const template = getFallbackTemplate(formData.title, formData.category);
-              setFormData(prev => ({ ...prev, description: template }));
+              if (!controller.signal.aborted) {
+                setFormData(prev => ({ ...prev, description: template }));
+              }
             }
             return;
           }
@@ -1585,19 +1609,23 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
       const specId = `${formData.title}_${formData.category}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
       const cacheRef = doc(db, 'shared_specs', specId);
       const cacheSnap = await getDoc(cacheRef);
+      if (controller.signal.aborted) return;
       
       if (cacheSnap.exists()) {
         const cachedSpec = cacheSnap.data().spec;
-        setFormData(prev => ({ 
-          ...prev, 
-          description: cachedSpec,
-          descriptionGe: language === 'ka' ? cachedSpec : prev.descriptionGe 
-        }));
+        if (!controller.signal.aborted) {
+          setFormData(prev => ({ 
+            ...prev, 
+            description: cachedSpec,
+            descriptionGe: language === 'ka' ? cachedSpec : prev.descriptionGe 
+          }));
+        }
         return;
       }
 
       // 3. Generate with Gemini
       const spec = await generateTechSpec(formData.title, formData.category);
+      if (controller.signal.aborted) return;
       if (spec) {
         // 4. Save to Cache
         await setDoc(cacheRef, {
@@ -1612,21 +1640,28 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
           lastAiGen: serverTimestamp()
         });
 
-        setFormData(prev => ({ 
-          ...prev, 
-          description: spec,
-          descriptionGe: language === 'ka' ? spec : prev.descriptionGe 
-        }));
+        if (!controller.signal.aborted) {
+          setFormData(prev => ({ 
+            ...prev, 
+            description: spec,
+            descriptionGe: language === 'ka' ? spec : prev.descriptionGe 
+          }));
+        }
       } else {
         throw new Error("AI Generation failed");
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (controller.signal.aborted || (error && error.name === 'AbortError')) return;
       console.error("Error generating tech spec:", error);
       alert(language === 'ka' ? "AI-სთან კავშირი ვერ მოხერხდა. გამოიყენეთ შაბლონი." : "AI service unavailable. Falling back to template.");
       const template = getFallbackTemplate(formData.title, formData.category);
-      setFormData(prev => ({ ...prev, description: template }));
+      if (!controller.signal.aborted) {
+        setFormData(prev => ({ ...prev, description: template }));
+      }
     } finally {
-      setIsAiGenerating(false);
+      if (!controller.signal.aborted) {
+        setIsAiGenerating(false);
+      }
     }
   };
 
@@ -4966,5 +5001,5 @@ export function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: 
   </div>
 </div>
   );
-}
+});
 
