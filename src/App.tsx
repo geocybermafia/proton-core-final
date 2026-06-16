@@ -130,6 +130,7 @@ import {
   UserCheck,
   Languages,
   TrendingUp,
+  ArrowLeft,
   ArrowUpRight,
   Repeat,
   Camera as CameraIcon,
@@ -1355,7 +1356,7 @@ const LegacyOrganizerView = ({
                      <div className="flex-1">
                         <p className="text-[10px] font-black uppercase tracking-tight">System Sync</p>
                         <p className={cn("text-[8px] font-bold uppercase tracking-widest", currentTheme.muted)}>ID {i*47} • {i*15}m ago</p>
-                      </div>
+                     </div>
                   </div>
                 ))}
              </div>
@@ -1372,6 +1373,7 @@ const DashboardView = ({
   setActiveView, 
   language = 'en',
   uiMode,
+  setUiMode,
   theme,
   setTheme,
   isSystemActive,
@@ -1384,7 +1386,8 @@ const DashboardView = ({
   chatHistory: PersonaHistory,
   language: 'en' | 'ka',
   user: any,
-  uiMode: 'business' | 'creative',
+  uiMode: 'business' | 'creative' | 'market',
+  setUiMode: (m: 'business' | 'creative' | 'market') => void,
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
@@ -1395,151 +1398,228 @@ const DashboardView = ({
   setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>
 }) => {
   const t = translations[language];
-  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const templates = uiMode === 'creative' ? [
+  // Beautiful curated titles & metrics for the 5 Gateways
+  const gateways = [
     {
-      id: 'template-creative-1',
-      title: language === 'ka' ? '🎨 სუპრემატისტული თბილისი' : '🎨 Suprematist Tbilisi Artwork',
-      desc: language === 'ka'
-        ? 'ფუტურისტული ხელოვნების დიზაინი და სუპრემატისტული ვიზუალები.'
-        : 'Futuristic art designs and suprematist geometric landscapes.',
-      prompt: language === 'ka'
-        ? 'Generate a futuristic landscape of Tbilisi in the style of avant-garde suprematism, featuring high-contrast geometric towers, Metekhi church silhouette, and neon light vectors, detailed 8k cinematic lighting.'
-        : 'Generate a futuristic landscape of Tbilisi in the style of avant-garde suprematism, featuring high-contrast geometric towers, Metekhi church silhouette, and neon light vectors, detailed 8k cinematic lighting.',
-      targetView: 'image'
-    },
-    {
-      id: 'template-creative-2',
-      title: language === 'ka' ? '✍️ ქართული ღვინის ბრენდინგის პოეზია' : '✍️ Georgian Wine Branding Storytelling',
-      desc: language === 'ka'
-        ? 'სარეკლამო კოპირაიტინგი ქართული ღვინის ახალი ბრენდისთვის.'
-        : 'Creative copywriting & poetic branding for a historic Saperavi brand.',
-      prompt: language === 'ka'
-        ? 'Write a poetic, elegant advertising copy for a premium Saperavi wine from Kakheti, blending Georgian historical winemaking legacy with futuristic neo-tradition aesthetics.'
-        : 'Write a poetic, elegant advertising copy for a premium Saperavi wine from Kakheti, blending Georgian historical winemaking legacy with futuristic neo-tradition aesthetics.',
-      targetView: 'personas'
-    },
-    {
-      id: 'template-creative-3',
-      title: language === 'ka' ? '🌐 ბილინგვური საიტის ლოკალიზაცია' : '🌐 Multilingual UI Content Localization',
-      desc: language === 'ka'
-        ? 'landing გვერდის ტექსტების პროფესიონალური თარგმნა და ადაპტაცია.'
-        : 'Translate and polish a creative agency landing page copy.',
-      prompt: language === 'ka'
-        ? 'Translate and polish the landing page copy of a creative design agency from English to Georgian, maintaining the bold, rebellious, modern technological copywriting tone.'
-        : 'Translate and polish the landing page copy of a creative design agency from English to Georgian, maintaining the bold, rebellious, modern technological copywriting tone.',
-      targetView: 'translator'
-    }
-  ] : [
-    {
-      id: 'template-1',
-      title: language === 'ka' ? '🎨 ქართული რეწვის სტარტაპის გეგმა' : '🎨 Georgia Artisan Craft Startup Plan',
+      id: 'business',
+      title: language === 'ka' ? 'ბიზნეს პორტალი' : 'Business Suite',
+      badge: 'Multi-Agent & Automation',
       desc: language === 'ka' 
-        ? 'ბიზნესის სამოქმედო გეგმა, მასალების მოპოვება და ექსპორტი.' 
-        : 'Business action plan, sources, and exporting local crafts.',
-      prompt: language === 'ka'
-        ? 'გამარჯობა! მე ვგეგმავ ქართული ტრადიციული თიხის ჭურჭლისა და კერამიკის სახელოსნოს გაფართოებას და პროდუქციის ექსპორტზე გატანას. შეგიძლია შემიდგინო დეტალური ბიზნეს გეგმა, მასალების ხარჯებისა და მარკეტინგული არხების ჩათვლით?'
-        : 'Hello! I am planning to expand a traditional Georgian pottery and ceramics workshop and export our products. Can you draft a comprehensive business plan, including material costs, automation suggestions, and marketing channels?',
-      targetView: 'personas'
+        ? 'ბიზნეს აგენტების მართვა, სტრატეგიული ანალიზი და ავტომატიზებული სამუშაო ხაზები (Workflows).'
+        : 'Enterprise multi-agent coordinate, automated workflows, strategic blueprints, and target plans.',
+      icon: Building,
+      color: 'cyan',
+      glowClass: 'border-cyan-500/20 hover:border-cyan-500/80 shadow-cyan-500/5 hover:shadow-cyan-500/20',
+      badgeClass: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+      iconClass: 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black',
+      shortcuts: [
+        { label: language === 'ka' ? 'აგენტების კატალოგი' : 'AI Agents', view: 'personas' },
+        { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Blueprints', view: 'blueprints' }
+      ],
+      action: () => setUiMode('business')
     },
     {
-      id: 'template-2',
-      title: language === 'ka' ? '📈 ლიდების ავტომატიზაცია Tbilisi კაფეებისთვის' : '📈 Lead Gen Automation for Tbilisi Cafe',
+      id: 'creative',
+      title: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio',
+      badge: 'Visual Arts & Localization',
       desc: language === 'ka'
-        ? 'ონლაინ შეკვეთების სინქრონიზაცია და ინსტაგრამით ლიდების მოზიდვა.'
-        : 'Syncing online inquiries and utilizing Instagram Reels for local customer acquisition.',
-      prompt: language === 'ka'
-        ? 'როგორ შემიძლია Proton Workflows-ის დახმარებით ავტომატურად შევაგროვო და დავამუშაო ინსტაგრამიდან შემოსული კლიენტების მონაცემები ჩემი კაფესთვის თბილისში, რათა შევამცირო ხელით წერა და გავზარდო ლოიალურობა?'
-        : 'How can I utilize automated Proton Workflows to capture customer leads from Instagram, sync them to a local CRM for my cafe in Tbilisi, and eliminate manual entry?',
-      targetView: 'blueprints'
+        ? 'მაღალი ხარისხის ილუსტრაციების გენერაცია, ორენოვანი სათარჯიმნო კაბინეტი და სარეკლამო კოპირაიტინგი.'
+        : 'Generate vector arts, copy poetic branding prompts, and launch modular face-to-face translation screens.',
+      icon: Palette,
+      color: 'amber',
+      glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
+      badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
+      shortcuts: [
+        { label: language === 'ka' ? 'ვიზუალური გენერატორი' : 'Art Studio', view: 'image' },
+        { label: language === 'ka' ? 'ორენოვანი მთარგმნელი' : 'Live Translator', view: 'translator' }
+      ],
+      action: () => {
+        setUiMode('creative');
+        setActiveView('image');
+      }
     },
     {
-      id: 'template-3',
-      title: language === 'ka' ? '⛓️ Web3 და კრიპტო გადახდები ტურიზმში' : '⛓️ Web3 & Crypto Payments in Local Tourism',
+      id: 'market',
+      title: language === 'ka' ? 'პროტონ მარკეტი' : 'Proton Market',
+      badge: 'P2P Trading & Registry',
       desc: language === 'ka'
-        ? 'დეცენტრალიზებული გადახდების ინტეგრაცია ქართული საოჯახო სასტუმროებისთვის.'
-        : 'Integrating decentralized wallet payments directly for Georgian guest-houses.',
-      prompt: language === 'ka'
-        ? 'მე ვარ Web3 ენთუზიასტი და მინდა ქართულ საოჯახო სასტუმროებში (Kakheti-სა და Svaneti-ში) დავნერგო კრიპტო და Web3 გადახდები ტურისტებისთვის. რა არის ამის საუკეთესო და მარტივი ტექნოლოგიური სტრატეგია?'
-        : 'I want to integrate crypto and decentralized Web3 payments for tourists visiting local guest-houses in Kakheti and Svaneti. What is the most seamless engineering and regulatory strategy for this in Georgia?',
-      targetView: 'personas'
+        ? 'განათავსეთ განცხადებები, მართეთ მომსახურებების რეესტრი, შეიძინეთ ან გაყიდეთ ნივთები.'
+        : 'Post dynamic listings, browse regional services or goods, track active ledger transactions, and trade.',
+      icon: ShoppingBag,
+      color: 'emerald',
+      glowClass: 'border-emerald-500/20 hover:border-emerald-500/80 shadow-emerald-500/5 hover:shadow-emerald-500/20',
+      badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+      iconClass: 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-black',
+      shortcuts: [
+        { label: language === 'ka' ? 'მარკეტის დათვალიერება' : 'Browse listings', view: 'market-hub' }
+      ],
+      action: () => {
+        setUiMode('market');
+        setActiveView('market-hub');
+      }
+    },
+    {
+      id: 'organizer',
+      title: language === 'ka' ? 'ამოცანების მმართველი' : 'Task Organizer',
+      badge: 'Smart Agenda & Calendar',
+      desc: language === 'ka'
+        ? 'აკონტროლეთ ყოველდღიური საქმეები, მართეთ ენერგეტიკული ბალანსი და სამუშაო კალენდარი.'
+        : 'Organize daily tasks, log personal workflows, set priorities, and track active work schedules.',
+      icon: CalendarIcon,
+      color: 'purple',
+      glowClass: 'border-purple-500/20 hover:border-purple-500/80 shadow-purple-500/5 hover:shadow-purple-500/20',
+      badgeClass: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+      iconClass: 'bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-black',
+      shortcuts: [
+        { label: language === 'ka' ? 'ჩემი დავალებები' : 'Active Tasks', view: 'organizer' }
+      ],
+      action: () => setActiveView('organizer')
+    },
+    {
+      id: 'finance',
+      title: language === 'ka' ? 'ფინანსური პორტალი' : 'Finance Ledger',
+      badge: 'Capital Flow & Distribution',
+      desc: language === 'ka'
+        ? 'გაანაწილეთ კაპიტალი, აწარმოეთ ტრანზაქციების ჟურნალი და თვალი ადევნეთ საინვესტიციო აქტივებს.'
+        : 'Track global currency balances, record transaction vouchers, and trace localized investment progress.',
+      icon: TrendingUp,
+      color: 'gold',
+      glowClass: 'border-[#dfb257]/20 hover:border-[#dfb257]/80 shadow-[#dfb257]/5 hover:shadow-[#dfb257]/20',
+      badgeClass: 'bg-[#dfb257]/10 text-[#dfb257] border-[#dfb257]/20',
+      iconClass: 'bg-[#dfb257]/10 text-[#dfb257] group-hover:bg-[#dfb257] group-hover:text-black',
+      shortcuts: [
+        { label: language === 'ka' ? 'ფინანსების მართვა' : 'Ledger view', view: 'finance' }
+      ],
+      action: () => setActiveView('finance')
     }
   ];
 
   return (
-    <div className={cn(
-      "space-y-8 animate-in fade-in duration-300 pb-20",
-      uiMode === 'creative' ? "creative-mode" : "business-mode"
-    )}>
-      <div className={cn(
-        "p-8 rounded-[40px] border shadow-2xl relative overflow-hidden transition-all duration-500",
-        uiMode === 'creative' 
-          ? "bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/20" 
-          : "bg-gradient-to-br from-proton-accent/10 via-proton-accent/5 to-transparent border-proton-accent/20"
-      )}>
+    <div className="space-y-12 animate-in fade-in duration-300 pb-20 max-w-6xl mx-auto px-4">
+      {/* Elegantly Crafted Hub Hero Section */}
+      <div className="p-8 md:p-12 rounded-[40px] border border-proton-border bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent shadow-2xl relative overflow-hidden transition-all duration-500">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
+        
         <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8 relative z-10">
-          <div className="space-y-2 text-center md:text-left flex-1">
-            <div className={cn(
-              "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-2",
-              uiMode === 'creative' ? "bg-amber-500/20 text-amber-500" : "bg-proton-accent/20 text-proton-accent"
-            )}>
-              {uiMode === 'creative' ? (language === 'ka' ? 'შემოქმედებითი რეჟიმი' : 'Creative Mode') : (language === 'ka' ? 'ბიზნეს რეჟიმი' : 'Business Mode')}
+          <div className="space-y-3 text-center md:text-left flex-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-mono font-black uppercase tracking-[0.2em] bg-zinc-800 text-proton-accent border border-zinc-700/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {language === 'ka' ? 'ცენტრალური კარიბჭე' : 'Central operational tower'}
             </div>
-            <h1 className={cn(
-              "font-black tracking-tighter uppercase leading-none",
-              uiMode === 'creative' ? "text-4xl md:text-6xl text-amber-500" : "text-4xl md:text-6xl text-proton-accent"
-            )}>
-              {uiMode === 'creative' ? (language === 'ka' ? 'შემოქმედებითი ჰაბი' : "Creative Hub") : (language === 'ka' ? 'ბიზნეს ჰაბი' : 'Business Control')}
+            
+            <h1 className="font-black tracking-tighter uppercase leading-none text-4xl sm:text-5xl md:text-6xl text-proton-text">
+              {language === 'ka' ? 'პროტონ-ქორ ჰაბი' : 'Proton Core Hub'}
             </h1>
-            <p className="text-proton-muted font-medium max-w-xl text-base">
-              {uiMode === 'creative' 
-                ? (language === 'ka' ? 'თქვენი პრაქტიკული სამუშაო სივრცე და ტექნიკური ხელსაწყოები.' : 'Your practical workspace and technical toolset.')
-                : (language === 'ka' ? 'სტრატეგიული ანალიტიკა და ბიზნეს პროცესების მართვის ცენტრი.' : 'Strategic analytics and business process management center.')}
+            
+            <p className="text-proton-muted font-medium max-w-2xl text-sm sm:text-base leading-relaxed">
+              {language === 'ka' 
+                ? 'კეთილი იყოს თქვენი მობრძანება. აირჩიეთ სასურველი კარიბჭე ციფრულ მოდულებთან, ხელოვნურ ინტელექტთან და ბაზრის რეესტრებთან დასაკავშირებლად.'
+                : 'Welcome back. Choose a secure pathway to engage with your modern workspaces, AI companions, and regional ledgers.'}
             </p>
-            {isSystemActive && (
-              <div className="flex items-center gap-2 mt-4">
-                <div className="relative flex items-center justify-center w-2.5 h-2.5">
-                  <div className="absolute w-full h-full bg-green-500 rounded-full animate-ping opacity-75" />
-                  <div className="relative w-1.5 h-1.5 bg-green-500 rounded-full" />
-                </div>
-                <span className="text-xs font-black uppercase tracking-[0.1em] text-proton-text/80">
-                  {t.hub.system_status}: <span className="text-green-500">{t.hub.active}</span>
-                </span>
-              </div>
-            )}
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 shrink-0">
-             <button 
-                onClick={() => setActiveView('organizer')}
-                className="px-6 py-4 bg-proton-bg border border-proton-border rounded-2xl flex items-center gap-3 hover:bg-proton-card transition-all group"
-             >
-                <LayoutDashboard size={18} className="text-proton-accent group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-black uppercase tracking-widest">{t.hub.quick_tasks}</span>
-             </button>
-             <div className="hidden md:flex">
-                {uiMode === 'creative' ? (
-                   <div className="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 backdrop-blur-sm">
-                     <Wrench className="text-amber-500" size={32} />
-                   </div>
-                ) : (
-                   <div className="w-20 h-20 rounded-full bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20 backdrop-blur-sm">
-                     <Activity className="text-proton-accent" size={32} />
-                   </div>
-                )}
-             </div>
+          <div className="flex items-center shrink-0">
+            <div className="w-20 h-20 rounded-full bg-proton-accent/5 flex items-center justify-center border border-proton-accent/10 backdrop-blur-sm shadow-inner">
+              <Grid className="text-proton-accent animate-spin" style={{ animationDuration: '40s' }} size={32} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Simulation Info & Instant Mode Toggler */}
+      {/* Main Gateways Portal Grid */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-[#dfb257]">
+            {language === 'ka' ? 'აირჩიეთ მიმართულება' : 'CHOOSE GATEWAY PORTAL'}
+          </h2>
+          <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest mt-1">
+            {language === 'ka' ? 'გაკონტროლებული მოდულები და ინტეგრირებული სამუშაო მაგიდები' : 'Garded pathways to interactive operating canvases'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {gateways.map((gate) => {
+            const IconComponent = gate.icon;
+            return (
+              <div
+                key={gate.id}
+                className={cn(
+                  "bg-proton-card/30 hover:bg-proton-card/70 border rounded-[36px] p-6 flex flex-col justify-between transition-all duration-300 group shadow-lg cursor-pointer transform hover:-translate-y-1 overflow-hidden relative",
+                  gate.glowClass
+                )}
+                onClick={gate.action}
+              >
+                {/* Visual Accent glow line */}
+                <div className={cn(
+                  "absolute top-0 left-0 w-full h-1 bg-gradient-to-r opacity-50 transition-opacity duration-300 group-hover:opacity-100",
+                  gate.color === 'cyan' ? 'from-cyan-500/50 to-transparent' :
+                  gate.color === 'amber' ? 'from-amber-500/50 to-transparent' :
+                  gate.color === 'emerald' ? 'from-emerald-500/50 to-transparent' :
+                  gate.color === 'purple' ? 'from-purple-500/50 to-transparent' :
+                  'from-[#dfb257]/50 to-transparent'
+                )} />
+
+                <div className="space-y-4 w-full">
+                  <div className="flex items-center justify-between w-full">
+                    {/* Mode Tag */}
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border",
+                      gate.badgeClass
+                    )}>
+                      {gate.badge}
+                    </span>
+
+                    <ArrowUpRight className="text-proton-muted group-hover:text-proton-text group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" size={16} />
+                  </div>
+
+                  {/* Header Title & Icon */}
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all shrink-0 border border-transparent",
+                      gate.iconClass
+                    )}>
+                      <IconComponent size={24} />
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-xl font-black tracking-tight text-proton-text uppercase group-hover:text-[#dfb257] transition-colors">
+                        {gate.title}
+                      </h3>
+                      <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">
+                        {gate.desc}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shortcuts & Quick actions */}
+                <div className="mt-6 pt-4 border-t border-proton-border/30 flex flex-wrap gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                  {gate.shortcuts.map((sc, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setActiveView(sc.view as any)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm border transition-all hover:scale-105 active:scale-95",
+                        gate.color === 'cyan' ? 'bg-cyan-500/5 text-cyan-400 border-cyan-500/10 hover:bg-cyan-500 hover:text-black' :
+                        gate.color === 'amber' ? 'bg-amber-500/5 text-amber-400 border-amber-500/10 hover:bg-amber-500 hover:text-black' :
+                        gate.color === 'emerald' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10 hover:bg-emerald-500 hover:text-black' :
+                        gate.color === 'purple' ? 'bg-purple-500/5 text-purple-400 border-purple-500/10 hover:bg-purple-500 hover:text-white' :
+                        'bg-[#dfb257]/5 text-[#dfb257] border-[#dfb257]/10 hover:bg-[#dfb257] hover:text-black'
+                      )}
+                    >
+                      {sc.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Interactive AI Simulation / Settings footer */}
       <div className={cn(
         "p-6 rounded-[32px] border transition-all select-none relative overflow-hidden shadow-xl flex flex-col md:flex-row items-center justify-between gap-6",
         aiSettings.useSimulatedAi 
@@ -1553,7 +1633,7 @@ const DashboardView = ({
           )}>
             <Sparkles className={cn(aiSettings.useSimulatedAi && "animate-pulse")} size={22} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1 text-left">
             <h4 className="text-sm font-black uppercase tracking-wider text-proton-text flex items-center gap-2">
               {language === 'ka' ? 'ინტელექტის მართვის რეჟიმი' : 'AI Intelligence Engine'}
               <span className={cn(
@@ -1591,241 +1671,13 @@ const DashboardView = ({
             : (language === 'ka' ? 'ჩართე საცდელი რეჟიმი' : 'Enable Simulation')}
         </button>
       </div>
-
-      {/* Dynamic Themed Templates & Prompts */}
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-black text-proton-text uppercase tracking-tight flex items-center gap-2">
-            <ClipboardList className={uiMode === 'creative' ? "text-amber-500" : "text-proton-accent"} size={18} />
-            {uiMode === 'creative'
-              ? (language === 'ka' ? 'კრეატიული შთაგონების შაბლონები' : 'Creative Inspiration Hub')
-              : (language === 'ka' ? 'სწრაფი ტესტირების შაბლონები' : 'Quick Start Playbook')}
-          </h3>
-          <p className="text-[10px] text-proton-muted font-black uppercase tracking-wider mt-1">
-            {uiMode === 'creative'
-              ? (language === 'ka' 
-                ? 'დააკოპირეთ მზა კრეატიული იდეები, დიზაინის მოთხოვნები და ბრენდინგის პრომტები' 
-                : 'Copy tested art directions, copywriting prompts, and storytelling frameworks adapted for creative work')
-              : (language === 'ka' 
-                ? 'დააკოპირეთ მზა ბიზნეს იდეები და მარკეტინგული კითხვები, რომლებიც მორგებულია ქართულ რეალობაზე' 
-                : 'Copy tested product requests and marketing templates specifically adapted to the local market')}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {templates.map((tpl) => (
-            <div 
-              key={tpl.id}
-              className={cn(
-                "bg-proton-card/40 backdrop-blur-sm p-6 rounded-[32px] border flex flex-col justify-between gap-4 group/tpl transition-all shadow-md relative overflow-hidden",
-                uiMode === 'creative' ? "border-amber-500/10 hover:border-amber-500/30" : "border-proton-border/80 hover:border-proton-accent/30"
-              )}
-            >
-              <div className={cn(
-                "absolute inset-0 bg-gradient-to-br opacity-0 group-hover/tpl:opacity-100 transition-opacity pointer-events-none",
-                uiMode === 'creative' ? "from-amber-500/5 to-transparent" : "from-proton-accent/5 to-transparent"
-              )} />
-              <div className="space-y-2 relative z-10 w-full">
-                <h4 className="text-xs font-black uppercase tracking-wider text-proton-text">{tpl.title}</h4>
-                <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">{tpl.desc}</p>
-              </div>
-              
-              <div className="flex gap-2 relative z-10 w-full">
-                <button
-                  type="button"
-                  onClick={() => handleCopy(tpl.id, tpl.prompt)}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
-                    copiedId === tpl.id 
-                      ? "bg-green-500 border-green-500 text-white" 
-                      : (uiMode === 'creative'
-                         ? "bg-proton-secondary/20 border-proton-border/60 text-proton-muted hover:border-amber-500 hover:text-amber-500 hover:bg-amber-500/5"
-                         : "bg-proton-secondary/20 border-proton-border/60 text-proton-muted hover:border-proton-accent hover:text-proton-accent hover:bg-proton-accent/5")
-                  )}
-                >
-                  {copiedId === tpl.id ? <Check size={12} /> : <Copy size={12} />}
-                  {copiedId === tpl.id ? (language === 'ka' ? 'კოპირებულია' : 'Copied!') : (language === 'ka' ? 'პრომტის ასლი' : 'Copy Prompt')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView(tpl.targetView as any || 'personas');
-                  }}
-                  className={cn(
-                    "px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border",
-                    uiMode === 'creative'
-                      ? "bg-amber-500/10 border-amber-500/20 text-amber-500 hover:bg-amber-500 hover:text-black"
-                      : "bg-proton-accent/10 border-proton-accent/20 text-proton-accent hover:bg-proton-accent hover:text-proton-bg"
-                  )}
-                >
-                  {language === 'ka' ? 'გახსნა' : 'Launch'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {uiMode === 'business' ? (
-        <div className="space-y-8">
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div 
-                onClick={() => setActiveView('organizer')}
-                className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-proton-accent transition-all cursor-pointer group shadow-lg"
-              >
-                 <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-bg transition-colors">
-                       <CalendarIcon size={28} />
-                    </div>
-                    <ArrowRight className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-2 transition-all" size={24} />
-                 </div>
-                 <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
-                    {language === 'ka' ? 'დავალებების მმართველი' : 'Task Organizer'}
-                 </h3>
-                 <p className="text-sm text-proton-muted font-medium">
-                    {language === 'ka' ? 'მართეთ თქვენი ყოველდღიური ამოცანები და პრიორიტეტები.' : 'Manage your daily tasks and priorities.'}
-                 </p>
-              </div>
-
-              <div 
-                onClick={() => setActiveView('blueprints')}
-                className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-purple-500 transition-all cursor-pointer group shadow-lg"
-              >
-                 <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center group-hover:bg-purple-500 group-hover:text-white transition-colors">
-                       <WorkflowIcon size={28} />
-                    </div>
-                    <ArrowRight className="text-proton-muted group-hover:text-purple-400 group-hover:translate-x-2 transition-all" size={24} />
-                 </div>
-                 <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
-                    {language === 'ka' ? 'სამუშაო პროცესები' : 'Business Workflows'}
-                 </h3>
-                 <p className="text-sm text-proton-muted font-medium">
-                    {language === 'ka' ? 'დაგეგმეთ და მოახდინეთ ბიზნეს ოპერაციების ავტომატიზაცია.' : 'Plan and automate your business operations.'}
-                 </p>
-              </div>
-
-              <div 
-                onClick={() => setActiveView('settings')}
-                className="bg-proton-card p-10 rounded-[40px] border border-proton-border hover:border-proton-accent transition-all cursor-pointer group shadow-lg"
-              >
-                 <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-proton-accent/10 text-proton-accent flex items-center justify-center group-hover:bg-proton-accent group-hover:text-proton-bg transition-colors">
-                       <Settings size={28} />
-                    </div>
-                    <ArrowRight className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-2 transition-all" size={24} />
-                 </div>
-                 <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight mb-2">
-                    {language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}
-                 </h3>
-                 <p className="text-sm text-proton-muted font-medium">
-                    {language === 'ka' ? 'შეცვალეთ AI პარამეტრები, განაახლეთ Gemini API გასაღები და გამოასწორეთ შეცდომები.' : 'Configure global system settings, update Gemini API keys, and fix environment errors.'}
-                 </p>
-              </div>
-           </div>
-           
-           <ObjectiveCenter language={language} />
-        </div>
-      ) : (
-        <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-           <div>
-             <h3 className="text-xl font-black text-proton-text uppercase tracking-tight flex items-center gap-2">
-               <Sparkles className="text-amber-500 animate-pulse" size={20} />
-               {language === 'ka' ? 'შემოქმედებითი ინსტრუმენტების ნაკრები' : 'INTEGRATED CREATIVE STUDIO'}
-             </h3>
-             <p className="text-[10px] text-proton-muted font-black uppercase tracking-wider mt-1">
-               {language === 'ka' 
-                 ? 'გააქტიურეთ სასურველი ხელსაწყო შემოქმედებითი პროდუქტიულობის მისაღწევად' 
-                 : 'Select a customized dynamic canvas below to launch productive creative sessions'}
-             </p>
-           </div>
-
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Studio Card */}
-              <div 
-                onClick={() => setActiveView('image')}
-                className="bg-proton-card/50 p-10 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group shadow-lg relative overflow-hidden"
-              >
-                 <div className="absolute top-0 right-0 p-6">
-                    <ArrowRight className="text-proton-muted group-hover:text-amber-500 group-hover:translate-x-2 transition-all" size={24} />
-                 </div>
-                 <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-colors">
-                       <ImageIcon size={28} />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                      STUDIO ENGINE
-                    </div>
-                    <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">
-                       {language === 'ka' ? 'ვიზუალური სტუდია' : 'AI Image Studio'}
-                    </h3>
-                    <p className="text-xs text-proton-muted font-semibold leading-relaxed">
-                       {language === 'ka' 
-                         ? 'შექმენით მაღალი ხარისხის ილუსტრაციები, ბანერები და ციფრული ხელოვნება Google Gemini მოდელების საშუალებით.' 
-                         : 'Generate exceptional illustrations, branding materials, and digital graphics powered by advanced Gemini models.'}
-                    </p>
-                 </div>
-              </div>
-
-              {/* Translator Card */}
-              <div 
-                onClick={() => setActiveView('translator')}
-                className="bg-proton-card/50 p-10 rounded-[40px] border border-proton-border hover:border-amber-500 transition-all cursor-pointer group shadow-lg relative overflow-hidden"
-              >
-                 <div className="absolute top-0 right-0 p-6">
-                    <ArrowRight className="text-proton-muted group-hover:text-amber-500 group-hover:translate-x-2 transition-all" size={24} />
-                 </div>
-                 <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-black transition-colors">
-                       <Languages size={28} />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                      LOCALIZATION
-                    </div>
-                    <h3 className="text-2xl font-black text-proton-text uppercase tracking-tight">
-                       {language === 'ka' ? 'ენების მთარგმნელი' : 'Bilingual Localizer'}
-                    </h3>
-                    <p className="text-xs text-proton-muted font-semibold leading-relaxed">
-                       {language === 'ka' 
-                         ? 'მძლავრი ორენოვანი თარგმანი და ლოკალიზაციის ხელსაწყო დოკუმენტებისა და ტექსტების ადაპტაციისთვის.' 
-                         : 'Bilingual localization lab for multi-national copy translation, contextual polishing, and precise editing.'}
-                    </p>
-                 </div>
-              </div>
-
-
-           </div>
-
-           <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent p-10 rounded-[50px] border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-center gap-10">
-              <div className="flex-1 space-y-4">
-                 <h3 className="text-3xl font-black text-proton-text uppercase tracking-tighter">
-                   {language === 'ka' ? 'ექსპრესიული კრეატიული რეჟიმი' : 'EXPRESSIVE CREATIVE MODE'}
-                 </h3>
-                 <p className="text-sm text-proton-muted font-medium">
-                   {language === 'ka' 
-                     ? 'გააქტიურებულია კრეატიული მოდულის უნიკალური დიზაინი, რომელიც გაძლევთ წვდომას ხელოვანების, ბილინგვური სააგენტოებისა და ციფრული დიზაინერების გაერთიანებულ პლატფორმასთან.' 
-                     : 'Creative Mode active. Your workspaces, local visual asset registers, and digital design platforms are synchronizing in real time.'}
-                 </p>
-                 <button 
-                   onClick={() => setActiveView('image')}
-                   className="px-8 py-4 bg-amber-500 text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:scale-105 hover:bg-amber-600 transition-all"
-                 >
-                   {language === 'ka' ? 'დაიწყე ხატვა' : 'Launch Art Engine'}
-                 </button>
-              </div>
-              <div className="w-full md:w-64 h-64 bg-proton-card rounded-[40px] border border-proton-border flex items-center justify-center p-8 shrink-0">
-                 <Cpu className="text-amber-500/50 w-full h-full animate-pulse" />
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 };
+
+
+
+
 
 const SystemsView = ({ 
   metadata, 
@@ -3506,6 +3358,9 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [uiMode, setUiMode] = useState<'business' | 'creative' | 'market'>(() => {
     try {
       return (safeStorage.get('proton_ui_mode') as 'business' | 'creative' | 'market') || 'business';
@@ -3520,11 +3375,20 @@ export default function App() {
     setIsTransitioning(true);
     setUiMode(newMode);
     
-    // Always navigate to the mode's main Hub (Dashboard or Market-Hub)
-    if (newMode === 'market') {
-      navigate('/market-hub');
-    } else {
-      navigate('/dashboard');
+    // settings, profile, documentation are shared tools across all modes
+    const isSharedToolPath = 
+      location.pathname.startsWith('/profile') || 
+      location.pathname.startsWith('/settings') || 
+      location.pathname.startsWith('/documentation');
+
+    if (!isSharedToolPath) {
+      if (newMode === 'market') {
+        navigate('/market-hub');
+      } else if (newMode === 'creative') {
+        navigate('/studio');
+      } else {
+        navigate('/dashboard');
+      }
     }
 
     setTimeout(() => setIsTransitioning(false), 2000);
@@ -3534,9 +3398,6 @@ export default function App() {
     document.documentElement.setAttribute('data-ui-mode', uiMode);
     safeStorage.set('proton_ui_mode', uiMode);
   }, [uiMode]);
-
-  const location = useLocation();
-  const navigate = useNavigate();
 
   // Helper mapping pathnames to specific Views
   const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
@@ -3583,10 +3444,6 @@ export default function App() {
   }, []);
 
   const setActiveView = React.useCallback((view: View) => {
-    if (view === 'personas' || view === 'image' || view === 'blueprints') {
-      setShowBetaModal(true);
-      return;
-    }
     navigate(getPathnameFromView(view));
   }, [navigate, getPathnameFromView]);
 
@@ -3659,14 +3516,7 @@ export default function App() {
   const [isSafeMode, setIsSafeMode] = useState(false);
   const [selectedPersonaId, setSelectedPersonaId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const blockedPaths = ['/personas', '/blueprints', '/studio'];
-    const isBlocked = blockedPaths.some(p => location.pathname.startsWith(p));
-    if (isBlocked) {
-      navigate('/dashboard', { replace: true });
-      setShowBetaModal(true);
-    }
-  }, [location.pathname, navigate]);
+  // Removed blocked paths restriction to allow seamless access to all integrated views
 
   useEffect(() => {
     if (isTransitioning) return;
@@ -3710,11 +3560,6 @@ export default function App() {
 
     if (!user && view !== 'translator' && view !== 'market' && view !== 'market-hub') {
       setShowAuth(true);
-      return;
-    }
-
-    if (view === 'personas' || view === 'image' || view === 'blueprints') {
-      setShowBetaModal(true);
       return;
     }
 
@@ -4508,7 +4353,10 @@ export default function App() {
           <span className="uppercase tracking-widest">Loading Translator...</span>
         </div>
       }>
-        <TranslatorView onBack={() => setActiveView('dashboard')} />
+        <TranslatorView onBack={() => {
+          setUiMode('business');
+          setActiveView('dashboard');
+        }} />
       </Suspense>
     );
   }
@@ -4598,11 +4446,11 @@ export default function App() {
               </div>
 
               <nav className={cn(
-                "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
+                "flex-1 py-6 space-y-6 mt-1 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
                 isSidebarOpen ? "px-4" : "px-0"
               )}>
                 {isSidebarOpen && (
-                  <div className="px-3 pb-6 border-b border-proton-border/30 mb-6 md:hidden">
+                  <div className="px-3 pb-6 border-b border-proton-border/30">
                     <p className="text-[10px] font-black text-proton-accent uppercase tracking-[0.14em] mb-2.5 font-mono">
                       {language === 'ka' ? 'სისტემის რეჟიმი' : 'SYSTEM MODE'}
                     </p>
@@ -4610,21 +4458,26 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Permanent Home Navigation */}
+                <div className="min-h-[1.5rem]">
+                  <SidebarItem 
+                    icon={LayoutDashboard} 
+                    label={t.sidebar.dashboard} 
+                    active={uiMode === 'business' && activeView === 'dashboard'} 
+                    onClick={() => {
+                      setUiMode('business');
+                      handleViewChange('dashboard');
+                    }} 
+                    expanded={isSidebarOpen}
+                    uiMode="business"
+                  />
+                </div>
+
                 {uiMode === 'business' ? (
                   <>
                     {/* BUSINESS MODE PANELS */}
-                    <div className="space-y-3 min-h-[1.5rem]">
-                      <SidebarItem 
-                        icon={LayoutDashboard} 
-                        label={t.sidebar.dashboard} 
-                        active={activeView === 'dashboard'} 
-                        onClick={() => handleViewChange('dashboard')} 
-                        expanded={isSidebarOpen}
-                        uiMode={uiMode}
-                      />
-                    </div>
 
-                    <div className="space-y-3 pt-6">
+                    <div className="space-y-3">
                       <AnimatePresence mode="wait">
                         {isSidebarOpen && (
                           <motion.button 
@@ -5084,10 +4937,12 @@ export default function App() {
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ] : uiMode === 'creative' ? [
+          { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
           { id: 'translator', icon: Languages, label: language === 'ka' ? 'თარგმანი' : 'Translate' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ] : [
+          { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
           { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ]).map((item) => {
@@ -5100,6 +4955,9 @@ export default function App() {
               onClick={() => {
                 if (item.id === 'control-hub') {
                   setIsMobileControlOpen(!isMobileControlOpen);
+                } else if (item.id === 'dashboard') {
+                  setUiMode('business');
+                  handleViewChange('dashboard');
                 } else {
                   handleViewChange(item.id as any);
                 }
@@ -5130,7 +4988,7 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="min-h-16 h-auto md:h-16 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 md:py-0 gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
+        <header className="h-16 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-8 gap-x-6 z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md select-none">
           {/* Left Section: User & Status */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <button 
@@ -5199,24 +5057,23 @@ export default function App() {
             ))}
           </nav>
           
-          {/* Right Section: System Controls & Mode */}
+          {/* Right Section: System Controls */}
           <div className="flex items-center justify-end gap-2 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
-            <div>
-              <ModeToggle 
-                mode={uiMode} 
-                setMode={handleModeChange} 
-                t={t} 
-                language={language} 
-                compact={viewportWidth < 640}
-                className={cn(
-                  viewportWidth < 640 
-                    ? "w-[125px]" 
-                    : "w-[280px] sm:w-[320px] md:w-[340px]"
-                )} 
-              />
-            </div>
-
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
+              {activeView !== 'dashboard' && (
+                <button
+                  onClick={() => {
+                    setUiMode('business');
+                    handleViewChange('dashboard');
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[10px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0"
+                  title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
+                >
+                  <ArrowLeft size={13} className="stroke-[2.5]" />
+                  <span className="hidden sm:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
+                </button>
+              )}
+
               {/* Elegant Compact Language Selector for 1-click accessibility */}
               <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
                 <button
@@ -5309,6 +5166,7 @@ export default function App() {
                       language={userProfile.language}
                       user={user}
                       uiMode={uiMode === 'market' ? 'business' : uiMode}
+                      setUiMode={handleModeChange}
                       aiSettings={aiSettings}
                       setLastGeminiMetadata={setLastGeminiMetadata}
                       trackFirestore={trackFirestore}
