@@ -167,7 +167,10 @@ export const translations = {
         home: "Home, Garden & Tools",
         fashion: "Fashion & Family",
         business: "Business & Agriculture",
-        hobby: "Hobby, Sports & Art"
+        hobby: "Hobby, Sports & Art",
+        realestate: "Real Estate & Spaces",
+        auto: "Auto & Transport",
+        crypto: "Digital Assets & Web3"
       },
       legal: {
         privacy_policy: "Privacy Policy",
@@ -607,7 +610,10 @@ export const translations = {
         home: "სახლი, ბაღი და ხელსაწყოები",
         fashion: "მოდა, სილამაზე და საბავშვო",
         business: "ბიზნესი და სოფლის მეურნეობა",
-        hobby: "ჰობი, სპორტი და ხელოვნება"
+        hobby: "ჰობი, სპორტი და ხელოვნება",
+        realestate: "უძრავი ქონება და სივრცეები",
+        auto: "ავტო და ტრანსპორტი",
+        crypto: "ციფრული აქტივები და Web3"
       },
       legal: {
         privacy_policy: "კონფიდენციალურობის პოლიტიკა",

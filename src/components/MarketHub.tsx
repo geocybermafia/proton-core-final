@@ -309,6 +309,7 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   service: "⚡",
   rent: "🔑",
   garden: "🏡",
+  home: "🏡",
   "family-technic": "🔌",
   technics: "💻",
   hunting: "🏹",
@@ -321,7 +322,11 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   sport: "⚽",
   business: "💼",
   book: "📚",
-  art: "🎨"
+  art: "🎨",
+  hobby: "🎨",
+  realestate: "🏢",
+  auto: "🚗",
+  crypto: "🪙"
 };
 
 const convertPrice = (price: number, from: string, to: string) => {
@@ -2001,26 +2006,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
           {/* Desktop Search Bar Grouping */}
           <div className="hidden md:flex flex-1 max-w-xl items-center gap-3">
-            {/* Category selection selector */}
-            <div className="relative shrink-0">
-              <select 
-                value={activeCategory}
-                onChange={(e) => {
-                  setActiveCategory(e.target.value);
-                  setViewMode('browse');
-                }}
-                className="pl-3 pr-9 py-2 bg-proton-card border border-proton-border rounded-xl text-[10px] sm:text-xs font-bold text-proton-text hover:text-proton-accent focus:outline-none transition-all cursor-pointer appearance-none min-w-[150px] uppercase tracking-wider"
-              >
-                <option value="all">📁 {language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}</option>
-                {Object.entries(t.market.categories).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {CATEGORY_EMOJIS[key] || '🏷️'} {label as string}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none" />
-            </div>
-
             {/* Input search */}
             <div className="flex-1 relative">
               <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-proton-accent" />
@@ -2029,7 +2014,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
-                className="w-full bg-proton-card border border-proton-border text-proton-text placeholder-proton-muted/50 font-bold tracking-wide focus:outline-none focus:border-proton-accent/60 pl-10 pr-4 py-2 rounded-xl text-xs transition-colors"
+                className="w-full bg-proton-card/70 border border-proton-border/80 text-proton-text placeholder-proton-muted/50 font-bold tracking-wide focus:outline-none focus:border-proton-accent/60 pl-10 pr-4 py-2 rounded-xl text-xs transition-all shadow-inner focus:bg-proton-card"
               />
               {searchRaw && (
                 <button 
@@ -2402,34 +2387,56 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           {viewMode === 'browse' && (
             <div className="relative -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-transparent border-b border-zinc-900/40 lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
               {/* Categories horizontal list */}
-              <div className="flex items-center gap-2.5 overflow-x-auto pb-3 pt-1 px-1 scrollbar-none scroll-smooth">
+              <div className="flex items-start gap-4 sm:gap-6 overflow-x-auto pb-4 pt-2 px-1 scrollbar-none scroll-smooth">
+                {/* Space-Saving Infinite / All categories icon block */}
                 <button
                   type="button"
                   onClick={() => setActiveCategory('all')}
-                  className={cn(
-                    "flex items-center gap-2.5 px-6 py-4 sm:py-3.5 rounded-2xl text-xs sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border min-h-[48px]",
-                    activeCategory === 'all'
-                      ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-xl scale-[1.02] -translate-y-0.5"
-                      : cn(currentTheme.cardAlt, currentTheme.bgHover)
-                  )}
+                  className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none cursor-pointer w-20 sm:w-24"
                 >
-                  <span className="text-sm">🌍</span>
-                  <span>{t.market.all_categories}</span>
+                  <div className={cn(
+                    "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-lg sm:text-xl transition-all duration-300 relative border",
+                    activeCategory === 'all'
+                      ? "bg-gradient-to-br from-[#dfb257]/20 to-[#dfb257]/5 border-[#dfb257] text-[#dfb257] shadow-lg shadow-[#dfb257]/10 scale-105 -translate-y-0.5"
+                      : "bg-[#09090b]/40 border-zinc-900 text-zinc-400 group-hover:text-white group-hover:bg-zinc-900/40 group-hover:border-zinc-800"
+                  )}>
+                    {activeCategory === 'all' && (
+                      <div className="absolute inset-0 bg-[#dfb257]/10 blur-md rounded-2xl -z-10" />
+                    )}
+                    <span>🌍</span>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-center line-clamp-2 max-w-full px-1 transition-all leading-snug",
+                    activeCategory === 'all' ? "text-[#dfb257]" : "text-zinc-500 group-hover:text-zinc-300"
+                  )}>
+                    {t.market.all_categories}
+                  </span>
                 </button>
+
                 {Object.entries(t.market.categories).map(([key, label]) => (
                   <button
                     key={key}
                     type="button"
                     onClick={() => setActiveCategory(key)}
-                    className={cn(
-                      "flex items-center gap-2.5 px-6 py-4 sm:py-3.5 rounded-2xl text-xs sm:text-[10px] font-black uppercase tracking-widest transition-all shrink-0 border min-h-[48px]",
-                      activeCategory === key
-                        ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-xl scale-[1.02] -translate-y-0.5"
-                        : cn(currentTheme.cardAlt, currentTheme.bgHover)
-                    )}
+                    className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none cursor-pointer w-20 sm:w-24"
                   >
-                    <span className="text-sm shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                    <span>{label as string}</span>
+                    <div className={cn(
+                      "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-lg sm:text-xl transition-all duration-300 relative border",
+                      activeCategory === key
+                        ? "bg-gradient-to-br from-[#dfb257]/20 to-[#dfb257]/5 border-[#dfb257] text-[#dfb257] shadow-lg shadow-[#dfb257]/10 scale-105 -translate-y-0.5"
+                        : "bg-[#09090b]/40 border-zinc-900 text-zinc-400 group-hover:text-white group-hover:bg-zinc-900/40 group-hover:border-zinc-800"
+                    )}>
+                      {activeCategory === key && (
+                        <div className="absolute inset-0 bg-[#dfb257]/10 blur-md rounded-2xl -z-10" />
+                      )}
+                      <span>{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                    </div>
+                    <span className={cn(
+                      "text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-center line-clamp-2 max-w-full px-1 transition-all leading-snug",
+                      activeCategory === key ? "text-[#dfb257]" : "text-zinc-500 group-hover:text-zinc-300"
+                    )}>
+                      {label as string}
+                    </span>
                   </button>
                 ))}
               </div>
