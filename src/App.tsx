@@ -1515,10 +1515,10 @@ const DashboardView = ({
         ? 'გაანაწილეთ კაპიტალი, აწარმოეთ ტრანზაქციების ჟურნალი და თვალი ადევნეთ საინვესტიციო აქტივებს.'
         : 'Track global currency balances, record transaction vouchers, and trace localized investment progress.',
       icon: TrendingUp,
-      color: 'gold',
-      glowClass: 'border-[#dfb257]/20 hover:border-[#dfb257]/80 shadow-[#dfb257]/5 hover:shadow-[#dfb257]/20',
-      badgeClass: 'bg-[#dfb257]/10 text-[#dfb257] border-[#dfb257]/20',
-      iconClass: 'bg-[#dfb257]/10 text-[#dfb257] group-hover:bg-[#dfb257] group-hover:text-black',
+      color: 'amber',
+      glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
+      badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+      iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
       shortcuts: [
         { label: language === 'ka' ? 'ფინანსების მართვა' : 'Ledger view', view: 'finance' }
       ],
@@ -1561,7 +1561,7 @@ const DashboardView = ({
       {/* Main Gateways Portal Grid */}
       <div className="space-y-6">
         <div>
-          <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-[#dfb257]">
+          <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-proton-accent">
             {language === 'ka' ? 'აირჩიეთ მიმართულება' : 'CHOOSE GATEWAY PORTAL'}
           </h2>
           <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest mt-1">
@@ -1588,7 +1588,7 @@ const DashboardView = ({
                   gate.color === 'amber' ? 'from-amber-500/50 to-transparent' :
                   gate.color === 'emerald' ? 'from-emerald-500/50 to-transparent' :
                   gate.color === 'purple' ? 'from-purple-500/50 to-transparent' :
-                  'from-[#dfb257]/50 to-transparent'
+                  'from-proton-accent/50 to-transparent'
                 )} />
 
                 <div className="space-y-4 w-full">
@@ -1613,7 +1613,7 @@ const DashboardView = ({
                       <IconComponent size={24} />
                     </div>
                     <div className="space-y-1">
-                      <h3 className="text-xl font-black tracking-tight text-proton-text uppercase group-hover:text-[#dfb257] transition-colors">
+                      <h3 className="text-xl font-black tracking-tight text-proton-text uppercase group-hover:text-proton-accent transition-colors">
                         {gate.title}
                       </h3>
                       <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">
@@ -1636,7 +1636,7 @@ const DashboardView = ({
                         gate.color === 'amber' ? 'bg-amber-500/5 text-amber-400 border-amber-500/10 hover:bg-amber-500 hover:text-black' :
                         gate.color === 'emerald' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10 hover:bg-emerald-500 hover:text-black' :
                         gate.color === 'purple' ? 'bg-purple-500/5 text-purple-400 border-purple-500/10 hover:bg-purple-500 hover:text-white' :
-                        'bg-[#dfb257]/5 text-[#dfb257] border-[#dfb257]/10 hover:bg-[#dfb257] hover:text-black'
+                        'bg-proton-accent/5 text-proton-accent border-proton-accent/10 hover:bg-proton-accent hover:text-proton-on-accent'
                       )}
                     >
                       {sc.label}
