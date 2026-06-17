@@ -1,7 +1,32 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
-const EnterpriseWorkflowBuilder = lazy(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
+
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  componentImport: () => Promise<{ default: T } | { [key: string]: any }>
+): React.LazyExoticComponent<T> {
+  return lazy(async () => {
+    const hasRetried = window.sessionStorage.getItem('chunk-retry-flag');
+    try {
+      const module = await componentImport();
+      window.sessionStorage.removeItem('chunk-retry-flag');
+      if (module && typeof module === 'object' && 'default' in module) {
+        return module as { default: T };
+      }
+      return { default: module } as { default: T };
+    } catch (error) {
+       console.error("Chunk load failed, retrying page reload...", error);
+       if (!hasRetried) {
+         window.sessionStorage.setItem('chunk-retry-flag', 'true');
+         window.location.reload();
+         return new Promise<never>(() => {});
+       }
+       throw error;
+    }
+  });
+}
+
+const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
 // Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
-const LocalFileScanner = lazy(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })));
+const LocalFileScanner = lazyWithRetry(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })));
 import { auth, db, googleProvider } from './firebase';
 import { useAuth } from './contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -15,18 +40,18 @@ import {
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-const SettingsView = lazy(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
+const SettingsView = lazyWithRetry(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-const CabinetView = lazy(() => import('./components/CabinetView'));
-const Web3ControlPanel = lazy(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
+const CabinetView = lazyWithRetry(() => import('./components/CabinetView'));
+const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
-const TranslatorView = lazy(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView })));
-const MarketHub = lazy(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
+const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView })));
+const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
 import { AuthFlow } from './components/AuthFlow';
-const OrganizerView = lazy(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
-const CommercialHub = lazy(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
+const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
+const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -139,7 +164,7 @@ import {
   Tag
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-const Calendar = lazy(() => import('react-calendar'));
+const Calendar = lazyWithRetry(() => import('react-calendar'));
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
