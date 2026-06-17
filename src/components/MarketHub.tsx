@@ -604,7 +604,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
   if (authLoading) {
     return (
-      <div className="min-h-[600px] bg-[#070708] rounded-3xl border border-white/5 flex flex-col items-center justify-center p-8 shadow-2xl relative overflow-hidden">
+      <div className="min-h-[600px] bg-[#070708] rounded-[36px] border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-[#dfb257]/[0.02] blur-[120px] pointer-events-none rounded-full" />
         <div className="flex flex-col items-center gap-5 relative z-10">
           <Loader2 className="w-12 h-12 animate-spin text-[#dfb257] opacity-80" />
@@ -1974,7 +1974,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
 
   return (
-    <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-16 md:pb-0">
+    <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       {/* Premium Standalone E-Commerce Navigation Bar */}
       <div className="w-full bg-proton-bg/95 border-b border-proton-border/40 py-3 sm:py-4 px-4 sm:px-8 flex flex-col gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
@@ -2602,7 +2602,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   </div>
 
                   {/* Section 3: Popular Brand Shortcuts */}
-                  <div className="p-6 bg-zinc-950/40 border border-zinc-900/80 rounded-2xl space-y-4">
+                  <div className="p-6 bg-zinc-950/40 border border-zinc-900/80 rounded-[28px] space-y-4">
                     <div className="flex items-center justify-between border-b border-zinc-900/40 pb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-sm">🏷️</span>
@@ -2793,7 +2793,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           key={order.id}
-                          className={cn("p-6 rounded-2xl border border-white/5 group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
+                          className={cn("p-8 rounded-[40px] border border-white/5 group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
                         >
                           <div>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 blur-3xl rounded-full -mr-16 -mt-16" />
@@ -3190,7 +3190,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
             {!loading && filteredListings.length === 0 && (
               <div className="py-32 text-center space-y-6">
-                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/10">
+                <div className="w-20 h-20 bg-white/5 rounded-[40px] flex items-center justify-center mx-auto border border-white/10">
                   <Search size={32} className={cn("opacity-20", currentTheme.muted)} />
                 </div>
                 <p className={cn("text-sm font-bold uppercase tracking-widest", currentTheme.muted)}>{t.market.no_results}</p>
@@ -3250,7 +3250,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className={cn(
-            "max-w-2xl mx-auto p-6 sm:p-8 rounded-3xl border backdrop-blur-2xl relative overflow-hidden shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7)]", 
+            "max-w-2xl mx-auto p-6 sm:p-12 rounded-[32px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7)]", 
             "bg-zinc-950/75 border-zinc-800/80 hover:border-[#dfb257]/30 transition-colors duration-500"
           )}
         >
@@ -3764,7 +3764,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           </span>
                        </div>
                        
-                       <div className="p-1 rounded-2xl bg-black/60 border border-zinc-850/50 overflow-hidden shadow-2xl relative">
+                       <div className="p-1 rounded-[28px] bg-black/60 border border-zinc-850/50 overflow-hidden shadow-2xl relative">
                           {/* Design-consistent Corner tech indicators */}
                           <div className="absolute top-3 left-4 text-[7px] font-mono font-black text-[#dfb257]/40 z-20 pointer-events-none uppercase tracking-widest">
                              GPS LINKED
@@ -3773,7 +3773,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                              SYSTEM ACTIVE
                           </div>
                           
-                          <div className="h-48 rounded-xl overflow-hidden">
+                          <div className="h-48 rounded-[24px] overflow-hidden">
                              <MapPicker 
                                 lat={formData.lat}
                                 lng={formData.lng}
@@ -4021,7 +4021,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               exit={{ opacity: 0, x: 100 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={cn(
-                "relative w-full max-w-md h-full sm:h-[calc(100vh-32px)] sm:rounded-3xl border border-white/5 flex flex-col overflow-hidden shadow-2xl z-10",
+                "relative w-full max-w-md h-full sm:h-[calc(100vh-32px)] sm:rounded-[40px] border border-white/5 flex flex-col overflow-hidden shadow-2xl z-10",
                 currentTheme.card
               )}
             >
@@ -4054,7 +4054,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20">
-                    <div className="p-5 bg-white/5 rounded-2xl border border-white/5 text-white/20">
+                    <div className="p-5 bg-white/5 rounded-[30px] border border-white/5 text-white/20">
                       <ShoppingCart size={32} />
                     </div>
                     <div>
@@ -4165,11 +4165,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className={cn(
-                "relative w-full max-w-lg sm:rounded-3xl border border-white/10 overflow-hidden",
+                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden",
                 currentTheme.card
               )}
             >
-              <div className="p-6 sm:p-8 space-y-8">
+              <div className="p-8 sm:p-10 space-y-8">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-black uppercase tracking-tight text-white">
                     {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
@@ -4183,7 +4183,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   </button>
                 </div>
 
-                <div className="bg-white/5 rounded-2xl p-6 border border-white/5 flex items-center gap-6">
+                <div className="bg-white/5 rounded-[32px] p-6 border border-white/5 flex items-center gap-6">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
                     {checkoutItem.image ? (
                       <img src={checkoutItem.image} alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} className="w-full h-full object-cover" />
@@ -4223,7 +4223,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
                 {/* Conditional Service Booking Panel */}
                 {(checkoutItem.listingType === 'service' || checkoutItem.category === 'service') && (
-                  <div className="space-y-4 bg-white/5 rounded-2xl p-6 border border-white/5 text-left">
+                  <div className="space-y-4 bg-white/5 rounded-[32px] p-6 border border-white/5 text-left">
                     <h4 className="text-xs font-black uppercase tracking-wider text-white">⚡ {language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Rules'}</h4>
                     <div className="grid grid-cols-2 gap-4 text-xs font-medium">
                       <div className="bg-white/5 rounded-xl p-3">
@@ -4294,9 +4294,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
-              className="relative w-full max-w-lg sm:rounded-3xl border border-white/10 overflow-hidden bg-[#121212]"
+              className="relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden bg-[#121212]"
             >
-              <div className="p-6 sm:p-8 space-y-6 flex flex-col h-[600px] max-h-[85vh]">
+              <div className="p-8 sm:p-10 space-y-6 flex flex-col h-[600px] max-h-[85vh]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
@@ -4328,7 +4328,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 </div>
 
                 {/* Messages Body */}
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-black/20 rounded-2xl p-4 border border-white/5">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-black/20 rounded-[24px] p-4 border border-white/5">
                   {messagesList.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
                       <span className="text-2xl opacity-40">🤝</span>
@@ -4346,7 +4346,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <div 
                         key={msg.id} 
                         className={cn(
-                          "flex flex-col max-w-[85%] rounded-2xl p-4 text-xs font-medium space-y-1",
+                          "flex flex-col max-w-[85%] rounded-[24px] p-4 text-xs font-medium space-y-1",
                           msg.senderId === user?.uid 
                             ? "bg-[#2e5bff] text-white ml-auto rounded-tr-none shadow-[0_4px_10px_rgba(46,91,255,0.2)]" 
                             : "bg-white/10 text-white mr-auto rounded-tl-none"
@@ -4402,7 +4402,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className={cn(
-                "relative w-full max-w-2xl sm:rounded-3xl border border-white/10 overflow-hidden",
+                "relative w-full max-w-2xl sm:rounded-[32px] border border-white/10 overflow-hidden",
                 currentTheme.card
               )}
             >
@@ -4899,7 +4899,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   </AnimatePresence>
 
   {/* Mobile Sticky 5-Tab Navigation Bar */}
-  <div className="md:hidden fixed bottom-0 inset-x-0 bg-proton-card/98 backdrop-blur-md border-t border-proton-border/30 h-16 z-50 grid grid-cols-5 items-center w-full px-1 shadow-lg">
+  <div className="md:hidden fixed bottom-0 left-0 w-full bg-proton-card/98 backdrop-blur-md border-t border-proton-border/30 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] z-[100] grid grid-cols-5 items-center px-1 shadow-lg">
     {/* Tab 1: Home */}
     <button
       onClick={() => {
