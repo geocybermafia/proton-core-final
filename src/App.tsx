@@ -4388,7 +4388,6 @@ export default function App() {
     )}>
       {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
       <div 
-        style={{ contain: 'strict', transform: 'translateZ(0)', willChange: 'transform' }}
         className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
       >
         <Suspense fallback={
