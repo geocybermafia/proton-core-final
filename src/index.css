@@ -20,8 +20,8 @@
   --proton-bg: #010409;
   --proton-card: #0d1117;
   --proton-border: #30363d;
-  --proton-text: #e6edf3;
-  --proton-muted: #8b949e;
+  --proton-text: #f0f6fc;
+  --proton-muted: #94aabe;
   --proton-on-accent: #000000;
   --proton-bg-image: radial-gradient(circle at 50% 50%, #0d1117 0%, #010409 100%), linear-gradient(0deg, transparent 24%, rgba(0, 242, 255, 0.02) 25%, rgba(0, 242, 255, 0.02) 26%, transparent 27%), linear-gradient(90deg, transparent 24%, rgba(0, 242, 255, 0.02) 25%, rgba(0, 242, 255, 0.02) 26%, transparent 27%);
   --proton-bg-size: auto, 50px 50px;
@@ -54,8 +54,8 @@
   --proton-bg: #f8fafc;
   --proton-card: #ffffff;
   --proton-border: #e2e8f0;
-  --proton-text: #0f172a;
-  --proton-muted: #64748b;
+  --proton-text: #0b1329;
+  --proton-muted: #475569;
   --proton-on-accent: #ffffff;
   --proton-bg-image: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.03) 0%, transparent 50%), radial-gradient(at 100% 0%, rgba(30, 209, 219, 0.03) 0%, transparent 50%), radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.03) 0%, transparent 50%), radial-gradient(at 0% 100%, rgba(30, 209, 219, 0.03) 0%, transparent 50%), #f8fafc;
   --proton-bg-size: cover;
@@ -150,7 +150,7 @@
   --proton-card: #0a0a0a;
   --proton-border: #1a1a1a;
   --proton-text: #ffffff;
-  --proton-muted: #737373;
+  --proton-muted: #9ca3af;
   --proton-on-accent: #000000;
   --proton-bg-image: radial-gradient(at 50% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 100%), #000000;
 }
@@ -164,6 +164,12 @@
 
 html {
   height: 100%;
+}
+
+@media (max-width: 639px) {
+  html {
+    font-size: 16.5px;
+  }
 }
 
 body, #root {
