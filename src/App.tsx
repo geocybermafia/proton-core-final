@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
 const EnterpriseWorkflowBuilder = lazy(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
 // Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
-import { LocalFileScanner } from './components/LocalFileScanner';
-import { ObjectiveCenter } from './components/ObjectiveCenter';
+const LocalFileScanner = lazy(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })));
 import { auth, db, googleProvider } from './firebase';
 import { useAuth } from './contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -140,8 +139,7 @@ import {
   Tag
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
-import Calendar from 'react-calendar';
+const Calendar = lazy(() => import('react-calendar'));
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
@@ -1343,7 +1341,14 @@ const LegacyOrganizerView = ({
             </div>
             <div className="w-full">
               <style>{currentTheme.calendar}</style>
-              <Calendar className="mx-auto" />
+              <Suspense fallback={
+                <div className="min-h-[200px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                  <Loader2 className="animate-spin text-proton-accent" size={24} />
+                  <span className="uppercase tracking-widest font-black text-proton-accent/90 animate-pulse">Initializing Calendar Matrix...</span>
+                </div>
+              }>
+                <Calendar className="mx-auto" />
+              </Suspense>
             </div>
           </div>
           
@@ -2103,7 +2108,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <LocalFileScanner t={t} />
+        <Suspense fallback={
+          <div className="bg-proton-card p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm flex items-center justify-center min-h-[300px]">
+            <Loader2 className="animate-spin text-proton-accent" size={24} />
+          </div>
+        }>
+          <LocalFileScanner t={t} />
+        </Suspense>
         
         <div className="bg-proton-card p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative group">
            <div className="absolute top-0 right-0 p-6 md:p-10 opacity-[0.02] pointer-events-none group-hover:scale-95 transition-transform duration-1000">
