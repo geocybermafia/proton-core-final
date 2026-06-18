@@ -2032,7 +2032,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Create Listing Button */}
             <button
               onClick={() => setViewMode('create')}
-              className="bg-proton-accent hover:bg-proton-accent/90 text-proton-on-accent font-black px-3.5 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="hidden md:flex bg-proton-accent hover:bg-proton-accent/90 text-proton-on-accent font-black px-3.5 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus size={13} className="stroke-[3]" />
               <span>{language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}</span>
