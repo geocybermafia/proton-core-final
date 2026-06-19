@@ -2106,38 +2106,25 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           </div>
         </div>
 
-        {/* Mobile Search/Filter Row (Shown only on mobile) */}
-        <div className="w-full flex md:hidden gap-2">
-          {/* Mobile dropdown categories */}
-          <div className="relative shrink-0">
-            <select 
-              value={activeCategory}
-              onChange={(e) => {
-                setActiveCategory(e.target.value);
-                setViewMode('browse');
-              }}
-              className="pl-2.5 pr-8 py-2 bg-proton-card border border-proton-border rounded-xl text-[10px] font-bold text-proton-text hover:text-proton-accent focus:outline-none transition-all cursor-pointer appearance-none min-w-[110px] uppercase tracking-wide"
-            >
-              <option value="all">📁 {language === 'ka' ? 'ყველა' : 'All'}</option>
-              {Object.entries(t.market.categories).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {CATEGORY_EMOJIS[key] || '🏷️'} {label as string}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={11} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none" />
-          </div>
-
-          {/* Mobile search input */}
+        {/* Mobile Search/Filter-free Full-width Search Row (Shown only on mobile) */}
+        <div className="w-full flex md:hidden items-center">
           <div className="flex-1 relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-45 text-proton-accent" />
+            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
             <input 
               type="text"
               value={searchRaw}
               onChange={(e) => setSearchRaw(e.target.value)}
-              placeholder={language === 'ka' ? 'ძებნა...' : 'Search...'}
-              className="w-full bg-proton-card border border-proton-border text-proton-text placeholder-proton-muted/60 font-bold tracking-wide focus:outline-none focus:border-proton-accent/60 pl-8 pr-4 py-2 rounded-xl text-[10px] transition-colors"
+              placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search...'}
+              className="w-full bg-proton-card border border-proton-border text-proton-text placeholder-proton-muted/60 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-xs transition-colors"
             />
+            {searchRaw && (
+              <button 
+                onClick={() => { setSearch(''); setSearchRaw(''); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -2200,7 +2187,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         </div>
 
         {viewMode === 'browse' && (
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full pt-1">
+          <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full pt-1">
             {/* Elegant AI Powered Search Panel */}
             <div className="relative flex-1 group">
               <div className="relative w-full flex items-center bg-[#101012] rounded-2xl border border-zinc-800/80 focus-within:border-[#dfb257] transition-all min-h-[46px] overflow-hidden shadow-inner">
@@ -2282,7 +2269,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {viewMode === 'browse' && (
-          <div className={cn("w-full flex flex-col md:flex-row md:items-center justify-between gap-5 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
+          <div className={cn("hidden md:flex flex-col md:flex-row md:items-center justify-between gap-5 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
             {/* Listing Type Selection Tabs */}
             <div className={cn("flex p-0.5 rounded-xl border shadow-inner w-fit select-none", currentTheme.cardAlt)}>
               <button
