@@ -2634,7 +2634,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           });
                           setViewMode('create');
                         }}
-                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                        className="hidden md:flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
                       >
                         <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#dfb257] flex items-center justify-center bg-[#dfb257]/5 group-hover:bg-[#dfb257]/10 group-hover:scale-105 transition-all text-[#dfb257]">
                           <Plus size={20} className="stroke-[3]" />
