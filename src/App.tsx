@@ -1527,9 +1527,28 @@ const DashboardView = ({
   ];
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-300 pb-20 max-w-6xl mx-auto px-4">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: { opacity: 0 },
+        visible: {
+          opacity: 1,
+          transition: {
+            staggerChildren: 0.08
+          }
+        }
+      }}
+      className="space-y-12 pb-20 max-w-6xl mx-auto px-4"
+    >
       {/* Elegantly Crafted Hub Hero Section */}
-      <div className="p-8 md:p-12 rounded-[40px] border border-proton-border bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent shadow-2xl relative overflow-hidden transition-all duration-500">
+      <motion.div 
+        variants={{
+          hidden: { opacity: 0, y: 30 },
+          visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+        }}
+        className="p-8 md:p-12 rounded-[40px] border border-proton-border bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent shadow-2xl relative overflow-hidden transition-all duration-500"
+      >
         <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
         
         <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8 relative z-10">
@@ -1551,12 +1570,16 @@ const DashboardView = ({
           </div>
           
           <div className="flex items-center shrink-0">
-            <div className="w-20 h-20 rounded-full bg-proton-accent/5 flex items-center justify-center border border-proton-accent/10 backdrop-blur-sm shadow-inner">
+            <motion.div 
+              whileHover={{ scale: 1.1, rotate: 90 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="w-20 h-20 rounded-full bg-proton-accent/5 flex items-center justify-center border border-proton-accent/10 backdrop-blur-sm shadow-inner cursor-pointer"
+            >
               <Grid className="text-proton-accent animate-spin" style={{ animationDuration: '40s' }} size={32} />
-            </div>
+            </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Gateways Portal Grid */}
       <div className="space-y-6">
@@ -1573,10 +1596,20 @@ const DashboardView = ({
           {gateways.map((gate) => {
             const IconComponent = gate.icon;
             return (
-              <div
+              <motion.div
                 key={gate.id}
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+                }}
+                whileHover={{ 
+                  y: -6,
+                  scale: 1.015,
+                  boxShadow: "0 25px 40px rgba(0,0,0,0.4)"
+                }}
+                whileTap={{ scale: 0.985 }}
                 className={cn(
-                  "bg-proton-card/30 hover:bg-proton-card/70 border rounded-[36px] p-6 flex flex-col justify-between transition-all duration-300 group shadow-lg cursor-pointer transform hover:-translate-y-1 overflow-hidden relative",
+                  "bg-proton-card/30 hover:bg-proton-card/70 border rounded-[36px] p-6 flex flex-col justify-between transition-all duration-300 group shadow-lg cursor-pointer overflow-hidden relative",
                   gate.glowClass
                 )}
                 onClick={gate.action}
@@ -1626,12 +1659,14 @@ const DashboardView = ({
                 {/* Shortcuts & Quick actions */}
                 <div className="mt-6 pt-4 border-t border-proton-border/30 flex flex-wrap gap-2 w-full" onClick={(e) => e.stopPropagation()}>
                   {gate.shortcuts.map((sc, i) => (
-                    <button
+                    <motion.button
                       key={i}
                       type="button"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => setActiveView(sc.view as any)}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm border transition-all hover:scale-105 active:scale-95",
+                        "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm border transition-all cursor-pointer",
                         gate.color === 'cyan' ? 'bg-cyan-500/5 text-cyan-400 border-cyan-500/10 hover:bg-cyan-500 hover:text-black' :
                         gate.color === 'amber' ? 'bg-amber-500/5 text-amber-400 border-amber-500/10 hover:bg-amber-500 hover:text-black' :
                         gate.color === 'emerald' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10 hover:bg-emerald-500 hover:text-black' :
@@ -1640,10 +1675,10 @@ const DashboardView = ({
                       )}
                     >
                       {sc.label}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -1701,7 +1736,7 @@ const DashboardView = ({
             : (language === 'ka' ? 'ჩართე საცდელი რეჟიმი' : 'Enable Simulation')}
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
