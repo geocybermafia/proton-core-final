@@ -34,7 +34,16 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin, language, onLanguageChange }) => {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mockActiveTab, setMockActiveTab] = useState<'dashboard' | 'assistants' | 'blueprints' | 'marketplace' | 'translator' | 'organizer'>('dashboard');
+  const [scrolled, setScrolled] = useState(false);
   const currentLang = language;
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 15);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
   // @ts-ignore
   const t = translations[currentLang].landing;
@@ -231,9 +240,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
   return (
     <div id="landing-container" className="min-h-screen bg-proton-bg text-proton-text font-sans overflow-x-hidden selection:bg-proton-accent selection:text-proton-bg">
-      {/* Navigation */}
-      <nav id="landing-navbar" className="fixed top-0 w-full z-[100] border-b border-proton-border/50 bg-proton-bg/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      {/* Navigation with dynamic scrolled styles */}
+      <nav 
+        id="landing-navbar" 
+        className={cn(
+          "fixed top-0 w-full z-[100] transition-all duration-300",
+          scrolled 
+            ? "border-b border-proton-border/80 bg-proton-bg/95 backdrop-blur-xl h-16 shadow-[0_10px_30px_rgba(0,0,0,0.4)]" 
+            : "border-b border-transparent bg-transparent h-24"
+        )}
+      >
+        <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-proton-accent flex items-center justify-center text-proton-bg shadow-lg shadow-proton-accent/20">
               <Zap size={22} fill="currentColor" />
@@ -285,42 +302,81 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       </nav>
 
       {/* Hero Section */}
-      <section id="hero-section" className="relative pt-40 pb-20 px-6 overflow-hidden">
-        {/* Background Gradients */}
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[150px] -mr-40 -mt-40 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[150px] -ml-40 -mb-40 pointer-events-none" />
+      <section id="hero-section" className="relative pt-48 pb-24 px-6 overflow-hidden">
+        {/* Animated Background Gradients */}
+        <motion.div 
+          animate={{
+            scale: [1, 1.15, 1],
+            x: [0, 30, 0],
+            y: [0, -30, 0],
+          }}
+          transition={{
+            duration: 18,
+            repeat: Infinity,
+            repeatType: 'mirror',
+            ease: "easeInOut"
+          }}
+          className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[160px] -mr-40 -mt-40 pointer-events-none" 
+        />
+        <motion.div 
+          animate={{
+            scale: [1, 1.2, 1],
+            x: [0, -40, 0],
+            y: [0, 40, 0],
+          }}
+          transition={{
+            duration: 22,
+            repeat: Infinity,
+            repeatType: 'mirror',
+            ease: "easeInOut"
+          }}
+          className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[140px] -ml-40 -mb-40 pointer-events-none" 
+        />
+
+        {/* Abstract Glowing Grid Background */}
+        <div className="absolute inset-x-0 top-0 h-[600px] bg-[linear-gradient(225deg,rgba(0,242,255,0.03)_0%,transparent_70%)] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto relative z-10 text-center flex flex-col items-center">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+            initial={{ opacity: 0, scale: 0.95, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
             className="max-w-4xl"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent mb-8">
-              <Star size={14} fill="currentColor" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+            <motion.div 
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-proton-accent/10 border border-proton-accent/20 text-proton-accent mb-8 shadow-inner shadow-proton-accent/5 backdrop-blur-md cursor-default select-none"
+            >
+              <Sparkles size={13} className="animate-pulse text-proton-accent" />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em]">
                 {t.badge_text}
               </span>
-            </div>
+            </motion.div>
             
-            <h1 className="text-4xl md:text-7xl font-black tracking-tighter leading-[0.95] mb-8 uppercase text-proton-text">
+            <h1 className="text-4xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-8 uppercase text-proton-text bg-gradient-to-br from-proton-text via-proton-text to-proton-accent/70 bg-clip-text text-transparent drop-shadow-sm select-none">
               {t.hero_title}
             </h1>
             
-            <p className="text-lg md:text-xl text-proton-muted mb-12 leading-relaxed max-w-2xl mx-auto">
+            <p className="text-lg md:text-2xl text-proton-muted mb-12 leading-relaxed max-w-3xl mx-auto font-medium">
               {t.hero_subtitle}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-              <button 
+              <motion.button 
                 id="hero-cta-btn"
                 onClick={onGetStarted}
-                className="w-full sm:w-auto px-10 py-5 bg-proton-accent text-proton-bg rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-2xl shadow-proton-accent/30 group"
+                whileHover={{ 
+                  scale: 1.05, 
+                  boxShadow: "0 20px 40px rgba(0, 242, 255, 0.25)",
+                  borderColor: "rgba(0, 242, 255, 0.5)"
+                }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full sm:w-auto px-10 py-5 bg-proton-accent text-proton-bg rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 cursor-pointer shadow-2xl shadow-proton-accent/30 group border border-proton-accent transition-all duration-300"
               >
-                {t.cta_start}
-                <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-              </button>
+                <span>{t.cta_start}</span>
+                <ArrowRight size={20} className="group-hover:translate-x-1.5 transition-transform" />
+              </motion.button>
             </div>
           </motion.div>
         </div>
@@ -348,8 +404,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               
               {/* Mock Interface Content */}
               <div className="p-4 sm:p-6 lg:p-8 flex flex-col sm:grid sm:grid-cols-12 gap-4 lg:gap-6 h-full select-none text-left">
-                {/* Mobile Tab bar */}
-                <div className="flex sm:hidden overflow-x-auto gap-2 pb-2 border-b border-proton-border/30 whitespace-nowrap scrollbar-none scroll-smooth">
+                {/* Mobile Tab bar with dynamic slider background */}
+                <div id="mock-mobile-tabs" className="flex sm:hidden overflow-x-auto gap-2 pb-2 border-b border-proton-border/30 whitespace-nowrap scrollbar-none scroll-smooth">
                   {[
                     { id: 'dashboard', nameEn: 'Dashboard', nameKa: 'სახლი' },
                     { id: 'assistants', nameEn: 'AI Agents', nameKa: 'აგენტები' },
@@ -362,13 +418,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                       key={item.id}
                       onClick={() => setMockActiveTab(item.id as any)}
                       className={cn(
-                        "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                        "relative px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                         mockActiveTab === item.id 
-                          ? "bg-proton-accent text-proton-bg font-black" 
-                          : "bg-proton-card text-proton-muted border border-proton-border"
+                          ? "text-proton-bg font-black" 
+                          : "bg-proton-card/45 text-proton-muted border border-proton-border"
                       )}
                     >
-                      {language === 'ka' ? item.nameKa : item.nameEn}
+                      {mockActiveTab === item.id && (
+                        <motion.div 
+                          layoutId="activeMockTabMobile"
+                          className="absolute inset-0 bg-proton-accent rounded-lg"
+                          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                        />
+                      )}
+                      <span className="relative z-10">{language === 'ka' ? item.nameKa : item.nameEn}</span>
                     </button>
                   ))}
                 </div>
@@ -391,13 +454,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                       key={item.id} 
                       onClick={() => setMockActiveTab(item.id as any)}
                       className={cn(
-                        "w-full px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer text-left bg-transparent border border-transparent",
+                        "relative w-full px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer text-left border border-transparent bg-transparent overflow-hidden",
                         mockActiveTab === item.id 
-                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.05)] font-black" 
-                          : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
+                          ? "text-proton-accent font-black" 
+                          : "text-proton-muted hover:text-proton-text"
                       )}
                     >
-                      <span>
+                      {mockActiveTab === item.id && (
+                        <motion.div 
+                          layoutId="activeMockTabDesktop"
+                          className="absolute inset-0 bg-proton-accent/10 border border-proton-accent/20 rounded-xl"
+                          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                        />
+                      )}
+                      <span className="relative z-10">
                         {language === 'ka' 
                           ? (item.name === 'Dashboard' ? 'დეშბორდი' : 
                             item.name === 'AI Assistants' ? 'AI ასისტენტები' :
@@ -407,7 +477,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                           : item.name
                         }
                       </span>
-                      {mockActiveTab === item.id && <div className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_#00f2ff]" />}
+                      {mockActiveTab === item.id && (
+                        <motion.div 
+                          layoutId="activeMockTabDotDesktop"
+                          className="relative z-10 w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_#00f2ff]" 
+                          transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                        />
+                      )}
                     </button>
                   ))}
                   
@@ -765,20 +841,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             {currentLocalContent.modules.map((m, idx) => (
               <motion.div
                 key={idx}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                className={cn("p-8 rounded-[32px] border flex flex-col justify-between hover:scale-[1.02] transition-all duration-300 shadow-lg", m.color)}
+                viewport={{ once: true, margin: "-80px" }}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: idx * 0.08 }}
+                whileHover={{ 
+                  y: -6, 
+                  scale: 1.015,
+                  boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)"
+                }}
+                className={cn(
+                  "p-8 rounded-[32px] border flex flex-col justify-between relative group overflow-hidden transition-all duration-500", 
+                  m.color
+                )}
               >
-                <div>
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-proton-bg/40 mb-6 border border-proton-border">
-                    <m.icon className="w-6 h-6 text-proton-text" />
-                  </div>
-                  <h3 className="text-xl font-black uppercase tracking-tight text-proton-text mb-4">
+                {/* Visual Accent Glow Backdrop on Hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                
+                <div className="relative z-10">
+                  <motion.div 
+                    whileHover={{ rotate: [0, -10, 10, 0] }}
+                    transition={{ duration: 0.5 }}
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center bg-proton-bg/60 mb-6 border border-proton-border/80 group-hover:border-proton-accent/30 group-hover:shadow-[0_0_20px_rgba(0,242,255,0.05)] transition-all duration-300"
+                  >
+                    <m.icon className="w-7 h-7 text-proton-text group-hover:text-proton-accent transition-colors duration-300" />
+                  </motion.div>
+                  <h3 className="text-2xl font-black uppercase tracking-tight text-proton-text mb-4 group-hover:text-proton-accent transition-colors duration-300">
                     {m.title}
                   </h3>
-                  <p className="text-sm font-medium leading-relaxed text-proton-muted">
+                  <p className="text-sm font-medium leading-relaxed text-proton-muted group-hover:text-proton-text/90 transition-colors duration-500">
                     {m.desc}
                   </p>
                 </div>
@@ -856,16 +947,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                     </div>
                   </button>
 
-                  <div 
-                    className={cn(
-                      "transition-all duration-300 ease-in-out border-t border-proton-border bg-proton-bg/40 px-6 overflow-hidden",
-                      isOpen ? "py-5 max-h-[300px] opacity-100" : "py-0 max-h-0 opacity-0 border-t-transparent"
-                    )}
+                  <motion.div 
+                    initial={false}
+                    animate={{ 
+                      height: isOpen ? "auto" : 0,
+                      opacity: isOpen ? 1 : 0
+                    }}
+                    transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+                    className="overflow-hidden bg-proton-bg/40 border-proton-border"
                   >
-                    <p className="text-sm font-medium leading-relaxed text-proton-muted">
-                      {faq.a}
-                    </p>
-                  </div>
+                    <div className="px-6 py-5 border-t border-proton-border/70">
+                      <p className="text-sm font-medium leading-relaxed text-proton-muted">
+                        {faq.a}
+                      </p>
+                    </div>
+                  </motion.div>
                 </div>
               );
             })}
@@ -884,13 +980,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             {currentLocalContent.cta_bottom_desc}
           </p>
 
-          <button
+          <motion.button
             id="bottom-cta-btn"
             onClick={onGetStarted}
-            className="px-10 py-5 bg-proton-accent text-proton-bg rounded-2xl font-black uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-xl shadow-proton-accent/20"
+            whileHover={{ 
+              scale: 1.05, 
+              boxShadow: "0 20px 40px rgba(0, 242, 255, 0.25)",
+              borderColor: "rgba(0, 242, 255, 0.5)"
+            }}
+            whileTap={{ scale: 0.98 }}
+            className="px-10 py-5 bg-proton-accent text-proton-bg rounded-2xl font-black uppercase tracking-widest text-sm cursor-pointer shadow-xl shadow-proton-accent/20 border border-proton-accent transition-all duration-300"
           >
             {currentLocalContent.cta_bottom_btn}
-          </button>
+          </motion.button>
         </div>
       </section>
 
