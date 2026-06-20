@@ -1852,36 +1852,147 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setViewMode('edit');
   };
 
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (activeCategory !== 'all') count++;
+    if (activeCountry !== 'GLOBAL') count++;
+    if (activeCity !== '') count++;
+    if (minPrice !== '') count++;
+    if (maxPrice !== '') count++;
+    if (activeListingType !== 'all') count++;
+    return count;
+  }, [activeCategory, activeCountry, activeCity, minPrice, maxPrice, activeListingType]);
+
   const FilterContent = (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2 text-[#dfb257]">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
+        <div className="flex items-center gap-2">
           <LayoutGrid size={16} className="text-[#dfb257]" />
-          {language === 'ka' ? 'ფილტრაცია' : 'Refine Search'}
-        </h3>
+          <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#dfb257]">
+            {language === 'ka' ? 'ფილტრაცია' : 'Refine Search'}
+          </h3>
+          {activeFiltersCount > 0 && (
+            <span className="flex items-center justify-center bg-[#dfb257] text-[#070708] font-black text-[10px] w-5 h-5 rounded-full scale-90">
+              {activeFiltersCount}
+            </span>
+          )}
+        </div>
+        
         <button 
           onClick={() => setIsFiltersOpen(false)} 
-          className="lg:hidden p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl hover:bg-zinc-800 hover:text-white transition-colors text-zinc-400"
+          className="lg:hidden p-2 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 hover:text-white transition-all text-zinc-400"
         >
-          <X size={18} />
+          <X size={16} />
         </button>
       </div>
 
-      <div className="space-y-5">
+      {/* Active Filter Badges */}
+      {activeFiltersCount > 0 && (
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
+          <span className="text-[9px] font-black tracking-wider text-zinc-500 uppercase">
+            {language === 'ka' ? 'აქტიური ფილტრები:' : 'Active Filters:'}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {activeListingType !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setActiveListingType('all')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all"
+              >
+                <span>Type: {activeListingType}</span>
+                <X size={10} className="shrink-0" />
+              </button>
+            )}
+            {activeCategory !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setActiveCategory('all')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all"
+              >
+                <span>{CATEGORY_EMOJIS[activeCategory] || ''} {t.market.categories[activeCategory] || activeCategory}</span>
+                <X size={10} className="shrink-0" />
+              </button>
+            )}
+            {activeCountry !== 'GLOBAL' && (
+              <button
+                type="button"
+                onClick={() => setActiveCountry('GLOBAL')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all"
+              >
+                <span>{WORLD_COUNTRIES.find(c => c.code === activeCountry)?.flag || '🌐'} {WORLD_COUNTRIES.find(c => c.code === activeCountry)?.name}</span>
+                <X size={10} className="shrink-0" />
+              </button>
+            )}
+            {activeCity !== '' && (
+              <button
+                type="button"
+                onClick={() => setActiveCity('')}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all"
+              >
+                <span>📍 {activeCity}</span>
+                <X size={10} className="shrink-0" />
+              </button>
+            )}
+            {(minPrice !== '' || maxPrice !== '') && (
+              <button
+                type="button"
+                onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all"
+              >
+                <span>
+                  {minPrice ? `${minPrice}` : '0'} - {maxPrice ? `${maxPrice}` : '∞'} {displayCurrency}
+                </span>
+                <X size={10} className="shrink-0" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-5">
+        {/* Listing Type Filter inside Sidebar */}
+        <div className="space-y-2">
+          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+            {language === 'ka' ? 'კატეგორიზაცია' : 'Listing Type'}
+          </label>
+          <div className="grid grid-cols-2 gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800">
+            {(['all', 'product', 'service', 'project'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setActiveListingType(type)}
+                className={cn(
+                  "py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-center",
+                  activeListingType === type
+                    ? "bg-[#dfb257] text-[#070708] shadow"
+                    : "text-zinc-400 hover:text-white"
+                )}
+              >
+                {type === 'all' ? (language === 'ka' ? 'ყველა' : 'All') :
+                 type === 'product' ? (language === 'ka' ? 'პროდუქტი' : 'Product') :
+                 type === 'service' ? (language === 'ka' ? 'სერვისი' : 'Service') :
+                 (language === 'ka' ? 'პროექტი' : 'Project')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Location Dropdown */}
+        <div className="space-y-2">
+          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
             {t.market.filters.country}
           </label>
           <div className="relative group">
-            <Globe size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60" />
+            <Globe size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60 pointer-events-none" />
             <select 
               value={activeCountry}
               onChange={(e) => setActiveCountry(e.target.value)}
-              className="w-full pl-10 pr-10 py-3 bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700/85 rounded-xl text-xs md:text-sm font-bold focus:border-[#dfb257] focus:outline-none transition-all text-white appearance-none cursor-pointer"
+              className="w-full pl-10 pr-10 py-3 bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700/85 rounded-xl text-xs font-bold focus:border-[#dfb257] focus:outline-none transition-all text-white appearance-none cursor-pointer"
             >
               {WORLD_COUNTRIES.map(country => (
                 <option key={country.code} value={country.code} className="bg-zinc-950 text-white">
-                  {country.name}
+                  {country.flag} &nbsp; {country.name}
                 </option>
               ))}
             </select>
@@ -1889,8 +2000,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           </div>
         </div>
 
+        {/* City Filter */}
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
+          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
             {t.market.filters.city}
           </label>
           <div className="relative group">
@@ -1900,78 +2012,138 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               value={activeCity}
               onChange={(e) => setActiveCity(e.target.value)}
               placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
-              className="w-full pl-10 pr-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
+              className="w-full pl-10 pr-9 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-650 text-white"
             />
+            {activeCity && (
+              <button
+                type="button"
+                onClick={() => setActiveCity('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Category Selection */}
         <div className="space-y-3">
-          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
+          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
             {t.market.form.category}
           </label>
-          <div className="grid grid-cols-2 gap-2 max-h-[340px] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto pr-1">
             <button 
               type="button"
               onClick={() => setActiveCategory('all')}
               className={cn(
-                "col-span-2 flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border text-left",
+                "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border text-left",
                 activeCategory === 'all' 
-                  ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow-lg shadow-black/80"
-                  : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                  ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
+                  : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
               )}
             >
-              <span className="text-base">🌍</span>
-              <span className="truncate">{t.market.all_categories}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm">🌍</span>
+                <span className="truncate">{t.market.all_categories}</span>
+              </div>
+              {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
             </button>
-            {Object.entries(t.market.categories).map(([key, label]) => (
-              <button 
-                key={key}
-                type="button"
-                onClick={() => setActiveCategory(key)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-3 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-tight transition-all border text-left",
-                  activeCategory === key 
-                    ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow-lg"
-                    : "bg-zinc-950 border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white"
-                )}
-                title={label as string}
-              >
-                <span className="text-base shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                <span className="truncate">{label as string}</span>
-              </button>
-            ))}
+            {Object.entries(t.market.categories).map(([key, label]) => {
+              const isSelected = activeCategory === key;
+              return (
+                <button 
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveCategory(key)}
+                  className={cn(
+                    "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all border text-left",
+                    isSelected 
+                      ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
+                      : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
+                  )}
+                  title={label as string}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                    <span className="truncate">{label as string}</span>
+                  </div>
+                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-zinc-300 ml-1 block">
-            {t.market.price} (USD)
+        {/* Price Filter with presets */}
+        <div className="space-y-3">
+          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+            {t.market.price} ({displayCurrency})
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <input 
-              type="number"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              placeholder={language === 'ka' ? 'მინ. ფასი' : 'Min Price'}
-              className="w-full px-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
-            />
-            <input 
-              type="number"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder={language === 'ka' ? 'მაქს. ფასი' : 'Max Price'}
-              className="w-full px-4 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs md:text-sm font-bold transition-all placeholder:text-zinc-650 text-white"
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500">MIN</span>
+              <input 
+                type="number"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                placeholder="0"
+                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-750 text-white"
+              />
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500">MAX</span>
+              <input 
+                type="number"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder="∞"
+                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-750 text-white"
+              />
+            </div>
+          </div>
+
+          {/* Quick Price Selection Presets */}
+          <div className="grid grid-cols-2 gap-1">
+            {[
+              { label: '< 50', min: '', max: '50' },
+              { label: '50 - 200', min: '50', max: '200' },
+              { label: '200 - 1000', min: '200', max: '1000' },
+              { label: '1000 +', min: '1000', max: '' }
+            ].map((preset, i) => {
+              const matches = minPrice === preset.min && maxPrice === preset.max;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setMinPrice(preset.min);
+                    setMaxPrice(preset.max);
+                  }}
+                  className={cn(
+                    "py-1.5 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all border",
+                    matches 
+                      ? "bg-[#dfb257]/10 border-[#dfb257] text-[#dfb257]" 
+                      : "bg-zinc-950/20 border-zinc-900 text-zinc-500 hover:text-zinc-300 hover:border-zinc-800"
+                  )}
+                >
+                  {preset.label} {displayCurrency}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <button 
-          onClick={clearFilters}
-          className="w-full py-3.5 mt-4 rounded-xl bg-red-950/20 border border-red-900/30 text-xs font-black uppercase tracking-[0.25em] hover:text-white hover:bg-red-905 hover:border-red-500/50 transition-all flex items-center justify-center gap-2 text-red-300"
-        >
-          <Trash2 size={14} className="stroke-[2.5]" />
-          {t.market.filters.clear_all}
-        </button>
+        {/* Clear Filters Button */}
+        {activeFiltersCount > 0 && (
+          <button 
+            type="button"
+            onClick={clearFilters}
+            className="w-full py-3 mt-4 rounded-xl bg-red-950/20 border border-red-900/30 text-[10px] font-black uppercase tracking-[0.25em] hover:text-white hover:bg-gradient-to-b hover:from-red-900/40 hover:to-red-950/60 hover:border-red-500/50 transition-all flex items-center justify-center gap-2 text-red-400"
+          >
+            <Trash2 size={13} className="stroke-[2.5]" />
+            {t.market.filters.clear_all}
+          </button>
+        )}
       </div>
     </div>
   );
