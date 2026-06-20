@@ -48,17 +48,17 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
     console.log('[DIAGNOSTIC EFFECT] onSnapshot subscription initiated for UID:', currentUid, 'Length:', currentUid.length);
 
     // Fetch Seller Listings with exact synchrony and diagnostic logging as requested by user
-    const qListings = query(collection(db, 'listings'));
+    const qListings = query(
+      collection(db, 'listings'),
+      where('sellerId', '==', currentUid)
+    );
 
     const unsubListings = onSnapshot(qListings, (snapshot) => {
-      const allListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      const matchedListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
       console.log('Fetching listings for user:', user?.uid || currentUid);
       console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings in CabinetView. UID:', currentUid);
-      console.log('[DIAGNOSTIC Data Integrity] Total listings in complete database:', allListings.length);
+      console.log('[DIAGNOSTIC Data Integrity] Total listings matched for seller:', matchedListings.length);
       
-      // Filter locally in perfect sync with authentic strict UID ownership
-      const matchedListings = allListings.filter(l => l.sellerId === currentUid);
-
       console.log('[DIAGNOSTIC Data Integrity] filteredListings for user inside CabinetView:', matchedListings);
       setSellerListings(matchedListings);
     }, (err) => {
