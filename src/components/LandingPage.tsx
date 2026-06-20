@@ -51,53 +51,53 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   // Comprehensive localized content for detailed sections
   const localContent = {
     en: {
-      platform_title: "Core Ecosystem Modules",
-      platform_subtitle: "Proton integrates four main systems working in perfect synergy under your control.",
+      platform_title: "Explore Core Features",
+      platform_subtitle: "Proton brings together four essential tools designed to work in beautiful harmony under your guiding hand.",
       
       modules: [
         {
-          title: "Autonomous AI Workspace",
-          desc: "Create and chat with specialized business personas. From technical architects to marketing strategists, configure custom instruction sets and execute advanced reasoning with the power of Gemini.",
+          title: "AI Helpers & Companions",
+          desc: "Create and chat with specialized assistants. From writing emails to preparing lists, they are configured to help you solve physical or digital tasks securely.",
           icon: Sparkles,
           color: "text-amber-400 border-amber-500/20 bg-amber-500/5"
         },
         {
-          title: "Global Asset Marketplace",
-          desc: "List products, materials, services, or software solutions. Reach global or local buyers, manage order cycles, view live ratings, and build a trusted vendor profile with built-in escrow flow.",
+          title: "Simple Marketplace",
+          desc: "Easily sell or buy products, craft items, or professional services. Connect with people around you, track orders, and build trust in your neighborhood.",
           icon: ShoppingBag,
           color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
         },
         {
-          title: "Visual Process Blueprints",
-          desc: "Define operations as visual Node Graphs. Create triggers, set parameters, organize action blocks, and orchestrate complex business flows without writing a single line of backend code.",
+          title: "Visual Process Planners",
+          desc: "Create simple chains of tasks and rules. Make triggers to automate routines, coordinate your schedule, and coordinate steps without any coding experience.",
           icon: Workflow,
           color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/5"
         },
         {
-          title: "Professional Cabinet",
-          desc: "Monitor live resources in real time. Track your AI tokens, computed node cycles, local database storage, seller incoming requests, buyer orders, and account status in a dense unified panel.",
+          title: "Personal Cabinet & Stats",
+          desc: "Keep an eye on active listings, orders, daily stats, and regional settings. A comfortable dashboard where you are in complete control of your workspace.",
           icon: UserCheck,
           color: "text-purple-400 border-purple-500/20 bg-purple-500/5"
         }
       ],
 
-      how_it_works_title: "How Proton Transforms Business",
-      how_it_works_subtitle: "A simple, highly secure three-step cycle to automate and trade globally.",
+      how_it_works_title: "How Proton Simplifies Your Day",
+      how_it_works_subtitle: "A completely transparent, secure, and friendly three-step process built to guide your growth.",
       steps: [
         {
           num: "01",
-          title: "Initialize Your Workspace",
-          desc: "Sign up and configure your system profile. Specify your operating region, language, and primary business objectives to automatically optimize your dashboard layout."
+          title: "Enter Your Workspace",
+          desc: "Sign up and build your personal profile. Set your preferred language and operating region so your dashboard instantly feels familiar and cozy."
         },
         {
           num: "02",
-          title: "Configure Agents & Workflows",
-          desc: "Activate specialized AI personas and map your routine operations visually using our blueprint builder. Connect trigger inputs to automate repetitive strategic task matrices."
+          title: "Choose Your Tools",
+          desc: "Activate helpful AI assistants and organize your routine tasks visually with our friendly process planners. No complicated settings required."
         },
         {
           num: "03",
-          title: "Deploy & Engage",
-          desc: "Publish your assets on the global marketplace, process incoming service contracts, and let your background AI agents handle customer diagnostics or translate documentation instantly."
+          title: "Connect & Grow",
+          desc: "Offer your goods or services on the local market, track incoming orders, and let your AI helpers summarize texts or handle daily reminders in the background."
         }
       ],
 
@@ -106,109 +106,109 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       faqs: [
         {
           q: "What is Proton Core?",
-          a: "Proton Core is a dense, responsive workspace designed to centralize AI autonomy, strategic business planning, document translation, visual software blueprint architecture, and listing trade workflows into one single-screen application context."
+          a: "Proton Core is a warm, simple, and fully responsive digital home designed to bring helpful AI assistants, task organizers, and neighborhood trade onto a single screen."
         },
         {
           q: "Who is this platform designed for?",
-          a: "It is built for digital entrepreneurs, modern managers, freelance consultants, and systems architects who need to streamline complex operations, coordinate digital products, automate translation workflows, and list items in an aligned professional community."
+          a: "It is built for local makers, freelance designers, modern team managers, and anyone who wants to automate daily tasks, list products, and connect in a friendly space."
         },
         {
-          q: "Is developer knowledge required to use workflows and AI?",
-          a: "No. Proton provides simple interactive visual tools. You can customize AI instructions, create digital listings, and model workflow templates through friendly inputs and drop-down selectors built with direct state persistence."
+          q: "Is technical experience required to use these tools?",
+          a: "Not at all. Proton offers intuitive visual boards where you can speak to AI, manage items, and design task logic using plain everyday language."
         },
         {
-          q: "How does the Marketplace ordering system work?",
-          a: "When a user orders your listing, an order block is immediately recorded in Firestore to guarantee transparency. The status is managed in the seller's incoming panel and the buyer's tracking cabinet, enabling seamless, transparent interactions."
+          q: "How safe are orders in the Marketplace?",
+          a: "Every transaction and listing is recorded directly in Firestore. Sells and updates are fully synchronized in real-time so both parties have perfect transparency."
         },
         {
-          q: "Can I use multiple devices or languages?",
-          a: "Yes. The workspace is fully responsive and auto-translates all interface elements between English (EN) and Georgian (KA) dynamically. All your listing states, user parameters, and task trackers are persisted securely in Firebase."
+          q: "Can I use it on mobile or other languages?",
+          a: "Yes! Proton works beautifully on your smartphone, tablet, or desktop. It lets you switch instantly between Georgian (KA) and English (EN) while saving your preferences safely."
         }
       ],
 
-      cta_bottom_title: "Ready to elevate your business operations?",
-      cta_bottom_desc: "Join the Proton ecosystem today and manage your resources with next-generation intelligence. Real-time sync, unified dashboard, and complete workspace freedom.",
-      cta_bottom_btn: "Access Workspace NOW"
+      cta_bottom_title: "Ready to feel at home in your digital workspace?",
+      cta_bottom_desc: "Join the Proton community today to organize, automate, and share your project goals with total clarity and absolute ease.",
+      cta_bottom_btn: "Open Your Workspace"
     },
     ka: {
-      platform_title: "ეკოსისტემის ძირითადი მოდულები",
-      platform_subtitle: "Proton აერთიანებს ოთხ უმსხვილეს სისტემას, რომლებიც მუშაობენ სრულ სინერგიაში შენი კონტროლის ქვეშ.",
+      platform_title: "აღმოაჩინე ძირითადი ხელსაწყოები",
+      platform_subtitle: "Proton-ი აერთიანებს ოთხ უმნიშვნელოვანეს მოდულს, რომლებიც მუშაობენ სრულ ჰარმონიაში თქვენი ხელმძღვანელობით.",
       
       modules: [
         {
-          title: "ავტონომიური AI სივრცე",
-          desc: "შექმენი და დაუკავშირდი სპეციალიზებულ ბიზნეს-პერსონებს. ტექნიკური არქიტექტორებიდან დაწყებული მარკეტინგის სტრატეგებით დამთავრებული, მოახდინე ინსტრუქციების კონფიგურაცია და გაუშვი რთული ოპერაციები Gemini-ს საშუალებით.",
+          title: "AI დამხმარეები",
+          desc: "შექმენით და გაესაუბრეთ სპეციალიზებულ ასისტენტებს. მეილების წერიდან დაწყებული სიების მომზადებით, ისინი მზად არიან დაგეხმარონ ნებისმიერ საქმეში.",
           icon: Sparkles,
           color: "text-amber-400 border-amber-500/20 bg-amber-500/5"
         },
         {
-          title: "გლობალური აქტივების მარკეტი",
-          desc: "განათავსე პროდუქტები, სერვისები თუ პროგრამული გადაწყვეტილებები. მიაღწიე გლობალურ თუ ადგილობრივ მყიდველებს, მართე შეკვეთის ციკლები, ნახე რეიტინგები და შექმენი სანდო გამყიდველის პროფილი.",
+          title: "მარტივი მარკეტი",
+          desc: "განათავსეთ ან შეიძინეთ პროდუქტები, მომსახურება თუ ნივთები. დაუკავშირდით ადამიანებს თქვენს გარშემო და აკონტროლეთ შეკვეთები გამჭვირვალედ.",
           icon: ShoppingBag,
           color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
         },
         {
-          title: "ვიზუალური პროცესების ბლუპრინტები",
-          desc: "განსაზღვრე ოპერაციები ვიზუალური ნოდური გრაფების სახით. შექმენი ტრიგერები, პარამეტრები, საოპერაციო ბლოკები და დააორკესტრირე ბიზნეს-ლოგიკა კოდის წერის გარეშე.",
+          title: "მარტივი ორგანიზატორი",
+          desc: "მოაწესრიგეთ თქვენი ყოველდღიური საქმეები და გეგმები სულ რაღაც წამებში. შექმენით დავალებების ჯაჭვები ყოველგვარი კოდის წერის გარეშე.",
           icon: Workflow,
           color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/5"
         },
         {
-          title: "პროფესიონალური კაბინეტი",
-          desc: "აკონტროლე რესურსები რეალურ დროში. თვალი ადევნე შენს გამოყოფილ AI ტოკენებს, გამოთვლით ციკლებს, ლოკალურ საცავს, შემოსულ მოთხოვნებს, აქტიურ შეკვეთებსა და სტატუსს ერთიან პანელში.",
+          title: "პირადი კაბინეტი და სტატუსი",
+          desc: "აკონტროლეთ თქვენი აქტიური განცხადებები, შეკვეთები და ყოველდღიური სტატისტიკა ერთიან, სუფთა და თბილ მართვის სივრცეში.",
           icon: UserCheck,
           color: "text-purple-400 border-purple-500/20 bg-purple-500/5"
         }
       ],
 
-      how_it_works_title: "როგორ მუშაობს Proton-ი?",
-      how_it_works_subtitle: "მარტივი, უსაფრთხო და მაღალეფექტური სამსაფეხურიანი ციკლი პროცესების მართვისთვის.",
+      how_it_works_title: "როგორ გვიმარტივებს Proton ყოველდღიურობას",
+      how_it_works_subtitle: "სრულიად გამჭვირვალე, საიმედო და მეგობრული 3-საფეხურიანი გზა თქვენი მიზნების მისაღწევად.",
       steps: [
         {
           num: "01",
-          title: "სამუშაო სივრცის ინიციალიზაცია",
-          desc: "დარეგისტრირდი და შექმენი შენი სისტემური პროფილი. მიუთითე რეგიონი, ენა და ძირითადი ბიზნეს მიზნები, რათა ავტომატურად მოხდეს დეშბორდის ოპტიმიზაცია."
+          title: "შედი სამუშაო სივრცეში",
+          desc: "დარეგისტრირდი და შექმენი პირადი პროფილი. აირჩიე შენთვის საყვარელი ენა და რეგიონი, რათა დეშბორდზე თავი მყუდროდ იგრძნო."
         },
         {
           num: "02",
-          title: "აგენტებისა და პროცესების მართვა",
-          desc: "გაააქტიურე სპეციალიზებული ხელოვნური ინტელექტის აგენტები და გამოსახე ყოველდღიური რუტინული ოპერაციები ვიზუალური ბლუპრინტების საშუალებით."
+          title: "აირჩიე შენი ხელსაწყოები",
+          desc: "გაააქტიურე მეგობრული AI ასისტენტები და დაგეგმე დავალებები მარტივი ორგანიზატორის საშუალებით, ზედმეტი სირთულეების გარეშე."
         },
         {
           num: "03",
-          title: "გაშვება და რეალური ვაჭრობა",
-          desc: "განათავსე აქტივები გლობალურ მარკეტზე, მიიღე სერვისული შეკვეთები და მიანდე ფონურ AI აგენტებს დოკუმენტაციის თარგმნა ან პროდუქტების დიაგნოსტიკა."
+          title: "დაუკავშირდი და განვითარდი",
+          desc: "განათავსე შენი ნივთები თუ მომსახურება უბნის მარკეტზე, ადევნე თვალი შეკვეთებს, ხოლო AI დამხმარეები ფონურ რეჟიმში შეგახსენებენ უმნიშვნელოვანეს საქმეებს."
         }
       ],
 
       faqs_title: "ხშირად დასმული კითხვები",
-      faqs_subtitle: "აქ იპოვი ამომწურავ პასუხებს Proton Core-ის შესაძლებლობების შესახებ.",
+      faqs_subtitle: "ყველაფერი, რაც გსურს იცოდე Proton Core პლატფორმისა და შესაძლებლობების შესახებ.",
       faqs: [
         {
           q: "რა არის Proton Core?",
-          a: "Proton Core არის მაღალტექნოლოგიური სამუშაო სივრცე, რომელიც აერთიანებს AI ასისტენტებს, სტრატეგიულ დაგეგმვას, დოკუმენტების თარგმნას, ვიზუალურ ბლუპრინტებსა და თავისუფალ სავაჭრო მარკეტს ერთიან სისტემაში."
+          a: "Proton Core არის თბილი, მოსახერხებელი და სრულად ადაპტირებული ციფრული სახლი, რომელიც აერთიანებს AI დამხმარეებს, საქმეების ორგანიზატორსა და მეგობრულ სავაჭრო მარკეტს ერთ ეკრანზე."
         },
         {
           q: "ვისთვის არის განკუთვნილი ეს პლატფორმა?",
-          a: "პლატფორმა შექმნილია ციფრული მეწარმეებისთვის, მენეჯერებისთვის, კონსულტანტებისთვის და სისტემური არქიტექტორებისთვის, რომლებსაც სურთ პროცესების ავტომატიზაცია და აქტივების ეფექტური მართვა."
+          a: "იგი შექმნილია ადგილობრივი ხელოსნებისთვის, დიზაინერებისთვის, გუნდის მენეჯერებისთვის და ნებისმიერი ადამიანისთვის, ვისაც სურს დავალებების გაწერა და კომფორტულ გარემოში კომუნიკაცია."
         },
         {
-          q: "მჭირდება თუ არა კოდირების ცოდნა ბლუპრინტებისა და AI-ს გამოსაყენებლად?",
-          a: "არა. Proton-ი გთავაზობს მარტივ ვიზუალურ ინსტრუმენტებს. შენ შეგიძლია დააკონფიგურირო AI ინსტრუქციები, შექმნა განცხადებები და მართო დავალებები ჩაშენებული მენიუებით."
+          q: "საჭიროა თუ არა ტექნიკური გამოცდილება ამ ხელსაწყოების გამოსაყენებლად?",
+          a: "სულაც არა. Proton-ი გთავაზობს ინტუიციურ ვიზუალურ დაფებს, სადაც შეგიძლიათ ესაუბროთ AI-ს და დაალაგოთ შეკვეთები უბრალო, სასაუბრო ენით."
         },
         {
-          q: "როგორ მუშაობს მარკეტზე ყიდვა-გაყიდვის სისტემა?",
-          a: "როდესაც მომხმარებელი ირჩევს შენს ნივთს, შეკვეთა მომენტალურად იწერება Firestore-ში. შეკვეთის სტატუსის მართვა ხდება გამყიდველის შემოსულ პანელში და მყიდველის თრექინგ სისტემაში, რაც უზრუნველყოფს სრულ გამჭვირვალობას."
+          q: "რამდენად უსაფრთხოა მარკეტის შეკვეთები?",
+          a: "ყოველი ტრანზაქცია და განცხადება იწერება პირდაპირ Firestore-ში რეალურ დროში, რაც სრულ გამჭვირვალობასა და სიმშვიდეს ანიჭებს როგორც მყიდველს, ისე გამყიდველს."
         },
         {
-          q: "შესაძლებელია თუ არა პლატფორმის გამოყენება ქართულად?",
-          a: "დიახ. სამუშაო სივრცე სრულად ადაპტირებადია და მხარს უჭერს როგორც ქართულ (KA), ისე ინგლისურ (EN) ენებს. მონაცემები საიმედოდ ინახება Firebase-ის რეალურ მონაცემთა ბაზაში."
+          q: "შესაძლებელია თუ არა მისი გამოყენება ტელეფონით ან სხვადასხვა ენაზე?",
+          a: "დიახ! Proton-ი არაჩვეულებრივად მუშაობს თქვენს სმარტფონში, პლანშეტში თუ კომპიუტერზე, და საშუალებას გაძლევთ წამში გადახვიდეთ ქართულ (KA) ან ინგლისურ (EN) ენაზე."
         }
       ],
 
-      cta_bottom_title: "მზად ხარ ბიზნესის ახალ საფეხურზე გადასაყვანად?",
-      cta_bottom_desc: "შეუერთდი Proton-ის ეკოსისტემას დღესვე და მართე შენი რესურსები ჭკვიანურად. რეალურ დროში სინქრონიზაცია, ერთიანი დეშბორდი და სრული თავისუფლება.",
-      cta_bottom_btn: "გადადი სამუშაო სივრცეში"
+      cta_bottom_title: "მზად ხარ იგრძნო თავი საკუთარ სახლში?",
+      cta_bottom_desc: "შეუერთდი Proton-ის მეგობრულ საზოგადოებას დღესვე, რათა დაგეგმო, გააერთიანო და განახორციელო შენი მიზნები სრული სიმარტივით.",
+      cta_bottom_btn: "გახსენი სამუშაო სივრცე"
     }
   };
 
@@ -596,8 +596,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                               <span className="text-[8px] font-mono text-proton-accent mb-0.5">Marketing Specialist</span>
                               <div className="bg-proton-card border border-proton-border text-proton-text px-3 py-2 rounded-2xl rounded-tl-none text-left max-w-[85%] leading-relaxed font-semibold">
                                 {language === 'ka' 
-                                  ? '💡 "Proton Core - მართე შენი ბიზნესი ავტომატურად: ერთიანი AI სივრცე, ვიზუალური პროცესები და გლობალური მარკეტი!"'
-                                  : '💡 "Proton Core - Command your business with perfect autonomy: Unified AI Space, Visual Blueprints, & secure Trade!"'
+                                  ? '💡 "Proton Core - მართე შენი საქმეები მარტივად: ჭკვიანი AI ასისტენტები, მარტივი დაფები და თბილი მარკეტი!"'
+                                  : '💡 "Proton Core - Manage your day-to-day with total ease: Smart AI helpers, visual task planners, & a cozy marketplace!"'
                                 }
                               </div>
                             </div>
