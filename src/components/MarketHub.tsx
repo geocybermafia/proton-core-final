@@ -538,8 +538,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [maxPrice, setMaxPrice] = useState('');
   const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [isSidebarCategoriesOpen, setIsSidebarCategoriesOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [allUserMessages, setAllUserMessages] = useState<any[]>([]);
 
   useEffect(() => {
@@ -1259,6 +1262,159 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setMinPrice('');
     setMaxPrice('');
     setActiveListingType('all');
+  };
+
+  const handleSeedListings = async () => {
+    if (!user) return;
+    setIsSeeding(true);
+    try {
+      const sampleListings = [
+        {
+          title: "Proton Cyber-Security Suite v2",
+          titleGe: "Proton კიბერ-უსაფრთხოების პაკეტი v2",
+          description: "Enterprise-grade penetration scanning and firewall configuration. Lifetime updates included.",
+          descriptionGe: "კორპორატიული დონის შეღწევადობის ტესტირება და ფაირვოლის კონფიგურაცია. მოყვება უვადო განახლებები.",
+          price: 1200,
+          currency: "USD",
+          category: "technics",
+          country: "USA",
+          city: "New York",
+          location: "Manhattan Plaza",
+          lat: 40.7128,
+          lng: -74.0060,
+          image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=600&q=80",
+          images: ["https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=600&q=80"],
+          condition: "new",
+          isNegotiable: false,
+          listingType: "product",
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email?.split('@')[0] || 'Security Agent',
+          status: 'active'
+        },
+        {
+          title: "Co-working Space Desk in Tbilisi",
+          titleGe: "ქოვორქინგ სივრცის სამუშაო მაგიდა თბილისში",
+          description: "Premium hot desk in Saburtalo with ultra-fast gigabit internet, coffee, and developer networking sessions.",
+          descriptionGe: "პრემიუმ კლასის სამუშაო ადგილი საბურთალოზე, ულტრა-სწრაფი გიგაბიტიანი ინტერნეტით, ყავით და დეველოპერული შეხვედრებით.",
+          price: 350,
+          currency: "GEL",
+          category: "realestate",
+          country: "GEO",
+          city: "Tbilisi",
+          location: "Pekini Ave 12",
+          lat: 41.7151,
+          lng: 44.8271,
+          image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80",
+          images: ["https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80"],
+          condition: "new",
+          isNegotiable: true,
+          listingType: "service",
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email?.split('@')[0] || 'Space Host',
+          status: 'active'
+        },
+        {
+          title: "Solar Agro-Monitoring Drone",
+          titleGe: "მზის ენერგიაზე მომუშავე აგრო-მონიტორინგის დრონი",
+          description: "Advanced autonomous farming survey drone equipped with thermal imaging for crop health analytics.",
+          descriptionGe: "ავტონომიური სასოფლო-სამეურნეო კვლევითი დრონი, აღჭურვილი თერმული კამერით მოსავლის ჯანმრთელობის ანალიტიკისთვის.",
+          price: 4500,
+          currency: "USD",
+          category: "business",
+          country: "GEO",
+          city: "Kakheti",
+          location: "Sighnaghi Valley",
+          lat: 41.6111,
+          lng: 45.9271,
+          image: "https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=600&q=80",
+          images: ["https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=600&q=80"],
+          condition: "new",
+          isNegotiable: true,
+          listingType: "product",
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email?.split('@')[0] || 'AgriTech Seller',
+          status: 'active'
+        },
+        {
+          title: "Web3 Decentralized Storage Node Setup",
+          titleGe: "Web3 დეცენტრალიზებული მეხსიერების ნოდის გამართვა",
+          description: "Professional deployment of distributed Storage nodes on Filecoin/Arweave, including smart contract integration.",
+          descriptionGe: "Filecoin/Arweave-ზე დეცენტრალიზებული შენახვის ნოდების პროფესიონალური გამართვა, სმარტ-კონტრაქტების ინტეგრაციით.",
+          price: 850,
+          currency: "USD",
+          category: "crypto",
+          country: "GLOBAL",
+          city: "Remote",
+          location: "Distributed Node Network",
+          lat: 42.1234,
+          lng: 43.1234,
+          image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80",
+          images: ["https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80"],
+          condition: "new",
+          isNegotiable: false,
+          listingType: "service",
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email?.split('@')[0] || 'Solidity Expert',
+          status: 'active'
+        },
+        {
+          title: "Hydroponic Smart Garden Kit",
+          titleGe: "ჰიდროპონიკური ჭკვიანი ბაღის ნაკრები",
+          description: "Automated indoor vertical gardening system with LED grow lights, pH sensors, and mobile application remote controls.",
+          descriptionGe: "ოთახის ავტომატიზებული ვერტიკალური მებაღეობის სისტემა, LED განათებით, pH სენსორებით და მობილური აპლიკაციით.",
+          price: 690,
+          currency: "GEL",
+          category: "home",
+          country: "GEO",
+          city: "Batumi",
+          location: "Khimshiashvili St 15",
+          lat: 41.6168,
+          lng: 41.6367,
+          image: "https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=600&q=80",
+          images: ["https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?auto=format&fit=crop&w=600&q=80"],
+          condition: "new",
+          isNegotiable: false,
+          listingType: "product",
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email?.split('@')[0] || 'Eco Farmer',
+          status: 'active'
+        },
+        {
+          title: "Kutaisi Logistics hangar",
+          titleGe: "ქუთაისის ლოჯისტიკური ანგარი",
+          description: "Spacious storage hangar with climate control and 24/7 security. Perfect for regional distribution.",
+          descriptionGe: "ფართო სასაწყობო ანგარი კლიმატკონტროლითა და 24/7 დაცვით. იდეალურია რეგიონალური დისტრიბუციისთვის.",
+          price: 1800,
+          currency: "GEL",
+          category: "realestate",
+          country: "GEO",
+          city: "Kutaisi",
+          location: "Avtomshenebeli St 45",
+          lat: 42.2662,
+          lng: 42.7180,
+          image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80",
+          images: ["https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80"],
+          condition: "new",
+          isNegotiable: true,
+          listingType: "project",
+          sellerId: user.uid,
+          sellerName: user.displayName || user.email?.split('@')[0] || 'Logistics Partner',
+          status: 'active'
+        }
+      ];
+
+      for (const listing of sampleListings) {
+        await addDoc(collection(db, 'listings'), {
+          ...listing,
+          createdAt: serverTimestamp()
+        });
+      }
+    } catch (error: any) {
+      console.error("Error seeding listings:", error);
+      alert("Error seeding: " + error.message);
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   const allListings = useMemo(() => {
@@ -2026,52 +2182,65 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           </div>
         </div>
 
-        {/* Category Selection */}
-        <div className="space-y-3">
-          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
-            {t.market.form.category}
-          </label>
-          <div className="grid grid-cols-1 gap-1.5 max-h-[220px] overflow-y-auto pr-1">
-            <button 
-              type="button"
-              onClick={() => setActiveCategory('all')}
-              className={cn(
-                "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border text-left",
-                activeCategory === 'all' 
-                  ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
-                  : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🌍</span>
-                <span className="truncate">{t.market.all_categories}</span>
-              </div>
-              {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
-            </button>
-            {Object.entries(t.market.categories).map(([key, label]) => {
-              const isSelected = activeCategory === key;
-              return (
-                <button 
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveCategory(key)}
-                  className={cn(
-                    "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all border text-left",
-                    isSelected 
-                      ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
-                      : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
-                  )}
-                  title={label as string}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                    <span className="truncate">{label as string}</span>
-                  </div>
-                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
-                </button>
-              );
-            })}
-          </div>
+        {/* Category Selection (Collapsible Accordion) */}
+        <div className="space-y-2 border-b border-zinc-900/60 pb-4">
+          <button
+            type="button"
+            onClick={() => setIsSidebarCategoriesOpen(!isSidebarCategoriesOpen)}
+            className="w-full flex items-center justify-between text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block cursor-pointer"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="shrink-0">{t.market.form.category}</span>
+              <span className="text-[10px] lowercase text-zinc-500 font-normal truncate max-w-[120px]">
+                ({activeCategory === 'all' ? (language === 'ka' ? 'ყველა' : 'all') : (t.market.categories[activeCategory] || activeCategory)})
+              </span>
+            </div>
+            <ChevronDown size={14} className={cn("text-zinc-500 transition-transform duration-250", isSidebarCategoriesOpen && "rotate-180")} />
+          </button>
+          
+          {isSidebarCategoriesOpen && (
+            <div className="grid grid-cols-1 gap-1.5 max-h-[200px] overflow-y-auto pr-1 mt-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <button 
+                type="button"
+                onClick={() => setActiveCategory('all')}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border text-left cursor-pointer",
+                  activeCategory === 'all' 
+                    ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
+                    : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">🌍</span>
+                  <span className="truncate">{t.market.all_categories}</span>
+                </div>
+                {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+              </button>
+              {Object.entries(t.market.categories).map(([key, label]) => {
+                const isSelected = activeCategory === key;
+                return (
+                  <button 
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveCategory(key)}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all border text-left cursor-pointer",
+                      isSelected 
+                        ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
+                        : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
+                    )}
+                    title={label as string}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 font-bold">
+                      <span className="text-sm shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                      <span className="truncate">{label as string}</span>
+                    </div>
+                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Price Filter with presets */}
@@ -2442,60 +2611,144 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
         {viewMode === 'browse' && (
           <div className={cn("hidden md:flex flex-col md:flex-row md:items-center justify-between gap-5 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
-            {/* Listing Type Selection Tabs */}
-            <div className={cn("flex p-0.5 rounded-xl border shadow-inner w-fit select-none", currentTheme.cardAlt)}>
-              <button
-                type="button"
-                onClick={() => setActiveListingType('all')}
-                className={cn(
-                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                  activeListingType === 'all' 
-                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
+            {/* Listing Type & Categories Wrap */}
+            <div className="flex items-center gap-3 relative">
+              {/* Listing Type Selection Tabs */}
+              <div className={cn("flex p-0.5 rounded-xl border shadow-inner w-fit select-none", currentTheme.cardAlt)}>
+                <button
+                  type="button"
+                  onClick={() => setActiveListingType('all')}
+                  className={cn(
+                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
+                    activeListingType === 'all' 
+                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
+                  )}
+                >
+                  <span>🌍</span>
+                  <span>{language === 'ka' ? 'ყველა' : 'All'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveListingType('service')}
+                  className={cn(
+                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
+                    activeListingType === 'service' 
+                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
+                  )}
+                >
+                  <span>⚡</span>
+                  <span>{language === 'ka' ? 'სერვისები' : 'Services'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveListingType('product')}
+                  className={cn(
+                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
+                    activeListingType === 'product' 
+                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
+                  )}
+                >
+                  <span>📦</span>
+                  <span>{language === 'ka' ? 'პროდუქტები' : 'Products'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveListingType('project')}
+                  className={cn(
+                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
+                    activeListingType === 'project' 
+                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
+                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
+                  )}
+                >
+                  <span>🚀</span>
+                  <span>{language === 'ka' ? 'პროექტები' : 'Projects'}</span>
+                </button>
+              </div>
+
+              {/* SPACE SAVING: Beautiful Category Dropdown integrated right here! */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  className="flex items-center gap-2 px-3.5 py-2 h-[38px] rounded-xl bg-zinc-950 border border-zinc-805 hover:border-zinc-700 hover:text-white transition-all text-[10px] font-black uppercase tracking-wider text-zinc-300 cursor-pointer active:scale-95 shadow-md"
+                >
+                  <span className="text-sm shrink-0">
+                    {activeCategory === 'all' ? '📊' : (CATEGORY_EMOJIS[activeCategory] || '🏷️')}
+                  </span>
+                  <span>
+                    {activeCategory === 'all' 
+                      ? (language === 'ka' ? 'ყველა კატეგორია' : 'All Categories') 
+                      : (t.market.categories[activeCategory] || activeCategory)}
+                  </span>
+                  <ChevronDown size={11} className={cn("opacity-40 transition-transform duration-200", isCategoryDropdownOpen && "rotate-180")} />
+                </button>
+
+                {isCategoryDropdownOpen && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsCategoryDropdownOpen(false)} 
+                    />
+                    <div className="absolute left-0 mt-2 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-90 w-full flex justify-between items-center mb-1.5">
+                        <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
+                        <span className="text-[#dfb257] text-[8px] tracking-widest">★ PROTON</span>
+                      </div>
+                      <div className="max-h-60 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategory('all');
+                            setIsCategoryDropdownOpen(false);
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left",
+                            activeCategory === 'all'
+                              ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
+                              : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>🌍</span>
+                            <span>{t.market.all_categories}</span>
+                          </div>
+                          {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                        </button>
+                        
+                        {Object.entries(t.market.categories).map(([key, label]) => {
+                          const isSelected = activeCategory === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                setActiveCategory(key);
+                                setIsCategoryDropdownOpen(false);
+                              }}
+                              className={cn(
+                                "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left",
+                                isSelected
+                                  ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
+                                  : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                              )}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-xs shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                                <span className="truncate">{label as string}</span>
+                              </div>
+                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
                 )}
-              >
-                <span>🌍</span>
-                <span>{language === 'ka' ? 'ყველა' : 'All'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveListingType('service')}
-                className={cn(
-                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                  activeListingType === 'service' 
-                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                )}
-              >
-                <span>⚡</span>
-                <span>{language === 'ka' ? 'სერვისები' : 'Services'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveListingType('product')}
-                className={cn(
-                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                  activeListingType === 'product' 
-                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                )}
-              >
-                <span>📦</span>
-                <span>{language === 'ka' ? 'პროდუქტები' : 'Products'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveListingType('project')}
-                className={cn(
-                  "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                  activeListingType === 'project' 
-                    ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                    : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                )}
-              >
-                <span>🚀</span>
-                <span>{language === 'ka' ? 'პროექტები' : 'Projects'}</span>
-              </button>
+              </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-4 sm:gap-6">
@@ -2542,136 +2795,149 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         />
       ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
         <div className="space-y-10 w-full">
-          {/* Horizontal Category Carousel & Sticky mobile subfilters - Only for Browse View */}
+          {/* SPACE-SAVING MOBILE TOOLBAR - Only for Browse View */}
           {viewMode === 'browse' && (
-            <div className="relative -mx-4 px-4 py-3 sm:mx-0 sm:px-0 bg-transparent border-b border-zinc-900/40 lg:border-none lg:p-0 mb-6 lg:mb-10 lg:pt-2 transition-all">
-              {/* Categories horizontal list */}
-              <div className="flex items-start gap-4 sm:gap-6 overflow-x-auto pb-4 pt-2 px-1 scrollbar-none scroll-smooth">
-                {/* Space-Saving Infinite / All categories icon block */}
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory('all')}
-                  className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none cursor-pointer w-20 sm:w-24"
-                >
-                  <div className={cn(
-                    "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-lg sm:text-xl transition-all duration-300 relative border",
-                    activeCategory === 'all'
-                      ? "bg-gradient-to-br from-[#dfb257]/20 to-[#dfb257]/5 border-[#dfb257] text-[#dfb257] shadow-lg shadow-[#dfb257]/10 scale-105 -translate-y-0.5"
-                      : "bg-[#09090b]/40 border-zinc-900 text-zinc-400 group-hover:text-white group-hover:bg-zinc-900/40 group-hover:border-zinc-800"
-                  )}>
-                    {activeCategory === 'all' && (
-                      <div className="absolute inset-0 bg-[#dfb257]/10 blur-md rounded-2xl -z-10" />
-                    )}
-                    <span>🌍</span>
-                  </div>
-                  <span className={cn(
-                    "text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-center line-clamp-2 max-w-full px-1 transition-all leading-snug",
-                    activeCategory === 'all' ? "text-[#dfb257]" : "text-zinc-500 group-hover:text-zinc-300"
-                  )}>
-                    {t.market.all_categories}
-                  </span>
-                </button>
-
-                {Object.entries(t.market.categories).map(([key, label]) => (
+            <div className="block md:hidden bg-zinc-950/45 border border-zinc-900 rounded-3xl p-4 mb-3.5 space-y-3.5 transition-all">
+              {/* Listing Type Select tabs (scrollable) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                {(['all', 'service', 'product', 'project'] as const).map((type) => (
                   <button
-                    key={key}
+                    key={type}
                     type="button"
-                    onClick={() => setActiveCategory(key)}
-                    className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none cursor-pointer w-20 sm:w-24"
+                    onClick={() => setActiveListingType(type)}
+                    className={cn(
+                      "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shrink-0 flex items-center gap-1.5 min-h-[40px] cursor-pointer",
+                      activeListingType === type
+                        ? "bg-gradient-to-b from-zinc-800 to-zinc-900 text-[#dfb257] border-[#dfb257]/30 shadow-md"
+                        : "text-zinc-400 border-transparent hover:text-zinc-200"
+                    )}
                   >
-                    <div className={cn(
-                      "w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-lg sm:text-xl transition-all duration-300 relative border",
-                      activeCategory === key
-                        ? "bg-gradient-to-br from-[#dfb257]/20 to-[#dfb257]/5 border-[#dfb257] text-[#dfb257] shadow-lg shadow-[#dfb257]/10 scale-105 -translate-y-0.5"
-                        : "bg-[#09090b]/40 border-zinc-900 text-zinc-400 group-hover:text-white group-hover:bg-zinc-900/40 group-hover:border-zinc-800"
-                    )}>
-                      {activeCategory === key && (
-                        <div className="absolute inset-0 bg-[#dfb257]/10 blur-md rounded-2xl -z-10" />
-                      )}
-                      <span>{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                    </div>
-                    <span className={cn(
-                      "text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-center line-clamp-2 max-w-full px-1 transition-all leading-snug",
-                      activeCategory === key ? "text-[#dfb257]" : "text-zinc-500 group-hover:text-zinc-300"
-                    )}>
-                      {label as string}
+                    <span>
+                      {type === 'all' ? '🌍' :
+                       type === 'service' ? '⚡' :
+                       type === 'product' ? '📦' : '🚀'}
+                    </span>
+                    <span>
+                      {type === 'all' ? (language === 'ka' ? 'ყველა' : 'All') :
+                       type === 'service' ? (language === 'ka' ? 'სერვისები' : 'Services') :
+                       type === 'product' ? (language === 'ka' ? 'პროდუქტები' : 'Products') :
+                       (language === 'ka' ? 'პროექტები' : 'Projects')}
                     </span>
                   </button>
                 ))}
               </div>
 
-              {/* Mobile Quick Subfilters & Filters button under category carousel */}
-              <div className="flex items-center justify-between gap-3 mt-3 lg:hidden w-full px-1">
-                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none grow py-1">
+              {/* Space-saving Compact Action Controls */}
+              <div className="grid grid-cols-12 gap-2 relative">
+                {/* Category Dropdown Selector */}
+                <div className="col-span-6 relative">
                   <button
                     type="button"
-                    onClick={() => setActiveListingType('all')}
-                    className={cn(
-                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
-                      activeListingType === 'all'
-                        ? "bg-white/10 text-white border-white/20"
-                        : "text-white/40 border-transparent hover:text-white/60"
-                    )}
+                    onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                    className="w-full flex items-center justify-between px-3 h-11 rounded-xl bg-zinc-950/90 border border-zinc-900 text-left text-[10px] font-black uppercase tracking-wider text-zinc-300 active:scale-95 transition-all cursor-pointer"
                   >
-                    {language === 'ka' ? 'ყველა' : 'All'}
+                    <div className="flex items-center gap-1.5 min-w-0 pr-1">
+                      <span className="text-xs shrink-0">
+                        {activeCategory === 'all' ? '📊' : (CATEGORY_EMOJIS[activeCategory] || '🏷️')}
+                      </span>
+                      <span className="truncate">
+                        {activeCategory === 'all' 
+                          ? (language === 'ka' ? 'კატეგორია' : 'Category') 
+                          : (t.market.categories[activeCategory] || activeCategory)}
+                      </span>
+                    </div>
+                    <ChevronDown size={11} className={cn("opacity-40 transition-transform duration-200 shrink-0", isCategoryDropdownOpen && "rotate-180")} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveListingType('service')}
-                    className={cn(
-                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
-                      activeListingType === 'service'
-                        ? "bg-white/10 text-white border-white/20"
-                        : "text-white/40 border-transparent hover:text-white/60"
-                    )}
-                  >
-                    ⚡ {language === 'ka' ? 'სერვისები' : 'Services'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveListingType('product')}
-                    className={cn(
-                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
-                      activeListingType === 'product'
-                        ? "bg-white/10 text-white border-white/20"
-                        : "text-white/40 border-transparent hover:text-white/60"
-                    )}
-                  >
-                    📦 {language === 'ka' ? 'პროდუქტები' : 'Products'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveListingType('project')}
-                    className={cn(
-                      "px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition-all border shrink-0 min-h-[48px]",
-                      activeListingType === 'project'
-                        ? "bg-white/10 text-white border-white/20"
-                        : "text-white/40 border-transparent hover:text-white/60"
-                    )}
-                  >
-                    🚀 {language === 'ka' ? 'პროექტები' : 'Projects'}
-                  </button>
+
+                  {isCategoryDropdownOpen && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setIsCategoryDropdownOpen(false)} 
+                      />
+                      <div className="absolute left-0 top-12 w-64 bg-zinc-950 border-2 border-[#dfb257]/30 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-90 w-full flex justify-between items-center mb-1.5">
+                          <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveCategory('all');
+                              setIsCategoryDropdownOpen(false);
+                            }}
+                            className={cn(
+                              "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
+                              activeCategory === 'all'
+                                ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
+                                : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>🌍</span>
+                              <span>{t.market.all_categories}</span>
+                            </div>
+                            {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                          </button>
+                          
+                          {Object.entries(t.market.categories).map(([key, label]) => {
+                            const isSelected = activeCategory === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => {
+                                  setActiveCategory(key);
+                                  setIsCategoryDropdownOpen(false);
+                                }}
+                                className={cn(
+                                  "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
+                                  isSelected
+                                    ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
+                                    : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                                )}
+                              >
+                                <div className="flex items-center gap-2 min-w-0 font-bold">
+                                  <span className="text-xs shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
+                                  <span className="truncate">{label as string}</span>
+                                </div>
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 select-none pb-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsFiltersOpen(true)}
-                    className={cn("h-12 px-5 rounded-xl text-sm font-black uppercase tracking-widest transition-all border border-white/10 shadow-lg bg-white/5 text-white active:scale-95 flex items-center justify-center")}
-                  >
-                    ⚙️ {language === 'ka' ? 'ფილტრები' : 'Filters'}
-                  </button>
-                  
-                  {/* Grid/Map simple compact button */}
-                  <button
-                    type="button"
-                    onClick={() => setDisplayMode(displayMode === 'grid' ? 'map' : 'grid')}
-                    className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-white/10 flex items-center justify-center shrink-0 animate-pulse-subtle"
-                    title={displayMode === 'grid' ? (language === 'ka' ? 'რუკა' : 'Map') : (language === 'ka' ? 'ბადე' : 'Grid')}
-                  >
-                    {displayMode === 'grid' ? <MapPin size={18} /> : <LayoutGrid size={18} />}
-                  </button>
-                </div>
+                {/* Filters button */}
+                <button
+                  type="button"
+                  onClick={() => setIsFiltersOpen(true)}
+                  className="col-span-3 h-11 rounded-xl text-[10px] uppercase font-black tracking-widest bg-zinc-950/90 border border-zinc-900 text-zinc-300 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  ⚙️ <span>{language === 'ka' ? 'ფილტრი' : 'Filter'}</span>
+                </button>
+
+                {/* Grid/Map button */}
+                <button
+                  type="button"
+                  onClick={() => setDisplayMode(displayMode === 'grid' ? 'map' : 'grid')}
+                  className="col-span-3 h-11 bg-zinc-950/90 border border-zinc-900 rounded-xl text-zinc-300 hover:text-white flex items-center justify-center active:scale-95 transition-all text-[10px] uppercase font-black tracking-widest gap-1 cursor-pointer"
+                >
+                  {displayMode === 'grid' ? (
+                    <>
+                      <MapPin size={11} className="text-[#dfb257]" />
+                      <span>{language === 'ka' ? 'რუკა' : 'Map'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <LayoutGrid size={11} className="text-[#dfb257]" />
+                      <span>{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -3354,12 +3620,61 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         </div>
       )}
 
-            {!loading && filteredListings.length === 0 && (
-              <div className="py-32 text-center space-y-6">
-                <div className="w-20 h-20 bg-white/5 rounded-[40px] flex items-center justify-center mx-auto border border-white/10">
-                  <Search size={32} className={cn("opacity-20", currentTheme.muted)} />
+            {!loading && listings.length === 0 && (
+              <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-zinc-950/40 border border-zinc-900 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
+                <div className="w-16 h-16 bg-[#dfb257]/10 rounded-2xl flex items-center justify-center mx-auto border border-[#dfb257]/20">
+                  <LayoutGrid size={28} className="text-[#dfb257]" />
                 </div>
-                <p className={cn("text-sm font-bold uppercase tracking-widest", currentTheme.muted)}>{t.market.no_results}</p>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-black uppercase tracking-widest text-white">
+                    {language === 'ka' ? 'მონაცემთა ბაზა ცარიელია' : 'Database is Empty'}
+                  </h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+                    {language === 'ka' 
+                      ? 'იმის გამო, რომ თქვენი Firestore ბაზა ახალია, განცხადებები არ მოიძებნა. გსურთ ჩატვირთოთ მაღალტექნოლოგიური სატესტო პროდუქტები, საერთაშორისო სერვისები და ვებ3 პროექტები რუკაზე გამოსაჩენად?'
+                      : 'Since you are connected to a fresh Firestore database, no listings were found. Would you like to seed beautiful high-tech demo products, international services, and web3 projects?'}
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                  <button
+                    type="button"
+                    onClick={handleSeedListings}
+                    disabled={isSeeding}
+                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest bg-[#dfb257] text-[#070708] hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[#dfb257]/10 flex items-center justify-center gap-2"
+                  >
+                    {isSeeding ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-black" />
+                        {language === 'ka' ? 'მიმდინარეობს...' : 'SEEDING...'}
+                      </>
+                    ) : (
+                      <>
+                        🚀 {language === 'ka' ? 'საწყისი მონაცემების გენერირება' : 'SEED SAMPLE LISTINGS'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!loading && listings.length > 0 && filteredListings.length === 0 && (
+              <div className="py-24 text-center space-y-6 max-w-sm mx-auto bg-zinc-950/20 border border-zinc-900/60 p-8 rounded-2xl">
+                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10">
+                  <Search size={24} className="text-zinc-650" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-black uppercase tracking-widest text-[#dfb257]">{t.market.no_results}</p>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed font-semibold">
+                    {language === 'ka' ? 'სცადეთ საძიებო სიტყვის შეცვლა ან სხვა ფილტრების მონიშვნა.' : 'Try adjusting your search keywords, category tags, or location filters.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-cros border-zinc-800 text-[10px] uppercase font-black tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-all active:scale-95"
+                >
+                  {language === 'ka' ? 'ფილტრების გასუფთავება' : 'Reset Filters'}
+                </button>
               </div>
             )}
 
