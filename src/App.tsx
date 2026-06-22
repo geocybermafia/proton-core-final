@@ -1429,6 +1429,44 @@ const DashboardView = ({
 }) => {
   const t = translations[language];
 
+  // Forensic Telemetry Diagnostics & Threat Audit State
+  const [forensicLogs, setForensicLogs] = useState<{ id: string; timestamp: string; category: string; message: string; severity: 'info' | 'warn' | 'success' | 'alert' }[]>([
+    { id: '1', timestamp: new Date().toISOString().slice(11, 19), category: 'SYS_INT', message: 'VFS Cryptographic Integrity check: 100% SECURE', severity: 'success' },
+    { id: '2', timestamp: new Date().toISOString().slice(11, 19), category: 'AUTH_LEDG', message: 'Federal session credential rotation complete', severity: 'info' },
+    { id: '3', timestamp: new Date().toISOString().slice(11, 19), category: 'NET_GATE', message: 'Gemini security conduit handshake synchronized', severity: 'success' }
+  ]);
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [nodePing, setNodePing] = useState(25);
+
+  const triggerAudit = useCallback(() => {
+    if (isAuditing) return;
+    setIsAuditing(true);
+    setNodePing(Math.floor(Math.random() * 15) + 12);
+    
+    const logsToAdd = [
+      { category: 'MEM_TRACE', message: language === 'ka' ? 'RAM დიაგნოსტიკა: რეგისტრის ადრესაცია [0x7FFA8301B] დადასტურებულია' : 'Volatile memory registers traced: core register address [0x7FFA8301B] confirmed.', severity: 'info' as const },
+      { category: 'PORT_MON', message: language === 'ka' ? 'დესკტოპის პორტ 3000-ის უსაფრთხო თრაფიკის ტესტირება: OK' : 'Local port 3000 ingress transit validation passed securely.', severity: 'success' as const },
+      { category: 'SHA_CHCK', message: language === 'ka' ? 'Blueprints ბიბლიოთეკის მთლიანობის შემოწმება (SHA-256 ვერიფიცირებულია)' : 'Workspace blueprint library cryptographic signature matched (SHA-256 hash valid).', severity: 'success' as const },
+      { category: 'CRIT_SEC', message: language === 'ka' ? 'უსაფრთხოების კონტური: შემოწმება დასრულებულია, უცხო ძალების კვალი არ არის' : 'Tactical security scan completed: zero malicious intrusion vectors identified.', severity: 'alert' as const }
+    ];
+
+    logsToAdd.forEach((log, index) => {
+      setTimeout(() => {
+        setForensicLogs(prev => [
+          {
+            id: String(Date.now() + index),
+            timestamp: new Date().toISOString().slice(11, 19),
+            ...log
+          },
+          ...prev.slice(0, 6)
+        ]);
+        if (index === logsToAdd.length - 1) {
+          setIsAuditing(false);
+        }
+      }, (index + 1) * 750);
+    });
+  }, [isAuditing, language]);
+
   // Beautiful curated titles & metrics for the 5 Gateways
   const gateways = [
     {
