@@ -25,11 +25,11 @@ export const DashboardView = React.memo(({
   personas: Persona[], 
   activeView: View, 
   setActiveView: (v: View) => void,
-  chatHistory: any[],
+  chatHistory: any,
   language: 'en' | 'ka',
   user: any,
   uiMode: 'business' | 'creative' | 'market',
-  setUiMode: (m: 'business' | 'creative' | 'market') => void,
+  setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void,
   aiSettings: GlobalAiSettings,
   setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
   trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
@@ -98,7 +98,9 @@ export const DashboardView = React.memo(({
         { label: language === 'ka' ? 'აგენტების კატალოგი' : 'AI Agents', view: 'personas' },
         { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Blueprints', view: 'blueprints' }
       ],
-      action: () => setUiMode('business')
+      action: () => {
+        setUiMode('business', 'personas');
+      }
     },
     {
       id: 'creative',
@@ -117,8 +119,7 @@ export const DashboardView = React.memo(({
         { label: language === 'ka' ? 'ორენოვანი მთარგმნელი' : 'Live Translator', view: 'translator' }
       ],
       action: () => {
-        setUiMode('creative');
-        setActiveView('image');
+        setUiMode('creative', 'image');
       }
     },
     {
@@ -137,8 +138,7 @@ export const DashboardView = React.memo(({
         { label: language === 'ka' ? 'მარკეტის დათვალიერება' : 'Browse listings', view: 'market-hub' }
       ],
       action: () => {
-        setUiMode('market');
-        setActiveView('market-hub');
+        setUiMode('market', 'market-hub');
       }
     },
     {
@@ -315,7 +315,13 @@ export const DashboardView = React.memo(({
                       type="button"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setActiveView(sc.view as any)}
+                      onClick={() => {
+                        if (gate.id === 'business' || gate.id === 'creative' || gate.id === 'market') {
+                          setUiMode(gate.id, sc.view as any);
+                        } else {
+                          setActiveView(sc.view as any);
+                        }
+                      }}
                       className={cn(
                         "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm border transition-all cursor-pointer",
                         gate.color === 'cyan' ? 'bg-cyan-500/5 text-cyan-400 border-cyan-500/10 hover:bg-cyan-500 hover:text-black' :

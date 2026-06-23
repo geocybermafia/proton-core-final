@@ -27,6 +27,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Set trust proxy to trust the proxy headers in front of Cloud Run, solving X-Forwarded-For issues
+  app.set("trust proxy", 1);
+
   // 1. Industry-standard Security Headers via Helmet (with compatible policy for frame-previews)
   app.use(helmet({
     contentSecurityPolicy: false, 
@@ -41,6 +44,7 @@ async function startServer() {
     max: 150, // limit each IP to 150 API calls per window
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
     handler: (req, res) => {
       res.status(429).json({
         isQuotaError: true,
