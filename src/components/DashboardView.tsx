@@ -45,18 +45,18 @@ export const DashboardView = React.memo(({
     {
       id: 'business',
       title: language === 'ka' ? 'ბიზნეს პორტალი' : 'Business Suite',
-      badge: 'Multi-Agent & Automation',
+      badge: language === 'ka' ? 'ბიზნესის მართვა' : 'Business Management',
       desc: language === 'ka' 
-        ? 'ბიზნეს აგენტების მართვა, სტრატეგიული ანალიზი და ავტომატიზებული სამუშაო ხაზები (Workflows).'
-        : 'Enterprise multi-agent coordinate, automated workflows, strategic blueprints, and target plans.',
+        ? 'ბიზნეს პროცესების მართვა, სტრატეგიული გეგმები და გუნდური როლები.'
+        : 'Manage business processes, strategic planning, and customized team roles.',
       icon: Building,
       color: 'cyan',
       glowClass: 'border-cyan-500/20 hover:border-cyan-500/80 shadow-cyan-500/5 hover:shadow-cyan-500/20',
       badgeClass: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
       iconClass: 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black',
       shortcuts: [
-        { label: language === 'ka' ? 'აგენტების კატალოგი' : 'AI Agents', view: 'personas' },
-        { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Blueprints', view: 'blueprints' }
+        { label: language === 'ka' ? 'როლები და აგენტები' : 'Roles & Agents', view: 'personas' },
+        { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Workflows', view: 'blueprints' }
       ],
       action: () => {
         setUiMode('business', 'personas');
@@ -65,18 +65,18 @@ export const DashboardView = React.memo(({
     {
       id: 'creative',
       title: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio',
-      badge: 'Visual Arts & Localization',
+      badge: language === 'ka' ? 'დიზაინი და ენები' : 'Design & Language',
       desc: language === 'ka'
         ? 'მაღალი ხარისხის ილუსტრაციების გენერაცია, ორენოვანი სათარჯიმნო კაბინეტი და სარეკლამო კოპირაიტინგი.'
-        : 'Generate vector arts, copy poetic branding prompts, and launch modular face-to-face translation screens.',
+        : 'Generate high-quality visuals, copy writing prompts, and handle bilingual translation.',
       icon: Palette,
       color: 'amber',
       glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
       badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
       shortcuts: [
-        { label: language === 'ka' ? 'ვიზუალური გენერატორი' : 'Art Studio', view: 'image' },
-        { label: language === 'ka' ? 'ორენოვანი მთარგმნელი' : 'Live Translator', view: 'translator' }
+        { label: language === 'ka' ? 'სურათების გენერატორი' : 'Image Generator', view: 'image' },
+        { label: language === 'ka' ? 'ორენოვანი მთარგმნელი' : 'Bilingual Translator', view: 'translator' }
       ],
       action: () => {
         setUiMode('creative', 'image');
@@ -85,10 +85,10 @@ export const DashboardView = React.memo(({
     {
       id: 'market',
       title: language === 'ka' ? 'პროტონ მარკეტი' : 'Proton Market',
-      badge: 'P2P Trading & Registry',
+      badge: language === 'ka' ? 'ელ-კომერცია' : 'E-Commerce Marketplace',
       desc: language === 'ka'
-        ? 'განათავსეთ განცხადებები, მართეთ მომსახურებების რეესტრი, შეიძინეთ ან გაყიდეთ ნივთები.'
-        : 'Post dynamic listings, browse regional services or goods, track active ledger transactions, and trade.',
+        ? 'განათავსეთ განცხადებები, შეიძინეთ ან გაყიდეთ ნივთები და მომსახურებები.'
+        : 'Publish listings, buy or sell items and services, and manage your orders.',
       icon: ShoppingBag,
       color: 'emerald',
       glowClass: 'border-emerald-500/20 hover:border-emerald-500/80 shadow-emerald-500/5 hover:shadow-emerald-500/20',
@@ -104,10 +104,10 @@ export const DashboardView = React.memo(({
     {
       id: 'organizer',
       title: language === 'ka' ? 'ამოცანების მმართველი' : 'Task Organizer',
-      badge: 'Smart Agenda & Calendar',
+      badge: language === 'ka' ? 'ამოცანები და კალენდარი' : 'Task & Time Management',
       desc: language === 'ka'
-        ? 'აკონტროლეთ ყოველდღიური საქმეები, მართეთ ენერგეტიკული ბალანსი და სამუშაო კალენდარი.'
-        : 'Organize daily tasks, log personal workflows, set priorities, and track active work schedules.',
+        ? 'დაგეგმეთ თქვენი დღე, ჩაინიშნეთ დავალებები და მართეთ კალენდარი ეფექტურად.'
+        : 'Plan your day, organize tasks, set reminders, and manage your calendar.',
       icon: CalendarIcon,
       color: 'purple',
       glowClass: 'border-purple-500/20 hover:border-purple-500/80 shadow-purple-500/5 hover:shadow-purple-500/20',
@@ -120,18 +120,18 @@ export const DashboardView = React.memo(({
     },
     {
       id: 'finance',
-      title: language === 'ka' ? 'ფინანსური პორტალი' : 'Finance Ledger',
-      badge: 'Capital Flow & Distribution',
+      title: language === 'ka' ? 'ფინანსების მართვა' : 'Finance Tracker',
+      badge: language === 'ka' ? 'ბიუჯეტი და ფინანსები' : 'Personal & Business Budgeting',
       desc: language === 'ka'
-        ? 'გაანაწილეთ კაპიტალი, აწარმოეთ ტრანზაქციების ჟურნალი და თვალი ადევნეთ საინვესტიციო აქტივებს.'
-        : 'Track global currency balances, record transaction vouchers, and trace localized investment progress.',
+        ? 'აკონტროლეთ შემოსავლები და გასავლები, მართეთ ბიუჯეტი და ტრანზაქციების ისტორია.'
+        : 'Track income and expenses, manage your budget, and review transaction history.',
       icon: TrendingUp,
       color: 'amber',
       glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
       badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
       shortcuts: [
-        { label: language === 'ka' ? 'ფინანსების მართვა' : 'Ledger view', view: 'finance' }
+        { label: language === 'ka' ? 'ფინანსების პანელი' : 'Budget Dashboard', view: 'finance' }
       ],
       action: () => setActiveView('finance')
     }
@@ -166,17 +166,17 @@ export const DashboardView = React.memo(({
           <div className="space-y-3 text-center md:text-left flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-mono font-black uppercase tracking-[0.2em] bg-zinc-900 text-proton-accent border border-zinc-800">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              {language === 'ka' ? 'ცენტრალური კრიპტო-საკონტროლო სადგური' : 'CENTRAL FORENSICS CONSOLE'}
+              {language === 'ka' ? 'სამუშაო სივრცის მართვის პანელი' : 'WORKSPACE OVERVIEW PANEL'}
             </div>
             
             <h1 className="font-black tracking-tighter uppercase leading-none text-4xl sm:text-5xl md:text-6xl text-proton-text">
-              {language === 'ka' ? 'PROTON OPERATIONAL HUB' : 'PROTON CORE SYSTEM'}
+              {language === 'ka' ? 'PROTON WORKSPACE HUB' : 'PROTON WORKSPACE HUB'}
             </h1>
             
             <p className="text-proton-muted font-medium max-w-2xl text-sm sm:text-base leading-relaxed">
               {language === 'ka' 
-                ? 'ავტორიზებული კავშირი დამყარებულია. მართეთ შეღწევადობის კვანძები, ანალიტიკური აგენტები და ადგილობრივი მონაცემთა ნაკადები კლინიკური სიზუსტით.'
-                : 'Authenticated uplink stabilized. Execute complex cybersecurity analytics, direct system agents, and govern state ledgers with tactical precision.'}
+                ? 'მოგესალმებით თქვენს პერსონალურ სამუშაო სივრცეში. მართეთ ბიზნეს აგენტები, კრეატიული სტუდია, პროდუქტების ბაზარი, ყოველდღიური ამოცანები და ფინანსები ერთიან, დაცულ გარემოში.'
+                : 'Welcome to your multi-functional workspace. Coordinate business agents, explore creative design studios, trade in the peer-to-peer market, organize your daily tasks, and track financial ledgers.'}
             </p>
           </div>
           
@@ -196,10 +196,10 @@ export const DashboardView = React.memo(({
       <div className="space-y-6">
         <div>
           <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-proton-accent">
-            {language === 'ka' ? 'საოპერაციო კარიბჭეები' : 'TACTICAL SECTORS AVAILABLE'}
+            {language === 'ka' ? 'სამუშაო სექციები' : 'AVAILABLE MODULES'}
           </h2>
           <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest mt-1">
-            {language === 'ka' ? 'იდენტიფიცირებული დაცული არხები' : 'Garded communication channels and integrated workflows'}
+            {language === 'ka' ? 'აირჩიეთ სასურველი მოდული ყოველდღიური საქმიანობის სამართავად' : 'Select a gateway module to manage your workspace workflows'}
           </p>
         </div>
 
@@ -317,7 +317,7 @@ export const DashboardView = React.memo(({
           </div>
           <div className="space-y-1 text-left">
             <h4 className="text-sm font-black uppercase tracking-wider text-proton-text flex items-center gap-2">
-              {language === 'ka' ? 'ინტელექტის მართვის რეჟიმი' : 'AI Intelligence Engine'}
+              {language === 'ka' ? 'AI ასისტენტის რეჟიმი' : 'AI Assistant Mode'}
               <span className={cn(
                 "text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
                 aiSettings.useSimulatedAi 

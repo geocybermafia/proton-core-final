@@ -22,90 +22,90 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '../lib/utils';
 
-// Multi-language translation dictionary for premium user engagement
+// Multi-language translation dictionary for professional user engagement
 const translations = {
   ka: {
-    title: "Web3 ფინანსური ლეჯერი",
-    subtitle: "მაღალი სიხშირის ბალანსის რეესტრი და დეცენტრალიზებული გასაღებების ჰენდშეიკი.",
-    gatewayTitle: "უსაფრთხოების კარიბჭე",
-    gatewaySubtitle: "SECURE_WALLET_GATEWAY_v1.0",
+    title: "Web3 ფინანსების პანელი",
+    subtitle: "დეცენტრალიზებული აქტივების მართვა და ტრანზაქციების რეალური მონიტორინგი.",
+    gatewayTitle: "უსაფრთხო კავშირი",
+    gatewaySubtitle: "PORTAL_GATEWAY_v1.0",
     statusStandalone: "სტატუსი: მოლოდინი",
-    requiresValidation: "სისტემა მოითხოვს კრიპტოგრაფიულ ვალიდაციას. დაუკავშირეთ უსაფრთხო Web3 საფულე ან ტექნიკური გეითვეი, რათა ჩატვირთოთ აქტიური ბალანსის მონაცემები და მოახდინოთ ტრანზაქციების ჟურნალის სინქრონიზაცია.",
-    initHandshake: "კავშირის დამყარება",
+    requiresValidation: "დასაწყებად დაუკავშირეთ თქვენი Web3 საფულე, რათა ჩატვირთოთ აქტიური ბალანსის მონაცემები და მოახდინოთ ტრანზაქციების ისტორიის სინქრონიზაცია.",
+    initHandshake: "საფულის დაკავშირება",
     evmBadge: "EVM თავსებადი",
-    shieldBadge: "აპარატურული დაცვა",
+    shieldBadge: "დაცული კავშირი",
     activeLedgerBadge: "აქტიური რეესტრი",
     
     features: {
-      f1_title: "შილდირებული პროტოკოლი",
-      f1_desc: "EVM-თავსებად ჯაჭვებთან ინტეგრაცია, ლეჯერის მონიტორინგი რეალურ დროში და ტრანზაქციების დაცული სიმულაციები.",
-      f2_title: "მულტი-ჩეინ კარიბჭე",
-      f2_desc: "მყისიერი უსაფრთხო კავშირები ნებისმიერ EVM საფულესთან ან ცივ აპარატურულ საცავთან.",
-      f3_title: "აუდიტის მონიტორინგი",
-      f3_desc: "ფინანსური ნაკადების ავტომატური 24-საათიანი სიჩქარის ტრენდებისა და ტრანზაქციების მონიტორინგი."
+      f1_title: "EVM ინტეგრაცია",
+      f1_desc: "EVM-თავსებად ქსელებთან კავშირი და ტრანზაქციების რეალურ დროში დაცული მონიტორინგი.",
+      f2_title: "საფულეების მხარდაჭერა",
+      f2_desc: "უსაფრთხო და მყისიერი კავშირი Metamask, Coinbase და სხვა პოპულარულ საფულეებთან.",
+      f3_title: "ფინანსური ანალიტიკა",
+      f3_desc: "ბალანსის ცვლილების დინამიკის, ტრენდებისა და ტრანზაქციების ავტომატური 24-საათიანი მონიტორინგი."
     },
 
     connected: {
       activeBalance: "აქტიური ბალანსი",
-      syncedRealtime: "სისტემა სინქრონიზებულია რეალურ დროში",
-      velocityTrends: "24-საათიანი ნაკადების ტრენდი",
-      networkSync: "ქსელის სინქრონიზაცია",
-      lockSecured: "კავშირის სტატუსი: დაცული",
-      diagnostics: "დიაგნოსტიკა",
-      auditNodes: "მონიტორინგის კვანძები",
-      compileMem: "მეხსიერების სტატუსი: ოპტიმალური",
-      sandboxTitle: "სიმულაციური ქვესისტემა",
-      resetLedger: "ლეჯერის გასუფთავება",
+      syncedRealtime: "სინქრონიზებულია რეალურ დროში",
+      velocityTrends: "24-საათიანი ბალანსის დინამიკა",
+      networkSync: "ქსელის სტატუსი",
+      lockSecured: "კავშირი: დაცული",
+      diagnostics: "ინფორმაცია",
+      auditNodes: "ტრანზაქცია რეესტრში",
+      compileMem: "სტატუსი: აქტიური",
+      sandboxTitle: "ტრანზაქციების სიმულატორი",
+      resetLedger: "რეესტრის გასუფთავება",
       demoAmount: "სიმულაციური რაოდენობა (ETH)",
-      recipientAddr: "მიმღების ან კონტრაქტის მისამართი",
-      simulateDeposit: "შემოსულების სიმულაცია",
+      recipientAddr: "მიმღების მისამართი",
+      simulateDeposit: "შემოსულის სიმულაცია",
       simulateTransfer: "გადარიცხვის სიმულაცია",
-      ledgerState: "ლეჯერის მდგომარეობა: PERFECT_MONITOR",
-      noRecords: "ტრანზაქციების ისტორია ცარიელია მითითებულ ფარგლებში",
-      receiveTx: "შემოსული_ტრანზაქცია",
-      transferTx: "გადარიცხვის_ტრანზაქცია"
+      ledgerState: "სტატუსი: აქტიური მონიტორინგი",
+      noRecords: "ტრანზაქციების ისტორია ცარიელია",
+      receiveTx: "შემოსული ტრანზაქცია",
+      transferTx: "გადარიცხვის ტრანზაქცია"
     }
   },
   en: {
-    title: "Web3 Financial Ledger",
-    subtitle: "High-frequency balance ledger and decentralized key handshake.",
-    gatewayTitle: "Security Gateway",
-    gatewaySubtitle: "SECURE_WALLET_GATEWAY_v1.0",
+    title: "Web3 Finance Manager",
+    subtitle: "Decentralized assets management and real-time transaction monitoring.",
+    gatewayTitle: "Secure Gateway",
+    gatewaySubtitle: "PORTAL_GATEWAY_v1.0",
     statusStandalone: "STATUS: STANDBY",
-    requiresValidation: "System requires cryptographic validation. Connect a secure Web3 wallet or hardware gateway below to load active treasury balance data and synchronize ledger records.",
-    initHandshake: "Connect Wallet to Access",
-    evmBadge: "EVM_COMPLIANT",
-    shieldBadge: "HARDWARE_SHIELD",
-    activeLedgerBadge: "LEDGER_ACTIVE",
+    requiresValidation: "Connect your Web3 wallet below to load your active balance and synchronize your transaction history.",
+    initHandshake: "Connect Wallet",
+    evmBadge: "EVM COMPATIBLE",
+    shieldBadge: "SECURE CONNECTION",
+    activeLedgerBadge: "LEDGER ACTIVE",
 
     features: {
-      f1_title: "Shielded Protocol",
-      f1_desc: "EVM-compatible ledger tracking and high-frequency cryptographic verification in sandbox.",
-      f2_title: "Multi-Chain Gateway",
-      f2_desc: "Instant secure handshake with Metamask, Coinbase, WalletConnect, or decentralized hardware.",
-      f3_title: "Auditing & Analytics",
-      f3_desc: "Automated analysis rendering precise 24-hour balance velocity trends and transactional timelines."
+      f1_title: "EVM Integration",
+      f1_desc: "EVM-compatible networks integration and secure real-time transaction tracking.",
+      f2_title: "Wallet Support",
+      f2_desc: "Instant secure connection with Metamask, Coinbase, WalletConnect, or decentralized hardware.",
+      f3_title: "Financial Analytics",
+      f3_desc: "Automated analysis of 24-hour balance dynamics and transactional timelines."
     },
 
     connected: {
       activeBalance: "Active Balance",
-      syncedRealtime: "SYS SYNCED IN REAL-TIME",
-      velocityTrends: "24H Velocity Trends",
+      syncedRealtime: "SYNCED IN REAL-TIME",
+      velocityTrends: "24H Balance Dynamics",
       networkSync: "Network Sync",
-      lockSecured: "LOCK STATUS: SECURED",
-      diagnostics: "Diagnostics",
-      auditNodes: "TX Audit Nodes",
-      compileMem: "COMPILE_MEM: OPTIMAL",
-      sandboxTitle: "Sandbox Simulation Subsystem",
+      lockSecured: "CONNECTION: SECURED",
+      diagnostics: "Info",
+      auditNodes: "TX Records",
+      compileMem: "STATUS: ACTIVE",
+      sandboxTitle: "Transaction Simulator",
       resetLedger: "Reset ledger store",
       demoAmount: "Simulate amount (ETH)",
-      recipientAddr: "Recipient Gas / Contract address",
+      recipientAddr: "Recipient wallet address",
       simulateDeposit: "Simulate Deposit",
       simulateTransfer: "Simulate Transfer",
-      ledgerState: "LEDGER STATE: PERFECT_MONITOR",
-      noRecords: "No matching records found in this ledger scope",
-      receiveTx: "RECEIVE_TRANSACTION",
-      transferTx: "TRANSFER_TRANSACTION"
+      ledgerState: "STATUS: ACTIVE MONITOR",
+      noRecords: "No transactions found in this ledger",
+      receiveTx: "Received Transaction",
+      transferTx: "Transferred Transaction"
     }
   }
 };
@@ -344,7 +344,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                       {cur.title}
                     </h3>
                     <span className="text-[7px] bg-zinc-950 border border-zinc-900 text-zinc-500 font-mono px-2 py-0.5 rounded uppercase tracking-[0.2em] font-black">
-                      PRO-CORE V1.0
+                      v1.0
                     </span>
                   </div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1 font-mono">
