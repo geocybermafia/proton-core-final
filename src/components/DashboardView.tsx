@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { 
   Building, 
   Palette, 
@@ -8,7 +8,6 @@ import {
   TrendingUp, 
   Grid, 
   Sparkles, 
-  Terminal, 
   ArrowUpRight 
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -40,45 +39,6 @@ export const DashboardView = React.memo(({
   setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>
 }) => {
   const t = translations[language];
-
-  // Forensic Telemetry Diagnostics & Threat Audit State
-  const [forensicLogs, setForensicLogs] = useState<{ id: string; timestamp: string; category: string; message: string; severity: 'info' | 'warn' | 'success' | 'alert' }[]>([
-    { id: '1', timestamp: new Date().toISOString().slice(11, 19), category: 'SYS_INT', message: 'VFS Cryptographic Integrity check: 100% UNCOMPROMISED', severity: 'success' },
-    { id: '2', timestamp: new Date().toISOString().slice(11, 19), category: 'AUTH_LEDG', message: 'Federated security credentials rotation event logged successfully', severity: 'info' },
-    { id: '3', timestamp: new Date().toISOString().slice(11, 19), category: 'NET_GATE', message: 'Gemini security conduit handshake fully synchronized with host', severity: 'success' },
-    { id: '4', timestamp: new Date().toISOString().slice(11, 19), category: 'INTELL', message: 'Continuous deep-forensic packet sniffing and threat matrix diagnostics active', severity: 'info' }
-  ]);
-  const [isAuditing, setIsAuditing] = useState(false);
-  const [nodePing, setNodePing] = useState(25);
-
-  const triggerAudit = useCallback(() => {
-    if (isAuditing) return;
-    setIsAuditing(true);
-    setNodePing(Math.floor(Math.random() * 10) + 12);
-    
-    const logsToAdd = [
-      { category: 'MEM_TRACE', message: language === 'ka' ? 'RAM დიაგნოსტიკა: რეგისტრის ადრესაცია [0x7FFA8301B] დადასტურებულია' : 'Volatile memory registers traced: core register address [0x7FFA8301B] confirmed.', severity: 'info' as const },
-      { category: 'PORT_MON', message: language === 'ka' ? 'დესკტოპის პორტ 3000-ის უსაფრთხო თრაფიკის ტესტირება: OK' : 'Local port 3000 ingress transit validation passed securely.', severity: 'success' as const },
-      { category: 'SHA_CHCK', message: language === 'ka' ? 'Blueprints ბიბლიოთეკის მთლიანობის შემოწმება (SHA-256 ვერიფიცირებულია)' : 'Workspace blueprint library cryptographic signature matched (SHA-256 hash valid).', severity: 'success' as const },
-      { category: 'CRIT_SEC', message: language === 'ka' ? 'უსაფრთხოების კონტური: შემოწმება დასრულებულია, უცხო ძალების კვალი არ არის' : 'Tactical security scan completed: zero malicious intrusion vectors identified.', severity: 'alert' as const }
-    ];
-
-    logsToAdd.forEach((log, index) => {
-      setTimeout(() => {
-        setForensicLogs(prev => [
-          {
-            id: String(Date.now() + index),
-            timestamp: new Date().toISOString().slice(11, 19),
-            ...log
-          },
-          ...prev.slice(0, 5)
-        ]);
-        if (index === logsToAdd.length - 1) {
-          setIsAuditing(false);
-        }
-      }, (index + 1) * 750);
-    });
-  }, [isAuditing, language]);
 
   // Beautiful curated titles & metrics for the 5 Gateways
   const gateways = [
@@ -338,139 +298,6 @@ export const DashboardView = React.memo(({
               </motion.div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Cyber-Forensics Clinical Diagnostics & Integrity Ledger */}
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-proton-accent">
-              {language === 'ka' ? 'უსაფრთხოების დიაგნოსტიკა და კრიპტოგრაფიული ტერმინალი' : 'SECURITY DIAGNOSTICS & CRYPTO TERMINAL'}
-            </h2>
-            <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest mt-1">
-              {language === 'ka' ? 'ცენტრალური კვანძების მთლიანობის უწყვეტი მონიტორი' : 'Continuous cryptographic event tracking'}
-            </p>
-          </div>
-          
-          <button
-            onClick={triggerAudit}
-            disabled={isAuditing}
-            className={cn(
-              "px-5 py-2.5 rounded-xl text-[9px] font-mono font-black uppercase tracking-wider border select-none transition-all active:scale-95 flex items-center gap-2",
-              isAuditing 
-                ? "bg-proton-accent/5 text-proton-accent/50 border-proton-accent/20 cursor-wait" 
-                : "bg-proton-accent/10 text-proton-accent border-proton-accent/20 hover:bg-proton-accent hover:text-proton-bg"
-            )}
-          >
-            <Terminal size={14} className={cn(isAuditing && "animate-spin")} />
-            {isAuditing 
-              ? (language === 'ka' ? 'მიმდინარეობს ანალიზი...' : 'Executing forensic trace...')
-              : (language === 'ka' ? 'უსაფრთხოების ტესტირება' : 'Run Tactical Audit')}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Diagnostic Metrics Matrix */}
-          <div className="lg:col-span-4 grid grid-cols-2 gap-4">
-            <div className="bg-proton-card/10 border border-proton-border p-5 rounded-3xl flex flex-col justify-between">
-              <div className="text-[9px] font-mono font-black text-proton-muted uppercase tracking-widest">
-                {language === 'ka' ? 'სისტემის დაცულობა' : 'CORE INTEGRITY'}
-              </div>
-              <div className="mt-4">
-                <div className="text-2xl font-black font-mono tracking-tight text-emerald-400">
-                  99.98%
-                </div>
-                <div className="text-[9px] font-mono text-proton-muted uppercase tracking-wide mt-1">
-                  {language === 'ka' ? 'სტაბილური / დაცული' : 'STATUS: SECURE'}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-proton-card/10 border border-proton-border p-5 rounded-3xl flex flex-col justify-between">
-              <div className="text-[9px] font-mono font-black text-proton-muted uppercase tracking-widest">
-                {language === 'ka' ? 'კონდუიტის შეყოვნება' : 'API LATENCY'}
-              </div>
-              <div className="mt-4">
-                <div className="text-2xl font-black font-mono tracking-tight text-cyan-400">
-                  {nodePing}ms
-                </div>
-                <div className="text-[9px] font-mono text-proton-muted uppercase tracking-wide mt-1">
-                  {language === 'ka' ? 'ოპტიმალური' : 'GATEWAY DELAY'}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-proton-card/10 border border-proton-border p-5 rounded-3xl flex flex-col justify-between">
-              <div className="text-[9px] font-mono font-black text-proton-muted uppercase tracking-widest">
-                {language === 'ka' ? 'აქტიური პორტი' : 'COMMS PORT'}
-              </div>
-              <div className="mt-4">
-                <div className="text-2xl font-black font-mono tracking-tight text-amber-500">
-                  3000
-                </div>
-                <div className="text-[9px] font-mono text-proton-muted uppercase tracking-wide mt-1">
-                  {language === 'ka' ? 'შიდა NGINX' : 'HOST TUNNEL'}
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-proton-card/10 border border-proton-border p-5 rounded-3xl flex flex-col justify-between">
-              <div className="text-[9px] font-mono font-black text-proton-muted uppercase tracking-widest">
-                {language === 'ka' ? 'VFS ჰეში' : 'VFS SIGNATURE'}
-              </div>
-              <div className="mt-4">
-                <div className="text-xs font-black font-mono tracking-tight text-purple-400 truncate">
-                  SHA-256//VALID
-                </div>
-                <div className="text-[9px] font-mono text-proton-muted uppercase tracking-wide mt-1">
-                  {language === 'ka' ? 'VFS გარემო სტაბილურია' : 'LOCAL CACHE UNPERMUTED'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Interactive Live Forensics Log */}
-          <div className="lg:col-span-8 bg-black/90 shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] border border-proton-border p-6 rounded-[36px] font-mono text-xs text-proton-muted/90 flex flex-col justify-between min-h-[220px] relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-proton-accent/5 rounded-full blur-xl pointer-events-none" />
-            
-            <div className="flex items-center justify-between border-b border-proton-border/30 pb-3 mb-4 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
-                <span className="text-[10px] uppercase font-black tracking-widest text-proton-accent">OPERATIVE FORENSIC TRAFFIC FEED</span>
-              </div>
-              <span className="text-[9px] text-proton-muted/40 font-bold uppercase tracking-widest">ACTIVE PORT SNIFFING</span>
-            </div>
-
-            <div className="space-y-2 flex-grow overflow-y-auto max-h-[160px] custom-scrollbar-minimal pr-1">
-              <AnimatePresence initial={false}>
-                {forensicLogs.map((log) => (
-                  <motion.div
-                    key={log.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex items-start gap-3 select-text py-0.5 border-b border-white/[0.02]"
-                  >
-                    <span className="text-proton-muted/40 font-bold shrink-0">{log.timestamp}</span>
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded text-[8px] font-black tracking-widest shrink-0 uppercase",
-                      log.severity === 'success' ? "bg-emerald-500/10 text-emerald-400" :
-                      log.severity === 'alert' ? "bg-red-500/10 text-red-400" :
-                      log.severity === 'warn' ? "bg-amber-500/10 text-amber-500" :
-                      "bg-cyan-500/10 text-cyan-400"
-                    )}>
-                      {log.category}
-                    </span>
-                    <span className="text-[11px] font-bold text-zinc-300 leading-relaxed break-all">
-                      {log.message}
-                    </span>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </div>
         </div>
       </div>
 
