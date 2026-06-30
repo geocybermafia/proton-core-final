@@ -82,8 +82,8 @@ export default function PersonasView({
 }: { 
   language: 'en' | 'ka',
   personas?: Persona[],
-  history?: ChatMessage[],
-  onNewMessage?: (msg: ChatMessage) => void,
+  history?: any,
+  onNewMessage?: (personaId: string, msg: ChatMessage) => void,
   customAvatars?: any,
   onUpdateAvatar?: any,
   onUpdatePersonas?: any,
@@ -93,7 +93,7 @@ export default function PersonasView({
   tasks?: any,
   uiMode?: any,
   isCreativeMode?: boolean,
-  initialPersonaId?: string,
+  initialPersonaId?: string | null,
   favoritePersonaIds?: string[],
   onToggleFavorite?: any,
   user?: any,
@@ -103,7 +103,18 @@ export default function PersonasView({
   const t = translations[language].personas;
   const [personas, setPersonas] = useState<Persona[]>(initialPersonas || []);
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialHistory || []);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (initialHistory && selectedPersona && initialHistory[selectedPersona.id]) {
+      return initialHistory[selectedPersona.id];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (selectedPersona && initialHistory && initialHistory[selectedPersona.id]) {
+      setMessages(initialHistory[selectedPersona.id]);
+    }
+  }, [selectedPersona, initialHistory]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showTools, setShowTools] = useState(false);
