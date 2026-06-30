@@ -7,7 +7,6 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
 
 interface CabinetViewProps {
   profile: UserProfile | null;
@@ -119,17 +118,6 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
 
   const totalRevenue = sellerOrders.reduce((sum, order) => sum + (Number(order.price) || 0), 0);
   
-  // Chart Data preparation (Last 7 days)
-  const chartData = [
-    { name: 'Mon', sales: 4000 },
-    { name: 'Tue', sales: 3000 },
-    { name: 'Wed', sales: 2000 },
-    { name: 'Thu', sales: 2780 },
-    { name: 'Fri', sales: 1890 },
-    { name: 'Sat', sales: 2390 },
-    { name: 'Sun', sales: 3490 },
-  ];
-
   const isUrl = (str: string) => str.startsWith('http') || str.startsWith('data:image');
 
   return (
@@ -217,36 +205,7 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
-          {/* Revenue Chart */}
-          <div className="h-[250px] bg-proton-bg/20 border border-proton-border rounded-2xl p-6 transition-all hover:bg-proton-bg/30">
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-[10px] font-black uppercase text-proton-text tracking-widest">Performance</p>
-              <div className="flex gap-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-proton-accent" />
-                 <div className="w-1.5 h-1.5 rounded-full bg-proton-accent/20" />
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1f2937" />
-                <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} stroke="#6b7280" />
-                <YAxis fontSize={10} axisLine={false} tickLine={false} stroke="#6b7280" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1f2937', borderRadius: '8px' }}
-                  itemStyle={{ fontSize: '10px', fontWeight: 'bold' }}
-                />
-                <Area type="monotone" dataKey="sales" stroke="#06b6d4" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
+        <div className="relative z-10">
           {/* Recent Orders Table */}
           <div className="bg-proton-bg/20 border border-proton-border rounded-2xl overflow-hidden">
             <div className="p-6 pb-2 border-b border-proton-border flex items-center justify-between">

@@ -811,7 +811,7 @@ export const translations = {
       theme_rose: "ვარდი",
       theme_vibrant: "ნებულა",
       theme_midnight: "ბნელი",
-      seller_dashboard: "გამყიდველის პანელი",
+      seller_dashboard: "გამყიდველის კაბინეტი",
       total_sales: "ჯამური გაყიდვები",
       active_listings: "აქტიური განცხადებები",
       revenue: "შემოსავალი",
@@ -820,7 +820,7 @@ export const translations = {
       buyer: "მყიდველი",
       status: "სტატუსი",
       action: "მოქმედება",
-      analytics_desc: "თქვენი გაყიდვების სტატისტიკა და შეკვეთების მართვა",
+      analytics_desc: "სტატისტიკა და შეკვეთები",
       no_orders: "შეკვეთები ჯერ არ გაქვთ",
       ship_order: "გაგზავნა",
       complete_order: "დასრულება"
