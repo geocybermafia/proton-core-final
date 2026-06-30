@@ -59,7 +59,7 @@ export const DashboardView = React.memo(({
         { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Workflows', view: 'blueprints' }
       ],
       action: () => {
-        setUiMode('business', 'personas');
+        setUiMode('business', 'business-hub');
       }
     },
     {

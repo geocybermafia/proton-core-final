@@ -53,6 +53,9 @@ import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
+import BusinessHubView from './components/BusinessHubView';
+const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView'));
+const PersonasView = lazyWithRetry(() => import('./components/PersonasView'));
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -122,6 +125,7 @@ import {
   PlusCircle,
   CreditCard,
   Wallet,
+  Briefcase,
   BarChart3,
   User as UserIcon,
   Target,
@@ -1886,7 +1890,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
 const PREDEFINED_AVATARS = ["👤", "👔", "💼", "🏢", "📊", "🤖", "🎨", "🚀", "⚡", "🌟", "🦁", "🏔️", "💡", "🛡️"];
 
-const PersonasView = ({ 
+const OldPersonasView = ({ 
   history, 
   onNewMessage,
   customAvatars,
@@ -2482,7 +2486,7 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
   );
 };
 
-const WorkflowEditor = ({
+const OldWorkflowEditor = ({
   workflow,
   onSave,
   onClose,
@@ -2696,7 +2700,7 @@ const WorkflowEditor = ({
   );
 };
 
-const WorkflowsView = ({
+const OldWorkflowsView = ({
   workflows,
   setWorkflows,
   personas,
@@ -2926,7 +2930,7 @@ const WorkflowsView = ({
       )}
       <AnimatePresence>
         {editingWorkflow && (
-          <WorkflowEditor 
+          <OldWorkflowEditor 
             workflow={editingWorkflow}
             onSave={handleSave}
             onClose={() => setEditingWorkflow(null)}
@@ -3114,6 +3118,7 @@ export default function App() {
         case 'image': return '/studio';
         case 'organizer': return '/organizer';
         case 'finance': return '/finance';
+        case 'business-hub': return '/business-hub';
         case 'compute': return '/compute';
         case 'device': return '/device';
         case 'profile': return '/profile';
@@ -3171,6 +3176,8 @@ export default function App() {
     if (pathname.startsWith('/studio')) return 'image';
     if (pathname.startsWith('/organizer')) return 'organizer';
     if (pathname.startsWith('/finance')) return 'finance';
+    if (pathname.startsWith('/business-hub')) return 'business-hub';
+    if (pathname.startsWith('/business')) return 'business-hub';
     if (pathname.startsWith('/compute')) return 'compute';
     if (pathname.startsWith('/device')) return 'device';
     if (pathname.startsWith('/profile')) return 'profile';
@@ -3193,6 +3200,7 @@ export default function App() {
       case 'image': return '/studio';
       case 'organizer': return '/organizer';
       case 'finance': return '/finance';
+      case 'business-hub': return '/business-hub';
       case 'compute': return '/compute';
       case 'device': return '/device';
       case 'profile': return '/profile';
@@ -3315,7 +3323,8 @@ export default function App() {
       view === 'commercial' || 
       view === 'finance' || 
       view === 'compute' || 
-      view === 'device'
+      view === 'device' ||
+      view === 'business-hub'
     ) {
       setUiMode('business');
     }
@@ -4680,7 +4689,7 @@ export default function App() {
       {/* Bottom Nav (Mobile Only) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
         {(uiMode === 'business' ? [
-          { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
+          { id: 'business-hub', icon: Briefcase, label: language === 'ka' ? 'პანელი' : 'Hub' },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
@@ -4795,7 +4804,7 @@ export default function App() {
           {/* Center Section: Main Navigation (Icons Only) */}
           <nav className="hidden xl:flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
             {(uiMode === 'business' ? [
-              { id: 'dashboard', label: t.sidebar.dashboard, icon: LayoutDashboard },
+              { id: 'business-hub', label: language === 'ka' ? 'მართვის პანელი' : 'Business Hub', icon: Briefcase },
               { id: 'personas', label: t.sidebar.agents, icon: Users },
               { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
@@ -4915,6 +4924,16 @@ export default function App() {
                       setTheme={setTheme}
                       isSystemActive={isSystemActive}
                       setAiSettings={setAiSettings}
+                    />
+                  )}
+                  {activeView === 'business-hub' && (
+                    <BusinessHubView 
+                      language={userProfile.language}
+                      setActiveView={setActiveView}
+                      personasCount={personas.length}
+                      workflowsCount={workflows.length}
+                      tasksCount={tasks.filter(t => !t.completed).length}
+                      userEmail={user?.email || ''}
                     />
                   )}
                   {activeView === 'personas' && (
