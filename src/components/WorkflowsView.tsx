@@ -6,7 +6,7 @@ import { translations } from '../translations';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, Lock, Zap, Edit2, Trash2, Clock, ChevronDown, X, Loader2, Sparkles, Activity
+  Plus, Lock, Zap, Edit2, Trash2, Clock, ChevronDown, X, Loader2, Sparkles, Activity, Link
 } from 'lucide-react';
 import { handleFirestoreError } from '../lib/firebaseUtils';
 import { analyzeWorkflow } from '../lib/gemini';
@@ -422,7 +422,10 @@ export default function WorkflowsView({
             return (
               <div 
                 key={wf.id} 
-                className="group proton-glass p-6 rounded-[32px] space-y-6 hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-full" 
+                className={cn(
+                  "group proton-glass p-6 rounded-[32px] space-y-6 hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-full",
+                  persona ? "border-l-4 border-l-proton-accent/50" : ""
+                )} 
                 onClick={() => setEditingWorkflow(wf)}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
@@ -458,6 +461,20 @@ export default function WorkflowsView({
                       {isCreativeMode ? <Activity size={18} /> : <Lock size={14} />}
                     </button>
                   </div>
+
+                  {/* Persona Connection Tag */}
+                  {persona && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-proton-accent/5 hover:bg-proton-accent/10 border border-proton-accent/20 rounded-2xl w-fit transition-all duration-300">
+                      <Link size={12} className="text-proton-accent animate-pulse" />
+                      <span className="text-[8px] font-black uppercase tracking-wider text-proton-accent">
+                        {language === 'ka' ? 'დამოკიდებულია პერსონაზე:' : 'PERSONA-LINKED:'}
+                      </span>
+                      <span className="text-[10px] font-black text-proton-text flex items-center gap-1.5">
+                        <span>{persona.avatar}</span>
+                        <span>{persona.name}</span>
+                      </span>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 gap-3 text-xs">
                     <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border group-hover:border-proton-accent/20 transition-colors">
