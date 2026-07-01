@@ -4182,8 +4182,8 @@ export default function App() {
             <motion.aside 
               initial={false}
               animate={{ 
-                width: isSidebarOpen ? 280 : (viewportWidth < 768 ? 0 : 80),
-                x: isSidebarOpen ? 0 : (viewportWidth < 768 ? -280 : 0)
+                width: isSidebarOpen ? 280 : 0,
+                x: isSidebarOpen ? 0 : -280
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={cn(
@@ -4749,10 +4749,11 @@ export default function App() {
           {/* Left Section: User & Status */}
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
             <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden w-9 h-9 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent transition-all shrink-0"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)]"
+              title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Hide Sidebar') : (language === 'ka' ? 'საიდბარი' : 'Show Sidebar')}
             >
-              <Grid size={18} />
+              <Grid size={18} className={cn("transition-transform duration-500", isSidebarOpen ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
             </button>
 
             {activeView !== 'dashboard' && (
