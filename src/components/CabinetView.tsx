@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { UserProfile, Theme } from '../types';
-import { User as UserIcon, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, Camera, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment, collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
+import AvatarEditorModal from './AvatarEditorModal';
 
 interface CabinetViewProps {
   profile: UserProfile | null;
@@ -28,6 +29,7 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
 export default function CabinetView({ profile, theme, setTheme }: CabinetViewProps) {
   const { user } = useAuth();
   const [isDesignOpen, setIsDesignOpen] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
   const [sellerListings, setSellerListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,15 +130,25 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
          
          <div className="relative p-6 px-10 flex flex-col md:flex-row gap-8 items-center">
             <div className="relative shrink-0">
-               <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-proton-accent via-blue-500 to-indigo-600 p-[2px] shadow-2xl">
-                  <div className="w-full h-full bg-proton-bg rounded-[22px] flex items-center justify-center overflow-hidden">
+               <button 
+                  onClick={() => setIsAvatarModalOpen(true)}
+                  className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-proton-accent via-blue-500 to-indigo-600 p-[2px] shadow-2xl relative group/avatar cursor-pointer hover:scale-[1.03] transition-all overflow-hidden"
+                  title={t.update_avatar}
+               >
+                  <div className="w-full h-full bg-proton-bg rounded-[22px] flex items-center justify-center overflow-hidden relative">
                      {profile.avatar && isUrl(profile.avatar) ? (
-                        <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover group-hover/avatar:scale-105 transition-all" referrerPolicy="no-referrer" />
                      ) : (
-                        <span className="text-4xl font-black text-proton-accent uppercase">{profile.name.charAt(0)}</span>
+                        <span className="text-4xl font-black text-proton-accent uppercase group-hover/avatar:scale-110 transition-all">{profile.name.charAt(0)}</span>
                      )}
+                     
+                     {/* Hover Overlay */}
+                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex flex-col items-center justify-center text-proton-accent gap-1">
+                        <Camera size={20} className="animate-bounce" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t.update_avatar}</span>
+                     </div>
                   </div>
-               </div>
+               </button>
                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-proton-accent rounded-xl flex items-center justify-center border-4 border-proton-card shadow-lg text-proton-bg">
                   <ShieldCheck size={16} />
                </div>
@@ -450,6 +462,15 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
             </div>
          </section>
       </div>
+
+      <AvatarEditorModal
+         isOpen={isAvatarModalOpen}
+         onClose={() => setIsAvatarModalOpen(false)}
+         currentAvatar={profile.avatar || undefined}
+         userName={profile.name}
+         lang={lang}
+         onSave={(newAvatarBase64) => handleUpdate('avatar', newAvatarBase64)}
+      />
     </div>
   );
 }

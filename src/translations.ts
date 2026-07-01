@@ -380,7 +380,19 @@ export const translations = {
       analytics_desc: "Your sales statistics and order management",
       no_orders: "No orders yet",
       ship_order: "Ship",
-      complete_order: "Complete"
+      complete_order: "Complete",
+      update_avatar: "Update Avatar",
+      use_camera: "Use Camera",
+      generate_ai: "AI Generate",
+      upload_file: "Upload Image",
+      camera_active: "Camera Active",
+      capture: "Take Photo",
+      retake: "Retake Photo",
+      save_avatar: "Apply Avatar",
+      cancel: "Cancel",
+      prompt_placeholder: "Describe your custom AI avatar...",
+      generating_ai: "AI is rendering image...",
+      camera_error: "Camera stream failed"
     },
     settings: {
       title: "Neural Settings",
@@ -823,7 +835,19 @@ export const translations = {
       analytics_desc: "სტატისტიკა და შეკვეთები",
       no_orders: "შეკვეთები ჯერ არ გაქვთ",
       ship_order: "გაგზავნა",
-      complete_order: "დასრულება"
+      complete_order: "დასრულება",
+      update_avatar: "ავატარის განახლება",
+      use_camera: "კამერის ჩართვა",
+      generate_ai: "AI გენერირება",
+      upload_file: "ფაილის ატვირთვა",
+      camera_active: "კამერა აქტიურია",
+      capture: "სურათის გადაღება",
+      retake: "ხელახლა გადაღება",
+      save_avatar: "ავატარის დაყენება",
+      cancel: "გაუქმება",
+      prompt_placeholder: "აღწერეთ სასურველი AI ავატარი...",
+      generating_ai: "AI აგენერირებს გამოსახულებას...",
+      camera_error: "კამერა არ არის ხელმისაწვდომი"
     },
     settings: {
       title: "სისტემის პარამეტრები",
