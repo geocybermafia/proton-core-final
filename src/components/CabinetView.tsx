@@ -27,7 +27,7 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
 
 export default function CabinetView({ profile, theme, setTheme }: CabinetViewProps) {
   const { user } = useAuth();
-  const [isDesignOpen, setIsDesignOpen] = React.useState(false);
+  const [isDesignOpen, setIsDesignOpen] = useState(false);
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
   const [sellerListings, setSellerListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
