@@ -4309,7 +4309,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 currentTheme.card
               )}
             >
-              <div className="p-8 sm:p-10 space-y-8">
+              <div className="p-6 sm:p-10 space-y-8 max-h-[85vh] md:max-h-[600px] overflow-y-auto custom-scrollbar-minimal">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-black uppercase tracking-tight text-white">
                     {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
@@ -4436,7 +4436,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className="relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden bg-[#121212]"
             >
-              <div className="p-8 sm:p-10 space-y-6 flex flex-col h-[600px] max-h-[85vh]">
+              <div className="p-6 sm:p-10 space-y-6 flex flex-col h-[85vh] md:h-[600px] max-h-[90vh]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
