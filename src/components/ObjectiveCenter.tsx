@@ -44,7 +44,7 @@ export const ObjectiveCenter = ({ language }: { language: 'en' | 'ka' }) => {
     },
     {
       id: 'obj-3',
-      title: language === 'ka' ? 'AI მოდელის ტრენინგი' : 'Neural Core Training',
+      title: language === 'ka' ? 'AI მოდელის ტრენინგი' : 'Neural Training',
       progress: 91,
       status: 'complete',
       priority: 'high',

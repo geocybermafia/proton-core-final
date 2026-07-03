@@ -51,7 +51,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   // Comprehensive localized content for detailed sections
   const localContent = {
     en: {
-      platform_title: "Explore Core Features",
+      platform_title: "Explore Features",
       platform_subtitle: "Proton brings together four essential tools designed to work in beautiful harmony under your guiding hand.",
       
       modules: [
@@ -102,11 +102,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       ],
 
       faqs_title: "Frequently Asked Questions",
-      faqs_subtitle: "Everything you need to know about Proton Core platforms and capabilities.",
+      faqs_subtitle: "Everything you need to know about Proton platforms and capabilities.",
       faqs: [
         {
-          q: "What is Proton Core?",
-          a: "Proton Core is a warm, simple, and fully responsive digital home designed to bring helpful AI assistants, task organizers, and neighborhood trade onto a single screen."
+          q: "What is Proton?",
+          a: "Proton is a warm, simple, and fully responsive digital home designed to bring helpful AI assistants, task organizers, and neighborhood trade onto a single screen."
         },
         {
           q: "Who is this platform designed for?",
@@ -182,11 +182,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       ],
 
       faqs_title: "ხშირად დასმული კითხვები",
-      faqs_subtitle: "ყველაფერი, რაც გსურს იცოდე Proton Core პლატფორმისა და შესაძლებლობების შესახებ.",
+      faqs_subtitle: "ყველაფერი, რაც გსურს იცოდე Proton პლატფორმისა და შესაძლებლობების შესახებ.",
       faqs: [
         {
-          q: "რა არის Proton Core?",
-          a: "Proton Core არის თბილი, მოსახერხებელი და სრულად ადაპტირებული ციფრული სახლი, რომელიც აერთიანებს AI დამხმარეებს, საქმეების ორგანიზატორსა და მეგობრულ სავაჭრო მარკეტს ერთ ეკრანზე."
+          q: "რა არის Proton?",
+          a: "Proton არის თბილი, მოსახერხებელი და სრულად ადაპტირებული ციფრული სახლი, რომელიც აერთიანებს AI დამხმარეებს, საქმეების ორგანიზატორსა და მეგობრულ სავაჭრო მარკეტს ერთ ეკრანზე."
         },
         {
           q: "ვისთვის არის განკუთვნილი ეს პლატფორმა?",
@@ -255,7 +255,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="w-10 h-10 rounded-xl bg-proton-accent flex items-center justify-center text-proton-bg shadow-lg shadow-proton-accent/20">
               <Zap size={22} fill="currentColor" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">Proton Core</span>
+            <span className="text-xl font-black tracking-tighter uppercase whitespace-nowrap">Proton AI</span>
           </div>
           
           <div className="flex items-center gap-4 sm:gap-6">
@@ -440,7 +440,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 <div className="col-span-3 border-r border-proton-border/40 pr-4 space-y-2 hidden sm:block">
                   <div className="flex items-center gap-2 mb-4">
                     <div className="w-2.5 h-2.5 rounded-full bg-proton-accent animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">CORE CONSOLE</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider text-proton-text">SYSTEM CONSOLE</span>
                   </div>
                   {[
                     { id: 'dashboard', name: 'Dashboard' },
@@ -588,7 +588,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                             <div className="flex flex-col items-end">
                               <span className="text-[8px] font-mono text-proton-muted mb-0.5">{language === 'ka' ? 'შენ (მომხმარებელი)' : 'You (User)'}</span>
                               <div className="bg-proton-accent/15 border border-proton-accent/30 text-proton-text px-3 py-2 rounded-2xl rounded-tr-none text-right max-w-[85%]">
-                                {language === 'ka' ? 'დაგვიწერე მოკლე და მიმზიდველი სლოგანი Proton Core-ისთვის.' : 'Write a short & attractive ad slogan for Proton Core systems.'}
+                                {language === 'ka' ? 'დაგვიწერე მოკლე და მიმზიდველი სლოგანი Proton-ისთვის.' : 'Write a short & attractive ad slogan for Proton systems.'}
                               </div>
                             </div>
                             {/* Message 2 */}
@@ -596,8 +596,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                               <span className="text-[8px] font-mono text-proton-accent mb-0.5">Marketing Specialist</span>
                               <div className="bg-proton-card border border-proton-border text-proton-text px-3 py-2 rounded-2xl rounded-tl-none text-left max-w-[85%] leading-relaxed font-semibold">
                                 {language === 'ka' 
-                                  ? '💡 "Proton Core - მართე შენი საქმეები მარტივად: ჭკვიანი AI ასისტენტები, მარტივი დაფები და თბილი მარკეტი!"'
-                                  : '💡 "Proton Core - Manage your day-to-day with total ease: Smart AI helpers, visual task planners, & a cozy marketplace!"'
+                                  ? '💡 "Proton - მართე შენი საქმეები მარტივად: ჭკვიანი AI ასისტენტები, მარტივი დაფები და თბილი მარკეტი!"'
+                                  : '💡 "Proton - Manage your day-to-day with total ease: Smart AI helpers, visual task planners, & a cozy marketplace!"'
                                 }
                               </div>
                             </div>
@@ -750,13 +750,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                         <div className="p-3 bg-proton-bg rounded-xl border border-proton-border/60 text-left flex flex-col justify-between">
                           <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest mb-1">ENGLISH (SOURCE)</p>
                           <p className="text-[10px] font-medium leading-relaxed text-proton-text">
-                            "Proton Core offers complete system operations, specialized AI instruction layers, and unified peer-to-peer commerce under strict client guidelines."
+                            "Proton offers complete system operations, specialized AI instruction layers, and unified peer-to-peer commerce under strict client guidelines."
                           </p>
                         </div>
                         <div className="p-3 bg-proton-accent/5 rounded-xl border border-proton-accent/20 text-left flex flex-col justify-between">
                           <p className="text-[8px] font-mono text-proton-accent uppercase tracking-widest mb-1">GEORGIAN (TRANSLATED BACKEND)</p>
                           <p className="text-[10px] font-semibold leading-relaxed text-proton-text">
-                            "Proton Core გთავაზობთ სრულ სისტემურ ოპერაციებს, სპეციალიზებულ AI ინსტრუქციების შრეებსა და ერთიან სავაჭრო მარკეტს მომხმარებლის მკაცრი კონტროლის ქვეშ."
+                            "Proton გთავაზობთ სრულ სისტემურ ოპერაციებს, სპეციალიზებულ AI ინსტრუქციების შრეებსა და ერთიან სავაჭრო მარკეტს მომხმარებლის მკაცრი კონტროლის ქვეშ."
                           </p>
                         </div>
                       </div>
@@ -1003,7 +1003,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             <div className="w-8 h-8 rounded-lg bg-proton-accent flex items-center justify-center text-proton-bg">
               <Zap size={18} fill="currentColor" />
             </div>
-            <span className="text-sm font-black tracking-tighter uppercase whitespace-nowrap">Proton Core Systems</span>
+            <span className="text-sm font-black tracking-tighter uppercase whitespace-nowrap">Proton Systems</span>
           </div>
           <p className="text-xs text-proton-muted font-mono uppercase tracking-[0.2em]">
             {t.footer_text}

@@ -570,7 +570,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        </div>
                        <div>
                         <p className="text-[10px] text-proton-text font-black uppercase tracking-[0.2em]">Biometric Data Matrix Secure</p>
-                        <p className="text-[8px] text-proton-accent opacity-50 font-black uppercase tracking-widest mt-1">E2E Encryption Level 4 • Proton Core V2</p>
+                        <p className="text-[8px] text-proton-accent opacity-50 font-black uppercase tracking-widest mt-1">E2E Encryption Level 4 • Proton V2</p>
                        </div>
                     </div>
                   </div>
@@ -644,7 +644,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <button
                           type="button"
                           onClick={() => showToast(
-                            language === 'ka' ? 'ინფორმაცია: Proton Core 4.1 განახლდა!' : 'System Status Update: Proton Engine 4.1-STABLE successfully injected.',
+                            language === 'ka' ? 'ინფორმაცია: Proton 4.1 განახლდა!' : 'System Status Update: Proton Engine 4.1-STABLE successfully injected.',
                             'info'
                           )}
                           className="flex items-center justify-center gap-2 p-3 rounded-xl bg-sky-950/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
@@ -858,7 +858,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                              <Shield size={28} />
                           </div>
                           <div>
-                             <p className="text-xs font-black uppercase tracking-wide text-green-400">Core Sync: Active</p>
+                             <p className="text-xs font-black uppercase tracking-wide text-green-400">System Sync: Active</p>
                              <p className="text-[10px] font-bold text-green-500/50 uppercase tracking-tighter">Level 4 Hash Encryption</p>
                           </div>
                        </div>
@@ -894,7 +894,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        <div className="flex items-center justify-center gap-4 text-[9px] text-proton-muted font-bold uppercase tracking-[0.3em]">
                         <span>Version 4.1.0-STABLE</span>
                         <span className="w-1 h-1 rounded-full bg-proton-border" />
-                        <span>Core: Pro-X3</span>
+                        <span>Engine: Pro-X3</span>
                        </div>
                     </div>
                   </div>

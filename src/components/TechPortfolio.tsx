@@ -77,7 +77,7 @@ export function TechPortfolio({ language, t, currentTheme }: TechPortfolioProps)
     {
       id: 'as-1',
       ticker: 'PRTN-Q',
-      name: 'Proton Quantum Core Server v2',
+      name: 'Proton Quantum Server v2',
       nameGe: 'პროტონ კვანტური სერვერი v2',
       category: 'server',
       description: 'Decentralized high-performance quantum processing server cluster.',
@@ -650,7 +650,7 @@ export function TechPortfolio({ language, t, currentTheme }: TechPortfolioProps)
               </div>
               <div>
                 <p className="text-xs uppercase font-extrabold tracking-wider text-zinc-300">
-                  {language === 'ka' ? 'ინვენტარი ცარიელია' : 'Inventory Core is Offline'}
+                  {language === 'ka' ? 'ინვენტარი ცარიელია' : 'Inventory is Offline'}
                 </p>
                 <p className={`${currentTheme.muted} text-[10px] mt-1`}>
                   {language === 'ka' 

@@ -44,7 +44,7 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       volume: 4,
       total: 5000,
       status: 'completed',
-      operator: 'Core-Node-Alpha'
+      operator: 'System-Node-Alpha'
     },
     {
       id: 'TX-4903',

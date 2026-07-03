@@ -3485,7 +3485,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                  </div>
               </div>
 
-              {/* STEP 1: Core Classification & Info */}
+              {/* STEP 1: Classification & Info */}
               {formStep === 1 && (
                  <motion.div 
                     initial={{ opacity: 0, y: 15 }} 

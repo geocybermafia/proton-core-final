@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -23,7 +23,8 @@ import {
   RefreshCw,
   PlusCircle,
   CheckCircle2,
-  Grid
+  Grid,
+  AlertTriangle
 } from 'lucide-react';
 import { Task, Workflow, Theme } from '../types';
 import { translations } from '../translations';
@@ -95,26 +96,55 @@ export const OrganizerView = ({
   const [editingPriority, setEditingPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [editingCategory, setEditingCategory] = useState('');
 
-  // Timer/Stopwatch states
+  // Timer/Stopwatch states - optimized to batch Firestore updates to avoid lagging on slow hardware
   const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
+  const [localTimerSeconds, setLocalTimerSeconds] = useState<{ [taskId: string]: number }>({});
+  const tasksRef = useRef<Task[]>(tasks);
+
+  // Sync tasks ref for background timer checks
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   // Stopwatch ticking logic
   useEffect(() => {
     if (!activeTimerTaskId) return;
+
+    // Load initial task time if not already tracked locally
+    const initialTask = tasksRef.current.find(tk => tk.id === activeTimerTaskId);
+    const initialSeconds = initialTask ? (initialTask.elapsedTime || 0) : 0;
+    
+    setLocalTimerSeconds(prev => ({
+      ...prev,
+      [activeTimerTaskId]: prev[activeTimerTaskId] !== undefined ? prev[activeTimerTaskId] : initialSeconds
+    }));
+
+    console.log(`[Stress Test Logs] Starting optimized local timer tick for task: ${activeTimerTaskId}. Current accumulated: ${initialSeconds}s`);
+
+    let tickCount = 0;
     const interval = setInterval(() => {
-      const activeTask = tasks.find(tk => tk.id === activeTimerTaskId);
-      if (activeTask) {
-        if (activeTask.completed) {
-          setActiveTimerTaskId(null);
-          return;
+      setLocalTimerSeconds(prev => {
+        const nextSec = (prev[activeTimerTaskId] || 0) + 1;
+        
+        // Every 30 seconds, perform a silent database flush as a backup safety fallback
+        tickCount++;
+        if (tickCount >= 30) {
+          tickCount = 0;
+          console.log(`[Stress Test Logs] Periodic safety backup save of active task stopwatch: ${activeTimerTaskId} with ${nextSec} seconds.`);
+          onEditTask(activeTimerTaskId, { elapsedTime: nextSec });
         }
-        onEditTask(activeTimerTaskId, { elapsedTime: (activeTask.elapsedTime || 0) + 1 });
-      } else {
-        setActiveTimerTaskId(null);
-      }
+        
+        return {
+          ...prev,
+          [activeTimerTaskId]: nextSec
+        };
+      });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [activeTimerTaskId, tasks, onEditTask]);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [activeTimerTaskId, onEditTask]);
 
   const themes = {
     light: {
@@ -281,9 +311,25 @@ export const OrganizerView = ({
   };
 
   const handleToggleTimer = (id: string) => {
+    // If there is an active timer running, save its accumulated elapsed time to database
+    if (activeTimerTaskId) {
+      const activeSeconds = localTimerSeconds[activeTimerTaskId];
+      if (activeSeconds !== undefined) {
+        console.log(`[Stress Test Logs] Toggling timer off or switching. Flushing ${activeSeconds}s to Firestore for task: ${activeTimerTaskId}`);
+        onEditTask(activeTimerTaskId, { elapsedTime: activeSeconds });
+      }
+    }
+
     if (activeTimerTaskId === id) {
       setActiveTimerTaskId(null);
     } else {
+      // Load current time of next task
+      const nextTask = tasks.find(tk => tk.id === id);
+      const nextSeconds = nextTask ? (nextTask.elapsedTime || 0) : 0;
+      setLocalTimerSeconds(prev => ({
+        ...prev,
+        [id]: nextSeconds
+      }));
       setActiveTimerTaskId(id);
     }
   };
@@ -473,7 +519,7 @@ export const OrganizerView = ({
               {language === 'ka' ? 'აქტიური ტაიმერი' : 'Active Stopwatch'}
             </p>
             <h4 className={cn("text-xl font-black font-mono", activeTimerTaskId ? "text-amber-500 animate-pulse" : "opacity-40")}>
-              {activeTimerTaskId ? formatElapsedTime(tasks.find(tk => tk.id === activeTimerTaskId)?.elapsedTime) : (language === 'ka' ? 'გამორთულია' : 'Idle')}
+              {activeTimerTaskId ? formatElapsedTime(localTimerSeconds[activeTimerTaskId] ?? tasks.find(tk => tk.id === activeTimerTaskId)?.elapsedTime) : (language === 'ka' ? 'გამორთულია' : 'Idle')}
             </h4>
           </div>
           <div className={cn("p-3.5 rounded-2xl shrink-0", activeTimerTaskId ? "bg-amber-500/10 text-amber-400" : currentTheme.accent)}>
@@ -1002,6 +1048,7 @@ export const OrganizerView = ({
     }
 
     const hasTimerTicking = activeTimerTaskId === task.id;
+    const isOverdue = task.dueDate ? (!task.completed && Date.now() > task.dueDate) : false;
 
     return (
       <motion.div 
@@ -1010,9 +1057,15 @@ export const OrganizerView = ({
         className={cn(
           "p-6 rounded-[24px] border transition-all group flex flex-col gap-4 relative overflow-hidden", 
           currentTheme.card, 
-          task.completed && "opacity-40 select-none border-proton-border/20"
+          task.completed && "opacity-40 select-none border-proton-border/20",
+          isOverdue && "border-red-500/40 bg-red-500/[0.02] shadow-[0_0_15px_rgba(239,68,68,0.05)]"
         )}
       >
+        {/* Overdue left accent bar */}
+        {isOverdue && (
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 shadow-[2px_0_10px_rgba(239,68,68,0.4)] z-20 animate-pulse" />
+        )}
+
         {/* Priority background accent layer */}
         <div className={cn("absolute -right-4 -top-4 w-20 h-20 blur-3xl opacity-10 pointer-events-none", 
           task.priority === 'high' ? "bg-red-500" : task.priority === 'medium' ? "bg-amber-500" : "bg-blue-500"
@@ -1057,6 +1110,12 @@ export const OrganizerView = ({
             
             {/* Tag indicators and dynamic elapsed time row */}
             <div className="flex items-center gap-3 mt-3 flex-wrap">
+              {isOverdue && (
+                <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border border-red-500/20 bg-red-500/10 text-red-500 flex items-center gap-1 animate-pulse">
+                  <AlertTriangle size={8} />
+                  {language === 'ka' ? 'ვადაგადაცილებული' : 'OVERDUE'}
+                </span>
+              )}
               {task.priority && (
                 <span className={cn(
                   "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
@@ -1096,7 +1155,7 @@ export const OrganizerView = ({
                     : (task.elapsedTime ? "bg-proton-secondary/20 text-proton-muted border border-proton-border/10" : "hidden")
                 )}>
                   <span className="w-1.5 h-1.5 rounded-full bg-current animate-ping" />
-                  ⏱️ {formatElapsedTime(task.elapsedTime)}
+                  ⏱️ {formatElapsedTime(activeTimerTaskId === task.id ? (localTimerSeconds[task.id] ?? task.elapsedTime) : task.elapsedTime)}
                 </div>
               )}
             </div>

@@ -44,7 +44,7 @@ export const translations = {
     diagnostic: {
       title: "System Diagnostic",
       run: "Run Analysis",
-      evaluating: "Evaluating Core Performance...",
+      evaluating: "Evaluating System Performance...",
       latency: "Testing Memory Latency...",
       matrix: "Benchmarking Matrix Flux...",
       running: "Processing neural pathways...",
@@ -264,7 +264,7 @@ export const translations = {
     },
     systems: {
       title: "System Architecture",
-      description: "Core infrastructure monitoring.",
+      description: "System infrastructure monitoring.",
       cloud_status: "Cloud Link",
       connected: "Connected",
       offline: "Offline",
@@ -310,7 +310,7 @@ export const translations = {
       customer_inquiry: "Client Response",
       send_quote: "Dispatch Quote",
       analyze_needs: "Analyze Target",
-      analyze_desc: "Extract core objectives from client input.",
+      analyze_desc: "Extract primary objectives from client input.",
       locked: "Logic Locked",
       confirm_action: "Confirm System Action",
       builder: {
@@ -403,7 +403,7 @@ export const translations = {
       appearance: "Design",
       security: "Security",
       save: "Save Config",
-      ai_desc: "Configure core intelligence parameters.",
+      ai_desc: "Configure system intelligence parameters.",
       temperature: "Creativity Bias (Temp)",
       search: "Search Grounding",
       maps: "Maps Integration",

@@ -117,7 +117,7 @@ export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
       ],
       description: language === 'ka' 
         ? 'ეს არის სრულიად მოდულარული AI პლატფორმა, რომელიც აერთიანებს მოწინავე NLP დამხმარეებს, რუკის ლოკალიზაციას (Leaflet), ფაილების სკანირებას, Web3-ს და ვიზუალური პროცესების მართვას ერთიან ეკოსისტემაში.'
-        : 'Proton Core seamlessly integrates localized maps, high-performance visual workflow orchestration (React Flow), AI multi-agents, secure dual Auth, and hardware monitors in a beautifully crafted neo-brutalist shell.'
+        : 'Proton seamlessly integrates localized maps, high-performance visual workflow orchestration (React Flow), AI multi-agents, secure dual Auth, and hardware monitors in a beautifully crafted neo-brutalist shell.'
     },
     {
       title: language === 'ka' ? '2. ბიზნეს მოდელი (SaaS Monetization)' : '2. SaaS Business Model & Margins',
@@ -433,7 +433,7 @@ app.post('/api/checkout/session', async (req, res) => {
                   <button 
                     onClick={() => {
                       const text = `
-Proton Core AI SaaS - Exit Valuation Listing Package
+Proton AI SaaS - Exit Valuation Listing Package
 ===================================================
 Simulated Valuation Parameters:
 - Target Monthly Active Users: ${activeUsers}
@@ -644,7 +644,7 @@ High-Value Infrastructure Assets Included:
                 {/* Left metrics column */}
                 <div className="md:col-span-5 space-y-4">
                   <span className="text-[10px] font-mono tracking-widest uppercase text-proton-muted block">
-                    {language === 'ka' ? 'წარმომადგენლობითი მეტრიკები' : 'Core Selling Pillars'}
+                    {language === 'ka' ? 'წარმომადგენლობითი მეტრიკები' : 'Key Selling Pillars'}
                   </span>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-3">

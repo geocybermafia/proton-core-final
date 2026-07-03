@@ -105,7 +105,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between px-2">
           <h3 className="text-xs font-black uppercase tracking-widest text-proton-muted">
-            {isKa ? 'ხელმისაწვდომი კრეატიული ინსტრუმენტები' : 'AVAILABLE CREATIVE CORE SUITES'}
+            {isKa ? 'ხელმისაწვდომი კრეატიული ინსტრუმენტები' : 'AVAILABLE CREATIVE SUITES'}
           </h3>
         </div>
         
@@ -320,7 +320,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
               type="text"
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
-              placeholder={isKa ? 'მაგ: ფლიპა / Proton-Core' : 'e.g. Proton-Core'}
+              placeholder={isKa ? 'მაგ: ფლიპა / Proton AI' : 'e.g. Proton AI'}
               className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-purple-400 transition-all text-sm shadow-inner"
             />
           </div>
@@ -333,7 +333,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={isKa ? 'აღწერე რა არის შენი პროდუქტი, რა უპირატესობები აქვს ან რა აქციას სთავაზობ მომხმარებელს...' : 'Describe what you offer, its core advantages, or specific special discounts...'}
+              placeholder={isKa ? 'აღწერე რა არის შენი პროდუქტი, რა უპირატესობები აქვს ან რა აქციას სთავაზობ მომხმარებელს...' : 'Describe what you offer, its key advantages, or specific special discounts...'}
               className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-purple-400 transition-all h-32 text-sm resize-none shadow-inner"
             />
           </div>

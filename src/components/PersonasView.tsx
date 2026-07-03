@@ -16,7 +16,7 @@ import Markdown from 'react-markdown';
 const AVATAR_PRESETS = [
   { emoji: '🤖', labelEn: 'Cortex Matrix', labelKa: 'კორტექს მატრიქსი' },
   { emoji: '⚡', labelEn: 'Hyperion Vector', labelKa: 'ჰიპერიონ ვექტორი' },
-  { emoji: '🧠', labelEn: 'Synapse Core', labelKa: 'სინაფსის ბირთვი' },
+  { emoji: '🧠', labelEn: 'Synapse System', labelKa: 'სინაფსის ბირთვი' },
   { emoji: '🔮', labelEn: 'Oracle Node', labelKa: 'ორაკულ ნოდი' },
   { emoji: '👾', labelEn: 'Specter Logic', labelKa: 'სპექტრის ლოგიკა' },
   { emoji: '⚙️', labelEn: 'Engine Operator', labelKa: 'ოპერატორი' },
@@ -339,7 +339,7 @@ export default function PersonasView({
          if (prevTool === 'image') {
            responseContent = `🎨 **WEAVING VISUAL MAP FOR**: "${input}"\n\n- **Target Neural Resolution**: 4K UHD Cyber Style\n- **Dynamic Range**: S-Log3 Gamut\n- **Status**: Synthesis 100% finished. [MOCK_OUTPUT_IMAGE_TAG]`;
          } else if (prevTool === 'summary') {
-           responseContent = `📄 **SEMANTIC KERNEL SUMMARIZATION**:\n\n1. **Core Concept Identified**: Focus parameters for ${input.substring(0, 30)}...\n2. **Synthesis Matrix**: Compressed 90% redundant syntax logic.\n3. **Outcome**: Highly functional abstract locked for action orchestration.`;
+           responseContent = `📄 **SEMANTIC KERNEL SUMMARIZATION**:\n\n1. **Main Concept Identified**: Focus parameters for ${input.substring(0, 30)}...\n2. **Synthesis Matrix**: Compressed 90% redundant syntax logic.\n3. **Outcome**: Highly functional abstract locked for action orchestration.`;
          } else if (prevTool === 'analysis') {
            responseContent = `⚡ **CYBERNETIC PROCESS ANALYSIS**:\n\n- **Structural Synergy**: OPTIMAL | 98.7% cohesion.\n- **Identified Bottlenecks**: High synchronous block dependencies in secondary sub-routines.\n- **Prescription**: Shift model targets into asynchronous pipelines instantly.`;
          }
@@ -504,7 +504,7 @@ export default function PersonasView({
                       <div className="flex justify-between items-center">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-accent flex items-center gap-2">
                           <Sparkles size={13} className="animate-bounce" />
-                          {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'Core Cogitative Instructions'}
+                          {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'System Cogitative Instructions'}
                         </label>
                         <span className="text-[9px] text-proton-muted uppercase font-mono tracking-wider opacity-60">
                            {selectedPersona.role}
@@ -875,7 +875,7 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaDesc}
                       onChange={(e) => setNewPersonaDesc(e.target.value)}
-                      placeholder="e.g. Security audit intelligence core..."
+                      placeholder="e.g. Security audit intelligence engine..."
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
                     />
                   </div>
@@ -953,7 +953,7 @@ export default function PersonasView({
                     <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
                       Cogitative Instructions / System Brain Prompt
                     </label>
-                    <span className="text-[8px] text-proton-accent font-black uppercase tracking-wider">Provides Core Guidelines</span>
+                    <span className="text-[8px] text-proton-accent font-black uppercase tracking-wider">Provides System Guidelines</span>
                   </div>
                   <textarea 
                     value={newPersonaInstructions}

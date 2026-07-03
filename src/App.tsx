@@ -1534,7 +1534,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         stream.getTracks().forEach(track => track.stop()); // Stop immediately
       } catch (err) {
-        console.error("Hardware access denied:", err);
+        console.warn("Hardware access denied:", err);
       }
     }
     
@@ -1546,61 +1546,102 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
           setSupported(prev => ({ ...prev, orientation: true }));
         }
       } catch (err) {
-        console.error("Orientation permission denied:", err);
+        console.warn("Orientation permission denied:", err);
       }
-    }
-
-    if (supported.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ 
-          lat: pos.coords.latitude, 
-          lng: pos.coords.longitude, 
-          accuracy: pos.coords.accuracy 
-        }),
-        (err) => console.error(err),
-        { enableHighAccuracy: true }
-      );
-    }
-
-    if (supported.battery) {
-      (navigator as any).getBattery().then((bat: any) => {
-        setBattery({ level: bat.level, charging: bat.charging });
-        bat.addEventListener('levelchange', () => setBattery(prev => prev ? { ...prev, level: bat.level } : null));
-        bat.addEventListener('chargingchange', () => setBattery(prev => prev ? { ...prev, charging: bat.charging } : null));
-      });
-    }
-
-    if (supported.network) {
-      const conn = (navigator as any).connection;
-      setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
-      conn.addEventListener('change', () => setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType }));
-    }
-
-    if (supported.orientation) {
-      const handler = (event: DeviceOrientationEvent) => {
-        setOrientation({
-          alpha: event.alpha || 0,
-          beta: event.beta || 0,
-          gamma: event.gamma || 0
-        });
-      };
-      window.addEventListener('deviceorientation', handler);
-      return () => window.removeEventListener('deviceorientation', handler);
     }
   };
 
   useEffect(() => {
-    setSupported({
-      geolocation: 'geolocation' in navigator,
-      battery: 'getBattery' in navigator,
-      network: 'connection' in navigator,
-      orientation: 'DeviceOrientationEvent' in window,
-      camera: 'mediaDevices' in navigator,
-      mic: 'mediaDevices' in navigator
-    });
+    console.log("[Stress Test Logs] HardwareView mounted. Registering optimal system monitoring listeners.");
     
-    // Automatically try to get some data if permitted or simple
+    const hasGeoloc = 'geolocation' in navigator;
+    const hasBattery = 'getBattery' in navigator;
+    const hasNetwork = 'connection' in navigator;
+    const hasOrientation = 'DeviceOrientationEvent' in window;
+    const hasMedia = 'mediaDevices' in navigator;
+
+    setSupported({
+      geolocation: hasGeoloc,
+      battery: hasBattery,
+      network: hasNetwork,
+      orientation: hasOrientation,
+      camera: hasMedia,
+      mic: hasMedia
+    });
+
+    if (hasGeoloc) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocation({ 
+            lat: pos.coords.latitude, 
+            lng: pos.coords.longitude, 
+            accuracy: pos.coords.accuracy 
+          });
+        },
+        (err) => console.warn("Geolocation permission not available directly"),
+        { enableHighAccuracy: false } // Low-accuracy is lightweight and prevents heavy hardware polling
+      );
+    }
+
+    let batteryInstance: any = null;
+    const onBatteryChange = () => {
+      if (batteryInstance) {
+        setBattery({ level: batteryInstance.level, charging: batteryInstance.charging });
+      }
+    };
+
+    if (hasBattery) {
+      (navigator as any).getBattery().then((bat: any) => {
+        batteryInstance = bat;
+        setBattery({ level: bat.level, charging: bat.charging });
+        bat.addEventListener('levelchange', onBatteryChange);
+        bat.addEventListener('chargingchange', onBatteryChange);
+      }).catch(() => {});
+    }
+
+    let conn: any = null;
+    const onNetworkChange = () => {
+      if (conn) {
+        setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
+      }
+    };
+
+    if (hasNetwork) {
+      conn = (navigator as any).connection;
+      if (conn) {
+        setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
+        conn.addEventListener('change', onNetworkChange);
+      }
+    }
+
+    const onOrientationChange = (event: DeviceOrientationEvent) => {
+      setOrientation({
+        alpha: event.alpha || 0,
+        beta: event.beta || 0,
+        gamma: event.gamma || 0
+      });
+    };
+
+    if (hasOrientation) {
+      window.addEventListener('deviceorientation', onOrientationChange);
+    }
+
+    // Automatically trigger permission prompt if appropriate
     requestHardwareAccess();
+
+    return () => {
+      console.log("[Stress Test Logs] Cleaning up all active system monitoring listeners safely to prevent memory leaks.");
+      if (batteryInstance) {
+        batteryInstance.removeEventListener('levelchange', onBatteryChange);
+        batteryInstance.removeEventListener('chargingchange', onBatteryChange);
+      }
+      if (conn) {
+        conn.removeEventListener('change', onNetworkChange);
+      }
+      if (hasOrientation) {
+        window.removeEventListener('deviceorientation', onOrientationChange);
+      }
+    };
   }, []);
 
   return (
@@ -1630,7 +1671,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {/* Battery / Power Core */}
+        {/* Battery / Power Engine */}
         <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
             <Zap size={60} />
@@ -1709,7 +1750,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.compute}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
-                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? 'Core' : ''}</span>
+                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? 'CPU' : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
                 {hardware.cores ? t.status_healthy : t.status_syncing}
@@ -4160,15 +4201,20 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  // Simulate usage while session is active
+  // Simulate usage while session is active - optimized with batched writes to prevent continuous database polling and network overhead
   useEffect(() => {
     if (!user) return;
+    console.log("[Stress Test Logs] Initializing optimized session usage tracker. Batching stats writes every 5 minutes to reduce database load.");
+    
     const interval = setInterval(() => {
       const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
       updateDoc(statsRef, {
-        computeTimeHours: increment(0.01)
-      }).catch(e => handleFirestoreError(e, 'write', statsRef.path)); 
-    }, 60000);
+        computeTimeHours: increment(0.05)
+      }).catch(e => {
+        console.warn("[Stress Test Warning] Failed to update session stats (device may be offline or rate-limited):", e.message);
+      }); 
+    }, 300000); // 5 minutes reduces transaction count and CPU wakeups by 80%
+    
     return () => clearInterval(interval);
   }, [user]);
 
@@ -5661,7 +5707,7 @@ export default function App() {
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-[2px] bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
               
               <div className="flex flex-col items-center justify-center space-y-4">
-                {/* Microanimated Locked Shield / Core Visual */}
+                {/* Microanimated Locked Shield / Security Visual */}
                 <div className="relative">
                   {/* Decorative rotating/pulsing ring */}
                   <motion.div 
@@ -5676,10 +5722,10 @@ export default function App() {
 
                 <div className="space-y-1">
                   <div className="text-[10px] font-black uppercase tracking-[0.3em] text-red-500/80 font-mono">
-                    System Core Security
+                    System Shield Security
                   </div>
                   <h3 className="text-xl sm:text-2xl font-black tracking-widest text-proton-text uppercase font-sans">
-                    PROTON-CORE // CLOSED BETA
+                    PROTON SYSTEM // CLOSED BETA
                   </h3>
                 </div>
               </div>
