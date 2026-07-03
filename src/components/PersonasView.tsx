@@ -576,12 +576,12 @@ export default function PersonasView({
 
               {/* Chat Container with Markdown rendering */}
               <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar-minimal bg-gradient-to-b from-transparent to-black/10">
-                 {messages.map((m) => (
+                 {messages.map((m, idx) => (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      key={m.id} 
+                      key={m.id ? `${m.id}-${idx}` : `msg-${idx}`} 
                       className={cn(
                         "flex gap-4 max-w-[85%] items-start animate-in fade-in slide-in-from-bottom-2",
                         m.role === 'user' ? "ml-auto flex-row-reverse" : ""

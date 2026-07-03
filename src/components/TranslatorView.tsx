@@ -146,7 +146,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       recognition.current.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-          setPermissionError('Microphone access is blocked. Please enable it in browser settings.');
+          setPermissionError('Microphone access is blocked. This is common when running inside an iframe. Try opening the app in a new browser tab (via the icon at the top right) to grant microphone permission.');
         }
         setStatus('idle');
         setInterimTranscript('');

@@ -44,7 +44,7 @@ const SettingsView = lazyWithRetry(() => import('./components/SettingsView').the
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useNavigate, useLocation } from 'react-router-dom';
-const CabinetView = lazyWithRetry(() => import('./components/CabinetView'));
+const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })));
 const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
 const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView })));
@@ -56,8 +56,8 @@ import { DashboardView } from './components/DashboardView';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
 import BusinessHubView from './components/BusinessHubView';
-const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView'));
-const PersonasView = lazyWithRetry(() => import('./components/PersonasView'));
+const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView').then(module => ({ default: module.default })));
+const PersonasView = lazyWithRetry(() => import('./components/PersonasView').then(module => ({ default: module.default })));
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -171,7 +171,7 @@ import {
   Tag
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-const Calendar = lazyWithRetry(() => import('react-calendar'));
+const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })));
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { translations } from './translations';
