@@ -899,15 +899,37 @@ export const OrganizerView = ({
         <div className="space-y-8">
           
           {/* Simple Clean Non-Cosmic Calendar */}
-          <div className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div className={cn("p-3 sm:p-6 md:p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
                 <CalendarIcon size={20} className={currentTheme.muted} />
                 {language === 'ka' ? 'კალენდარი' : 'Workspace Calendar'}
               </h3>
             </div>
-            <div className="w-full">
-              <style>{currentTheme.calendar}</style>
+            <div className="w-full overflow-hidden">
+              <style>{`
+                ${currentTheme.calendar}
+                .react-calendar { width: 100% !important; max-width: 100% !important; }
+                .react-calendar__viewContainer { width: 100% !important; }
+                .react-calendar__month-view { width: 100% !important; }
+                .react-calendar__month-view__days { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; width: 100% !important; }
+                .react-calendar__tile { 
+                  aspect-ratio: 1; 
+                  display: flex !important; 
+                  align-items: center; 
+                  justify-content: center; 
+                  padding: 4px !important; 
+                  font-size: 0.75rem !important; 
+                  min-width: 0 !important; 
+                  overflow: hidden !important; 
+                }
+                @media (min-width: 640px) {
+                  .react-calendar__tile { 
+                    font-size: 0.875rem !important; 
+                    padding: 0.8em 0.1em !important; 
+                  }
+                }
+              `}</style>
               <Calendar className="mx-auto" />
             </div>
           </div>
