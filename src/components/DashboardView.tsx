@@ -75,11 +75,12 @@ export const DashboardView = React.memo(({
       badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
       shortcuts: [
+        { label: language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub', view: 'creative-studio' },
         { label: language === 'ka' ? 'სურათების გენერატორი' : 'Image Generator', view: 'image' },
-        { label: language === 'ka' ? 'ორენოვანი მთარგმნელი' : 'Bilingual Translator', view: 'translator' }
+        { label: language === 'ka' ? 'სარეკლამო კოპირაიტინგი' : 'Ad Copywriter', view: 'copywriting' }
       ],
       action: () => {
-        setUiMode('creative', 'image');
+        setUiMode('creative', 'creative-studio');
       }
     },
     {

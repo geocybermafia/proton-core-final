@@ -48,6 +48,8 @@ const CabinetView = lazyWithRetry(() => import('./components/CabinetView'));
 const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
 const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView })));
+const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })));
+const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })));
 const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
@@ -2404,11 +2406,109 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
 
 
 
-const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndIncrementAiQuota }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean, checkAndIncrementAiQuota: () => Promise<boolean> }) => {
+const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndIncrementAiQuota, onBack }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean, checkAndIncrementAiQuota: () => Promise<boolean>, onBack?: () => void }) => {
+  const isKa = language === 'ka';
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [selectedRatio, setSelectedRatio] = useState<'1:1' | '16:9' | '9:16'>('1:1');
+  const [selectedStyle, setSelectedStyle] = useState<string>('none');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // History state with LocalStorage persistence
+  const [historyList, setHistoryList] = useState<{ id: string; url: string; prompt: string; ratio: string; style: string; timestamp: number }[]>(() => {
+    try {
+      const saved = localStorage.getItem('proton_image_history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const t = translations[language].image_studio;
+
+  const stylePresets: Record<string, { label: string; labelGe: string; promptSuffix: string; color: string }> = {
+    none: {
+      label: 'None',
+      labelGe: 'ორიგინალი',
+      promptSuffix: '',
+      color: 'border-white/10 text-white/60 hover:border-white/30'
+    },
+    cyberpunk: {
+      label: 'Cyberpunk',
+      labelGe: 'კიბერპანკი',
+      promptSuffix: ', futuristic neon cyberpunk style, glowing high-tech vectors, volumetric cyberpunk illumination, atmospheric dark background',
+      color: 'border-cyan-500/30 text-cyan-400 bg-cyan-500/5 hover:border-cyan-500'
+    },
+    ornament: {
+      label: 'Georgian Ornament',
+      labelGe: 'ქართული ორნამენტი',
+      promptSuffix: ', traditional Georgian architectural ornament patterns, historical wood carvings design, intricate ethnic decorative motifs, high resolution',
+      color: 'border-amber-500/30 text-amber-500 bg-amber-500/5 hover:border-amber-500'
+    },
+    render: {
+      label: '3D Render',
+      labelGe: '3D რენდერი',
+      promptSuffix: ', highly detailed 3D digital model render, octane render, unreal engine 5, professional cinematic studio lighting, gorgeous details',
+      color: 'border-purple-500/30 text-purple-400 bg-purple-500/5 hover:border-purple-500'
+    },
+    lineart: {
+      label: 'Line Art',
+      labelGe: 'ლაინ არტი',
+      promptSuffix: ', elegant minimalist line art, clean vector strokes, minimalist flat vector art, aesthetic clean design, dark backdrop',
+      color: 'border-emerald-500/30 text-emerald-400 bg-emerald-500/5 hover:border-emerald-500'
+    },
+    watercolor: {
+      label: 'Watercolor',
+      labelGe: 'აკვარელი',
+      promptSuffix: ', soft artistic watercolor painting style, vibrant watercolor washes, expressive canvas brush strokes, highly creative illustration',
+      color: 'border-pink-500/30 text-pink-400 bg-pink-500/5 hover:border-pink-500'
+    }
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (!prompt.trim() || !isCreativeMode) return;
+    
+    setEnhancing(true);
+    try {
+      const enhancerPersona: Persona = {
+        id: 'prompt_enhancer',
+        name: 'Prompt Engineer',
+        nameGe: 'პრომპტ ინჟინერი',
+        role: 'Creative Prompt Specialist',
+        description: 'AI prompt generator',
+        descriptionGe: 'AI პრომპტების გენერატორი',
+        avatar: '🪄',
+        language: 'Mixed',
+        systemInstruction: `You are an elite AI prompt engineer for image generation models. 
+Your goal is to rewrite the user's short description into a detailed, creative, visually striking prompt for image generation.
+Add specific lighting, background details, camera angles, or texture suggestions.
+Keep the prompt in the language it was written (English or Georgian).
+Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, or conversational explanations.`
+      };
+
+      const outcome = await chatWithPersona(
+        enhancerPersona,
+        `Enhance this image prompt: "${prompt}"`,
+        [],
+        'gemini-3.5-flash',
+        false,
+        true,
+        0.8,
+        undefined,
+        language
+      );
+
+      if (outcome && outcome.text) {
+        setPrompt(outcome.text.trim());
+      }
+    } catch (err) {
+      console.error("Failed to enhance prompt:", err);
+    } finally {
+      setEnhancing(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!isCreativeMode || !prompt.trim()) return;
@@ -2418,8 +2518,39 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
 
     setLoading(true);
     try {
-      const result = await generateOrEditImage(prompt);
+      // Append style prefix if selected
+      let finalPrompt = prompt.trim();
+      const styleConfig = stylePresets[selectedStyle];
+      if (styleConfig && styleConfig.promptSuffix) {
+        finalPrompt += styleConfig.promptSuffix;
+      }
+
+      // Append aspect ratio helper
+      if (selectedRatio === '16:9') {
+        finalPrompt += ', 16:9 landscape aspect ratio, cinematic panoramic view';
+      } else if (selectedRatio === '9:16') {
+        finalPrompt += ', 9:16 vertical portrait aspect ratio, mobile optimization';
+      } else {
+        finalPrompt += ', 1:1 square ratio';
+      }
+
+      const result = await generateOrEditImage(finalPrompt);
       setImage(result);
+
+      // Add to history
+      const newItem = {
+        id: `img-${Date.now()}`,
+        url: result,
+        prompt: prompt.trim(),
+        ratio: selectedRatio,
+        style: selectedStyle,
+        timestamp: Date.now()
+      };
+
+      const updatedHistory = [newItem, ...historyList].slice(0, 12);
+      setHistoryList(updatedHistory);
+      localStorage.setItem('proton_image_history', JSON.stringify(updatedHistory));
+
     } catch (error: any) {
       console.error(error);
       if (error?.message?.includes('PROHIBITED_CONTENT') || error?.toString().includes('PROHIBITED_CONTENT')) {
@@ -2432,28 +2563,130 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
     }
   };
 
+  const handleCopyPrompt = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleDeleteHistoryItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = historyList.filter(item => item.id !== id);
+    setHistoryList(updated);
+    localStorage.setItem('proton_image_history', JSON.stringify(updated));
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight">{t.title}</h2>
-        <p className="text-proton-muted text-sm mt-1">{t.subtitle}</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="p-2.5 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card text-proton-muted hover:text-proton-text transition-all active:scale-95 cursor-pointer"
+              title={isKa ? 'უკან დაბრუნება' : 'Go Back'}
+            >
+              <ArrowLeft size={16} />
+            </button>
+          )}
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{t.title}</h2>
+            <p className="text-proton-muted text-sm mt-1">{t.subtitle}</p>
+          </div>
+        </div>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
-        <div className="proton-glass p-4 sm:p-6 md:p-8 rounded-3xl space-y-6">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            disabled={!isCreativeMode}
-            placeholder={isCreativeMode ? t.placeholder : t.offline}
-            className={cn(
-              "w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 md:h-48 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30",
-              !isCreativeMode && "opacity-50"
-            )}
-          />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column Parameters */}
+        <div className="lg:col-span-5 space-y-6 bg-proton-card/30 p-6 rounded-3xl border border-proton-border shadow-sm">
+          {/* Text Area Prompt with AI enhancer */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">
+                {isKa ? 'გამოსახულების აღწერა (პრომპტი)' : 'IMAGE PROMPT'}
+              </label>
+              <button
+                type="button"
+                onClick={handleEnhancePrompt}
+                disabled={enhancing || !prompt.trim() || !isCreativeMode}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 text-proton-accent hover:underline disabled:opacity-50"
+                )}
+              >
+                {enhancing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                {enhancing ? (isKa ? 'მუშავდება...' : 'Enhancing...') : (isKa ? '🪄 პრომპტის გაუმჯობესება' : '🪄 Magic Enhance')}
+              </button>
+            </div>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              disabled={!isCreativeMode}
+              placeholder={isCreativeMode ? t.placeholder : t.offline}
+              className={cn(
+                "w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-proton-accent transition-all h-32 text-sm resize-none focus:ring-1 focus:ring-proton-accent/30 shadow-inner leading-relaxed",
+                !isCreativeMode && "opacity-50"
+              )}
+            />
+          </div>
+
+          {/* Aspect Ratio Selector */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">
+              {isKa ? 'ზომის ფორმატი' : 'ASPECT RATIO'}
+            </label>
+            <div className="grid grid-cols-3 gap-3 bg-proton-bg p-1 rounded-xl border border-proton-border">
+              {(['1:1', '16:9', '9:16'] as const).map(ratio => (
+                <button
+                  key={ratio}
+                  type="button"
+                  onClick={() => setSelectedRatio(ratio)}
+                  className={cn(
+                    "py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border shrink-0 flex flex-col items-center gap-1",
+                    selectedRatio === ratio 
+                      ? "bg-proton-accent border-proton-accent text-proton-bg font-bold shadow-[0_0_12px_rgba(0,242,255,0.2)]"
+                      : "border-transparent text-proton-muted hover:text-proton-text hover:bg-white/5"
+                  )}
+                >
+                  <span className={cn(
+                    "border border-current rounded",
+                    ratio === '1:1' ? "w-3 h-3" : ratio === '16:9' ? "w-4 h-2.5" : "w-2.5 h-4"
+                  )} />
+                  {ratio === '1:1' ? (isKa ? 'კვადრატი' : '1:1 Square') : ratio === '16:9' ? (isKa ? 'პანორამული' : '16:9 Wide') : (isKa ? 'პორტრეტი' : '9:16 Mobile')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Style Presets */}
+          <div className="space-y-3">
+            <label className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">
+              {isKa ? 'მხატვრული სტილი' : 'ART STYLE'}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(stylePresets).map(([key, value]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setSelectedStyle(key)}
+                  className={cn(
+                    "px-3 py-2.5 rounded-xl border text-left text-[10px] font-bold tracking-tight transition-all uppercase flex items-center justify-between",
+                    selectedStyle === key 
+                      ? "border-proton-accent bg-proton-accent/10 text-proton-text shadow-[0_0_10px_rgba(0,242,255,0.05)]" 
+                      : value.color
+                  )}
+                >
+                  <span>{isKa ? value.labelGe : value.label}</span>
+                  {selectedStyle === key && <Check size={10} className="text-proton-accent" />}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Generate Button */}
           <button 
             onClick={handleGenerate}
-            disabled={!isCreativeMode || loading}
-            className="w-full py-4 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-proton-accent/20"
+            disabled={!isCreativeMode || loading || !prompt.trim()}
+            className="w-full py-4 rounded-xl bg-proton-accent text-proton-bg font-bold text-sm flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 shadow-lg shadow-proton-accent/20 mt-2"
           >
             {loading ? (
                 <>
@@ -2476,11 +2709,103 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
           </button>
         </div>
 
-        {image && (
-          <div className="proton-glass p-4 rounded-3xl overflow-hidden shadow-2xl">
-            <img src={image} alt="Generated" className="rounded-2xl w-full h-full object-cover" referrerPolicy="no-referrer" />
+        {/* Right Column Preview */}
+        <div className="lg:col-span-7 space-y-6">
+          <div className="bg-proton-card p-6 rounded-3xl border border-proton-border space-y-4 shadow-sm">
+            <h3 className="text-xs font-black uppercase tracking-widest text-proton-muted pb-3 border-b border-white/5">
+              {isKa ? 'ვიზუალური შედეგი' : 'ACTIVE VIEWPORT'}
+            </h3>
+            
+            <div className="flex justify-center items-center bg-[#090d16] rounded-2xl border border-white/5 overflow-hidden relative min-h-[300px] md:min-h-[400px]">
+              {image ? (
+                <div className={cn(
+                  "w-full h-full p-2 flex justify-center items-center",
+                  selectedRatio === '16:9' ? 'aspect-video' : selectedRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-square'
+                )}>
+                  <img src={image} alt="Generated" className="rounded-xl w-full h-full object-contain" referrerPolicy="no-referrer" />
+                  
+                  {/* Download Action overlay */}
+                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    <a 
+                      href={image} 
+                      download="proton_neural_artwork.png"
+                      className="p-2.5 rounded-xl bg-black/80 border border-white/10 text-proton-text hover:bg-black transition-all hover:scale-110"
+                      title={isKa ? 'ჩამოტვირთვა' : 'Download image'}
+                    >
+                      <Download size={14} />
+                    </a>
+                    <button
+                      onClick={() => handleCopyPrompt(prompt, 'main')}
+                      className="p-2.5 rounded-xl bg-black/80 border border-white/10 text-proton-text hover:bg-black transition-all hover:scale-110"
+                      title={isKa ? 'პრომპტის კოპირება' : 'Copy prompt'}
+                    >
+                      {copiedId === 'main' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center p-8 space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-proton-muted mx-auto">
+                    <ImageIcon size={24} />
+                  </div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-proton-muted">
+                    {isKa ? 'ელოდება გენერაციას' : 'Awaiting Render'}
+                  </p>
+                  <p className="text-[10px] text-white/30 max-w-xs mx-auto">
+                    {isKa ? 'შეიყვანე აღწერა მარცხნივ, აირჩიე სტილი და ფორმატი და დააჭირე გენერაციას' : 'Enter prompt, customize aspect ratio and presets, then click Generate to render.'}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Gallery History Tray */}
+          {historyList.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-black uppercase tracking-widest text-proton-muted px-1">
+                {isKa ? 'ჩემი გალერეა (ბოლო ნამუშევრები)' : 'MY CREATION ARCHIVE'}
+              </h3>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {historyList.map(item => (
+                  <div 
+                    key={item.id} 
+                    onClick={() => {
+                      setImage(item.url);
+                      setPrompt(item.prompt);
+                      setSelectedRatio(item.ratio as any);
+                      setSelectedStyle(item.style);
+                    }}
+                    className="group relative bg-[#090d16] rounded-2xl border border-white/5 overflow-hidden cursor-pointer hover:border-proton-accent/30 transition-all shadow-sm"
+                  >
+                    {/* Thumbnail */}
+                    <div className="aspect-square w-full overflow-hidden relative">
+                      <img src={item.url} alt="Thumbnail" className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" referrerPolicy="no-referrer" />
+                      
+                      {/* Trash action */}
+                      <button
+                        onClick={(e) => handleDeleteHistoryItem(item.id, e)}
+                        className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/60 border border-white/10 text-white/40 hover:text-red-400 hover:bg-black transition-all opacity-0 group-hover:opacity-100"
+                        title={isKa ? 'წაშლა' : 'Delete'}
+                      >
+                        <Trash2 size={10} />
+                      </button>
+
+                      {/* Info Overlay on hover */}
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black via-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[9px] text-white/90 line-clamp-2 leading-normal font-medium">{item.prompt}</p>
+                        <div className="flex justify-between items-center mt-1 text-[7px] font-black uppercase tracking-widest text-proton-accent/80">
+                          <span>{item.ratio}</span>
+                          <span>{item.style}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3111,6 +3436,8 @@ export default function App() {
     const getViewPath = (v: View): string => {
       switch (v) {
         case 'translator': return '/translator';
+        case 'creative-studio': return '/creative-studio';
+        case 'copywriting': return '/copywriting';
         case 'market-hub': return '/market-hub';
         case 'market': return '/market-hub';
         case 'personas': return '/personas';
@@ -3152,7 +3479,7 @@ export default function App() {
       } else if (newMode === 'market') {
         navigate('/market-hub');
       } else if (newMode === 'creative') {
-        navigate('/studio');
+        navigate('/creative-studio');
       } else {
         navigate('/dashboard');
       }
@@ -3168,6 +3495,8 @@ export default function App() {
 
   // Helper mapping pathnames to specific Views
   const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
+    if (pathname.startsWith('/creative-studio')) return 'creative-studio';
+    if (pathname.startsWith('/copywriting')) return 'copywriting';
     if (pathname.startsWith('/translator')) return 'translator';
     if (pathname.startsWith('/market-hub')) return 'market-hub';
     if (pathname.startsWith('/market')) return 'market-hub';
@@ -3192,6 +3521,8 @@ export default function App() {
   // Helper mapping view to router pathnames
   const getPathnameFromView = React.useCallback((view: View): string => {
     switch (view) {
+      case 'creative-studio': return '/creative-studio';
+      case 'copywriting': return '/copywriting';
       case 'translator': return '/translator';
       case 'market-hub': return '/market-hub';
       case 'market': return '/market-hub';
@@ -3315,7 +3646,7 @@ export default function App() {
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
     if (view === 'market-hub' || view === 'market') {
       setUiMode('market');
-    } else if (view === 'image' || view === 'translator') {
+    } else if (view === 'image' || view === 'translator' || view === 'creative-studio' || view === 'copywriting') {
       setUiMode('creative');
     } else if (
       view === 'organizer' || 
@@ -4154,8 +4485,7 @@ export default function App() {
           </div>
         }>
           <TranslatorView onBack={() => {
-            setUiMode('business');
-            setActiveView('dashboard');
+            handleViewChange('creative-studio');
           }} />
         </Suspense>
       </div>
@@ -4355,6 +4685,14 @@ export default function App() {
                         )}
                       </AnimatePresence>
                       <SidebarItem 
+                        icon={Sparkles} 
+                        label={language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub'} 
+                        active={activeView === 'creative-studio'} 
+                        onClick={() => handleViewChange('creative-studio')} 
+                        expanded={isSidebarOpen}
+                        uiMode={uiMode}
+                      />
+                      <SidebarItem 
                         icon={Image} 
                         label={t.sidebar.image} 
                         active={activeView === 'image'} 
@@ -4367,6 +4705,14 @@ export default function App() {
                         label={t.sidebar.translator} 
                         active={(activeView as string) === 'translator'} 
                         onClick={() => handleViewChange('translator')} 
+                        expanded={isSidebarOpen}
+                        uiMode={uiMode}
+                      />
+                      <SidebarItem 
+                        icon={FileText} 
+                        label={language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting'} 
+                        active={activeView === 'copywriting'} 
+                        onClick={() => handleViewChange('copywriting')} 
                         expanded={isSidebarOpen}
                         uiMode={uiMode}
                       />
@@ -4695,8 +5041,7 @@ export default function App() {
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ] : uiMode === 'creative' ? [
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
-          { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
-          { id: 'translator', icon: Languages, label: language === 'ka' ? 'თარგმანი' : 'Translate' },
+          { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'ჰაბი' : 'Hub' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
         ] : [
           { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
@@ -4810,8 +5155,10 @@ export default function App() {
               { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
             ] : uiMode === 'creative' ? [
-              { id: 'image', icon: ImageIcon, label: language === 'ka' ? 'სტუდია' : 'Studio' },
-              { id: 'translator', icon: Languages, label: language === 'ka' ? 'ინსტრუმენტი' : 'Translator' },
+              { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub', icon: Sparkles },
+              { id: 'image', label: t.sidebar.image, icon: ImageIcon },
+              { id: 'translator', label: t.sidebar.translator, icon: Languages },
+              { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
             ] : [
               { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
             ]).map((link) => (
@@ -4960,7 +5307,35 @@ export default function App() {
                       checkAndIncrementAiQuota={checkAndIncrementAiQuota}
                     />
                   )}
-                  {activeView === 'image' && <ImageView uiMode={uiMode === 'market' ? 'business' : uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} />}
+                  {activeView === 'image' && <ImageView uiMode={uiMode === 'market' ? 'business' : uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} onBack={() => handleViewChange('creative-studio')} />}
+                  {activeView === 'creative-studio' && (
+                    <Suspense fallback={
+                      <div className="h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest">Loading Creative Studio Hub...</span>
+                      </div>
+                    }>
+                      <CreativeStudioHub 
+                        language={userProfile.language} 
+                        setActiveView={handleViewChange} 
+                        setUiMode={setUiMode} 
+                      />
+                    </Suspense>
+                  )}
+                  {activeView === 'copywriting' && (
+                    <Suspense fallback={
+                      <div className="h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest">Loading Copywriting Studio...</span>
+                      </div>
+                    }>
+                      <CopywritingView 
+                        language={userProfile.language} 
+                        onBack={() => handleViewChange('creative-studio')} 
+                        checkAndIncrementAiQuota={checkAndIncrementAiQuota}
+                      />
+                    </Suspense>
+                  )}
                   {activeView === 'blueprints' && (
                     <WorkflowsView 
                       workflows={workflows}
