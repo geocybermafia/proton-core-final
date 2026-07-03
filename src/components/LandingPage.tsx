@@ -303,38 +303,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
       {/* Hero Section */}
       <section id="hero-section" className="relative pt-48 pb-24 px-6 overflow-hidden">
-        {/* Animated Background Gradients */}
-        <motion.div 
-          animate={{
-            scale: [1, 1.15, 1],
-            x: [0, 30, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{
-            duration: 18,
-            repeat: Infinity,
-            repeatType: 'mirror',
-            ease: "easeInOut"
-          }}
-          className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[160px] -mr-40 -mt-40 pointer-events-none" 
-        />
-        <motion.div 
-          animate={{
-            scale: [1, 1.2, 1],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
-          }}
-          transition={{
-            duration: 22,
-            repeat: Infinity,
-            repeatType: 'mirror',
-            ease: "easeInOut"
-          }}
-          className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[140px] -ml-40 -mb-40 pointer-events-none" 
-        />
+        {/* Animated Background Gradients & Grids Container */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <motion.div 
+            animate={{
+              scale: [1, 1.15, 1],
+              x: [0, 30, 0],
+              y: [0, -30, 0],
+            }}
+            transition={{
+              duration: 18,
+              repeat: Infinity,
+              repeatType: 'mirror',
+              ease: "easeInOut"
+            }}
+            className="absolute top-0 right-0 w-[320px] h-[320px] sm:w-[800px] sm:h-[800px] bg-proton-accent/5 rounded-full blur-[50px] sm:blur-[160px] -mr-40 -mt-40 pointer-events-none" 
+            style={{ willChange: "transform", transform: "translateZ(0)" }}
+          />
+          <motion.div 
+            animate={{
+              scale: [1, 1.2, 1],
+              x: [0, -40, 0],
+              y: [0, 40, 0],
+            }}
+            transition={{
+              duration: 22,
+              repeat: Infinity,
+              repeatType: 'mirror',
+              ease: "easeInOut"
+            }}
+            className="absolute bottom-0 left-0 w-[240px] h-[240px] sm:w-[600px] sm:h-[600px] bg-emerald-500/5 rounded-full blur-[40px] sm:blur-[140px] -ml-40 -mb-40 pointer-events-none" 
+            style={{ willChange: "transform", transform: "translateZ(0)" }}
+          />
 
-        {/* Abstract Glowing Grid Background */}
-        <div className="absolute inset-x-0 top-0 h-[600px] bg-[linear-gradient(225deg,rgba(0,242,255,0.03)_0%,transparent_70%)] pointer-events-none" />
+          {/* Abstract Glowing Grid Background */}
+          <div className="absolute inset-x-0 top-0 h-[600px] bg-[linear-gradient(225deg,rgba(0,242,255,0.03)_0%,transparent_70%)] pointer-events-none" />
+        </div>
 
         <div className="max-w-7xl mx-auto relative z-10 text-center flex flex-col items-center">
           <motion.div
@@ -389,7 +393,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           className="max-w-5xl mx-auto mt-16 relative px-4"
         >
           <div className="relative group">
-            <div className="absolute inset-0 bg-proton-accent/20 blur-[100px] opacity-10" />
+            <div 
+              className="absolute inset-0 bg-proton-accent/20 blur-[30px] md:blur-[100px] opacity-10 pointer-events-none" 
+              style={{ willChange: "transform", transform: "translateZ(0)" }}
+            />
             <div className="relative bg-proton-card border border-proton-border rounded-[40px] shadow-2xl overflow-hidden aspect-video">
               <div className="h-12 border-b border-proton-border bg-proton-bg/50 px-6 flex items-center gap-2">
                 <div className="flex gap-1.5">
@@ -971,7 +978,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
 
       {/* HIGH-CONVERSION CTA FOOTER BANNER */}
       <section id="bottom-cta-banner" className="py-24 px-6 relative overflow-hidden border-t border-proton-border/50">
-        <div className="absolute inset-0 bg-proton-accent/5 opacity-40 blur-[120px] pointer-events-none" />
+        <div 
+          className="absolute inset-0 bg-proton-accent/5 opacity-40 blur-[40px] md:blur-[120px] pointer-events-none" 
+          style={{ willChange: "transform", transform: "translateZ(0)" }}
+        />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <h2 className="text-3xl md:text-6xl font-black uppercase tracking-tighter text-proton-text mb-6">
             {currentLocalContent.cta_bottom_title}
