@@ -5039,7 +5039,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   </AnimatePresence>
 
   {/* Mobile Sticky 5-Tab Navigation Bar */}
-  <div className="md:hidden fixed bottom-0 left-0 w-full bg-proton-card/98 backdrop-blur-md border-t border-proton-border/30 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] z-[100] grid grid-cols-5 items-center px-1 shadow-lg">
+  <div className="md:hidden fixed bottom-0 left-0 w-full bg-proton-card/98 backdrop-blur-md border-t border-proton-border/30 h-[calc(4.75rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] py-1.5 z-[100] grid grid-cols-5 items-center px-1 shadow-lg">
     {/* Tab 1: Home */}
     <button
       onClick={() => {
@@ -5047,12 +5047,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         setViewMode('browse');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
         activeBottomTab === 'home' && viewMode === 'browse' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
       )}
     >
-      <LayoutGrid size={20} className="stroke-[2]" />
-      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+      <LayoutGrid size={22} className="stroke-[2]" />
+      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'მთავარი' : 'Home'}
       </span>
     </button>
@@ -5063,12 +5063,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         setActiveBottomTab('categories');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
         activeBottomTab === 'categories' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
       )}
     >
-      <Tag size={20} className="stroke-[2]" />
-      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+      <Tag size={22} className="stroke-[2]" />
+      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'კატეგორია' : 'Category'}
       </span>
     </button>
@@ -5100,13 +5100,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         setActiveBottomTab('home');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
         viewMode === 'create' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
       )}
       title={language === 'ka' ? 'განცხადების დამატება' : 'Add Listing'}
     >
-      <Plus size={20} className="stroke-[2.5]" />
-      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+      <Plus size={22} className="stroke-[2.5]" />
+      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'დამატება' : 'Add'}
       </span>
     </button>
@@ -5117,19 +5117,19 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         setActiveBottomTab('messages');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 relative",
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 relative py-1.5",
         activeBottomTab === 'messages' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
       )}
     >
       <div className="relative">
-        <MessageCircle size={20} className="stroke-[2]" />
+        <MessageCircle size={22} className="stroke-[2]" />
         {groupedChats.length > 0 && (
           <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-proton-on-accent bg-proton-accent rounded-full">
             {groupedChats.length}
           </span>
         )}
       </div>
-      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'ჩატი' : 'Chat'}
       </span>
     </button>
@@ -5141,12 +5141,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         setViewMode('my-listings');
       }}
       className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200",
+        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
         viewMode === 'my-listings' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
       )}
     >
-      <User size={20} className="stroke-[2]" />
-      <span className="text-[9px] font-bold mt-1 uppercase tracking-wider block text-center">
+      <User size={22} className="stroke-[2]" />
+      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
         {language === 'ka' ? 'კაბინეტი' : 'Profile'}
       </span>
     </button>

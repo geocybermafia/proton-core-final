@@ -992,7 +992,7 @@ export const OrganizerView = ({
       return (
         <div 
           key={task.id} 
-          className={cn("p-6 rounded-[24px] border transition-all flex flex-col gap-4 relative", currentTheme.card)}
+          className={cn("p-6 rounded-[24px] border transition-all flex flex-col gap-4 relative scroll-m-24 md:scroll-m-0 scroll-mt-[120px] scroll-mb-[120px]", currentTheme.card)}
         >
           <div className="space-y-4">
             <div className="flex flex-col gap-1">
@@ -1003,7 +1003,7 @@ export const OrganizerView = ({
                 type="text"
                 value={editingContent}
                 onChange={e => setEditingContent(e.target.value)}
-                className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all", currentTheme.input)}
+                className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all scroll-m-24 md:scroll-m-0", currentTheme.input)}
               />
             </div>
 
@@ -1014,7 +1014,7 @@ export const OrganizerView = ({
               <textarea 
                 value={editingDescription}
                 onChange={e => setEditingDescription(e.target.value)}
-                className={cn("w-full px-4 py-2 text-xs font-medium rounded-lg h-16 resize-none focus:outline-none focus:border-proton-accent transition-all", currentTheme.input)}
+                className={cn("w-full px-4 py-2 text-xs font-medium rounded-lg h-16 resize-none focus:outline-none focus:border-proton-accent transition-all scroll-m-24 md:scroll-m-0", currentTheme.input)}
               />
             </div>
 
@@ -1026,7 +1026,7 @@ export const OrganizerView = ({
                 <select
                   value={editingPriority}
                   onChange={e => setEditingPriority(e.target.value as 'low' | 'medium' | 'high')}
-                  className={cn("w-full px-3 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent bg-black border-2 border-proton-border/30", currentTheme.input)}
+                  className={cn("w-full px-3 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent bg-black border-2 border-proton-border/30 scroll-m-24 md:scroll-m-0", currentTheme.input)}
                 >
                   <option value="low">{t.low}</option>
                   <option value="medium">{t.medium}</option>
@@ -1043,7 +1043,7 @@ export const OrganizerView = ({
                   value={editingCategory}
                   placeholder="e.g. Marketing"
                   onChange={e => setEditingCategory(e.target.value)}
-                  className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all", currentTheme.input)}
+                  className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all scroll-m-24 md:scroll-m-0", currentTheme.input)}
                 />
               </div>
             </div>
