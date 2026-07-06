@@ -330,4 +330,28 @@ export async function architectTask(project: string, temperature: number = 0.9):
   return callServerGemini<{ data: TaskPlan, metadata: GeminiMetadata }>('architectTask', [project, temperature]);
 }
 
+export async function breakdownTask(taskContent: string, appLanguage: 'en' | 'ka' = 'en'): Promise<string[]> {
+  if (isSimulatedActive()) {
+    await sleep(600);
+    if (appLanguage === 'ka') {
+      return [
+        "განსაზღვრეთ დავალების მიზანი და მასშტაბი",
+        "მოამზადეთ სამუშაო გარემო და ინსტრუმენტები",
+        "განახორციელეთ დავალების პირველი ეტაპი",
+        "შეასრულეთ ძირითადი დეტალები",
+        "გადაამოწმეთ შესრულებული სამუშაოს ხარისხი"
+      ];
+    } else {
+      return [
+        "Define task objective and scope",
+        "Prepare workspace and tools",
+        "Execute initial phase of the task",
+        "Implement core details",
+        "Review and verify the final output"
+      ];
+    }
+  }
+  return callServerGemini<string[]>('breakdownTask', [taskContent, appLanguage]);
+}
+
 

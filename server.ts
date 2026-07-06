@@ -17,7 +17,8 @@ import {
   generateSpeech, 
   architectTask,
   translateText,
-  generateTechSpec
+  generateTechSpec,
+  breakdownTask
 } from "./src/lib/gemini-server.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -110,6 +111,9 @@ async function startServer() {
           break;
         case "generateTechSpec":
           result = await generateTechSpec(args[0], args[1], customApiKey);
+          break;
+        case "breakdownTask":
+          result = await breakdownTask(args[0], args[1], customApiKey);
           break;
         default:
           return res.status(400).send(`Unknown action: ${action}`);

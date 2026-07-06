@@ -403,3 +403,57 @@ export async function generateTechSpec(title: string, category: string, apiKeyOv
   }
 }
 
+export async function breakdownTask(
+  taskContent: string,
+  appLanguage: 'en' | 'ka' = 'en',
+  apiKeyOverride?: string
+): Promise<string[]> {
+  try {
+    const ai = getAi(apiKeyOverride);
+    if (!ai) throw new Error("AI engine not initialized");
+    
+    const prompt = appLanguage === 'ka' 
+      ? `მოცემულია დავალება: "${taskContent}". 
+დაყავი ეს დავალება 3-დან 6-მდე კონკრეტულ, მარტივ და პრაქტიკულ ქვე-დავალებად (ნაბიჯად), რომლებიც საჭიროა მის შესასრულებლად.
+პასუხი დააბრუნე ექსკლუზიურად JSON ფორმატში, როგორც ტექსტური მასივი (array of strings). მაგალითად: ["ნაბიჯი 1", "ნაბიჯი 2", "ნაბიჯი 3"].
+არ დაწერო არანაირი სხვა ტექსტი, შესავალი ან დასკვნა, მხოლოდ სუფთა JSON მასივი.`
+      : `Given the task: "${taskContent}".
+Break down this task into 3 to 6 actionable, simple, and practical subtasks (steps) needed to complete it.
+Respond EXCLUSIVELY in JSON format as a plain array of strings. Example: ["Step 1", "Step 2", "Step 3"].
+Do not include any other text, markdown wrapper, or explanation, just the raw JSON array.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.7,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        }
+      }
+    });
+
+    const text = response.text ? response.text.trim() : "[]";
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Gemini API Error in breakdownTask:", error);
+    if (appLanguage === 'ka') {
+      return [
+        "დაგეგმეთ საწყისი მოთხოვნები",
+        "შეაგროვეთ საჭირო რესურსები",
+        "განახორციელეთ ძირითადი სამუშაო",
+        "გადაამოწმეთ შედეგები და დაასრულეთ"
+      ];
+    } else {
+      return [
+        "Plan initial requirements",
+        "Gather necessary resources",
+        "Execute core work items",
+        "Verify results and finalize"
+      ];
+    }
+  }
+}
+

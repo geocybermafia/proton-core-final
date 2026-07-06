@@ -24,11 +24,18 @@ import {
   PlusCircle,
   CheckCircle2,
   Grid,
-  AlertTriangle
+  AlertTriangle,
+  Flame,
+  Droplets,
+  Smile,
+  PenTool,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { Task, Workflow, Theme } from '../types';
 import { translations } from '../translations';
 import { cn } from '../lib/utils';
+import { breakdownTask } from '../lib/gemini';
 
 type OrganizerTheme = Theme;
 
@@ -81,6 +88,96 @@ export const OrganizerView = ({
   const [taskPriority, setTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [taskCategory, setTaskCategory] = useState('');
 
+  // Daily Vitality and Habits states
+  const [dailyFocus, setDailyFocus] = useState(() => {
+    return localStorage.getItem('organizer_daily_focus') || '';
+  });
+  const [waterGlasses, setWaterGlasses] = useState(() => {
+    return parseInt(localStorage.getItem('organizer_water_glasses') || '0', 10);
+  });
+  const [mood, setMood] = useState(() => {
+    return localStorage.getItem('organizer_daily_mood') || '';
+  });
+  const [scratchpad, setScratchpad] = useState(() => {
+    return localStorage.getItem('organizer_scratchpad') || '';
+  });
+  const [habits, setHabits] = useState<{ id: string, labelEn: string, labelKa: string, completed: boolean }[]>(() => {
+    const saved = localStorage.getItem('organizer_habits');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+    }
+    return [
+      { id: 'meditation', labelEn: 'Meditation & Peace', labelKa: '🧘 მედიტაცია და სიმშვიდე', completed: false },
+      { id: 'reading', labelEn: 'Reading & Growth', labelKa: '📚 კითხვა და განვითარება', completed: false },
+      { id: 'workout', labelEn: 'Workout & Fitness', labelKa: '🏃 ვარჯიში და ფიტნესი', completed: false },
+      { id: 'nutrition', labelEn: 'Healthy Eating', labelKa: '🥗 ჯანსაღი კვება', completed: false }
+    ];
+  });
+  const [habitStreak, setHabitStreak] = useState(() => {
+    return parseInt(localStorage.getItem('organizer_habit_streak') || '0', 10);
+  });
+
+  // Daily reset check on mount
+  useEffect(() => {
+    const todayStr = new Date().toDateString();
+    const lastActiveDate = localStorage.getItem('organizer_last_active_date');
+    if (lastActiveDate !== todayStr) {
+      // It is a new day! Reset daily values.
+      setWaterGlasses(0);
+      setHabits(prev => prev.map(h => ({ ...h, completed: false })));
+      setMood('');
+      setDailyFocus('');
+      
+      if (lastActiveDate) {
+        const lastDate = new Date(lastActiveDate);
+        const todayDate = new Date();
+        lastDate.setHours(0,0,0,0);
+        todayDate.setHours(0,0,0,0);
+        const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays > 1) {
+          // Streak broken
+          setHabitStreak(0);
+          localStorage.setItem('organizer_habit_streak', '0');
+        }
+      }
+      localStorage.setItem('organizer_last_active_date', todayStr);
+    }
+  }, []);
+
+  // Syncing to localStorage on state changes
+  useEffect(() => {
+    localStorage.setItem('organizer_daily_focus', dailyFocus);
+  }, [dailyFocus]);
+
+  useEffect(() => {
+    localStorage.setItem('organizer_water_glasses', String(waterGlasses));
+  }, [waterGlasses]);
+
+  useEffect(() => {
+    localStorage.setItem('organizer_daily_mood', mood);
+  }, [mood]);
+
+  useEffect(() => {
+    localStorage.setItem('organizer_scratchpad', scratchpad);
+  }, [scratchpad]);
+
+  useEffect(() => {
+    localStorage.setItem('organizer_habits', JSON.stringify(habits));
+    // Check if all habits are completed to increment streak
+    const allCompleted = habits.length > 0 && habits.every(h => h.completed);
+    const lastStreakDate = localStorage.getItem('organizer_last_streak_date');
+    const todayStr = new Date().toDateString();
+    
+    if (allCompleted && lastStreakDate !== todayStr) {
+      localStorage.setItem('organizer_last_streak_date', todayStr);
+      setHabitStreak(prev => {
+        const next = prev + 1;
+        localStorage.setItem('organizer_habit_streak', String(next));
+        return next;
+      });
+    }
+  }, [habits]);
+
   // UI Toggles & Filter states
   const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -88,6 +185,7 @@ export const OrganizerView = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [viewLayout, setViewLayout] = useState<'list' | 'grouped'>('grouped');
+  const [isBreakingDown, setIsBreakingDown] = useState<Record<string, boolean>>({});
 
   // Task inline editing states
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -371,6 +469,25 @@ export const OrganizerView = ({
 
   const cancelEditMode = () => {
     setEditingTaskId(null);
+  };
+
+  const handleAiBreakdown = async (task: Task) => {
+    if (isBreakingDown[task.id]) return;
+    
+    setIsBreakingDown(prev => ({ ...prev, [task.id]: true }));
+    try {
+      const steps = await breakdownTask(task.content, language);
+      const newSubtasks = steps.map((stepContent, index) => ({
+        id: `sub-${Date.now()}-${index}`,
+        content: stepContent,
+        completed: false
+      }));
+      onEditTask(task.id, { subtasks: newSubtasks });
+    } catch (error) {
+      console.error("Failed to auto breakdown task with AI:", error);
+    } finally {
+      setIsBreakingDown(prev => ({ ...prev, [task.id]: false }));
+    }
   };
 
   // Master filter application
@@ -898,6 +1015,187 @@ export const OrganizerView = ({
         {/* Right Column: Calendar + Templates Pool */}
         <div className="space-y-8">
           
+          {/* Daily Vitality & Habits Dashboard */}
+          <div className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
+                <Sparkles size={20} className="text-amber-400" />
+                {language === 'ka' ? 'დღიური ბალანსი' : 'Daily Vitality'}
+              </h3>
+              {habitStreak > 0 && (
+                <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider animate-bounce">
+                  <Flame size={12} className="fill-current" />
+                  <span>{habitStreak} {language === 'ka' ? 'დღე' : 'Days'}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              {/* Daily Focus */}
+              <div className="space-y-2">
+                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                  {language === 'ka' ? 'დღის მთავარი ფოკუსი' : 'Main Target of the Day'}
+                </label>
+                <input
+                  type="text"
+                  placeholder={language === 'ka' ? 'რა არის დღევანდელი მთავარი საქმე?...' : 'What is your single main target today?...'}
+                  value={dailyFocus}
+                  onChange={(e) => setDailyFocus(e.target.value)}
+                  className={cn("w-full rounded-2xl px-5 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                />
+              </div>
+
+              {/* Mood Meter */}
+              <div className="space-y-2">
+                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                  {language === 'ka' ? 'როგორი განწყობა გაქვს დღეს?' : 'How is your energy/mood today?'}
+                </label>
+                <div className="grid grid-cols-5 gap-1.5 select-none">
+                  {[
+                    { val: 'superb', emoji: '🤩', labelEn: 'Superb', labelKa: 'საუკეთესო' },
+                    { val: 'focused', emoji: '😎', labelEn: 'Focused', labelKa: 'აქტიური' },
+                    { val: 'calm', emoji: '😌', labelEn: 'Calm', labelKa: 'მშვიდი' },
+                    { val: 'tired', emoji: '🥱', labelEn: 'Tired', labelKa: 'დაღლილი' },
+                    { val: 'stressed', emoji: '😓', labelEn: 'Stressed', labelKa: 'სტრესული' },
+                  ].map((m) => {
+                    const isSelected = mood === m.val;
+                    return (
+                      <button
+                        key={m.val}
+                        type="button"
+                        onClick={() => setMood(mood === m.val ? '' : m.val)}
+                        className={cn(
+                          "py-2 px-1 rounded-xl text-center border transition-all hover:scale-105 flex flex-col items-center justify-center gap-1 min-h-[50px]",
+                          isSelected 
+                            ? "bg-proton-accent/20 border-proton-accent text-proton-text shadow-sm" 
+                            : "border-proton-border/30 opacity-60 hover:opacity-100"
+                        )}
+                        title={language === 'ka' ? m.labelKa : m.labelEn}
+                      >
+                        <span className="text-base leading-none">{m.emoji}</span>
+                        <span className="text-[7px] font-black uppercase tracking-tight truncate max-w-full">
+                          {language === 'ka' ? m.labelKa : m.labelEn}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Water Hydration */}
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center select-none">
+                  <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                    {language === 'ka' ? 'წყლის ბალანსი' : 'Hydration Tracker'}
+                  </label>
+                  <span className="text-[10px] font-black text-cyan-400">
+                    {waterGlasses} / 8 {language === 'ka' ? 'ჭიქა' : 'Glasses'} ({Math.round(waterGlasses * 250)}ml)
+                  </span>
+                </div>
+                
+                {/* 8 Glass slots */}
+                <div className="flex items-center justify-between bg-proton-secondary/5 border border-proton-border/15 rounded-2xl p-2.5 px-3 gap-1">
+                  <div className="flex items-center gap-1.5 flex-1 justify-center">
+                    {Array.from({ length: 8 }).map((_, i) => {
+                      const glassNum = i + 1;
+                      const active = waterGlasses >= glassNum;
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setWaterGlasses(waterGlasses === glassNum ? glassNum - 1 : glassNum)}
+                          className={cn(
+                            "w-5.5 h-6.5 rounded-lg flex items-end justify-center pb-1 transition-all hover:scale-125 hover:-translate-y-1 relative group overflow-hidden border",
+                            active 
+                              ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" 
+                              : "border-proton-border/30 text-proton-muted opacity-40 hover:opacity-100"
+                          )}
+                        >
+                          <Droplets size={10} className={cn("transition-transform duration-300", active && "scale-110 animate-bounce text-cyan-400")} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Plus and Minus Buttons */}
+                  <div className="flex items-center gap-1 ml-2">
+                    <button
+                      type="button"
+                      disabled={waterGlasses === 0}
+                      onClick={() => setWaterGlasses(prev => Math.max(0, prev - 1))}
+                      className="w-5 h-5 rounded-md bg-proton-secondary/20 hover:bg-proton-secondary/40 flex items-center justify-center text-xs font-black select-none transition-all disabled:opacity-30 text-proton-text"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      disabled={waterGlasses >= 8}
+                      onClick={() => setWaterGlasses(prev => Math.min(8, prev + 1))}
+                      className="w-5 h-5 rounded-md bg-cyan-400 text-black font-black flex items-center justify-center text-xs select-none transition-all hover:scale-105"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Core Habits Checklist */}
+              <div className="space-y-3">
+                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                  {language === 'ka' ? 'ყოველდღიური ჯანსაღი ჩვევები' : 'Core Daily Habits'}
+                </label>
+                
+                <div className="space-y-2">
+                  {habits.map((habit) => (
+                    <button
+                      key={habit.id}
+                      type="button"
+                      onClick={() => {
+                        setHabits(prev => prev.map(h => h.id === habit.id ? { ...h, completed: !h.completed } : h));
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all hover:bg-proton-secondary/5 group",
+                        habit.completed 
+                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                          : "border-proton-border/20 text-proton-text"
+                      )}
+                    >
+                      <span className="text-xs font-semibold">
+                        {language === 'ka' ? habit.labelKa : habit.labelEn}
+                      </span>
+                      <div className={cn(
+                        "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
+                        habit.completed 
+                          ? "bg-emerald-500 border-emerald-500 text-white" 
+                          : "border-proton-border/30 group-hover:border-proton-accent"
+                      )}>
+                        {habit.completed && <Check size={12} strokeWidth={4} />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Minimalist Scratchpad */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center select-none">
+                  <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                    {language === 'ka' ? 'სწრაფი ჩანაწერები' : 'Offline Daily Scratchpad'}
+                  </label>
+                  <PenTool size={10} className={currentTheme.muted} />
+                </div>
+                <textarea
+                  placeholder={language === 'ka' 
+                    ? 'ჩაწერეთ იდეები, კოდის ფრაგმენტები ან დროებითი ჩანაწერები... (ავტომატური შენახვა)' 
+                    : 'Draft instant thoughts, reminders, or scratch notes here... (auto-saves)'}
+                  value={scratchpad}
+                  onChange={(e) => setScratchpad(e.target.value)}
+                  className={cn("w-full h-24 rounded-2xl px-4 py-3 text-xs font-mono focus:outline-none transition-all resize-none bg-black/40", currentTheme.input)}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Simple Clean Non-Cosmic Calendar */}
           <div className={cn("p-3 sm:p-6 md:p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
@@ -1250,22 +1548,45 @@ export const OrganizerView = ({
              </div>
            ))}
            
-           {/* Add subtask input row */}
-           <div className="flex items-center gap-2 pt-1 max-w-xs">
-             <input 
-               type="text"
-               placeholder={language === 'ka' ? 'მონიშნეთ ნაბიჯი...' : 'Add step...'}
-               className="bg-transparent border-b border-proton-border/20 text-[10px] py-1 px-1 flex-1 focus:outline-none focus:border-proton-accent/50 transition-all text-proton-text"
-               onKeyDown={(e) => {
-                 if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                   const content = (e.target as HTMLInputElement).value.trim();
-                   const newSubtasks = [...(task.subtasks || []), { id: `sub-${Date.now()}`, content, completed: false }];
-                   onEditTask(task.id, { subtasks: newSubtasks });
-                   (e.target as HTMLInputElement).value = '';
-                 }
-               }}
-             />
-           </div>
+            {/* Add subtask input row */}
+            <div className="flex items-center gap-3 pt-2 max-w-md select-none">
+              <div className="flex items-center gap-2 flex-1 min-w-[150px]">
+                <Plus size={10} className="text-proton-text/40 shrink-0" />
+                <input 
+                  type="text"
+                  placeholder={language === 'ka' ? 'ნაბიჯის დამატება...' : 'Add step...'}
+                  className="bg-transparent border-b border-proton-border/20 text-[10px] py-1 px-1 w-full focus:outline-none focus:border-proton-accent/50 transition-all text-proton-text"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
+                      const content = (e.target as HTMLInputElement).value.trim();
+                      const newSubtasks = [...(task.subtasks || []), { id: `sub-${Date.now()}`, content, completed: false }];
+                      onEditTask(task.id, { subtasks: newSubtasks });
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleAiBreakdown(task)}
+                disabled={isBreakingDown[task.id]}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-300 border shrink-0",
+                  isBreakingDown[task.id]
+                    ? "bg-proton-accent/5 border-proton-accent/10 text-proton-accent/50 cursor-not-allowed"
+                    : "bg-proton-accent/10 hover:bg-proton-accent/25 text-proton-accent border-proton-accent/20 active:scale-95 shadow-sm"
+                )}
+                title={language === 'ka' ? 'ხელოვნური ინტელექტით ნაბიჯებად დაშლა' : 'Break down with AI'}
+              >
+                {isBreakingDown[task.id] ? (
+                  <Loader2 size={10} className="animate-spin text-proton-accent" />
+                ) : (
+                  <Sparkles size={10} className="text-proton-accent" />
+                )}
+                <span>{language === 'ka' ? 'AI დაშლა' : 'AI Breakdown'}</span>
+              </button>
+            </div>
 
            {/* Nested progress display */}
            {task.subtasks && task.subtasks.length > 0 && (
