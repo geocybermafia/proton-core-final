@@ -189,7 +189,40 @@ const safeStorage = {
   set: (key: string, value: string) => {
     try {
       localStorage.setItem(key, value);
-    } catch (e) {}
+    } catch (e: any) {
+      // Handle QuotaExceededError to guarantee critical task and workflow persistence
+      if (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        console.warn("Storage quota exceeded! Pruning chat history to make room for critical data...");
+        try {
+          const chatHistoryStr = localStorage.getItem('proton_chat_history');
+          if (chatHistoryStr) {
+            const history = JSON.parse(chatHistoryStr);
+            let pruned = false;
+            for (const personaId in history) {
+              if (Array.isArray(history[personaId]) && history[personaId].length > 15) {
+                history[personaId] = history[personaId].slice(-15);
+                pruned = true;
+              }
+            }
+            if (pruned) {
+              localStorage.setItem('proton_chat_history', JSON.stringify(history));
+              localStorage.setItem(key, value);
+              return;
+            }
+          }
+        } catch (innerError) {
+          console.error("Pruning failed:", innerError);
+        }
+        
+        try {
+          localStorage.removeItem('proton_chat_history');
+          localStorage.setItem(key, value);
+          console.log("Chat history cleared completely to free up space for critical data.");
+        } catch (lastError) {
+          console.error("Critical storage write failed:", lastError);
+        }
+      }
+    }
   }
 };
 
@@ -3840,7 +3873,12 @@ export default function App() {
       return saved ? JSON.parse(saved) : PERSONAS;
     } catch { return PERSONAS; }
   });
-  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>(() => {
+    try {
+      const saved = safeStorage.get('proton_workflows');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
   useEffect(() => {
     safeStorage.set('proton_chat_history', JSON.stringify(chatHistory));
@@ -3853,6 +3891,10 @@ export default function App() {
   useEffect(() => {
     safeStorage.set('proton_personas', JSON.stringify(personas));
   }, [personas]);
+
+  useEffect(() => {
+    safeStorage.set('proton_workflows', JSON.stringify(workflows));
+  }, [workflows]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const defaultProfile: UserProfile = {
       name: 'Cyber Master',
@@ -3926,7 +3968,12 @@ export default function App() {
   const [isSystemActive] = useState(true);
   const [bootstrapComplete, setBootstrapComplete] = useState(false);
   
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    try {
+      const saved = safeStorage.get('proton_tasks');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [userStats, setUserStats] = useState<{
     storageGB: number;
     workHours: number;
@@ -3989,12 +4036,23 @@ export default function App() {
   // Background data fetch for logged in user
   useEffect(() => {
     if (!user) {
-      setWorkflows([]);
+      // Offline/Guest mode loads from local safeStorage to support resilient offline operations
+      try {
+        const savedWorkflows = safeStorage.get('proton_workflows');
+        setWorkflows(savedWorkflows ? JSON.parse(savedWorkflows) : []);
+      } catch {
+        setWorkflows([]);
+      }
+      try {
+        const savedTasks = safeStorage.get('proton_tasks');
+        setTasks(savedTasks ? JSON.parse(savedTasks) : []);
+      } catch {
+        setTasks([]);
+      }
       setPersonas(PERSONAS);
       setChatHistory({});
       setPersonaAvatars({});
-      setTasks([]);
-      setBootstrapComplete(false);
+      setBootstrapComplete(true);
       return;
     }
 
