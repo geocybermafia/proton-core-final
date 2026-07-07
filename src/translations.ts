@@ -26,6 +26,7 @@ export const translations = {
       market: "Marketplace",
       commercial: "SaaS Exit Hub",
       finance: "Finance",
+      objectives: "Strategic Goals",
       bottom_nav: {
         dashboard: "Home",
         personas: "Agents"
@@ -481,6 +482,7 @@ export const translations = {
       market: "მარკეტი",
       commercial: "კომერცია",
       finance: "ფინანსები",
+      objectives: "მიზნები",
       bottom_nav: {
         dashboard: "მთავარი",
         personas: "აგენტები"

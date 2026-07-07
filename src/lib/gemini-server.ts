@@ -457,3 +457,175 @@ Do not include any other text, markdown wrapper, or explanation, just the raw JS
   }
 }
 
+export async function generateStrategicObjective(
+  appLanguage: 'en' | 'ka' = 'en',
+  apiKeyOverride?: string
+): Promise<{
+  title: string;
+  priority: 'low' | 'medium' | 'high';
+  category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
+  subtasks: { label: string; completed: boolean }[];
+}> {
+  try {
+    const ai = getAi(apiKeyOverride);
+    if (!ai) throw new Error("AI engine not initialized");
+
+    const prompt = appLanguage === 'ka'
+      ? `შექმენი ერთი ახალი, რეალისტური და ინოვაციური ბიზნეს/ტექნიკური სტრატეგიული მიზანი (Strategic Goal) ქართული ან საერთაშორისო სტარტაპისთვის.
+მიზანი უნდა ეხებოდეს ერთ-ერთ კატეგორიას: "Infrastructure", "System", "Interface", "Security" ან "Intelligence".
+პრიორიტეტი უნდა იყოს ერთ-ერთი: "low", "medium" ან "high".
+ქვე-ამოცანები (subtasks) უნდა შეიცავდეს 3-დან 5-მდე კონკრეტულ ნაბიჯს.
+დააბრუნე პასუხი ექსკლუზიურად JSON ფორმატში, შემდეგი სქემით:
+{
+  "title": "მიზნის მოკლე და ზუსტი სათაური ქართულად",
+  "priority": "low" | "medium" | "high",
+  "category": "Infrastructure" | "System" | "Interface" | "Security" | "Intelligence",
+  "subtasks": [
+    { "label": "ნაბიჯი 1 ქართულად", "completed": false },
+    { "label": "ნაბიჯი 2 ქართულად", "completed": false }
+  ]
+}`
+      : `Create a single, realistic, and innovative business/technical strategic goal (Strategic Goal) for a startup.
+The goal should belong to one of these categories: "Infrastructure", "System", "Interface", "Security", or "Intelligence".
+Priority must be one of: "low", "medium", or "high".
+Subtasks should contain 3 to 5 actionable steps.
+Respond EXCLUSIVELY in JSON format following this schema:
+{
+  "title": "Clear and precise goal title in English",
+  "priority": "low" | "medium" | "high",
+  "category": "Infrastructure" | "System" | "Interface" | "Security" | "Intelligence",
+  "subtasks": [
+    { "label": "Step 1 in English", "completed": false },
+    { "label": "Step 2 in English", "completed": false }
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.85,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            priority: { type: Type.STRING },
+            category: { type: Type.STRING },
+            subtasks: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  label: { type: Type.STRING },
+                  completed: { type: Type.BOOLEAN }
+                },
+                required: ["label", "completed"]
+              }
+            }
+          },
+          required: ["title", "priority", "category", "subtasks"]
+        }
+      }
+    });
+
+    const text = response.text ? response.text.trim() : "{}";
+    const data = JSON.parse(text);
+    return {
+      title: data.title || (appLanguage === 'ka' ? "ინტელექტუალური სკალირება" : "Autonomous Intelligence Scaling"),
+      priority: ['low', 'medium', 'high'].includes(data.priority) ? data.priority : 'medium',
+      category: ['Infrastructure', 'System', 'Interface', 'Security', 'Intelligence'].includes(data.category) ? data.category : 'System',
+      subtasks: Array.isArray(data.subtasks) ? data.subtasks.map((st: any) => ({
+        label: st.label || "Step",
+        completed: !!st.completed
+      })) : []
+    };
+  } catch (error) {
+    console.error("Gemini API Error in generateStrategicObjective:", error);
+    if (appLanguage === 'ka') {
+      return {
+        title: "სისტემის ავტომატური რეპლიკაცია",
+        priority: "medium",
+        category: "Infrastructure",
+        subtasks: [
+          { label: "კლასტერის მომზადება", completed: false },
+          { label: "დატვირთვის გადანაწილება", completed: false },
+          { label: "რეზერვების ტესტირება", completed: false }
+        ]
+      };
+    } else {
+      return {
+        title: "Database Cloud Replication",
+        priority: "medium",
+        category: "Infrastructure",
+        subtasks: [
+          { label: "Configure failover clusters", completed: false },
+          { label: "Enable real-time transaction sync", completed: false },
+          { label: "Verify disaster recovery backup", completed: false }
+        ]
+      };
+    }
+  }
+}
+
+export async function expandObjectiveAnalysis(
+  title: string,
+  category: string,
+  appLanguage: 'en' | 'ka' = 'en',
+  apiKeyOverride?: string
+): Promise<string> {
+  try {
+    const ai = getAi(apiKeyOverride);
+    if (!ai) throw new Error("AI engine not initialized");
+
+    const prompt = appLanguage === 'ka'
+      ? `შენ ხარ ბიზნეს სტრატეგი და ტექნიკური მრჩეველი.
+გააკეთე სიღრმისეული, სტრატეგიული ანალიზი შემდეგი მიზნისთვის: "${title}" (კატეგორია: "${category}").
+დაწერე დაახლოებით 300-500 სიტყვა ლამაზი Markdown ფორმატირებით ქართულ ენაზე.
+ანალიზი უნდა მოიცავდეს შემდეგ სექციებს:
+1. **სტრატეგიული კონტექსტი (Strategic Context)** - რატომ არის ეს მიზანი კრიტიკული და რა პრობლემებს წყვეტს ის.
+2. **ნაბიჯ-ნაბიჯ საგზაო რუკა (Roadmap)** - დეტალური ეტაპები და საორიენტაციო დროები.
+3. **ძირითადი KPI-ები და წარმატების საზომები (Key Performance Indicators)** - როგორ გავიგებთ, რომ მიზანი მიღწეულია.
+4. **რისკები და პრევენცია (Risks & Mitigation)** - რა შეიძლება წავიდეს არასწორად და როგორ ავიცილოთ თავიდან.
+5. **ლოკალური რეკომენდაცია ქართული ბაზრისთვის (Georgian Market Nuances)** - პრაქტიკული რჩევა ადგილობრივი სპეციფიკის გათვალისწინებით.`
+      : `You are a strategic business advisor and chief technology officer.
+Provide a deep, strategic analysis for the following objective: "${title}" (Category: "${category}").
+Write approximately 300-500 words with elegant Markdown formatting in English.
+The analysis must include:
+1. **Strategic Context** - Why this goal is critical and what bottlenecks it resolves.
+2. **Step-by-Step Implementation Roadmap** - Phased execution timeline and dependencies.
+3. **Key KPIs & Measurement Metrics** - How we define and measure quantitative success.
+4. **Risk Factors & Mitigation Strategies** - Potential points of failure and contingency planning.
+5. **Startup Advisory Tips** - Practical recommendations tailored to lean product operations.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.8
+      }
+    });
+
+    return response.text || "No analysis could be generated.";
+  } catch (error) {
+    console.error("Gemini API Error in expandObjectiveAnalysis:", error);
+    if (appLanguage === 'ka') {
+      return `### 📊 სტრატეგიული ანალიზი: ${title}
+      
+შეცდომა ანალიზის გენერირებისას. კავშირი სერვერთან ვერ დამყარდა. 
+
+**რეკომენდაციები:**
+* გადაამოწმეთ თქვენი ინტერნეტ კავშირი ან API გასაღების სტატუსი პარამეტრებში.
+* დაყავით ქვე-ამოცანები მცირე ეტაპებად და დაიწყეთ მათი თანმიმდევრული შესრულება.`;
+    } else {
+      return `### 📊 Strategic Analysis: ${title}
+      
+Error generating detailed analysis. Could not establish session with Gemini API.
+
+**Immediate Guidance:**
+* Verify your connection and API Key status in settings.
+* Break down the subtasks into micro-steps and execute sequentially.`;
+    }
+  }
+}
+

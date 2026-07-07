@@ -354,4 +354,90 @@ export async function breakdownTask(taskContent: string, appLanguage: 'en' | 'ka
   return callServerGemini<string[]>('breakdownTask', [taskContent, appLanguage]);
 }
 
+export async function generateStrategicObjective(appLanguage: 'en' | 'ka' = 'en'): Promise<{
+  title: string;
+  priority: 'low' | 'medium' | 'high';
+  category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
+  subtasks: { label: string; completed: boolean }[];
+}> {
+  if (isSimulatedActive()) {
+    await sleep(600);
+    if (appLanguage === 'ka') {
+      return {
+        title: "სისტემის ავტომატური რეპლიკაცია",
+        priority: "medium",
+        category: "Infrastructure",
+        subtasks: [
+          { label: "კლასტერის მომზადება", completed: false },
+          { label: "დატვირთვის გადანაწილება", completed: false },
+          { label: "რეზერვების ტესტირება", completed: false }
+        ]
+      };
+    } else {
+      return {
+        title: "Database Cloud Replication",
+        priority: "medium",
+        category: "Infrastructure",
+        subtasks: [
+          { label: "Configure failover clusters", completed: false },
+          { label: "Enable real-time transaction sync", completed: false },
+          { label: "Verify disaster recovery backup", completed: false }
+        ]
+      };
+    }
+  }
+  return callServerGemini<{
+    title: string;
+    priority: 'low' | 'medium' | 'high';
+    category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
+    subtasks: { label: string; completed: boolean }[];
+  }>('generateStrategicObjective', [appLanguage]);
+}
+
+export async function expandObjectiveAnalysis(title: string, category: string, appLanguage: 'en' | 'ka' = 'en'): Promise<string> {
+  if (isSimulatedActive()) {
+    await sleep(800);
+    if (appLanguage === 'ka') {
+      return `### 📊 სტრატეგიული ანალიზი: ${title}
+
+ეს არის დეტალური ბიზნეს ანალიზი, რომელიც გენერირებულია რეალურ დროში.
+
+#### 1. სტრატეგიული კონტექსტი (Strategic Context)
+ეს მიზანი კრიტიკულია დაფარვის ხარისხისა და სტაბილურობის უზრუნველსაყოფად ქართულ ბაზარზე, განსაკუთრებით თბილისის მზარდი ტექნოლოგიური ეკოსისტემისთვის.
+
+#### 2. ნაბიჯ-ნაბიჯ საგზაო რუკა (Roadmap)
+* **ფაზა 1 (კვირა 1):** არქიტექტურული მონახაზი და მომზადება.
+* **ფაზა 2 (კვირა 2-3):** საწყისი პროტოტიპირება და ტესტირება.
+* **ფაზა 3 (კვირა 4):** სრული ინტეგრაცია და მონიტორინგი.
+
+#### 3. ძირითადი KPI-ები (Key Performance Indicators)
+* დაყოვნების შემცირება (Latency < 200ms)
+* 99.9% სისტემური მუშაობის დრო (Uptime)
+
+#### 4. რისკები და პრევენცია (Risks)
+მთავარი რისკი არის სერვერის რესურსების შეზღუდულობა, რომლის პრევენციაც მოხდება დატვირთვის სწორი მენეჯმენტით.`;
+    } else {
+      return `### 📊 Strategic Analysis: ${title}
+
+This is a deep dive strategic analysis generated in real-time.
+
+#### 1. Strategic Context
+This objective is critical to ensuring high-quality operations and system stability for our target customer base.
+
+#### 2. Phased Roadmap
+* **Phase 1 (Week 1):** Structural definitions and alignment.
+* **Phase 2 (Weeks 2-3):** Implementation of core connectors.
+* **Phase 3 (Week 4):** Final deployment and logging review.
+
+#### 3. Core Measurement Metrics (KPIs)
+* Core process latency reduced by 25%.
+* Integration error rate below 0.1%.
+
+#### 4. Contingency Planning
+Mitigate integration locks by routing offline callbacks gracefully through secondary buffers.`;
+    }
+  }
+  return callServerGemini<string>('expandObjectiveAnalysis', [title, category, appLanguage]);
+}
+
 

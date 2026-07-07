@@ -18,7 +18,9 @@ import {
   architectTask,
   translateText,
   generateTechSpec,
-  breakdownTask
+  breakdownTask,
+  generateStrategicObjective,
+  expandObjectiveAnalysis
 } from "./src/lib/gemini-server.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -114,6 +116,12 @@ async function startServer() {
           break;
         case "breakdownTask":
           result = await breakdownTask(args[0], args[1], customApiKey);
+          break;
+        case "generateStrategicObjective":
+          result = await generateStrategicObjective(args[0], customApiKey);
+          break;
+        case "expandObjectiveAnalysis":
+          result = await expandObjectiveAnalysis(args[0], args[1], args[2], customApiKey);
           break;
         default:
           return res.status(400).send(`Unknown action: ${action}`);

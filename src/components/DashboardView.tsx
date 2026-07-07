@@ -56,7 +56,8 @@ export const DashboardView = React.memo(({
       iconClass: 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black',
       shortcuts: [
         { label: language === 'ka' ? 'როლები და აგენტები' : 'Roles & Agents', view: 'personas' },
-        { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Workflows', view: 'blueprints' }
+        { label: language === 'ka' ? 'სამუშაო პროცესები' : 'Workflows', view: 'blueprints' },
+        { label: language === 'ka' ? 'სტრატეგიული მიზნები' : 'Strategic Goals', view: 'objectives' }
       ],
       action: () => {
         setUiMode('business', 'business-hub');

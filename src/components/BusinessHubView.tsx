@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Users, Workflow, Calendar, Wallet, ArrowRight, Sparkles, 
-  Clock, Activity, CheckSquare, Layers, Shield, Briefcase
+  Clock, Activity, CheckSquare, Layers, Shield, Briefcase, Target
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'framer-motion';
@@ -101,6 +101,19 @@ export default function BusinessHubView({
       glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
       badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
+    },
+    {
+      id: 'objectives',
+      title: isKa ? 'სტრატეგიული მიზნები' : 'Strategic Goals',
+      desc: isKa 
+        ? 'ბიზნეს მიზნების მონიტორინგი, პროგრესის კონტროლი და სტრატეგიული ანალიზი.'
+        : 'Track business milestones, progress monitoring, and dynamic AI-powered goal generation.',
+      badge: isKa ? 'მიზნები და პროგრესი' : 'Milestones & Strategy',
+      icon: Target,
+      color: 'cyan',
+      glowClass: 'border-cyan-500/20 hover:border-cyan-500/80 shadow-cyan-500/5 hover:shadow-cyan-500/20',
+      badgeClass: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+      iconClass: 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black',
     }
   ];
 
