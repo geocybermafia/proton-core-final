@@ -133,7 +133,7 @@ export const DashboardView = React.memo(({
       badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
       shortcuts: [
-        { label: language === 'ka' ? 'ფინანსების პანელი' : 'Budget Dashboard', view: 'finance' }
+        { label: language === 'ka' ? 'ფინანსების დაფა' : 'Budget Dashboard', view: 'finance' }
       ],
       action: () => setActiveView('finance')
     }
@@ -168,7 +168,7 @@ export const DashboardView = React.memo(({
           <div className="space-y-3 text-center md:text-left flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-mono font-black uppercase tracking-[0.2em] bg-zinc-900 text-proton-accent border border-zinc-800">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              {language === 'ka' ? 'სამუშაო სივრცის მართვის პანელი' : 'WORKSPACE OVERVIEW PANEL'}
+              {language === 'ka' ? 'სამუშაო სივრცის მართვის დაფა' : 'WORKSPACE OVERVIEW PANEL'}
             </div>
             
             <h1 className="font-black tracking-tighter uppercase leading-none text-4xl sm:text-5xl md:text-6xl text-proton-text">

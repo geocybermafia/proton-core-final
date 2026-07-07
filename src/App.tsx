@@ -5394,7 +5394,7 @@ export default function App() {
       {/* Bottom Nav (Mobile Only) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
         {(uiMode === 'business' ? [
-          { id: 'business-hub', icon: Briefcase, label: language === 'ka' ? 'პანელი' : 'Hub' },
+          { id: 'business-hub', icon: Briefcase, label: language === 'ka' ? 'დაფა' : 'Hub' },
           { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
           { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
@@ -5509,7 +5509,7 @@ export default function App() {
           {/* Center Section: Main Navigation (Icons Only) */}
           <nav className="hidden xl:flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
             {(uiMode === 'business' ? [
-              { id: 'business-hub', label: language === 'ka' ? 'მართვის პანელი' : 'Business Hub', icon: Briefcase },
+              { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
               { id: 'personas', label: t.sidebar.agents, icon: Users },
               { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               { id: 'objectives', label: t.sidebar.objectives, icon: Target },

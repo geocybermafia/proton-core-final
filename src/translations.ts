@@ -457,7 +457,7 @@ export const translations = {
   },
   ka: {
     nav: {
-      dashboard: "მართვის პანელი",
+      dashboard: "მართვის დაფა",
       personas: "პერსონები",
       blueprints: "პროცესები",
       images: "ვიზუალი",
@@ -494,7 +494,7 @@ export const translations = {
       system_status: "სტატუსი",
       active: "აქტიური",
       quick_tasks: "ჩემი საქმეები",
-      technical_base_desc: "მართვის პანელი და ინფრასტრუქტურა.",
+      technical_base_desc: "მართვის დაფა და ინფრასტრუქტურა.",
       tools_desc: "ბიზნეს ავტომატიზაციის ხელსაწყოები.",
       ai_assistant_desc: "AI ასისტენტების მართვა."
     },

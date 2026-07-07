@@ -25,7 +25,7 @@ import { cn } from '../lib/utils';
 // Multi-language translation dictionary for professional user engagement
 const translations = {
   ka: {
-    title: "Web3 ფინანსების პანელი",
+    title: "Web3 ფინანსების დაფა",
     subtitle: "დეცენტრალიზებული აქტივების მართვა და ტრანზაქციების რეალური მონიტორინგი.",
     gatewayTitle: "უსაფრთხო კავშირი",
     gatewaySubtitle: "PORTAL_GATEWAY_v1.0",

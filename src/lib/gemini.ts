@@ -141,7 +141,7 @@ export async function chatWithPersona(
         : `I'd love to! I can dynamically assist you with:\n\n* 📈 **Automated Lead Gen & Outreach:** Tactics to acquire active clients.\n* ⚙️ **Process Architecture:** Sketching triggers and automated outcomes via Proton UI.\n* ⛓️ **Innovation Strategy:** Seamless Web3 tokenization or high-compute setup plans.\n\nTell me a bit more about your current operations!`;
     } else {
       responseText = isKa
-        ? `საინტერესო მოთხოვნაა! Proton AI-ს საშუალებით ჩვენ შეგვიძლია აღნიშნული ამოცანა მარტივად დავყოთ შესასრულებელ ეტაპებად.\n\nრეკომენდებულია **"სამუშაო პროცესების" (Processes)** პანელში ახალი ავტომატური ნაკადის შექმნა, რომელიც შესაბამის მონაცემებს დაამუშავებს. შემიძლია დაგეხმაროთ წერილობითი გეგმის შედგენაშიც.`
+        ? `საინტერესო მოთხოვნაა! Proton AI-ს საშუალებით ჩვენ შეგვიძლია აღნიშნული ამოცანა მარტივად დავყოთ შესასრულებელ ეტაპებად.\n\nრეკომენდებულია **"სამუშაო პროცესების" (Processes)** დაფაზე ახალი ავტომატური ნაკადის შექმნა, რომელიც შესაბამის მონაცემებს დაამუშავებს. შემიძლია დაგეხმაროთ წერილობითი გეგმის შედგენაშიც.`
         : `A fascinating topic! Using our intelligent suite, we can easily modularize this task.\n\nI recommend defining a custom logical sequence in the **Business Processes** workspace to execute this automatically. Would you like me to map out the detailed specifications for that logical flow?`;
     }
 

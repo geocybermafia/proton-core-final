@@ -274,7 +274,7 @@ export const ObjectiveCenter = ({ language, user }: { language: 'en' | 'ka'; use
           <div className="flex items-center gap-3">
             <Target className="text-proton-accent" size={32} />
             <h2 className="text-3xl font-black tracking-tighter text-proton-text uppercase">
-              {language === 'ka' ? 'სტრატეგიული მიზნების პანელი' : 'Strategic Goals Dashboard'}
+              {language === 'ka' ? 'სტრატეგიული მიზნების დაფა' : 'Strategic Goals Dashboard'}
             </h2>
           </div>
           <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.3em]">

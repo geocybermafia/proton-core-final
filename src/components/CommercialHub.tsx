@@ -76,7 +76,7 @@ export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
     tabStripe: language === 'ka' ? 'გადახდები და API' : 'Billing & APIs',
     
     // Valuation section
-    valuationTitle: language === 'ka' ? 'ინტერაქტიული SaaS შეფასების პანელი' : 'Interactive SaaS Valuation Calculator',
+    valuationTitle: language === 'ka' ? 'ინტერაქტიული SaaS შეფასების დაფა' : 'Interactive SaaS Valuation Calculator',
     valuationDesc: language === 'ka' ? 'შეცვალეთ ბიზნეს პარამეტრები, რათა იხილოთ პროექტის პოტენციური ARR და გასაყიდი ფასი Flippa-ზე ან Acquire.com-ზე.' : 'Adjust commercial parameters to show dynamic ARR growth, profit margins, and actual acquisition multipliers.',
     mrr: language === 'ka' ? 'ყოველთვიური შემოსავალი (MRR)' : 'Monthly Recurring Revenue (MRR)',
     arr: language === 'ka' ? 'წლიური შემოსავალი (ARR)' : 'Annual Recurring Revenue (ARR)',

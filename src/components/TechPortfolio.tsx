@@ -654,7 +654,7 @@ export function TechPortfolio({ language, t, currentTheme }: TechPortfolioProps)
                 </p>
                 <p className={`${currentTheme.muted} text-[10px] mt-1`}>
                   {language === 'ka' 
-                    ? 'ყველა მოწყობილობა განაღდებულია. შეიძინეთ ახალი ლიცენზიები ან ბლეიდ-სერვერები მარჯვენა პანელში.' 
+                    ? 'ყველა მოწყობილობა განაღდებულია. შეიძინეთ ახალი ლიცენზიები ან ბლეიდ-სერვერები მარჯვენა დაფაზე.' 
                     : 'No deployable tech units currently loaded in user storage profile.'}
                 </p>
               </div>
