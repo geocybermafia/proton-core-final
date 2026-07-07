@@ -3765,6 +3765,7 @@ export default function App() {
         case 'settings': return '/settings';
         case 'documentation': return '/documentation';
         case 'commercial': return '/commercial';
+        case 'objectives': return '/objectives';
         case 'dashboard':
         default:
           return '/dashboard';
@@ -3826,6 +3827,7 @@ export default function App() {
     if (pathname.startsWith('/settings')) return 'settings';
     if (pathname.startsWith('/documentation')) return 'documentation';
     if (pathname.startsWith('/commercial')) return 'commercial';
+    if (pathname.startsWith('/objectives')) return 'objectives';
     return 'dashboard';
   }, []);
 
@@ -3851,6 +3853,7 @@ export default function App() {
       case 'settings': return '/settings';
       case 'documentation': return '/documentation';
       case 'commercial': return '/commercial';
+      case 'objectives': return '/objectives';
       case 'dashboard':
       default:
         return '/dashboard';
@@ -3948,7 +3951,8 @@ export default function App() {
       location.pathname.startsWith('/finance') ||
       location.pathname.startsWith('/compute') ||
       location.pathname.startsWith('/device') ||
-      location.pathname.startsWith('/commercial')
+      location.pathname.startsWith('/commercial') ||
+      location.pathname.startsWith('/objectives')
     ) {
       if (uiMode !== 'business') {
         setUiMode('business');
@@ -3968,7 +3972,8 @@ export default function App() {
       view === 'finance' || 
       view === 'compute' || 
       view === 'device' ||
-      view === 'business-hub'
+      view === 'business-hub' ||
+      view === 'objectives'
     ) {
       setUiMode('business');
     }
