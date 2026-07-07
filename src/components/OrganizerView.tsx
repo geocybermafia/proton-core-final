@@ -180,6 +180,7 @@ export const OrganizerView = ({
 
   // UI Toggles & Filter states
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
+  const [currentViewDate, setCurrentViewDate] = useState<Date>(new Date());
   const [isCalendarFilterActive, setIsCalendarFilterActive] = useState<boolean>(false);
   const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -536,6 +537,72 @@ export const OrganizerView = ({
              d.getFullYear() === s.getFullYear();
     });
   }, [tasks, selectedCalendarDate]);
+
+  // Dynamic workload summary for the selected calendar month
+  const monthStats = useMemo(() => {
+    const year = currentViewDate.getFullYear();
+    const month = currentViewDate.getMonth();
+    
+    // Total days in this month
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    
+    // Filter tasks due in this month
+    const monthTasks = tasks.filter(task => {
+      if (!task.dueDate) return false;
+      const d = new Date(task.dueDate);
+      return d.getMonth() === month && d.getFullYear() === year;
+    });
+    
+    // Group tasks by day of the month
+    const dayTasksMap: Record<number, Task[]> = {};
+    for (let day = 1; day <= totalDays; day++) {
+      dayTasksMap[day] = [];
+    }
+    
+    monthTasks.forEach(task => {
+      if (!task.dueDate) return;
+      const day = new Date(task.dueDate).getDate();
+      if (dayTasksMap[day]) {
+        dayTasksMap[day].push(task);
+      }
+    });
+    
+    // Calculate days with tasks
+    let busyDays = 0;
+    let highLoadDays = 0; // 3+ tasks
+    let mediumLoadDays = 0; // 1-2 tasks
+    
+    Object.keys(dayTasksMap).forEach(dayKey => {
+      const dayTasksList = dayTasksMap[Number(dayKey)] || [];
+      if (dayTasksList.length > 0) {
+        busyDays++;
+        if (dayTasksList.length >= 3) {
+          highLoadDays++;
+        } else {
+          mediumLoadDays++;
+        }
+      }
+    });
+    
+    const freeDays = totalDays - busyDays;
+    const workloadPercentage = totalDays > 0 ? Math.round((busyDays / totalDays) * 100) : 0;
+    
+    const completedTasks = monthTasks.filter(t => t.completed).length;
+    const pendingTasks = monthTasks.length - completedTasks;
+    
+    return {
+      totalDays,
+      monthTasks,
+      dayTasksMap,
+      busyDays,
+      highLoadDays,
+      mediumLoadDays,
+      freeDays,
+      workloadPercentage,
+      completedTasks,
+      pendingTasks
+    };
+  }, [tasks, currentViewDate]);
 
   // Grouped layout logic (Today/Tomorrow, Upcoming Week, Overdue/Urgent, Someday/No Deadline)
   const groupedTasks = useMemo(() => {
@@ -1320,13 +1387,21 @@ export const OrganizerView = ({
               <Calendar 
                 className="mx-auto" 
                 value={selectedCalendarDate}
+                onActiveStartDateChange={({ activeStartDate }: any) => {
+                  if (activeStartDate) {
+                    setCurrentViewDate(activeStartDate);
+                  }
+                }}
                 onChange={(val) => {
                   const dateVal = val as Date;
                   setSelectedCalendarDate(dateVal);
                   setIsCalendarFilterActive(true);
                   setTaskDueDate(dateVal);
+                  if (dateVal) {
+                    setCurrentViewDate(dateVal);
+                  }
                 }}
-                tileContent={({ date, view }) => {
+                tileContent={({ date, view }: any) => {
                   if (view === 'month') {
                     const dayTasks = tasks.filter(t => {
                       if (!t.dueDate) return false;
@@ -1350,6 +1425,140 @@ export const OrganizerView = ({
                   return null;
                 }}
               />
+
+              {/* Dynamic Monthly Workload Summary Panel */}
+              <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-black text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? 'თვიური დატვირთვის ანალიზი' : 'Monthly Workload Analysis'}
+                    </h4>
+                    <p className={cn("text-[10px] uppercase tracking-widest mt-0.5 font-bold", currentTheme.muted)}>
+                      {currentViewDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className={cn("px-3 py-1.5 rounded-xl border font-mono text-xs font-black shrink-0", 
+                    monthStats.workloadPercentage > 50 ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                    monthStats.workloadPercentage > 20 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                  )}>
+                    {monthStats.workloadPercentage}% {language === 'ka' ? 'დატვირთვა' : 'Load'}
+                  </div>
+                </div>
+
+                {/* Micro metrics bar charts/progress */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className={cn("text-[9px] uppercase tracking-widest font-bold", currentTheme.muted)}>
+                        {language === 'ka' ? 'დატვირთული დღეები' : 'Active Days'}
+                      </span>
+                      <span className="text-xs font-black text-white">
+                        {monthStats.busyDays} / {monthStats.totalDays}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-proton-accent rounded-full transition-all duration-500"
+                        style={{ width: `${monthStats.workloadPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className={cn("text-[9px] uppercase tracking-widest font-bold", currentTheme.muted)}>
+                        {language === 'ka' ? 'შესრულების დონე' : 'Month Progress'}
+                      </span>
+                      <span className="text-xs font-black text-white">
+                        {monthStats.completedTasks} / {monthStats.monthTasks.length}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${monthStats.monthTasks.length > 0 ? Math.round((monthStats.completedTasks / monthStats.monthTasks.length) * 100) : 0}%` 
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Day Intensity Distribution */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
+                      {language === 'ka' ? 'ინტენსივობის განაწილება' : 'Intensity Distribution'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 flex flex-col items-center text-center">
+                      <span className="text-sm font-black text-red-400">{monthStats.highLoadDays}</span>
+                      <span className="text-[8px] uppercase tracking-tighter text-red-400/60 mt-0.5 font-bold">
+                        {language === 'ka' ? 'მძიმე დღე' : 'High Load'}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 flex flex-col items-center text-center">
+                      <span className="text-sm font-black text-amber-400">{monthStats.mediumLoadDays}</span>
+                      <span className="text-[8px] uppercase tracking-tighter text-amber-400/60 mt-0.5 font-bold">
+                        {language === 'ka' ? 'საშუალო დღე' : 'Med Load'}
+                      </span>
+                    </div>
+                    <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center">
+                      <span className="text-sm font-black text-emerald-400">{monthStats.freeDays}</span>
+                      <span className="text-[8px] uppercase tracking-tighter text-emerald-400/60 mt-0.5 font-bold">
+                        {language === 'ka' ? 'თავისუფალი' : 'Free Days'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specific days workload list */}
+                {monthStats.busyDays > 0 && (
+                  <div className="space-y-2">
+                    <p className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
+                      {language === 'ka' ? 'დატვირთული დღეების განრიგი' : 'Active Days Breakdown'}
+                    </p>
+                    <div className="max-h-[140px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
+                      {Object.keys(monthStats.dayTasksMap)
+                        .map(dayStr => Number(dayStr))
+                        .filter(day => monthStats.dayTasksMap[day] && monthStats.dayTasksMap[day].length > 0)
+                        .map(day => {
+                          const dayTasks = monthStats.dayTasksMap[day] || [];
+                          const isHigh = dayTasks.length >= 3;
+                          const completedCount = dayTasks.filter(t => t.completed).length;
+                          return (
+                            <div 
+                              key={day}
+                              className="px-3 py-2 bg-black/20 hover:bg-black/30 rounded-xl border border-white/5 flex items-center justify-between gap-3 text-xs transition-all"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className={cn(
+                                  "w-2 h-2 rounded-full",
+                                  isHigh ? "bg-red-500 animate-pulse" : "bg-amber-500"
+                                )} />
+                                <span className="font-bold text-white">
+                                  {language === 'ka' ? `${day} რიცხვი` : `Day ${day}`}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
+                                  {completedCount} / {dayTasks.length} {language === 'ka' ? 'შესრულებული' : 'done'}
+                                </span>
+                                <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-mono font-black", 
+                                  isHigh ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"
+                                )}>
+                                  {dayTasks.length} {language === 'ka' ? 'საქმე' : 'tasks'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Dynamic Calendar-Task Integration Dashboard */}
               {selectedCalendarDate && (
