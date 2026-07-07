@@ -78,7 +78,7 @@ export interface GeminiMetadata {
   latency?: number;
 }
 
-export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation' | 'market' | 'commercial' | 'market-hub' | 'finance' | 'business-hub' | 'creative-studio' | 'copywriting' | 'objectives';
+export type View = 'translator' | 'dashboard' | 'compute' | 'personas' | 'blueprints' | 'profile' | 'settings' | 'image' | 'organizer' | 'device' | 'documentation' | 'market' | 'commercial' | 'market-hub' | 'finance' | 'business-hub' | 'creative-studio' | 'copywriting';
 
 export type Task = {
   id: string;

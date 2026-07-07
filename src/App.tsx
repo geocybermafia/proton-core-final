@@ -56,7 +56,6 @@ import { DashboardView } from './components/DashboardView';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
 import BusinessHubView from './components/BusinessHubView';
-const ObjectiveCenter = lazyWithRetry(() => import('./components/ObjectiveCenter').then(module => ({ default: module.ObjectiveCenter })));
 const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView').then(module => ({ default: module.default })));
 const PersonasView = lazyWithRetry(() => import('./components/PersonasView').then(module => ({ default: module.default })));
 import { 
@@ -3765,7 +3764,6 @@ export default function App() {
         case 'settings': return '/settings';
         case 'documentation': return '/documentation';
         case 'commercial': return '/commercial';
-        case 'objectives': return '/objectives';
         case 'dashboard':
         default:
           return '/dashboard';
@@ -3827,7 +3825,6 @@ export default function App() {
     if (pathname.startsWith('/settings')) return 'settings';
     if (pathname.startsWith('/documentation')) return 'documentation';
     if (pathname.startsWith('/commercial')) return 'commercial';
-    if (pathname.startsWith('/objectives')) return 'objectives';
     return 'dashboard';
   }, []);
 
@@ -3853,7 +3850,6 @@ export default function App() {
       case 'settings': return '/settings';
       case 'documentation': return '/documentation';
       case 'commercial': return '/commercial';
-      case 'objectives': return '/objectives';
       case 'dashboard':
       default:
         return '/dashboard';
@@ -3951,8 +3947,7 @@ export default function App() {
       location.pathname.startsWith('/finance') ||
       location.pathname.startsWith('/compute') ||
       location.pathname.startsWith('/device') ||
-      location.pathname.startsWith('/commercial') ||
-      location.pathname.startsWith('/objectives')
+      location.pathname.startsWith('/commercial')
     ) {
       if (uiMode !== 'business') {
         setUiMode('business');
@@ -3972,8 +3967,7 @@ export default function App() {
       view === 'finance' || 
       view === 'compute' || 
       view === 'device' ||
-      view === 'business-hub' ||
-      view === 'objectives'
+      view === 'business-hub'
     ) {
       setUiMode('business');
     }
@@ -4990,16 +4984,7 @@ export default function App() {
                         />
                       </div>
 
-                      <div className="pt-2">
-                        <SidebarItem 
-                          icon={Target} 
-                          label={t.sidebar.objectives} 
-                          active={activeView === 'objectives'} 
-                          onClick={() => handleViewChange('objectives')} 
-                          expanded={isSidebarOpen}
-                          uiMode={uiMode}
-                        />
-                      </div>
+
 
                       <div className="pt-2">
                         <SidebarItem 
@@ -5512,7 +5497,6 @@ export default function App() {
               { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
               { id: 'personas', label: t.sidebar.agents, icon: Users },
               { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
-              { id: 'objectives', label: t.sidebar.objectives, icon: Target },
               ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
             ] : uiMode === 'creative' ? [
               { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub', icon: Sparkles },
@@ -5709,16 +5693,7 @@ export default function App() {
                       checkAndIncrementAiQuota={checkAndIncrementAiQuota}
                     />
                   )}
-                  {activeView === 'objectives' && (
-                    <Suspense fallback={
-                      <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
-                        <Loader2 className="animate-spin text-proton-accent" size={24} />
-                        <span className="uppercase tracking-widest">Loading Strategic Goals...</span>
-                      </div>
-                    }>
-                      <ObjectiveCenter language={userProfile.language} user={user} />
-                    </Suspense>
-                  )}
+
                   {activeView === 'finance' && (
                     <div className="space-y-6 max-w-7xl mx-auto pb-20">
                       <Suspense fallback={
