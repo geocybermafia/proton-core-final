@@ -179,6 +179,8 @@ export const OrganizerView = ({
   }, [habits]);
 
   // UI Toggles & Filter states
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
+  const [isCalendarFilterActive, setIsCalendarFilterActive] = useState<boolean>(false);
   const [energyFilter, setEnergyFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [showAdvancedAdd, setShowAdvancedAdd] = useState(false);
@@ -507,10 +509,33 @@ export const OrganizerView = ({
       const categoryMatch = categoryFilter === null
         ? true
         : task.category?.toLowerCase() === categoryFilter.toLowerCase();
+
+      const dateMatch = (!isCalendarFilterActive || !selectedCalendarDate)
+        ? true
+        : task.dueDate && (() => {
+            const d = new Date(task.dueDate);
+            const s = selectedCalendarDate;
+            return d.getDate() === s.getDate() &&
+                   d.getMonth() === s.getMonth() &&
+                   d.getFullYear() === s.getFullYear();
+          })();
       
-      return contentMatch && statusMatch && energyMatch && categoryMatch;
+      return contentMatch && statusMatch && energyMatch && categoryMatch && dateMatch;
     });
-  }, [tasks, searchQuery, filterStatus, language, energyFilter, categoryFilter]);
+  }, [tasks, searchQuery, filterStatus, language, energyFilter, categoryFilter, isCalendarFilterActive, selectedCalendarDate]);
+
+  // Filtered tasks specifically for the selected date on the calendar
+  const selectedDateTasks = useMemo(() => {
+    if (!selectedCalendarDate) return [];
+    return tasks.filter(task => {
+      if (!task.dueDate) return false;
+      const d = new Date(task.dueDate);
+      const s = selectedCalendarDate;
+      return d.getDate() === s.getDate() &&
+             d.getMonth() === s.getMonth() &&
+             d.getFullYear() === s.getFullYear();
+    });
+  }, [tasks, selectedCalendarDate]);
 
   // Grouped layout logic (Today/Tomorrow, Upcoming Week, Overdue/Urgent, Someday/No Deadline)
   const groupedTasks = useMemo(() => {
@@ -700,7 +725,7 @@ export const OrganizerView = ({
           </div>
 
           {/* Quick Task Creation Card */}
-          <div className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div id="task-form" className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
             <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter mb-6">
               <PlusCircle size={20} className="text-proton-accent" />
               {language === 'ka' ? 'ახალი დავალების დამატება' : 'Register New Task / Objective'}
@@ -776,7 +801,13 @@ export const OrganizerView = ({
                             <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>{t.due_date}</label>
                             <input 
                               type="date"
-                              onChange={e => setTaskDueDate(e.target.value ? new Date(e.target.value) : null)}
+                              value={taskDueDate ? (() => {
+                                const y = taskDueDate.getFullYear();
+                                const m = String(taskDueDate.getMonth() + 1).padStart(2, '0');
+                                const d = String(taskDueDate.getDate()).padStart(2, '0');
+                                return `${y}-${m}-${d}`;
+                              })() : ''}
+                              onChange={e => setTaskDueDate(e.target.value ? new Date(e.target.value + "T00:00:00") : null)}
                               className={cn("w-full rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                             />
                           </div>
@@ -903,6 +934,38 @@ export const OrganizerView = ({
 
           {/* Task Render Section */}
           <div className="space-y-4">
+             {isCalendarFilterActive && selectedCalendarDate && (
+               <div className={cn("p-6 rounded-[24px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-proton-border/30 shadow-md", currentTheme.card)}>
+                 <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-xl bg-proton-accent/10 flex items-center justify-center text-proton-accent border border-proton-accent/20 shrink-0">
+                     <CalendarIcon size={18} />
+                   </div>
+                   <div>
+                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-proton-accent">
+                       {language === 'ka' ? 'დავალებები არჩეული თარიღით' : 'Filtered by Calendar Date'}
+                     </p>
+                     <p className="text-xs font-black text-proton-text uppercase tracking-wider mt-0.5">
+                       {selectedCalendarDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
+                         weekday: 'long',
+                         year: 'numeric',
+                         month: 'long',
+                         day: 'numeric'
+                       })}
+                     </p>
+                   </div>
+                 </div>
+                 <button 
+                   onClick={() => {
+                     setIsCalendarFilterActive(false);
+                     setSelectedCalendarDate(null);
+                   }}
+                   className="px-4 py-2 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-red-500/20 shrink-0 self-stretch sm:self-auto text-center"
+                 >
+                   {language === 'ka' ? 'ყველა დავალების ჩვენება' : 'Show All Tasks'}
+                 </button>
+               </div>
+             )}
+
              {viewLayout === 'list' ? (
                 // Flat simple list layout
                 filteredTasks.length === 0 ? (
@@ -1203,23 +1266,49 @@ export const OrganizerView = ({
                 <CalendarIcon size={20} className={currentTheme.muted} />
                 {language === 'ka' ? 'კალენდარი' : 'Workspace Calendar'}
               </h3>
+              {isCalendarFilterActive && (
+                <button 
+                  onClick={() => {
+                    setIsCalendarFilterActive(false);
+                    setSelectedCalendarDate(null);
+                  }}
+                  className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-red-500/15 border border-red-500/20 text-red-400 rounded-md hover:bg-red-500 hover:text-white transition-all"
+                >
+                  {language === 'ka' ? 'ფილტრის გაუქმება' : 'Reset'}
+                </button>
+              )}
             </div>
             <div className="w-full overflow-hidden">
               <style>{`
                 ${currentTheme.calendar}
-                .react-calendar { width: 100% !important; max-width: 100% !important; }
+                .react-calendar { width: 100% !important; max-width: 100% !important; border: none !important; background: transparent !important; }
                 .react-calendar__viewContainer { width: 100% !important; }
                 .react-calendar__month-view { width: 100% !important; }
                 .react-calendar__month-view__days { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; width: 100% !important; }
                 .react-calendar__tile { 
                   aspect-ratio: 1; 
                   display: flex !important; 
+                  flex-direction: column !important;
                   align-items: center; 
                   justify-content: center; 
                   padding: 4px !important; 
                   font-size: 0.75rem !important; 
                   min-width: 0 !important; 
                   overflow: hidden !important; 
+                  position: relative !important;
+                  border-radius: 12px !important;
+                  transition: all 0.2s ease !important;
+                }
+                .react-calendar__tile:hover {
+                  background-color: rgba(255, 255, 255, 0.05) !important;
+                }
+                .react-calendar__tile--active {
+                  background-color: #22d3ee !important;
+                  color: #000 !important;
+                  font-weight: bold !important;
+                }
+                .react-calendar__tile--now {
+                  border: 1px solid rgba(34, 211, 238, 0.4) !important;
                 }
                 @media (min-width: 640px) {
                   .react-calendar__tile { 
@@ -1228,7 +1317,130 @@ export const OrganizerView = ({
                   }
                 }
               `}</style>
-              <Calendar className="mx-auto" />
+              <Calendar 
+                className="mx-auto" 
+                value={selectedCalendarDate}
+                onChange={(val) => {
+                  const dateVal = val as Date;
+                  setSelectedCalendarDate(dateVal);
+                  setIsCalendarFilterActive(true);
+                  setTaskDueDate(dateVal);
+                }}
+                tileContent={({ date, view }) => {
+                  if (view === 'month') {
+                    const dayTasks = tasks.filter(t => {
+                      if (!t.dueDate) return false;
+                      const d = new Date(t.dueDate);
+                      return d.getDate() === date.getDate() &&
+                             d.getMonth() === date.getMonth() &&
+                             d.getFullYear() === date.getFullYear();
+                    });
+                    if (dayTasks.length > 0) {
+                      const hasPending = dayTasks.some(t => !t.completed);
+                      return (
+                        <div className="flex justify-center gap-0.5 mt-1">
+                          <span className={cn(
+                            "w-1 h-1 rounded-full",
+                            hasPending ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                          )} />
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                }}
+              />
+
+              {/* Dynamic Calendar-Task Integration Dashboard */}
+              {selectedCalendarDate && (
+                <div className="mt-6 pt-6 border-t border-proton-border/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <p className="text-[9px] font-black text-proton-muted uppercase tracking-wider">
+                        {language === 'ka' ? 'არჩეული დღე' : 'Selected Day'}
+                      </p>
+                      <p className="text-xs font-black text-proton-text uppercase tracking-wider">
+                        {selectedCalendarDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsCalendarFilterActive(!isCalendarFilterActive);
+                        }}
+                        className={cn(
+                          "px-2.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border",
+                          isCalendarFilterActive 
+                            ? "bg-proton-accent text-proton-bg border-proton-accent shadow-md shadow-proton-accent/20" 
+                            : "bg-proton-secondary/20 text-proton-text border-proton-border/30 hover:bg-white/5"
+                        )}
+                      >
+                        {language === 'ka' ? (isCalendarFilterActive ? 'ფილტრი: აქტიური' : 'ფილტრის ჩართვა') : (isCalendarFilterActive ? 'Filter: Active' : 'Filter Tasks')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setTaskDueDate(selectedCalendarDate);
+                          setShowAdvancedAdd(true);
+                          const formEl = document.getElementById('task-form');
+                          if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-2.5 py-1.5 bg-proton-text text-proton-bg font-black text-[8px] uppercase tracking-wider rounded-lg hover:scale-105 transition-all"
+                      >
+                        {language === 'ka' ? '+ საქმე' : '+ Add Task'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Micro-list checklist for the day */}
+                  <div className="space-y-2">
+                    {selectedDateTasks.length === 0 ? (
+                      <div className="p-3 bg-proton-secondary/5 rounded-xl border border-proton-border/10 text-center">
+                        <p className="text-[10px] text-proton-muted italic">
+                          {language === 'ka' ? 'ამ დღეს საქმეები არ არის' : 'No tasks scheduled for this day'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="max-h-[160px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
+                        {selectedDateTasks.map(t => (
+                          <div 
+                            key={t.id} 
+                            className="p-2.5 bg-black/30 rounded-xl border border-proton-border/10 flex items-center justify-between gap-3 group/item hover:border-proton-accent/30 transition-all"
+                          >
+                            <button 
+                              onClick={() => onToggleTask(t.id)}
+                              className="flex items-center gap-2.5 min-w-0 text-left flex-1"
+                            >
+                              {t.completed ? (
+                                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                              ) : (
+                                <div className="w-3.5 h-3.5 rounded-full border border-proton-text/40 group-hover/item:border-proton-accent shrink-0" />
+                              )}
+                              <span className={cn(
+                                "text-[11px] font-bold truncate",
+                                t.completed ? "text-proton-muted line-through" : "text-proton-text"
+                              )}>
+                                {language === 'ka' ? (t.contentGe || t.content) : t.content}
+                              </span>
+                            </button>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded text-[7px] font-black uppercase shrink-0",
+                              t.priority === 'high' ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                              t.priority === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : 
+                              "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                            )}>
+                              {t.priority}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
