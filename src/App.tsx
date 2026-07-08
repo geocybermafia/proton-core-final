@@ -4902,197 +4902,192 @@ export default function App() {
                   <SidebarItem 
                     icon={LayoutDashboard} 
                     label={t.sidebar.dashboard} 
-                    active={uiMode === 'business' && activeView === 'dashboard'} 
+                    active={activeView === 'dashboard'} 
                     onClick={() => {
-                      setUiMode('business');
                       handleViewChange('dashboard');
                     }} 
                     expanded={isSidebarOpen}
-                    uiMode="business"
+                    uiMode={uiMode}
                   />
                 </div>
 
                 <div className="pt-2"></div>
 
-                {uiMode === 'business' ? (
-                  <>
-                    {/* BUSINESS MODE PANELS */}
-
-                    <div className="space-y-3 pt-6">
-                      <AnimatePresence mode="wait">
-                        {isSidebarOpen && (
-                          <motion.button 
-                            type="button"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            onClick={() => setIsAgentsExpanded(!isAgentsExpanded)}
-                            className="w-full text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-2 flex items-center justify-between hover:text-proton-accent transition-colors select-none text-left"
-                          >
-                            <span>{t.sidebar.agents}</span>
-                            <ChevronDown size={14} className={cn("transition-transform duration-300", isAgentsExpanded ? "rotate-0" : "-rotate-90")} />
-                          </motion.button>
-                        )}
-                      </AnimatePresence>
-                      
-                      {isAgentsExpanded && (
-                        <>
-                          <Reorder.Group 
-                            axis="y" 
-                            values={personas} 
-                            onReorder={setPersonas} 
-                            className="space-y-1"
-                          >
-                            {personas.slice(0, isSidebarOpen ? 8 : 4).map((persona) => (
-                              <SidebarPersonaItem
-                                key={persona.id}
-                                persona={persona}
-                                avatar={personaAvatars[persona.id] || persona.avatar}
-                                active={activeView === 'personas' && selectedPersonaId === persona.id}
-                                onClick={() => handleViewChange('personas', persona.id)}
-                                expanded={isSidebarOpen}
-                              />
-                            ))}
-                          </Reorder.Group>
-
-                          {isSidebarOpen && personas.length > 8 && (
-                            <button 
-                              onClick={() => handleViewChange('personas')}
-                              className="w-full text-center py-2 text-[10px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
-                            >
-                              + {personas.length - 8} More Agents
-                            </button>
-                          )}
-                        </>
+                {/* UNIFIED SIDEBAR GROUPS */}
+                <div className="space-y-8">
+                  {/* GROUP 1: AI COMPANIONS */}
+                  <div className="space-y-3">
+                    <AnimatePresence mode="wait">
+                      {isSidebarOpen && (
+                        <motion.button 
+                          type="button"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          onClick={() => setIsAgentsExpanded(!isAgentsExpanded)}
+                          className="w-full text-[10px] font-black text-proton-accent uppercase tracking-[0.2em] px-3 mb-2 flex items-center justify-between hover:text-proton-text transition-colors select-none text-left"
+                        >
+                          <span>{language === 'ka' ? 'ხელოვნური ინტელექტი' : 'AI COMPANIONS'}</span>
+                          <ChevronDown size={14} className={cn("transition-transform duration-300", isAgentsExpanded ? "rotate-0" : "-rotate-90")} />
+                        </motion.button>
                       )}
+                    </AnimatePresence>
+                    
+                    {isAgentsExpanded && (
+                      <>
+                        <Reorder.Group 
+                          axis="y" 
+                          values={personas} 
+                          onReorder={setPersonas} 
+                          className="space-y-1"
+                        >
+                          {personas.slice(0, isSidebarOpen ? 4 : 2).map((persona) => (
+                            <SidebarPersonaItem
+                              key={persona.id}
+                              persona={persona}
+                              avatar={personaAvatars[persona.id] || persona.avatar}
+                              active={activeView === 'personas' && selectedPersonaId === persona.id}
+                              onClick={() => handleViewChange('personas', persona.id)}
+                              expanded={isSidebarOpen}
+                            />
+                          ))}
+                        </Reorder.Group>
 
-                      <div className="pt-4">
-                        <SidebarItem 
-                          icon={CalendarIcon} 
-                          label={t.sidebar.organizer} 
-                          active={activeView === 'organizer'} 
-                          onClick={() => handleViewChange('organizer')} 
-                          expanded={isSidebarOpen}
-                          uiMode={uiMode}
-                        />
-                      </div>
+                        {isSidebarOpen && personas.length > 4 && (
+                          <button 
+                            onClick={() => handleViewChange('personas')}
+                            className="w-full text-center py-2 text-[10px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
+                          >
+                            + {personas.length - 4} More Agents
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
 
-                      <div className="pt-2">
-                        <SidebarItem 
-                          icon={WorkflowIcon} 
-                          label={t.sidebar.blueprints} 
-                          active={activeView === 'blueprints'} 
-                          onClick={() => handleViewChange('blueprints')} 
-                          expanded={isSidebarOpen}
-                          uiMode={uiMode}
-                        />
-                      </div>
-
-
-
-                      <div className="pt-2">
-                        <SidebarItem 
-                          icon={Wallet} 
-                          label={t.sidebar.finance} 
-                          active={activeView === 'finance'} 
-                          onClick={() => handleViewChange('finance')} 
-                          expanded={isSidebarOpen}
-                          uiMode={uiMode}
-                        />
-                      </div>
-
-                      {userProfile.showCommercialHub && (
-                        <div className="pt-2">
-                          <SidebarItem 
-                            icon={TrendingUp} 
-                            label={t.sidebar.commercial} 
-                            active={activeView === 'commercial'} 
-                            onClick={() => handleViewChange('commercial')} 
-                            expanded={isSidebarOpen}
-                            uiMode={uiMode}
-                            badge="EXIT"
-                          />
-                        </div>
+                  {/* GROUP 2: CREATIVE STUDIO */}
+                  <div className="space-y-3">
+                    <AnimatePresence mode="wait">
+                      {isSidebarOpen && (
+                        <motion.p 
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em] px-3"
+                        >
+                          {language === 'ka' ? 'კრეატიული სტუდია' : 'CREATIVE STUDIO'}
+                        </motion.p>
                       )}
-                    </div>
-                  </>
-                ) : uiMode === 'creative' ? (
-                  <>
-                    {/* CREATIVE MODE PANELS */}
-                    <div className="space-y-3 min-h-[1.5rem]">
-                      <AnimatePresence mode="wait">
-                        {isSidebarOpen && (
-                          <motion.p 
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
-                          >
-                            {language === 'ka' ? 'კრეატიული მოდულები' : 'CREATIVE SUITE'}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
+                    </AnimatePresence>
+                    <SidebarItem 
+                      icon={Sparkles} 
+                      label={language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub'} 
+                      active={activeView === 'creative-studio'} 
+                      onClick={() => handleViewChange('creative-studio')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                    <SidebarItem 
+                      icon={Image} 
+                      label={t.sidebar.image} 
+                      active={activeView === 'image'} 
+                      onClick={() => handleViewChange('image')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                    <SidebarItem 
+                      icon={Languages} 
+                      label={t.sidebar.translator} 
+                      active={(activeView as string) === 'translator'} 
+                      onClick={() => handleViewChange('translator')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                    <SidebarItem 
+                      icon={FileText} 
+                      label={language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting'} 
+                      active={activeView === 'copywriting'} 
+                      onClick={() => handleViewChange('copywriting')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                  </div>
+
+                  {/* GROUP 3: MANAGEMENT & FINANCE */}
+                  <div className="space-y-3">
+                    <AnimatePresence mode="wait">
+                      {isSidebarOpen && (
+                        <motion.p 
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="text-[10px] font-black text-purple-400 uppercase tracking-[0.2em] px-3"
+                        >
+                          {language === 'ka' ? 'მართვა & ფინანსები' : 'PLANNING & FINANCE'}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                    <SidebarItem 
+                      icon={CalendarIcon} 
+                      label={t.sidebar.organizer} 
+                      active={activeView === 'organizer'} 
+                      onClick={() => handleViewChange('organizer')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                    <SidebarItem 
+                      icon={WorkflowIcon} 
+                      label={t.sidebar.blueprints} 
+                      active={activeView === 'blueprints'} 
+                      onClick={() => handleViewChange('blueprints')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                    <SidebarItem 
+                      icon={Wallet} 
+                      label={t.sidebar.finance} 
+                      active={activeView === 'finance'} 
+                      onClick={() => handleViewChange('finance')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                    {userProfile.showCommercialHub && (
                       <SidebarItem 
-                        icon={Sparkles} 
-                        label={language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub'} 
-                        active={activeView === 'creative-studio'} 
-                        onClick={() => handleViewChange('creative-studio')} 
+                        icon={TrendingUp} 
+                        label={t.sidebar.commercial} 
+                        active={activeView === 'commercial'} 
+                        onClick={() => handleViewChange('commercial')} 
                         expanded={isSidebarOpen}
                         uiMode={uiMode}
+                        badge="EXIT"
                       />
-                      <SidebarItem 
-                        icon={Image} 
-                        label={t.sidebar.image} 
-                        active={activeView === 'image'} 
-                        onClick={() => handleViewChange('image')} 
-                        expanded={isSidebarOpen}
-                        uiMode={uiMode}
-                      />
-                      <SidebarItem 
-                        icon={Languages} 
-                        label={t.sidebar.translator} 
-                        active={(activeView as string) === 'translator'} 
-                        onClick={() => handleViewChange('translator')} 
-                        expanded={isSidebarOpen}
-                        uiMode={uiMode}
-                      />
-                      <SidebarItem 
-                        icon={FileText} 
-                        label={language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting'} 
-                        active={activeView === 'copywriting'} 
-                        onClick={() => handleViewChange('copywriting')} 
-                        expanded={isSidebarOpen}
-                        uiMode={uiMode}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* MARKET MODE PANELS */}
-                    <div className="space-y-3 min-h-[1.5rem]">
-                      <AnimatePresence mode="wait">
-                        {isSidebarOpen && (
-                          <motion.p 
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            className="text-xs font-black text-proton-muted uppercase tracking-widest px-3"
-                          >
-                            {language === 'ka' ? 'კომერციის ჰაბი' : 'COMMERCE MATRIX'}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
-                      <SidebarItem 
-                        icon={ShoppingBag} 
-                        label={t.sidebar.market} 
-                        active={(activeView as string) === 'market-hub'} 
-                        onClick={() => handleViewChange('market-hub' as any)} 
-                        expanded={isSidebarOpen}
-                        uiMode="business"
-                      />
-                    </div>
-                  </>
-                )}
+                    )}
+                  </div>
+
+                  {/* GROUP 4: NEIGHBORHOOD MARKET */}
+                  <div className="space-y-3">
+                    <AnimatePresence mode="wait">
+                      {isSidebarOpen && (
+                        <motion.p 
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] px-3"
+                        >
+                          {language === 'ka' ? 'ადგილობრივი ბაზარი' : 'COMMERCE & MARKET'}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+                    <SidebarItem 
+                      icon={ShoppingBag} 
+                      label={t.sidebar.market} 
+                      active={activeView === 'market-hub' || activeView === 'market'} 
+                      onClick={() => handleViewChange('market-hub')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                    />
+                  </div>
+                </div>
 
                 <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
               <AnimatePresence mode="wait">
@@ -5382,20 +5377,13 @@ export default function App() {
 
       {/* Bottom Nav (Mobile Only) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
-        {(uiMode === 'business' ? [
-          { id: 'business-hub', icon: Briefcase, label: language === 'ka' ? 'დაფა' : 'Hub' },
-          { id: 'personas', icon: Users, label: t.sidebar.bottom_nav.personas },
-          { id: 'organizer', icon: CalendarIcon, label: language === 'ka' ? 'საქმე' : 'Tasks' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
-        ] : uiMode === 'creative' ? [
-          { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
-          { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'ჰაბი' : 'Hub' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
-        ] : [
-          { id: 'dashboard', icon: LayoutDashboard, label: t.sidebar.bottom_nav.dashboard },
+        {[
+          { id: 'dashboard', icon: LayoutDashboard, label: language === 'ka' ? 'მთავარი' : 'Home' },
+          { id: 'personas', icon: Users, label: language === 'ka' ? 'აგენტები' : 'Agents' },
+          { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'კრეატივი' : 'Creative' },
           { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'პარამეტრები' : 'Settings' },
-        ]).map((item) => {
+          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
+        ].map((item) => {
           const isActive = item.id === 'control-hub'
             ? (activeView === 'profile' || activeView === 'settings' || isMobileControlOpen)
             : activeView === item.id;
@@ -5405,10 +5393,8 @@ export default function App() {
               onClick={() => {
                 if (item.id === 'control-hub') {
                   setIsMobileControlOpen(!isMobileControlOpen);
-                } else if (item.id === 'dashboard') {
-                  setUiMode('business');
-                  handleViewChange('dashboard');
                 } else {
+                  setIsMobileControlOpen(false);
                   handleViewChange(item.id as any);
                 }
               }}
@@ -5417,8 +5403,8 @@ export default function App() {
                 isActive ? "text-proton-accent" : "text-proton-muted"
               )}
             >
-              <item.icon size={20} className={cn(isActive && "animate-pulse")} />
-              <span className="text-[9px] font-sans font-bold uppercase tracking-wider">{item.label}</span>
+              <item.icon size={18} className={cn(isActive && "animate-pulse")} />
+              <span className="text-[8px] font-sans font-bold uppercase tracking-wider">{item.label}</span>
               {isActive && (
                 <motion.div 
                   initial={{ scaleX: 0, opacity: 0 }}
@@ -5467,24 +5453,30 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <div className={cn(
                   "w-1.5 h-1.5 rounded-full animate-pulse",
-                  uiMode === 'business' 
-                    ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]" 
-                    : uiMode === 'creative' 
-                      ? "bg-amber-500 shadow-[0_0_8px_#ff9f1c]" 
-                      : "bg-sky-500 shadow-[0_0_8px_#0ea5e9]"
+                  activeView === 'dashboard'
+                    ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]"
+                    : uiMode === 'business' 
+                      ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]" 
+                      : uiMode === 'creative' 
+                        ? "bg-amber-500 shadow-[0_0_8px_#ff9f1c]" 
+                        : "bg-sky-500 shadow-[0_0_8px_#0ea5e9]"
                 )} />
                 <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono">
                   PROTON // {
-                    uiMode === 'business' 
-                      ? (language === 'ka' ? 'ბიზნესი' : 'BUSINESS') 
-                      : uiMode === 'creative' 
-                        ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE') 
-                        : (language === 'ka' ? 'მარკეტი' : 'MARKET')
+                    activeView === 'dashboard'
+                      ? (language === 'ka' ? 'მთავარი' : 'HOME')
+                      : uiMode === 'business' 
+                        ? (language === 'ka' ? 'ბიზნესი' : 'BUSINESS') 
+                        : uiMode === 'creative' 
+                          ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE') 
+                          : (language === 'ka' ? 'მარკეტი' : 'MARKET')
                   }
                 </span>
               </div>
               <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
-                {uiMode === 'business' ? (
+                {activeView === 'dashboard' ? (
+                  language === 'ka' ? 'პერსონალური სამუშაო სივრცე' : 'Personal Workspace Hub'
+                ) : uiMode === 'business' ? (
                   language === 'ka' ? 'ავტომატიზაცია და მულტი-აგენტები' : 'Automation & Multi-Agents Active'
                 ) : uiMode === 'creative' ? (
                   language === 'ka' ? 'სტუდია და ლოკალიზაცია' : 'AI Studio & Localization'

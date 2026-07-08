@@ -84,11 +84,11 @@ export const DashboardView = React.memo(({
   const gateways = [
     {
       id: 'business',
-      title: language === 'ka' ? 'ბიზნეს პორტალი' : 'Business Suite',
-      badge: language === 'ka' ? 'ბიზნესის მართვა' : 'Business Management',
+      title: language === 'ka' ? 'ხელოვნური ინტელექტი & ავტომატიზაცია' : 'AI & Automation',
+      badge: language === 'ka' ? 'ინტელექტუალური ასისტენტები' : 'AI Companions',
       desc: language === 'ka' 
-        ? 'ბიზნეს პროცესების მართვა, სტრატეგიული გეგმები და გუნდური როლები.'
-        : 'Manage business processes, strategic planning, and customized team roles.',
+        ? 'შექმენით და მართეთ სპეციალიზებული AI აგენტები, როლები და ავტომატიზებული პროცესები.'
+        : 'Create and coordinate specialized AI agents, custom roles, and automated workflows.',
       icon: Building,
       color: 'cyan',
       glowClass: 'border-cyan-500/20 hover:border-cyan-500/80 shadow-cyan-500/5 hover:shadow-cyan-500/20',
@@ -207,17 +207,17 @@ export const DashboardView = React.memo(({
           <div className="space-y-3 text-center md:text-left flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-mono font-black uppercase tracking-[0.2em] bg-zinc-900 text-proton-accent border border-zinc-800">
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              {language === 'ka' ? 'სამუშაო სივრცის მართვის დაფა' : 'WORKSPACE OVERVIEW PANEL'}
+              {language === 'ka' ? 'ციფრული სამუშაო სახლი' : 'MY DIGITAL HOME'}
             </div>
             
             <h1 className="font-black tracking-tighter uppercase leading-none text-4xl sm:text-5xl md:text-6xl text-proton-text">
-              {language === 'ka' ? 'PROTON WORKSPACE HUB' : 'PROTON WORKSPACE HUB'}
+              {language === 'ka' ? 'კეთილი იყოს შენი მობრძანება' : 'WELCOME TO PROTON'}
             </h1>
             
             <p className="text-proton-muted font-medium max-w-2xl text-sm sm:text-base leading-relaxed">
               {language === 'ka' 
-                ? 'მოგესალმებით თქვენს პერსონალურ სამუშაო სივრცეში. მართეთ ბიზნეს აგენტები, კრეატიული სტუდია, პროდუქტების ბაზარი, ყოველდღიური ამოცანები და ფინანსები ერთიან, დაცულ გარემოში.'
-                : 'Welcome to your multi-functional workspace. Coordinate business agents, explore creative design studios, trade in the peer-to-peer market, organize your daily tasks, and track financial ledgers.'}
+                ? 'ეს არის შენი პერსონალური ციფრული სივრცე. აქ შეგიძლია გაესაუბრო ჭკვიან AI ასისტენტებს, შექმნა კრეატიული ხელოვნება, გაყიდო ან შეიძინო ნივთები ადგილობრივ მარკეტზე და მართო ყოველდღიური საქმეები მარტივად და ინტუიციურად.'
+                : 'This is your cozy, personal digital workspace. Chat with friendly AI companions, design stunning visual arts, trade items in the neighborhood market, and track your daily tasks or budgets effortlessly.'}
             </p>
           </div>
           
