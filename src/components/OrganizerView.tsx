@@ -486,8 +486,12 @@ export const OrganizerView = ({
         completed: false
       }));
       onEditTask(task.id, { subtasks: newSubtasks });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to auto breakdown task with AI:", error);
+      const msg = error?.message || String(error);
+      alert(language === 'ka' 
+        ? `ავტომატური დაყოფა ვერ მოხერხდა: ${msg}` 
+        : `Failed to auto breakdown task: ${msg}`);
     } finally {
       setIsBreakingDown(prev => ({ ...prev, [task.id]: false }));
     }
