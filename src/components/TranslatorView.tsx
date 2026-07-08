@@ -338,7 +338,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
         )}
       >
         <div className="flex justify-between items-center mb-4 lg:mb-8">
-          <div className="flex items-center gap-3">
+          <div className={cn("flex items-center gap-3 transition-all duration-300", onBack && "pl-14 lg:pl-16")}>
             <div className="px-4 py-1.5 rounded-full bg-blue-500/20 flex items-center gap-2 border border-blue-500/30">
               <Globe size={14} className="text-blue-400" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">{topLang}</span>
