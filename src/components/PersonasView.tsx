@@ -441,8 +441,10 @@ export default function PersonasView({
 
       {/* Chat Interface */}
       <div className={cn(
-        "flex-1 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative h-full",
-        mobileShowChat ? "flex" : "hidden lg:flex"
+        "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full relative",
+        mobileShowChat 
+          ? "fixed inset-0 z-[80] bg-proton-bg lg:relative lg:inset-auto lg:z-auto lg:bg-proton-card lg:border lg:border-proton-border lg:rounded-2xl" 
+          : "hidden lg:flex lg:border lg:border-proton-border lg:rounded-2xl"
       )}>
         <AnimatePresence mode="wait">
         {selectedPersona ? (
@@ -594,7 +596,7 @@ export default function PersonasView({
               </AnimatePresence>
 
               {/* Chat Container with Markdown rendering */}
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar-minimal bg-gradient-to-b from-transparent to-black/10">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-8 pb-24 sm:pb-8 space-y-6 custom-scrollbar-minimal bg-gradient-to-b from-transparent to-black/10">
                  {messages.map((m, idx) => (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
@@ -663,7 +665,7 @@ export default function PersonasView({
                  )}
               </div>
 
-              <footer className="p-6 border-t border-proton-border bg-white/[0.02]">
+              <footer className="p-4 sm:p-6 border-t border-proton-border bg-white/[0.02] shrink-0 pb-safe">
                  <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
                     <AnimatePresence>
                       {showTools && (
@@ -732,7 +734,7 @@ export default function PersonasView({
                           : t.chat_placeholder.replace('{name}', language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name)
                         }
                         className={cn(
-                          "w-full bg-proton-bg border border-proton-border rounded-2xl pl-16 pr-14 py-4.5 focus:outline-none transition-all text-xs placeholder:text-proton-muted/40 font-medium tracking-wide",
+                          "w-full bg-proton-bg border border-proton-border rounded-2xl pl-16 pr-14 py-3.5 sm:py-4.5 focus:outline-none transition-all text-base sm:text-xs placeholder:text-proton-muted/40 font-medium tracking-wide",
                           selectedTool ? "border-proton-accent/40 shadow-[0_0_20px_rgba(0,242,255,0.06)]" : "focus:border-proton-accent/50 focus:ring-1 focus:ring-proton-accent/15"
                         )}
                       />
