@@ -45,7 +45,8 @@ import {
   where,
   Timestamp,
   serverTimestamp,
-  limit 
+  limit,
+  runTransaction
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -347,51 +348,32 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           freshPrice = freshList.price;
           freshCurrency = freshList.currency || 'USD';
           freshTitle = freshList.title || item.title;
-        } else {
-          const docRef = doc(db, 'listings', item.id);
-          const docSnap = await getDoc(docRef);
-          if (!docSnap.exists()) {
-            alert(language === 'ka' 
-              ? `პროდუქტი "${item.title}" აღარ არსებობს ბაზაში.` 
-              : `Product "${item.title}" no longer exists in our database.`);
+
+          if (isSold) {
+            alert(language === 'ka'
+              ? `შეცდომა: პროდუქტი "${freshTitle}" უკვე გაყიდულია და მისი შეძენა შეუძლებელია.`
+              : `Error: Product "${freshTitle}" has already been sold and cannot be purchased.`);
             setIsPlacingCartOrders(false);
             return;
           }
-          const freshData = docSnap.data();
-          if (freshData.status === 'sold' || freshData.isSold) {
-            isSold = true;
-          }
-          freshPrice = freshData.price;
-          freshCurrency = freshData.currency || 'USD';
-          freshTitle = freshData.title || item.title;
-        }
 
-        if (isSold) {
-          alert(language === 'ka'
-            ? `შეცდომა: პროდუქტი "${freshTitle}" უკვე გაყიდულია და მისი შეძენა შეუძლებელია.`
-            : `Error: Product "${freshTitle}" has already been sold and cannot be purchased.`);
-          setIsPlacingCartOrders(false);
-          return;
-        }
+          const isService = item.listingType === 'service' || item.category === 'service';
+          const orderData = {
+            listingId: item.id,
+            buyerId: user.uid,
+            sellerId: item.sellerId,
+            amount: freshPrice,
+            currency: freshCurrency,
+            itemTitle: freshTitle,
+            status: isService ? 'booked' : 'completed',
+            orderType: isService ? 'service' : 'product',
+            buyerInstructions: '',
+            createdAt: Date.now()
+          };
 
-        const isService = item.listingType === 'service' || item.category === 'service';
-        const orderData = {
-          listingId: item.id,
-          buyerId: user.uid,
-          sellerId: item.sellerId,
-          amount: freshPrice,
-          currency: freshCurrency,
-          itemTitle: freshTitle,
-          status: isService ? 'booked' : 'completed',
-          orderType: isService ? 'service' : 'product',
-          buyerInstructions: '',
-          createdAt: Date.now()
-        };
-
-        if (isSupabaseConfigured()) {
-          const { error } = await supabase.from('orders').insert([orderData]);
-          if (error) {
-            console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", error);
+          const { error: insertErr } = await supabase.from('orders').insert([orderData]);
+          if (insertErr) {
+            console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", insertErr);
           } else if (!isService) {
             const { error: updateErr } = await supabase
               .from('listings')
@@ -400,25 +382,61 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             if (updateErr) console.error("[SUPABASE ERROR] Failed to update listing status:", updateErr);
           }
         } else {
-          await addDoc(collection(db, 'orders'), {
-            ...orderData,
-            createdAt: serverTimestamp()
-          });
-          if (!isService) {
-            await updateDoc(doc(db, 'listings', item.id), {
-              status: 'sold',
-              isSold: true
+          const isService = item.listingType === 'service' || item.category === 'service';
+          await runTransaction(db, async (transaction) => {
+            const docRef = doc(db, 'listings', item.id);
+            const docSnap = await transaction.get(docRef);
+            if (!docSnap.exists()) {
+              throw new Error(`Product "${item.title}" no longer exists in our database.`);
+            }
+            const freshData = docSnap.data();
+            if (freshData.status === 'sold' || freshData.isSold) {
+              throw new Error(`Product "${freshData.title || item.title}" has already been sold.`);
+            }
+
+            freshPrice = freshData.price;
+            freshCurrency = freshData.currency || 'USD';
+            freshTitle = freshData.title || item.title;
+
+            const orderData = {
+              listingId: item.id,
+              buyerId: user.uid,
+              sellerId: item.sellerId,
+              amount: freshPrice,
+              currency: freshCurrency,
+              itemTitle: freshTitle,
+              status: isService ? 'booked' : 'completed',
+              orderType: isService ? 'service' : 'product',
+              buyerInstructions: '',
+              createdAt: Date.now()
+            };
+
+            const newOrderRef = doc(collection(db, 'orders'));
+            transaction.set(newOrderRef, {
+              ...orderData,
+              createdAt: serverTimestamp()
             });
-          }
+
+            if (!isService) {
+              transaction.update(docRef, {
+                status: 'sold',
+                isSold: true
+              });
+            }
+          });
         }
       }
       setCart([]);
       setIsCartOpen(false);
       setViewMode('my-listings');
       setProfileSubMode('buying');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Cart checkout error:", err);
-      alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.");
+      if (err && err.message && (err.message.includes('sold') || err.message.includes('no longer exists'))) {
+        alert(language === 'ka' ? `შეცდომა: ${err.message}` : `Error: ${err.message}`);
+      } else {
+        alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.");
+      }
     } finally {
       setIsPlacingCartOrders(false);
     }
@@ -1262,25 +1280,45 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           if (updateErr) console.error("[SUPABASE ERROR] Failed to update listing status:", updateErr);
         }
       } else {
-        await addDoc(collection(db, 'orders'), {
-          ...orderData,
-          createdAt: serverTimestamp()
-        });
-        if (!isService) {
-          await updateDoc(doc(db, 'listings', checkoutItem.id), {
-            status: 'sold',
-            isSold: true
+        await runTransaction(db, async (transaction) => {
+          const listingRef = doc(db, 'listings', checkoutItem.id);
+          const listingSnap = await transaction.get(listingRef);
+          if (!listingSnap.exists()) {
+            throw new Error('Listing does not exist.');
+          }
+          const freshData = listingSnap.data();
+          if (freshData.status === 'sold' || freshData.isSold) {
+            throw new Error('This item has already been sold.');
+          }
+
+          const newOrderRef = doc(collection(db, 'orders'));
+          transaction.set(newOrderRef, {
+            ...orderData,
+            createdAt: serverTimestamp()
           });
-        }
+
+          if (!isService) {
+            transaction.update(listingRef, {
+              status: 'sold',
+              isSold: true
+            });
+          }
+        });
       }
       
       setCheckoutItem(null);
       setBuyerInstructions('');
       setViewMode('my-listings');
       setProfileSubMode('buying');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating order:", error);
-      alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.");
+      if (error && (error.message === 'This item has already been sold.' || error.message?.includes('sold'))) {
+        alert(language === 'ka' 
+          ? "ეს პროდუქტი უკვე გაყიდულია სხვა მომხმარებლის მიერ." 
+          : "This item has already been sold to another user.");
+      } else {
+        alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.");
+      }
     } finally {
       setIsCheckingOut(false);
     }
