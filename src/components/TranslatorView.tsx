@@ -56,6 +56,26 @@ Guidelines:
 7. CRITICAL: Return ONLY the translated text. Do not provide any explanations, meta-talk, or original text.
 `;
 
+interface LanguageOption {
+  name: string;
+  nativeName: string;
+  bcp47: string;
+  ttsLangCode: string;
+}
+
+export const SUPPORTED_LANGUAGES: { [key: string]: LanguageOption } = {
+  'English': { name: 'English', nativeName: 'English', bcp47: 'en-US', ttsLangCode: 'en' },
+  'Georgian': { name: 'Georgian', nativeName: 'ქართული', bcp47: 'ka-GE', ttsLangCode: 'ka' },
+  'German': { name: 'German', nativeName: 'Deutsch', bcp47: 'de-DE', ttsLangCode: 'de' },
+  'Spanish': { name: 'Spanish', nativeName: 'Español', bcp47: 'es-ES', ttsLangCode: 'es' },
+  'French': { name: 'French', nativeName: 'Français', bcp47: 'fr-FR', ttsLangCode: 'fr' },
+  'Italian': { name: 'Italian', nativeName: 'Italiano', bcp47: 'it-IT', ttsLangCode: 'it' },
+  'Chinese': { name: 'Chinese', nativeName: '中文', bcp47: 'zh-CN', ttsLangCode: 'zh' },
+  'Japanese': { name: 'Japanese', nativeName: '日本語', bcp47: 'ja-JP', ttsLangCode: 'ja' },
+  'Turkish': { name: 'Turkish', nativeName: 'Türkçe', bcp47: 'tr-TR', ttsLangCode: 'tr' },
+  'Ukrainian': { name: 'Ukrainian', nativeName: 'Українська', bcp47: 'uk-UA', ttsLangCode: 'uk' }
+};
+
 interface Message {
   id: string;
   text: string;
@@ -77,8 +97,10 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   const [status, setStatus] = useState<'idle' | 'starting' | 'recording' | 'stopping' | 'processing'>('idle');
   
   // Settings
-  const [topLang] = useState('English');
-  const [bottomLang] = useState('Georgian');
+  const [topLang, setTopLang] = useState('English');
+  const [bottomLang, setBottomLang] = useState('Georgian');
+  const [showTopDropdown, setShowTopDropdown] = useState(false);
+  const [showBottomDropdown, setShowBottomDropdown] = useState(false);
   
   const recognition = useRef<any>(null);
   const audioContext = useRef<AudioContext | null>(null);
@@ -209,10 +231,27 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     setStatus('processing');
     try {
+      const sourceLangName = activeSide === 'top' ? topLang : bottomLang;
+      const targetLangName = activeSide === 'top' ? bottomLang : topLang;
+      const targetTtsCode = SUPPORTED_LANGUAGES[targetLangName]?.ttsLangCode || (activeSide === 'top' ? 'ka' : 'en');
       const sourceRole = activeSide === 'top' ? 'Visitor' : 'Creative';
-      const targetLanguage = activeSide === 'top' ? 'Georgian' : 'English';
       
-      const translated = await translateText(textToTranslate, sourceRole, targetLanguage, SYSTEM_INSTRUCTION);
+      const dynamicInstruction = `
+You are a high-performance translation engine specialized for face-to-face communication.
+Your goal is to provide seamless, culturally accurate translations between ${topLang} and ${bottomLang}.
+
+Grounded Creative Glossary (use terms when translating to/from Georgian/English as appropriate):
+${CREATIVE_GLOSSARY.ka.map(i => `- ${i.term} (${i.en}): ${i.desc}`).join('\n')}
+
+Guidelines:
+1. Detect which language is being spoken (either ${topLang} or ${bottomLang}).
+2. If the input is in ${sourceLangName}, translate it accurately to ${targetLangName}.
+3. Keep translations concise, natural, and highly conversational.
+4. If the input contains creative or artisanal terms (like woodworking, pottery, glazing, qvevri, carvings), translate them with high professional and cultural fidelity.
+5. CRITICAL: Return ONLY the translated text. Do NOT provide any explanations, meta-talk, notes, or original text.
+`;
+
+      const translated = await translateText(textToTranslate, sourceRole, targetLangName, dynamicInstruction);
       
       const newMessage: Message = {
         id: Math.random().toString(36).substr(2, 9),
@@ -225,7 +264,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       setMessages(prev => [newMessage, ...prev]);
       
       // Auto TTS
-      playTTS(translated, activeSide === 'top' ? 'ka' : 'en');
+      playTTS(translated, targetTtsCode);
     } catch (error) {
       console.error('Translation error:', error);
     } finally {
@@ -253,7 +292,9 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     setStatus('starting');
     
     if (recognition.current) {
-      recognition.current.lang = side === 'top' ? 'en-US' : 'ka-GE';
+      const activeLangKey = side === 'top' ? topLang : bottomLang;
+      const bcpCode = SUPPORTED_LANGUAGES[activeLangKey]?.bcp47 || (side === 'top' ? 'en-US' : 'ka-GE');
+      recognition.current.lang = bcpCode;
       try {
         recognition.current.start();
         if (navigator.vibrate) navigator.vibrate(10);
@@ -264,9 +305,10 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     }
   };
 
-  const playTTS = async (text: string, lang: 'ka' | 'en') => {
+  const playTTS = async (text: string, lang: string) => {
     try {
-      const prompt = `Say in ${lang === 'ka' ? 'Georgian' : 'English'}: ${text}`;
+      const langName = Object.values(SUPPORTED_LANGUAGES).find(l => l.ttsLangCode === lang)?.name || 'English';
+      const prompt = `Say in ${langName}: ${text}`;
       const voiceName = lang === 'ka' ? 'Kore' : 'Zephyr';
       
       const base64Audio = await generateSpeech(prompt, voiceName);
@@ -312,7 +354,8 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       console.error('TTS error:', error);
       // Fallback to browser TTS if Gemini TTS fails
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang === 'ka' ? 'ka-GE' : 'en-US';
+      const bcp = Object.values(SUPPORTED_LANGUAGES).find(l => l.ttsLangCode === lang)?.bcp47 || 'en-US';
+      utterance.lang = bcp;
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -339,9 +382,52 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       >
         <div className="flex justify-between items-center mb-4 lg:mb-8">
           <div className={cn("flex items-center gap-3 transition-all duration-300", onBack && "pl-14 lg:pl-16")}>
-            <div className="px-4 py-1.5 rounded-full bg-blue-500/20 flex items-center gap-2 border border-blue-500/30">
-              <Globe size={14} className="text-blue-400" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">{topLang}</span>
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowTopDropdown(!showTopDropdown);
+                  setShowBottomDropdown(false);
+                }}
+                className="px-4 py-1.5 rounded-full bg-blue-500/20 hover:bg-blue-500/30 flex items-center gap-2 border border-blue-500/30 text-blue-400 transition-all cursor-pointer"
+              >
+                <Globe size={14} />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{topLang}</span>
+                <ChevronDown size={10} className={cn("transition-transform duration-200", showTopDropdown && "rotate-180")} />
+              </button>
+              
+              <AnimatePresence>
+                {showTopDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowTopDropdown(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute left-0 mt-2 w-48 bg-zinc-950 border border-zinc-900 rounded-2xl p-2 shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-none text-left"
+                    >
+                      {Object.keys(SUPPORTED_LANGUAGES).map((key) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setTopLang(key);
+                            setShowTopDropdown(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all block",
+                            topLang === key 
+                              ? "bg-blue-500 text-black" 
+                              : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <span className="block text-[10px]">{key}</span>
+                          <span className="block text-[8px] opacity-70 font-medium normal-case">{SUPPORTED_LANGUAGES[key].nativeName}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -504,9 +590,52 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       >
         <div className="flex justify-between items-center mb-4 lg:mb-8">
           <div className="flex items-center gap-3">
-            <div className="px-4 py-1.5 rounded-full bg-amber-500/20 flex items-center gap-2 border border-amber-500/30">
-              <Languages size={14} className="text-amber-400" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-400">{bottomLang}</span>
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowBottomDropdown(!showBottomDropdown);
+                  setShowTopDropdown(false);
+                }}
+                className="px-4 py-1.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 flex items-center gap-2 border border-amber-500/30 text-amber-400 transition-all cursor-pointer"
+              >
+                <Languages size={14} />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{bottomLang}</span>
+                <ChevronDown size={10} className={cn("transition-transform duration-200", showBottomDropdown && "rotate-180")} />
+              </button>
+              
+              <AnimatePresence>
+                {showBottomDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowBottomDropdown(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute left-0 mt-2 w-48 bg-zinc-950 border border-zinc-900 rounded-2xl p-2 shadow-2xl z-50 max-h-64 overflow-y-auto scrollbar-none text-left"
+                    >
+                      {Object.keys(SUPPORTED_LANGUAGES).map((key) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setBottomLang(key);
+                            setShowBottomDropdown(false);
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all block",
+                            bottomLang === key 
+                              ? "bg-amber-500 text-black" 
+                              : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <span className="block text-[10px]">{key}</span>
+                          <span className="block text-[8px] opacity-70 font-medium normal-case">{SUPPORTED_LANGUAGES[key].nativeName}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
             </div>
           </div>
           <button className="w-10 h-10 rounded-full border border-white/10 text-white/40 hover:bg-white/5 transition-all flex items-center justify-center">

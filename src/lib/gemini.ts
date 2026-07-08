@@ -285,7 +285,7 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
 export async function translateText(
   text: string,
   sourceRole: 'Visitor' | 'Creative',
-  targetLanguage: 'Georgian' | 'English',
+  targetLanguage: string,
   systemInstruction: string
 ): Promise<string> {
   if (isSimulatedActive()) {
@@ -296,11 +296,13 @@ export async function translateText(
       if (textLower.includes("how much") || textLower.includes("price")) return "რა ღირს ეს მომსახურება/პროდუქტი?";
       if (textLower.includes("thank")) return "დიდი მადლობა დახმარებისთვის!";
       return `[თარგმანი]: ${text} (სიმულაციური თარგმანი ქართულად)`;
-    } else {
+    } else if (targetLanguage === 'English') {
       if (textLower.includes("გამარჯობა")) return "Hello, nice to meet you!";
       if (textLower.includes("მადლობა")) return "Thank you very much!";
       if (textLower.includes("ფასი") || textLower.includes("რა ღირს")) return "How much does this cost?";
       return `[Translated]: ${text} (Simulated translation to English)`;
+    } else {
+      return `[Translated to ${targetLanguage}]: ${text} (Simulated translation)`;
     }
   }
   return callServerGemini<string>('translateText', [text, sourceRole, targetLanguage, systemInstruction]);

@@ -355,7 +355,7 @@ export async function architectTask(project: string, temperature: number = 0.9, 
 export async function translateText(
   text: string,
   sourceRole: 'Visitor' | 'Creative',
-  targetLanguage: 'Georgian' | 'English',
+  targetLanguage: string,
   systemInstruction: string,
   apiKeyOverride?: string
 ): Promise<string> {
