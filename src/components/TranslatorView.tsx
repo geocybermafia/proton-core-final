@@ -14,7 +14,9 @@ import {
   Languages,
   Info,
   ArrowLeft,
-  Zap
+  Zap,
+  Keyboard,
+  Send
 } from 'lucide-react';
 import { translateText, generateSpeech } from '../lib/gemini';
 import { cn } from '../lib/utils';
@@ -101,6 +103,10 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   const [bottomLang, setBottomLang] = useState('Georgian');
   const [showTopDropdown, setShowTopDropdown] = useState(false);
   const [showBottomDropdown, setShowBottomDropdown] = useState(false);
+  const [topInputText, setTopInputText] = useState('');
+  const [bottomInputText, setBottomInputText] = useState('');
+  const [showTopKeyboard, setShowTopKeyboard] = useState(false);
+  const [showBottomKeyboard, setShowBottomKeyboard] = useState(false);
   
   const recognition = useRef<any>(null);
   const audioContext = useRef<AudioContext | null>(null);
@@ -506,47 +512,95 @@ Guidelines:
             </AnimatePresence>
           </div>
 
-          <div className="mt-8 lg:mt-auto flex justify-center pb-4 lg:pb-12">
-            <button 
-              onPointerDown={(e) => {
-                e.preventDefault();
-                startRecording('top');
-              }}
-              onPointerUp={(e) => {
-                e.preventDefault();
-                stopRecording();
-              }}
-              onPointerCancel={(e) => {
-                e.preventDefault();
-                stopRecording();
-              }}
-              disabled={status === 'processing'}
-              style={{ touchAction: 'none' }}
-              className={cn(
-                "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
-                activeSide === 'top' && (status === 'recording' || status === 'starting') 
-                  ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
-                  : "bg-blue-600 border-blue-600/30 hover:bg-blue-500 hover:rotate-12 active:scale-90"
-              )}
-            >
-              <AnimatePresence mode="wait">
-                {activeSide === 'top' && (status === 'starting' || status === 'recording') ? (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                    <MicOff size={isDesktop ? 54 : 40} />
-                  </motion.div>
-                ) : (
-                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                    <Mic size={isDesktop ? 54 : 40} />
-                  </motion.div>
+          <div className="mt-8 lg:mt-auto flex flex-col items-center gap-4 pb-4 lg:pb-12 w-full max-w-md mx-auto">
+            <div className="flex items-center gap-4">
+              <button 
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  startRecording('top');
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  stopRecording();
+                }}
+                onPointerCancel={(e) => {
+                  e.preventDefault();
+                  stopRecording();
+                }}
+                disabled={status === 'processing'}
+                style={{ touchAction: 'none' }}
+                className={cn(
+                  "w-20 h-20 lg:w-24 lg:h-24 rounded-[30px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
+                  activeSide === 'top' && (status === 'recording' || status === 'starting') 
+                    ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
+                    : "bg-blue-600 border-blue-600/30 hover:bg-blue-500 hover:rotate-12 active:scale-90"
                 )}
-              </AnimatePresence>
-              {activeSide === 'top' && (status === 'recording' || status === 'starting') && (
-                <>
-                  <div className="absolute inset-[-15px] border-2 border-red-500 rounded-[50px] animate-ping opacity-40" />
-                  <div className="absolute inset-[-30px] border border-red-500/30 rounded-[60px] animate-pulse opacity-20" />
-                </>
+              >
+                <AnimatePresence mode="wait">
+                  {activeSide === 'top' && (status === 'starting' || status === 'recording') ? (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                      <MicOff size={isDesktop ? 36 : 28} />
+                    </motion.div>
+                  ) : (
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                      <Mic size={isDesktop ? 36 : 28} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                {activeSide === 'top' && (status === 'recording' || status === 'starting') && (
+                  <>
+                    <div className="absolute inset-[-12px] border-2 border-red-500 rounded-[38px] animate-ping opacity-40" />
+                    <div className="absolute inset-[-24px] border border-red-500/30 rounded-[44px] animate-pulse opacity-20" />
+                  </>
+                )}
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setShowTopKeyboard(!showTopKeyboard)}
+                className={cn(
+                  "w-12 h-12 rounded-2xl border flex items-center justify-center transition-all cursor-pointer",
+                  showTopKeyboard ? "bg-blue-500/20 border-blue-500/40 text-blue-400" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                )}
+                title="Type instead"
+              >
+                <Keyboard size={18} />
+              </button>
+            </div>
+
+            <AnimatePresence>
+              {showTopKeyboard && (
+                <motion.form 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (topInputText.trim()) {
+                      setActiveSide('top');
+                      handleFinalTranscript(topInputText);
+                      setTopInputText('');
+                    }
+                  }}
+                  className="w-full flex gap-2 px-4"
+                >
+                  <input
+                    type="text"
+                    value={topInputText}
+                    onChange={(e) => setTopInputText(e.target.value)}
+                    placeholder={`Type in ${topLang}...`}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500/50 transition-all placeholder-white/30"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!topInputText.trim() || status === 'processing'}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    <Send size={14} />
+                  </button>
+                </motion.form>
               )}
-            </button>
+            </AnimatePresence>
           </div>
       </motion.div>
 
@@ -689,49 +743,97 @@ Guidelines:
            </AnimatePresence>
         </div>
 
-        <div className="mt-8 lg:mt-auto flex flex-col items-center justify-center pb-4 lg:pb-12 space-y-4">
-          <button 
-            onPointerDown={(e) => {
-              e.preventDefault();
-              startRecording('bottom');
-            }}
-            onPointerUp={(e) => {
-              e.preventDefault();
-              stopRecording();
-            }}
-            onPointerCancel={(e) => {
-              e.preventDefault();
-              stopRecording();
-            }}
-            disabled={status === 'processing'}
-            style={{ touchAction: 'none' }}
-            className={cn(
-              "w-24 h-24 lg:w-32 lg:h-32 rounded-[40px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
-              activeSide === 'bottom' && (status === 'recording' || status === 'starting') 
-                ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
-                : "bg-amber-600 border-amber-600/30 hover:bg-amber-500 hover:-rotate-12 active:scale-90"
-            )}
-          >
-            <AnimatePresence mode="wait">
-              {activeSide === 'bottom' && (status === 'starting' || status === 'recording') ? (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <MicOff size={isDesktop ? 54 : 40} />
-                </motion.div>
-              ) : (
-                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
-                  <Mic size={isDesktop ? 54 : 40} />
-                </motion.div>
+        <div className="mt-8 lg:mt-auto flex flex-col items-center justify-center pb-4 lg:pb-12 space-y-4 w-full max-w-md mx-auto">
+          <div className="flex items-center gap-4">
+            <button 
+              onPointerDown={(e) => {
+                e.preventDefault();
+                startRecording('bottom');
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault();
+                stopRecording();
+              }}
+              onPointerCancel={(e) => {
+                e.preventDefault();
+                stopRecording();
+              }}
+              disabled={status === 'processing'}
+              style={{ touchAction: 'none' }}
+              className={cn(
+                "w-20 h-20 lg:w-24 lg:h-24 rounded-[30px] flex items-center justify-center transition-all duration-700 relative group border-[3px]",
+                activeSide === 'bottom' && (status === 'recording' || status === 'starting') 
+                  ? "bg-red-500 border-red-500/40 scale-110 shadow-[0_0_60px_rgba(239,68,68,0.4)]" 
+                  : "bg-amber-600 border-amber-600/30 hover:bg-amber-500 hover:-rotate-12 active:scale-90"
               )}
-            </AnimatePresence>
-            {activeSide === 'bottom' && (status === 'recording' || status === 'starting') && (
-              <>
-                <div className="absolute inset-[-15px] border-2 border-red-500 rounded-[50px] animate-ping opacity-40" />
-                <div className="absolute inset-[-30px] border border-red-500/30 rounded-[60px] animate-pulse opacity-20" />
-              </>
+            >
+              <AnimatePresence mode="wait">
+                {activeSide === 'bottom' && (status === 'starting' || status === 'recording') ? (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                    <MicOff size={isDesktop ? 36 : 28} />
+                  </motion.div>
+                ) : (
+                  <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}>
+                    <Mic size={isDesktop ? 36 : 28} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {activeSide === 'bottom' && (status === 'recording' || status === 'starting') && (
+                <>
+                  <div className="absolute inset-[-12px] border-2 border-red-500 rounded-[38px] animate-ping opacity-40" />
+                  <div className="absolute inset-[-24px] border border-red-500/30 rounded-[44px] animate-pulse opacity-20" />
+                </>
+              )}
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => setShowBottomKeyboard(!showBottomKeyboard)}
+              className={cn(
+                "w-12 h-12 rounded-2xl border flex items-center justify-center transition-all cursor-pointer",
+                showBottomKeyboard ? "bg-amber-500/20 border-amber-500/40 text-amber-400" : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+              )}
+              title="Type instead"
+            >
+              <Keyboard size={18} />
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {showBottomKeyboard && (
+              <motion.form 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (bottomInputText.trim()) {
+                    setActiveSide('bottom');
+                    handleFinalTranscript(bottomInputText);
+                    setBottomInputText('');
+                  }
+                }}
+                className="w-full flex gap-2 px-4"
+              >
+                <input
+                  type="text"
+                  value={bottomInputText}
+                  onChange={(e) => setBottomInputText(e.target.value)}
+                  placeholder={bottomLang === 'Georgian' ? `ჩაწერეთ ქართულად...` : `Type in ${bottomLang}...`}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50 transition-all placeholder-white/30"
+                />
+                <button
+                  type="submit"
+                  disabled={!bottomInputText.trim() || status === 'processing'}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <Send size={14} />
+                </button>
+              </motion.form>
             )}
-          </button>
-          
-          {isDesktop && status === 'idle' && (
+          </AnimatePresence>
+
+          {isDesktop && status === 'idle' && !showBottomKeyboard && (
             <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-2">
                <span className="px-2 py-0.5 rounded border border-white/10 bg-white/5">SPACE</span>
                to Speak
