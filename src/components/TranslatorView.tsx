@@ -84,6 +84,28 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   const audioContext = useRef<AudioContext | null>(null);
   const lastTranscript = useRef('');
 
+  // Refs to avoid memory leaks / event listener rebuilds on status changes
+  const statusRef = useRef(status);
+  const startRecordingRef = useRef<any>(null);
+  const stopRecordingRef = useRef<any>(null);
+  const handleFinalTranscriptRef = useRef<any>(null);
+
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  useEffect(() => {
+    startRecordingRef.current = startRecording;
+  });
+
+  useEffect(() => {
+    stopRecordingRef.current = stopRecording;
+  });
+
+  useEffect(() => {
+    handleFinalTranscriptRef.current = handleFinalTranscript;
+  });
+
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth > 1024);
     const handleOnline = () => setIsOnline(true);
@@ -95,19 +117,33 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     // Keyboard support for Desktop
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && status === 'idle') {
+      if (e.code === 'Space' && statusRef.current === 'idle') {
         e.preventDefault();
-        startRecording('bottom');
+        if (startRecordingRef.current) {
+          startRecordingRef.current('bottom');
+        }
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        stopRecording();
+        if (stopRecordingRef.current) {
+          stopRecordingRef.current();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
     // Initialize Speech Recognition
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -136,7 +172,9 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
       recognition.current.onend = () => {
         if (lastTranscript.current.trim()) {
-          handleFinalTranscript(lastTranscript.current);
+          if (handleFinalTranscriptRef.current) {
+            handleFinalTranscriptRef.current(lastTranscript.current);
+          }
         } else {
           setStatus('idle');
         }
@@ -154,17 +192,11 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
     }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      
       if (recognition.current) {
         recognition.current.stop();
       }
     };
-  }, [status]);
+  }, []);
 
   const handleFinalTranscript = async (text: string) => {
     if (!text.trim() || !activeSide) {
