@@ -5,7 +5,7 @@ import { Persona, ChatMessage } from '../types';
 import { 
   Send, User, Bot, Plus, Trash2, Edit2, Users, Image as ImageIcon, 
   FileText, Zap, Sparkles, ChevronUp, X, Check, Globe, HelpCircle, Laptop,
-  Terminal, ShieldAlert, Cpu
+  Terminal, ShieldAlert, Cpu, ArrowLeft
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -119,6 +119,7 @@ export default function PersonasView({
   const [isSending, setIsSending] = useState(false);
   const [showTools, setShowTools] = useState(false);
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [mobileShowChat, setMobileShowChat] = useState(!!initialPersonaId || !!selectedPersona);
 
   const [isEditingInstructions, setIsEditingInstructions] = useState(false);
   const [editingInstructions, setEditingInstructions] = useState('');
@@ -259,6 +260,7 @@ export default function PersonasView({
       
       // Auto select the new assistant
       setSelectedPersona(payload);
+      setMobileShowChat(true);
       
       // Reset State
       setIsCreatorOpen(false);
@@ -368,7 +370,10 @@ export default function PersonasView({
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-14rem)] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       
       {/* Persona Selector */}
-      <div className="w-full lg:w-80 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative">
+      <div className={cn(
+        "w-full lg:w-80 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative h-full",
+        mobileShowChat ? "hidden lg:flex" : "flex"
+      )}>
         <div className="p-5 border-b border-proton-border bg-white/5 flex justify-between items-center">
           <span className="text-[10px] font-black uppercase tracking-[0.25em] text-proton-text flex items-center gap-2">
             <Cpu size={14} className="text-proton-accent" />
@@ -388,7 +393,10 @@ export default function PersonasView({
             <motion.button
               layout
               key={p.id}
-              onClick={() => setSelectedPersona(p)}
+              onClick={() => {
+                setSelectedPersona(p);
+                setMobileShowChat(true);
+              }}
               className={cn(
                 "w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-300 text-left group border text-xs select-none relative cursor-pointer",
                 selectedPersona?.id === p.id 
@@ -432,7 +440,10 @@ export default function PersonasView({
       </div>
 
       {/* Chat Interface */}
-      <div className="flex-1 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative">
+      <div className={cn(
+        "flex-1 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative h-full",
+        mobileShowChat ? "flex" : "hidden lg:flex"
+      )}>
         <AnimatePresence mode="wait">
         {selectedPersona ? (
            <motion.div 
@@ -444,6 +455,14 @@ export default function PersonasView({
            >
               <header className="px-6 py-5 border-b border-proton-border bg-white/5 flex items-center justify-between">
                  <div className="flex items-center gap-4">
+                     <button
+                       onClick={() => setMobileShowChat(false)}
+                       className="lg:hidden p-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-proton-muted hover:text-proton-text cursor-pointer mr-1"
+                       title={language === "ka" ? "უკან" : "Back"}
+                     >
+                       <ArrowLeft size={16} />
+                     </button>
+                     
                     <div className="w-12 h-12 rounded-xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center overflow-hidden">
                        {isUrl(selectedPersona.avatar) ? (
                             <img src={selectedPersona.avatar} alt="" className="w-full h-full object-cover" />
