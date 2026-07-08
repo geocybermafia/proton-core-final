@@ -8,7 +8,11 @@ import {
   TrendingUp, 
   Grid, 
   Sparkles, 
-  ArrowUpRight 
+  ArrowUpRight,
+  SlidersHorizontal,
+  Eye,
+  EyeOff,
+  LayoutGrid
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -39,6 +43,42 @@ export const DashboardView = React.memo(({
   setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>
 }) => {
   const t = translations[language];
+
+  // Dynamic state for grid widget visibility
+  const [visibleWidgets, setVisibleWidgets] = React.useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('proton_dashboard_widgets');
+      return saved ? JSON.parse(saved) : ['business', 'creative', 'market', 'organizer', 'finance'];
+    } catch {
+      return ['business', 'creative', 'market', 'organizer', 'finance'];
+    }
+  });
+
+  const [showConfig, setShowConfig] = React.useState(false);
+
+  const toggleWidget = (id: string) => {
+    setVisibleWidgets(prev => {
+      const next = prev.includes(id) 
+        ? prev.filter(w => w !== id) 
+        : [...prev, id];
+      // Always keep at least one widget visible
+      if (next.length === 0) return prev;
+      localStorage.setItem('proton_dashboard_widgets', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const showAllWidgets = () => {
+    const all = ['business', 'creative', 'market', 'organizer', 'finance'];
+    setVisibleWidgets(all);
+    localStorage.setItem('proton_dashboard_widgets', JSON.stringify(all));
+  };
+
+  const showEssentialOnly = () => {
+    const essential = ['business', 'finance', 'organizer'];
+    setVisibleWidgets(essential);
+    localStorage.setItem('proton_dashboard_widgets', JSON.stringify(essential));
+  };
 
   // Beautiful curated titles & metrics for the 5 Gateways
   const gateways = [
@@ -195,17 +235,122 @@ export const DashboardView = React.memo(({
 
       {/* Main Gateways Portal Grid */}
       <div className="space-y-6">
-        <div>
-          <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-proton-accent">
-            {language === 'ka' ? 'სამუშაო სექციები' : 'AVAILABLE MODULES'}
-          </h2>
-          <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest mt-1">
-            {language === 'ka' ? 'აირჩიეთ სასურველი მოდული ყოველდღიური საქმიანობის სამართავად' : 'Select a gateway module to manage your workspace workflows'}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-proton-border/30 pb-4">
+          <div>
+            <h2 className="text-xs font-mono font-black uppercase tracking-[0.3em] text-proton-accent flex items-center gap-2">
+              <LayoutGrid size={14} />
+              {language === 'ka' ? 'სამუშაო სექციები' : 'AVAILABLE MODULES'}
+            </h2>
+            <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest mt-1">
+              {language === 'ka' ? 'აირჩიეთ სასურველი მოდული ყოველდღიური საქმიანობის სამართავად' : 'Select a gateway module to manage your workspace workflows'}
+            </p>
+          </div>
+          
+          <button
+            type="button"
+            onClick={() => setShowConfig(!showConfig)}
+            className={cn(
+              "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border active:scale-95 cursor-pointer",
+              showConfig 
+                ? "bg-proton-accent text-proton-bg border-proton-accent font-black" 
+                : "bg-proton-card/50 hover:bg-proton-card border-proton-border text-proton-muted hover:text-proton-text font-bold"
+            )}
+          >
+            <SlidersHorizontal size={12} />
+            {language === 'ka' ? 'ვიჯეტების მორგება' : 'Customize Widgets'}
+          </button>
         </div>
 
+        {/* Dynamic Widget Customizer Panel */}
+        {showConfig && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-5 rounded-3xl border border-proton-border bg-proton-card/20 backdrop-blur-md space-y-4 overflow-hidden"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-proton-border/20 pb-3">
+              <div className="space-y-0.5">
+                <h4 className="text-[11px] font-black uppercase tracking-wider text-proton-text">
+                  {language === 'ka' ? 'ვიჯეტების ჩვენების პარამეტრები' : 'Widget Visibility Preferences'}
+                </h4>
+                <p className="text-[9px] text-proton-muted font-mono uppercase">
+                  {language === 'ka' 
+                    ? 'გამორთეთ არაარსებითი მეტრიკები საწყისი ჩატვირთვის დასაჩქარებლად' 
+                    : 'Toggle non-essential modules to optimize your dashboard performance'}
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={showAllWidgets}
+                  className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[9px] font-bold text-proton-accent uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  {language === 'ka' ? 'ყველა' : 'Show All'}
+                </button>
+                <button
+                  type="button"
+                  onClick={showEssentialOnly}
+                  className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[9px] font-bold text-proton-muted hover:text-proton-text uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  {language === 'ka' ? 'ძირითადი' : 'Essential Only'}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {gateways.map((gate) => {
+                const isVisible = visibleWidgets.includes(gate.id);
+                const GateIcon = gate.icon;
+                return (
+                  <button
+                    key={gate.id}
+                    type="button"
+                    onClick={() => toggleWidget(gate.id)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-2xl border transition-all text-left group active:scale-95 cursor-pointer",
+                      isVisible 
+                        ? "bg-proton-accent/5 border-proton-accent/40 text-proton-text" 
+                        : "bg-transparent border-proton-border/40 text-proton-muted hover:border-proton-border"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center border",
+                      isVisible 
+                        ? "bg-proton-accent/10 border-proton-accent/20 text-proton-accent" 
+                        : "bg-zinc-900 border-zinc-800 text-zinc-600"
+                    )}>
+                      <GateIcon size={16} />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-black uppercase tracking-wider truncate">
+                        {gate.title.split(' ')[0]}
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {isVisible ? (
+                          <>
+                            <Eye size={10} className="text-emerald-500 shrink-0" />
+                            <span className="text-[8px] font-mono font-bold text-emerald-500 uppercase tracking-widest">{language === 'ka' ? 'აქტიური' : 'Active'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff size={10} className="text-zinc-600 shrink-0" />
+                            <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">{language === 'ka' ? 'დამალული' : 'Hidden'}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {gateways.map((gate) => {
+          {gateways.filter(gate => visibleWidgets.includes(gate.id)).map((gate) => {
             const IconComponent = gate.icon;
             return (
               <motion.div

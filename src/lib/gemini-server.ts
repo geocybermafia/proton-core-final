@@ -12,11 +12,13 @@ const aiInstances = new Map<string, GoogleGenAI>();
 
 function getAi(apiKeyOverride?: string) {
   // Respect user-specified custom API key first, then fall back to environment configurations
-  const apiKey = apiKeyOverride || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  const rawKey = apiKeyOverride || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!rawKey) {
     console.warn("Secure Config Alert: Server-side VITE_GEMINI_API_KEY and GEMINI_API_KEY environment variables are missing.");
     return null;
   }
+  
+  const apiKey = rawKey.trim();
   
   if (!aiInstances.has(apiKey)) {
     const maskedKey = apiKey.substring(0, 6) + "..." + apiKey.substring(apiKey.length - 4);
@@ -187,7 +189,7 @@ export async function generatePersonaAvatar(persona: Persona, apiKeyOverride?: s
     const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized");
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-lite-image',
       contents: {
         parts: [
           {
@@ -237,7 +239,7 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string, 
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-lite-image',
       contents: { parts },
       config: {
         imageConfig: {
