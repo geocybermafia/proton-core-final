@@ -227,11 +227,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const groupedChats = useMemo(() => {
     if (!user) return [];
+    // Every message in allUserMessages already matches participants query, so no need to filter by listings.find,
+    // which incorrectly excludes active discussions when a listing is sold or not in the locally fetched array.
     const relevantMsgs = allUserMessages.filter(msg => {
-      const lst = listings.find(l => l.id === msg.listingId);
-      const isSeller = lst && lst.sellerId === user.uid;
-      const isBuyer = msg.senderId === user.uid;
-      return isSeller || isBuyer;
+      if (!msg.participants) return true;
+      return msg.participants.includes(user.uid);
     });
 
     const groups: Record<string, { listingId: string; listingTitle: string; lastMessage: string; lastTime: any; messages: any[] }> = {};
@@ -256,7 +256,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       g.lastTime = last ? last.createdAt : null;
       return g;
     }).sort((a, b) => safeParseDate(b.lastTime) - safeParseDate(a.lastTime));
-  }, [allUserMessages, listings, user]);
+  }, [allUserMessages, user]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
@@ -2872,7 +2872,168 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               />
             ) : (
               <div className="space-y-8">
-                {viewMode === 'my-listings' && profileSubMode === 'selling' && (
+                {viewMode === 'my-listings' && activeBottomTab === 'messages' && (
+                  /* Dedicated Desktop Inbox / Direct Messages layout */
+                  <div className="hidden md:grid grid-cols-12 gap-6 bg-zinc-950/20 border border-zinc-900/60 rounded-[32px] p-6 h-[620px] animate-in fade-in duration-300">
+                    {/* Left Column: Conversational threads */}
+                    <div className="col-span-4 border-r border-zinc-900/60 pr-6 flex flex-col h-full overflow-hidden">
+                      <div className="pb-4 border-b border-zinc-900/40">
+                        <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#dfb257] mb-1">
+                          {language === 'ka' ? 'ჩატების სია' : 'Direct Messages'}
+                        </h3>
+                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                          {language === 'ka' ? 'აქტიური საუბრები' : 'Active Conversations'}
+                        </p>
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto space-y-2 pr-1 mt-4 scrollbar-none">
+                        {groupedChats.length === 0 ? (
+                          <div className="text-center py-12">
+                            <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                              {language === 'ka' ? 'აქტიური საუბრები არ არის' : 'No active chats found'}
+                            </p>
+                          </div>
+                        ) : (
+                          groupedChats.map((chat) => {
+                            const relatedListing = listings.find(l => l.id === chat.listingId);
+                            const isActive = activeChatListing?.id === chat.listingId;
+                            return (
+                              <button
+                                key={chat.listingId}
+                                onClick={() => {
+                                  if (relatedListing) {
+                                    setActiveChatListing(relatedListing);
+                                  } else {
+                                    const otherMsg = chat.messages.find(m => m.senderId !== user?.uid);
+                                    const sellerId = otherMsg ? otherMsg.senderId : '';
+                                    const sellerName = otherMsg ? otherMsg.senderName : 'Seller';
+                                    setActiveChatListing({
+                                      id: chat.listingId,
+                                      title: chat.listingTitle,
+                                      sellerId: sellerId,
+                                      sellerName: sellerName,
+                                      price: 0,
+                                      currency: 'USD',
+                                      condition: 'new',
+                                      isNegotiable: false,
+                                      status: 'active'
+                                    } as any);
+                                  }
+                                }}
+                                className={cn(
+                                  "w-full text-left p-3.5 rounded-2xl flex items-center justify-between transition-all border",
+                                  isActive 
+                                    ? "bg-zinc-900 border-[#dfb257]/30 shadow-[0_4px_20px_rgba(223,178,87,0.05)]" 
+                                    : "bg-zinc-950/40 hover:bg-zinc-900 border-zinc-850/60"
+                                )}
+                              >
+                                <div className="truncate flex-1 pr-3">
+                                  <span className={cn("text-[10px] font-black block truncate mb-1", isActive ? "text-[#dfb257]" : "text-zinc-300")}>
+                                    {chat.listingTitle}
+                                  </span>
+                                  <p className="text-[11px] text-zinc-550 truncate font-medium">
+                                    {chat.lastMessage}
+                                  </p>
+                                </div>
+                                <span className="text-[8px] font-bold text-zinc-600 font-mono shrink-0 uppercase">
+                                  {chat.lastTime ? new Date(safeParseDate(chat.lastTime)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                </span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Active Thread Messages */}
+                    <div className="col-span-8 flex flex-col h-full overflow-hidden pl-2">
+                      {activeChatListing ? (
+                        <div className="flex flex-col h-full justify-between">
+                          {/* Chat header */}
+                          <div className="pb-4 border-b border-zinc-900/60 flex items-center justify-between">
+                            <div>
+                              <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest block font-mono">
+                                {language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Inquiry thread:'}
+                              </span>
+                              <h4 className="text-sm font-black text-white uppercase tracking-wider">
+                                {activeChatListing.title}
+                              </h4>
+                              <p className="text-[10px] text-zinc-450 font-medium mt-0.5">
+                                {language === 'ka' ? 'გამყიდველი:' : 'Vendor:'} {activeChatListing.sellerName || 'Seller'}
+                              </p>
+                            </div>
+                            <div className="px-3 py-1 bg-[#dfb257]/10 border border-[#dfb257]/20 rounded-xl text-[9px] font-bold text-[#dfb257] uppercase tracking-wider">
+                              {activeChatListing.condition === 'new' ? (language === 'ka' ? 'ახალი' : 'New') : (language === 'ka' ? 'მეორადი' : 'Used')}
+                            </div>
+                          </div>
+
+                          {/* Chat messages body */}
+                          <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-1 scrollbar-none bg-black/20 rounded-3xl p-4 border border-zinc-900/30 flex flex-col">
+                            {messagesList.length === 0 ? (
+                              <div className="text-center my-auto py-12">
+                                <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">
+                                  {language === 'ka' ? 'შეტყობინებები არ არის' : 'No messages yet'}
+                                </p>
+                              </div>
+                            ) : (
+                              messagesList.map((msg) => {
+                                const isMe = msg.senderId === user?.uid;
+                                return (
+                                  <div 
+                                    key={msg.id}
+                                    className={cn(
+                                      "max-w-[75%] p-3.5 rounded-2xl text-xs flex flex-col gap-1 shadow-sm",
+                                      isMe 
+                                        ? "bg-[#dfb257] text-[#070708] self-end rounded-tr-none font-bold" 
+                                        : "bg-zinc-900 text-zinc-100 self-start rounded-tl-none font-medium border border-zinc-850"
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-1.5 justify-between">
+                                      <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-[#070708]/70" : "text-zinc-550")}>
+                                        {msg.senderName}
+                                      </span>
+                                    </div>
+                                    <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* Message sender form */}
+                          <form onSubmit={handleSendMessage} className="flex gap-3">
+                            <input 
+                              type="text"
+                              value={chatMessageText}
+                              onChange={(e) => setChatMessageText(e.target.value)}
+                              placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
+                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
+                            />
+                            <button 
+                              type="submit"
+                              disabled={!chatMessageText.trim()}
+                              className="px-6 py-3 bg-[#dfb257] hover:bg-opacity-90 disabled:opacity-40 transition-all rounded-2xl text-xs font-black text-[#070708] uppercase tracking-widest"
+                            >
+                              {language === 'ka' ? 'გაგზავნა' : 'Send'}
+                            </button>
+                          </form>
+                        </div>
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500">
+                          <span className="text-3xl opacity-40 mb-3">💬</span>
+                          <p className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                            {language === 'ka' ? 'აირჩიეთ საუბარი' : 'Select a Conversation'}
+                          </p>
+                          <p className="text-[10px] text-zinc-600 max-w-xs mt-1">
+                            {language === 'ka' ? 'დააწკაპუნეთ საუბარზე მარცხენა პანელში ჩეთის გასახსნელად.' : 'Click any conversation on the left list to view thread details.'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages' && (
                   <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner self-start max-w-md animate-in fade-in duration-300">
                     <button
                       type="button"
@@ -2908,9 +3069,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6">
-                  <AnimatePresence mode="popLayout">
-                  {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
+                {activeBottomTab !== 'messages' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6">
+                    <AnimatePresence mode="popLayout">
+                    {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
                     (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
                       const isExpanded = expandedOrderId === order.id;
                       const isService = order.orderType === 'service';
@@ -3194,7 +3356,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                             className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative cursor-pointer hover:border-[#dfb257]/50 transition-all border shrink-0 bg-zinc-900 text-white border-zinc-800"
                             title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
                           >
-                            {listing.sellerName.substring(0, 2).toUpperCase()}
+                            {(listing.sellerName || 'Seller').substring(0, 2).toUpperCase()}
                             <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-zinc-950" />
                           </div>
                           <div 
@@ -3314,7 +3476,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                )}
             </AnimatePresence>
           </div>
-        </div>
+        )}
+      </div>
       )}
 
             {!loading && listings.length === 0 && (
@@ -4478,7 +4641,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
-                      {activeChatListing.sellerName.substring(0, 2).toUpperCase()}
+                      {(activeChatListing.sellerName || 'Seller').substring(0, 2).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="text-sm font-black uppercase tracking-wider text-white">
