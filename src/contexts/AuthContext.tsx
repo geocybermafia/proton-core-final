@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { User, onAuthStateChanged, onIdTokenChanged, signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 
@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       // Programmatically wipe cart, ledger, and listing form/draft states from localStorage for cross-session safety
       localStorage.removeItem('proton_market_cart');
@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       await signOut(auth);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // onAuthStateChanged handles the initial session and subsequent sign-in/sign-out
@@ -78,8 +78,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const value = useMemo(() => ({
+    user,
+    loading,
+    initialized,
+    logout,
+  }), [user, loading, initialized, logout]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, initialized, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

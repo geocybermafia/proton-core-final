@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 export type Language = 'en' | 'ka';
 
@@ -26,7 +26,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return 'en';
   });
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     
     // Update existing localStorage schema so it matches perfectly
@@ -48,7 +48,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Dispatch a custom event so other active instances of the hook get notified
     window.dispatchEvent(new CustomEvent('proton-language-changed', { detail: lang }));
-  };
+  }, []);
 
   // Sync state across multiple uses of the provider if any, or general storage sync bounds
   useEffect(() => {
@@ -78,8 +78,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, []);
 
+  const value = useMemo(() => ({
+    language,
+    setLanguage,
+  }), [language, setLanguage]);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );
