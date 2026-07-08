@@ -4676,7 +4676,7 @@ export default function App() {
     }
   };
 
-  const handleEditTask = (id: string, updates: Partial<Task>) => {
+  const handleEditTask = useCallback((id: string, updates: Partial<Task>) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
         const updated = { ...t, ...updates };
@@ -4688,9 +4688,9 @@ export default function App() {
       }
       return t;
     }));
-  };
+  }, [user, trackFirestore]);
 
-  const handleToggleTask = (id: string) => {
+  const handleToggleTask = useCallback((id: string) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
         const updated = { ...t, completed: !t.completed };
@@ -4702,15 +4702,15 @@ export default function App() {
       }
       return t;
     }));
-  };
+  }, [user, trackFirestore]);
 
-  const handleDeleteTask = (id: string) => {
+  const handleDeleteTask = useCallback((id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
     if (user) {
       const docRef = doc(db, 'users', user.uid, 'tasks', id);
       trackFirestore(deleteDoc(docRef), 'delete', docRef.path).catch((e: any) => handleFirestoreError(e, 'delete', docRef.path));
     }
-  };
+  }, [user, trackFirestore]);
 
   const handleAiSuggestTasks = async () => {
     if (!isCreativeMode) return;
