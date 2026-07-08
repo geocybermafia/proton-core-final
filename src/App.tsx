@@ -4752,8 +4752,12 @@ export default function App() {
           setDoc(docRef, task).catch(e => handleFirestoreError(e, 'write', docRef.path));
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       addLog('error', 'AI Suggestion failed', error);
+      const msg = error?.message || String(error);
+      alert(language === 'ka' 
+        ? `ავტომატური დავალებების შემოთავაზება ვერ მოხერხდა: ${msg}` 
+        : `Failed to suggest tasks with AI: ${msg}`);
     }
   };
 
