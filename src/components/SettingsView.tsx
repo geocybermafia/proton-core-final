@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -118,7 +118,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [metaTags, setMetaTags] = useState(getHeadMeta());
   const [activeSEOView, setActiveSEOView] = useState<'visual' | 'code'>('visual');
 
+  // Dynamically replace hardcoded placeholders with the actual active domain URL in the DOM
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const currentOrigin = window.location.origin;
+      
+      // Sync Canonical Link
+      const canonicalEl = document.querySelector('link[rel="canonical"]');
+      if (canonicalEl) {
+        canonicalEl.setAttribute('href', currentOrigin);
+      }
+      
+      // Sync Open Graph URL
+      const ogUrlEl = document.querySelector('meta[property="og:url"]');
+      if (ogUrlEl) {
+        ogUrlEl.setAttribute('content', currentOrigin);
+      }
+      
+      // Sync Twitter URL
+      const twitterUrlEl = document.querySelector('meta[name="twitter:url"]');
+      if (twitterUrlEl) {
+        twitterUrlEl.setAttribute('content', currentOrigin);
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'twitter:url';
+        meta.content = currentOrigin;
+        document.head.appendChild(meta);
+      }
+      
+      setMetaTags(getHeadMeta());
+    }
+  }, [activeTab]);
+
   const refreshMetaTags = () => {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const currentOrigin = window.location.origin;
+      const canonicalEl = document.querySelector('link[rel="canonical"]');
+      if (canonicalEl) canonicalEl.setAttribute('href', currentOrigin);
+      const ogUrlEl = document.querySelector('meta[property="og:url"]');
+      if (ogUrlEl) ogUrlEl.setAttribute('content', currentOrigin);
+    }
     setMetaTags(getHeadMeta());
     showToast(
       language === 'ka' ? 'მეტა ტეგები წარმატებით განახლდა DOM-იდან!' : 'Successfully synchronized live meta tags from document head!',
@@ -1085,7 +1124,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           
                           <div className="space-y-1 font-sans">
                             <div className="flex items-center gap-1.5 text-xs text-[#dadce0]">
-                              <span className="text-xs font-medium truncate">https://proton-ai.example.com</span>
+                              <span className="text-xs font-medium truncate">
+                                {metaTags.canonical !== 'N/A' ? metaTags.canonical : 'https://proton-ai.example.com'}
+                              </span>
                               <span className="text-[8px] text-proton-muted">▼</span>
                             </div>
                             <h4 className="text-lg text-blue-400 hover:underline cursor-pointer leading-tight font-medium">
@@ -1117,7 +1158,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             )}
                             <div className="p-4 space-y-1 bg-zinc-950 font-sans border-t border-proton-border/30">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-proton-accent opacity-60">
-                                proton-ai.example.com
+                                {metaTags.ogUrl !== 'N/A' ? metaTags.ogUrl.replace(/^https?:\/\//, '') : 'proton-ai.example.com'}
                               </span>
                               <h5 className="text-xs font-black text-proton-text uppercase tracking-tight truncate leading-snug">
                                 {metaTags.ogTitle !== 'N/A' ? metaTags.ogTitle : metaTags.title}
