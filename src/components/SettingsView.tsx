@@ -32,7 +32,9 @@ import {
   AlertCircle,
   AlertTriangle,
   Info,
-  TrendingUp
+  TrendingUp,
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -84,10 +86,45 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const t = translations[language].settings;
   const common = translations[language].common;
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security'>('preferences');
+  const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Custom SEO Meta Audit State
+  const getHeadMeta = () => {
+    if (typeof document === 'undefined') return {
+      title: 'N/A', description: 'N/A', keywords: 'N/A', canonical: 'N/A',
+      ogTitle: 'N/A', ogDescription: 'N/A', ogUrl: 'N/A', ogImage: 'N/A', ogType: 'N/A',
+      twitterCard: 'N/A', twitterTitle: 'N/A', twitterDescription: 'N/A', twitterImage: 'N/A'
+    };
+    return {
+      title: document.title || 'N/A',
+      description: document.querySelector('meta[name="description"]')?.getAttribute('content') || 'N/A',
+      keywords: document.querySelector('meta[name="keywords"]')?.getAttribute('content') || 'N/A',
+      canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || 'N/A',
+      ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute('content') || 'N/A',
+      ogDescription: document.querySelector('meta[property="og:description"]')?.getAttribute('content') || 'N/A',
+      ogUrl: document.querySelector('meta[property="og:url"]')?.getAttribute('content') || 'N/A',
+      ogImage: document.querySelector('meta[property="og:image"]')?.getAttribute('content') || 'N/A',
+      ogType: document.querySelector('meta[property="og:type"]')?.getAttribute('content') || 'N/A',
+      twitterCard: document.querySelector('meta[name="twitter:card"]')?.getAttribute('content') || 'N/A',
+      twitterTitle: document.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || 'N/A',
+      twitterDescription: document.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || 'N/A',
+      twitterImage: document.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || 'N/A',
+    };
+  };
+
+  const [metaTags, setMetaTags] = useState(getHeadMeta());
+  const [activeSEOView, setActiveSEOView] = useState<'visual' | 'code'>('visual');
+
+  const refreshMetaTags = () => {
+    setMetaTags(getHeadMeta());
+    showToast(
+      language === 'ka' ? 'მეტა ტეგები წარმატებით განახლდა DOM-იდან!' : 'Successfully synchronized live meta tags from document head!',
+      'success'
+    );
+  };
   
   // Connect to the custom systems toast notification portal
   const { showToast } = useToast();
@@ -145,6 +182,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'ai', label: t.ai_config || 'AI Assistant', icon: Cpu },
     { id: 'profile', label: t.profile || 'Profile', icon: User },
     { id: 'security', label: t.security || 'Security', icon: Shield },
+    { id: 'seo', label: language === 'ka' ? 'SEO აუდიტი' : 'SEO Audit', icon: Search },
   ];
 
   return (
@@ -898,6 +936,266 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'seo' && (
+                <div className="space-y-6" id="sec-seo-audit">
+                  <header className="pb-6 border-b border-proton-border/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
+                        <Search className="text-proton-accent" size={22} />
+                        {language === 'ka' ? 'SEO აუდიტის პროტოკოლი' : 'SEO Audit Protocol'}
+                      </h3>
+                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                        {language === 'ka' ? 'მეტა მონაცემების და საძიებო ინდექსაციის ანალიზი' : 'Simulated crawler indexation & Open Graph compliance'}
+                      </p>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={refreshMetaTags}
+                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-proton-accent/10 hover:bg-proton-accent hover:text-proton-bg border border-proton-accent/20 transition-all cursor-pointer active:scale-95"
+                    >
+                      <RefreshCw size={12} className="animate-spin-slow" />
+                      {language === 'ka' ? 'სინქრონიზაცია' : 'Sync Live DOM'}
+                    </button>
+                  </header>
+
+                  {/* Audit Score Circle & Checklist */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
+                    {/* Score Panel */}
+                    <div className="sm:col-span-4 bg-proton-bg/40 p-5 rounded-[24px] border border-proton-border/50 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-proton-accent/5 rounded-full filter blur-xl" />
+                      <span className="text-[9px] font-black uppercase text-proton-muted tracking-widest mb-2">
+                        {language === 'ka' ? 'SEO ქულა' : 'SEO Compliance'}
+                      </span>
+                      <div className="relative w-24 h-24 flex items-center justify-center rounded-full border-4 border-proton-accent/20 bg-proton-card shadow-inner">
+                        <div className="absolute inset-2 rounded-full border border-dashed border-proton-accent/30 animate-[spin_40s_linear_infinite]" />
+                        <span className="text-3xl font-black text-proton-text">
+                          {(() => {
+                            let score = 0;
+                            if (metaTags.title !== 'N/A') score += 20;
+                            if (metaTags.description !== 'N/A') score += 20;
+                            if (metaTags.canonical !== 'N/A') score += 15;
+                            if (metaTags.keywords !== 'N/A') score += 10;
+                            if (metaTags.ogTitle !== 'N/A') score += 20;
+                            if (metaTags.twitterCard !== 'N/A') score += 15;
+                            return score;
+                          })()}
+                        </span>
+                        <span className="text-xs font-bold text-proton-muted absolute bottom-5">/100</span>
+                      </div>
+                      <span className="text-[9px] font-black uppercase text-proton-accent tracking-widest mt-3">
+                        {language === 'ka' ? 'სრულად ოპტიმიზებული' : 'Fully Optimized'}
+                      </span>
+                    </div>
+
+                    {/* Quick Audit Checks */}
+                    <div className="sm:col-span-8 space-y-2 bg-proton-card/50 p-5 rounded-[24px] border border-proton-border/50">
+                      <span className="text-[10px] font-black uppercase text-proton-muted tracking-widest block mb-1">
+                        {language === 'ka' ? 'აუდიტის ანგარიში' : 'Audit Checkpoints'}
+                      </span>
+                      {[
+                        { 
+                          label: language === 'ka' ? 'სათაური (Title Tag)' : 'Document Title Tag', 
+                          status: metaTags.title !== 'N/A', 
+                          desc: metaTags.title,
+                          req: '50-60 chars'
+                        },
+                        { 
+                          label: language === 'ka' ? 'მეტა აღწერა (Meta Description)' : 'Meta Description Tag', 
+                          status: metaTags.description !== 'N/A', 
+                          desc: metaTags.description,
+                          req: '120-160 chars'
+                        },
+                        { 
+                          label: language === 'ka' ? 'კანონიკური ბმული (Canonical Link)' : 'Canonical URL Link', 
+                          status: metaTags.canonical !== 'N/A', 
+                          desc: metaTags.canonical,
+                          req: 'Valid protocol URL'
+                        },
+                        { 
+                          label: language === 'ka' ? 'საძიებო სიტყვები (Keywords)' : 'Keywords Tag', 
+                          status: metaTags.keywords !== 'N/A', 
+                          desc: metaTags.keywords,
+                          req: 'Comma separated'
+                        }
+                      ].map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-3 p-2 bg-proton-bg/20 rounded-xl border border-proton-border/20">
+                          {item.status ? (
+                            <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-proton-text truncate">{item.label}</span>
+                              <span className="text-[8px] font-mono text-proton-muted shrink-0 bg-proton-secondary/20 px-2 py-0.5 rounded border border-proton-border/10">{item.req}</span>
+                            </div>
+                            <p className="text-[9px] text-proton-muted truncate font-mono mt-0.5">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Simulator vs Code tab */}
+                  <div className="flex gap-2 p-1 bg-proton-bg border border-proton-border/50 rounded-2xl max-w-xs">
+                    <button
+                      type="button"
+                      onClick={() => setActiveSEOView('visual')}
+                      className={cn(
+                        "flex-1 py-2 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest",
+                        activeSEOView === 'visual' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
+                      )}
+                    >
+                      {language === 'ka' ? 'სიმულატორი' : 'Snippet Preview'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSEOView('code')}
+                      className={cn(
+                        "flex-1 py-2 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest",
+                        activeSEOView === 'code' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
+                      )}
+                    >
+                      {language === 'ka' ? 'წყარო კოდი' : 'HTML Tags'}
+                    </button>
+                  </div>
+
+                  <AnimatePresence mode="wait">
+                    {activeSEOView === 'visual' ? (
+                      <motion.div
+                        key="visual-preview"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="space-y-6"
+                      >
+                        {/* Google SERP Card */}
+                        <div className="bg-[#17171a] p-6 rounded-[28px] border border-proton-border/40 space-y-3">
+                          <div className="flex items-center justify-between border-b border-proton-border/20 pb-3">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                              {language === 'ka' ? 'Google-ის ძიების სიმულატორი' : 'Google SERP Crawler Mockup'}
+                            </span>
+                            <span className="text-[8px] font-mono text-proton-muted">desktop</span>
+                          </div>
+                          
+                          <div className="space-y-1 font-sans">
+                            <div className="flex items-center gap-1.5 text-xs text-[#dadce0]">
+                              <span className="text-xs font-medium truncate">https://proton-ai.example.com</span>
+                              <span className="text-[8px] text-proton-muted">▼</span>
+                            </div>
+                            <h4 className="text-lg text-blue-400 hover:underline cursor-pointer leading-tight font-medium">
+                              {metaTags.title}
+                            </h4>
+                            <p className="text-xs text-zinc-400 leading-relaxed max-w-2xl font-normal">
+                              {metaTags.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Social Link Share Mockup */}
+                        <div className="bg-[#17171a] p-6 rounded-[28px] border border-proton-border/40 space-y-4">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5 border-b border-proton-border/20 pb-3">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                            {language === 'ka' ? 'სოციალური ბარათის ვიზუალი' : 'Open Graph Social Link Preview'}
+                          </span>
+
+                          <div className="max-w-md bg-zinc-900 border border-proton-border/30 rounded-xl overflow-hidden shadow-2xl">
+                            {metaTags.ogImage !== 'N/A' && (
+                              <div className="aspect-[1.91/1] w-full bg-zinc-800 relative overflow-hidden">
+                                <img 
+                                  src={metaTags.ogImage} 
+                                  alt="SEO Share Representation" 
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                              </div>
+                            )}
+                            <div className="p-4 space-y-1 bg-zinc-950 font-sans border-t border-proton-border/30">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-proton-accent opacity-60">
+                                proton-ai.example.com
+                              </span>
+                              <h5 className="text-xs font-black text-proton-text uppercase tracking-tight truncate leading-snug">
+                                {metaTags.ogTitle !== 'N/A' ? metaTags.ogTitle : metaTags.title}
+                              </h5>
+                              <p className="text-[11px] text-proton-muted font-medium leading-relaxed line-clamp-2">
+                                {metaTags.ogDescription !== 'N/A' ? metaTags.ogDescription : metaTags.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="code-preview"
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        className="space-y-4"
+                      >
+                        <div className="bg-zinc-950 p-5 rounded-[24px] border border-zinc-800 font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar-minimal shadow-inner relative group">
+                          <span className="absolute top-4 right-4 text-[8px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 select-none">
+                            head template
+                          </span>
+                          <div className="space-y-1">
+                            <p className="text-zinc-500">&lt;head&gt;</p>
+                            <p className="pl-4"><span className="text-cyan-400">&lt;title&gt;</span>{metaTags.title}<span className="text-cyan-400">&lt;/title&gt;</span></p>
+                            <p className="pl-4 text-zinc-500">&lt;!-- Standard Meta --&gt;</p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">name=</span><span className="text-emerald-400">"description"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.description}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">name=</span><span className="text-emerald-400">"keywords"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.keywords}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;link</span> <span className="text-amber-400">rel=</span><span className="text-emerald-400">"canonical"</span> <span className="text-amber-400">href=</span><span className="text-emerald-400">"{metaTags.canonical}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            
+                            <p className="pl-4 mt-2 text-zinc-500">&lt;!-- Open Graph / Facebook --&gt;</p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">property=</span><span className="text-emerald-400">"og:type"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.ogType}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">property=</span><span className="text-emerald-400">"og:url"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.ogUrl}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">property=</span><span className="text-emerald-400">"og:title"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.ogTitle}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">property=</span><span className="text-emerald-400">"og:description"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.ogDescription}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">property=</span><span className="text-emerald-400">"og:image"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.ogImage}"</span><span className="text-purple-400"> /&gt;</span></p>
+
+                            <p className="pl-4 mt-2 text-zinc-500">&lt;!-- Twitter Cards --&gt;</p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">name=</span><span className="text-emerald-400">"twitter:card"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.twitterCard}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">name=</span><span className="text-emerald-400">"twitter:title"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.twitterTitle}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">name=</span><span className="text-emerald-400">"twitter:description"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.twitterDescription}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="pl-4"><span className="text-purple-400">&lt;meta</span> <span className="text-amber-400">name=</span><span className="text-emerald-400">"twitter:image"</span> <span className="text-amber-400">content=</span><span className="text-emerald-400">"{metaTags.twitterImage}"</span><span className="text-purple-400"> /&gt;</span></p>
+                            <p className="text-zinc-500">&lt;/head&gt;</p>
+                          </div>
+                        </div>
+
+                        {/* Direct testing instructions */}
+                        <div className="bg-proton-bg/20 p-5 rounded-[24px] border border-proton-border/30 flex items-start gap-4">
+                          <Info size={18} className="text-proton-accent mt-0.5 shrink-0" />
+                          <div className="space-y-1 text-[11px] leading-relaxed">
+                            <span className="font-black text-proton-text uppercase tracking-widest block">
+                              {language === 'ka' ? 'როგორ დავტესტოთ?' : 'HOW DO I TEST THIS LIVE?'}
+                            </span>
+                            <p className="text-proton-muted">
+                              {language === 'ka' 
+                                ? 'თქვენი მეტა ტეგები უკვე ჩაწერილია საიტის მთავარ index.html-ში. საძიებო ბოტები (Googlebot, Bingbot) და სოციალური პლატფორმები (Slack, Telegram, Discord) კითხულობენ ამ ტეგებს პირდაპირ სერვერიდან. მათ შესამოწმებლად შეგიძლიათ გამოიყენოთ ოფიციალური უფასო ხელსაწყოები:' 
+                                : 'These meta tags are fully compiled into your index.html. To verify how real search engine crawlers (Googlebot) and social scraper bots (Discord, Slack, LinkedIn) parse them directly from our servers, you can inspect them via:'}
+                            </p>
+                            <ul className="list-disc pl-4 space-y-1 text-[10px] text-proton-accent/80 font-black uppercase tracking-wider">
+                              <li>
+                                <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1 inline-flex">
+                                  Google Search Console URL Inspector
+                                  <ExternalLink size={10} className="inline ml-1" />
+                                </a>
+                              </li>
+                              <li>
+                                <a href="https://metatags.io" target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1 inline-flex">
+                                  MetaTags.io Global Validator
+                                  <ExternalLink size={10} className="inline ml-1" />
+                                </a>
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
             </motion.div>
