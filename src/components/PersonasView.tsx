@@ -367,6 +367,7 @@ export default function PersonasView({
       if (!permitted) return;
     }
 
+    const promptToSend = input;
     let finalPrompt = input;
     if (selectedTool) {
       const toolLabel = aiTools.find(t => t.id === selectedTool)?.label;
@@ -403,7 +404,7 @@ export default function PersonasView({
       let metadata = null;
 
       if (prevTool === 'image') {
-        const imageUrl = await generateOrEditImage(input);
+        const imageUrl = await generateOrEditImage(promptToSend);
         aiResponseText = language === 'ka'
           ? `აი თქვენი გენერირებული ვიზუალი:\n\n![გენერირებული ვიზუალი](${imageUrl})`
           : `Here is your generated visual:\n\n![Generated Visual](${imageUrl})`;
