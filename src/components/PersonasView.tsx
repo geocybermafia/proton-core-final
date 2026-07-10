@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { motion, AnimatePresence } from 'framer-motion';
 import Markdown from 'react-markdown';
+import { chatWithPersona } from '../lib/gemini';
 
 // Cyber Preset Avatars
 const AVATAR_PRESETS = [
@@ -332,31 +333,42 @@ export default function PersonasView({
     setIsSending(true);
 
     try {
-       const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
-       await setDoc(chatRef, { messages: newMessages }, { merge: true });
-       
-       setTimeout(async () => {
-         let responseContent = `[RECOVERY_MODE] ${selectedPersona.name} is currently optimizing neural pathways. Detailed response capability will be restored shortly.`;
-         
-         if (prevTool === 'image') {
-           responseContent = `🎨 **WEAVING VISUAL MAP FOR**: "${input}"\n\n- **Target Neural Resolution**: 4K UHD Cyber Style\n- **Dynamic Range**: S-Log3 Gamut\n- **Status**: Synthesis 100% finished. [MOCK_OUTPUT_IMAGE_TAG]`;
-         } else if (prevTool === 'summary') {
-           responseContent = `📄 **SEMANTIC KERNEL SUMMARIZATION**:\n\n1. **Main Concept Identified**: Focus parameters for ${input.substring(0, 30)}...\n2. **Synthesis Matrix**: Compressed 90% redundant syntax logic.\n3. **Outcome**: Highly functional abstract locked for action orchestration.`;
-         } else if (prevTool === 'analysis') {
-           responseContent = `⚡ **CYBERNETIC PROCESS ANALYSIS**:\n\n- **Structural Synergy**: OPTIMAL | 98.7% cohesion.\n- **Identified Bottlenecks**: High synchronous block dependencies in secondary sub-routines.\n- **Prescription**: Shift model targets into asynchronous pipelines instantly.`;
-         }
+      const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
+      await setDoc(chatRef, { messages: newMessages }, { merge: true });
 
-         const aiMessage: ChatMessage = {
-           id: (Date.now() + 1).toString(),
-           role: 'model',
-           content: responseContent,
-           timestamp: Date.now()
-         };
-         const updatedMessages = [...newMessages, aiMessage];
-         setMessages(updatedMessages);
-         await setDoc(chatRef, { messages: updatedMessages }, { merge: true });
-         setIsSending(false);
-       }, 1500);
+      // Build chat history excluding the last message (which is user message to send)
+      const formattedHistory = messages.map(m => ({
+        role: m.role as 'user' | 'model',
+        parts: [{ text: m.content }]
+      }));
+
+      const result = await chatWithPersona(
+        selectedPersona,
+        finalPrompt,
+        formattedHistory,
+        'gemini-3.5-flash',
+        false,
+        true,
+        0.9,
+        selectedPersona.systemInstruction,
+        language
+      );
+
+      const aiMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        content: result.text,
+        timestamp: Date.now()
+      };
+
+      if (setLastGeminiMetadata && result.metadata) {
+        setLastGeminiMetadata(result.metadata);
+      }
+
+      const updatedMessages = [...newMessages, aiMessage];
+      setMessages(updatedMessages);
+      await setDoc(chatRef, { messages: updatedMessages }, { merge: true });
+      setIsSending(false);
 
     } catch (error) {
       console.error("Failed to send message:", error);
