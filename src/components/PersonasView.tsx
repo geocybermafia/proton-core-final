@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { motion, AnimatePresence } from 'framer-motion';
 import Markdown from 'react-markdown';
+import { createPortal } from 'react-dom';
 import { chatWithPersona, generateOrEditImage } from '../lib/gemini';
 
 // Cyber Preset Avatars
@@ -686,6 +687,9 @@ export default function PersonasView({
                       <textarea
                         value={editingInstructions}
                         onChange={(e) => setEditingInstructions(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onKeyUp={(e) => e.stopPropagation()}
+                        onKeyPress={(e) => e.stopPropagation()}
                         className="w-full h-24 sm:h-36 p-4 bg-proton-bg border border-proton-border rounded-xl text-xs text-white placeholder-proton-muted/50 focus:outline-none focus:border-proton-accent/40 focus:ring-1 focus:ring-proton-accent/20 transition-all font-mono leading-relaxed"
                         placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუმენტი ან ინსტრუქცია...' : 'Specify precise cogitative boundary parameters for the model target...'}
                       />
@@ -872,7 +876,12 @@ export default function PersonasView({
                         type="text" 
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter') handleSendMessage();
+                        }}
+                        onKeyUp={(e) => e.stopPropagation()}
+                        onKeyPress={(e) => e.stopPropagation()}
                         placeholder={selectedTool 
                           ? `${(aiTools.find(t => t.id === selectedTool)?.label || '').toUpperCase()} MODE...` 
                           : t.chat_placeholder.replace('{name}', language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name)
@@ -929,7 +938,7 @@ export default function PersonasView({
 
       {/* 1. CREATOR OVERLAY MODAL */}
       <AnimatePresence>
-        {isCreatorOpen && (
+        {isCreatorOpen && createPortal(
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -976,6 +985,9 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaNameEn}
                       onChange={(e) => setNewPersonaNameEn(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="e.g. Sentry Code"
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
                     />
@@ -988,6 +1000,9 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaNameKa}
                       onChange={(e) => setNewPersonaNameKa(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="მაგ. სენტრი კოდი"
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
                     />
@@ -1003,6 +1018,9 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaRole}
                       onChange={(e) => setNewPersonaRole(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="e.g. System Audit Specialist"
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
                     />
@@ -1040,6 +1058,9 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaDesc}
                       onChange={(e) => setNewPersonaDesc(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="e.g. Security audit intelligence engine..."
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
                     />
@@ -1052,6 +1073,9 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaDescKa}
                       onChange={(e) => setNewPersonaDescKa(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="მაგ. უსაფრთხოების აუდიტის ინტელექტუალი..."
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
                     />
@@ -1106,6 +1130,9 @@ export default function PersonasView({
                       type="text" 
                       value={newPersonaAvatarUrl}
                       onChange={(e) => setNewPersonaAvatarUrl(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      onKeyUp={(e) => e.stopPropagation()}
+                      onKeyPress={(e) => e.stopPropagation()}
                       placeholder="Https://images.unsplash.com/photo-example..."
                       className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-mono"
                     />
@@ -1123,6 +1150,9 @@ export default function PersonasView({
                   <textarea 
                     value={newPersonaInstructions}
                     onChange={(e) => setNewPersonaInstructions(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onKeyUp={(e) => e.stopPropagation()}
+                    onKeyPress={(e) => e.stopPropagation()}
                     placeholder="E.g. Analyze all user statements for business priorities. Structure answers inside highly clean markdown tags..."
                     className="w-full h-28 bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-mono leading-relaxed"
                   />
@@ -1148,13 +1178,14 @@ export default function PersonasView({
                 </button>
               </footer>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* 2. DECOMMISSION (DELETE) CONFIRMATION MODAL */}
       <AnimatePresence>
-        {isDecommissioning && decomTarget && (
+        {isDecommissioning && decomTarget && createPortal(
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1206,7 +1237,8 @@ export default function PersonasView({
                 </button>
               </footer>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
 
