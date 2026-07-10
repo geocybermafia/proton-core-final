@@ -164,14 +164,22 @@ export default function PersonasView({
     setSaveSuccess(false);
     setSaveError(null);
 
+    const updatedPersona = {
+      ...selectedPersona,
+      systemInstruction: editingInstructions
+    };
+
     try {
       const personaDocRef = doc(db, 'users', auth.currentUser.uid, 'personas', selectedPersona.id);
       await setDoc(personaDocRef, { systemInstruction: editingInstructions }, { merge: true });
       
-      setSelectedPersona({
-        ...selectedPersona,
-        systemInstruction: editingInstructions
-      });
+      setSelectedPersona(updatedPersona);
+
+      if (onUpdatePersonas) {
+        onUpdatePersonas((prev: Persona[]) => 
+          prev.map(p => p.id === selectedPersona.id ? updatedPersona : p)
+        );
+      }
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -193,9 +201,14 @@ export default function PersonasView({
   useEffect(() => {
     if (initialPersonas) {
       setPersonas(initialPersonas);
-      if (initialPersonas.length > 0 && !selectedPersona) {
-        const found = initialPersonaId ? initialPersonas.find(p => p.id === initialPersonaId) : null;
-        setSelectedPersona(found || initialPersonas[0]);
+      if (initialPersonaId) {
+        const found = initialPersonas.find(p => p.id === initialPersonaId);
+        if (found) {
+          setSelectedPersona(found);
+          setMobileShowChat(true);
+        }
+      } else if (initialPersonas.length > 0 && !selectedPersona) {
+        setSelectedPersona(initialPersonas[0]);
       }
     }
   }, [initialPersonas, initialPersonaId]);
@@ -259,6 +272,11 @@ export default function PersonasView({
       const personaDocRef = doc(db, 'users', auth.currentUser.uid, 'personas', generatedId);
       await setDoc(personaDocRef, payload);
       
+      // Notify parent component to update global personas list
+      if (onUpdatePersonas) {
+        onUpdatePersonas((prev: Persona[]) => [...prev, payload]);
+      }
+
       // Auto select the new assistant
       setSelectedPersona(payload);
       setMobileShowChat(true);
@@ -296,6 +314,12 @@ export default function PersonasView({
 
       // Adjust Selected Persona
       const updatedList = personas.filter(p => p.id !== targetId);
+      
+      // Notify parent component to update global personas list
+      if (onUpdatePersonas) {
+        onUpdatePersonas(updatedList);
+      }
+
       if (updatedList.length > 0) {
         setSelectedPersona(updatedList[0]);
       } else {
