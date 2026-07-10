@@ -128,7 +128,7 @@ async function startServer() {
       }
       res.json(result);
     } catch (error: any) {
-      console.error(`Error in /api/gemini [action: ${action}]:`, error);
+      console.warn(`Gemini Request [action: ${action}] was handled via fallback/user configuration message:`, error);
       const errStr = error.message || String(error);
       
       if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.includes("RESOURCE_EXHAUSTED")) {

@@ -156,7 +156,7 @@ export async function chatWithPersona(
       persona, message, history, model, includeMaps, includeSearch, temperature, globalInstruction, appLanguage
     ]);
   } catch (error: any) {
-    console.error("Gemini API Client Proxy Error:", error);
+    console.warn("Gemini API Client Proxy Status Warning:", error);
     let displayMessage = error.message || String(error);
     
     // Attempt to parse dynamic server-side errors

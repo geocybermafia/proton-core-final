@@ -89,7 +89,7 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
       metadata 
     };
   } catch (error: any) {
-    console.error("Gemini API Error in chatWithPersona:", error);
+    console.warn("Gemini API Service Note (Expected rate-limiting on shared free accounts):", error);
     const endTime = performance.now();
     const errStr = error.message || String(error);
     

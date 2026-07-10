@@ -210,7 +210,7 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       };
 
       recognition.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
+        console.warn('Speech recognition warning:', event.error);
         if (event.error === 'not-allowed') {
           setPermissionError('Microphone access is blocked. This is common when running inside an iframe. Try opening the app in a new browser tab (via the icon at the top right) to grant microphone permission.');
         }
@@ -305,7 +305,7 @@ Guidelines:
         recognition.current.start();
         if (navigator.vibrate) navigator.vibrate(10);
       } catch (e) {
-        console.error('Recognition start error:', e);
+        console.warn('Recognition start state notice:', e);
         setStatus('idle');
       }
     }
