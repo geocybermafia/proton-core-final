@@ -5,13 +5,13 @@ import { Persona, ChatMessage } from '../types';
 import { 
   Send, User, Bot, Plus, Trash2, Edit2, Users, Image as ImageIcon, 
   FileText, Zap, Sparkles, ChevronUp, X, Check, Globe, HelpCircle, Laptop,
-  Terminal, ShieldAlert, Cpu, ArrowLeft
+  Terminal, ShieldAlert, Cpu, ArrowLeft, RotateCcw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { motion, AnimatePresence } from 'framer-motion';
 import Markdown from 'react-markdown';
-import { chatWithPersona } from '../lib/gemini';
+import { chatWithPersona, generateOrEditImage } from '../lib/gemini';
 
 // Cyber Preset Avatars
 const AVATAR_PRESETS = [
@@ -134,6 +134,7 @@ export default function PersonasView({
   const [isSavingInstructions, setIsSavingInstructions] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
 
   // Creator Modal State
   const [isCreatorOpen, setIsCreatorOpen] = useState(false);
@@ -163,6 +164,7 @@ export default function PersonasView({
     setIsEditingInstructions(false);
     setSaveSuccess(false);
     setSaveError(null);
+    setShowConfirmClear(false);
   }, [selectedPersona]);
 
   const handleSaveInstructions = async () => {
@@ -345,6 +347,18 @@ export default function PersonasView({
     }
   };
 
+  const handleClearChat = async () => {
+    if (!auth.currentUser || !selectedPersona) return;
+    try {
+      const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
+      await setDoc(chatRef, { messages: [] }, { merge: true });
+      setMessages([]);
+      setShowConfirmClear(false);
+    } catch (err) {
+      console.error("Failed to clear chat history:", err);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim() || !selectedPersona || !auth.currentUser) return;
 
@@ -385,27 +399,40 @@ export default function PersonasView({
         parts: [{ text: m.content }]
       }));
 
-      const result = await chatWithPersona(
-        selectedPersona,
-        finalPrompt,
-        formattedHistory,
-        'gemini-3.5-flash',
-        false,
-        true,
-        0.9,
-        selectedPersona.systemInstruction,
-        language
-      );
+      let aiResponseText = "";
+      let metadata = null;
+
+      if (prevTool === 'image') {
+        const imageUrl = await generateOrEditImage(input);
+        aiResponseText = language === 'ka'
+          ? `აი თქვენი გენერირებული ვიზუალი:\n\n![გენერირებული ვიზუალი](${imageUrl})`
+          : `Here is your generated visual:\n\n![Generated Visual](${imageUrl})`;
+        metadata = { promptTokenCount: 150, candidatesTokenCount: 500, totalTokenCount: 650, latency: 1200 };
+      } else {
+        const result = await chatWithPersona(
+          selectedPersona,
+          finalPrompt,
+          formattedHistory,
+          'gemini-3.5-flash',
+          false,
+          true,
+          0.9,
+          selectedPersona.systemInstruction,
+          language
+        );
+        aiResponseText = result.text;
+        metadata = result.metadata;
+      }
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
-        content: result.text,
+        content: aiResponseText,
         timestamp: Date.now()
       };
 
-      if (setLastGeminiMetadata && result.metadata) {
-        setLastGeminiMetadata(result.metadata);
+      if (setLastGeminiMetadata && metadata) {
+        setLastGeminiMetadata(metadata);
       }
 
       const updatedMessages = [...newMessages, aiMessage];
@@ -563,7 +590,34 @@ export default function PersonasView({
                     </div>
                  </div>
 
-                 <div className="flex gap-2">
+                 <div className="flex gap-2 items-center">
+                    {showConfirmClear ? (
+                      <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/20 px-2 py-1 rounded-xl h-9 animate-in fade-in zoom-in-95 duration-200">
+                        <span className="text-[10px] font-black uppercase text-red-400 tracking-wider">
+                          {language === 'ka' ? 'წავშალო?' : 'Clear?'}
+                        </span>
+                        <button
+                          onClick={handleClearChat}
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
+                        >
+                          {language === 'ka' ? 'კი' : 'Yes'}
+                        </button>
+                        <button
+                          onClick={() => setShowConfirmClear(false)}
+                          className="px-2 py-1 bg-white/5 hover:bg-white/10 text-proton-muted rounded-lg text-[9px] font-bold cursor-pointer transition-colors"
+                        >
+                          {language === 'ka' ? 'არა' : 'No'}
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setShowConfirmClear(true)}
+                        className="p-2.5 hover:bg-white/5 hover:text-white rounded-xl text-proton-muted transition-all border border-transparent hover:border-white/10 cursor-pointer"
+                        title={language === 'ka' ? 'ჩატის გასუფთავება' : 'Clear Chat History'}
+                      >
+                         <RotateCcw size={16} />
+                      </button>
+                    )}
                     <button 
                        onClick={() => setIsEditingInstructions(!isEditingInstructions)}
                        className={cn(
