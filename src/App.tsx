@@ -5576,8 +5576,16 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto overscroll-y-none px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12 relative z-10 custom-scrollbar-minimal">
-          <div className="max-w-7xl mx-auto px-1">
+        <div className={cn(
+          "flex-1 overscroll-y-none relative z-10 custom-scrollbar-minimal",
+          activeView === 'personas' 
+            ? "h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] overflow-hidden flex flex-col p-2 sm:p-4 md:p-6" 
+            : "overflow-y-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
+        )}>
+          <div className={cn(
+            "max-w-7xl mx-auto px-1 w-full",
+            activeView === 'personas' ? "h-full flex flex-col overflow-hidden" : ""
+          )}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
@@ -5585,7 +5593,10 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                className="w-full"
+                className={cn(
+                  "w-full",
+                  activeView === 'personas' ? "h-full flex flex-col overflow-hidden" : ""
+                )}
               >
               {uiMode === 'market' && (activeView as string) === 'market-hub' ? (
                 <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">

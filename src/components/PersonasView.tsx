@@ -473,7 +473,7 @@ export default function PersonasView({
   const isUrl = (str: string) => str?.startsWith('http') || str?.startsWith('data:image');
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-14rem)] animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+    <div className="flex-1 w-full h-full flex flex-col lg:flex-row gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
       
       {/* Persona Selector */}
       <div className={cn(
