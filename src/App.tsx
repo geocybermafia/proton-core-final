@@ -3812,7 +3812,7 @@ export default function App() {
     if (pathname.startsWith('/translator')) return 'translator';
     if (pathname.startsWith('/market-hub')) return 'market-hub';
     if (pathname.startsWith('/market')) return 'market-hub';
-    if (pathname.startsWith('/personas')) return 'personas';
+    if (pathname.startsWith('/personas')) return 'dashboard';
     if (pathname.startsWith('/blueprints')) return 'blueprints';
     if (pathname.startsWith('/studio')) return 'image';
     if (pathname.startsWith('/organizer')) return 'organizer';
@@ -4960,56 +4960,6 @@ export default function App() {
 
                 {/* UNIFIED SIDEBAR GROUPS */}
                 <div className="space-y-8">
-                  {/* GROUP 1: AI COMPANIONS */}
-                  <div className="space-y-3">
-                    <AnimatePresence mode="wait">
-                      {isSidebarOpen && (
-                        <motion.button 
-                          type="button"
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          onClick={() => setIsAgentsExpanded(!isAgentsExpanded)}
-                          className="w-full text-[10px] font-black text-proton-accent uppercase tracking-[0.2em] px-3 mb-2 flex items-center justify-between hover:text-proton-text transition-colors select-none text-left"
-                        >
-                          <span>{language === 'ka' ? 'ხელოვნური ინტელექტი' : 'AI COMPANIONS'}</span>
-                          <ChevronDown size={14} className={cn("transition-transform duration-300", isAgentsExpanded ? "rotate-0" : "-rotate-90")} />
-                        </motion.button>
-                      )}
-                    </AnimatePresence>
-                    
-                    {isAgentsExpanded && (
-                      <>
-                        <Reorder.Group 
-                          axis="y" 
-                          values={personas} 
-                          onReorder={setPersonas} 
-                          className="space-y-1"
-                        >
-                          {personas.slice(0, isSidebarOpen ? 4 : 2).map((persona) => (
-                            <SidebarPersonaItem
-                              key={persona.id}
-                              persona={persona}
-                              avatar={personaAvatars[persona.id] || persona.avatar}
-                              active={activeView === 'personas' && selectedPersonaId === persona.id}
-                              onClick={() => handleViewChange('personas', persona.id)}
-                              expanded={isSidebarOpen}
-                            />
-                          ))}
-                        </Reorder.Group>
-
-                        {isSidebarOpen && personas.length > 4 && (
-                          <button 
-                            onClick={() => handleViewChange('personas')}
-                            className="w-full text-center py-2 text-[10px] font-black uppercase text-proton-muted tracking-widest hover:text-proton-accent transition-colors"
-                          >
-                            + {personas.length - 4} More Agents
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-
                   {/* GROUP 2: CREATIVE STUDIO */}
                   <div className="space-y-3">
                     <AnimatePresence mode="wait">
@@ -5424,7 +5374,6 @@ export default function App() {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: language === 'ka' ? 'მთავარი' : 'Home' },
-          { id: 'personas', icon: Users, label: language === 'ka' ? 'აგენტები' : 'Agents' },
           { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'კრეატივი' : 'Creative' },
           { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
@@ -5536,7 +5485,6 @@ export default function App() {
           <nav className="hidden xl:flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
             {(uiMode === 'business' ? [
               { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
-              { id: 'personas', label: t.sidebar.agents, icon: Users },
               { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
               ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
             ] : uiMode === 'creative' ? [

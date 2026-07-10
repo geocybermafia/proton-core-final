@@ -51,19 +51,6 @@ export default function BusinessHubView({
 
   const modules = [
     {
-      id: 'personas',
-      title: isKa ? 'ბიზნეს აგენტები და როლები' : 'Business Agents & Chat',
-      desc: isKa 
-        ? 'კომუნიკაცია თქვენს პერსონალურ AI ასისტენტებთან. შექმენით ახალი როლები სპეციფიკური ამოცანებისთვის.'
-        : 'Chat with customized AI agent personas. Create tailored roles to delegate specific operations.',
-      badge: isKa ? 'ინტელექტუალური ასისტენტები' : 'AI Multi-Agents',
-      icon: Users,
-      color: 'cyan',
-      glowClass: 'border-cyan-500/20 hover:border-cyan-500/80 shadow-cyan-500/5 hover:shadow-cyan-500/20',
-      badgeClass: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-      iconClass: 'bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-black',
-    },
-    {
       id: 'blueprints',
       title: isKa ? 'სამუშაო პროცესები' : 'Workflows & Blueprints',
       desc: isKa 
