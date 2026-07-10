@@ -145,6 +145,11 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
 
     // Keyboard support for Desktop
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || 
+                      e.target instanceof HTMLTextAreaElement || 
+                      (e.target instanceof HTMLElement && e.target.isContentEditable);
+      if (isInput) return;
+
       if (e.code === 'Space' && statusRef.current === 'idle') {
         e.preventDefault();
         if (startRecordingRef.current) {
@@ -153,6 +158,11 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || 
+                      e.target instanceof HTMLTextAreaElement || 
+                      (e.target instanceof HTMLElement && e.target.isContentEditable);
+      if (isInput) return;
+
       if (e.code === 'Space') {
         if (stopRecordingRef.current) {
           stopRecordingRef.current();

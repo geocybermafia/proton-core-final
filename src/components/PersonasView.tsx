@@ -473,11 +473,11 @@ export default function PersonasView({
   const isUrl = (str: string) => str?.startsWith('http') || str?.startsWith('data:image');
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col lg:flex-row gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
+    <div className="flex-1 min-h-0 w-full flex flex-col lg:flex-row gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
       
       {/* Persona Selector */}
       <div className={cn(
-        "w-full lg:w-80 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative h-full",
+        "w-full lg:w-80 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative h-full min-h-0",
         mobileShowChat ? "hidden lg:flex" : "flex"
       )}>
         <div className="p-5 border-b border-proton-border bg-white/5 flex justify-between items-center">
@@ -547,7 +547,7 @@ export default function PersonasView({
 
       {/* Chat Interface */}
       <div className={cn(
-        "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full",
+        "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full min-h-0",
         mobileShowChat 
           ? "fixed inset-0 z-[80] bg-proton-bg lg:relative lg:inset-auto lg:z-auto lg:bg-proton-card lg:border lg:border-proton-border lg:rounded-2xl" 
           : "hidden lg:flex lg:relative lg:border lg:border-proton-border lg:rounded-2xl"
@@ -559,7 +559,7 @@ export default function PersonasView({
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
              exit={{ opacity: 0 }}
-             className="flex flex-col h-full overflow-hidden"
+             className="flex-1 min-h-0 flex flex-col overflow-hidden"
            >
               <header className="px-6 py-5 border-b border-proton-border bg-white/5 flex items-center justify-between">
                  <div className="flex items-center gap-4">
