@@ -276,6 +276,7 @@ export default function PersonasView({
       name: resolvedNameEn,
       nameGe: newPersonaNameKa.trim() || resolvedNameEn,
       role: newPersonaRole.trim() || "General Assistant",
+      roleGe: newPersonaRoleKa.trim() || newPersonaRole.trim() || "მორგებული ასისტენტი",
       description: newPersonaDesc.trim() || "Custom AI intelligence unit",
       descriptionGe: newPersonaDescKa.trim() || newPersonaDesc.trim() || "მორგებული AI ინტელექტის მოდული",
       systemInstruction: newPersonaInstructions.trim() || "You are a helpful assistant.",
@@ -530,7 +531,7 @@ export default function PersonasView({
                  </div>
                  <div className="text-[9px] font-black uppercase tracking-widest opacity-60 truncate mt-0.5 text-proton-muted flex items-center gap-1">
                    <span className="inline-block w-1 h-1 rounded-full bg-proton-muted" />
-                   {p.role}
+                   {language === 'ka' ? (p.roleGe || p.role) : p.role}
                  </div>
               </div>
             </motion.button>
@@ -538,7 +539,7 @@ export default function PersonasView({
 
           {personas.length === 0 && (
              <div className="text-center py-16 opacity-40 text-[10px] font-black uppercase tracking-widest leading-loose p-6 border border-dashed border-proton-border rounded-xl">
-                 No Intelligence Units Synced
+                 {language === 'ka' ? 'ინტელექტის მოდულები არ არის სინქრონიზებული' : 'No Intelligence Units Synced'}
              </div>
           )}
         </div>
@@ -578,7 +579,7 @@ export default function PersonasView({
                        )}
                     </div>
                     <div>
-                       <h3 className="font-extrabold text-base tracking-tight text-proton-text">
+                       <h3 className="font-extrabold text-sm sm:text-base tracking-tight text-proton-text truncate max-w-[120px] sm:max-w-xs">
                          {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
                        </h3>
                        <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.2em] text-proton-accent uppercase mt-0.5">
@@ -586,7 +587,7 @@ export default function PersonasView({
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-proton-accent opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-proton-accent"></span>
                           </span>
-                          <span>{selectedPersona.role}</span>
+                          <span className="truncate max-w-[100px] sm:max-w-none">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
                        </div>
                     </div>
                  </div>
@@ -660,17 +661,17 @@ export default function PersonasView({
                           {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'System Cogitative Instructions'}
                         </label>
                         <span className="text-[9px] text-proton-muted uppercase font-mono tracking-wider opacity-60">
-                           {selectedPersona.role}
+                           {language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}
                         </span>
                       </div>
 
-                      {/* Presets Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-black/30 p-3 rounded-2xl border border-proton-border/40">
+                      {/* Presets Grid - Horizontal scrolling on mobile, grid on desktop */}
+                      <div className="flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 gap-3 bg-black/30 p-3 rounded-2xl border border-proton-border/40 custom-scrollbar-minimal pb-4 md:pb-3">
                         {INSTRUCTION_PRESETS.map((p, idx) => (
                           <button
                             key={idx}
                             onClick={() => setEditingInstructions(p.prompt)}
-                            className="p-3 text-left bg-white/5 hover:bg-proton-accent/10 hover:border-proton-accent/30 rounded-xl group border border-transparent transition-all cursor-pointer"
+                            className="p-3 text-left bg-white/5 hover:bg-proton-accent/10 hover:border-proton-accent/30 rounded-xl group border border-transparent transition-all cursor-pointer shrink-0 w-52 md:w-auto"
                           >
                             <p className="text-[10px] font-black uppercase tracking-wider text-proton-text group-hover:text-proton-accent transition-colors">
                               {language === 'ka' ? p.titleKa : p.titleEn}
@@ -685,7 +686,7 @@ export default function PersonasView({
                       <textarea
                         value={editingInstructions}
                         onChange={(e) => setEditingInstructions(e.target.value)}
-                        className="w-full h-36 p-4 bg-proton-bg border border-proton-border rounded-xl text-xs text-white placeholder-proton-muted/50 focus:outline-none focus:border-proton-accent/40 focus:ring-1 focus:ring-proton-accent/20 transition-all font-mono leading-relaxed"
+                        className="w-full h-24 sm:h-36 p-4 bg-proton-bg border border-proton-border rounded-xl text-xs text-white placeholder-proton-muted/50 focus:outline-none focus:border-proton-accent/40 focus:ring-1 focus:ring-proton-accent/20 transition-all font-mono leading-relaxed"
                         placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუმენტი ან ინსტრუქცია...' : 'Specify precise cogitative boundary parameters for the model target...'}
                       />
 
@@ -764,7 +765,16 @@ export default function PersonasView({
                                   ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
                                   li: ({ children }) => <li className="text-white/70">{children}</li>,
                                   strong: ({ children }) => <strong className="font-extrabold text-proton-accent">{children}</strong>,
-                                  code: ({ children }) => <code className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-[9px] text-amber-300 border border-white/5">{children}</code>
+                                  pre: ({ children }) => <pre className="bg-black/30 border border-white/5 p-4 rounded-xl font-mono text-[10px] overflow-x-auto text-amber-300 my-3 leading-relaxed w-full custom-scrollbar-minimal">{children}</pre>,
+                                  code: ({ children, ...props }) => {
+                                    const contentStr = String(children || '');
+                                    const isInline = !contentStr.includes('\n');
+                                    return isInline ? (
+                                      <code className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-[9px] text-amber-300 border border-white/5">{children}</code>
+                                    ) : (
+                                      <code className="block font-mono text-[10px] text-white/90 leading-relaxed">{children}</code>
+                                    );
+                                  }
                                 }}
                               >
                                 {m.content}
@@ -864,12 +874,12 @@ export default function PersonasView({
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                         placeholder={selectedTool 
-                          ? `${aiTools.find(t => t.id === selectedTool)?.label.toUpperCase()} MODE...` 
+                          ? `${(aiTools.find(t => t.id === selectedTool)?.label || '').toUpperCase()} MODE...` 
                           : t.chat_placeholder.replace('{name}', language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name)
                         }
                         className={cn(
-                          "w-full bg-proton-bg border border-proton-border rounded-2xl pl-16 pr-14 py-3.5 sm:py-4.5 focus:outline-none transition-all text-base sm:text-xs placeholder:text-proton-muted/40 font-medium tracking-wide",
-                          selectedTool ? "border-proton-accent/40 shadow-[0_0_20px_rgba(0,242,255,0.06)]" : "focus:border-proton-accent/50 focus:ring-1 focus:ring-proton-accent/15"
+                          "w-full bg-proton-bg border border-proton-border rounded-2xl pl-16 py-3.5 sm:py-4.5 focus:outline-none transition-all text-base sm:text-xs placeholder:text-proton-muted/40 font-medium tracking-wide",
+                          selectedTool ? "pr-24 border-proton-accent/40 shadow-[0_0_20px_rgba(0,242,255,0.06)]" : "pr-14 focus:border-proton-accent/50 focus:ring-1 focus:ring-proton-accent/15"
                         )}
                       />
 

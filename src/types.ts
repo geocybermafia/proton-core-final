@@ -32,6 +32,7 @@ export type Persona = {
   name: string;
   nameGe: string;
   role: string;
+  roleGe?: string;
   description: string;
   descriptionGe: string;
   systemInstruction: string;
