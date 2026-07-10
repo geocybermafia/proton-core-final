@@ -168,6 +168,14 @@ export default function PersonasView({
     setShowConfirmClear(false);
   }, [selectedPersona]);
 
+  // Scroll recovery on mount to prevent any clipping/offsetting issues
+  useEffect(() => {
+    const el = document.getElementById('main-scroll-container');
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, []);
+
   const handleSaveInstructions = async () => {
     if (!selectedPersona || !auth.currentUser) return;
     setIsSavingInstructions(true);

@@ -3873,13 +3873,50 @@ export default function App() {
     }
   }, [location.pathname]);
 
-  // Scroll main container to top on view changes
+  // Scroll main container & window to top on view changes with layout safety and multi-stage timing
   useEffect(() => {
+    // Reset window scrolling
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+
     const el = document.getElementById('main-scroll-container');
     if (el) {
       el.scrollTop = 0;
+      // Multi-stage backup resets for layout/animation changes
+      const t1 = setTimeout(() => { el.scrollTop = 0; }, 50);
+      const t2 = setTimeout(() => { el.scrollTop = 0; }, 150);
+      const t3 = setTimeout(() => { el.scrollTop = 0; }, 300);
+      const t4 = setTimeout(() => { el.scrollTop = 0; }, 500);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+        clearTimeout(t4);
+      };
     }
   }, [activeView]);
+
+  // Lock html and body overflow when user is logged in to prevent whole-screen browser scroll leaks
+  useEffect(() => {
+    if (user) {
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.height = '100%';
+      document.body.style.overflow = 'hidden';
+      document.body.style.height = '100%';
+    } else {
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    }
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.height = '';
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+    };
+  }, [user]);
   
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
