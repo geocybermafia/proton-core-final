@@ -3872,6 +3872,14 @@ export default function App() {
       setSelectedPersonaId(null);
     }
   }, [location.pathname]);
+
+  // Scroll main container to top on view changes
+  useEffect(() => {
+    const el = document.getElementById('main-scroll-container');
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, [activeView]);
   
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
@@ -5576,10 +5584,13 @@ export default function App() {
           </div>
         </header>
 
-        <div className={cn(
-          "flex-1 min-h-0 overscroll-y-none relative z-10 custom-scrollbar-minimal flex flex-col",
-          activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto"
-        )}>
+        <div 
+          id="main-scroll-container"
+          className={cn(
+            "flex-1 min-h-0 overscroll-y-none relative z-10 custom-scrollbar-minimal flex flex-col",
+            activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto"
+          )}
+        >
           <div className={cn(
             "mx-auto px-1 w-full flex-1 min-h-0 flex flex-col",
             activeView === 'personas' 
