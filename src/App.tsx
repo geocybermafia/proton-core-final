@@ -5579,7 +5579,7 @@ export default function App() {
         <div className={cn(
           "flex-1 overscroll-y-none relative z-10 custom-scrollbar-minimal",
           activeView === 'personas' 
-            ? "h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] overflow-hidden flex flex-col p-2 sm:p-4 md:p-6" 
+            ? "h-[calc(100dvh-8rem)] md:h-[calc(100dvh-4rem)] overflow-hidden flex flex-col p-2 sm:p-4 md:p-6" 
             : "overflow-y-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
         )}>
           <div className={cn(

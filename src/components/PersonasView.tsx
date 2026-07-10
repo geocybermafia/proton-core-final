@@ -547,10 +547,10 @@ export default function PersonasView({
 
       {/* Chat Interface */}
       <div className={cn(
-        "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full relative",
+        "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full",
         mobileShowChat 
           ? "fixed inset-0 z-[80] bg-proton-bg lg:relative lg:inset-auto lg:z-auto lg:bg-proton-card lg:border lg:border-proton-border lg:rounded-2xl" 
-          : "hidden lg:flex lg:border lg:border-proton-border lg:rounded-2xl"
+          : "hidden lg:flex lg:relative lg:border lg:border-proton-border lg:rounded-2xl"
       )}>
         <AnimatePresence mode="wait">
         {selectedPersona ? (
@@ -559,7 +559,7 @@ export default function PersonasView({
              initial={{ opacity: 0 }}
              animate={{ opacity: 1 }}
              exit={{ opacity: 0 }}
-             className="flex flex-col h-full"
+             className="flex flex-col h-full overflow-hidden"
            >
               <header className="px-6 py-5 border-b border-proton-border bg-white/5 flex items-center justify-between">
                  <div className="flex items-center gap-4">
