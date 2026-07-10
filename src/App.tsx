@@ -4848,7 +4848,7 @@ export default function App() {
         className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
       >
         <Suspense fallback={
-          <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+          <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
             <Loader2 className="animate-spin text-proton-accent" size={24} />
             <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
           </div>
@@ -4870,7 +4870,7 @@ export default function App() {
         className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}
       >
         <Suspense fallback={
-          <div className="h-screen w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+          <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
             <Loader2 className="animate-spin text-proton-accent" size={24} />
             <span className="uppercase tracking-widest">Loading Live Translator...</span>
           </div>
@@ -5463,7 +5463,7 @@ export default function App() {
         })}
       </nav>
 
-      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg h-full overflow-hidden">
+      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg overflow-hidden">
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[150px] pointer-events-none -mr-40 -mt-40 z-0" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
