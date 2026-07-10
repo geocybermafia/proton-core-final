@@ -122,6 +122,13 @@ export default function PersonasView({
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(!!initialPersonaId || !!selectedPersona);
 
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Smooth scroll to the end of the conversation when messages array or isSending state changes
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isSending]);
+
   const [isEditingInstructions, setIsEditingInstructions] = useState(false);
   const [editingInstructions, setEditingInstructions] = useState('');
   const [isSavingInstructions, setIsSavingInstructions] = useState(false);
@@ -206,6 +213,12 @@ export default function PersonasView({
         if (found) {
           setSelectedPersona(found);
           setMobileShowChat(true);
+        }
+      } else if (selectedPersona) {
+        // Keep currently selected persona in sync with latest initialPersonas data (e.g. system instructions)
+        const updatedSelf = initialPersonas.find(p => p.id === selectedPersona.id);
+        if (updatedSelf) {
+          setSelectedPersona(updatedSelf);
         }
       } else if (initialPersonas.length > 0 && !selectedPersona) {
         setSelectedPersona(initialPersonas[0]);
@@ -335,6 +348,11 @@ export default function PersonasView({
   const handleSendMessage = async () => {
     if (!input.trim() || !selectedPersona || !auth.currentUser) return;
 
+    if (checkAndIncrementAiQuota) {
+      const permitted = await checkAndIncrementAiQuota();
+      if (!permitted) return;
+    }
+
     let finalPrompt = input;
     if (selectedTool) {
       const toolLabel = aiTools.find(t => t.id === selectedTool)?.label;
@@ -356,8 +374,9 @@ export default function PersonasView({
     setShowTools(false);
     setIsSending(true);
 
+    const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
+
     try {
-      const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
       await setDoc(chatRef, { messages: newMessages }, { merge: true });
 
       // Build chat history excluding the last message (which is user message to send)
@@ -394,9 +413,31 @@ export default function PersonasView({
       await setDoc(chatRef, { messages: updatedMessages }, { merge: true });
       setIsSending(false);
 
-    } catch (error) {
-      console.error("Failed to send message:", error);
+    } catch (error: any) {
+      console.warn("Failed to send message or process via Gemini:", error);
       setIsSending(false);
+      
+      const errorMsg = error?.message || String(error);
+      let friendlyError = language === 'ka' 
+        ? "სისტემური შეცდომა: AI-სთან დაკავშირება ვერ მოხერხდა. გთხოვთ შეამოწმოთ თქვენი ინტერნეტ კავშირი ან სცადოთ მოგვიანებით."
+        : "System Error: Failed to communicate with AI. Please check your network connection or try again later.";
+      
+      if (errorMsg.includes("429") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.toLowerCase().includes("quota") || errorMsg.toLowerCase().includes("limit")) {
+        friendlyError = language === 'ka'
+          ? "ყოველდღიური მოთხოვნების ლიმიტი ამოიწურა (429 Quota Exceeded). გთხოვთ, მიუთითოთ თქვენი საკუთარი Gemini API Key პარამეტრების მენიუდან, რათა გააგრძელოთ შეუფერხებლად მუშაობა."
+          : "API Quota Exceeded (429). Please configure your own Gemini API Key in the Settings menu to continue without interruption.";
+      }
+
+      const systemErrorMessage: ChatMessage = {
+        id: (Date.now() + 2).toString(),
+        role: 'model',
+        content: `⚠️ **${language === 'ka' ? 'შეცდომა' : 'Error'}**: ${friendlyError}`,
+        timestamp: Date.now()
+      };
+      
+      const updatedMessages = [...newMessages, systemErrorMessage];
+      setMessages(updatedMessages);
+      await setDoc(chatRef, { messages: updatedMessages }, { merge: true }).catch(err => console.error("Failed to write system error message to Firestore:", err));
     }
   };
 
@@ -699,6 +740,8 @@ export default function PersonasView({
                        </div>
                     </div>
                  )}
+                 {/* Scroll Anchor */}
+                 <div ref={chatEndRef} />
               </div>
 
               <footer className="p-4 sm:p-6 border-t border-proton-border bg-white/[0.02] shrink-0 pb-safe">
