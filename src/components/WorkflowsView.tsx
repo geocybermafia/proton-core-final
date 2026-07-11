@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { handleFirestoreError } from '../lib/firebaseUtils';
 import { analyzeWorkflow } from '../lib/gemini';
+import { useToast } from './Toast';
+import Markdown from 'react-markdown';
 
 function lazyWithRetry<T extends React.ComponentType<any>>(
   componentImport: () => Promise<{ default: T } | { [key: string]: any }>
@@ -75,7 +77,16 @@ const WorkflowEditor = ({
   checkAndIncrementAiQuota: () => Promise<boolean>
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
-  const [editorMode, setEditorMode] = useState<'form' | 'flow'>('form');
+  const [editorMode, setEditorMode] = useState<'form' | 'flow' | 'insights'>(
+    (workflow.analysisHistory && workflow.analysisHistory.length > 0) ? 'insights' : 'form'
+  );
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedAnalysisIndex, setSelectedAnalysisIndex] = useState<number | null>(
+    (workflow.analysisHistory && workflow.analysisHistory.length > 0) 
+      ? workflow.analysisHistory.length - 1 
+      : null
+  );
+  const { showToast } = useToast();
   const t = translations[language].editor;
 
   return (
@@ -101,12 +112,12 @@ const WorkflowEditor = ({
                <p className="text-proton-muted text-xs uppercase tracking-widest">ID: {formData.id?.slice(-6)}</p>
             </div>
           </div>
-          <div className="flex bg-proton-card p-1 rounded-2xl border border-proton-border shadow-sm">
+          <div className="flex bg-proton-card p-1 rounded-2xl border border-proton-border shadow-sm overflow-x-auto max-w-full custom-scrollbar-minimal">
              <button 
                 type="button"
                 onClick={() => setEditorMode('form')} 
                 className={cn(
-                    "px-6 py-2.5 text-xs font-bold rounded-xl transition-all duration-300",
+                    "px-4 sm:px-6 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 whitespace-nowrap",
                     editorMode === 'form' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
                 )}
              >
@@ -116,15 +127,26 @@ const WorkflowEditor = ({
                 type="button"
                 onClick={() => setEditorMode('flow')} 
                 className={cn(
-                    "px-6 py-2.5 text-xs font-bold rounded-xl transition-all duration-300",
+                    "px-4 sm:px-6 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 whitespace-nowrap",
                     editorMode === 'flow' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
                 )}
              >
                 {translations[language].sidebar.blueprints}
              </button>
+             <button 
+                type="button"
+                onClick={() => setEditorMode('insights')} 
+                className={cn(
+                    "px-4 sm:px-6 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 whitespace-nowrap flex items-center gap-1.5",
+                    editorMode === 'insights' ? 'bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20' : 'text-proton-muted hover:text-proton-text'
+                )}
+              >
+                <Sparkles size={12} className={isAnalyzing ? "animate-spin" : ""} />
+                {language === 'ka' ? 'AI ანალიზი' : 'AI Insights'}
+              </button>
           </div>
         </div>
-        {editorMode === 'form' ? (
+        {editorMode === 'form' && (
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-[10px] font-mono text-proton-muted uppercase tracking-widest flex justify-between">
@@ -240,19 +262,46 @@ const WorkflowEditor = ({
             </div>
             <button 
               type="button"
+              disabled={isAnalyzing}
               onClick={async () => {
-                const permitted = await checkAndIncrementAiQuota();
-                if (!permitted) return;
-                const analysis = await analyzeWorkflow(formData);
-                alert(analysis);
+                setIsAnalyzing(true);
+                setEditorMode('insights');
+                try {
+                  const permitted = await checkAndIncrementAiQuota();
+                  if (!permitted) {
+                    setIsAnalyzing(false);
+                    return;
+                  }
+                  showToast(language === 'ka' ? 'ოპტიმიზაცია მიმდინარეობს...' : 'Optimizing workflow logic...', 'info');
+                  const analysis = await analyzeWorkflow(formData);
+                  const updatedHistory = [
+                    ...(formData.analysisHistory || []),
+                    { timestamp: Date.now(), result: analysis }
+                  ];
+                  const updatedData = { ...formData, analysisHistory: updatedHistory };
+                  setFormData(updatedData);
+                  setSelectedAnalysisIndex(updatedHistory.length - 1);
+                  showToast(language === 'ka' ? 'ოპტიმიზაცია წარმატებით დასრულდა!' : 'Workflow successfully optimized!', 'success');
+                } catch (error) {
+                  console.error(error);
+                  showToast(language === 'ka' ? 'ოპტიმიზაცია ვერ მოხერხდა' : 'Failed to optimize logic', 'error');
+                } finally {
+                  setIsAnalyzing(false);
+                }
               }}
-              className="w-full py-4 rounded-2xl border border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all flex items-center justify-center gap-2 group"
+              className="w-full py-4 rounded-2xl border border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
             >
-              <Sparkles size={16} className="group-hover:animate-spin" />
-              {t.optimize_btn}
+              {isAnalyzing ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Sparkles size={16} className="group-hover:animate-spin" />
+              )}
+              {isAnalyzing ? (language === 'ka' ? 'მუშავდება...' : 'Processing...') : t.optimize_btn}
             </button>
           </div>
-        ) : (
+        )}
+
+        {editorMode === 'flow' && (
           <div className="h-[500px] w-full mt-4 shrink-0">
             <Suspense fallback={
               <div className="h-full w-full flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
@@ -262,6 +311,197 @@ const WorkflowEditor = ({
             }>
               <EnterpriseWorkflowBuilder workflow={formData} onSave={setFormData} language={language} />
             </Suspense>
+          </div>
+        )}
+
+        {editorMode === 'insights' && (
+          <div className="space-y-6 flex-1 flex flex-col min-h-0 pt-2">
+            {isAnalyzing ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center space-y-4">
+                <div className="relative">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-proton-accent to-proton-secondary blur opacity-30 animate-pulse" />
+                  <Loader2 className="animate-spin text-proton-accent relative z-10" size={40} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-bold text-lg text-proton-text">
+                    {language === 'ka' ? 'Gemini აანალიზებს პროცესს...' : 'Gemini Analyzing Process...'}
+                  </h4>
+                  <p className="text-xs text-proton-muted max-w-sm leading-relaxed mx-auto">
+                    {language === 'ka' 
+                      ? 'მიმდინარეობს ვორქფლოუს ლოგიკის, ეფექტურობისა და შესაძლო გაუმჯობესებების დეტალური ანალიზი.' 
+                      : 'Running a deep structural review of process logical efficiency and possible bottlenecks.'}
+                  </p>
+                </div>
+              </div>
+            ) : (!formData.analysisHistory || formData.analysisHistory.length === 0) ? (
+              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center space-y-6">
+                <div className="w-16 h-16 rounded-2xl bg-proton-accent/5 border border-proton-accent/20 flex items-center justify-center text-proton-accent">
+                  <Sparkles size={28} />
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-bold text-lg text-proton-text">
+                    {language === 'ka' ? 'AI ოპტიმიზაცია არ მოიძებნა' : 'No AI Analysis Found'}
+                  </h4>
+                  <p className="text-xs text-proton-muted max-w-sm leading-relaxed mx-auto">
+                    {language === 'ka' 
+                      ? 'გაუშვით Gemini-ს ხელოვნური ინტელექტი, რათა მიიღოთ პროფესიონალური რეკომენდაციები ამ პროცესის ოპტიმიზაციისთვის.' 
+                      : 'Generate deep AI architectural feedback and efficiency score improvements for this workflow logic.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsAnalyzing(true);
+                    try {
+                      const permitted = await checkAndIncrementAiQuota();
+                      if (!permitted) {
+                        setIsAnalyzing(false);
+                        return;
+                      }
+                      showToast(language === 'ka' ? 'ოპტიმიზაცია მიმდინარეობს...' : 'Optimizing workflow logic...', 'info');
+                      const analysis = await analyzeWorkflow(formData);
+                      const updatedHistory = [
+                        ...(formData.analysisHistory || []),
+                        { timestamp: Date.now(), result: analysis }
+                      ];
+                      const updatedData = { ...formData, analysisHistory: updatedHistory };
+                      setFormData(updatedData);
+                      setSelectedAnalysisIndex(updatedHistory.length - 1);
+                      showToast(language === 'ka' ? 'ოპტიმიზაცია წარმატებით დასრულდა!' : 'Workflow successfully optimized!', 'success');
+                    } catch (e) {
+                      console.error(e);
+                      showToast(language === 'ka' ? 'ოპტიმიზაცია ვერ მოხერხდა' : 'Failed to optimize logic', 'error');
+                    } finally {
+                      setIsAnalyzing(false);
+                    }
+                  }}
+                  className="px-6 py-3 rounded-xl bg-proton-accent text-proton-bg font-bold text-xs hover:scale-105 transition-all flex items-center gap-2 shadow-lg shadow-proton-accent/20 cursor-pointer"
+                >
+                  <Sparkles size={14} />
+                  {language === 'ka' ? 'ანალიზის გაშვება' : 'Run Process Optimization'}
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
+                {/* Left side: History list */}
+                <div className="md:col-span-1 space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  <h5 className="text-[10px] font-mono text-proton-muted uppercase tracking-widest mb-1">
+                    {language === 'ka' ? 'ანალიზის ისტორია' : 'Analysis History'}
+                  </h5>
+                  {formData.analysisHistory.map((hist, index) => {
+                    const isActive = selectedAnalysisIndex === index;
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSelectedAnalysisIndex(index)}
+                        className={cn(
+                          "w-full text-left p-3.5 rounded-2xl border text-xs transition-all flex flex-col gap-1.5 relative overflow-hidden cursor-pointer",
+                          isActive 
+                            ? "bg-proton-accent/5 border-proton-accent text-proton-text" 
+                            : "bg-proton-card/40 border-proton-border text-proton-muted hover:border-proton-accent/30 hover:text-proton-text"
+                        )}
+                      >
+                        <div className="flex justify-between items-center w-full">
+                          <span className="font-bold flex items-center gap-1.5">
+                            <Sparkles size={12} className={isActive ? "text-proton-accent animate-pulse" : ""} />
+                            {language === 'ka' ? `ანალიზი #${index + 1}` : `Iteration #${index + 1}`}
+                          </span>
+                          <span className="text-[9px] font-mono opacity-60">
+                            {new Date(hist.timestamp).toLocaleTimeString(language === 'ka' ? 'ka-GE' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div className="text-[9px] font-mono opacity-60">
+                          {new Date(hist.timestamp).toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsAnalyzing(true);
+                      try {
+                        const permitted = await checkAndIncrementAiQuota();
+                        if (!permitted) {
+                          setIsAnalyzing(false);
+                          return;
+                        }
+                        showToast(language === 'ka' ? 'ოპტიმიზაცია მიმდინარეობს...' : 'Optimizing workflow logic...', 'info');
+                        const analysis = await analyzeWorkflow(formData);
+                        const updatedHistory = [
+                          ...(formData.analysisHistory || []),
+                          { timestamp: Date.now(), result: analysis }
+                        ];
+                        const updatedData = { ...formData, analysisHistory: updatedHistory };
+                        setFormData(updatedData);
+                        setSelectedAnalysisIndex(updatedHistory.length - 1);
+                        showToast(language === 'ka' ? 'ოპტიმიზაცია წარმატებით დასრულდა!' : 'Workflow successfully optimized!', 'success');
+                      } catch (e) {
+                        console.error(e);
+                        showToast(language === 'ka' ? 'ოპტიმიზაცია ვერ მოხერხდა' : 'Failed to optimize logic', 'error');
+                      } finally {
+                        setIsAnalyzing(false);
+                      }
+                    }}
+                    className="w-full py-3.5 rounded-2xl border border-dashed border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all flex items-center justify-center gap-2 mt-4 cursor-pointer"
+                  >
+                    <Sparkles size={14} />
+                    {language === 'ka' ? 'ახალი ანალიზი' : 'Run New Optimization'}
+                  </button>
+                </div>
+
+                {/* Right side: Detailed Report */}
+                <div className="md:col-span-2 space-y-4 flex flex-col min-h-0 bg-proton-card/20 border border-proton-border/60 rounded-[24px] p-5">
+                  <div className="flex justify-between items-center pb-3 border-b border-proton-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-proton-accent animate-pulse" />
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-proton-accent">
+                        {language === 'ka' ? 'Gemini-ს რეკომენდაციები' : 'Gemini Optimization Report'}
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const content = selectedAnalysisIndex !== null && formData.analysisHistory ? formData.analysisHistory[selectedAnalysisIndex]?.result : '';
+                        navigator.clipboard.writeText(content);
+                        showToast(language === 'ka' ? 'კოპირებულია!' : 'Copied to clipboard!', 'success');
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-proton-card border border-proton-border text-[10px] font-bold text-proton-muted hover:text-proton-text transition-all cursor-pointer"
+                    >
+                      {language === 'ka' ? 'კოპირება' : 'Copy'}
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto max-h-[350px] pr-1 custom-scrollbar-minimal">
+                    <div className="prose prose-invert prose-xs max-w-none text-proton-text leading-relaxed tracking-wide space-y-2">
+                      <Markdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed font-light text-proton-text/85 text-xs">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                          li: ({ children }) => <li className="text-proton-text/70 text-xs">{children}</li>,
+                          strong: ({ children }) => <strong className="font-extrabold text-proton-accent">{children}</strong>,
+                          pre: ({ children }) => <pre className="bg-black/30 border border-proton-border p-4 rounded-xl font-mono text-[10px] overflow-x-auto text-amber-300 my-3 leading-relaxed w-full custom-scrollbar-minimal">{children}</pre>,
+                          code: ({ children, ...props }) => {
+                            const contentStr = String(children || '');
+                            const isInline = !contentStr.includes('\n');
+                            return isInline ? (
+                              <code className="bg-white/10 px-1.5 py-0.5 rounded font-mono text-[9px] text-amber-300 border border-proton-border">{children}</code>
+                            ) : (
+                              <code className="block font-mono text-[10px] text-proton-text/90 leading-relaxed">{children}</code>
+                            );
+                          }
+                        }}
+                      >
+                        {selectedAnalysisIndex !== null && formData.analysisHistory ? formData.analysisHistory[selectedAnalysisIndex]?.result : ''}
+                      </Markdown>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -299,6 +539,7 @@ export default function WorkflowsView({
   const common = translations[language].common;
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [confirmation, setConfirmation] = useState<{ action: () => void; message: string } | null>(null);
+  const { showToast } = useToast();
 
   const handleSave = async (updatedWorkflow: Workflow) => {
     setWorkflows(workflows.map(wf => wf.id === updatedWorkflow.id ? updatedWorkflow : wf));
@@ -328,22 +569,31 @@ export default function WorkflowsView({
   };
 
   const handleAnalyze = async (wf: Workflow) => {
-    const permitted = await checkAndIncrementAiQuota();
-    if (!permitted) return;
+    try {
+      const permitted = await checkAndIncrementAiQuota();
+      if (!permitted) return;
 
-    const result = await analyzeWorkflow(wf);
-    const updatedWorkflow = {
-      ...wf,
-      analysisHistory: [
-        ...(wf.analysisHistory || []),
-        { timestamp: Date.now(), result }
-      ]
-    };
-    setWorkflows(workflows.map(w => w.id === wf.id ? updatedWorkflow : w));
-    
-    if (user && db) {
-      const docRef = doc(db, 'users', user.uid, 'workflows', wf.id);
-      await setDoc(docRef, updatedWorkflow).catch(e => handleFirestoreError(e, 'update', docRef.path));
+      showToast(language === 'ka' ? 'მიმდინარეობს ანალიზი...' : 'Analyzing workflow...', 'info');
+      const result = await analyzeWorkflow(wf);
+      const updatedWorkflow = {
+        ...wf,
+        analysisHistory: [
+          ...(wf.analysisHistory || []),
+          { timestamp: Date.now(), result }
+        ]
+      };
+      setWorkflows(workflows.map(w => w.id === wf.id ? updatedWorkflow : w));
+      
+      if (user && db) {
+        const docRef = doc(db, 'users', user.uid, 'workflows', wf.id);
+        await setDoc(docRef, updatedWorkflow).catch(e => handleFirestoreError(e, 'update', docRef.path));
+      }
+
+      showToast(language === 'ka' ? 'ანალიზი წარმატებით დასრულდა!' : 'Analysis completed successfully!', 'success');
+      setEditingWorkflow(updatedWorkflow);
+    } catch (err) {
+      console.error(err);
+      showToast(language === 'ka' ? 'ანალიზი ვერ მოხერხდა.' : 'Analysis failed.', 'error');
     }
   };
 

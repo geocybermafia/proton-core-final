@@ -18,6 +18,7 @@ import {
 import { cn } from '../lib/utils';
 import { chatWithPersona } from '../lib/gemini';
 import { Persona } from '../types';
+import { useToast } from './Toast';
 
 interface CreativeStudioHubProps {
   language: 'en' | 'ka';
@@ -178,6 +179,7 @@ export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => vo
   checkAndIncrementAiQuota
 }) => {
   const isKa = language === 'ka';
+  const { showToast } = useToast();
 
   const [brandName, setBrandName] = useState('');
   const [description, setDescription] = useState('');
@@ -198,7 +200,7 @@ export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => vo
 
   const handleGenerate = async () => {
     if (!brandName.trim() || !description.trim()) {
-      alert(isKa ? 'გთხოვთ შეავსოთ ბრენდის სახელი და აღწერა' : 'Please fill in both the brand name and description');
+      showToast(isKa ? 'გთხოვთ შეავსოთ ბრენდის სახელი და აღწერა' : 'Please fill in both the brand name and description', 'warning');
       return;
     }
 
@@ -274,7 +276,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
 
     } catch (err) {
       console.error(err);
-      alert(isKa ? 'კოპირაიტინგის გენერაცია ვერ მოხერხდა. გთხოვთ სცადოთ მოგვიანებით.' : 'Ad generation node failure. Please try again later.');
+      showToast(isKa ? 'კოპირაიტინგის გენერაცია ვერ მოხერხდა. გთხოვთ სცადოთ მოგვიანებით.' : 'Ad generation node failure. Please try again later.', 'error');
     } finally {
       setLoading(false);
     }
