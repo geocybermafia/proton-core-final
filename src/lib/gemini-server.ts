@@ -98,20 +98,16 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
       text = appLanguage === 'ka'
         ? `⚠️ **კვოტა ამოიწურა / ლიმიტის გადაჭარბება (შეცდომა 429)**
         
-გაზიარებულმა ან თქვენმა პერსონალურმა Gemini API გასაღებმა მიაღწია Google-ის მიერ დაწესებულ მოთხოვნების ლიმიტს:
-1. **თუ იყენებთ უფასო (Free) API გასაღებს:** Google-ის უფასო ტარიფს აქვს მკაცრი შეზღუდვები (წუთში მაქსიმუმ 15 მოთხოვნა). სწრაფი ან ხშირი გამოყენებისას, განსაკუთრებით თუ საუბრობთ რამდენიმე პერსონასთან ან გამოსცემთ სერვისებს, ეს ლიმიტი მარტივად ივსება.
-2. **როგორ მოვაგვაროთ:** 
+გაზიარებულმა Gemini API გასაღებმა მიაღწია Google-ის მიერ დაწესებულ მოთხოვნების ლიმიტს:
+1. **როგორ მოვაგვაროთ:** 
    * გთხოვთ, **დაელოდოთ 1 წუთი** და სცადოთ ხელახლა.
-   * დარწმუნდით, რომ თქვენს Google AI Studio ბილინგზე ჩართულია **"Pay-as-you-go"** ფასიანი გეგმა (რომელიც ასევე გთავაზობთ ფართო უფასო ლიმიტებს სტაბილური მუშაობისთვის).
-   * შეამოწმეთ, რომ შეყვანილი API გასაღები ნამდვილად აქტიური და სწორია ზედა მარჯვენა კუთხეში არსებული ⚙️ პარამეტრების დაფიდან.`
+   * შეფერხების გარეშე მუშაობისთვის, ჩართეთ **„AI სიმულაციური რეჟიმი“** ზედა მარჯვენა კუთხეში არსებული ⚙️ პარამეტრების მენიუდან.`
         : `⚠️ **Quota Exceeded / Rate Limit Reached (Error 429)**
         
-The shared environment key or your personal Gemini API key has exceeded Google's service limits:
-1. **If you are using a Free API Key:** Google's Free tier keys have strict rate-limit constraints (typically 15 requests per minute). Rapid or continuous use can exhaust this limit immediately.
-2. **How to resolve:**
+The shared environment key has exceeded Google's service limits:
+1. **How to resolve:**
    * Please **wait 1 minute** before trying your request again.
-   * Ensure your Google AI Studio account is upgraded to a **"Pay-as-you-go"** billing plan (which offers much higher rate limits and generous free tiers).
-   * Confirm that your custom API key in the System Settings panel (⚙️ icon in the top-right) is active and correct.`;
+   * To continue without any interruption, please enable **'AI Simulation Mode'** in the ⚙️ Settings panel.`;
     } else {
       text = appLanguage === 'ka'
         ? `⚠️ **კავშირის შეცდომა:** სასურველი პასუხის მიღება ვერ მოხერხდა. (${errStr.substring(0, 80)}). გთხოვთ სცადოთ მოგვიანებით.`
@@ -179,7 +175,7 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
   } catch (error: any) {
     const errStr = error?.message || String(error);
     console.log(`[INFO] summarizeConversation fallback triggered: ${errStr.substring(0, 120)}`);
-    return "💡 **საუბრის შეჯამება (Offline Mode)**:\n\n* **ბიზნეს იდეები:** განხილულია ქართულ ბაზარზე მორგებული ავთენტური მარკეტინგისა და ტექნოლოგიური სტრატეგიები.\n* **ავტომატიზაცია:** დაგეგმილია ბიზნეს ნაკადების (Workflows) გააქტიურება დაყოვნების შესამცირებლად.\n* **გაფართოება:** რეკომენდებულია პარამეტრებში საკუთარი Gemini API Key-ს შეყვანა შეზღუდვების ასაცილებლად.";
+    return "💡 **საუბრის შეჯამება (Offline Mode)**:\n\n* **ბიზნეს იდეები:** განხილულია ქართულ ბაზარზე მორგებული ავთენტური მარკეტინგისა და ტექნოლოგიური სტრატეგიები.\n* **ავტომატიზაცია:** დაგეგმილია ბიზნეს ნაკადების (Workflows) გააქტიურება დაყოვნების შესამცირებლად.\n* **გაფართოება:** რეკომენდებულია პარამეტრებში „AI სიმულაციური რეჟიმის“ ჩართვა შეზღუდვების ასაცილებლად.";
   }
 }
 
@@ -714,7 +710,7 @@ The analysis must include:
 #### 4. რისკები და პრევენცია (Risks)
 მთავარი რისკი არის სერვერის რესურსების შეზღუდულობა, რომლის პრევენციაც მოხდება დატვირთვის სწორი მენეჯმენტით.
 
-*(შენიშვნა: ანალიზი გენერირებულია ოფლაინ რეჟიმში API კვოტის გადაჭარბების გამო. თქვენ შეგიძლიათ დააკონფიგურიროთ საკუთარი Gemini API Key პარამეტრებიდან ⚙️)*`;
+*(შენიშვნა: ანალიზი გენერირებულია ოფლაინ რეჟიმში API კვოტის გადაჭარბების გამო. თქვენ შეგიძლიათ ჩართოთ „AI სიმულაციური რეჟიმი“ პარამეტრებიდან ⚙️)*`;
     } else {
       return `### 📊 Strategic Analysis (Offline Mode): ${title}
       
@@ -735,7 +731,7 @@ This objective is critical to ensuring high-quality operations and system stabil
 #### 4. Contingency Planning
 Mitigate integration locks by routing offline callbacks gracefully through secondary buffers.
 
-*(Note: Running in offline simulation mode due to shared API key rate limits. You can configure your own custom key in ⚙️ settings)*`;
+*(Note: Running in offline simulation mode due to shared API key rate limits. You can enable 'AI Simulation Mode' in ⚙️ settings)*`;
     }
   }
 }

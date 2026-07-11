@@ -462,8 +462,8 @@ export default function PersonasView({
       
       if (errorMsg.includes("429") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.toLowerCase().includes("quota") || errorMsg.toLowerCase().includes("limit")) {
         friendlyError = language === 'ka'
-          ? "ყოველდღიური მოთხოვნების ლიმიტი ამოიწურა (429 Quota Exceeded). გთხოვთ, მიუთითოთ თქვენი საკუთარი Gemini API Key პარამეტრების მენიუდან, რათა გააგრძელოთ შეუფერხებლად მუშაობა."
-          : "API Quota Exceeded (429). Please configure your own Gemini API Key in the Settings menu to continue without interruption.";
+          ? "ყოველდღიური მოთხოვნების ლიმიტი ამოიწურა (429 Quota Exceeded). გთხოვთ, ჩართოთ „AI სიმულაციური რეჟიმი“ პარამეტრების მენიუდან შეუფერხებელი მუშაობისთვის."
+          : "API Quota Exceeded (429). Please enable 'AI Simulation Mode' in the Settings menu to continue without interruption.";
       }
 
       const systemErrorMessage: ChatMessage = {
