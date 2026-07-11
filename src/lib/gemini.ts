@@ -75,6 +75,33 @@ function isSimulatedActive(): boolean {
   return false;
 }
 
+function autoEnableSimulationMode() {
+  try {
+    const saved = localStorage.getItem('proton_ai_settings');
+    let aiSettings: any = {
+      temperature: 0.9,
+      enableSearch: true,
+      enableMaps: false,
+      zenMode: false,
+      systemInstruction: "",
+      voice: "Kore",
+      useSimulatedAi: true
+    };
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        aiSettings = { ...parsed, useSimulatedAi: true };
+      } catch (e) {}
+    }
+    localStorage.setItem('proton_ai_settings', JSON.stringify(aiSettings));
+    
+    // Dispatch a custom event so that the App state syncs instantly
+    window.dispatchEvent(new CustomEvent('proton_ai_settings_auto_simulated'));
+  } catch (e) {
+    console.warn("Failed to auto-enable simulation mode", e);
+  }
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function callServerGemini<T>(action: string, args: any[]): Promise<T> {
@@ -152,36 +179,19 @@ export async function chatWithPersona(
   }
 
   try {
-    return await callServerGemini<{ text: string, metadata: GeminiMetadata }>('chatWithPersona', [
+    const res = await callServerGemini<{ text: string, metadata: GeminiMetadata }>('chatWithPersona', [
       persona, message, history, model, includeMaps, includeSearch, temperature, globalInstruction, appLanguage
     ]);
-  } catch (error: any) {
-    console.warn("Gemini API Client Proxy Status Warning:", error);
-    let displayMessage = error.message || String(error);
-    
-    // Attempt to parse dynamic server-side errors
-    try {
-      if (displayMessage.startsWith("Error: ")) {
-        displayMessage = displayMessage.substring(7);
-      }
-      const parsed = JSON.parse(displayMessage);
-      if (parsed && (parsed.isQuotaError || parsed.isModelError)) {
-        displayMessage = appLanguage === 'ka' ? parsed.messageKa : parsed.messageEn;
-      }
-    } catch (e) {
-      // Check for presence of common quota/excess cues in raw string
-      const errLower = displayMessage.toLowerCase();
-      if (errLower.includes("429") || errLower.includes("quota") || errLower.includes("resource_exhausted")) {
-        displayMessage = appLanguage === 'ka'
-          ? `ლიმიტის გადაჭარბება (შეცდომა 429): გაზიარებულმა API გასაღებმა მიაღწია კვოტას. გთხოვთ გააქტიუროთ თქვენი საკუთარი Gemini API გასაღები "პარამეტრებიდან" (ზედა მარჯვენა კუთხეში ⚙️) მუშაობის გასაგრძელებლად.`
-          : `Quota Exceeded (Error 429): The shared environment API key has reached its limits. Please configure your custom Gemini API Key in "System Settings" (icon in the top-right ⚙️) to resume operations immediately.`;
-      }
+    const textVal = res?.text || "";
+    if (textVal.includes("კვოტა ამოიწურა") || textVal.includes("Quota Exceeded") || textVal.includes("RESOURCE_EXHAUSTED") || textVal.includes("ლიმიტის გადაჭარბება") || textVal.includes("429")) {
+      autoEnableSimulationMode();
+      return chatWithPersona(persona, message, history, model, includeMaps, includeSearch, temperature, globalInstruction, appLanguage);
     }
-
-    return {
-      text: displayMessage,
-      metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: 0 } 
-    };
+    return res;
+  } catch (error: any) {
+    console.warn("Gemini API Client Proxy Status Warning, falling back to simulation mode:", error);
+    autoEnableSimulationMode();
+    return chatWithPersona(persona, message, history, model, includeMaps, includeSearch, temperature, globalInstruction, appLanguage);
   }
 }
 
@@ -200,7 +210,13 @@ export async function generateNewPersona(basePersona: Persona, prompt: string): 
       systemInstruction: "Simulated instructions based on: " + prompt
     };
   }
-  return callServerGemini<Persona>('generateNewPersona', [basePersona, prompt]);
+  try {
+    return await callServerGemini<Persona>('generateNewPersona', [basePersona, prompt]);
+  } catch (error) {
+    console.warn("generateNewPersona proxy failed, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return generateNewPersona(basePersona, prompt);
+  }
 }
 
 export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[]) {
@@ -211,8 +227,9 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
   try {
     return await callServerGemini<string>('summarizeConversation', [history]);
   } catch (error) {
-    console.error("summarizeConversation Proxy Error:", error);
-    return "Error generating summary.";
+    console.warn("summarizeConversation Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return summarizeConversation(history);
   }
 }
 
@@ -233,8 +250,9 @@ export async function analyzeWorkflow(workflow: { name: string, trigger: string,
   try {
     return await callServerGemini<string>('analyzeWorkflow', [workflow]);
   } catch (error) {
-    console.error("analyzeWorkflow Proxy Error:", error);
-    return "Error analyzing workflow.";
+    console.warn("analyzeWorkflow Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return analyzeWorkflow(workflow);
   }
 }
 
@@ -242,13 +260,18 @@ export async function generatePersonaAvatar(persona: Persona) {
   if (isSimulatedActive()) {
     return persona.avatar || "🤖";
   }
-  return callServerGemini<string>('generatePersonaAvatar', [persona]);
+  try {
+    return await callServerGemini<string>('generatePersonaAvatar', [persona]);
+  } catch (error) {
+    console.warn("generatePersonaAvatar Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return generatePersonaAvatar(persona);
+  }
 }
 
 export async function generateOrEditImage(prompt: string, imageBase64?: string) {
   if (isSimulatedActive()) {
     await sleep(1000);
-    // Return a beautiful dynamic colored SVG representation encoded as Data URI
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
       <rect width="100%" height="100%" fill="#0c111d"/>
       <circle cx="200" cy="200" r="160" fill="url(#grad)" opacity="0.15"/>
@@ -271,7 +294,13 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string) 
     </svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
   }
-  return callServerGemini<string>('generateOrEditImage', [prompt, imageBase64]);
+  try {
+    return await callServerGemini<string>('generateOrEditImage', [prompt, imageBase64]);
+  } catch (error) {
+    console.warn("generateOrEditImage Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return generateOrEditImage(prompt, imageBase64);
+  }
 }
 
 export async function generateSpeech(text: string, voiceName: string = 'Kore') {
@@ -279,7 +308,13 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore') {
     await sleep(500);
     return "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
   }
-  return callServerGemini<string>('generateSpeech', [text, voiceName]);
+  try {
+    return await callServerGemini<string>('generateSpeech', [text, voiceName]);
+  } catch (error) {
+    console.warn("generateSpeech Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return generateSpeech(text, voiceName);
+  }
 }
 
 export async function translateText(
@@ -305,7 +340,13 @@ export async function translateText(
       return `[Translated to ${targetLanguage}]: ${text} (Simulated translation)`;
     }
   }
-  return callServerGemini<string>('translateText', [text, sourceRole, targetLanguage, systemInstruction]);
+  try {
+    return await callServerGemini<string>('translateText', [text, sourceRole, targetLanguage, systemInstruction]);
+  } catch (error) {
+    console.warn("translateText Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return translateText(text, sourceRole, targetLanguage, systemInstruction);
+  }
 }
 
 export async function architectTask(project: string, temperature: number = 0.9): Promise<{ data: TaskPlan, metadata: GeminiMetadata }> {
@@ -329,7 +370,13 @@ export async function architectTask(project: string, temperature: number = 0.9):
       metadata: { promptTokenCount: 150, candidatesTokenCount: 180, totalTokenCount: 330, latency: 700 }
     };
   }
-  return callServerGemini<{ data: TaskPlan, metadata: GeminiMetadata }>('architectTask', [project, temperature]);
+  try {
+    return await callServerGemini<{ data: TaskPlan, metadata: GeminiMetadata }>('architectTask', [project, temperature]);
+  } catch (error) {
+    console.warn("architectTask Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return architectTask(project, temperature);
+  }
 }
 
 export async function breakdownTask(taskContent: string, appLanguage: 'en' | 'ka' = 'en'): Promise<string[]> {
@@ -353,7 +400,13 @@ export async function breakdownTask(taskContent: string, appLanguage: 'en' | 'ka
       ];
     }
   }
-  return callServerGemini<string[]>('breakdownTask', [taskContent, appLanguage]);
+  try {
+    return await callServerGemini<string[]>('breakdownTask', [taskContent, appLanguage]);
+  } catch (error) {
+    console.warn("breakdownTask Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return breakdownTask(taskContent, appLanguage);
+  }
 }
 
 export async function generateStrategicObjective(appLanguage: 'en' | 'ka' = 'en'): Promise<{
@@ -388,12 +441,18 @@ export async function generateStrategicObjective(appLanguage: 'en' | 'ka' = 'en'
       };
     }
   }
-  return callServerGemini<{
-    title: string;
-    priority: 'low' | 'medium' | 'high';
-    category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
-    subtasks: { label: string; completed: boolean }[];
-  }>('generateStrategicObjective', [appLanguage]);
+  try {
+    return await callServerGemini<{
+      title: string;
+      priority: 'low' | 'medium' | 'high';
+      category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
+      subtasks: { label: string; completed: boolean }[];
+    }>('generateStrategicObjective', [appLanguage]);
+  } catch (error) {
+    console.warn("generateStrategicObjective Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return generateStrategicObjective(appLanguage);
+  }
 }
 
 export async function expandObjectiveAnalysis(title: string, category: string, appLanguage: 'en' | 'ka' = 'en'): Promise<string> {
@@ -439,7 +498,13 @@ This objective is critical to ensuring high-quality operations and system stabil
 Mitigate integration locks by routing offline callbacks gracefully through secondary buffers.`;
     }
   }
-  return callServerGemini<string>('expandObjectiveAnalysis', [title, category, appLanguage]);
+  try {
+    return await callServerGemini<string>('expandObjectiveAnalysis', [title, category, appLanguage]);
+  } catch (error) {
+    console.warn("expandObjectiveAnalysis Proxy Error, falling back to simulation:", error);
+    autoEnableSimulationMode();
+    return expandObjectiveAnalysis(title, category, appLanguage);
+  }
 }
 
 

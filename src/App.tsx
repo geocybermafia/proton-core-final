@@ -3732,6 +3732,31 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleAutoSimulated = () => {
+      try {
+        const saved = localStorage.getItem('proton_ai_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setAiSettings(parsed);
+          showToast(
+            language === 'ka'
+              ? '💡 კვოტა ამოიწურა. სისტემა ავტომატურად გადაერთო საცდელ რეჟიმზე შეუფერხებელი მუშაობისთვის!'
+              : '💡 Quota reached. Automatically switched to Simulation Mode to ensure seamless operations!',
+            'warning'
+          );
+        }
+      } catch (e) {
+        console.warn("Failed to sync auto-simulated settings in UI", e);
+      }
+    };
+    window.addEventListener('proton_ai_settings_auto_simulated', handleAutoSimulated);
+    return () => {
+      window.removeEventListener('proton_ai_settings_auto_simulated', handleAutoSimulated);
+    };
+  }, [showToast, language]);
+
   const location = useLocation();
   const navigate = useNavigate();
 
