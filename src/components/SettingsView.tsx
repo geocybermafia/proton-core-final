@@ -425,12 +425,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const tabs = [
-    { id: 'preferences', label: language === 'ka' ? 'პრეფერენციები' : 'Preferences', icon: Palette },
-    { id: 'ai', label: t.ai_config || 'AI Assistant', icon: Cpu },
-    { id: 'profile', label: t.profile || 'Profile', icon: User },
-    { id: 'security', label: t.security || 'Security', icon: Shield },
-    { id: 'seo', label: language === 'ka' ? 'SEO აუდიტი' : 'SEO Audit', icon: Search },
-    { id: 'cost_control', label: language === 'ka' ? 'ხარჯების კონტროლი' : 'Cost Control', icon: TrendingUp },
+    { id: 'preferences', label: language === 'ka' ? 'დიზაინი და ენა' : 'Design & Language', icon: Palette },
+    { id: 'ai', label: language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant', icon: Cpu },
+    { id: 'profile', label: language === 'ka' ? 'ჩემი პროფილი' : 'My Profile', icon: User },
+    { id: 'security', label: language === 'ka' ? 'უსაფრთხოება' : 'Security & Keys', icon: Shield },
+    { id: 'seo', label: language === 'ka' ? 'როგორ გამოჩნდება საიტი?' : 'Google & Social Preview', icon: Search },
+    { id: 'cost_control', label: language === 'ka' ? 'გამოყენებული რესურსები' : 'Used Resources', icon: TrendingUp },
   ];
 
   return (
@@ -501,9 +501,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
                       <Cpu size={20} className="text-proton-accent" />
-                      {t.ai_config}
+                      {language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant'}
                     </h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.ai_desc}</p>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                      {language === 'ka' ? 'მართეთ ხელოვნური ინტელექტის პასუხები და მუშაობის სტილი' : 'Configure the behavior and speech style of your assistant'}
+                    </p>
                   </header>
 
                   <div className="space-y-8">
@@ -512,7 +514,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
                           <Zap size={14} className="text-proton-accent animate-pulse" />
-                          {t.temperature}
+                          {language === 'ka' ? 'პასუხების სტილი (კრეატიულობა)' : 'Creativity & Precision'}
                         </label>
                         <span className="text-[11px] font-mono font-bold text-proton-accent bg-proton-accent/10 px-3 py-1 rounded-lg border border-proton-accent/20">
                           {aiSettings.temperature.toFixed(1)}
@@ -533,28 +535,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="text-[10px] font-bold uppercase tracking-wider py-2 px-4 rounded-xl bg-proton-bg/40 border border-proton-border/30 text-proton-text/90 flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
                         <span>
-                          {language === 'ka' ? 'აქტიური რეჟიმი: ' : 'Active Tuning Mode: '}
+                          {language === 'ka' ? 'აქტიური რეჟიმი: ' : 'Active Style: '}
                           {aiSettings.temperature <= 0.2 ? (
-                            <span className="text-emerald-400 font-extrabold">{language === 'ka' ? 'ზუსტი და დეტერმინისტული (Scientific)' : 'Analytical & Deterministic (Scientific)'}</span>
+                            <span className="text-emerald-400 font-extrabold">{language === 'ka' ? 'ზუსტი და მკაფიო' : 'Precise & Accurate'}</span>
                           ) : aiSettings.temperature <= 0.5 ? (
-                            <span className="text-cyan-400 font-extrabold">{language === 'ka' ? 'ბალანსირებული და რაციონალური (Standard)' : 'Balanced & Rational (Standard)'}</span>
+                            <span className="text-cyan-400 font-extrabold">{language === 'ka' ? 'სტანდარტული ბალანსი' : 'Standard Balanced'}</span>
                           ) : aiSettings.temperature <= 0.8 ? (
-                            <span className="text-purple-400 font-extrabold">{language === 'ka' ? 'კრეატიული და ინტუიციური (Dynamic)' : 'Creative & Conversational (Dynamic)'}</span>
+                            <span className="text-purple-400 font-extrabold">{language === 'ka' ? 'კრეატიული წერა' : 'Creative Writing'}</span>
                           ) : (
-                            <span className="text-amber-400 font-extrabold">{language === 'ka' ? 'ინოვაციური და ექსპერიმენტული (Innovative)' : 'Experimental & Highly Creative (Innovative)'}</span>
+                            <span className="text-amber-400 font-extrabold">{language === 'ka' ? 'ძალიან თავისუფალი (ექსპერიმენტული)' : 'Experimental & Free'}</span>
                           )}
                         </span>
                       </div>
 
                       {/* Presets Cards for Quick Snapping */}
                       <div className="space-y-2 pt-2">
-                        <label className="text-[9px] font-black text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'აირჩიეთ მზა კრეატიულობის რეჟიმი' : 'Select Creativity Preset'}</label>
+                        <label className="text-[9px] font-black text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'აირჩიეთ მზა ქცევის სტილი' : 'Choose a Speech Style'}</label>
                         <div className="grid grid-cols-2 gap-3">
                           {[
-                            { val: 0.1, label: language === 'ka' ? 'ზუსტი (0.1)' : 'Analytical (0.1)', desc: language === 'ka' ? 'დეტერმინისტული პასუხები' : 'Factual and highly precise answers' },
-                            { val: 0.5, label: language === 'ka' ? 'ბალანსი (0.5)' : 'Balanced (0.5)', desc: language === 'ka' ? 'ლოგიკური და სტაბილური' : 'Standard balanced response flow' },
-                            { val: 0.7, label: language === 'ka' ? 'კრეატივი (0.7)' : 'Creative (0.7)', desc: language === 'ka' ? 'ინტუიციური და მდიდარი' : 'Great for writing & brainstorms' },
-                            { val: 0.9, label: language === 'ka' ? 'ინოვატორი (0.9)' : 'Experimental (0.9)', desc: language === 'ka' ? 'თავისუფალი და მრავალფეროვანი' : 'Maximum creative freedom & style' },
+                            { val: 0.1, label: language === 'ka' ? 'ზუსტი და მკაფიო (0.1)' : 'Precise (0.1)', desc: language === 'ka' ? 'კონკრეტული და მხოლოდ რეალური ფაქტები' : 'Factual and highly accurate answers' },
+                            { val: 0.5, label: language === 'ka' ? 'სტანდარტული (0.5)' : 'Balanced (0.5)', desc: language === 'ka' ? 'ბუნებრივი საუბრის რეჟიმი' : 'Standard balanced response flow' },
+                            { val: 0.7, label: language === 'ka' ? 'კრეატიული (0.7)' : 'Creative (0.7)', desc: language === 'ka' ? 'საუკეთესოა იდეებისა და ტექსტებისთვის' : 'Great for brainstorming & copy' },
+                            { val: 0.9, label: language === 'ka' ? 'თავისუფალი (0.9)' : 'Experimental (0.9)', desc: language === 'ka' ? 'მაქსიმალურად მრავალფეროვანი პასუხები' : 'Maximum creative freedom' },
                           ].map((item) => (
                             <button
                               key={item.val}
@@ -594,17 +596,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         setAiSettings(prev => ({ ...prev, enableSearch: next }));
                         showToast(
                           next 
-                            ? (language === 'ka' ? 'Google ძიება ინტეგრირებულია AI პასუხებში!' : 'Google Search integrated into AI replies!') 
-                            : (language === 'ka' ? 'Google ძიება გამორთულია.' : 'Google Search deactivated.'),
+                            ? (language === 'ka' ? 'ინფორმაციის მოძიება აქტიურია!' : 'Google Search integrated successfully!') 
+                            : (language === 'ka' ? 'ინფორმაციის მოძიება გამორთულია.' : 'Google Search deactivated.'),
                           next ? 'success' : 'info'
                         );
                       }}>
                         <div className="flex items-center gap-3">
                           <Search size={18} className={aiSettings.enableSearch ? "text-proton-accent animate-bounce" : "text-proton-muted"} />
-                          <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">{t.search}</label>
+                          <div className="text-left">
+                            <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">
+                              {language === 'ka' ? 'ინტერნეტში მოძიება' : 'Search on Google'}
+                            </label>
+                            <p className="text-[8px] text-proton-muted uppercase font-bold mt-0.5 leading-normal">
+                              {language === 'ka' ? 'უახლესი ამბების მოსაძებნად' : 'Find recent info online'}
+                            </p>
+                          </div>
                         </div>
                         <div className={cn(
-                          "w-10 h-5 rounded-full relative transition-all border border-proton-border",
+                          "w-10 h-5 rounded-full relative transition-all border border-proton-border shrink-0",
                           aiSettings.enableSearch ? "bg-proton-accent border-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-secondary/30"
                         )}>
                           <div className={cn(
@@ -622,17 +631,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         setAiSettings(prev => ({ ...prev, enableMaps: next }));
                         showToast(
                           next 
-                            ? (language === 'ka' ? 'Google რუკები გააქტიურდა AI ლოკაციებისთვის' : 'Google Maps enabled for AI location awareness') 
-                            : (language === 'ka' ? 'Google რუკების მოდული გამორთულია' : 'Google Maps module deactivated'),
+                            ? (language === 'ka' ? 'რუკების მოდული გააქტიურდა!' : 'Maps awareness enabled!') 
+                            : (language === 'ka' ? 'რუკების მოდული გამორთულია.' : 'Maps deactivated.'),
                           next ? 'success' : 'info'
                         );
                       }}>
                         <div className="flex items-center gap-3">
                           <MapPin size={18} className={aiSettings.enableMaps ? "text-proton-accent animate-pulse" : "text-proton-muted"} />
-                          <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">{t.maps}</label>
+                          <div className="text-left">
+                            <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">
+                              {language === 'ka' ? 'ადგილები და რუკები' : 'Places & Maps'}
+                            </label>
+                            <p className="text-[8px] text-proton-muted uppercase font-bold mt-0.5 leading-normal">
+                              {language === 'ka' ? 'მდებარეობების საჩვენებლად' : 'Display map locations'}
+                            </p>
+                          </div>
                         </div>
                         <div className={cn(
-                          "w-10 h-5 rounded-full relative transition-all border border-proton-border",
+                          "w-10 h-5 rounded-full relative transition-all border border-proton-border shrink-0",
                           aiSettings.enableMaps ? "bg-proton-accent border-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-secondary/30"
                         )}>
                           <div className={cn(
@@ -647,15 +663,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="space-y-4">
                        <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
                          <Volume2 size={16} className="text-purple-400" />
-                         {t.voice || 'Voice Style'}
+                         {language === 'ka' ? 'ასისტენტის ხმა' : 'Assistant Voice Style'}
                        </label>
-                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
                          {[
                            { id: 'Kore', label: 'Kore' },
                            { id: 'Fenrir', label: 'Fenrir' },
                            { id: 'Charon', label: 'Charon' },
-                           { id: 'TbilisiDialect', label: 'Local' },
-                           { id: 'GeorgianModern', label: 'Kartuli' }
+                           { id: 'TbilisiDialect', label: language === 'ka' ? 'ადგილობრივი' : 'Local' },
+                           { id: 'GeorgianModern', label: language === 'ka' ? 'ქართული' : 'Georgian' }
                          ].map((voice) => (
                            <button
                              key={voice.id}
@@ -663,12 +679,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                              onClick={() => {
                                setAiSettings(prev => ({ ...prev, voice: voice.id }));
                                showToast(
-                                 language === 'ka' ? `სინთეზატორის ხმა: ${voice.label}` : `TTS synthesizer voice set to: ${voice.label}`,
+                                 language === 'ka' ? `ასისტენტის ხმა: ${voice.label}` : `Assistant voice set to: ${voice.label}`,
                                  'info'
-                               );
+                                );
                              }}
                              className={cn(
-                               "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all",
+                               "p-2.5 rounded-xl border text-[9px] font-black uppercase tracking-wider text-center transition-all",
                                aiSettings.voice === voice.id 
                                 ? "bg-proton-accent border-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
                                 : "bg-proton-secondary/10 border-proton-border/50 text-proton-muted hover:border-proton-accent/50 hover:text-proton-text"
@@ -689,21 +705,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       setUiMode(next);
                       showToast(
                         next === 'creative' 
-                          ? (language === 'ka' ? 'კრეატიული რეჟიმი აქტიურია! ნეონური ინტერფეისი დატვირთულია.' : 'Creative custom mode loaded with dynamic neon visuals!') 
-                          : (language === 'ka' ? 'ბიზნეს რეჟიმი ჩართულია: მინიმალისტური და სუფთა.' : 'Business corporate mode loaded: minimalist & clear.'),
+                          ? (language === 'ka' ? 'ფერადი ნეონის ვიზუალი აქტიურია!' : 'Glowing neon visuals active!') 
+                          : (language === 'ka' ? 'სუფთა მინიმალისტური რეჟიმი ჩართულია.' : 'Clean minimal layout active.'),
                         'success'
                       );
                     }}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
-                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0",
                           uiMode === 'creative' ? "bg-proton-accent text-proton-bg shadow-lg" : "bg-proton-secondary/20 text-proton-muted"
                         )}>
                           <Sparkles size={28} />
                         </div>
-                        <div className="flex-1">
-                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">{language === 'ka' ? 'კრეატიული რეჟიმი' : 'Creative Mode'}</label>
-                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">{language === 'ka' ? 'ფოკუსი შემოქმედებაზე და დეტალებზე' : 'Focus on creation and meticulous details'}</p>
+                        <div className="text-left">
+                          <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">
+                            {language === 'ka' ? 'ფერადი ნეონის ვიზუალი' : 'Vibrant Neon Design'}
+                          </label>
+                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">
+                            {language === 'ka' ? 'ჩართეთ ლამაზი ნეონის ფერები და ეფექტები ინტერფეისში' : 'Enable glowing neon accents and visual effects'}
+                          </p>
                         </div>
                       </div>
                       <div className={cn(
@@ -720,7 +740,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     {/* AI Simulation Mode Block */}
                     <div className={cn(
                       "p-7 rounded-[32px] border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 transition-all select-none",
-                      aiSettings.useSimulatedAi ? "bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5 animate-pulse" : "bg-proton-secondary/10 border-proton-border"
+                      aiSettings.useSimulatedAi ? "bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5" : "bg-proton-secondary/10 border-proton-border"
                     )}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
@@ -729,14 +749,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         )}>
                           <Sparkles className={cn(aiSettings.useSimulatedAi && "animate-spin")} size={28} />
                         </div>
-                        <div className="flex-1">
+                        <div className="text-left">
                           <label className="text-xs font-black uppercase tracking-widest block text-proton-text">
-                            {language === 'ka' ? 'AI სიმულაციური რეჟიმი' : 'AI Simulation Mode'}
+                            {language === 'ka' ? 'საცდელი რეჟიმი (Simulation)' : 'Safe Sandbox Mode (Simulated AI)'}
                           </label>
                           <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1 leading-relaxed">
                             {language === 'ka' 
-                              ? 'ჩართეთ საცდელი რეჟიმი API შეცდომებისა და კვოტის ამოწურვის (429) სრულად ასარიდებლად. პასუხები გენერირდება მყისიერად.' 
-                              : 'Bypass any 429 quota exhaustion or environment key errors. Get realistic answers instantly.'}
+                              ? 'ჩართეთ ეს რეჟიმი, თუ ინტერნეტი ნელია ან სერვერი დროებით არ მუშაობს. პასუხებს მიიღებთ მყისიერად.' 
+                              : 'Enable this to bypass server errors and test things instantly with simulated replies.'}
                           </p>
                         </div>
                       </div>
@@ -747,8 +767,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           setAiSettings(prev => ({ ...prev, useSimulatedAi: next }));
                           showToast(
                             next 
-                              ? (language === 'ka' ? 'AI სიმულაცია ჩაირთო! თავიდან აცილებულია Quota-Errors.' : 'AI Mock Simulation active! Expiration limits bypassed.') 
-                              : (language === 'ka' ? 'დავუბრუნდით რეალურ Gemini API სერვერს.' : 'Restored live real-time Gemini API server calls.'),
+                              ? (language === 'ka' ? 'საცდელი რეჟიმი ჩაირთო!' : 'Simulated Sandbox active!') 
+                              : (language === 'ka' ? 'დავუბრუნდით რეალურ Gemini API-ს.' : 'Restored live real-time Gemini API.'),
                             next ? 'warning' : 'info'
                           );
                         }}
@@ -760,49 +780,49 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         )}
                       >
                         {aiSettings.useSimulatedAi 
-                          ? (language === 'ka' ? 'ჩართულია' : 'Enabled') 
-                          : (language === 'ka' ? 'გამორთულია' : 'Disabled')}
+                          ? (language === 'ka' ? 'ჩართულია' : 'Active') 
+                          : (language === 'ka' ? 'გამორთულია' : 'Inactive')}
                       </button>
                     </div>
 
                     {/* Custom AI Instructions & Quick prompt templates */}
                     <div className="space-y-4 pt-6 border-t border-proton-border/50">
                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted block">
-                         {t.system_prompt || 'Custom AI Instructions'}
+                         {language === 'ka' ? 'AI-ს ხასიათი და ქცევა' : 'AI Behavior & Personality'}
                        </label>
                        
                        <textarea
                          value={aiSettings.systemInstruction || ""}
                          onChange={e => setAiSettings(prev => ({ ...prev, systemInstruction: e.target.value }))}
                          className="w-full bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
-                         placeholder="Example: Be professional and concise..."
+                         placeholder={language === 'ka' ? "მაგალითად: იყავი მეგობრული დიზაინერი, ისაუბრე მოკლედ და გამოიყენე მარტივი სიტყვები..." : "Example: Speak like a friendly designer, be brief, and use simple language..."}
                        />
 
                        {/* Quick System instructions Templates */}
                        <div className="space-y-2">
-                         <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted/80">{language === 'ka' ? 'სწრაფი სისტემური შაბლონები' : 'Quick Prompt Presets'}</label>
+                         <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted/80">{language === 'ka' ? 'აირჩიეთ მზა ქცევის სტილი' : 'Choose a Ready Personality'}</label>
                          <div className="flex flex-wrap gap-2">
                            {[
                              { 
-                               label: 'Architect 🧠', 
+                               label: language === 'ka' ? 'პროფესიონალი 🧠' : 'Professional 🧠', 
                                text: language === 'ka' 
-                                 ? 'შენ ხარ პროფესიონალი, მაღალტექნოლოგიური სისტემური არქიტექტორი. იყავი პირდაპირი, ლოგიკური და მოგვაწოდე სუფთა კოდი.' 
-                                 : 'You are a professional, high-performance tech and system architect. Be direct, logical, and provide clean code structures.' 
+                                 ? 'შენ ხარ მეგობრული და პროფესიონალი დიზაინერი. ისაუბრე მარტივად, ზედმეტი ტექნიკური ტერმინების გარეშე.' 
+                                 : 'You are a friendly and professional designer. Speak simply, without complex technical terms.' 
                              },
                              { 
-                               label: 'Concise ⚡', 
+                               label: language === 'ka' ? 'მოკლე პასუხები ⚡' : 'Short & Direct ⚡', 
                                text: language === 'ka' 
-                                 ? 'იყავი უკიდურესად მოკლე, კონკრეტული და უპასუხე ზედმეტი სიტყვების გარეშე.' 
-                                 : 'Be extremely concise, brief, and provide answers without fluff.' 
+                                 ? 'იყავი უკიდურესად მოკლე, კონკრეტული და მიპასუხე ზედმეტი სიტყვების გარეშე.' 
+                                 : 'Be extremely brief, direct, and answer without any extra talk.' 
                              },
                              { 
-                               label: 'Creative 🎨', 
+                               label: language === 'ka' ? 'კრეატიული 🎨' : 'Creative Buddy 🎨', 
                                text: language === 'ka' 
-                                 ? 'შენ ხარ კრეატიული კონსულტანტი. მოგვაწოდე ინოვაციური და არასტანდარტული იდეები.' 
-                                 : 'You are an inspiring, creative consultant. Offer innovative, out-of-the-box suggestions.' 
+                                 ? 'შენ ხარ შემოქმედებითი პარტნიორი. დამეხმარე ახალი, ფერადი და ვიზუალური იდეების მოფიქრებაში.' 
+                                 : 'You are a creative partner. Help me brainstorm beautiful, visual ideas.' 
                              },
                              { 
-                               label: 'Tech Hybrid 🇬🇪', 
+                               label: 'ქართულ-English 🇬🇪', 
                                text: language === 'ka' 
                                  ? 'უპასუხე მეგობრულ, ჰიბრიდულ ქართულ-ინგლისურ ტექნიკურ დიალექტზე.' 
                                  : 'Respond in a friendly, hybrid English-Georgian tech dialect.' 
@@ -814,7 +834,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                onClick={() => {
                                  setAiSettings(prev => ({ ...prev, systemInstruction: tmpl.text }));
                                  showToast(
-                                   language === 'ka' ? `შაბლონი '${tmpl.label}' ჩაიტვირთა` : `Preset instruction '${tmpl.label}' loaded!`,
+                                   language === 'ka' ? `ქცევის სტილი '${tmpl.label}' ჩაიტვირთა!` : `Preset character '${tmpl.label}' loaded!`,
                                    'success'
                                  );
                                }}
@@ -836,9 +856,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
                       <User size={20} className="text-proton-accent" />
-                      {t.profile || 'Profile'}
+                      {language === 'ka' ? 'ჩემი პროფილი' : 'My Profile'}
                     </h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.profile_desc}</p>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                      {language === 'ka' ? 'მართეთ თქვენი სახელი, როლი და პირადი პარამეტრები' : 'Manage your name, workspace role, and personal info'}
+                    </p>
                   </header>
 
                   <div className="space-y-8">
@@ -873,20 +895,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="text-center md:text-left space-y-2">
                         <div className="flex flex-col md:flex-row md:items-center gap-2">
                           <h4 className="text-base font-black text-proton-text uppercase tracking-wider">
-                            {userProfile.name || (language === 'ka' ? 'დეველოპერი' : 'Developer')}
+                            {userProfile.name || (language === 'ka' ? 'მომხმარებელი' : 'User')}
                           </h4>
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-proton-accent/15 border border-proton-accent/30 rounded-full text-[8px] font-black uppercase tracking-widest text-proton-accent w-fit mx-auto md:mx-0">
                             <ShieldCheck size={10} className="animate-pulse" />
-                            {language === 'ka' ? 'ავტორიზებული' : 'Verified Root'}
+                            {language === 'ka' ? 'დადასტურებული პროფილი' : 'Verified Profile'}
                           </span>
                         </div>
                         <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">
-                          {userProfile.role || 'System Architect'}
+                          {userProfile.role === 'System Architect' ? (language === 'ka' ? 'დიზაინერი' : 'Designer') :
+                           userProfile.role === 'Founder & CEO' ? (language === 'ka' ? 'დამფუძნებელი / CEO' : 'Founder / CEO') :
+                           userProfile.role === 'Security Auditor' ? (language === 'ka' ? 'კრეატიული დირექტორი' : 'Creative Director') :
+                           userProfile.role === 'AI Specialist' ? (language === 'ka' ? 'მარკეტოლოგი' : 'Marketer') :
+                           userProfile.role === 'Lead Developer' ? (language === 'ka' ? 'დეველოპერი' : 'Developer') :
+                           userProfile.role || (language === 'ka' ? 'შემოქმედი' : 'Creator')}
                         </p>
                         <p className="text-[9px] text-proton-muted/80 font-semibold max-w-sm leading-normal">
                           {language === 'ka' 
-                            ? 'ამაყად მართეთ თქვენი ტექნიკური პროფილი, AI პარამეტრები და ორგანიზატორი ერთ უსაფრთხო სივრცეში.' 
-                            : 'Proudly manage your engineering identity, custom AI models, and planning assets inside a single sandbox.'}
+                            ? 'მართეთ თქვენი სახელი, როლი და პირადი პარამეტრები ერთ მარტივ სივრცეში.' 
+                            : 'Manage your name, workspace role, and personal info in one simple place.'}
                         </p>
                       </div>
                     </div>
@@ -894,7 +921,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     {/* Technical Profile Fields Form */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-[32px] border border-proton-border/30">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.name || 'Full Name'}</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'სახელი და გვარი' : 'Your Name'}</label>
                         <div className="relative group">
                           <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
                           <input 
@@ -907,7 +934,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.email || 'Email Address'}</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'ელფოსტა' : 'Email Address'}</label>
                         <div className="relative group">
                           <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
                           <input 
@@ -920,7 +947,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.region || 'Region'}</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'მდებარეობა' : 'Location'}</label>
                         <div className="relative group">
                           <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
                           <input 
@@ -933,7 +960,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.phone || 'Phone Number'}</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'ტელეფონის ნომერი' : 'Phone Number'}</label>
                         <div className="relative group">
                           <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
                           <input 
@@ -949,14 +976,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="space-y-2 sm:col-span-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted flex items-center gap-1.5">
                           <Briefcase size={12} className="text-proton-accent" />
-                          {language === 'ka' ? 'სისტემური როლი და წოდება' : 'Operational Workspace Role'}
+                          {language === 'ka' ? 'თქვენი საქმიანობა (როლი)' : 'Your Profession / Role'}
                         </label>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                           {[
-                            { id: 'System Architect', label: language === 'ka' ? 'არქიტექტორი' : 'Architect' },
+                            { id: 'System Architect', label: language === 'ka' ? 'დიზაინერი' : 'Designer' },
                             { id: 'Founder & CEO', label: language === 'ka' ? 'დამფუძნებელი' : 'Founder & CEO' },
-                            { id: 'Security Auditor', label: language === 'ka' ? 'აუდიტორი' : 'Auditor' },
-                            { id: 'AI Specialist', label: language === 'ka' ? 'AI ექსპერტი' : 'AI Specialist' },
+                            { id: 'Security Auditor', label: language === 'ka' ? 'კრეატიული დირექტორი' : 'Creative Director' },
+                            { id: 'AI Specialist', label: language === 'ka' ? 'მარკეტოლოგი' : 'Marketer' },
                             { id: 'Lead Developer', label: language === 'ka' ? 'დეველოპერი' : 'Developer' },
                           ].map((role) => (
                             <button
@@ -965,7 +992,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               onClick={() => {
                                 setUserProfile(prev => ({ ...prev, role: role.id }));
                                 showToast(
-                                  language === 'ka' ? `სამუშაო როლი განახლდა: ${role.label}` : `Operational role set to: ${role.id}`,
+                                  language === 'ka' ? `საქმიანობა განახლდა: ${role.label}` : `Profession set to: ${role.label}`,
                                   'info'
                                 );
                               }}
@@ -988,26 +1015,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Activity size={18} className="text-proton-accent animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">{language === 'ka' ? 'აქტიური კვანძის სტატუსი' : 'Active Node Telemetry'}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">{language === 'ka' ? 'სისტემის სტატუსი' : 'Workspace Status'}</span>
                         </div>
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                         <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'ლოკალური IP' : 'Internal IP'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">10.128.0.32</span>
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'კავშირი' : 'Connection'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'უსაფრთხოა' : 'Protected'}</span>
                         </div>
                         <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'მთლიანობა' : 'Node Integrity'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">99.98%</span>
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'მუშაობა' : 'System Status'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'გამართული' : 'Excellent'}</span>
                         </div>
                         <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'შრიფტი' : 'Encryption'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">AES-256 GCM</span>
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'შენახვა' : 'Auto-Save'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'აქტიური' : 'Active'}</span>
                         </div>
                         <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'სტატუსი' : 'Mode'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">SECURE NODE</span>
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'რეჟიმი' : 'Current Mode'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'მზადყოფნა' : 'Ready'}</span>
                         </div>
                       </div>
                     </div>
@@ -1018,16 +1045,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
                           <ShieldAlert size={20} />
                         </div>
-                        <div>
-                          <h4 className="text-xs font-black text-red-400 uppercase tracking-widest">{language === 'ka' ? 'საფრთხის ზონა' : 'Danger Zone'}</h4>
-                          <p className="text-[9px] text-proton-muted font-bold uppercase tracking-tight mt-0.5">{language === 'ka' ? 'სამუშაო სივრცის მართვა და განულება' : 'Workspace lifecycle & reset commands'}</p>
+                        <div className="text-left">
+                          <h4 className="text-xs font-black text-red-400 uppercase tracking-widest">{language === 'ka' ? 'მონაცემების გასუფთავება' : 'Clear Data & Reset'}</h4>
+                          <p className="text-[9px] text-proton-muted font-bold uppercase tracking-tight mt-0.5">{language === 'ka' ? 'საწყისი პარამეტრების დაბრუნება' : 'Reset workspace to defaults'}</p>
                         </div>
                       </div>
                       
                       <p className="text-[10px] text-proton-muted leading-relaxed">
                         {language === 'ka' 
-                          ? 'სამუშაო სივრცის განულება აღადგენს პროფილს, AI პარამეტრებს, ბიუჯეტებს და გაასუფთავებს ბრაუზერის ლოკალურ მეხსიერებას (LocalStorage). ეს ქმედება შეუქცევადია.' 
-                          : 'Resetting the workspace will restore default names, wipe system limits, clean organizer logs, and clear the browser storage cache. This operation is irreversible.'}
+                          ? 'ყველა სახელი, ფოტო და პარამეტრი დაბრუნდება საწყის მდგომარეობაში. ეს მოქმედება წაშლის თქვენს მიერ შეტანილ ცვლილებებს.' 
+                          : 'Reset all names, photos, and options to their original values. This will clear your custom changes.'}
                       </p>
 
                       {!showResetModal ? (
@@ -1037,7 +1064,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           className="w-full sm:w-auto px-5 py-3 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 hover:border-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                           <Trash2 size={14} />
-                          {language === 'ka' ? 'ინსტალაციის განულება' : 'Reset Workspace Data'}
+                          {language === 'ka' ? 'ყველაფრის წაშლა' : 'Reset All Settings'}
                         </button>
                       ) : (
                         <div className="p-5 bg-proton-bg border border-red-500/30 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -1071,10 +1098,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="space-y-8 animate-in fade-in duration-300" id="sec-preferences">
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">
-                      {language === 'ka' ? 'ინტერფეისის პარამეტრები' : 'User Preferences'}
+                      {language === 'ka' ? 'დიზაინი და ენა' : 'Design & Language'}
                     </h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
-                      {language === 'ka' ? 'მართეთ საიტის ენა, გლობალური ფერები და ორგანიზატორი ერთ სივრცეში' : 'Manage interface language, global theme settings and planner accents'}
+                      {language === 'ka' ? 'შეცვალეთ საიტის ფერები, ენა და სასარგებლო ხელსაწყოები' : 'Choose website language, colors, and helpful creator tools'}
                     </p>
                   </header>
 
@@ -1085,15 +1112,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <Sparkles size={100} className="text-proton-accent" />
                       </div>
                       
-                      <div>
+                      <div className="text-left">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-accent flex items-center gap-2">
                           <Bell size={14} className="animate-bounce" />
-                          {language === 'ka' ? 'სისტემური შეტყობინებების პალიტრა' : 'Toast Notification Control Center'}
+                          {language === 'ka' ? 'შეტყობინებების ტესტი' : 'Notification Test'}
                         </label>
                         <p className="text-[9px] text-proton-muted font-bold uppercase tracking-widest mt-0.5 leading-relaxed">
                           {language === 'ka' 
-                            ? 'გამოსცადეთ გლობალური ანიმირებული შეტყობინებები (Toast Notifications) მოქმედებაში:' 
-                            : 'Trigger floating animated toast alerts directly in this window to test the polish:'}
+                            ? 'დააკლიკეთ ღილაკებს სხვადასხვა ფერის შეტყობინების შესამოწმებლად:' 
+                            : 'Click the buttons below to see how floating alerts look:'}
                         </p>
                       </div>
 
@@ -1107,52 +1134,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
                         >
                           <CheckCircle2 size={12} />
-                          Success
+                          {language === 'ka' ? 'წარმატება' : 'Success'}
                         </button>
                         <button
                           type="button"
                           onClick={() => showToast(
-                            language === 'ka' ? 'ოპერაცია უარყოფილია: შეცდომა ID 502' : 'Critical security error: Protocol validation failed (502).',
+                            language === 'ka' ? 'მოქმედება ვერ შესრულდა!' : 'Error occurred: action failed.',
                             'error'
                           )}
                           className="flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
                         >
                           <AlertCircle size={12} />
-                          Error Alert
+                          {language === 'ka' ? 'შეცდომა' : 'Error Alert'}
                         </button>
                         <button
                           type="button"
                           onClick={() => showToast(
-                            language === 'ka' ? 'ყურადღება: Gemini API-ის კვოტა 80%-ზეა.' : 'Warning: API sandbox is running close to 90% quota capacity.',
+                            language === 'ka' ? 'ყურადღება: ლიმიტი იწურება.' : 'Warning: storage limit is close to full.',
                             'warning'
                           )}
                           className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
                         >
                           <AlertTriangle size={12} />
-                          Warning style
+                          {language === 'ka' ? 'ყურადღება' : 'Warning style'}
                         </button>
                         <button
                           type="button"
                           onClick={() => showToast(
-                            language === 'ka' ? 'ინფორმაცია: Proton 4.1 განახლდა!' : 'System Status Update: Proton Engine 4.1-STABLE successfully injected.',
+                            language === 'ka' ? 'საიტი განახლდა!' : 'System updated!',
                             'info'
                           )}
                           className="flex items-center justify-center gap-2 p-3 rounded-xl bg-sky-950/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
                         >
                           <Info size={12} />
-                          Informational
+                          {language === 'ka' ? 'ინფორმაცია' : 'Informational'}
                         </button>
                       </div>
                     </div>
 
                     {/* 1. Language Sector */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-4">
-                      <div>
+                      <div className="text-left">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
-                          {language === 'ka' ? 'სისტემის ენა' : 'System Language'}
+                          {language === 'ka' ? 'საიტის ენა' : 'Website Language'}
                         </label>
                         <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
-                          {language === 'ka' ? 'აირჩიეთ სასურველი ლოკალიზაცია ინტერფეისისთვის' : 'Choose default system localization'}
+                          {language === 'ka' ? 'აირჩიეთ სასურველი ენა ინტერფეისისთვის' : 'Choose your preferred language'}
                         </p>
                       </div>
 
@@ -1198,12 +1225,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* 2. Global Site Theme Accent */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-5">
-                      <div>
+                      <div className="text-left">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
-                          {language === 'ka' ? 'გლობალური პალიტრა' : 'Global Color Palette'}
+                          {language === 'ka' ? 'საიტის თემა და ფერები' : 'Theme & Color Accent'}
                         </label>
                         <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
-                          {language === 'ka' ? 'საიტის ძირითადი ფერების და აქცენტების მართვა' : 'Configure main interface background gradient and accent layers'}
+                          {language === 'ka' ? 'აირჩიეთ საიტის ფერი და განწყობა' : 'Choose website color and mood'}
                         </p>
                       </div>
 
@@ -1218,7 +1245,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 language === 'ka' 
                                   ? `აქტიური გახდა გლობალური თემა: ${tInfo.label}` 
                                   : `Global theme updated to: ${tInfo.label}`,
-                                'success'
+                                  'success'
                               );
                             }}
                             className={cn(
@@ -1258,29 +1285,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       setAiSettings(prev => ({ ...prev, zenMode: next }));
                       showToast(
                         next 
-                          ? (language === 'ka' ? 'ზენ რეჟიმი გააქტიურებულია. მაქსიმალური ფოკუსი!' : 'Zen focus mode activated!') 
-                          : (language === 'ka' ? 'ზენ რეჟიმი გამორთულია.' : 'Zen focus mode turned off.'),
+                          ? (language === 'ka' ? 'ფოკუსის რეჟიმი ჩაირთო! ეკრანი მაქსიმალურად სუფთაა.' : 'Zen focus mode activated!') 
+                          : (language === 'ka' ? 'ფოკუსის რეჟიმი გამოირთო.' : 'Zen focus mode turned off.'),
                         'info'
                       );
                     }}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
-                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0",
                           aiSettings.zenMode ? "bg-amber-500/20 text-amber-500 shadow-lg" : "bg-proton-secondary/20 text-proton-muted"
                         )}>
                           <EyeOff size={28} />
                         </div>
-                        <div>
+                        <div className="text-left">
                           <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">
-                            {language === 'ka' ? 'ზენ რეჟიმი' : 'Zen Mode'}
+                            {language === 'ka' ? 'ფოკუსის რეჟიმი (Zen)' : 'Zen Mode (Quiet Focus)'}
                           </label>
                           <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">
-                            {language === 'ka' ? 'ინტერფეისის მაქსიმალური განტვირთვა' : 'De-clutter the interface matrix for maximum focus'}
+                            {language === 'ka' ? 'დამალეთ ზედმეტი დეტალები ინტერფეისიდან მეტი კონცენტრაციისთვის' : 'Hide extra details from the screen for a cleaner space to focus'}
                           </p>
                         </div>
                       </div>
                       <div className={cn(
-                        "w-12 h-6 rounded-full relative transition-all border border-proton-border",
+                        "w-12 h-6 rounded-full relative transition-all border border-proton-border shrink-0",
                         aiSettings.zenMode ? "bg-amber-500 border-amber-500" : "bg-proton-secondary/30"
                       )}>
                         <div className={cn(
@@ -1299,29 +1326,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       setUserProfile(prev => ({ ...prev, showCommercialHub: next }));
                       showToast(
                         next 
-                          ? (language === 'ka' ? 'კომერციული გასხვისების ცენტრი გააქტიურდა გვერდითა მენიუში!' : 'SaaS Exit Hub activated in sidebar!') 
-                          : (language === 'ka' ? 'კომერციული მოდული დამალულია გვერდითა მენიუდან.' : 'SaaS Exit Hub hidden from sidebar.'),
+                          ? (language === 'ka' ? 'ბიზნეს კალკულატორი გამოჩნდა გვერდითა მენიუში!' : 'Business tools activated in sidebar!') 
+                          : (language === 'ka' ? 'ბიზნეს კალკულატორი დამალულია გვერდითა მენიუდან.' : 'Business tools hidden from sidebar.'),
                         'success'
                       );
                     }}>
                       <div className="flex items-center gap-5">
                         <div className={cn(
-                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
+                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0",
                           userProfile.showCommercialHub ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" : "bg-proton-secondary/20 text-proton-muted"
                         )}>
                           <TrendingUp size={28} />
                         </div>
-                        <div>
+                        <div className="text-left">
                           <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">
-                            {language === 'ka' ? 'კომერცია & გასხვისება (SaaS Exit)' : 'SaaS Commercial Exit Hub'}
+                            {language === 'ka' ? 'ბიზნესის კალკულატორი' : 'Business & Earnings Tools'}
                           </label>
                           <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">
-                            {language === 'ka' ? 'ARR და ბიზნეს-ღირებულების კალკულატორის გამოჩენა გვერდითა მენიუში' : 'Show business valuation & brand tools in current sidebar link list'}
+                            {language === 'ka' ? 'გვერდითა მენიუში დამატებითი ბიზნეს-ანალიტიკის ხელსაწყოს გამოჩენა' : 'Show additional business planning and value calculators in the sidebar'}
                           </p>
                         </div>
                       </div>
                       <div className={cn(
-                        "w-12 h-6 rounded-full relative transition-all border border-proton-border",
+                        "w-12 h-6 rounded-full relative transition-all border border-proton-border shrink-0",
                         userProfile.showCommercialHub ? "bg-proton-accent border-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-secondary/30"
                       )}>
                         <div className={cn(
@@ -1339,10 +1366,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
                       <Shield size={20} className="text-proton-accent" />
-                      {t.security}
+                      {language === 'ka' ? 'საიტის უსაფრთხოება' : 'Website Security'}
                     </h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
-                      {language === 'ka' ? 'სისტემის უსაფრთხოება და შიფრირების კონსოლი' : 'Security architecture, passkeys & isolation protocols.'}
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest text-left">
+                      {language === 'ka' ? 'საიტის დაცვა და მუშაობის შემოწმება' : 'Secure your website and check health status'}
                     </p>
                   </header>
 
@@ -1353,12 +1380,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <div className="w-12 h-12 rounded-2xl bg-green-500 text-proton-bg flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group-hover:scale-105">
                              <ShieldCheck size={24} />
                           </div>
-                          <div>
+                          <div className="text-left">
                              <p className="text-xs font-black uppercase tracking-wide text-green-400">
-                               {language === 'ka' ? 'სინქრონიზაცია: აქტიური' : 'System Sync: Active'}
+                               {language === 'ka' ? 'დაცვა: აქტიურია' : 'Protection: Active'}
                              </p>
                              <p className="text-[10px] font-bold text-green-500/50 uppercase tracking-tighter mt-0.5">
-                               {language === 'ka' ? 'მე-4 დონის უსაფრთხოების ჰეში' : 'Level 4 Hash Encryption'}
+                               {language === 'ka' ? 'ყველა სისტემა დაცულია გამართულად' : 'All systems running safely'}
                              </p>
                           </div>
                        </div>
@@ -1370,13 +1397,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="flex items-center gap-3">
                         <Fingerprint size={18} className="text-proton-accent" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">
-                          {language === 'ka' ? 'სესიის კრიპტო-გასაღების გენერატორი' : 'Cryptographic Passkey Generator'}
+                          {language === 'ka' ? 'უსაფრთხოების კოდის შექმნა' : 'Generate Secure Access Key'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-proton-muted leading-relaxed uppercase font-bold tracking-tight">
+                      <p className="text-[10px] text-proton-muted leading-relaxed uppercase font-bold tracking-tight text-left">
                         {language === 'ka' 
-                          ? 'შექმენით უსაფრთხო AES-256 კავშირის სესიის გასაღები API ზარების ავტორიზაციისთვის.' 
-                          : 'Generate an isolated AES-256 session handshake passkey for secure sandboxed API transactions.'}
+                          ? 'შექმენით უნიკალური საიდუმლო კოდი სხვადასხვა ხელსაწყოებისა და სერვისების უსაფრთხო კავშირისთვის.' 
+                          : 'Generate a unique secret code to securely connect your website with creative tools.'}
                       </p>
 
                       {isGeneratingKey ? (
@@ -1384,8 +1411,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <div className="w-full h-2 bg-proton-secondary/20 rounded-full overflow-hidden border border-proton-border/30">
                             <div className="h-full bg-proton-accent transition-all duration-200" style={{ width: `${keyProgress}%` }} />
                           </div>
-                          <span className="text-[9px] font-mono font-bold text-proton-accent uppercase tracking-widest animate-pulse block">
-                            {language === 'ka' ? `სინთეზირება... ${keyProgress}%` : `Synthesizing Hash Matrix... ${keyProgress}%`}
+                          <span className="text-[9px] font-mono font-bold text-proton-accent uppercase tracking-widest animate-pulse block text-left">
+                            {language === 'ka' ? `კოდი იქმნება... ${keyProgress}%` : `Generating secure key... ${keyProgress}%`}
                           </span>
                         </div>
                       ) : generatedKey ? (
@@ -1396,7 +1423,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             onClick={() => {
                               navigator.clipboard.writeText(generatedKey);
                               showToast(
-                                language === 'ka' ? 'კრიპტო-გასაღები კოპირებულია!' : 'Cryptokey copied to clipboard!',
+                                language === 'ka' ? 'კოდი წარმატებით დაკოპირდა!' : 'Access key copied to clipboard!',
                                 'success'
                               );
                             }}
@@ -1408,14 +1435,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       ) : null}
 
                       {!isGeneratingKey && (
-                        <button
-                          type="button"
-                          onClick={generateCryptoPasskey}
-                          className="px-4 py-2 bg-proton-accent/10 border border-proton-accent/30 hover:bg-proton-accent hover:text-proton-bg text-proton-accent text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2"
-                        >
-                          <Key size={12} />
-                          {language === 'ka' ? 'სესიის გასაღების შექმნა' : 'Generate Session Key'}
-                        </button>
+                        <div className="text-left">
+                          <button
+                            type="button"
+                            onClick={generateCryptoPasskey}
+                            className="px-4 py-2 bg-proton-accent/10 border border-proton-accent/30 hover:bg-proton-accent hover:text-proton-bg text-proton-accent text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2"
+                          >
+                            <Key size={12} />
+                            {language === 'ka' ? 'კოდის შექმნა' : 'Generate Key'}
+                          </button>
+                        </div>
                       )}
                     </div>
 
@@ -1424,17 +1453,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="flex items-center gap-3">
                         <Terminal size={18} className="text-proton-accent" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">
-                          {language === 'ka' ? 'სისტემის მთლიანობის სკანერი' : 'System Integrity Console'}
+                          {language === 'ka' ? 'საიტის შემოწმება' : 'Check Website Health'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-proton-muted leading-relaxed uppercase font-bold tracking-tight">
+                      <p className="text-[10px] text-proton-muted leading-relaxed uppercase font-bold tracking-tight text-left">
                         {language === 'ka' 
-                          ? 'ჩაატარეთ უსაფრთხოების, წესების და კვანძების მთლიანობის პირდაპირი დიაგნოსტიკა.' 
-                          : 'Execute a live audit of Firestore rules compliance, API pipeline integrity, and secure nodes.'}
+                          ? 'შეამოწმეთ, ყველაფერი გამართულად, შეცდომების გარეშე და უსაფრთხო რეჟიმში მუშაობს თუ არა თქვენს საიტზე.' 
+                          : 'Run a quick scan to make sure everything on your website is configured correctly and running without errors.'}
                       </p>
 
                       {integrityLogs.length > 0 && (
-                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-[9px] text-proton-text/90 space-y-1.5 shadow-inner">
+                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-[9px] text-proton-text/90 space-y-1.5 shadow-inner text-left">
                           {integrityLogs.map((log, index) => (
                             <div key={index} className="flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1 duration-200">
                               <span className="text-proton-accent font-black shrink-0">&gt;</span>
@@ -1444,30 +1473,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={runIntegrityDiagnostics}
-                        disabled={isIntegrityChecking}
-                        className={cn(
-                          "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 border",
-                          isIntegrityChecking 
-                            ? "bg-proton-secondary/10 border-proton-border/40 text-proton-muted cursor-not-allowed" 
-                            : "bg-proton-accent/10 border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg"
-                        )}
-                      >
-                        <RefreshCw size={12} className={cn(isIntegrityChecking && "animate-spin")} />
-                        {isIntegrityChecking 
-                          ? (language === 'ka' ? 'მოწმდება...' : 'Auditing...') 
-                          : (language === 'ka' ? 'დიაგნოსტიკის გაშვება' : 'Run Diagnostics')}
-                      </button>
+                      <div className="text-left">
+                        <button
+                          type="button"
+                          onClick={runIntegrityDiagnostics}
+                          disabled={isIntegrityChecking}
+                          className={cn(
+                            "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 border",
+                            isIntegrityChecking 
+                              ? "bg-proton-secondary/10 border-proton-border/40 text-proton-muted cursor-not-allowed" 
+                              : "bg-proton-accent/10 border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg"
+                          )}
+                        >
+                          <RefreshCw size={12} className={cn(isIntegrityChecking && "animate-spin")} />
+                          {isIntegrityChecking 
+                            ? (language === 'ka' ? 'მიმდინარეობს შემოწმება...' : 'Checking...') 
+                            : (language === 'ka' ? 'შემოწმების გაშვება' : 'Run Scan')}
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="pt-4 flex flex-col gap-4">
+                    <div className="pt-4 flex flex-col gap-4 text-left">
                        <button 
                          type="button" 
                          onClick={() => {
                            showToast(
-                             language === 'ka' ? 'უსაფრთხოების ჟურნალი წარმატებით გადმოიწერა!' : 'Security cryptographic audit log successfully downloaded!',
+                             language === 'ka' ? 'ისტორია წარმატებით ჩამოიტვირთა!' : 'Security audit report successfully downloaded!',
                              'success'
                            );
                          }}
@@ -1475,7 +1506,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                          id="btn-export-log"
                        >
                           <Save size={14} />
-                          {language === 'ka' ? 'მონაცემთა ჟურნალის ექსპორტი' : 'Export Security Logs'}
+                          {language === 'ka' ? 'შემოწმების ისტორიის ჩამოტვირთვა' : 'Download Scan History'}
                        </button>
                        <div className="flex items-center justify-center gap-4 text-[9px] text-proton-muted font-bold uppercase tracking-[0.3em]">
                         <span>Version 4.1.0-STABLE</span>
@@ -1492,10 +1523,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <header className="pb-6 border-b border-proton-border/50">
                     <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
                       <TrendingUp className="text-proton-accent" size={22} />
-                      {language === 'ka' ? 'ხარჯების კონტროლი' : 'Cost Control'}
+                      {language === 'ka' ? 'ბიუჯეტი და ლიმიტები' : 'Budget & Limits'}
                     </h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
-                      {language === 'ka' ? 'API მოხმარების მონიტორინგი და ლიმიტები' : 'API usage statistics & hard budgeting controls'}
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest text-left">
+                      {language === 'ka' ? 'აკონტროლეთ საიტის ყოველთვიური ხარჯები მარტივად' : 'Manage your monthly budget and request limits easily'}
                     </p>
                   </header>
 
@@ -1503,47 +1534,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {estimatedCost > spendingLimit && (
                     <div className="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-4 animate-pulse">
                       <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={20} />
-                      <div>
+                      <div className="text-left">
                         <p className="text-xs font-black uppercase text-rose-400">
-                          {language === 'ka' ? 'ხარჯვის ლიმიტი გადაჭარბებულია!' : 'Hard Limit Exceeded!'}
+                          {language === 'ka' ? 'ბიუჯეტის ლიმიტი ამოიწურა!' : 'Limit Receeded!'}
                         </p>
                         <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider mt-1 leading-relaxed">
                           {language === 'ka' 
-                            ? `მიმდინარე თვის სავარაუდო ხარჯი ($${estimatedCost.toFixed(2)}) აჭარბებს დაწესებულ ლიმიტს ($${spendingLimit.toFixed(2)}).`
-                            : `Your current month's calculated cost of $${estimatedCost.toFixed(2)} exceeds your limit of $${spendingLimit.toFixed(2)}.`}
+                            ? `მიმდინარე თვის სავარაუდო ხარჯი ($${estimatedCost.toFixed(2)}) აჭარბებს თქვენს მიერ დაწესებულ ლიმიტს ($${spendingLimit.toFixed(2)}).`
+                            : `Your calculated monthly usage of $${estimatedCost.toFixed(2)} exceeds your set limit of $${spendingLimit.toFixed(2)}.`}
                         </p>
                       </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl">
+                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
                       <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
-                        {language === 'ka' ? 'სავარაუდო ხარჯი' : 'Estimated Spent'}
+                        {language === 'ka' ? 'დახარჯული თანხა' : 'Spent This Month'}
                       </p>
                       <p className="text-3xl font-black text-proton-text mt-1">${estimatedCost.toFixed(3)}</p>
                       <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-1">
-                        {language === 'ka' ? 'სისტემური დაფარვა' : 'System-wide accumulation'}
+                        {language === 'ka' ? 'მიმდინარე თვის ჯამი' : 'Total spent this month'}
                       </span>
                     </div>
 
-                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl">
+                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
                       <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
-                        {language === 'ka' ? 'ხარჯვის ლიმიტი' : 'Spending Limit'}
+                        {language === 'ka' ? 'მაქსიმალური ლიმიტი' : 'Monthly Limit'}
                       </p>
                       <p className="text-3xl font-black text-proton-accent mt-1">${spendingLimit.toFixed(2)}</p>
                       <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-1">
-                        {language === 'ka' ? 'მაქსიმალური ბიუჯეტი' : 'Hard capping limit'}
+                        {language === 'ka' ? 'თქვენი ბიუჯეტი' : 'Your set threshold'}
                       </span>
                     </div>
                   </div>
 
                   {/* Slider & Preset Controls */}
                   <div className="space-y-6 p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px]">
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
-                          {language === 'ka' ? 'დააწესეთ მაქსიმალური ლიმიტი (USD)' : 'Adjust hard limit (USD)'}
+                          {language === 'ka' ? 'შეცვალეთ ყოველთვიური ლიმიტი (USD)' : 'Adjust monthly budget limit (USD)'}
                         </label>
                         <span className="text-xs font-mono font-bold text-proton-accent bg-proton-accent/10 px-3 py-1 rounded-lg border border-proton-accent/20">
                           ${spendingLimit.toFixed(2)}
@@ -1557,7 +1588,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       />
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 justify-start">
                       {[1.00, 2.00, 5.00, 10.00, 20.00, 50.00].map((preset) => (
                         <button
                           key={preset}
@@ -1575,24 +1606,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       ))}
                     </div>
 
-                    <div className="pt-2">
+                    <div className="pt-2 text-left">
                       <button
                         type="button"
                         onClick={() => handleSaveSpendingLimit(spendingLimit)}
                         className="w-full py-4 bg-proton-accent text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-proton-bg transition-all shadow-xl active:scale-95"
                       >
-                        {language === 'ka' ? 'ლიმიტის განახლება' : 'Update Spending Limit'}
+                        {language === 'ka' ? 'ბიუჯეტის შენახვა' : 'Save Budget Limit'}
                       </button>
                     </div>
                   </div>
 
                   {/* Real-time Usage Metrics Bento Grid */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-black text-proton-text uppercase tracking-widest">
-                      {language === 'ka' ? 'მოხმარების დეტალური მეტრიკა' : 'Real-time Consumed Resources'}
+                    <h4 className="text-xs font-black text-proton-text uppercase tracking-widest text-left">
+                      {language === 'ka' ? 'გამოყენებული რესურსები' : 'Used Resources'}
                     </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
                       {/* AI Tokens */}
                       <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
@@ -1600,7 +1631,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
-                            {language === 'ka' ? 'გენერირებული ტოკენები' : 'AI Tokens Consumed'}
+                            {language === 'ka' ? 'ინტელექტის სიტყვები (ტოკენები)' : 'AI Text & Words'}
                           </p>
                           <p className="text-sm font-black text-proton-text mt-0.5">
                             {userStats.aiTokens.toLocaleString()} Tokens
@@ -1615,7 +1646,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
-                            {language === 'ka' ? 'გამოთვლითი საათები' : 'Compute Engine Hours'}
+                            {language === 'ka' ? 'საიტის მუშაობის დრო (საათები)' : 'Website Active Hours'}
                           </p>
                           <p className="text-sm font-black text-proton-text mt-0.5">
                             {userStats.computeTimeHours.toFixed(2)} Hours
@@ -1630,7 +1661,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
-                            {language === 'ka' ? 'გამოყენებული მეხსიერება' : 'Cloud Storage Occupied'}
+                            {language === 'ka' ? 'ატვირთული ფაილების მოცულობა' : 'Uploaded Files Space'}
                           </p>
                           <p className="text-sm font-black text-proton-text mt-0.5">
                             {userStats.storageGB.toFixed(2)} GB
@@ -1645,7 +1676,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
-                            {language === 'ka' ? 'დღიური მოთხოვნები' : 'Daily AI Request Count'}
+                            {language === 'ka' ? 'დღიური მოთხოვნები' : 'Daily AI Actions'}
                           </p>
                           <p className="text-sm font-black text-proton-text mt-0.5">
                             {userStats.dailyGenerationsCount || 0} Runs
@@ -1663,21 +1694,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div>
                       <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
                         <Search className="text-proton-accent" size={22} />
-                        {language === 'ka' ? 'SEO აუდიტის პროტოკოლი' : 'SEO Audit Protocol'}
+                        {language === 'ka' ? 'საძიებო სისტემები (SEO)' : 'Search Engines (SEO)'}
                       </h3>
-                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
-                        {language === 'ka' ? 'მეტა მონაცემების და საძიებო ინდექსაციის ანალიზი' : 'Simulated crawler indexation & Open Graph compliance'}
+                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest text-left">
+                        {language === 'ka' ? 'შეამოწმეთ, როგორ გამოჩნდება თქვენი საიტი Google-ში და სოციალურ ქსელებში' : 'See how your website appears on Google search and social networks'}
                       </p>
                     </div>
                     
-                    <button
-                      type="button"
-                      onClick={refreshMetaTags}
-                      className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-proton-accent/10 hover:bg-proton-accent hover:text-proton-bg border border-proton-accent/20 transition-all cursor-pointer active:scale-95"
-                    >
-                      <RefreshCw size={12} className="animate-spin-slow" />
-                      {language === 'ka' ? 'სინქრონიზაცია' : 'Sync Live DOM'}
-                    </button>
+                    <div className="text-left">
+                      <button
+                        type="button"
+                        onClick={refreshMetaTags}
+                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-proton-accent/10 hover:bg-proton-accent hover:text-proton-bg border border-proton-accent/20 transition-all cursor-pointer active:scale-95"
+                      >
+                        <RefreshCw size={12} className="animate-spin-slow" />
+                        {language === 'ka' ? 'ინფორმაციის განახლება' : 'Update Information'}
+                      </button>
+                    </div>
                   </header>
 
                   {/* Audit Score Circle & Checklist */}
@@ -1686,7 +1719,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="sm:col-span-4 bg-proton-bg/40 p-5 rounded-[24px] border border-proton-border/50 flex flex-col items-center justify-center text-center relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-16 h-16 bg-proton-accent/5 rounded-full filter blur-xl" />
                       <span className="text-[9px] font-black uppercase text-proton-muted tracking-widest mb-2">
-                        {language === 'ka' ? 'SEO ქულა' : 'SEO Compliance'}
+                        {language === 'ka' ? 'გამართულობა' : 'Optimization score'}
                       </span>
                       <div className="relative w-24 h-24 flex items-center justify-center rounded-full border-4 border-proton-accent/20 bg-proton-card shadow-inner">
                         <div className="absolute inset-2 rounded-full border border-dashed border-proton-accent/30 animate-[spin_40s_linear_infinite]" />
@@ -1710,31 +1743,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Quick Audit Checks */}
-                    <div className="sm:col-span-8 space-y-2 bg-proton-card/50 p-5 rounded-[24px] border border-proton-border/50">
+                    <div className="sm:col-span-8 space-y-2 bg-proton-card/50 p-5 rounded-[24px] border border-proton-border/50 text-left">
                       <span className="text-[10px] font-black uppercase text-proton-muted tracking-widest block mb-1">
-                        {language === 'ka' ? 'აუდიტის ანგარიში' : 'Audit Checkpoints'}
+                        {language === 'ka' ? 'შემოწმების პუნქტები' : 'Checklist'}
                       </span>
                       {[
                         { 
-                          label: language === 'ka' ? 'სათაური (Title Tag)' : 'Document Title Tag', 
+                          label: language === 'ka' ? 'საიტის სათაური (Title)' : 'Website Title (Title Tag)', 
                           status: metaTags.title !== 'N/A', 
                           desc: metaTags.title,
                           req: '50-60 chars'
                         },
                         { 
-                          label: language === 'ka' ? 'მეტა აღწერა (Meta Description)' : 'Meta Description Tag', 
+                          label: language === 'ka' ? 'მოკლე აღწერა (Description)' : 'Website Description (Meta Description)', 
                           status: metaTags.description !== 'N/A', 
                           desc: metaTags.description,
                           req: '120-160 chars'
                         },
                         { 
-                          label: language === 'ka' ? 'კანონიკური ბმული (Canonical Link)' : 'Canonical URL Link', 
+                          label: language === 'ka' ? 'საიტის მთავარი ბმული (Canonical)' : 'Main Link (Canonical URL)', 
                           status: metaTags.canonical !== 'N/A', 
                           desc: metaTags.canonical,
                           req: 'Valid protocol URL'
                         },
                         { 
-                          label: language === 'ka' ? 'საძიებო სიტყვები (Keywords)' : 'Keywords Tag', 
+                          label: language === 'ka' ? 'საძიებო სიტყვები (Keywords)' : 'Search Keywords (Keywords Tag)', 
                           status: metaTags.keywords !== 'N/A', 
                           desc: metaTags.keywords,
                           req: 'Comma separated'
@@ -1768,7 +1801,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         activeSEOView === 'visual' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
                       )}
                     >
-                      {language === 'ka' ? 'სიმულატორი' : 'Snippet Preview'}
+                      {language === 'ka' ? 'როგორ გამოჩნდება' : 'Google Preview'}
                     </button>
                     <button
                       type="button"
@@ -1778,7 +1811,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         activeSEOView === 'code' ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/10" : "text-proton-muted hover:text-proton-text"
                       )}
                     >
-                      {language === 'ka' ? 'წყარო კოდი' : 'HTML Tags'}
+                      {language === 'ka' ? 'საიტის კოდი' : 'Website Code'}
                     </button>
                   </div>
 
@@ -1789,14 +1822,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -5 }}
-                        className="space-y-6"
+                        className="space-y-6 text-left"
                       >
                         {/* Google SERP Card */}
                         <div className="bg-[#17171a] p-6 rounded-[28px] border border-proton-border/40 space-y-3">
                           <div className="flex items-center justify-between border-b border-proton-border/20 pb-3">
                             <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                              {language === 'ka' ? 'Google-ის ძიების სიმულატორი' : 'Google SERP Crawler Mockup'}
+                              {language === 'ka' ? 'გუგლის ძებნის შედეგი' : 'Google Search Preview'}
                             </span>
                             <span className="text-[8px] font-mono text-proton-muted">desktop</span>
                           </div>
@@ -1821,7 +1854,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="bg-[#17171a] p-6 rounded-[28px] border border-proton-border/40 space-y-4">
                           <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5 border-b border-proton-border/20 pb-3">
                             <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                            {language === 'ka' ? 'სოციალური ბარათის ვიზუალი' : 'Open Graph Social Link Preview'}
+                            {language === 'ka' ? 'ფეისბუქის / სოციალური ქსელის პოსტი' : 'Facebook / Social Media Post Preview'}
                           </span>
 
                           <div className="max-w-md bg-zinc-900 border border-proton-border/30 rounded-xl overflow-hidden shadow-2xl">
@@ -1855,7 +1888,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -5 }}
-                        className="space-y-4"
+                        className="space-y-4 text-left"
                       >
                         <div className="bg-zinc-950 p-5 rounded-[24px] border border-zinc-800 font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar-minimal shadow-inner relative group">
                           <span className="absolute top-4 right-4 text-[8px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 select-none">
@@ -1890,27 +1923,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <Info size={18} className="text-proton-accent mt-0.5 shrink-0" />
                           <div className="space-y-1 text-[11px] leading-relaxed">
                             <span className="font-black text-proton-text uppercase tracking-widest block">
-                              {language === 'ka' ? 'როგორ დავტესტოთ?' : 'HOW DO I TEST THIS LIVE?'}
+                              {language === 'ka' ? 'როგორ შევამოწმოთ პირდაპირ რეჟიმში?' : 'HOW DO I TEST THIS LIVE?'}
                             </span>
                             <p className="text-proton-muted">
                               {language === 'ka' 
-                                ? 'თქვენი მეტა ტეგები უკვე ჩაწერილია საიტის მთავარ index.html-ში. საძიებო ბოტები (Googlebot, Bingbot) და სოციალური პლატფორმები (Slack, Telegram, Discord) კითხულობენ ამ ტეგებს პირდაპირ სერვერიდან. მათ შესამოწმებლად შეგიძლიათ გამოიყენოთ ოფიციალური უფასო ხელსაწყოები:' 
-                                : 'These meta tags are fully compiled into your index.html. To verify how real search engine crawlers (Googlebot) and social scraper bots (Discord, Slack, LinkedIn) parse them directly from our servers, you can inspect them via:'}
+                                ? 'თქვენი საიტის სათაურები და აღწერები უკვე ჩაწერილია მთავარ index.html ფაილში. საძიებო რობოტები (Google, Bing) და სოციალური პლატფორმები (Facebook, Slack, Telegram) კითხულობენ ამ ინფორმაციას პირდაპირ თქვენი საიტიდან.' 
+                                : 'These meta tags are fully compiled into your index.html. To verify how real search engine crawlers (Googlebot) and social scraper bots parse them directly from our servers, you can inspect them.'}
                             </p>
-                            <ul className="list-disc pl-4 space-y-1 text-[10px] text-proton-accent/80 font-black uppercase tracking-wider">
-                              <li>
-                                <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1 inline-flex">
-                                  Google Search Console URL Inspector
-                                  <ExternalLink size={10} className="inline ml-1" />
-                                </a>
-                              </li>
-                              <li>
-                                <a href="https://metatags.io" target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1 inline-flex">
-                                  MetaTags.io Global Validator
-                                  <ExternalLink size={10} className="inline ml-1" />
-                                </a>
-                              </li>
-                            </ul>
                           </div>
                         </div>
                       </motion.div>
