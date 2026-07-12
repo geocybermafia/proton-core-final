@@ -43,7 +43,7 @@ import { useToast } from './Toast';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -86,8 +86,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const t = translations[language].settings;
   const common = translations[language].common;
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo'>('preferences');
+  const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo' | 'cost_control'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
+
+  const [userStats, setUserStats] = useState<{
+    storageGB: number;
+    computeTimeHours: number;
+    aiTokens: number;
+    dailyGenerationsCount: number;
+  }>({
+    storageGB: 1.2,
+    computeTimeHours: 0.1,
+    aiTokens: 150,
+    dailyGenerationsCount: 0
+  });
+
+  const [spendingLimit, setSpendingLimit] = useState<number>(5.00);
+  const [isStatsLoading, setIsStatsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+    const unsubscribe = onSnapshot(statsRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserStats({
+          storageGB: data.storageGB !== undefined ? data.storageGB : 1.2,
+          computeTimeHours: data.computeTimeHours !== undefined ? data.computeTimeHours : 0.1,
+          aiTokens: data.aiTokens !== undefined ? data.aiTokens : 150,
+          dailyGenerationsCount: data.dailyGenerationsCount !== undefined ? data.dailyGenerationsCount : 0
+        });
+        if (data.spendingLimit !== undefined) {
+          setSpendingLimit(data.spendingLimit);
+        }
+      }
+      setIsStatsLoading(false);
+    }, (err) => {
+      console.warn("Failed to subscribe to stats inside SettingsView:", err);
+      setIsStatsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const estimatedCost = (userStats.aiTokens * 0.0000015) + (userStats.computeTimeHours * 0.05) + (userStats.storageGB * 0.02);
+
+  const handleSaveSpendingLimit = async (limitVal: number) => {
+    if (!user) return;
+    try {
+      const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+      await setDoc(statsRef, { spendingLimit: limitVal }, { merge: true });
+      setSpendingLimit(limitVal);
+      showToast(
+        language === 'ka' 
+          ? `ხარჯვის ლიმიტი წარმატებით განახლდა: $${limitVal.toFixed(2)}` 
+          : `Hard spending limit successfully updated to: $${limitVal.toFixed(2)}`,
+        'success'
+      );
+    } catch (e: any) {
+      showToast(
+        language === 'ka' ? `ლიმიტის შენახვა ვერ მოხერხდა: ${e.message}` : `Failed to save spending limit: ${e.message}`,
+        'error'
+      );
+    }
+  };
   const [showApiKey, setShowApiKey] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -188,6 +249,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           role: userProfile.role || 'System Architect',
           showCommercialHub: !!userProfile.showCommercialHub
         }, { merge: true });
+
+        const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+        await setDoc(statsRef, { spendingLimit }, { merge: true });
       } catch (err) {
         console.error("Failed to sync user profile directly to Firestore:", err);
       }
@@ -222,6 +286,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'profile', label: t.profile || 'Profile', icon: User },
     { id: 'security', label: t.security || 'Security', icon: Shield },
     { id: 'seo', label: language === 'ka' ? 'SEO აუდიტი' : 'SEO Audit', icon: Search },
+    { id: 'cost_control', label: language === 'ka' ? 'ხარჯების კონტროლი' : 'Cost Control', icon: TrendingUp },
   ];
 
   return (
@@ -940,6 +1005,176 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <span className="w-1 h-1 rounded-full bg-proton-border" />
                         <span>Engine: Pro-X3</span>
                        </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'cost_control' && (
+                <div className="space-y-8 animate-in fade-in duration-300" id="sec-cost-control">
+                  <header className="pb-6 border-b border-proton-border/50">
+                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
+                      <TrendingUp className="text-proton-accent" size={22} />
+                      {language === 'ka' ? 'ხარჯების კონტროლი' : 'Cost Control'}
+                    </h3>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                      {language === 'ka' ? 'API მოხმარების მონიტორინგი და ლიმიტები' : 'API usage statistics & hard budgeting controls'}
+                    </p>
+                  </header>
+
+                  {/* Warning Toast Notification Triggered Banner */}
+                  {estimatedCost > spendingLimit && (
+                    <div className="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-4 animate-pulse">
+                      <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={20} />
+                      <div>
+                        <p className="text-xs font-black uppercase text-rose-400">
+                          {language === 'ka' ? 'ხარჯვის ლიმიტი გადაჭარბებულია!' : 'Hard Limit Exceeded!'}
+                        </p>
+                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider mt-1 leading-relaxed">
+                          {language === 'ka' 
+                            ? `მიმდინარე თვის სავარაუდო ხარჯი ($${estimatedCost.toFixed(2)}) აჭარბებს დაწესებულ ლიმიტს ($${spendingLimit.toFixed(2)}).`
+                            : `Your current month's calculated cost of $${estimatedCost.toFixed(2)} exceeds your limit of $${spendingLimit.toFixed(2)}.`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
+                        {language === 'ka' ? 'სავარაუდო ხარჯი' : 'Estimated Spent'}
+                      </p>
+                      <p className="text-3xl font-black text-proton-text mt-1">${estimatedCost.toFixed(3)}</p>
+                      <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-1">
+                        {language === 'ka' ? 'სისტემური დაფარვა' : 'System-wide accumulation'}
+                      </span>
+                    </div>
+
+                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
+                        {language === 'ka' ? 'ხარჯვის ლიმიტი' : 'Spending Limit'}
+                      </p>
+                      <p className="text-3xl font-black text-proton-accent mt-1">${spendingLimit.toFixed(2)}</p>
+                      <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-1">
+                        {language === 'ka' ? 'მაქსიმალური ბიუჯეტი' : 'Hard capping limit'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Slider & Preset Controls */}
+                  <div className="space-y-6 p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px]">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
+                          {language === 'ka' ? 'დააწესეთ მაქსიმალური ლიმიტი (USD)' : 'Adjust hard limit (USD)'}
+                        </label>
+                        <span className="text-xs font-mono font-bold text-proton-accent bg-proton-accent/10 px-3 py-1 rounded-lg border border-proton-accent/20">
+                          ${spendingLimit.toFixed(2)}
+                        </span>
+                      </div>
+                      <input 
+                        type="range" min="0.5" max="50" step="0.5"
+                        value={spendingLimit}
+                        onChange={e => setSpendingLimit(parseFloat(e.target.value))}
+                        className="w-full accent-proton-accent appearance-none h-2 bg-proton-secondary/30 rounded-full cursor-pointer transition-all border border-proton-border/30"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {[1.00, 2.00, 5.00, 10.00, 20.00, 50.00].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setSpendingLimit(preset)}
+                          className={cn(
+                            "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                            spendingLimit === preset
+                              ? "bg-proton-accent border-proton-accent text-proton-bg font-bold shadow-lg shadow-proton-accent/20"
+                              : "bg-transparent border-proton-border text-proton-muted hover:border-proton-accent hover:text-proton-text"
+                          )}
+                        >
+                          ${preset.toFixed(2)}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveSpendingLimit(spendingLimit)}
+                        className="w-full py-4 bg-proton-accent text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-proton-bg transition-all shadow-xl active:scale-95"
+                      >
+                        {language === 'ka' ? 'ლიმიტის განახლება' : 'Update Spending Limit'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Real-time Usage Metrics Bento Grid */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-proton-text uppercase tracking-widest">
+                      {language === 'ka' ? 'მოხმარების დეტალური მეტრიკა' : 'Real-time Consumed Resources'}
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* AI Tokens */}
+                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
+                          <Cpu size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
+                            {language === 'ka' ? 'გენერირებული ტოკენები' : 'AI Tokens Consumed'}
+                          </p>
+                          <p className="text-sm font-black text-proton-text mt-0.5">
+                            {userStats.aiTokens.toLocaleString()} Tokens
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Compute Hours */}
+                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                          <Zap size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
+                            {language === 'ka' ? 'გამოთვლითი საათები' : 'Compute Engine Hours'}
+                          </p>
+                          <p className="text-sm font-black text-proton-text mt-0.5">
+                            {userStats.computeTimeHours.toFixed(2)} Hours
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Storage */}
+                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
+                          <Save size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
+                            {language === 'ka' ? 'გამოყენებული მეხსიერება' : 'Cloud Storage Occupied'}
+                          </p>
+                          <p className="text-sm font-black text-proton-text mt-0.5">
+                            {userStats.storageGB.toFixed(2)} GB
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Daily Generations */}
+                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-proton-muted uppercase tracking-wider">
+                            {language === 'ka' ? 'დღიური მოთხოვნები' : 'Daily AI Request Count'}
+                          </p>
+                          <p className="text-sm font-black text-proton-text mt-0.5">
+                            {userStats.dailyGenerationsCount || 0} Runs
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

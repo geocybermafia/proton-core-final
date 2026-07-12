@@ -4292,6 +4292,7 @@ export default function App() {
     computeTimeHours: number;
     dailyGenerationsCount?: number;
     dailyGenerationsDate?: string;
+    spendingLimit?: number;
   }>({
     storageGB: 1.42,
     workHours: 142.5,
@@ -4301,7 +4302,8 @@ export default function App() {
     aiTokens: 5000,
     computeTimeHours: 142.5,
     dailyGenerationsCount: 0,
-    dailyGenerationsDate: ''
+    dailyGenerationsDate: '',
+    spendingLimit: 5.00
   });
 
   useEffect(() => {
@@ -4545,7 +4547,8 @@ export default function App() {
           computeTimeHours: data.computeTimeHours || prev.computeTimeHours,
           aiTokens: data.aiTokens || prev.aiTokens,
           dailyGenerationsCount: data.dailyGenerationsCount !== undefined ? data.dailyGenerationsCount : prev.dailyGenerationsCount,
-          dailyGenerationsDate: data.dailyGenerationsDate || prev.dailyGenerationsDate
+          dailyGenerationsDate: data.dailyGenerationsDate || prev.dailyGenerationsDate,
+          spendingLimit: data.spendingLimit !== undefined ? data.spendingLimit : prev.spendingLimit
         }));
       } else {
         // Init stats with some realistic dev data if missing
@@ -4554,7 +4557,8 @@ export default function App() {
           computeTimeHours: 0.1,
           aiTokens: 150,
           dailyGenerationsCount: 0,
-          dailyGenerationsDate: ''
+          dailyGenerationsDate: '',
+          spendingLimit: 5.00
         }, { merge: true }).catch(err => handleFirestoreError(err, 'write', statsRef.path));
       }
     }, (err) => {
@@ -4566,6 +4570,29 @@ export default function App() {
     });
     return () => unsubscribe();
   }, [user]);
+
+  const [hasWarnedLimit, setHasWarnedLimit] = useState(false);
+
+  // Real-time Cost Control Warning Toast Trigger
+  useEffect(() => {
+    if (userStats && userStats.spendingLimit !== undefined) {
+      const estimatedCost = (userStats.aiTokens * 0.0000015) + (userStats.computeTimeHours * 0.05) + (userStats.storageGB * 0.02);
+      const isExceeded = estimatedCost > userStats.spendingLimit;
+      if (isExceeded) {
+        if (!hasWarnedLimit) {
+          showToast(
+            userProfile.language === 'ka'
+              ? `⚠️ ხარჯვის ლიმიტი გადაჭარბებულია! ამ თვის სავარაუდო ხარჯი ($${estimatedCost.toFixed(2)}) აჭარბებს დაწესებულ ლიმიტს ($${userStats.spendingLimit.toFixed(2)}).`
+              : `⚠️ Spending limit exceeded! Your current month's estimated cost ($${estimatedCost.toFixed(2)}) is higher than your spending limit ($${userStats.spendingLimit.toFixed(2)}).`,
+            'warning'
+          );
+          setHasWarnedLimit(true);
+        }
+      } else {
+        setHasWarnedLimit(false);
+      }
+    }
+  }, [userStats, showToast, userProfile.language, hasWarnedLimit]);
 
   // Simulate usage while session is active - optimized with batched writes to prevent continuous database polling and network overhead
   useEffect(() => {
