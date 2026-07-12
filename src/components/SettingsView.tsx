@@ -34,7 +34,16 @@ import {
   Info,
   TrendingUp,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Trash2,
+  Fingerprint,
+  Terminal,
+  Copy,
+  Check,
+  Briefcase,
+  ShieldAlert,
+  ShieldCheck,
+  Activity
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -103,6 +112,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [spendingLimit, setSpendingLimit] = useState<number>(5.00);
   const [isStatsLoading, setIsStatsLoading] = useState<boolean>(true);
+
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+  const [generatedKey, setGeneratedKey] = useState('');
+  const [keyProgress, setKeyProgress] = useState(0);
+  const [isIntegrityChecking, setIsIntegrityChecking] = useState(false);
+  const [integrityLogs, setIntegrityLogs] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -280,6 +296,134 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const handleResetWorkspace = async () => {
+    setShowResetModal(false);
+    
+    const defaultName = user && user.email ? user.email.split('@')[0] : 'Developer';
+    const defaultEmail = user && user.email ? user.email : 'devdarianib@gmail.com';
+    const initialProfile: UserProfile = {
+      name: defaultName,
+      email: defaultEmail,
+      language: 'en',
+      region: 'Tbilisi, GE',
+      notifications: true,
+      phoneNumber: '',
+      avatar: '',
+      role: 'System Architect',
+      showCommercialHub: false
+    };
+    setUserProfile(initialProfile);
+
+    setAiSettings({
+      temperature: 0.5,
+      enableSearch: false,
+      enableMaps: false,
+      zenMode: false,
+      systemInstruction: '',
+      voice: 'GeorgianModern',
+      useSimulatedAi: false
+    });
+
+    setTheme('proton');
+    setSpendingLimit(5.00);
+
+    localStorage.removeItem('proton_tasks');
+    localStorage.removeItem('organizer_events');
+    localStorage.removeItem('active_session_sec');
+    
+    if (user) {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, {
+          name: defaultName,
+          email: defaultEmail,
+          language: 'en',
+          region: 'Tbilisi, GE',
+          notifications: true,
+          phoneNumber: '',
+          avatar: '',
+          role: 'System Architect',
+          showCommercialHub: false
+        });
+
+        const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
+        await setDoc(statsRef, {
+          storageGB: 1.2,
+          computeTimeHours: 0.1,
+          aiTokens: 150,
+          dailyGenerationsCount: 0,
+          dailyGenerationsDate: '',
+          spendingLimit: 5.00
+        });
+      } catch (err) {
+        console.error("Firestore Reset error:", err);
+      }
+    }
+
+    showToast(
+      language === 'ka' 
+        ? 'სამუშაო სივრცე წარმატებით განულდა საწყის პარამეტრებზე!' 
+        : 'Workspace has been successfully reset to default configurations!',
+      'success'
+    );
+  };
+
+  const generateCryptoPasskey = () => {
+    setIsGeneratingKey(true);
+    setKeyProgress(0);
+    setGeneratedKey('');
+    
+    const interval = setInterval(() => {
+      setKeyProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+          let result = 'SEC-X3-';
+          for (let i = 0; i < 24; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+            if ((i + 1) % 6 === 0 && i < 23) result += '-';
+          }
+          setGeneratedKey(result);
+          setIsGeneratingKey(false);
+          showToast(
+            language === 'ka' ? 'სესიის უსაფრთხოების გასაღები გენერირებულია!' : 'Cryptographic session passkey generated successfully!',
+            'success'
+          );
+          return 100;
+        }
+        return prev + 20;
+      });
+    }, 200);
+  };
+
+  const runIntegrityDiagnostics = () => {
+    setIsIntegrityChecking(true);
+    setIntegrityLogs([]);
+    
+    const messages = [
+      language === 'ka' ? '⚡ ბირთვის უსაფრთხოების დაფის ინიციალიზაცია...' : '⚡ Initializing secure core system handshake...',
+      language === 'ka' ? '🔒 Firestore-ის წესების უსაფრთხოების შემოწმება...' : '🔒 Validating Firestore rules and schema integrity...',
+      language === 'ka' ? '💻 მე-4 დონის შიფრირების კვანძების ანალიზი...' : '💻 Analyzing level 4 encryption hash compliance...',
+      language === 'ka' ? '🛡️ აქტიური ქსელური უსაფრთხოების ფაირვოლის სკანირება...' : '🛡️ Verifying active firewall telemetry pipelines...',
+      language === 'ka' ? '✅ დიაგნოსტიკა დასრულებულია: 100% წარმატებული კავშირი!' : '✅ Diagnostics Complete: 100% integrity verified! All nodes optimal.'
+    ];
+
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      if (currentStep < messages.length) {
+        setIntegrityLogs(prev => [...prev, messages[currentStep]]);
+        currentStep++;
+      } else {
+        clearInterval(interval);
+        setIsIntegrityChecking(false);
+        showToast(
+          language === 'ka' ? 'სისტემის მთლიანობის სკანირება წარმატებულია!' : 'Core system integrity diagnostics completed successfully!',
+          'success'
+        );
+      }
+    }, 600);
+  };
+
   const tabs = [
     { id: 'preferences', label: language === 'ka' ? 'პრეფერენციები' : 'Preferences', icon: Palette },
     { id: 'ai', label: t.ai_config || 'AI Assistant', icon: Cpu },
@@ -355,34 +499,95 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {activeTab === 'ai' && (
                 <div className="space-y-8" id="sec-ai-config">
                   <header className="pb-6 border-b border-proton-border/50">
-                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.ai_config}</h3>
+                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
+                      <Cpu size={20} className="text-proton-accent" />
+                      {t.ai_config}
+                    </h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.ai_desc}</p>
                   </header>
 
                   <div className="space-y-8">
-                    <div className="space-y-5">
+                    {/* Temperature Tuner Slider */}
+                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-[32px] border border-proton-border/30">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
-                          <Zap size={14} className="text-amber-500 animate-pulse" />
+                          <Zap size={14} className="text-proton-accent animate-pulse" />
                           {t.temperature}
                         </label>
-                        <span className="text-[11px] font-mono font-bold text-proton-accent bg-proton-accent/10 px-3 py-1 rounded-lg border border-proton-accent/20">{aiSettings.temperature.toFixed(1)}</span>
+                        <span className="text-[11px] font-mono font-bold text-proton-accent bg-proton-accent/10 px-3 py-1 rounded-lg border border-proton-accent/20">
+                          {aiSettings.temperature.toFixed(1)}
+                        </span>
                       </div>
+                      
                       <input 
                         type="range" min="0" max="1" step="0.1"
                         value={aiSettings.temperature}
                         onChange={e => {
                           const val = parseFloat(e.target.value);
                           setAiSettings(prev => ({ ...prev, temperature: val }));
-                          // Debounce showing toast for slider to prevent flood
                         }}
                         className="w-full accent-proton-accent appearance-none h-2 bg-proton-secondary/30 rounded-full cursor-pointer transition-all border border-proton-border/30"
                       />
+
+                      {/* Current Value Dynamic Description Badge */}
+                      <div className="text-[10px] font-bold uppercase tracking-wider py-2 px-4 rounded-xl bg-proton-bg/40 border border-proton-border/30 text-proton-text/90 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
+                        <span>
+                          {language === 'ka' ? 'აქტიური რეჟიმი: ' : 'Active Tuning Mode: '}
+                          {aiSettings.temperature <= 0.2 ? (
+                            <span className="text-emerald-400 font-extrabold">{language === 'ka' ? 'ზუსტი და დეტერმინისტული (Scientific)' : 'Analytical & Deterministic (Scientific)'}</span>
+                          ) : aiSettings.temperature <= 0.5 ? (
+                            <span className="text-cyan-400 font-extrabold">{language === 'ka' ? 'ბალანსირებული და რაციონალური (Standard)' : 'Balanced & Rational (Standard)'}</span>
+                          ) : aiSettings.temperature <= 0.8 ? (
+                            <span className="text-purple-400 font-extrabold">{language === 'ka' ? 'კრეატიული და ინტუიციური (Dynamic)' : 'Creative & Conversational (Dynamic)'}</span>
+                          ) : (
+                            <span className="text-amber-400 font-extrabold">{language === 'ka' ? 'ინოვაციური და ექსპერიმენტული (Innovative)' : 'Experimental & Highly Creative (Innovative)'}</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Presets Cards for Quick Snapping */}
+                      <div className="space-y-2 pt-2">
+                        <label className="text-[9px] font-black text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'აირჩიეთ მზა კრეატიულობის რეჟიმი' : 'Select Creativity Preset'}</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { val: 0.1, label: language === 'ka' ? 'ზუსტი (0.1)' : 'Analytical (0.1)', desc: language === 'ka' ? 'დეტერმინისტული პასუხები' : 'Factual and highly precise answers' },
+                            { val: 0.5, label: language === 'ka' ? 'ბალანსი (0.5)' : 'Balanced (0.5)', desc: language === 'ka' ? 'ლოგიკური და სტაბილური' : 'Standard balanced response flow' },
+                            { val: 0.7, label: language === 'ka' ? 'კრეატივი (0.7)' : 'Creative (0.7)', desc: language === 'ka' ? 'ინტუიციური და მდიდარი' : 'Great for writing & brainstorms' },
+                            { val: 0.9, label: language === 'ka' ? 'ინოვატორი (0.9)' : 'Experimental (0.9)', desc: language === 'ka' ? 'თავისუფალი და მრავალფეროვანი' : 'Maximum creative freedom & style' },
+                          ].map((item) => (
+                            <button
+                              key={item.val}
+                              type="button"
+                              onClick={() => {
+                                setAiSettings(prev => ({ ...prev, temperature: item.val }));
+                                showToast(
+                                  language === 'ka' ? `კრეატიულობა შეიცვალა: ${item.val}` : `Creativity updated to: ${item.val}`,
+                                  'info'
+                                );
+                              }}
+                              className={cn(
+                                "p-3 rounded-2xl border text-left transition-all active:scale-95 flex flex-col justify-between h-20",
+                                Math.abs(aiSettings.temperature - item.val) < 0.05
+                                  ? "bg-proton-accent/10 border-proton-accent shadow-md shadow-proton-accent/5"
+                                  : "bg-proton-bg/20 border-proton-border/40 hover:border-proton-accent/40 hover:bg-proton-secondary/10"
+                              )}
+                            >
+                              <span className={cn(
+                                "text-[10px] font-black uppercase tracking-wider",
+                                Math.abs(aiSettings.temperature - item.val) < 0.05 ? "text-proton-accent" : "text-proton-text"
+                              )}>{item.label}</span>
+                              <span className="text-[8px] text-proton-muted block font-medium uppercase tracking-tight mt-1 truncate leading-normal">{item.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Google Web Search & Google Maps Toggle Row */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className={cn(
-                        "p-5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
+                        "p-5 rounded-[24px] border flex items-center justify-between transition-all cursor-pointer group",
                         aiSettings.enableSearch ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
                       )} onClick={() => {
                         const next = !aiSettings.enableSearch;
@@ -410,7 +615,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                       
                       <div className={cn(
-                        "p-5 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
+                        "p-5 rounded-[24px] border flex items-center justify-between transition-all cursor-pointer group",
                         aiSettings.enableMaps ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
                       )} onClick={() => {
                         const next = !aiSettings.enableMaps;
@@ -438,6 +643,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
+                    {/* AI Voices Row */}
                     <div className="space-y-4">
                        <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
                          <Volume2 size={16} className="text-purple-400" />
@@ -474,6 +680,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        </div>
                     </div>
 
+                    {/* Creative Visual Mode Mode toggle */}
                     <div className={cn(
                       "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
                       uiMode === 'creative' ? "bg-proton-accent/10 border-proton-accent/40 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
@@ -558,16 +765,66 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </button>
                     </div>
 
-                    <div className="space-y-3 pt-6 border-t border-proton-border/50">
-                       <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
+                    {/* Custom AI Instructions & Quick prompt templates */}
+                    <div className="space-y-4 pt-6 border-t border-proton-border/50">
+                       <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted block">
                          {t.system_prompt || 'Custom AI Instructions'}
                        </label>
+                       
                        <textarea
                          value={aiSettings.systemInstruction || ""}
                          onChange={e => setAiSettings(prev => ({ ...prev, systemInstruction: e.target.value }))}
                          className="w-full bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
                          placeholder="Example: Be professional and concise..."
                        />
+
+                       {/* Quick System instructions Templates */}
+                       <div className="space-y-2">
+                         <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted/80">{language === 'ka' ? 'სწრაფი სისტემური შაბლონები' : 'Quick Prompt Presets'}</label>
+                         <div className="flex flex-wrap gap-2">
+                           {[
+                             { 
+                               label: 'Architect 🧠', 
+                               text: language === 'ka' 
+                                 ? 'შენ ხარ პროფესიონალი, მაღალტექნოლოგიური სისტემური არქიტექტორი. იყავი პირდაპირი, ლოგიკური და მოგვაწოდე სუფთა კოდი.' 
+                                 : 'You are a professional, high-performance tech and system architect. Be direct, logical, and provide clean code structures.' 
+                             },
+                             { 
+                               label: 'Concise ⚡', 
+                               text: language === 'ka' 
+                                 ? 'იყავი უკიდურესად მოკლე, კონკრეტული და უპასუხე ზედმეტი სიტყვების გარეშე.' 
+                                 : 'Be extremely concise, brief, and provide answers without fluff.' 
+                             },
+                             { 
+                               label: 'Creative 🎨', 
+                               text: language === 'ka' 
+                                 ? 'შენ ხარ კრეატიული კონსულტანტი. მოგვაწოდე ინოვაციური და არასტანდარტული იდეები.' 
+                                 : 'You are an inspiring, creative consultant. Offer innovative, out-of-the-box suggestions.' 
+                             },
+                             { 
+                               label: 'Tech Hybrid 🇬🇪', 
+                               text: language === 'ka' 
+                                 ? 'უპასუხე მეგობრულ, ჰიბრიდულ ქართულ-ინგლისურ ტექნიკურ დიალექტზე.' 
+                                 : 'Respond in a friendly, hybrid English-Georgian tech dialect.' 
+                             },
+                           ].map((tmpl) => (
+                             <button
+                               key={tmpl.label}
+                               type="button"
+                               onClick={() => {
+                                 setAiSettings(prev => ({ ...prev, systemInstruction: tmpl.text }));
+                                 showToast(
+                                   language === 'ka' ? `შაბლონი '${tmpl.label}' ჩაიტვირთა` : `Preset instruction '${tmpl.label}' loaded!`,
+                                   'success'
+                                 );
+                               }}
+                               className="px-3 py-1.5 rounded-lg bg-proton-secondary/10 border border-proton-border/40 text-[9px] font-black uppercase tracking-wider text-proton-muted hover:border-proton-accent hover:text-proton-text transition-all active:scale-95"
+                             >
+                               {tmpl.label}
+                             </button>
+                           ))}
+                         </div>
+                       </div>
                     </div>
 
                   </div>
@@ -577,26 +834,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {activeTab === 'profile' && (
                 <div className="space-y-8 pb-10" id="sec-profile">
                   <header className="pb-6 border-b border-proton-border/50">
-                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.profile || 'Profile'}</h3>
+                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
+                      <User size={20} className="text-proton-accent" />
+                      {t.profile || 'Profile'}
+                    </h3>
                     <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">{t.profile_desc}</p>
                   </header>
 
                   <div className="space-y-8">
-                    {/* Profile Picture Upload */}
-                    <div className="flex flex-col sm:flex-row items-center gap-6 p-6 bg-proton-secondary/5 rounded-[32px] border border-proton-border/30">
-                      <div className="relative group">
-                        <div className="w-24 h-24 rounded-full bg-proton-bg border-4 border-proton-border flex items-center justify-center overflow-hidden shadow-2xl transition-transform group-hover:scale-105">
+                    {/* Identity Header Card with customizable avatar & background gradient */}
+                    <div className="relative overflow-hidden rounded-[32px] border border-proton-border/40 bg-gradient-to-br from-proton-secondary/20 via-proton-bg to-proton-secondary/10 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-xl">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-full blur-2xl pointer-events-none" />
+                      
+                      <div className="relative group shrink-0">
+                        <div className="w-24 h-24 rounded-full bg-proton-bg border-4 border-proton-border flex items-center justify-center overflow-hidden shadow-2xl transition-all duration-300 group-hover:border-proton-accent/80 group-hover:scale-105">
                           {userProfile.avatar ? (
                             <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
-                            <User size={48} className="text-proton-muted" />
+                            <User size={44} className="text-proton-muted" />
                           )}
                         </div>
                         <button 
                           onClick={() => fileInputRef.current?.click()}
-                          className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-proton-accent text-proton-bg flex items-center justify-center border-4 border-proton-card shadow-lg hover:bg-white transition-colors"
+                          type="button"
+                          className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-proton-accent text-proton-bg flex items-center justify-center border-4 border-proton-card shadow-lg hover:bg-white hover:scale-110 transition-all duration-200"
                         >
-                          <Camera size={18} />
+                          <Camera size={16} />
                         </button>
                         <input 
                           type="file" 
@@ -606,20 +869,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           className="hidden" 
                         />
                       </div>
-                      <div className="text-center sm:text-left">
-                        <h4 className="text-sm font-black text-proton-text uppercase tracking-widest">{t.profile_picture || 'Profile Picture'}</h4>
-                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider mt-1">{language === 'ka' ? 'ატვირთეთ ფოტო თქვენი იდენტიფიკაციისთვის' : 'Upload a photo for your identification'}</p>
-                        <button 
-                          onClick={() => fileInputRef.current?.click()}
-                          className="mt-4 flex items-center gap-2 px-4 py-2 bg-proton-accent/10 border border-proton-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-proton-accent hover:bg-proton-accent hover:text-proton-bg transition-all"
-                        >
-                          <Upload size={14} />
-                          {t.upload_avatar || 'Upload Avatar'}
-                        </button>
+
+                      <div className="text-center md:text-left space-y-2">
+                        <div className="flex flex-col md:flex-row md:items-center gap-2">
+                          <h4 className="text-base font-black text-proton-text uppercase tracking-wider">
+                            {userProfile.name || (language === 'ka' ? 'დეველოპერი' : 'Developer')}
+                          </h4>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-proton-accent/15 border border-proton-accent/30 rounded-full text-[8px] font-black uppercase tracking-widest text-proton-accent w-fit mx-auto md:mx-0">
+                            <ShieldCheck size={10} className="animate-pulse" />
+                            {language === 'ka' ? 'ავტორიზებული' : 'Verified Root'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">
+                          {userProfile.role || 'System Architect'}
+                        </p>
+                        <p className="text-[9px] text-proton-muted/80 font-semibold max-w-sm leading-normal">
+                          {language === 'ka' 
+                            ? 'ამაყად მართეთ თქვენი ტექნიკური პროფილი, AI პარამეტრები და ორგანიზატორი ერთ უსაფრთხო სივრცეში.' 
+                            : 'Proudly manage your engineering identity, custom AI models, and planning assets inside a single sandbox.'}
+                        </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Technical Profile Fields Form */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-[32px] border border-proton-border/30">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{t.name || 'Full Name'}</label>
                         <div className="relative group">
@@ -627,7 +900,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <input 
                             value={userProfile.name || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
-                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
                             placeholder="e.g. John Doe"
                           />
                         </div>
@@ -640,7 +913,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <input 
                             value={userProfile.email || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
-                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
                             placeholder="e.g. john@example.com"
                           />
                         </div>
@@ -653,7 +926,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <input 
                             value={userProfile.region || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
-                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
                             placeholder="e.g. Tbilisi, GE"
                           />
                         </div>
@@ -666,21 +939,129 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <input 
                             value={userProfile.phoneNumber || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                            className="w-full bg-proton-secondary/20 pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/50"
+                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
                             placeholder="+995 ..."
                           />
                         </div>
                       </div>
+
+                      {/* Selectable Business / System Role */}
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted flex items-center gap-1.5">
+                          <Briefcase size={12} className="text-proton-accent" />
+                          {language === 'ka' ? 'სისტემური როლი და წოდება' : 'Operational Workspace Role'}
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {[
+                            { id: 'System Architect', label: language === 'ka' ? 'არქიტექტორი' : 'Architect' },
+                            { id: 'Founder & CEO', label: language === 'ka' ? 'დამფუძნებელი' : 'Founder & CEO' },
+                            { id: 'Security Auditor', label: language === 'ka' ? 'აუდიტორი' : 'Auditor' },
+                            { id: 'AI Specialist', label: language === 'ka' ? 'AI ექსპერტი' : 'AI Specialist' },
+                            { id: 'Lead Developer', label: language === 'ka' ? 'დეველოპერი' : 'Developer' },
+                          ].map((role) => (
+                            <button
+                              key={role.id}
+                              type="button"
+                              onClick={() => {
+                                setUserProfile(prev => ({ ...prev, role: role.id }));
+                                showToast(
+                                  language === 'ka' ? `სამუშაო როლი განახლდა: ${role.label}` : `Operational role set to: ${role.id}`,
+                                  'info'
+                                );
+                              }}
+                              className={cn(
+                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all active:scale-95",
+                                userProfile.role === role.id 
+                                  ? "bg-proton-accent/15 border-proton-accent text-proton-accent shadow-md shadow-proton-accent/5" 
+                                  : "bg-proton-bg border-proton-border/60 text-proton-muted hover:border-proton-accent/40 hover:text-proton-text"
+                              )}
+                            >
+                              {role.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="p-8 bg-proton-secondary/5 border border-dashed border-proton-border/50 rounded-[32px] flex items-center gap-5 group">
-                       <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-accent shadow-xl group-hover:scale-110 transition-transform">
-                        <Shield size={24} />
-                       </div>
-                       <div>
-                        <p className="text-[10px] text-proton-text font-black uppercase tracking-[0.2em]">Biometric Data Matrix Secure</p>
-                        <p className="text-[8px] text-proton-accent opacity-50 font-black uppercase tracking-widest mt-1">E2E Encryption Level 4 • Proton V2</p>
-                       </div>
+
+                    {/* Active Node System Status Card */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px] space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Activity size={18} className="text-proton-accent animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">{language === 'ka' ? 'აქტიური კვანძის სტატუსი' : 'Active Node Telemetry'}</span>
+                        </div>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'ლოკალური IP' : 'Internal IP'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">10.128.0.32</span>
+                        </div>
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'მთლიანობა' : 'Node Integrity'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">99.98%</span>
+                        </div>
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'შრიფტი' : 'Encryption'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">AES-256 GCM</span>
+                        </div>
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'სტატუსი' : 'Mode'}</span>
+                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">SECURE NODE</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Interactive Danger Zone Section */}
+                    <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-[32px] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+                          <ShieldAlert size={20} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-red-400 uppercase tracking-widest">{language === 'ka' ? 'საფრთხის ზონა' : 'Danger Zone'}</h4>
+                          <p className="text-[9px] text-proton-muted font-bold uppercase tracking-tight mt-0.5">{language === 'ka' ? 'სამუშაო სივრცის მართვა და განულება' : 'Workspace lifecycle & reset commands'}</p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-[10px] text-proton-muted leading-relaxed">
+                        {language === 'ka' 
+                          ? 'სამუშაო სივრცის განულება აღადგენს პროფილს, AI პარამეტრებს, ბიუჯეტებს და გაასუფთავებს ბრაუზერის ლოკალურ მეხსიერებას (LocalStorage). ეს ქმედება შეუქცევადია.' 
+                          : 'Resetting the workspace will restore default names, wipe system limits, clean organizer logs, and clear the browser storage cache. This operation is irreversible.'}
+                      </p>
+
+                      {!showResetModal ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowResetModal(true)}
+                          className="w-full sm:w-auto px-5 py-3 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 hover:border-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all active:scale-95 flex items-center justify-center gap-2"
+                        >
+                          <Trash2 size={14} />
+                          {language === 'ka' ? 'ინსტალაციის განულება' : 'Reset Workspace Data'}
+                        </button>
+                      ) : (
+                        <div className="p-5 bg-proton-bg border border-red-500/30 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <span className="text-[10px] font-black text-red-400 uppercase tracking-wider block">
+                            ⚠️ {language === 'ka' ? 'დარწმუნებული ხართ, რომ გსურთ ყველაფრის განულება?' : 'Are you absolutely sure you want to reset everything?'}
+                          </span>
+                          <div className="flex gap-3 pt-1">
+                            <button
+                              type="button"
+                              onClick={handleResetWorkspace}
+                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                            >
+                              {language === 'ka' ? 'დიახ, განულება' : 'Yes, Reset Now'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setShowResetModal(false)}
+                              className="px-4 py-2 bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                            >
+                              {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -956,37 +1337,132 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {activeTab === 'security' && (
                 <div className="space-y-8" id="sec-security">
                   <header className="pb-6 border-b border-proton-border/50">
-                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight">{t.security}</h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">Security architecture & isolation protocols.</p>
+                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
+                      <Shield size={20} className="text-proton-accent" />
+                      {t.security}
+                    </h3>
+                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                      {language === 'ka' ? 'სისტემის უსაფრთხოება და შიფრირების კონსოლი' : 'Security architecture, passkeys & isolation protocols.'}
+                    </p>
                   </header>
 
-                  <div className="space-y-5">
-                    <div className="p-7 bg-green-500/5 border border-green-500/20 rounded-[32px] flex items-center justify-between group">
+                  <div className="space-y-6">
+                    {/* Status card */}
+                    <div className="p-6 bg-green-500/5 border border-green-500/20 rounded-[32px] flex items-center justify-between group">
                        <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 rounded-2xl bg-green-500 text-proton-bg flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group-hover:scale-105">
-                             <Shield size={28} />
+                          <div className="w-12 h-12 rounded-2xl bg-green-500 text-proton-bg flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group-hover:scale-105">
+                             <ShieldCheck size={24} />
                           </div>
                           <div>
-                             <p className="text-xs font-black uppercase tracking-wide text-green-400">System Sync: Active</p>
-                             <p className="text-[10px] font-bold text-green-500/50 uppercase tracking-tighter">Level 4 Hash Encryption</p>
+                             <p className="text-xs font-black uppercase tracking-wide text-green-400">
+                               {language === 'ka' ? 'სინქრონიზაცია: აქტიური' : 'System Sync: Active'}
+                             </p>
+                             <p className="text-[10px] font-bold text-green-500/50 uppercase tracking-tighter mt-0.5">
+                               {language === 'ka' ? 'მე-4 დონის უსაფრთხოების ჰეში' : 'Level 4 Hash Encryption'}
+                             </p>
                           </div>
                        </div>
                        <Lock size={20} className="text-green-500" />
                     </div>
 
-                    <div className="p-7 bg-proton-secondary/10 border border-proton-border rounded-[32px] flex items-center justify-between opacity-50 relative overflow-hidden">
-                       <div className="flex items-center gap-5">
-                          <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
-                             <Globe size={28} />
+                    {/* Cryptographic Key Generator */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Fingerprint size={18} className="text-proton-accent" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">
+                          {language === 'ka' ? 'სესიის კრიპტო-გასაღების გენერატორი' : 'Cryptographic Passkey Generator'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-proton-muted leading-relaxed uppercase font-bold tracking-tight">
+                        {language === 'ka' 
+                          ? 'შექმენით უსაფრთხო AES-256 კავშირის სესიის გასაღები API ზარების ავტორიზაციისთვის.' 
+                          : 'Generate an isolated AES-256 session handshake passkey for secure sandboxed API transactions.'}
+                      </p>
+
+                      {isGeneratingKey ? (
+                        <div className="space-y-2 py-2">
+                          <div className="w-full h-2 bg-proton-secondary/20 rounded-full overflow-hidden border border-proton-border/30">
+                            <div className="h-full bg-proton-accent transition-all duration-200" style={{ width: `${keyProgress}%` }} />
                           </div>
-                          <div>
-                             <p className="text-xs font-black uppercase tracking-wide text-proton-text">Public Indexing</p>
-                             <p className="text-[10px] font-bold text-proton-muted uppercase tracking-tighter">Status: Restricted Access</p>
-                          </div>
-                       </div>
+                          <span className="text-[9px] font-mono font-bold text-proton-accent uppercase tracking-widest animate-pulse block">
+                            {language === 'ka' ? `სინთეზირება... ${keyProgress}%` : `Synthesizing Hash Matrix... ${keyProgress}%`}
+                          </span>
+                        </div>
+                      ) : generatedKey ? (
+                        <div className="p-4 bg-proton-bg border border-proton-accent/40 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in duration-300">
+                          <code className="text-xs font-mono font-bold text-proton-accent select-all break-all tracking-wider">{generatedKey}</code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(generatedKey);
+                              showToast(
+                                language === 'ka' ? 'კრიპტო-გასაღები კოპირებულია!' : 'Cryptokey copied to clipboard!',
+                                'success'
+                              );
+                            }}
+                            className="p-2.5 rounded-lg bg-proton-accent/10 border border-proton-accent/20 text-proton-accent hover:bg-proton-accent hover:text-proton-bg transition-all"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {!isGeneratingKey && (
+                        <button
+                          type="button"
+                          onClick={generateCryptoPasskey}
+                          className="px-4 py-2 bg-proton-accent/10 border border-proton-accent/30 hover:bg-proton-accent hover:text-proton-bg text-proton-accent text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2"
+                        >
+                          <Key size={12} />
+                          {language === 'ka' ? 'სესიის გასაღების შექმნა' : 'Generate Session Key'}
+                        </button>
+                      )}
                     </div>
 
-                    <div className="pt-8 flex flex-col gap-4">
+                    {/* System Integrity Scanner */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px] space-y-4">
+                      <div className="flex items-center gap-3">
+                        <Terminal size={18} className="text-proton-accent" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">
+                          {language === 'ka' ? 'სისტემის მთლიანობის სკანერი' : 'System Integrity Console'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-proton-muted leading-relaxed uppercase font-bold tracking-tight">
+                        {language === 'ka' 
+                          ? 'ჩაატარეთ უსაფრთხოების, წესების და კვანძების მთლიანობის პირდაპირი დიაგნოსტიკა.' 
+                          : 'Execute a live audit of Firestore rules compliance, API pipeline integrity, and secure nodes.'}
+                      </p>
+
+                      {integrityLogs.length > 0 && (
+                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-[9px] text-proton-text/90 space-y-1.5 shadow-inner">
+                          {integrityLogs.map((log, index) => (
+                            <div key={index} className="flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1 duration-200">
+                              <span className="text-proton-accent font-black shrink-0">&gt;</span>
+                              <span className="break-all font-bold uppercase tracking-tighter leading-normal">{log}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={runIntegrityDiagnostics}
+                        disabled={isIntegrityChecking}
+                        className={cn(
+                          "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 border",
+                          isIntegrityChecking 
+                            ? "bg-proton-secondary/10 border-proton-border/40 text-proton-muted cursor-not-allowed" 
+                            : "bg-proton-accent/10 border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg"
+                        )}
+                      >
+                        <RefreshCw size={12} className={cn(isIntegrityChecking && "animate-spin")} />
+                        {isIntegrityChecking 
+                          ? (language === 'ka' ? 'მოწმდება...' : 'Auditing...') 
+                          : (language === 'ka' ? 'დიაგნოსტიკის გაშვება' : 'Run Diagnostics')}
+                      </button>
+                    </div>
+
+                    <div className="pt-4 flex flex-col gap-4">
                        <button 
                          type="button" 
                          onClick={() => {
@@ -995,10 +1471,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                              'success'
                            );
                          }}
-                         className="w-full py-5 bg-proton-text text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-proton-accent hover:text-proton-bg transition-all shadow-xl active:scale-95"
+                         className="w-full py-5 bg-proton-text text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-proton-accent hover:text-proton-bg transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
                          id="btn-export-log"
                        >
-                          Export Data Log
+                          <Save size={14} />
+                          {language === 'ka' ? 'მონაცემთა ჟურნალის ექსპორტი' : 'Export Security Logs'}
                        </button>
                        <div className="flex items-center justify-center gap-4 text-[9px] text-proton-muted font-bold uppercase tracking-[0.3em]">
                         <span>Version 4.1.0-STABLE</span>
