@@ -320,8 +320,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       enableMaps: false,
       zenMode: false,
       systemInstruction: '',
-      voice: 'GeorgianModern',
-      useSimulatedAi: false
+      voice: 'GeorgianModern'
     });
 
     setTheme('proton');
@@ -735,54 +734,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           uiMode === 'creative' ? "right-0.5" : "left-0.5"
                         )} />
                       </div>
-                    </div>
-
-                    {/* AI Simulation Mode Block */}
-                    <div className={cn(
-                      "p-7 rounded-[32px] border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 transition-all select-none",
-                      aiSettings.useSimulatedAi ? "bg-amber-500/10 border-amber-500/30 shadow-lg shadow-amber-500/5" : "bg-proton-secondary/10 border-proton-border"
-                    )}>
-                      <div className="flex items-center gap-5">
-                        <div className={cn(
-                          "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0",
-                          aiSettings.useSimulatedAi ? "bg-amber-500 text-proton-bg shadow-lg shadow-amber-500/20" : "bg-proton-secondary/20 text-proton-muted"
-                        )}>
-                          <Sparkles className={cn(aiSettings.useSimulatedAi && "animate-spin")} size={28} />
-                        </div>
-                        <div className="text-left">
-                          <label className="text-xs font-black uppercase tracking-widest block text-proton-text">
-                            {language === 'ka' ? 'საცდელი რეჟიმი (Simulation)' : 'Safe Sandbox Mode (Simulated AI)'}
-                          </label>
-                          <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1 leading-relaxed">
-                            {language === 'ka' 
-                              ? 'ჩართეთ ეს რეჟიმი, თუ ინტერნეტი ნელია ან სერვერი დროებით არ მუშაობს. პასუხებს მიიღებთ მყისიერად.' 
-                              : 'Enable this to bypass server errors and test things instantly with simulated replies.'}
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = !aiSettings.useSimulatedAi;
-                          setAiSettings(prev => ({ ...prev, useSimulatedAi: next }));
-                          showToast(
-                            next 
-                              ? (language === 'ka' ? 'საცდელი რეჟიმი ჩაირთო!' : 'Simulated Sandbox active!') 
-                              : (language === 'ka' ? 'დავუბრუნდით რეალურ Gemini API-ს.' : 'Restored live real-time Gemini API.'),
-                            next ? 'warning' : 'info'
-                          );
-                        }}
-                        className={cn(
-                          "w-full sm:w-auto px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 active:scale-95",
-                          aiSettings.useSimulatedAi 
-                            ? "bg-amber-500 border-amber-500 text-proton-bg hover:bg-amber-600 shadow-lg shadow-amber-500/10 font-bold"
-                            : "bg-transparent border-proton-border text-proton-muted hover:border-proton-accent hover:text-proton-accent"
-                        )}
-                      >
-                        {aiSettings.useSimulatedAi 
-                          ? (language === 'ka' ? 'ჩართულია' : 'Active') 
-                          : (language === 'ka' ? 'გამორთულია' : 'Inactive')}
-                      </button>
                     </div>
 
                     {/* Custom AI Instructions & Quick prompt templates */}

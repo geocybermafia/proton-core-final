@@ -445,59 +445,6 @@ export const DashboardView = React.memo(({
           })}
         </div>
       </div>
-
-      {/* Interactive AI Simulation / Settings footer */}
-      <div className={cn(
-        "p-6 rounded-[32px] border transition-all select-none relative overflow-hidden shadow-xl flex flex-col md:flex-row items-center justify-between gap-6",
-        aiSettings.useSimulatedAi 
-          ? "bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-amber-500/40 shadow-amber-500/5" 
-          : "bg-gradient-to-r from-cyan-500/10 via-cyan-500/5 to-transparent border-proton-border/80"
-      )}>
-        <div className="flex items-center gap-5">
-          <div className={cn(
-            "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0",
-            aiSettings.useSimulatedAi ? "bg-amber-500 text-proton-bg shadow-lg shadow-amber-500/25" : "bg-cyan-500 text-proton-bg shadow-lg shadow-cyan-500/25"
-          )}>
-            <Sparkles className={cn(aiSettings.useSimulatedAi && "animate-pulse")} size={22} />
-          </div>
-          <div className="space-y-1 text-left">
-            <h4 className="text-sm font-black uppercase tracking-wider text-proton-text flex items-center gap-2">
-              {language === 'ka' ? 'AI ასისტენტის რეჟიმი' : 'AI Assistant Mode'}
-              <span className={cn(
-                "text-[8px] font-black uppercase px-2 py-0.5 rounded-full",
-                aiSettings.useSimulatedAi 
-                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" 
-                  : "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
-              )}>
-                {aiSettings.useSimulatedAi ? (language === 'ka' ? 'სიმულაცია' : 'Simulation Mode') : (language === 'ka' ? 'ღრუბლოვანი' : 'Cloud Live')}
-              </span>
-            </h4>
-            <p className="text-[11px] text-proton-muted font-bold leading-relaxed max-w-xl">
-              {aiSettings.useSimulatedAi 
-                ? (language === 'ka' 
-                  ? 'აქტიურია პორტატული საცდელი რეჟიმი. პასუხები გენერირდება ლოკალურად — API კვოტების შეზღუდვისა და დაყოვნების გარეშე.' 
-                  : 'Playground Active. AI responses are processed locally with 0 delay, completely avoiding quota rate limits.')
-                : (language === 'ka' 
-                   ? 'აქტიურია Google Gemini ღრუბლოვანი სერვერი. თუ მიიღებთ 429 შეცდომას, შეგიძლიათ ნებისმიერ დროს გადახვიდეთ სიმულაციურ რეჟიმში.' 
-                   : 'Direct Google Gemini cloud API connection. If you experience quota exhaustion, toggle simulation mode to resume instantly.')}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setAiSettings(prev => ({ ...prev, useSimulatedAi: !prev.useSimulatedAi }))}
-          className={cn(
-            "w-full md:w-auto px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 active:scale-95 shadow-md",
-            aiSettings.useSimulatedAi 
-              ? "bg-amber-500 border-amber-500 text-proton-bg hover:bg-amber-600 shadow-amber-500/20"
-              : "bg-transparent border-proton-border text-proton-muted hover:border-cyan-405 hover:text-cyan-400"
-          )}
-        >
-          {aiSettings.useSimulatedAi 
-            ? (language === 'ka' ? 'გადართე Live რეჟიმში' : 'Switch to Live Cloud') 
-            : (language === 'ka' ? 'ჩართე საცდელი რეჟიმი' : 'Enable Simulation')}
-        </button>
-      </div>
     </motion.div>
   );
 });
