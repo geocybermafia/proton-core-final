@@ -6,7 +6,8 @@ import {
   sendPasswordResetEmail,
   GoogleAuthProvider
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, db } from '../firebase';
 import { translations } from '../translations';
 import { motion } from 'framer-motion';
 import { Zap, Loader2, ChevronLeft } from 'lucide-react';
@@ -23,6 +24,8 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [subscribeNews, setSubscribeNews] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -72,13 +75,28 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
       setError(t.passwords_dont_match);
       return;
     }
+    if (!isLogin && !agreeTerms) {
+      setError(t.terms_error);
+      return;
+    }
 
     setLoading(true);
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userDocRef = doc(db, 'users', userCredential.user.uid);
+        await setDoc(userDocRef, {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          displayName: userCredential.user.email?.split('@')[0] || 'User',
+          agreedToTerms: agreeTerms,
+          subscribedToNews: subscribeNews,
+          agreedToTermsAt: new Date().toISOString(),
+          subscribedToNewsAt: subscribeNews ? new Date().toISOString() : null,
+          language: language
+        }, { merge: true });
       }
     } catch (err: any) {
       setError(err.message);
@@ -158,17 +176,45 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
           )}
 
           {!isLogin && !isResetting && (
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-proton-text">{t.confirm_password}</label>
-              <input 
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-2 bg-proton-bg border border-proton-border rounded-lg outline-none focus:ring-2 focus:ring-proton-accent/20 transition-all text-proton-text"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-proton-text">{t.confirm_password}</label>
+                <input 
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2 bg-proton-bg border border-proton-border rounded-lg outline-none focus:ring-2 focus:ring-proton-accent/20 transition-all text-proton-text"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-proton-border bg-proton-bg text-proton-accent focus:ring-proton-accent/20 transition-all cursor-pointer accent-proton-accent"
+                  />
+                  <span className="text-xs text-proton-muted group-hover:text-proton-text transition-colors leading-normal select-none">
+                    {t.agree_terms}
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <input 
+                    type="checkbox"
+                    checked={subscribeNews}
+                    onChange={(e) => setSubscribeNews(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-proton-border bg-proton-bg text-proton-accent focus:ring-proton-accent/20 transition-all cursor-pointer accent-proton-accent"
+                  />
+                  <span className="text-xs text-proton-muted group-hover:text-proton-text transition-colors leading-normal select-none">
+                    {t.subscribe_news}
+                  </span>
+                </label>
+              </div>
+            </>
           )}
 
           {error && <div className="p-3 bg-red-500/10 text-red-500 rounded-lg text-sm border border-red-500/20">{error}</div>}

@@ -212,7 +212,10 @@ export const translations = {
       send_reset_link: "Dispatch Reset Link",
       back_to_login: "Back to Login",
       dont_have_account: "New user?",
-      already_have_account: "Existing user?"
+      already_have_account: "Existing user?",
+      agree_terms: "I have read and agree to the Terms of Service.",
+      subscribe_news: "I want to receive news & updates regarding the site.",
+      terms_error: "You must agree to the Terms of Service to continue."
     },
     landing: {
       hero_title: "Manage, Automate, and Sell in One Intelligent Workspace",
@@ -667,7 +670,10 @@ export const translations = {
       send_reset_link: "ლინკის გაგზავნა",
       back_to_login: "უკან ავტორიზაციაზე",
       dont_have_account: "არ გაქვთ ანგარიში?",
-      already_have_account: "უკვე გაქვთ ანგარიში?"
+      already_have_account: "უკვე გაქვთ ანგარიში?",
+      agree_terms: "გავეცანი და ვეთანხმები გამოყენების პირობებს.",
+      subscribe_news: "მსურს სიახლეებისა და განახლებების მიღება საიტიდან.",
+      terms_error: "გაგრძელებისთვის საჭიროა დაეთანხმოთ გამოყენების პირობებს."
     },
     landing: {
       hero_title: "მართე, დაგეგმე და განვითარდი ერთიან ჭკვიან სამუშაო სივრცეში",
