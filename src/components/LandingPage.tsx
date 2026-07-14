@@ -285,13 +285,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           
           <div className="flex items-center gap-2 sm:gap-6">
             {/* Language Switcher */}
-            <div id="lang-switcher-row" className="flex bg-proton-card rounded-xl p-1 border border-proton-border">
+            <div id="lang-switcher-row" className="flex bg-proton-card/60 rounded-lg p-0.5 border border-proton-border/80 backdrop-blur-sm">
               <button 
                 id="btn-lang-en"
                 onClick={() => onLanguageChange('en')}
                 className={cn(
-                  "px-3.5 py-2 text-xs sm:text-sm font-black rounded-lg transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center",
-                  language === 'en' ? "bg-proton-accent text-proton-bg" : "text-proton-muted hover:text-proton-text"
+                  "px-2.5 py-1 text-[10px] sm:text-xs font-black rounded-md transition-all cursor-pointer h-7 sm:h-8 min-w-[32px] sm:min-w-[36px] flex items-center justify-center uppercase tracking-wider",
+                  language === 'en' ? "bg-proton-accent text-proton-bg shadow-sm" : "text-proton-muted hover:text-proton-text"
                 )}
               >
                 EN
@@ -300,8 +300,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                 id="btn-lang-ka"
                 onClick={() => onLanguageChange('ka')}
                 className={cn(
-                  "px-3.5 py-2 text-xs sm:text-sm font-black rounded-lg transition-all cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center",
-                  language === 'ka' ? "bg-proton-accent text-proton-bg" : "text-proton-muted hover:text-proton-text"
+                  "px-2.5 py-1 text-[10px] sm:text-xs font-black rounded-md transition-all cursor-pointer h-7 sm:h-8 min-w-[32px] sm:min-w-[36px] flex items-center justify-center uppercase tracking-wider",
+                  language === 'ka' ? "bg-proton-accent text-proton-bg shadow-sm" : "text-proton-muted hover:text-proton-text"
                 )}
               >
                 KA
