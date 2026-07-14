@@ -21,7 +21,6 @@ export type GlobalAiSettings = {
   systemInstruction?: string;
   voice: string;
   customApiKey?: string;
-  useSimulatedAi?: boolean;
 };
 
 export type ChatMessage = { id: string, role: 'user' | 'model', content: string, timestamp: number };

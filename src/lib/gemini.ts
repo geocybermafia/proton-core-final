@@ -48,7 +48,14 @@ export const PERSONAS: Persona[] = [
     nameGe: "ლიდების ავტომატორი",
     role: "Marketing Specialist",
     description: "Automates social presence and lead generation for niche 'underground' businesses in Tbilisi and beyond.",
-    descriptionGe: "ავტომატიზირებს სოციალურ ყოფნას და ლიდების გენერაცი�async function callServerGemini<T>(action: string, args: any[]): Promise<T> {
+    descriptionGe: "ავტომატიზირებს სოციალურ ყოფნას და ლიდების გენერაციას თბილისსა და მის ფარგლებს გარეთ არსებული ნიშური ბიზნესებისთვის.",
+    avatar: "📢",
+    language: 'Mixed',
+    systemInstruction: `You are 'Lead Gen Automator' (ლიდების ავტომატორი), a digital persona from Proton AI. Your tone is energetic, persuasive, and marketing-driven. You specialize in social media strategies, digital lead generation, and customer acquisition for Georgian companies and underground brands in Tbilisi. You use creative and smart automation concepts, always focusing on maximizing engagement and growth. Always reply in a way that matches the user's language, blending English and Georgian terms naturally.`
+  }
+];
+
+async function callServerGemini<T>(action: string, args: any[]): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
@@ -216,140 +223,6 @@ export async function expandObjectiveAnalysis(title: string, category: string, a
   } catch (error) {
     console.error("expandObjectiveAnalysis Proxy Error:", error);
     return "";
-  }
-}Metadata }>('architectTask', [project, temperature]);
-  } catch (error) {
-    console.warn("architectTask Proxy Error, falling back to simulation:", error);
-    autoEnableSimulationMode();
-    return architectTask(project, temperature);
-  }
-}
-
-export async function breakdownTask(taskContent: string, appLanguage: 'en' | 'ka' = 'en'): Promise<string[]> {
-  if (isSimulatedActive()) {
-    await sleep(600);
-    if (appLanguage === 'ka') {
-      return [
-        "განსაზღვრეთ დავალების მიზანი და მასშტაბი",
-        "მოამზადეთ სამუშაო გარემო და ინსტრუმენტები",
-        "განახორციელეთ დავალების პირველი ეტაპი",
-        "შეასრულეთ ძირითადი დეტალები",
-        "გადაამოწმეთ შესრულებული სამუშაოს ხარისხი"
-      ];
-    } else {
-      return [
-        "Define task objective and scope",
-        "Prepare workspace and tools",
-        "Execute initial phase of the task",
-        "Implement core details",
-        "Review and verify the final output"
-      ];
-    }
-  }
-  try {
-    return await callServerGemini<string[]>('breakdownTask', [taskContent, appLanguage]);
-  } catch (error) {
-    console.warn("breakdownTask Proxy Error, falling back to simulation:", error);
-    autoEnableSimulationMode();
-    return breakdownTask(taskContent, appLanguage);
-  }
-}
-
-export async function generateStrategicObjective(appLanguage: 'en' | 'ka' = 'en'): Promise<{
-  title: string;
-  priority: 'low' | 'medium' | 'high';
-  category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
-  subtasks: { label: string; completed: boolean }[];
-}> {
-  if (isSimulatedActive()) {
-    await sleep(600);
-    if (appLanguage === 'ka') {
-      return {
-        title: "სისტემის ავტომატური რეპლიკაცია",
-        priority: "medium",
-        category: "Infrastructure",
-        subtasks: [
-          { label: "კლასტერის მომზადება", completed: false },
-          { label: "დატვირთვის გადანაწილება", completed: false },
-          { label: "რეზერვების ტესტირება", completed: false }
-        ]
-      };
-    } else {
-      return {
-        title: "Database Cloud Replication",
-        priority: "medium",
-        category: "Infrastructure",
-        subtasks: [
-          { label: "Configure failover clusters", completed: false },
-          { label: "Enable real-time transaction sync", completed: false },
-          { label: "Verify disaster recovery backup", completed: false }
-        ]
-      };
-    }
-  }
-  try {
-    return await callServerGemini<{
-      title: string;
-      priority: 'low' | 'medium' | 'high';
-      category: 'Infrastructure' | 'System' | 'Interface' | 'Security' | 'Intelligence';
-      subtasks: { label: string; completed: boolean }[];
-    }>('generateStrategicObjective', [appLanguage]);
-  } catch (error) {
-    console.warn("generateStrategicObjective Proxy Error, falling back to simulation:", error);
-    autoEnableSimulationMode();
-    return generateStrategicObjective(appLanguage);
-  }
-}
-
-export async function expandObjectiveAnalysis(title: string, category: string, appLanguage: 'en' | 'ka' = 'en'): Promise<string> {
-  if (isSimulatedActive()) {
-    await sleep(800);
-    if (appLanguage === 'ka') {
-      return `### 📊 სტრატეგიული ანალიზი: ${title}
-
-ეს არის დეტალური ბიზნეს ანალიზი, რომელიც გენერირებულია რეალურ დროში.
-
-#### 1. სტრატეგიული კონტექსტი (Strategic Context)
-ეს მიზანი კრიტიკულია დაფარვის ხარისხისა და სტაბილურობის უზრუნველსაყოფად ქართულ ბაზარზე, განსაკუთრებით თბილისის მზარდი ტექნოლოგიური ეკოსისტემისთვის.
-
-#### 2. ნაბიჯ-ნაბიჯ საგზაო რუკა (Roadmap)
-* **ფაზა 1 (კვირა 1):** არქიტექტურული მონახაზი და მომზადება.
-* **ფაზა 2 (კვირა 2-3):** საწყისი პროტოტიპირება და ტესტირება.
-* **ფაზა 3 (კვირა 4):** სრული ინტეგრაცია და მონიტორინგი.
-
-#### 3. ძირითადი KPI-ები (Key Performance Indicators)
-* დაყოვნების შემცირება (Latency < 200ms)
-* 99.9% სისტემური მუშაობის დრო (Uptime)
-
-#### 4. რისკები და პრევენცია (Risks)
-მთავარი რისკი არის სერვერის რესურსების შეზღუდულობა, რომლის პრევენციაც მოხდება დატვირთვის სწორი მენეჯმენტით.`;
-    } else {
-      return `### 📊 Strategic Analysis: ${title}
-
-This is a deep dive strategic analysis generated in real-time.
-
-#### 1. Strategic Context
-This objective is critical to ensuring high-quality operations and system stability for our target customer base.
-
-#### 2. Phased Roadmap
-* **Phase 1 (Week 1):** Structural definitions and alignment.
-* **Phase 2 (Weeks 2-3):** Implementation of core connectors.
-* **Phase 3 (Week 4):** Final deployment and logging review.
-
-#### 3. Core Measurement Metrics (KPIs)
-* Core process latency reduced by 25%.
-* Integration error rate below 0.1%.
-
-#### 4. Contingency Planning
-Mitigate integration locks by routing offline callbacks gracefully through secondary buffers.`;
-    }
-  }
-  try {
-    return await callServerGemini<string>('expandObjectiveAnalysis', [title, category, appLanguage]);
-  } catch (error) {
-    console.warn("expandObjectiveAnalysis Proxy Error, falling back to simulation:", error);
-    autoEnableSimulationMode();
-    return expandObjectiveAnalysis(title, category, appLanguage);
   }
 }
 
