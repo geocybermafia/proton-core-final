@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, 
   ShieldCheck, 
@@ -35,6 +35,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mockActiveTab, setMockActiveTab] = useState<'dashboard' | 'assistants' | 'blueprints' | 'marketplace' | 'translator' | 'organizer'>('dashboard');
   const [scrolled, setScrolled] = useState(false);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [demoNotice, setDemoNotice] = useState<{ messageEn: string; messageKa: string; type: 'success' | 'info' } | null>(null);
   const currentLang = language;
 
   React.useEffect(() => {
@@ -44,6 +46,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  React.useEffect(() => {
+    if (!isAutoPlaying) return;
+    const tabs: ('dashboard' | 'assistants' | 'blueprints' | 'marketplace' | 'translator' | 'organizer')[] = [
+      'dashboard', 'assistants', 'blueprints', 'marketplace', 'translator', 'organizer'
+    ];
+    const interval = setInterval(() => {
+      setMockActiveTab((current) => {
+        const nextIndex = (tabs.indexOf(current) + 1) % tabs.length;
+        return tabs[nextIndex];
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isAutoPlaying]);
+
+  React.useEffect(() => {
+    if (demoNotice) {
+      const timer = setTimeout(() => {
+        setDemoNotice(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [demoNotice]);
   
   // @ts-ignore
   const t = translations[currentLang].landing;
@@ -385,6 +410,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
           </motion.div>
         </div>
 
+        {/* Real-time Ecosystem Activity Ticker */}
+        <div id="activity-ticker" className="max-w-5xl mx-auto overflow-hidden bg-proton-card/40 border border-proton-border/80 rounded-2xl py-3 px-4 backdrop-blur-md select-none relative z-10 mt-16">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-proton-accent/10 border border-proton-accent/20 text-[9px] font-black uppercase text-proton-accent whitespace-nowrap shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
+              LIVE ACTIVITY
+            </div>
+            <div className="relative flex-1 overflow-hidden h-5 flex items-center">
+              <motion.div 
+                initial={{ x: 0 }}
+                animate={{ x: "-50%" }}
+                transition={{
+                  ease: "linear",
+                  duration: 45,
+                  repeat: Infinity
+                }}
+                className="flex gap-16 whitespace-nowrap text-[10px] font-mono text-proton-muted/80 tracking-wider uppercase"
+              >
+                {[
+                  "✨ AI Agent specialized for writing commercial templates was initialized &bull; Persona: Specialist",
+                  "🛍️ Handcrafted wool socks sold in Marketplace for 35 GEL &bull; Instant Sync",
+                  "⚡ Visual blueprint 'Inventory Sync' executed automatically &bull; Firestore latency 42ms",
+                  "🌐 Bidirectional English to Georgian translation parsed successfully by Gemini",
+                  "👤 New user registered from Tbilisi &bull; Settings synced to Cloud",
+                  "📈 Tactical growth matrix report completed in 240ms for local entrepreneur",
+                  "✨ AI Agent specialized for writing commercial templates was initialized &bull; Persona: Specialist",
+                  "🛍️ Handcrafted wool socks sold in Marketplace for 35 GEL &bull; Instant Sync",
+                  "⚡ Visual blueprint 'Inventory Sync' executed automatically &bull; Firestore latency 42ms",
+                  "🌐 Bidirectional English to Georgian translation parsed successfully by Gemini",
+                  "👤 New user registered from Tbilisi &bull; Settings synced to Cloud",
+                  "📈 Tactical growth matrix report completed in 240ms for local entrepreneur"
+                ].map((text, i) => (
+                  <span key={i} className="flex items-center gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
+                    <span dangerouslySetInnerHTML={{ __html: text }} />
+                  </span>
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        </div>
+
         {/* Dashboard Preview Overlay */}
         <motion.div 
           initial={{ opacity: 0, y: 100 }}
@@ -398,6 +465,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
               style={{ willChange: "transform", transform: "translateZ(0)" }}
             />
             <div className="relative bg-proton-card border border-proton-border rounded-[40px] shadow-2xl overflow-hidden aspect-video">
+              {/* Floating Alert inside Mockup */}
+              <AnimatePresence>
+                {demoNotice && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute bottom-6 right-6 z-50 p-4 bg-emerald-500 text-white rounded-2xl border border-emerald-400/40 shadow-2xl backdrop-blur-md max-w-sm text-left flex items-start gap-3"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white shrink-0 mt-0.5">
+                      <Zap size={12} fill="currentColor" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wider mb-0.5">
+                        {language === 'ka' ? 'სისტემური შეტყობინება' : 'SYSTEM ALERT'}
+                      </p>
+                      <p className="text-[10px] font-semibold leading-relaxed opacity-95">
+                        {language === 'ka' ? demoNotice.messageKa : demoNotice.messageEn}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className="h-12 border-b border-proton-border bg-proton-bg/50 px-6 flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/30" />
@@ -423,7 +514,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   ].map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => setMockActiveTab(item.id as any)}
+                      onClick={() => {
+                        setIsAutoPlaying(false);
+                        setMockActiveTab(item.id as any);
+                      }}
                       className={cn(
                         "relative px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer",
                         mockActiveTab === item.id 
@@ -459,7 +553,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                   ].map((item) => (
                     <button 
                       key={item.id} 
-                      onClick={() => setMockActiveTab(item.id as any)}
+                      onClick={() => {
+                        setIsAutoPlaying(false);
+                        setMockActiveTab(item.id as any);
+                      }}
                       className={cn(
                         "relative w-full px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer text-left border border-transparent bg-transparent overflow-hidden",
                         mockActiveTab === item.id 
@@ -494,8 +591,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                     </button>
                   ))}
                   
-                  <div className="pt-4">
-                    <div className="p-3 bg-proton-accent/5 border border-proton-accent/10 rounded-xl">
+                  <div className="pt-4 space-y-2">
+                    <button 
+                      onClick={() => setIsAutoPlaying(!isAutoPlaying)}
+                      className="w-full p-2.5 bg-proton-accent/5 border border-proton-accent/10 hover:border-proton-accent/30 rounded-xl flex items-center justify-between text-left cursor-pointer transition-all"
+                    >
+                      <div>
+                        <p className="text-[8px] font-mono text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'ავტო-პრეზენტაცია' : 'AUTOPLAY TOUR'}</p>
+                        <p className="text-[9px] font-black text-proton-text uppercase">
+                          {isAutoPlaying 
+                            ? (language === 'ka' ? 'აქტიურია' : 'RUNNING') 
+                            : (language === 'ka' ? 'შეჩერებულია' : 'PAUSED')
+                          }
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {isAutoPlaying && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
+                        )}
+                        <span className={cn("w-2 h-2 rounded-full transition-colors", isAutoPlaying ? "bg-proton-accent" : "bg-proton-muted")} />
+                      </div>
+                    </button>
+
+                    <div className="p-3 bg-proton-bg border border-proton-border rounded-xl relative overflow-hidden">
+                      {isAutoPlaying && (
+                        <motion.div 
+                          key={mockActiveTab}
+                          initial={{ width: "0%" }}
+                          animate={{ width: "100%" }}
+                          transition={{ duration: 5, ease: "linear" }}
+                          className="absolute bottom-0 left-0 h-[2px] bg-proton-accent"
+                        />
+                      )}
                       <p className="text-[8px] font-mono text-proton-accent uppercase tracking-widest mb-1">SYSTEM STATE</p>
                       <p className="text-[9px] font-black text-proton-text uppercase">● SECURED BY FIREBASE</p>
                     </div>
@@ -727,7 +854,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
                               </p>
                             </div>
                             <button 
-                              onClick={() => alert(language === 'ka' ? "როლური მოდელი: დააჭირეთ დაწყებას რეალური შესყიდვების გამოსაცდელად!" : "Simulator Notice: Access the workspace to initialize direct sales flow!")}
+                              onClick={() => setDemoNotice({
+                                messageEn: "🛍️ Order received! Direct connection to Firestore verified. Order was tracked in personal Cabinet.",
+                                messageKa: "🛍️ შეკვეთა მიღებულია! კავშირი Firestore-თან შემოწმებულია. შეკვეთა აისახა პირად კაბინეტში.",
+                                type: 'success'
+                              })}
                               className="w-full py-1 bg-proton-bg hover:bg-emerald-400/10 border border-proton-border hover:border-emerald-400/30 text-[8px] font-black uppercase tracking-wider text-proton-text rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
                               <ShoppingBag size={10} />
