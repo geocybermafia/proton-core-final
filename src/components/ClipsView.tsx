@@ -173,7 +173,7 @@ const SEED_CLIPS = [
   }
 ];
 
-export function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
+export default function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);

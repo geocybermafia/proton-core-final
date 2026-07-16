@@ -51,7 +51,7 @@ const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView')
 const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })));
 const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })));
 const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
-const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.ClipsView })));
+const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
