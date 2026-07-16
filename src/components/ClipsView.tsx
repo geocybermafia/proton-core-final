@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useClipPlayback } from '../hooks/useClipPlayback';
 import { 
   Heart, 
   MessageSquare, 
@@ -261,11 +262,6 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [activeTab, setActiveTab] = useState<'forYou' | 'myClips' | 'productReels'>('forYou');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Video playback states
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(true);
-  
   // Modal / Sidebar overlays
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [comments, setComments] = useState<ClipComment[]>([]);
@@ -289,8 +285,37 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   // Marketplace Listings list for Tagging
   const [listings, setListings] = useState<any[]>([]);
 
-  const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Filter clips based on selected tab and search
+  const filteredClips = clips.filter(clip => {
+    // 1. Tab filters
+    if (activeTab === 'myClips' && clip.creatorId !== user?.uid) return false;
+    if (activeTab === 'productReels' && !clip.productId) return false;
+
+    // 2. Search filters
+    if (searchQuery.trim() === '') return true;
+    const searchLower = searchQuery.toLowerCase();
+    const hasTag = clip.caption.toLowerCase().includes(searchLower);
+    const hasCreator = clip.creatorName.toLowerCase().includes(searchLower);
+    return hasTag || hasCreator;
+  });
+
+  // Use the custom playback hook to manage video instances robustly
+  const {
+    currentIndex,
+    setCurrentIndex,
+    isPlaying,
+    setIsPlaying,
+    isMuted,
+    setIsMuted,
+    videoRefs,
+    registerVideoRef,
+    togglePlay,
+    toggleMute,
+    handleScroll,
+    resetPlayback
+  } = useClipPlayback(filteredClips.length, containerRef);
 
   // 1. Fetch Listings for Tagging
   useEffect(() => {
@@ -353,94 +378,19 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     return () => unsubscribe();
   }, []);
 
-  // 3. Keep current video playing, pause others
+  // 3. Reset playback scroll and current index when tab or query updates
   useEffect(() => {
-    setIsPlaying(true);
-    Object.keys(videoRefs.current).forEach((key) => {
-      const video = videoRefs.current[key];
-      if (video) {
-        if (parseInt(key) === currentIndex) {
-          video.play().catch(e => console.warn("Autoplay block:", e));
-        } else {
-          video.pause();
-          video.currentTime = 0;
-        }
-      }
-    });
-  }, [currentIndex, clips]);
-
-  // Handle intersection observer or scroll in desktop/mobile
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const scrollPosition = container.scrollTop;
-    const height = container.clientHeight;
-    const newIndex = Math.round(scrollPosition / height);
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < filteredClips.length) {
-      setCurrentIndex(newIndex);
-    }
-  };
-
-  // 4. Fetch comments for selected clip
-  useEffect(() => {
-    if (!isCommentsOpen || !filteredClips[currentIndex]) return;
-    const clipId = filteredClips[currentIndex].id;
-
-    if (clipId.startsWith('seed-')) {
-      setComments(localComments[clipId] || []);
-      setCommentsLoading(false);
-      return;
-    }
-
-    setCommentsLoading(true);
-    const q = query(
-      collection(db, 'clips', clipId, 'comments'),
-      orderBy('createdAt', 'asc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const commList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClipComment));
-      setComments(commList);
-      setCommentsLoading(false);
-    }, (error) => {
-      console.warn("Comments Firestore subscription error, using local fallback:", error);
-      setComments(localComments[clipId] || []);
-      setCommentsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [isCommentsOpen, currentIndex, clips, localComments]);
-
-  // Filter clips based on selected tab and search
-  const filteredClips = clips.filter(clip => {
-    // 1. Tab filters
-    if (activeTab === 'myClips' && clip.creatorId !== user?.uid) return false;
-    if (activeTab === 'productReels' && !clip.productId) return false;
-
-    // 2. Search filters
-    if (searchQuery.trim() === '') return true;
-    const searchLower = searchQuery.toLowerCase();
-    const hasTag = clip.caption.toLowerCase().includes(searchLower);
-    const hasCreator = clip.creatorName.toLowerCase().includes(searchLower);
-    return hasTag || hasCreator;
-  });
-
-  // Scroll to top and reset currentIndex when activeTab or searchQuery updates
-  useEffect(() => {
-    setCurrentIndex(0);
-    setIsPlaying(true);
-    if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
-    }
-  }, [activeTab, searchQuery]);
+    resetPlayback();
+  }, [activeTab, searchQuery, resetPlayback]);
 
   // Keep currentIndex clamped safely when filteredClips length changes
   useEffect(() => {
     if (filteredClips.length > 0 && currentIndex >= filteredClips.length) {
       setCurrentIndex(filteredClips.length - 1);
     }
-  }, [filteredClips.length, currentIndex]);
+  }, [filteredClips.length, currentIndex, setCurrentIndex]);
 
-  // Keyboard controls for a rich desktop experience (ArrowUp, ArrowDown, Spacebar)
+  // Keyboard controls for ArrowUp, ArrowDown, and Spacebar utilizing hook actions
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -477,16 +427,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
         }
       } else if (e.key === ' ') {
         e.preventDefault();
-        const video = videoRefs.current[currentIndex];
-        if (video) {
-          if (isPlaying) {
-            video.pause();
-            setIsPlaying(false);
-          } else {
-            video.play().catch(err => console.log(err));
-            setIsPlaying(true);
-          }
-        }
+        togglePlay(currentIndex);
       }
     };
 
@@ -494,7 +435,37 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currentIndex, filteredClips.length, isPlaying]);
+  }, [currentIndex, filteredClips.length, togglePlay, setCurrentIndex]);
+
+  // 4. Fetch comments for selected clip
+  useEffect(() => {
+    if (!isCommentsOpen || !filteredClips[currentIndex]) return;
+    const clipId = filteredClips[currentIndex].id;
+
+    if (clipId.startsWith('seed-')) {
+      setComments(localComments[clipId] || []);
+      setCommentsLoading(false);
+      return;
+    }
+
+    setCommentsLoading(true);
+    const q = query(
+      collection(db, 'clips', clipId, 'comments'),
+      orderBy('createdAt', 'asc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const commList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClipComment));
+      setComments(commList);
+      setCommentsLoading(false);
+    }, (error) => {
+      console.warn("Comments Firestore subscription error, using local fallback:", error);
+      setComments(localComments[clipId] || []);
+      setCommentsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [isCommentsOpen, currentIndex, clips, localComments]);
 
   // Toggle Like with Firestore
   const handleLikeToggle = async (clip: Clip) => {
@@ -861,24 +832,13 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                   {/* VIDEO PLAYER ELEMENT */}
                   <div className="absolute inset-0 z-0 flex items-center justify-center">
                     <video
-                      ref={el => { videoRefs.current[idx] = el; }}
+                      ref={el => registerVideoRef(idx, el)}
                       src={clip.videoUrl}
                       loop
                       playsInline
                       muted={isMuted}
                       className="w-full h-full object-cover"
-                      onClick={() => {
-                        const video = videoRefs.current[idx];
-                        if (video) {
-                          if (isPlaying) {
-                            video.pause();
-                            setIsPlaying(false);
-                          } else {
-                            video.play().catch(err => console.log(err));
-                            setIsPlaying(true);
-                          }
-                        }
-                      }}
+                      onClick={() => togglePlay(idx)}
                     />
                     
                     {/* Pause icon overlay */}
@@ -906,7 +866,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setIsMuted(!isMuted);
+                        toggleMute();
                       }}
                       className="p-2.5 rounded-full bg-black/40 border border-white/10 text-white hover:bg-black/60 transition-all pointer-events-auto"
                     >
