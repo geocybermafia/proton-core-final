@@ -255,12 +255,24 @@ const INITIAL_MOCK_COMMENTS: { [clipId: string]: ClipComment[] } = {
   ]
 };
 
+const FILTER_OPTIONS = [
+  { id: 'normal', labelKa: 'ორიგინალი', labelEn: 'Normal' },
+  { id: 'noir', labelKa: 'ნუარი 🎬', labelEn: 'Noir 🎬' },
+  { id: 'vintage', labelKa: 'ვინტაჟი 🎞️', labelEn: 'Vintage 🎞️' },
+  { id: 'warm', labelKa: 'თბილი 🌅', labelEn: 'Sunset 🌅' },
+  { id: 'glitch', labelKa: 'გლიჩი ⚡', labelEn: 'Glitch ⚡' }
+];
+
 export default function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'forYou' | 'myClips' | 'productReels'>('forYou');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Real-time video filters
+  const [activeFilter, setActiveFilter] = useState<'normal' | 'noir' | 'vintage' | 'warm' | 'glitch'>('normal');
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false);
   
   // Modal / Sidebar overlays
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
@@ -687,6 +699,23 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   return (
     <div id="proton-clips-view" className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] text-proton-text select-none">
       
+      {/* Dynamic Keyframe Injection for Advanced Video Filters */}
+      <style>{`
+        @keyframes proton-glitch-skew {
+          0% { transform: skew(0.5deg) scale(1.01); filter: hue-rotate(0deg) saturate(1.5); }
+          15% { transform: skew(-0.8deg) scale(1); filter: hue-rotate(10deg) saturate(1.7); }
+          30% { transform: skew(0.2deg) scale(1.02); filter: hue-rotate(0deg); }
+          45% { transform: skew(-0.5deg) scale(0.99); filter: hue-rotate(-10deg) saturate(1.5); }
+          60% { transform: skew(0.8deg) scale(1.01); filter: hue-rotate(5deg); }
+          75% { transform: skew(-0.2deg) scale(1); filter: hue-rotate(-5deg) saturate(1.8); }
+          90% { transform: skew(0.4deg) scale(1.03); filter: hue-rotate(20deg); }
+          100% { transform: skew(0.1deg) scale(1.01); filter: hue-rotate(0deg) saturate(1.5); }
+        }
+        .animate-proton-glitch {
+          animation: proton-glitch-skew 1.2s infinite steps(6) alternate-reverse;
+        }
+      `}</style>
+      
       {/* HEADER CONTROLS */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-proton-border/30 px-2">
         <div className="flex items-center gap-3">
@@ -830,16 +859,27 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                 >
                   
                   {/* VIDEO PLAYER ELEMENT */}
-                  <div className="absolute inset-0 z-0 flex items-center justify-center">
+                  <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
                     <video
                       ref={el => registerVideoRef(idx, el)}
                       src={clip.videoUrl}
                       loop
                       playsInline
                       muted={isMuted}
-                      className="w-full h-full object-cover"
+                      className={cn(
+                        "w-full h-full object-cover transition-all duration-300",
+                        activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
+                        activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
+                        activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
+                        activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
+                      )}
                       onClick={() => togglePlay(idx)}
                     />
+                    
+                    {/* Real-time CRT scanlines overlay when Glitch effect is selected */}
+                    {activeFilter === 'glitch' && (
+                      <div className="absolute inset-0 pointer-events-none z-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_3px_100%] opacity-75 mix-blend-overlay animate-pulse" />
+                    )}
                     
                     {/* Pause icon overlay */}
                     <AnimatePresence>
@@ -938,6 +978,25 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       </button>
                       <span className="text-[10px] font-medium text-white drop-shadow-md">
                         {language === 'ka' ? 'გაზიარება' : 'Share'}
+                      </span>
+                    </div>
+
+                    {/* Filters Toggle Button */}
+                    <div className="flex flex-col items-center gap-1 pointer-events-auto">
+                      <button
+                        onClick={() => setShowFiltersPanel(prev => !prev)}
+                        className={cn(
+                          "p-3 rounded-full border transition-all shadow-lg",
+                          showFiltersPanel 
+                            ? "bg-purple-600/35 border-purple-500 text-purple-300 shadow-purple-500/20" 
+                            : "bg-black/40 border-white/10 text-white hover:bg-black/60"
+                        )}
+                        title="Video filters"
+                      >
+                        <Sparkles className="h-5 w-5" />
+                      </button>
+                      <span className="text-[10px] font-medium text-white drop-shadow-md">
+                        {language === 'ka' ? 'ფილტრები' : 'Filters'}
                       </span>
                     </div>
 
@@ -1052,6 +1111,61 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       </div>
                     </div>
                   </div>
+
+                  {/* REAL-TIME DYNAMIC FILTERS PANEL OVERLAY */}
+                  <AnimatePresence>
+                    {showFiltersPanel && (
+                      <motion.div
+                        initial={{ y: 80, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 80, opacity: 0 }}
+                        className="absolute bottom-0 left-0 right-0 z-20 bg-black/95 border-t border-white/10 p-4 pointer-events-auto flex flex-col gap-3 rounded-t-2xl shadow-2xl"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-black text-white flex items-center gap-1.5 uppercase tracking-wider">
+                            <Sparkles size={14} className="text-purple-400 animate-pulse" />
+                            {language === 'ka' ? 'ვიდეო ფილტრები' : 'Real-time Filters'}
+                          </span>
+                          <button 
+                            onClick={() => setShowFiltersPanel(false)}
+                            className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin scrollbar-thumb-white/10">
+                          {FILTER_OPTIONS.map(opt => {
+                            const isSelected = activeFilter === opt.id;
+                            return (
+                              <button
+                                key={opt.id}
+                                onClick={() => {
+                                  setActiveFilter(opt.id as any);
+                                  showToast(
+                                    language === 'ka' 
+                                      ? `ფილტრი შეიცვალა: ${opt.labelKa}` 
+                                      : `Filter applied: ${opt.labelEn}`,
+                                    'success'
+                                  );
+                                }}
+                                className={cn(
+                                  "flex-shrink-0 px-3 py-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-1 transition-all border",
+                                  isSelected 
+                                    ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20" 
+                                    : "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+                                )}
+                              >
+                                <span>
+                                  {language === 'ka' ? opt.labelKa : opt.labelEn}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                 </div>
               );
