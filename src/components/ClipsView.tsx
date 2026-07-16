@@ -173,6 +173,13 @@ const SEED_CLIPS = [
   }
 ];
 
+const LOCAL_SEED_CLIPS: Clip[] = SEED_CLIPS.map((item, index) => ({
+  ...item,
+  id: `seed-clip-${index + 1}`,
+  likes: item.likes as string[] || [],
+  createdAt: { seconds: Date.now() / 1000 - (3600 * index), nanoseconds: 0 } as any
+}));
+
 export default function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
@@ -190,6 +197,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [comments, setComments] = useState<ClipComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>({});
   
   // Profile Modal Overlay
   const [selectedCreator, setSelectedCreator] = useState<{ id: string, name: string, avatar?: string } | null>(null);
@@ -228,28 +236,23 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
-        // Automatically seed some initial clips so the video tab is instantly alive!
-        setLoading(true);
-        try {
-          for (const item of SEED_CLIPS) {
-            const docId = `seed-${Math.random().toString(36).substring(2, 11)}`;
-            await setDoc(doc(db, 'clips', docId), {
-              ...item,
-              id: docId,
-              createdAt: serverTimestamp()
-            });
-          }
-        } catch (e) {
-          console.error("Error seeding clips:", e);
-        }
+        // If Firestore contains no clips, we use the default seed clips locally.
+        // This is safe, performant, and avoids permission errors.
+        setClips(LOCAL_SEED_CLIPS);
         setLoading(false);
         return;
       }
 
       const rawClips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Clip));
       
+      // Merge with LOCAL_SEED_CLIPS so there are always initial high-quality reels,
+      // but filter out any duplicates.
+      const existingIds = new Set(rawClips.map(c => c.id));
+      const filteredSeed = LOCAL_SEED_CLIPS.filter(c => !existingIds.has(c.id));
+      const combinedClips = [...rawClips, ...filteredSeed];
+
       // Resolve tagged product info locally for richer experience
-      const populatedClips = await Promise.all(rawClips.map(async (clip) => {
+      const populatedClips = await Promise.all(combinedClips.map(async (clip) => {
         if (clip.productId) {
           try {
             const productDoc = await getDoc(doc(db, 'listings', clip.productId));
@@ -264,6 +267,11 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       }));
 
       setClips(populatedClips);
+      setLoading(false);
+    }, (error) => {
+      console.warn("Clips Firestore access issue, falling back to local seed data:", error);
+      // Fallback to local high-quality seed clips
+      setClips(LOCAL_SEED_CLIPS);
       setLoading(false);
     });
 
@@ -300,8 +308,15 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   // 4. Fetch comments for selected clip
   useEffect(() => {
     if (!isCommentsOpen || !filteredClips[currentIndex]) return;
-    setCommentsLoading(true);
     const clipId = filteredClips[currentIndex].id;
+
+    if (clipId.startsWith('seed-')) {
+      setComments(localComments[clipId] || []);
+      setCommentsLoading(false);
+      return;
+    }
+
+    setCommentsLoading(true);
     const q = query(
       collection(db, 'clips', clipId, 'comments'),
       orderBy('createdAt', 'asc')
@@ -311,10 +326,14 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       const commList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ClipComment));
       setComments(commList);
       setCommentsLoading(false);
+    }, (error) => {
+      console.warn("Comments Firestore subscription error, using local fallback:", error);
+      setComments(localComments[clipId] || []);
+      setCommentsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isCommentsOpen, currentIndex, clips]);
+  }, [isCommentsOpen, currentIndex, clips, localComments]);
 
   // Filter clips based on selected tab and search
   const filteredClips = clips.filter(clip => {
@@ -337,6 +356,25 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
         language === 'ka' ? 'ავტორიზაცია საჭიროა მოსაწონებლად' : 'Please sign in to like clips',
         'warning'
       );
+      return;
+    }
+
+    if (clip.id.startsWith('seed-')) {
+      // Handle seed clip like locally
+      setClips(prev => prev.map(c => {
+        if (c.id === clip.id) {
+          const likesList = c.likes || [];
+          const isLiked = likesList.includes(user.uid);
+          const newLikes = isLiked 
+            ? likesList.filter(uid => uid !== user.uid)
+            : [...likesList, user.uid];
+          const newLikesCount = isLiked
+            ? Math.max(0, (c.likesCount || 0) - 1)
+            : (c.likesCount || 0) + 1;
+          return { ...c, likes: newLikes, likesCount: newLikesCount };
+        }
+        return c;
+      }));
       return;
     }
 
@@ -376,6 +414,25 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     };
 
     setNewComment('');
+
+    if (clipId.startsWith('seed-')) {
+      // Handle seed clip comment locally
+      const mockCommentId = `comment-seed-${Math.random().toString(36).substring(2, 11)}`;
+      const newCommentObj: ClipComment = {
+        id: mockCommentId,
+        clipId,
+        userId: user.uid,
+        userName: commentData.userName,
+        userAvatar: commentData.userAvatar,
+        text: commentData.text,
+        createdAt: new Date()
+      };
+      setLocalComments(prev => ({
+        ...prev,
+        [clipId]: [...(prev[clipId] || []), newCommentObj]
+      }));
+      return;
+    }
 
     try {
       await addDoc(collection(db, 'clips', clipId, 'comments'), commentData);
