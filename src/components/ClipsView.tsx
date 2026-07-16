@@ -180,6 +180,80 @@ const LOCAL_SEED_CLIPS: Clip[] = SEED_CLIPS.map((item, index) => ({
   createdAt: { seconds: Date.now() / 1000 - (3600 * index), nanoseconds: 0 } as any
 }));
 
+const INITIAL_MOCK_COMMENTS: { [clipId: string]: ClipComment[] } = {
+  'seed-clip-1': [
+    {
+      id: 'mock-c-1-1',
+      clipId: 'seed-clip-1',
+      userId: 'mock-u-1',
+      userName: 'თამუნა_K',
+      userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&fit=crop&q=80',
+      text: 'საოცარი ხელოვნებაა! ძალიან მინდა შეძენა 🏺✨',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 2)
+    },
+    {
+      id: 'mock-c-1-2',
+      clipId: 'seed-clip-1',
+      userId: 'mock-u-2',
+      userName: 'გიორგი_G',
+      userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&fit=crop&q=80',
+      text: 'რა სინაზით და ფორმით მუშაობს! ბრავო 👏',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 1)
+    }
+  ],
+  'seed-clip-2': [
+    {
+      id: 'mock-c-2-1',
+      clipId: 'seed-clip-2',
+      userId: 'mock-u-3',
+      userName: 'მარი_M',
+      userAvatar: 'https://images.unsplash.com/photo-1554151228-14d9def656e4?w=100&fit=crop&q=80',
+      text: 'ფერი უთბილესია! მატყლი მთისაა? 🧶',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 5)
+    },
+    {
+      id: 'mock-c-2-2',
+      clipId: 'seed-clip-2',
+      userId: 'mock-u-4',
+      userName: 'დათო_D',
+      userAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&fit=crop&q=80',
+      text: 'ძალიან მყუდრო ვიდეოა, ზამთარს მომანატრებს ❄️',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 3)
+    }
+  ],
+  'seed-clip-3': [
+    {
+      id: 'mock-c-3-1',
+      clipId: 'seed-clip-3',
+      userId: 'mock-u-5',
+      userName: 'სალომე_S',
+      userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&fit=crop&q=80',
+      text: 'ყაზბეგი მართლაც უნიკალური ადგილია, სული ისვენებს აქ... დრონით გადაღება საოცრებაა!',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 12)
+    },
+    {
+      id: 'mock-c-3-2',
+      clipId: 'seed-clip-3',
+      userId: 'mock-u-6',
+      userName: 'ნიკა_N',
+      userAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&fit=crop&q=80',
+      text: 'ნისლი მთებში ყოველთვის განსაკუთრებულ მისტიკას ქმნის 🏔️👌',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 8)
+    }
+  ],
+  'seed-clip-4': [
+    {
+      id: 'mock-c-4-1',
+      clipId: 'seed-clip-4',
+      userId: 'mock-u-7',
+      userName: 'ელენე_E',
+      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&fit=crop&q=80',
+      text: 'გაზაფხულის განწყობა შემოიტანეთ ჩემს სმარტფონში 🌸 დიდი მადლობა ასეთი მშვიდი ვიდეოსთვის!',
+      createdAt: new Date(Date.now() - 1000 * 3600 * 4)
+    }
+  ]
+};
+
 export default function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
@@ -197,7 +271,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [comments, setComments] = useState<ClipComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>({});
+  const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>(INITIAL_MOCK_COMMENTS);
   
   // Profile Modal Overlay
   const [selectedCreator, setSelectedCreator] = useState<{ id: string, name: string, avatar?: string } | null>(null);
@@ -216,6 +290,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [listings, setListings] = useState<any[]>([]);
 
   const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 1. Fetch Listings for Tagging
   useEffect(() => {
@@ -348,6 +423,78 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     const hasCreator = clip.creatorName.toLowerCase().includes(searchLower);
     return hasTag || hasCreator;
   });
+
+  // Scroll to top and reset currentIndex when activeTab or searchQuery updates
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsPlaying(true);
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+  }, [activeTab, searchQuery]);
+
+  // Keep currentIndex clamped safely when filteredClips length changes
+  useEffect(() => {
+    if (filteredClips.length > 0 && currentIndex >= filteredClips.length) {
+      setCurrentIndex(filteredClips.length - 1);
+    }
+  }, [filteredClips.length, currentIndex]);
+
+  // Keyboard controls for a rich desktop experience (ArrowUp, ArrowDown, Spacebar)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        document.activeElement?.tagName === 'SELECT'
+      ) {
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (currentIndex < filteredClips.length - 1) {
+          const nextIndex = currentIndex + 1;
+          setCurrentIndex(nextIndex);
+          if (containerRef.current) {
+            containerRef.current.scrollTo({
+              top: nextIndex * containerRef.current.clientHeight,
+              behavior: 'smooth'
+            });
+          }
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (currentIndex > 0) {
+          const prevIndex = currentIndex - 1;
+          setCurrentIndex(prevIndex);
+          if (containerRef.current) {
+            containerRef.current.scrollTo({
+              top: prevIndex * containerRef.current.clientHeight,
+              behavior: 'smooth'
+            });
+          }
+        }
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        const video = videoRefs.current[currentIndex];
+        if (video) {
+          if (isPlaying) {
+            video.pause();
+            setIsPlaying(false);
+          } else {
+            video.play().catch(err => console.log(err));
+            setIsPlaying(true);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentIndex, filteredClips.length, isPlaying]);
 
   // Toggle Like with Firestore
   const handleLikeToggle = async (clip: Clip) => {
@@ -696,6 +843,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
           
           /* VERTICAL TIKTOK GRID FEEDS */
           <div 
+            ref={containerRef}
             onScroll={handleScroll}
             className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth flex flex-col items-center"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -814,7 +962,9 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         <MessageSquare className="h-5 w-5" />
                       </button>
                       <span className="text-[11px] font-bold text-white drop-shadow-md">
-                        {clip.id.startsWith('seed-') ? 14 : '...'}
+                        {clip.id.startsWith('seed-') 
+                          ? (localComments[clip.id]?.length || 0)
+                          : (currentIndex === idx && comments.length > 0) ? comments.length : '0'}
                       </span>
                     </div>
 
@@ -1005,7 +1155,15 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         <div className="flex items-center justify-between">
                           <p className="text-[11px] font-black text-white">@{comm.userName}</p>
                           <span className="text-[9px] text-proton-muted font-mono">
-                            {comm.createdAt ? new Date(comm.createdAt?.seconds * 1000).toLocaleDateString() : 'Just now'}
+                            {comm.createdAt ? (
+                              comm.createdAt.seconds 
+                                ? new Date(comm.createdAt.seconds * 1000).toLocaleDateString() 
+                                : comm.createdAt instanceof Date 
+                                  ? comm.createdAt.toLocaleDateString()
+                                  : typeof comm.createdAt === 'string' || typeof comm.createdAt === 'number'
+                                    ? new Date(comm.createdAt).toLocaleDateString()
+                                    : 'Just now'
+                            ) : 'Just now'}
                           </span>
                         </div>
                         <p className="text-xs text-gray-200 mt-1 select-text break-words">
