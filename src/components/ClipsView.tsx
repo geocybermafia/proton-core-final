@@ -704,7 +704,31 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     let finalVideoUrl = newClipVideoUrl.trim();
     let finalSound = newClipSound.trim() || 'Original Sound';
 
-    // If no custom URL, use selected preset
+    // If there's a local video file, attempt to convert it to base64 if small enough.
+    if (localVideoFile) {
+      if (localVideoFile.size > 800 * 1024) { // 800 KB limit for safe Base64 Firestore storage
+        showToast(
+          language === 'ka' 
+            ? 'ვიდეო ფაილი დიდია (>800KB). ოპტიმალური სიჩქარისთვის ის შეინახება თქვენს ბრაუზერში!' 
+            : 'Video file is large (>800KB). Saved to local browser cache for peak speed!',
+          'info'
+        );
+      } else {
+        try {
+          const base64String = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(localVideoFile);
+          });
+          finalVideoUrl = base64String;
+        } catch (err) {
+          console.error("Base64 video conversion error:", err);
+        }
+      }
+    }
+
+    // If no custom URL or local conversion, use selected preset
     if (!finalVideoUrl) {
       const preset = PRESET_LOOPS.find(p => p.id === selectedPresetId);
       if (preset) {
