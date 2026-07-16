@@ -46,105 +46,184 @@
           // Fallback or ignore if cannot modify
         }
 
-        // Global Node.js process polyfill for browser compatibility
+        // Global Node.js process polyfill with Proxy
         try {
           if (typeof window !== 'undefined') {
-            if (typeof window.process === 'undefined') {
-              window.process = {
-                env: { NODE_ENV: 'development' },
-                argv: [],
-                platform: 'browser',
-                browser: true,
-                on: function() { return this; },
-                once: function() { return this; },
-                off: function() { return this; },
-                emit: function() { return true; },
-                addListener: function() { return this; },
-                removeListener: function() { return this; },
-                removeAllListeners: function() { return this; }
-              };
-            } else {
-              const p = window.process;
-              p.env = p.env || {};
-              p.on = p.on || function() { return this; };
-              p.once = p.once || function() { return this; };
-              p.off = p.off || function() { return this; };
-              p.emit = p.emit || function() { return true; };
-              p.addListener = p.addListener || function() { return this; };
-              p.removeListener = p.removeListener || function() { return this; };
-              p.removeAllListeners = p.removeAllListeners || function() { return this; };
-            }
-
-            // Chrome extension API fallback for iframe sandboxing
-            if (typeof window.chrome === 'undefined') {
-              window.chrome = {};
-            }
-            if (typeof window.chrome.runtime === 'undefined') {
-              const noop = function() {};
-              const mockPort = {
-                onMessage: { addListener: noop, removeListener: noop },
-                onDisconnect: { addListener: noop, removeListener: noop },
-                postMessage: noop,
-                disconnect: noop,
-              };
-              window.chrome.runtime = {
-                connect: function() { return mockPort; },
-                sendMessage: noop,
-                onMessage: { addListener: noop, removeListener: noop },
-                onConnect: { addListener: noop, removeListener: noop },
-              };
-            }
-
-            // window.ethereum fallback for sandboxed iframe compatibility
-            if (window.ethereum) {
-              try {
-                const eth = window.ethereum;
-                eth.emit = eth.emit || function() { return true; };
-                eth.addListener = eth.addListener || eth.on || function() { return this; };
-                eth.removeListener = eth.removeListener || eth.off || function() { return this; };
-                eth.on = eth.on || eth.addListener || function() { return this; };
-                eth.off = eth.off || eth.removeListener || function() { return this; };
-              } catch (e) {
-                // Read-only property fallback using a safe Proxy wrapper
-                try {
-                  const originalEth = window.ethereum;
-                  const ethProxy = new Proxy(originalEth, {
-                    get: function(target, prop, receiver) {
-                      if (prop === 'emit') {
-                        return target.emit || function() { return true; };
-                      }
-                      if (prop === 'addListener') {
-                        return target.addListener || target.on || function() { return this; };
-                      }
-                      if (prop === 'removeListener') {
-                        return target.removeListener || target.off || function() { return this; };
-                      }
-                      if (prop === 'on') {
-                        return target.on || target.addListener || function() { return this; };
-                      }
-                      if (prop === 'off') {
-                        return target.off || target.removeListener || function() { return this; };
-                      }
-                      const val = Reflect.get(target, prop, receiver);
-                      if (typeof val === 'function') {
-                        return val.bind(target);
-                      }
-                      return val;
-                    }
-                  });
-                  Object.defineProperty(window, 'ethereum', {
-                    value: ethProxy,
-                    configurable: true,
-                    writable: true
-                  });
-                } catch (proxyError) {
-                  // Ignore if cannot define property
+            let rawProcess = window.process || { env: { NODE_ENV: 'development' } };
+            const processHandler = {
+              get(target, prop) {
+                if (prop === 'env') {
+                  return target.env || { NODE_ENV: 'development' };
                 }
+                if (prop === 'argv') return target.argv || [];
+                if (prop === 'platform') return target.platform || 'browser';
+                if (prop === 'browser') return true;
+                
+                // Event emitter stubs
+                if (['on', 'once', 'off', 'addListener', 'removeListener', 'removeAllListeners'].includes(prop)) {
+                  return target[prop] || function() { return this; };
+                }
+                if (prop === 'emit') {
+                  return target[prop] || function() { return true; };
+                }
+                
+                const val = Reflect.get(target, prop);
+                if (typeof val === 'function') {
+                  return val.bind(target);
+                }
+                return val;
+              },
+              set(target, prop, value) {
+                return Reflect.set(target, prop, value);
               }
-            }
+            };
+
+            let processProxy = new Proxy(rawProcess, processHandler);
+
+            Object.defineProperty(window, 'process', {
+              get: () => processProxy,
+              set: (newVal) => {
+                if (newVal && typeof newVal === 'object') {
+                  rawProcess = Object.assign(rawProcess, newVal);
+                } else {
+                  rawProcess = newVal;
+                }
+                processProxy = new Proxy(rawProcess || {}, processHandler);
+              },
+              configurable: true,
+              enumerable: true
+            });
           }
-        } catch (err) {
-          // Keep failure silent to prevent script stopping
+        } catch (e) {
+          // ignore
+        }
+
+        // Chrome extension API fallback for iframe sandboxing
+        try {
+          if (typeof window !== 'undefined') {
+            const noop = function() {};
+            const mockListener = {
+              addListener: noop,
+              removeListener: noop,
+              hasListener: function() { return false; },
+              hasListeners: function() { return false; }
+            };
+            const mockPort = {
+              onMessage: mockListener,
+              onDisconnect: mockListener,
+              postMessage: noop,
+              disconnect: noop,
+            };
+            
+            let rawChrome = window.chrome || {};
+            const chromeHandler = {
+              get(target, prop) {
+                if (prop === 'runtime') {
+                  return target.runtime || {
+                    connect: function() { return mockPort; },
+                    sendMessage: noop,
+                    onMessage: mockListener,
+                    onConnect: mockListener,
+                    onDisconnect: mockListener,
+                    getURL: function(path) { return path || ''; },
+                    id: 'mock-extension-id'
+                  };
+                }
+                return target[prop];
+              }
+            };
+
+            let chromeProxy = new Proxy(rawChrome, chromeHandler);
+            Object.defineProperty(window, 'chrome', {
+              get: () => chromeProxy,
+              set: (newVal) => {
+                rawChrome = newVal || {};
+                chromeProxy = new Proxy(rawChrome, chromeHandler);
+              },
+              configurable: true,
+              enumerable: true
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        // window.ethereum fallback for sandboxed iframe compatibility with Proxy
+        try {
+          if (typeof window !== 'undefined') {
+            let rawEthereum = window.ethereum;
+            const ethHandler = {
+              get(target, prop, receiver) {
+                if (!target) return undefined;
+                if (prop === 'emit') {
+                  return target.emit || function() { return true; };
+                }
+                if (['addListener', 'on'].includes(prop)) {
+                  return target.addListener || target.on || function() { return this; };
+                }
+                if (['removeListener', 'off'].includes(prop)) {
+                  return target.removeListener || target.off || function() { return this; };
+                }
+                const val = Reflect.get(target, prop, receiver);
+                if (typeof val === 'function') {
+                  return val.bind(target);
+                }
+                return val;
+              }
+            };
+
+            Object.defineProperty(window, 'ethereum', {
+              get: () => {
+                if (!rawEthereum) return undefined;
+                return new Proxy(rawEthereum, ethHandler);
+              },
+              set: (newVal) => {
+                rawEthereum = newVal;
+              },
+              configurable: true,
+              enumerable: true
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        // Global window error listener to swallow benign extension sandboxing errors
+        try {
+          if (typeof window !== 'undefined') {
+            window.addEventListener('error', function(event) {
+              const msg = event.message || '';
+              if (
+                msg.includes("reading 'emit'") ||
+                msg.includes("reading 'addListener'") ||
+                msg.includes("reading 'runtime'") ||
+                msg.includes("Extension context invalidated") ||
+                (msg.includes("Cannot read properties of undefined") && (msg.includes("emit") || msg.includes("addListener") || msg.includes("onMessage")))
+              ) {
+                event.stopImmediatePropagation();
+                event.preventDefault();
+                return true;
+              }
+            }, true);
+
+            window.addEventListener('unhandledrejection', function(event) {
+              const reason = event.reason || {};
+              const msg = reason.message || String(reason);
+              if (
+                msg.includes("reading 'emit'") ||
+                msg.includes("reading 'addListener'") ||
+                msg.includes("reading 'runtime'") ||
+                msg.includes("Extension context invalidated") ||
+                (msg.includes("Cannot read properties of undefined") && (msg.includes("emit") || msg.includes("addListener") || msg.includes("onMessage")))
+              ) {
+                event.stopImmediatePropagation();
+                event.preventDefault();
+                return true;
+              }
+            }, true);
+          }
+        } catch (e) {
+          // ignore
         }
       })();
     </script>
