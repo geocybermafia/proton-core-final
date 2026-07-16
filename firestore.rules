@@ -215,5 +215,42 @@ service cloud.firestore {
       allow write: if isOwner(userId)
         && incoming().lastAiGen == request.time;
     }
+
+    // ======================================================
+    // 8. PROTON CLIPS (TIKTOK/REELS SHORT VIDEOS)
+    // ======================================================
+    match /clips/{clipId} {
+      allow read: if isSignedIn();
+      allow create: if isVerified() && isValidId(clipId) 
+        && incoming().creatorId == request.auth.uid
+        && incoming().videoUrl is string && incoming().videoUrl.size() <= 2000
+        && incoming().caption is string && incoming().caption.size() <= 500
+        && incoming().creatorName is string && incoming().creatorName.size() <= 200
+        && incoming().createdAt == request.time;
+      allow update: if isVerified() && isValidId(clipId) && (
+        // Action 1: Like/Unlike (can only alter likes array and likesCount)
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likesCount']) 
+          && incoming().likes is list && incoming().likes.size() <= 100000
+          && (incoming().likesCount is number || incoming().likesCount is int)) ||
+        // Action 2: Edit caption/soundName by owner
+        (existing().creatorId == request.auth.uid 
+          && incoming().creatorId == request.auth.uid 
+          && incoming().videoUrl == existing().videoUrl
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'soundName', 'productId']))
+      );
+      allow delete: if isVerified() && isValidId(clipId) && existing().creatorId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isVerified() && isValidId(commentId)
+          && incoming().userId == request.auth.uid
+          && incoming().clipId == clipId
+          && incoming().text is string && incoming().text.size() <= 1000
+          && incoming().createdAt == request.time;
+        allow delete: if isVerified() && isValidId(commentId) 
+          && (existing().userId == request.auth.uid || get(/databases/$(database)/documents/clips/$(clipId)).data.creatorId == request.auth.uid);
+      }
+    }
   }
 }

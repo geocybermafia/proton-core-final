@@ -51,6 +51,7 @@ const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView')
 const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })));
 const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })));
 const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
+const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.ClipsView })));
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
@@ -168,7 +169,8 @@ import {
   Mic as MicIcon,
   Play,
   Pause,
-  Tag
+  Tag,
+  Video
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })));
@@ -3832,6 +3834,8 @@ export default function App() {
 
   // Helper mapping pathnames to specific Views
   const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
+    if (pathname.startsWith('/clips')) return 'clips';
+    if (pathname.startsWith('/reels')) return 'clips';
     if (pathname.startsWith('/creative-studio')) return 'creative-studio';
     if (pathname.startsWith('/copywriting')) return 'copywriting';
     if (pathname.startsWith('/translator')) return 'translator';
@@ -3858,6 +3862,7 @@ export default function App() {
   // Helper mapping view to router pathnames
   const getPathnameFromView = React.useCallback((view: View): string => {
     switch (view) {
+      case 'clips': return '/clips';
       case 'creative-studio': return '/creative-studio';
       case 'copywriting': return '/copywriting';
       case 'translator': return '/translator';
@@ -5133,6 +5138,15 @@ export default function App() {
                       expanded={isSidebarOpen}
                       uiMode={uiMode}
                     />
+                    <SidebarItem 
+                      icon={Video} 
+                      label={language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips'} 
+                      active={activeView === 'clips'} 
+                      onClick={() => handleViewChange('clips')} 
+                      expanded={isSidebarOpen}
+                      uiMode={uiMode}
+                      badge="LIVE"
+                    />
                   </div>
                 </div>
 
@@ -5546,6 +5560,7 @@ export default function App() {
               { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
             ] : [
               { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
+              { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video },
             ]).map((link) => (
               <button
                 key={link.id}
@@ -5843,6 +5858,20 @@ export default function App() {
                       </div>
                     }>
                       <CommercialHub language={userProfile.language} />
+                    </Suspense>
+                  )}
+                  {activeView === 'clips' && (
+                    <Suspense fallback={
+                      <div className="min-h-[450px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest font-bold">Streaming Proton Feed...</span>
+                      </div>
+                    }>
+                      <ClipsView 
+                        language={userProfile.language} 
+                        setActiveView={handleViewChange} 
+                        user={user} 
+                      />
                     </Suspense>
                   )}
                 </>

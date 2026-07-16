@@ -131,9 +131,51 @@
         "category": { "type": "string" },
         "createdAt": { "type": "number" }
       }
+    },
+    "Clip": {
+      "title": "Proton Reel Clip",
+      "description": "Short vertical video post shared by general users or marketplace sellers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "creatorAvatar": { "type": "string" },
+        "likes": { "type": "array" },
+        "likesCount": { "type": "number" },
+        "soundName": { "type": "string" },
+        "productId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "videoUrl", "caption", "creatorId", "creatorName", "createdAt"]
+    },
+    "ClipComment": {
+      "title": "Clip Comment",
+      "description": "User comments on video clips",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clipId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "clipId", "userId", "userName", "text", "createdAt"]
     }
   },
   "firestore": {
+    "/clips/{clipId}": {
+      "schema": "Clip",
+      "description": "Global user-generated video reels / TikTok-style platform clips"
+    },
+    "/clips/{clipId}/comments/{commentId}": {
+      "schema": "ClipComment",
+      "description": "Subcollection of comments left on a specific video clip"
+    },
     "/shared_specs/{specId}": {
       "schema": "SharedSpec",
       "description": "Global cache for AI specs"
