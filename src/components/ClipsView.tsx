@@ -20,6 +20,9 @@ import {
   Sparkles,
   ArrowLeft,
   ChevronRight,
+  ChevronLeft,
+  UploadCloud,
+  Check,
   TrendingUp,
   AlertCircle,
   Video,
@@ -287,12 +290,22 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   
   // Create / Upload modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [uploadStep, setUploadStep] = useState<number>(1);
   const [newClipCaption, setNewClipCaption] = useState('');
   const [newClipSound, setNewClipSound] = useState('');
   const [newClipVideoUrl, setNewClipVideoUrl] = useState('');
   const [selectedPresetId, setSelectedPresetId] = useState('potter-clay');
   const [newClipProductId, setNewClipProductId] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [localVideoFile, setLocalVideoFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Set upload step back to 1 when modal opens
+  useEffect(() => {
+    if (isCreateOpen) {
+      setUploadStep(1);
+    }
+  }, [isCreateOpen]);
   
   // Marketplace Listings list for Tagging
   const [listings, setListings] = useState<any[]>([]);
@@ -620,6 +633,53 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     }
   };
 
+  // Drag & Drop / Selection helpers for local video uploading
+  const handleLocalFileSelect = (file: File) => {
+    if (!file.type.startsWith('video/')) {
+      showToast(
+        language === 'ka' ? 'გთხოვთ აირჩიოთ მხოლოდ ვიდეო ფაილი (.mp4)' : 'Please select a valid video file (.mp4)',
+        'error'
+      );
+      return;
+    }
+    const localUrl = URL.createObjectURL(file);
+    setNewClipVideoUrl(localUrl);
+    setLocalVideoFile(file);
+    setSelectedPresetId('');
+    showToast(
+      language === 'ka' ? 'ვიდეო ფაილი წარმატებით ჩაიტვირთა!' : 'Video file loaded successfully!',
+      'success'
+    );
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleLocalFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleHashtagClick = (tag: string) => {
+    if (newClipCaption.includes(tag)) {
+      setNewClipCaption(prev => prev.replace(new RegExp(`\\s*${tag}`, 'g'), '').trim());
+    } else {
+      setNewClipCaption(prev => {
+        const spacer = prev.length > 0 && !prev.endsWith(' ') ? ' ' : '';
+        return `${prev}${spacer}${tag}`;
+      });
+    }
+  };
+
   // Create Reel Action
   const handleCreateReel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -682,6 +742,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       setNewClipSound('');
       setNewClipVideoUrl('');
       setNewClipProductId('');
+      setLocalVideoFile(null);
+      setUploadStep(1);
       setIsCreateOpen(false);
       setActiveTab('myClips'); // Switch to My Clips to see the post!
       setCurrentIndex(0);
@@ -1369,139 +1431,471 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       {/* CREATE NEW REEL MODAL */}
       <AnimatePresence>
         {isCreateOpen && (
-          <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-lg bg-proton-bg border border-proton-border/30 rounded-2xl p-6 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="relative w-full max-w-2xl bg-proton-bg border border-proton-border/30 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-proton-text"
             >
+              {/* Close Button */}
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-proton-bg border border-proton-border/10 text-proton-muted hover:text-white transition-all"
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 border border-white/10 text-proton-muted hover:text-white hover:bg-white/10 transition-all z-10"
               >
-                <X size={15} />
+                <X size={16} />
               </button>
 
-              <div className="flex items-center gap-2 pb-3 border-b border-proton-border/20">
-                <Video className="text-purple-400 animate-pulse" size={18} />
-                <h3 className="font-extrabold text-sm uppercase tracking-wider text-white">
-                  {language === 'ka' ? 'ახალი კლიპის დამატება' : 'Publish a Clip'}
-                </h3>
-              </div>
-
-              <form onSubmit={handleCreateReel} className="flex-1 overflow-y-auto space-y-4 py-4 pr-1">
-                
-                {/* Visual Video preset choice */}
+              {/* Title Header */}
+              <div className="flex items-center gap-2.5 pb-4 border-b border-proton-border/10">
+                <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                  <Video className="animate-pulse" size={18} />
+                </div>
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-proton-muted mb-2">
-                    {language === 'ka' ? '1. აირჩიე ვიდეო ნიმუში ან ჩასვი ბმული' : '1. Choose video template or paste link'}
-                  </label>
-                  
-                  {/* Presets Row */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                    {PRESET_LOOPS.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPresetId(p.id);
-                          setNewClipVideoUrl('');
-                          setNewClipSound(p.sound);
-                        }}
-                        className={cn(
-                          "p-2 text-left rounded-xl border text-xs font-semibold transition-all flex flex-col gap-1",
-                          selectedPresetId === p.id && !newClipVideoUrl
-                            ? "bg-purple-500/20 text-purple-400 border-purple-500/50 ring-1 ring-purple-500/20"
-                            : "bg-proton-bg/40 border-proton-border/20 text-proton-muted hover:text-white hover:bg-proton-bg/60"
-                        )}
-                      >
-                        <span className="font-bold block truncate">{language === 'ka' ? p.nameGe : p.nameEn}</span>
-                        <span className="text-[10px] text-proton-muted opacity-80 truncate block">{p.sound}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom URL Input */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-proton-muted italic">
-                      {language === 'ka' ? 'ან ჩასვი საკუთარი .mp4 ვიდეოს ბმული:' : 'Or paste a direct custom .mp4 video URL:'}
-                    </span>
-                    <input
-                      type="url"
-                      value={newClipVideoUrl}
-                      onChange={(e) => {
-                        setNewClipVideoUrl(e.target.value);
-                        setSelectedPresetId('');
-                      }}
-                      placeholder="https://example.com/my-cool-video.mp4"
-                      className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 px-3 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Caption / description input */}
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-proton-muted">
-                    {language === 'ka' ? '2. სათაური & ჰეშთეგები' : '2. Caption & Hashtags'}
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={newClipCaption}
-                    onChange={(e) => setNewClipCaption(e.target.value)}
-                    placeholder={language === 'ka' ? 'აღწერე ვიდეო... გამოიყენე ჰეშთეგები (მაგ. #wool #pottery #tbilisi)' : 'Describe your reel... Use hashtags (e.g. #wool #pottery #handcrafted)'}
-                    className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 px-3 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all resize-none"
-                  />
-                </div>
-
-                {/* Sound Name track */}
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-proton-muted">
-                    {language === 'ka' ? '3. მუსიკა / აუდიო ბილიკი' : '3. Audio track / Music name'}
-                  </label>
-                  <div className="relative">
-                    <Music size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-proton-muted" />
-                    <input
-                      type="text"
-                      value={newClipSound}
-                      onChange={(e) => setNewClipSound(e.target.value)}
-                      placeholder={language === 'ka' ? 'ორიგინალი ხმა ან სიმღერის სახელი' : 'Original Audio or track name'}
-                      className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 pl-9 pr-3 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* Tag Marketplace Product (Awesome connection) */}
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-proton-muted">
-                    {language === 'ka' ? '4. მონიშნე პროდუქტი მარკეტიდან (არასავალდებულო)' : '4. Tag a marketplace product (Optional)'}
-                  </label>
-                  <div className="relative">
-                    <ShoppingBag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-proton-muted" />
-                    <select
-                      value={newClipProductId}
-                      onChange={(e) => setNewClipProductId(e.target.value)}
-                      className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 pl-9 pr-3 text-xs text-proton-text transition-all appearance-none cursor-pointer"
-                    >
-                      <option value="">
-                        {language === 'ka' ? '-- არ მონიშნო --' : '-- Do not tag --'}
-                      </option>
-                      {listings.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          [{item.category}] {item.title} - ${item.price}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <p className="text-[10px] text-proton-muted italic leading-relaxed">
-                    {language === 'ka' 
-                      ? 'ვიდეოს მნახველებს შეეძლებათ პირდაპირ გადავიდნენ ამ პროდუქტის შესაძენად.' 
-                      : 'Viewers will see a clickable tag on the video overlay directing them to checkout.'}
+                  <h3 className="font-black text-sm uppercase tracking-wider text-white">
+                    {language === 'ka' ? 'კრეატორთა სტუდია' : 'Creator Studio'}
+                  </h3>
+                  <p className="text-[10px] text-proton-muted">
+                    {language === 'ka' ? 'გამოაქვეყნე მოკლე კლიპი YouTube Shorts-ის მსგავსად' : 'Publish a high-converting loop clip, YouTube-style'}
                   </p>
                 </div>
+              </div>
 
-                {/* Submit bar button */}
-                <div className="pt-4 flex justify-end gap-3">
+              {/* STEP PROGRESS WIZARD INDICATOR */}
+              <div className="py-4 px-2 flex items-center justify-between gap-2 border-b border-proton-border/10">
+                {[
+                  { step: 1, labelKa: 'ვიდეო ფაილი', labelEn: 'Video File' },
+                  { step: 2, labelKa: 'აღწერა & ტეგები', labelEn: 'Caption & Tags' },
+                  { step: 3, labelKa: 'ხმა & პროდუქტი', labelEn: 'Sound & Shop' }
+                ].map((s, index) => {
+                  const isActive = uploadStep === s.step;
+                  const isCompleted = uploadStep > s.step;
+                  return (
+                    <React.Fragment key={s.step}>
+                      <div className="flex items-center gap-2 flex-1 md:flex-initial">
+                        <div
+                          className={cn(
+                            "w-6 h-6 rounded-full flex items-center justify-center text-xs font-black border transition-all duration-300",
+                            isActive 
+                              ? "bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/30 scale-110" 
+                              : isCompleted
+                                ? "bg-emerald-600/30 border-emerald-500 text-emerald-300"
+                                : "bg-white/5 border-white/10 text-proton-muted"
+                          )}
+                        >
+                          {isCompleted ? <Check size={12} className="stroke-[3]" /> : s.step}
+                        </div>
+                        <span 
+                          className={cn(
+                            "text-[10px] font-extrabold tracking-tight transition-all duration-300 hidden sm:inline",
+                            isActive ? "text-purple-400" : isCompleted ? "text-emerald-400" : "text-proton-muted"
+                          )}
+                        >
+                          {language === 'ka' ? s.labelKa : s.labelEn}
+                        </span>
+                      </div>
+                      {index < 2 && (
+                        <div className="flex-1 h-[2px] bg-proton-border/20 relative rounded-full">
+                          <div 
+                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-600 to-pink-500 transition-all duration-500 rounded-full" 
+                            style={{ width: uploadStep > s.step ? "100%" : "0%" }}
+                          />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {/* MAIN CONTENT WORKSPACE */}
+              <div className="flex-1 overflow-y-auto py-5 pr-1 space-y-6">
+                
+                {/* STEP 1: VIDEO MEDIA SOURCE SELECTION */}
+                {uploadStep === 1 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-5"
+                  >
+                    {/* Left/Main Column: Source Options */}
+                    <div className="md:col-span-7 space-y-5">
+                      
+                      {/* DRAG AND DROP ZONE */}
+                      <div>
+                        <span className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted mb-2">
+                          {language === 'ka' ? 'ვარიანტი ა: ატვირთე ვიდეო' : 'Option A: Upload local video'}
+                        </span>
+                        
+                        <div
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onClick={() => document.getElementById('proton-upload-file-input')?.click()}
+                          className={cn(
+                            "border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all hover:bg-white/5",
+                            isDragging 
+                              ? "border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/10 scale-[0.99]" 
+                              : localVideoFile 
+                                ? "border-emerald-500/50 bg-emerald-500/5" 
+                                : "border-proton-border/30 bg-proton-bg/40 hover:border-purple-500/40"
+                          )}
+                        >
+                          <input 
+                            id="proton-upload-file-input"
+                            type="file"
+                            accept="video/mp4,video/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                handleLocalFileSelect(e.target.files[0]);
+                              }
+                            }}
+                          />
+                          
+                          {localVideoFile ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="p-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                <Check size={28} className="stroke-[3] animate-bounce" />
+                              </div>
+                              <p className="text-xs font-bold text-white max-w-[200px] truncate">
+                                {localVideoFile.name}
+                              </p>
+                              <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest">
+                                {(localVideoFile.size / (1024 * 1024)).toFixed(2)} MB • MP4 Video
+                              </p>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLocalVideoFile(null);
+                                  setNewClipVideoUrl('');
+                                  setSelectedPresetId('potter-clay');
+                                  showToast(
+                                    language === 'ka' ? 'ატვირთული ფაილი წაიშალა' : 'Uploaded file removed',
+                                    'info'
+                                  );
+                                }}
+                                className="mt-2 px-3 py-1 rounded-lg bg-red-600/25 hover:bg-red-600/40 text-red-300 text-[10px] font-bold border border-red-500/30 transition-all"
+                              >
+                                {language === 'ka' ? 'ფაილის წაშლა' : 'Remove File'}
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <div className="p-3 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 mb-1">
+                                <UploadCloud size={28} className="animate-pulse" />
+                              </div>
+                              <p className="text-xs font-black text-white">
+                                {language === 'ka' ? 'ჩააგდე ვიდეო აქ ან დააჭირე ასარჩევად' : 'Drag & drop file here or click to browse'}
+                              </p>
+                              <p className="text-[10px] text-proton-muted leading-relaxed max-w-[240px]">
+                                {language === 'ka' ? 'რეკომენდირებულია ვერტიკალური .mp4 ფორმატი' : 'Vertical aspect ratio recommended (.mp4 format, max 50MB)'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* CINEMATOGRAPHIC TEMPLATES */}
+                      <div>
+                        <span className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted mb-2">
+                          {language === 'ka' ? 'ვარიანტი ბ: აირჩიე მაღალი ხარისხის ვიდეო ნიმუში' : 'Option B: Choose cinematographic loop'}
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {PRESET_LOOPS.map((p) => {
+                            const isSelected = selectedPresetId === p.id && !localVideoFile && !newClipVideoUrl.startsWith('http');
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPresetId(p.id);
+                                  setNewClipVideoUrl('');
+                                  setNewClipSound(p.sound);
+                                  setLocalVideoFile(null);
+                                }}
+                                className={cn(
+                                  "p-2.5 text-left rounded-xl border text-xs font-bold transition-all flex flex-col gap-1 relative overflow-hidden group",
+                                  isSelected
+                                    ? "bg-purple-600/20 text-purple-400 border-purple-500 ring-1 ring-purple-500/20"
+                                    : "bg-proton-bg/40 border-proton-border/20 text-proton-muted hover:text-white hover:bg-proton-bg/60"
+                                )}
+                              >
+                                <span className="font-extrabold block truncate z-10">
+                                  {language === 'ka' ? p.nameGe : p.nameEn}
+                                </span>
+                                <span className="text-[9px] text-proton-muted opacity-85 truncate block font-mono z-10">
+                                  🎵 {p.sound}
+                                </span>
+                                {isSelected && (
+                                  <div className="absolute right-1 top-1 text-purple-400 bg-purple-500/10 rounded-full p-0.5 border border-purple-500/20">
+                                    <Check size={8} className="stroke-[3]" />
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* CUSTOM PASTE URL */}
+                      <div>
+                        <span className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted mb-1.5">
+                          {language === 'ka' ? 'ვარიანტი გ: პირდაპირი ბმული' : 'Option C: Paste custom MP4 link'}
+                        </span>
+                        <div className="relative">
+                          <input
+                            type="url"
+                            value={localVideoFile ? '' : newClipVideoUrl}
+                            disabled={!!localVideoFile}
+                            onChange={(e) => {
+                              setNewClipVideoUrl(e.target.value);
+                              setSelectedPresetId('');
+                            }}
+                            placeholder="https://example.com/cinematic-reel.mp4"
+                            className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 px-3 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all disabled:opacity-40"
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Right Column: Dynamic Live Preview Player */}
+                    <div className="md:col-span-5 flex flex-col items-center justify-start bg-white/5 border border-white/5 rounded-2xl p-4 self-stretch">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-3 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+                        {language === 'ka' ? 'ცოცხალი პრევიუ' : 'Live Video Preview'}
+                      </span>
+                      
+                      {(() => {
+                        const previewUrl = newClipVideoUrl || PRESET_LOOPS.find(p => p.id === selectedPresetId)?.url;
+                        if (previewUrl) {
+                          return (
+                            <div className="w-full aspect-[9/16] max-h-[290px] rounded-xl overflow-hidden relative border border-proton-border/20 bg-black shadow-lg">
+                              <video
+                                src={previewUrl}
+                                controls
+                                muted
+                                playsInline
+                                loop
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-[8px] font-bold text-purple-300 uppercase tracking-widest border border-purple-500/20">
+                                {language === 'ka' ? 'მზადაა' : 'Connected'}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-full aspect-[9/16] max-h-[290px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-4 bg-proton-bg/40">
+                            <Video className="text-proton-muted opacity-25 mb-2" size={32} />
+                            <p className="text-[10px] text-proton-muted leading-relaxed max-w-[120px]">
+                              {language === 'ka' ? 'შეარჩიეთ მედია წყარო პრევიუსთვის' : 'Select a video source to load player preview'}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP 2: DETAILS & HASHTAGS */}
+                {uploadStep === 2 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-5"
+                  >
+                    {/* Caption Input */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted">
+                          {language === 'ka' ? 'ვიდეოს სათაური & აღწერა' : 'Video Caption & Description'}
+                        </label>
+                        <span className="text-[10px] font-mono text-proton-muted">
+                          {newClipCaption.length}/300
+                        </span>
+                      </div>
+                      <textarea
+                        rows={4}
+                        maxLength={300}
+                        value={newClipCaption}
+                        onChange={(e) => setNewClipCaption(e.target.value)}
+                        placeholder={language === 'ka' ? 'აღწერე შენი მოკლე ვიდეო... გამოიყენე ჰეშთეგები (მაგ. #wool #handmade #tbilisi)' : 'Describe your story... Use hashtags to get discovered (e.g. #wool #handmade #handcrafted)'}
+                        className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl p-3 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all resize-none font-sans leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Interactive Suggested Hashtags Row */}
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted">
+                        {language === 'ka' ? 'ინტერაქტიული ჰეშთეგები (დააკლიკე დასამატებლად)' : 'Quick Tags Assistant (tap to toggle)'}
+                      </label>
+                      <div className="flex flex-wrap gap-1.5 max-h-[140px] overflow-y-auto pb-1 p-0.5 font-sans">
+                        {['#handmade', '#craft', '#pottery', '#wool', '#თბილისი', '#clay', '#georgian', '#art', '#knitting', '#cozy', '#travel'].map((tag) => {
+                          const isUsed = newClipCaption.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => handleHashtagClick(tag)}
+                              className={cn(
+                                "px-3 py-1.5 rounded-full text-[10px] font-extrabold transition-all border",
+                                isUsed
+                                  ? "bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-500/20 scale-105"
+                                  : "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10 hover:text-white"
+                              )}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-proton-muted italic">
+                        {language === 'ka' 
+                          ? '💡 სწორი ჰეშთეგები ეხმარება ადგილობრივ მყიდველებს თქვენი ვიდეოების პოვნაში.' 
+                          : '💡 High-impact hashtags index your products inside search feeds for marketplace shoppers.'}
+                      </p>
+                    </div>
+
+                    {/* Live preview caption snippet box */}
+                    <div className="p-3 bg-white/5 border border-white/5 rounded-xl space-y-1">
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-proton-muted block">
+                        {language === 'ka' ? 'როგორ გამოჩნდება კლიპის აღწერა' : 'How it will display'}
+                      </span>
+                      <p className="text-xs text-white/90 line-clamp-2 leading-relaxed">
+                        {newClipCaption.trim() 
+                          ? newClipCaption 
+                          : (language === 'ka' ? 'ჯერ არაფერია დაწერილი...' : 'Your caption will show up here...')}
+                      </p>
+                    </div>
+
+                  </motion.div>
+                )}
+
+                {/* STEP 3: SOUND & PRODUCTS */}
+                {uploadStep === 3 && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-5"
+                  >
+                    
+                    {/* Selectors Column */}
+                    <div className="md:col-span-7 space-y-5">
+                      
+                      {/* Audio/Music selector */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted">
+                          {language === 'ka' ? 'მუსიკა ან აუდიო ფონი' : 'Audio track / Music name'}
+                        </label>
+                        <div className="relative">
+                          <Music size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-proton-muted" />
+                          <input
+                            type="text"
+                            value={newClipSound}
+                            onChange={(e) => setNewClipSound(e.target.value)}
+                            placeholder={language === 'ka' ? 'ორიგინალი ხმა ან სიმღერის სახელი' : 'Original Sound or custom music track'}
+                            className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 pl-9 pr-3 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Product Tag dropdown */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted">
+                          {language === 'ka' ? 'მონიშნე პროდუქტი მარკეტიდან' : 'Tag marketplace product'}
+                        </label>
+                        <div className="relative">
+                          <ShoppingBag size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-proton-muted" />
+                          <select
+                            value={newClipProductId}
+                            onChange={(e) => setNewClipProductId(e.target.value)}
+                            className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 pl-9 pr-3 text-xs text-proton-text transition-all appearance-none cursor-pointer"
+                          >
+                            <option value="">
+                              {language === 'ka' ? '-- არ მონიშნო პროდუქტი --' : '-- Do not tag any product --'}
+                            </option>
+                            {listings.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                [{item.category}] {item.title} - ${item.price}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <p className="text-[10px] text-proton-muted italic font-sans">
+                          {language === 'ka' 
+                            ? 'ამით ვიდეოზე გამოჩნდება პირდაპირი ბმული, რომლის მეშვეობითაც მნახველი მომენტალურად იყიდის პროდუქტს.' 
+                            : 'This overlays a high-impact clickable checkout card directly on top of the video loops.'}
+                        </p>
+                      </div>
+
+                    </div>
+
+                    {/* Live Mock Overlay Column */}
+                    <div className="md:col-span-5 bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center justify-start self-stretch">
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-3 flex items-center gap-1.5">
+                        <ShoppingBag size={10} className="text-purple-400" />
+                        {language === 'ka' ? 'პროდუქტის ბანერის პრევიუ' : 'Live Shop Tag Preview'}
+                      </span>
+
+                      {(() => {
+                        const selectedProduct = listings.find(l => l.id === newClipProductId);
+                        if (selectedProduct) {
+                          return (
+                            <div className="w-full p-3 bg-black/90 border border-purple-500/30 rounded-xl space-y-2 relative shadow-lg">
+                              <span className="absolute top-1.5 right-1.5 text-[7px] font-black uppercase text-purple-400 tracking-wider animate-pulse bg-purple-500/10 px-1 py-0.5 rounded border border-purple-500/20">
+                                {language === 'ka' ? 'აქტიურია' : 'LIVE TAG'}
+                              </span>
+                              
+                              <p className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">
+                                {selectedProduct.category}
+                              </p>
+                              <h5 className="text-xs font-black text-white line-clamp-1">
+                                {selectedProduct.title}
+                              </h5>
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-xs font-mono font-bold text-emerald-400">
+                                  ${selectedProduct.price}
+                                </span>
+                                <span className="text-[9px] px-2 py-0.5 rounded-md bg-purple-600 text-white font-extrabold tracking-wide uppercase">
+                                  {language === 'ka' ? 'ყიდვა' : 'Shop Now'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-full h-full flex flex-col items-center justify-center text-center p-4 border border-dashed border-proton-border/20 rounded-xl bg-proton-bg/20 min-h-[110px]">
+                            <ShoppingBag className="text-proton-muted opacity-25 mb-1" size={24} />
+                            <p className="text-[10px] text-proton-muted leading-relaxed">
+                              {language === 'ka' ? 'მონიშნე პროდუქტი ბანერის სანახავად' : 'Tag a product to preview the shop card overlay'}
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                  </motion.div>
+                )}
+
+              </div>
+
+              {/* ACTION FOOTER */}
+              <div className="pt-4 border-t border-proton-border/10 flex items-center justify-between gap-3">
+                
+                {/* Back Button */}
+                {uploadStep > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setUploadStep(prev => prev - 1)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-proton-muted hover:text-white transition-all text-xs font-bold"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>{language === 'ka' ? 'უკან' : 'Back'}</span>
+                  </button>
+                ) : (
                   <button
                     type="button"
                     onClick={() => setIsCreateOpen(false)}
@@ -1509,29 +1903,55 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                   >
                     {language === 'ka' ? 'გაუქმება' : 'Cancel'}
                   </button>
+                )}
+
+                {/* Next / Submit Button */}
+                {uploadStep < 3 ? (
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={() => {
+                      if (uploadStep === 1) {
+                        const previewUrl = newClipVideoUrl || PRESET_LOOPS.find(p => p.id === selectedPresetId)?.url;
+                        if (!previewUrl) {
+                          showToast(
+                            language === 'ka' ? 'გთხოვთ შეარჩიოთ ვიდეო ფაილი ან ნიმუში' : 'Please select a video template or upload a file first',
+                            'warning'
+                          );
+                          return;
+                        }
+                      }
+                      setUploadStep(prev => prev + 1);
+                    }}
+                    className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-500/10 hover:shadow-lg transition-all"
+                  >
+                    <span>{language === 'ka' ? 'გაგრძელება' : 'Next'}</span>
+                    <ChevronRight size={14} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleCreateReel}
                     disabled={isUploading}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold shadow-md shadow-purple-500/10 hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-black shadow-lg shadow-purple-500/20 hover:shadow-xl transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
                   >
                     {isUploading ? (
                       <>
-                        <svg className="animate-spin h-4 w-5 text-white" viewBox="0 0 24 24" fill="none">
+                        <svg className="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span>{language === 'ka' ? 'იგზავნება...' : 'Publishing...'}</span>
+                        <span>{language === 'ka' ? 'ქვეყნდება...' : 'Publishing...'}</span>
                       </>
                     ) : (
                       <>
-                        <Video size={14} />
-                        <span>{language === 'ka' ? 'გამოქვეყნება' : 'Publish Reel'}</span>
+                        <Check size={14} className="stroke-[3]" />
+                        <span>{language === 'ka' ? 'გამოქვეყნება კედელზე' : 'Publish to Feed'}</span>
                       </>
                     )}
                   </button>
-                </div>
+                )}
 
-              </form>
+              </div>
+
             </motion.div>
           </div>
         )}
