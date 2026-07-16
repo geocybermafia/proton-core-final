@@ -27,7 +27,7 @@
     <meta name="twitter:image" content="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&h=630&q=80" />
 
     <script>
-      // Global fix for 'fetch' property assignment errors
+      // Global fix for 'fetch' property assignment errors and MetaMask/Iframe sandboxing issues
       (function() {
         try {
           if (typeof window !== 'undefined' && window.fetch) {
@@ -44,6 +44,107 @@
           }
         } catch (e) {
           // Fallback or ignore if cannot modify
+        }
+
+        // Global Node.js process polyfill for browser compatibility
+        try {
+          if (typeof window !== 'undefined') {
+            if (typeof window.process === 'undefined') {
+              window.process = {
+                env: { NODE_ENV: 'development' },
+                argv: [],
+                platform: 'browser',
+                browser: true,
+                on: function() { return this; },
+                once: function() { return this; },
+                off: function() { return this; },
+                emit: function() { return true; },
+                addListener: function() { return this; },
+                removeListener: function() { return this; },
+                removeAllListeners: function() { return this; }
+              };
+            } else {
+              const p = window.process;
+              p.env = p.env || {};
+              p.on = p.on || function() { return this; };
+              p.once = p.once || function() { return this; };
+              p.off = p.off || function() { return this; };
+              p.emit = p.emit || function() { return true; };
+              p.addListener = p.addListener || function() { return this; };
+              p.removeListener = p.removeListener || function() { return this; };
+              p.removeAllListeners = p.removeAllListeners || function() { return this; };
+            }
+
+            // Chrome extension API fallback for iframe sandboxing
+            if (typeof window.chrome === 'undefined') {
+              window.chrome = {};
+            }
+            if (typeof window.chrome.runtime === 'undefined') {
+              const noop = function() {};
+              const mockPort = {
+                onMessage: { addListener: noop, removeListener: noop },
+                onDisconnect: { addListener: noop, removeListener: noop },
+                postMessage: noop,
+                disconnect: noop,
+              };
+              window.chrome.runtime = {
+                connect: function() { return mockPort; },
+                sendMessage: noop,
+                onMessage: { addListener: noop, removeListener: noop },
+                onConnect: { addListener: noop, removeListener: noop },
+              };
+            }
+
+            // window.ethereum fallback for sandboxed iframe compatibility
+            if (window.ethereum) {
+              try {
+                const eth = window.ethereum;
+                eth.emit = eth.emit || function() { return true; };
+                eth.addListener = eth.addListener || eth.on || function() { return this; };
+                eth.removeListener = eth.removeListener || eth.off || function() { return this; };
+                eth.on = eth.on || eth.addListener || function() { return this; };
+                eth.off = eth.off || eth.removeListener || function() { return this; };
+              } catch (e) {
+                // Read-only property fallback using a safe Proxy wrapper
+                try {
+                  const originalEth = window.ethereum;
+                  const ethProxy = new Proxy(originalEth, {
+                    get: function(target, prop, receiver) {
+                      if (prop === 'emit') {
+                        return target.emit || function() { return true; };
+                      }
+                      if (prop === 'addListener') {
+                        return target.addListener || target.on || function() { return this; };
+                      }
+                      if (prop === 'removeListener') {
+                        return target.removeListener || target.off || function() { return this; };
+                      }
+                      if (prop === 'on') {
+                        return target.on || target.addListener || function() { return this; };
+                      }
+                      if (prop === 'off') {
+                        return target.off || target.removeListener || function() { return this; };
+                      }
+                      const val = Reflect.get(target, prop, receiver);
+                      if (typeof val === 'function') {
+                        return val.bind(target);
+                      }
+                      return val;
+                    }
+                  });
+                  Object.defineProperty(window, 'ethereum', {
+                    value: ethProxy,
+                    configurable: true,
+                    writable: true
+                  });
+                } catch (proxyError) {
+                  // Ignore if cannot define property
+                }
+              }
+            }
+          }
+        } catch (err) {
+          // Keep failure silent to prevent script stopping
         }
       })();
     </script>

@@ -19,7 +19,14 @@ import {
   Sparkles,
   ShoppingBag,
   UserCheck,
-  ChevronDown
+  ChevronDown,
+  MapPin,
+  RotateCcw,
+  CheckCircle,
+  MessageSquare,
+  Plus,
+  Coins,
+  Eye
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -38,6 +45,63 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [demoNotice, setDemoNotice] = useState<{ messageEn: string; messageKa: string; type: 'success' | 'info' } | null>(null);
   const currentLang = language;
+
+  // Interactive how-it-works simulation state
+  const [activeStepIdx, setActiveStepIdx] = useState(0);
+  const [step1Name, setStep1Name] = useState(language === 'ka' ? 'ანი' : 'Anna');
+  const [step1Region, setStep1Region] = useState(language === 'ka' ? 'თბილისი' : 'Tbilisi');
+  const [step1Lang, setStep1Lang] = useState<'ka' | 'en'>(language);
+
+  const [step2Tone, setStep2Tone] = useState<'cozy' | 'pro' | 'analytical'>('cozy');
+  const [step2Action, setStep2Action] = useState<string | null>(null);
+  const [step2IsLoading, setStep2IsLoading] = useState(false);
+
+  const [step3Title, setStep3Title] = useState(language === 'ka' ? 'ხელნაკეთი ფინჯანი' : 'Handmade Ceramic Mug');
+  const [step3Price, setStep3Price] = useState('25');
+  const [step3Listings, setStep3Listings] = useState<Array<{title: string, price: string, time: string}>>([
+    { 
+      title: language === 'ka' ? 'თბილი შალის წინდები' : 'Warm Wool Socks', 
+      price: '35', 
+      time: '1m' 
+    }
+  ]);
+
+  const handleStep2Action = (actionType: 'welcome' | 'summary') => {
+    setStep2IsLoading(true);
+    setStep2Action(null);
+    setTimeout(() => {
+      setStep2IsLoading(false);
+      if (actionType === 'welcome') {
+        if (step2Tone === 'cozy') {
+          setStep2Action(language === 'ka' 
+            ? `გამარჯობა, ${step1Name}! 🌟 ძალიან გვიხარია, რომ შემოგვიერთდი. მოდი, დღევანდელი დღე განსაკუთრებულად თბილი და პროდუქტიული გავხადოთ!` 
+            : `Hey ${step1Name}! 🌟 We're so excited to have you in our workspace. Let's make today incredibly productive and warm!`);
+        } else if (step2Tone === 'pro') {
+          setStep2Action(language === 'ka'
+            ? `სალამი ${step1Name}, თქვენი პროფილი წარმატებით აქტიურდა. მზად ვართ ბიზნეს-დავალებების შესასრულებლად და მონაცემთა სინქრონიზაციისთვის.`
+            : `Hello ${step1Name}, your profile has been successfully activated. We are ready for business tasks and real-time synchronization.`);
+        } else {
+          setStep2Action(language === 'ka'
+            ? `სისტემის სტატუსი: აქტიური. მომხმარებელი: ${step1Name}. რეგიონი: ${step1Region}. რეკომენდებული ნაბიჯი: განათავსეთ პირველი პროდუქტი მარკეტზე.`
+            : `Status: Active. User: ${step1Name}. Region: ${step1Region}. Recommended step: publish your first listing on the marketplace.`);
+        }
+      } else {
+        if (step2Tone === 'cozy') {
+          setStep2Action(language === 'ka'
+            ? `„თბილი შალის წინდები“ (35 GEL) წარმატებით შეკვეთილია! Firestore კავშირი იდეალურადაა. შეტყობინება გაეგზავნა გამყიდველს. ✨`
+            : `"Warm Wool Socks" (35 GEL) ordered successfully! Firestore connection is ideal. Message dispatched to the seller. ✨`);
+        } else if (step2Tone === 'pro') {
+          setStep2Action(language === 'ka'
+            ? `ახალი ტრანზაქცია დაფიქსირდა: პროდუქტი ID_422 (35 GEL). სტატუსი: გადახდილია. ბალანსი განახლდა 240ms-ში.`
+            : `New transaction logged: Product ID_422 (35 GEL). Status: Paid. Balance updated in 240ms.`);
+        } else {
+          setStep2Action(language === 'ka'
+            ? `შეჯამება: შეკვეთა #992 მყიდველისგან ${step1Name}. თანხა: 35 GEL. მონაცემთა ბაზის ჩანაწერი განახლებულია.`
+            : `Summary: Order #992 by ${step1Name}. Amount: 35 GEL. Database record successfully updated.`);
+        }
+      }
+    }, 800);
+  };
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -1020,7 +1084,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
       {/* HOW IT WORKS SECTION */}
       <section id="how-it-works-section" className="py-24 px-6 border-t border-proton-border/50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-20">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-proton-accent/5 border border-proton-accent/15 text-[10px] font-black uppercase tracking-widest text-proton-accent mb-4">
+              <Zap size={10} className="text-proton-accent animate-pulse" />
+              {language === 'ka' ? 'ინტერაქტიული გზამკვლევი' : 'Interactive Walkthrough'}
+            </div>
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-proton-text mb-4">
               {currentLocalContent.how_it_works_title}
             </h2>
@@ -1029,23 +1097,358 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
-            {/* Visual connector line for desktop */}
-            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-proton-border/30 -translate-y-1/2 z-0" />
-            
-            {currentLocalContent.steps.map((step, idx) => (
-              <div key={idx} className="relative z-10 flex flex-col items-center text-center group">
-                <div className="w-20 h-20 rounded-full bg-proton-card border-2 border-proton-accent/80 flex items-center justify-center text-proton-accent text-2xl font-black shadow-xl group-hover:scale-110 transition-transform duration-300 mb-8">
-                  {step.num}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            {/* Left Column: Interactive Steps List */}
+            <div className="lg:col-span-5 flex flex-col gap-4">
+              {currentLocalContent.steps.map((step, idx) => {
+                const isActive = activeStepIdx === idx;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setActiveStepIdx(idx)}
+                    className={cn(
+                      "relative text-left p-6 rounded-2xl border transition-all duration-300 group cursor-pointer flex gap-4 items-start select-none overflow-hidden",
+                      isActive 
+                        ? "bg-proton-card border-proton-accent/40 shadow-lg shadow-proton-accent/5" 
+                        : "bg-proton-card/10 border-proton-border/50 hover:bg-proton-card/25 hover:border-proton-border/80"
+                    )}
+                  >
+                    {/* Left Accent Bar */}
+                    {isActive && (
+                      <motion.div 
+                        layoutId="active-step-bar"
+                        className="absolute left-0 top-0 bottom-0 w-1 bg-proton-accent"
+                        transition={{ duration: 0.3 }}
+                      />
+                    )}
+
+                    <div className={cn(
+                      "w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-black text-sm border transition-all duration-300",
+                      isActive 
+                        ? "bg-proton-accent/10 border-proton-accent text-proton-accent" 
+                        : "bg-proton-bg border-proton-border text-proton-muted group-hover:text-proton-text group-hover:border-proton-border/80"
+                    )}>
+                      {step.num}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className={cn(
+                        "text-md font-black uppercase tracking-wider mb-1 transition-colors duration-300",
+                        isActive ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
+                      )}>
+                        {step.title}
+                      </h3>
+                      <p className="text-xs text-proton-muted/90 leading-relaxed font-medium">
+                        {step.desc}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right Column: Dynamic Sandbox Simulator */}
+            <div className="lg:col-span-7 bg-proton-card/30 border border-proton-border/80 rounded-3xl p-6 md:p-8 flex flex-col relative overflow-hidden backdrop-blur-md min-h-[380px] justify-between">
+              {/* Simulator Header Decor */}
+              <div className="absolute top-0 left-0 right-0 h-10 border-b border-proton-border/40 bg-proton-bg/40 px-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-proton-accent/60" />
+                  <span className="text-[9px] font-mono uppercase tracking-widest text-proton-muted font-bold">
+                    {language === 'ka' ? 'ინტერაქტიული სიმულატორი' : 'LIVE INTERACTIVE SIMULATOR'}
+                  </span>
                 </div>
-                <h3 className="text-lg font-black uppercase tracking-tight text-proton-text mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-sm text-proton-muted leading-relaxed max-w-sm">
-                  {step.desc}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[8px] font-mono text-emerald-400 font-black">
+                    {language === 'ka' ? 'აქტიური' : 'ONLINE'}
+                  </span>
+                </div>
               </div>
-            ))}
+
+              <div className="pt-8 flex-1 flex flex-col justify-center">
+                <AnimatePresence mode="wait">
+                  {activeStepIdx === 0 && (
+                    <motion.div
+                      key="step-0-panel"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.25 }}
+                      className="space-y-4 py-4"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-proton-muted">
+                            {language === 'ka' ? 'თქვენი სახელი (ჩაწერეთ):' : 'YOUR NAME (TYPE TO TEST):'}
+                          </label>
+                          <input 
+                            type="text"
+                            value={step1Name}
+                            onChange={(e) => setStep1Name(e.target.value)}
+                            className="w-full px-3 py-1.5 bg-proton-bg/60 border border-proton-border rounded-lg outline-none focus:ring-1 focus:ring-proton-accent/20 text-xs text-proton-text font-semibold"
+                            placeholder={language === 'ka' ? 'სახელი' : 'Name'}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-proton-muted">
+                            {language === 'ka' ? 'სამუშაო რეგიონი:' : 'WORK REGION:'}
+                          </label>
+                          <div className="flex gap-1.5">
+                            {['თბილისი', 'ბათუმი', 'ქუთაისი'].map((r) => {
+                              const mappedReg = language === 'en' 
+                                ? (r === 'თბილისი' ? 'Tbilisi' : r === 'ბათუმი' ? 'Batumi' : 'Kutaisi') 
+                                : r;
+                              const currentReg = language === 'en' 
+                                ? (step1Region === 'თბილისი' ? 'Tbilisi' : step1Region === 'ბათუმი' ? 'Batumi' : 'Kutaisi')
+                                : step1Region;
+                              const isSel = currentReg === mappedReg;
+                              return (
+                                <button
+                                  key={r}
+                                  onClick={() => setStep1Region(mappedReg)}
+                                  className={cn(
+                                    "flex-1 py-1 text-[10px] font-black uppercase tracking-wider border rounded-md transition-all cursor-pointer",
+                                    isSel 
+                                      ? "bg-proton-accent/15 border-proton-accent text-proton-accent" 
+                                      : "bg-proton-bg/40 border-proton-border text-proton-muted hover:text-proton-text"
+                                  )}
+                                >
+                                  {r === 'თბილისი' && language === 'en' ? 'Tbilisi' : r === 'ბათუმი' && language === 'en' ? 'Batumi' : r === 'ქუთაისი' && language === 'en' ? 'Kutaisi' : r}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Welcome Banner Render */}
+                      <div className="p-4 bg-proton-bg border border-proton-border rounded-xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-proton-accent/5 rounded-full blur-2xl -mr-4 -mt-4" />
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center text-proton-accent">
+                            <UserCheck size={18} />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-black text-proton-text flex items-center gap-1.5">
+                              {language === 'ka' ? `სალამი, ${step1Name || 'სტუმარო'}!` : `Welcome, ${step1Name || 'Guest'}!`}
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            </p>
+                            <p className="text-[10px] font-medium text-proton-muted mt-0.5 leading-relaxed">
+                              {language === 'ka' 
+                                ? `თქვენი სამუშაო სივრცე მზად არის რეგიონისთვის: ${step1Region}. ინტერფეისი მორგებულია ქართულ ენაზე.` 
+                                : `Your personalized workspace is ready in ${step1Region} with all settings configured.`}
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <span className="inline-flex items-center gap-1 text-[8px] font-mono uppercase bg-proton-accent/5 border border-proton-accent/25 px-1.5 py-0.5 rounded text-proton-accent">
+                                <Globe size={8} />
+                                {language === 'ka' ? 'ენა: ქართული' : 'Language: English'}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-[8px] font-mono uppercase bg-proton-muted/5 border border-proton-border px-1.5 py-0.5 rounded text-proton-muted">
+                                <MapPin size={8} />
+                                {step1Region}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeStepIdx === 1 && (
+                    <motion.div
+                      key="step-1-panel"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.25 }}
+                      className="space-y-4 py-4"
+                    >
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-proton-muted block">
+                          {language === 'ka' ? 'აირჩიეთ AI ასისტენტის ტონი:' : 'CHOOSE AI ASSISTANT TONE:'}
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'cozy', labelEn: 'Cozy', labelKa: 'თბილი' },
+                            { id: 'pro', labelEn: 'Business', labelKa: 'პროფესიონალური' },
+                            { id: 'analytical', labelEn: 'Technical', labelKa: 'ტექნიკური' }
+                          ].map((item) => {
+                            const isSel = step2Tone === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => setStep2Tone(item.id as any)}
+                                className={cn(
+                                  "py-1.5 px-2 text-[9px] font-black uppercase tracking-wider border rounded-md transition-all cursor-pointer flex flex-col items-center gap-0.5",
+                                  isSel 
+                                    ? "bg-proton-accent/15 border-proton-accent text-proton-accent" 
+                                    : "bg-proton-bg/40 border-proton-border text-proton-muted hover:text-proton-text"
+                                )}
+                              >
+                                <span>{language === 'ka' ? item.labelKa : item.labelEn}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-proton-muted block">
+                          {language === 'ka' ? 'გამოსცადეთ მოქმედებები (დააჭირეთ):' : 'CLICK TO TEST ACTIONS:'}
+                        </label>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleStep2Action('welcome')}
+                            disabled={step2IsLoading}
+                            className="flex-1 py-1.5 px-3 bg-proton-accent/10 hover:bg-proton-accent/20 border border-proton-accent/25 hover:border-proton-accent/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-proton-accent transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <Sparkles size={11} />
+                            {language === 'ka' ? 'მისალმება' : 'Draft Welcome'}
+                          </button>
+                          <button
+                            onClick={() => handleStep2Action('summary')}
+                            disabled={step2IsLoading}
+                            className="flex-1 py-1.5 px-3 bg-proton-accent/10 hover:bg-proton-accent/20 border border-proton-accent/25 hover:border-proton-accent/50 rounded-xl text-[10px] font-black uppercase tracking-wider text-proton-accent transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            <Terminal size={11} />
+                            {language === 'ka' ? 'შეკვეთის შეჯამება' : 'Summarize Order'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Simulated Terminal Response */}
+                      <div className="font-mono text-[10px] bg-black/60 border border-proton-border/80 rounded-xl p-4 min-h-[110px] flex flex-col justify-between relative overflow-hidden">
+                        <div className="absolute top-2 right-2 flex gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-proton-accent/40" />
+                        </div>
+                        {step2IsLoading ? (
+                          <div className="flex-1 flex flex-col items-center justify-center gap-2 py-4">
+                            <span className="w-4 h-4 rounded-full border-2 border-proton-accent border-t-transparent animate-spin" />
+                            <span className="text-[8px] uppercase tracking-widest text-proton-muted font-bold">
+                              {language === 'ka' ? 'AI აანალიზებს...' : 'AI ASSISTANT ANALYZING...'}
+                            </span>
+                          </div>
+                        ) : step2Action ? (
+                          <div className="space-y-1 animate-fadeIn">
+                            <p className="text-[8px] uppercase tracking-wider text-proton-accent font-black">
+                              {language === 'ka' ? `მორგებული AI პასუხი (${step2Tone.toUpperCase()})` : `CONFIGURED AI RESPONSE (${step2Tone.toUpperCase()})`}
+                            </p>
+                            <p className="text-proton-text font-medium leading-relaxed mt-1">
+                              {step2Action}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="flex-1 flex items-center justify-center text-center p-2">
+                            <p className="text-[9px] text-proton-muted/80 leading-relaxed max-w-xs font-semibold">
+                              {language === 'ka' 
+                                ? 'დააჭირეთ ზემოთ მოცემულ რომელიმე ღილაკს, რათა გამოსცადოთ მორგებული AI ასისტენტი რეალურ დროში!' 
+                                : 'Click any action button above to watch your custom-configured AI perform tasks in real-time!'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {activeStepIdx === 2 && (
+                    <motion.div
+                      key="step-2-panel"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{ duration: 0.25 }}
+                      className="space-y-3 py-4"
+                    >
+                      {/* Listing Form */}
+                      <div className="p-3 bg-proton-bg/60 border border-proton-border rounded-xl space-y-2">
+                        <p className="text-[8px] font-black uppercase tracking-wider text-proton-muted">
+                          {language === 'ka' ? 'განათავსეთ პროდუქტი მარკეტზე (ტესტი):' : 'ADD MOCK LISTING TO MARKETPLACE:'}
+                        </p>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={step3Title}
+                            onChange={(e) => setStep3Title(e.target.value)}
+                            className="flex-1 px-2.5 py-1.5 bg-proton-bg border border-proton-border rounded-lg outline-none text-[11px] text-proton-text font-semibold"
+                            placeholder={language === 'ka' ? 'პროდუქტი' : 'Item Name'}
+                          />
+                          <input 
+                            type="number"
+                            value={step3Price}
+                            onChange={(e) => setStep3Price(e.target.value)}
+                            className="w-16 px-2.5 py-1.5 bg-proton-bg border border-proton-border rounded-lg outline-none text-[11px] text-proton-text font-semibold text-center"
+                            placeholder="GEL"
+                          />
+                          <button
+                            onClick={() => {
+                              if (!step3Title.trim() || !step3Price.trim()) return;
+                              setStep3Listings([
+                                { title: step3Title, price: step3Price, time: 'Just now' },
+                                ...step3Listings
+                              ]);
+                              setStep3Title('');
+                              setStep3Price('');
+                              setDemoNotice({
+                                messageEn: `🛍️ "${step3Title}" successfully published. Instant real-time Firestore synchronizer active!`,
+                                messageKa: `🛍️ "${step3Title}" წარმატებით განთავსდა. Firestore-ის მყისიერი სინქრონიზაცია აქტიურია!`,
+                                type: 'success'
+                              });
+                            }}
+                            className="px-3 bg-proton-accent text-proton-bg hover:opacity-90 font-black text-xs rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Plus size={12} />
+                            {language === 'ka' ? 'დამატება' : 'Add'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Marketplace Preview Feed */}
+                      <div className="space-y-1.5">
+                        <p className="text-[8px] font-black uppercase tracking-wider text-proton-muted block">
+                          {language === 'ka' ? 'აქტიური განცხადებები მარკეტზე (FIRESTORE SYNC):' : 'LIVE ACTIVE MARKETPLACE FEED (FIRESTORE SYNC):'}
+                        </p>
+                        <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-1">
+                          {step3Listings.map((lst, lIdx) => (
+                            <div 
+                              key={lIdx} 
+                              className="flex items-center justify-between p-2 bg-proton-card border border-proton-border/80 hover:border-proton-accent/25 rounded-lg transition-all"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded bg-proton-accent/10 border border-proton-accent/25 flex items-center justify-center text-proton-accent">
+                                  <ShoppingBag size={10} />
+                                </div>
+                                <p className="text-[10px] font-bold text-proton-text truncate max-w-[160px] md:max-w-[220px]">
+                                  {lst.title}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-mono text-proton-muted uppercase">{lst.time}</span>
+                                <span className="text-[10px] font-black text-proton-text bg-proton-bg px-2 py-0.5 rounded border border-proton-border/80">
+                                  {lst.price} GEL
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Database Sync Bar Indicator */}
+              <div className="pt-4 border-t border-proton-border/30 flex items-center justify-between text-[8px] font-mono uppercase tracking-widest text-proton-muted font-bold">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle size={10} className="text-emerald-400" />
+                  {language === 'ka' ? 'კავშირი Firebase ბაზასთან' : 'DATABASE INTEGRATION ACTIVE'}
+                </div>
+                <div>
+                  {language === 'ka' ? 'კოდის გარეშე' : 'ZERO COMPLEXITY'}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

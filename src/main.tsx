@@ -44,6 +44,15 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 
   static getDerivedStateFromError(error: Error) {
+    const errMsg = error?.message || String(error);
+    if (
+      errMsg.includes("reading 'emit'") ||
+      errMsg.includes("reading 'addListener'") ||
+      errMsg.includes("reading 'runtime'") ||
+      errMsg.includes("Extension context invalidated")
+    ) {
+      return { hasError: false, error: null };
+    }
     return { hasError: true, error };
   }
 
