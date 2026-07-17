@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-export function useClipPlayback(clipsLength: number, containerRef: React.RefObject<HTMLDivElement | null>) {
+export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTMLDivElement | null>) {
+  const clipsLength = clips.length;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
 
   // Keep a mapping of index -> HTMLVideoElement
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
+
+  const serializedUrls = clips.map(c => `${c.id}:${c.videoUrl}`).join(',');
 
   // Safely register video element references
   const registerVideoRef = useCallback((index: number, el: HTMLVideoElement | null) => {
@@ -89,7 +92,7 @@ export function useClipPlayback(clipsLength: number, containerRef: React.RefObje
         activeVideo.pause();
       }
     }
-  }, [currentIndex, isPlaying, clipsLength]);
+  }, [currentIndex, isPlaying, clipsLength, serializedUrls]);
 
   // Handle active slide tracking via native element scrolls
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {

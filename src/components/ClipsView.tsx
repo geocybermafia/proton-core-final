@@ -420,6 +420,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [newClipDuration, setNewClipDuration] = useState<number>(0);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
+  const [failedVideoIds, setFailedVideoIds] = useState<Record<string, boolean>>({});
 
   // Set upload step back to 1 when modal opens
   useEffect(() => {
@@ -514,7 +515,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     toggleMute,
     handleScroll,
     resetPlayback
-  } = useClipPlayback(filteredClips.length, containerRef);
+  } = useClipPlayback(filteredClips, containerRef);
 
   // 1. Fetch Listings for Tagging
   useEffect(() => {
@@ -998,7 +999,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   };
 
   return (
-    <div id="proton-clips-view" className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] text-proton-text select-none">
+    <div id="proton-clips-view" className="flex flex-col h-full w-full text-proton-text select-none">
       
       {/* Dynamic Keyframe Injection for Advanced Video Filters */}
       <style>{`
@@ -1156,7 +1157,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
               return (
                 <div 
                   key={clip.id} 
-                  className="w-full max-w-[450px] h-full flex-shrink-0 snap-start snap-always relative overflow-hidden bg-black/90 flex flex-col justify-between"
+                  className="w-full max-w-[450px] h-full min-h-full flex-shrink-0 snap-start snap-always relative overflow-hidden bg-black/90 flex flex-col justify-between"
                 >
                   
                   {/* VIDEO PLAYER ELEMENT */}
@@ -1167,6 +1168,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       loop
                       playsInline
                       muted={isMuted}
+                      preload="auto"
+                      autoPlay={idx === currentIndex && isPlaying}
                       className={cn(
                         "w-full h-full object-cover transition-all duration-300",
                         activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
@@ -1195,7 +1198,43 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           setIsBuffering(false);
                         }
                       }}
+                      onError={(e) => {
+                        console.error("Video play/decode error for ID", clip.id, e);
+                        setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
+                      }}
                     />
+                    
+                    {/* Native Unsupported Codec/Format Overlay Fallback */}
+                    {failedVideoIds[clip.id] && (
+                      <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center p-6 text-center gap-4">
+                        <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full animate-pulse">
+                          <AlertCircle size={28} />
+                        </div>
+                        <h4 className="text-xs font-black uppercase text-red-400 tracking-wider">
+                          {language === 'ka' ? 'შეცდომა კლიპის ჩართვისას' : 'Decoder Error / Format Unsupported'}
+                        </h4>
+                        <p className="text-[10px] sm:text-[11px] text-proton-muted max-w-[280px] leading-relaxed">
+                          {language === 'ka' 
+                            ? 'ბრაუზერს არ აქვს ამ ვიდეოს კოდეკის მხარდაჭერა. გთხოვთ გამოიყენოთ სტანდარტული MP4 (H.264).' 
+                            : 'This specific video codec is not supported by your browser. Share standard web-optimized MP4 files.'}
+                        </p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Temporarily set this clip's videoUrl state locally to a working demo preset
+                            clip.videoUrl = PRESET_LOOPS[0].url;
+                            setFailedVideoIds(prev => ({ ...prev, [clip.id]: false }));
+                            showToast(
+                              language === 'ka' ? 'ჩაირთო სტანდარტული კლიპი' : 'Playing standard fallback loop',
+                              'info'
+                            );
+                          }}
+                          className="px-3.5 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-bold hover:bg-purple-500/30 transition-all pointer-events-auto"
+                        >
+                          {language === 'ka' ? 'დემო ვიდეოს ჩართვა' : 'Play standard demo loop'}
+                        </button>
+                      </div>
+                    )}
                     
                     {/* Real-time CRT scanlines overlay when Glitch effect is selected */}
                     {activeFilter === 'glitch' && (
