@@ -1198,8 +1198,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           setIsBuffering(false);
                         }
                       }}
-                      onError={(e) => {
-                        console.error("Video play/decode error for ID", clip.id, e);
+                      onError={() => {
+                        console.error("Video play/decode error for ID", clip.id);
                         setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
                       }}
                     />
