@@ -492,23 +492,15 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       if (snapshot.empty) {
-        // If Firestore contains no clips, we use the default seed clips locally.
-        // This is safe, performant, and avoids permission errors.
-        setClips(LOCAL_SEED_CLIPS);
+        setClips([]);
         setLoading(false);
         return;
       }
 
       const rawClips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Clip));
-      
-      // Merge with LOCAL_SEED_CLIPS so there are always initial high-quality reels,
-      // but filter out any duplicates.
-      const existingIds = new Set(rawClips.map(c => c.id));
-      const filteredSeed = LOCAL_SEED_CLIPS.filter(c => !existingIds.has(c.id));
-      const combinedClips = [...rawClips, ...filteredSeed];
 
       // Resolve tagged product info locally for richer experience
-      const populatedClips = await Promise.all(combinedClips.map(async (clip) => {
+      const populatedClips = await Promise.all(rawClips.map(async (clip) => {
         if (clip.productId) {
           try {
             const productDoc = await getDoc(doc(db, 'listings', clip.productId));
@@ -525,9 +517,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       setClips(populatedClips);
       setLoading(false);
     }, (error) => {
-      console.warn("Clips Firestore access issue, falling back to local seed data:", error);
-      // Fallback to local high-quality seed clips
-      setClips(LOCAL_SEED_CLIPS);
+      console.warn("Clips Firestore access issue:", error);
+      setClips([]);
       setLoading(false);
     });
 
