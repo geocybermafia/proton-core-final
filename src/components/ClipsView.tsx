@@ -1544,7 +1544,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                   creatorClips.map((c) => (
                     <div 
                       key={c.id} 
-                      className="aspect-[9/16] bg-black rounded-lg overflow-hidden relative cursor-pointer group border border-proton-border/10"
+                      className="aspect-[9/16] bg-black rounded-lg overflow-hidden relative cursor-pointer group border border-proton-border/10 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 hover:border-purple-500/30"
                       onClick={() => {
                         const originalIndex = clips.findIndex(x => x.id === c.id);
                         if (originalIndex !== -1) {
@@ -1557,14 +1557,19 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         <img 
                           src={c.thumbnailUrl} 
                           alt={c.caption} 
-                          className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" 
+                          className="w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-105 group-hover:brightness-[1.12] group-hover:contrast-[1.02]" 
                         />
                       ) : (
-                        <video src={c.videoUrl} className="w-full h-full object-cover" muted playsInline />
+                        <video 
+                          src={c.videoUrl} 
+                          className="w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-105 group-hover:brightness-[1.12] group-hover:contrast-[1.02]" 
+                          muted 
+                          playsInline 
+                        />
                       )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col justify-end p-2">
-                        <div className="flex items-center gap-1 text-[10px] font-bold text-white">
-                          <Heart size={10} className="fill-white" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-2">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-white transform translate-y-1.5 group-hover:translate-y-0 transition-all duration-300">
+                          <Heart size={10} className="fill-white text-pink-500" />
                           <span>{c.likesCount || 0}</span>
                         </div>
                       </div>
