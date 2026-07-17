@@ -489,6 +489,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
   // Filter clips based on selected tab and search
   const filteredClips = clips.filter(clip => {
+    if (!clip) return false;
     // 1. Tab filters
     if (activeTab === 'myClips' && clip.creatorId !== user?.uid) return false;
     if (activeTab === 'productReels' && !clip.productId) return false;
