@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTMLDivElement | null>) {
   const clipsLength = clips.length;
@@ -9,7 +9,7 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
   // Keep a mapping of index -> HTMLVideoElement
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
 
-  const serializedUrls = clips.map(c => `${c.id}:${c.videoUrl}`).join(',');
+  const serializedUrls = clips.map(c => c ? `${c.id || ''}:${c.videoUrl || ''}` : '').join(',');
 
   // Safely register video element references
   const registerVideoRef = useCallback((index: number, el: HTMLVideoElement | null) => {

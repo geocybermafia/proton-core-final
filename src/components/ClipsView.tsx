@@ -496,8 +496,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     // 2. Search filters
     if (searchQuery.trim() === '') return true;
     const searchLower = searchQuery.toLowerCase();
-    const hasTag = clip.caption.toLowerCase().includes(searchLower);
-    const hasCreator = clip.creatorName.toLowerCase().includes(searchLower);
+    const hasTag = (clip.caption || '').toLowerCase().includes(searchLower);
+    const hasCreator = (clip.creatorName || '').toLowerCase().includes(searchLower);
     return hasTag || hasCreator;
   });
 
