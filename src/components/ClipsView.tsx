@@ -54,6 +54,48 @@ import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from './Toast';
 
+// Simple IndexedDB wrapper for local caching of larger videos
+const initDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('proton-clips-cache', 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('videos')) {
+        db.createObjectStore('videos');
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+};
+
+const saveVideoToLocalCache = async (id: string, file: File | Blob): Promise<void> => {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction('videos', 'readwrite');
+    const store = transaction.objectStore('videos');
+    store.put(file, id);
+  } catch (e) {
+    console.warn("IndexedDB storage failed:", e);
+  }
+};
+
+const getVideoFromLocalCache = async (id: string): Promise<Blob | null> => {
+  try {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('videos', 'readonly');
+      const store = transaction.objectStore('videos');
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (e) {
+    console.warn("IndexedDB retrieval failed:", e);
+    return null;
+  }
+};
+
 interface ClipsViewProps {
   language: 'en' | 'ka';
   setActiveView: (view: any) => void;
@@ -377,6 +419,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [newClipThumbnail, setNewClipThumbnail] = useState<string>('');
   const [newClipDuration, setNewClipDuration] = useState<number>(0);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState<boolean>(false);
+  const [isBuffering, setIsBuffering] = useState<boolean>(false);
 
   // Set upload step back to 1 when modal opens
   useEffect(() => {
@@ -499,19 +542,58 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
       const rawClips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Clip));
 
-      // Resolve tagged product info locally for richer experience
+      // Resolve tagged product info and local IndexedDB URLs
       const populatedClips = await Promise.all(rawClips.map(async (clip) => {
+        let finalVideoUrl = clip.videoUrl;
+
+        // 1. Resolve IndexedDB local video cache if needed
+        if (clip.videoUrl && clip.videoUrl.startsWith('indexeddb://')) {
+          const docId = clip.videoUrl.replace('indexeddb://', '');
+          try {
+            const localBlob = await getVideoFromLocalCache(docId);
+            if (localBlob) {
+              finalVideoUrl = URL.createObjectURL(localBlob);
+            } else {
+              // Fallback for other browsers/devices so they see a valid video
+              finalVideoUrl = PRESET_LOOPS[0].url;
+            }
+          } catch (e) {
+            console.warn("Failed to retrieve cached IndexedDB video:", e);
+            finalVideoUrl = PRESET_LOOPS[0].url;
+          }
+        } else if (clip.videoUrl && clip.videoUrl.startsWith('data:video/')) {
+          // 2. Convert base64 data to native Blob ObjectURLs to resolve loading & lagging bugs on browsers
+          try {
+            const parts = clip.videoUrl.split(';base64,');
+            if (parts.length === 2) {
+              const contentType = parts[0].split(':')[1];
+              const raw = window.atob(parts[1]);
+              const rawLength = raw.length;
+              const uInt8Array = new Uint8Array(rawLength);
+              for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+              }
+              const blob = new Blob([uInt8Array], { type: contentType });
+              finalVideoUrl = URL.createObjectURL(blob);
+            }
+          } catch (e) {
+            console.warn("Failed to parse base64 video in populatedClips:", e);
+          }
+        }
+
+        const updatedClip = { ...clip, videoUrl: finalVideoUrl };
+
         if (clip.productId) {
           try {
             const productDoc = await getDoc(doc(db, 'listings', clip.productId));
             if (productDoc.exists()) {
-              return { ...clip, productInfo: productDoc.data() };
+              return { ...updatedClip, productInfo: productDoc.data() };
             }
           } catch (e) {
             console.error("Error resolving listing:", e);
           }
         }
-        return clip;
+        return updatedClip;
       }));
 
       setClips(populatedClips);
@@ -826,15 +908,23 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     let finalVideoUrl = newClipVideoUrl.trim();
     let finalSound = newClipSound.trim() || 'Original Sound';
 
+    const docId = `clip-${Math.random().toString(36).substring(2, 11)}`;
+
     // If there's a local video file, attempt to convert it to base64 if small enough.
     if (localVideoFile) {
-      if (localVideoFile.size > 800 * 1024) { // 800 KB limit for safe Base64 Firestore storage
-        showToast(
-          language === 'ka' 
-            ? 'ვიდეო ფაილი დიდია (>800KB). ოპტიმალური სიჩქარისთვის ის შეინახება თქვენს ბრაუზერში!' 
-            : 'Video file is large (>800KB). Saved to local browser cache for peak speed!',
-          'info'
-        );
+      if (localVideoFile.size > 700 * 1024) { // 700 KB limit for safe Base64 Firestore storage
+        try {
+          await saveVideoToLocalCache(docId, localVideoFile);
+          finalVideoUrl = `indexeddb://${docId}`;
+          showToast(
+            language === 'ka' 
+              ? 'ვიდეო ფაილი დიდია (>700KB). ოპტიმალური სიჩქარისთვის ის შეინახება თქვენს ბრაუზერში!' 
+              : 'Video file is large (>700KB). Saved to local browser cache for peak speed!',
+            'info'
+          );
+        } catch (err) {
+          console.error("Failed to save to local IndexedDB:", err);
+        }
       } else {
         try {
           const base64String = await new Promise<string>((resolve, reject) => {
@@ -861,7 +951,6 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       }
     }
 
-    const docId = `clip-${Math.random().toString(36).substring(2, 11)}`;
     const clipData = {
       id: docId,
       videoUrl: finalVideoUrl,
@@ -1086,6 +1175,26 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
                       )}
                       onClick={() => togglePlay(idx)}
+                      onPlay={() => {
+                        if (idx === currentIndex) {
+                          setIsPlaying(true);
+                        }
+                      }}
+                      onPause={() => {
+                        if (idx === currentIndex) {
+                          setIsPlaying(false);
+                        }
+                      }}
+                      onWaiting={() => {
+                        if (idx === currentIndex) {
+                          setIsBuffering(true);
+                        }
+                      }}
+                      onPlaying={() => {
+                        if (idx === currentIndex) {
+                          setIsBuffering(false);
+                        }
+                      }}
                     />
                     
                     {/* Real-time CRT scanlines overlay when Glitch effect is selected */}
@@ -1093,9 +1202,26 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       <div className="absolute inset-0 pointer-events-none z-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_3px_100%] opacity-75 mix-blend-overlay animate-pulse" />
                     )}
                     
+                    {/* Buffering Loader overlay */}
+                    <AnimatePresence>
+                      {isBuffering && idx === currentIndex && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute pointer-events-none z-10 bg-black/20 p-4 rounded-full flex items-center justify-center"
+                        >
+                          <svg className="animate-spin h-8 w-8 text-purple-500" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
                     {/* Pause icon overlay */}
                     <AnimatePresence>
-                      {!isPlaying && (
+                      {!isPlaying && idx === currentIndex && (
                         <motion.div 
                           initial={{ scale: 0.5, opacity: 0 }}
                           animate={{ scale: 1, opacity: 0.7 }}
@@ -1555,10 +1681,24 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       key={c.id} 
                       className="aspect-[9/16] bg-black rounded-lg overflow-hidden relative cursor-pointer group border border-proton-border/10 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 hover:border-purple-500/30"
                       onClick={() => {
-                        const originalIndex = clips.findIndex(x => x.id === c.id);
-                        if (originalIndex !== -1) {
-                          setCurrentIndex(originalIndex);
+                        // Switch to 'forYou' tab and clear search queries so that the item is guaranteed to be in the render list
+                        setActiveTab('forYou');
+                        setSearchQuery('');
+                        
+                        const targetIndex = clips.findIndex(x => x.id === c.id);
+                        if (targetIndex !== -1) {
+                          setCurrentIndex(targetIndex);
                           setSelectedCreator(null);
+                          
+                          // Scroll to the targeted item index inside the reels feed smoothly after a tiny render frame delay
+                          setTimeout(() => {
+                            if (containerRef.current) {
+                              containerRef.current.scrollTo({
+                                top: targetIndex * containerRef.current.clientHeight,
+                                behavior: 'smooth'
+                              });
+                            }
+                          }, 100);
                         }
                       }}
                     >

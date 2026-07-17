@@ -21,7 +21,7 @@ export function useClipPlayback(clipsLength: number, containerRef: React.RefObje
   const togglePlay = useCallback((index: number) => {
     const video = videoRefs.current[index];
     if (video) {
-      if (isPlaying && index === currentIndex) {
+      if (!video.paused && index === currentIndex) {
         video.pause();
         setIsPlaying(false);
       } else {
@@ -35,12 +35,18 @@ export function useClipPlayback(clipsLength: number, containerRef: React.RefObje
             });
           }
         } else {
-          video.play().catch(err => console.warn("Playback play request failed/blocked:", err));
-          setIsPlaying(true);
+          video.play()
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch(err => {
+              console.warn("Playback play request failed/blocked:", err);
+              setIsPlaying(false);
+            });
         }
       }
     }
-  }, [currentIndex, isPlaying, containerRef]);
+  }, [currentIndex, containerRef]);
 
   const toggleMute = useCallback(() => {
     setIsMuted(prev => !prev);
@@ -77,6 +83,7 @@ export function useClipPlayback(clipsLength: number, containerRef: React.RefObje
       if (isPlaying) {
         activeVideo.play().catch(error => {
           console.warn("Playback play request failed/blocked by browser autoplay rules:", error);
+          setIsPlaying(false);
         });
       } else {
         activeVideo.pause();
