@@ -1171,7 +1171,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       preload="auto"
                       autoPlay={idx === currentIndex && isPlaying}
                       className={cn(
-                        "w-full h-full object-cover transition-all duration-300",
+                        "w-full h-full object-contain transition-all duration-300",
                         activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
                         activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
                         activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
