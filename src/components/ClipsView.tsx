@@ -430,9 +430,21 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [dynamicPlaceholderThumbnails, setDynamicPlaceholderThumbnails] = useState<Record<string, string>>({});
   const [loadedVideoIds, setLoadedVideoIds] = useState<Record<string, boolean>>({});
 
+  // Refs for tracking mounted state and asynchronous processing clip IDs to avoid memory leaks and duplicate workers
+  const isMounted = useRef<boolean>(true);
+  const processingClipIds = useRef<Record<string, boolean>>({});
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   // Dynamic extraction of video frame at 0.1 seconds using hidden canvas as placeholder while loading
   const generate01sThumbnail = (clipId: string, videoUrl: string) => {
-    if (dynamicPlaceholderThumbnails[clipId]) return;
+    if (dynamicPlaceholderThumbnails[clipId] || processingClipIds.current[clipId]) return;
+    processingClipIds.current[clipId] = true;
 
     const video = document.createElement('video');
     video.src = videoUrl;
@@ -444,6 +456,9 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
     const timeoutId = setTimeout(() => {
       video.remove();
+      if (processingClipIds.current) {
+        delete processingClipIds.current[clipId];
+      }
     }, 8000);
 
     video.onseeked = () => {
@@ -455,23 +470,34 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-          setDynamicPlaceholderThumbnails(prev => ({
-            ...prev,
-            [clipId]: dataUrl
-          }));
+          if (isMounted.current) {
+            setDynamicPlaceholderThumbnails(prev => ({
+              ...prev,
+              [clipId]: dataUrl
+            }));
+          }
         }
         clearTimeout(timeoutId);
         video.remove();
+        if (processingClipIds.current) {
+          delete processingClipIds.current[clipId];
+        }
       } catch (err) {
         console.error("Error drawing frame at 0.1s for clip:", clipId, err);
         clearTimeout(timeoutId);
         video.remove();
+        if (processingClipIds.current) {
+          delete processingClipIds.current[clipId];
+        }
       }
     };
 
     video.onerror = () => {
       clearTimeout(timeoutId);
       video.remove();
+      if (processingClipIds.current) {
+        delete processingClipIds.current[clipId];
+      }
     };
   };
 
@@ -498,16 +524,18 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}s`;
 
     // Initialize or update metadata state for this clip
-    setVideoMetadata(prev => ({
-      ...prev,
-      [clipId]: {
-        ...prev[clipId],
-        resolution,
-        aspectRatio,
-        duration: isNaN(dur) || dur === Infinity ? 'Unknown' : formattedDuration,
-        fps: prev[clipId]?.fps || 'Detecting...'
-      }
-    }));
+    if (isMounted.current) {
+      setVideoMetadata(prev => ({
+        ...prev,
+        [clipId]: {
+          ...prev[clipId],
+          resolution,
+          aspectRatio,
+          duration: isNaN(dur) || dur === Infinity ? 'Unknown' : formattedDuration,
+          fps: prev[clipId]?.fps || 'Detecting...'
+        }
+      }));
+    }
 
     // 4. Extract/Measure Frame Rate (FPS) dynamically using requestVideoFrameCallback or requestAnimationFrame
     let frameCount = 0;
@@ -515,6 +543,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     let frameCallbackId: any;
 
     const checkFps = () => {
+      if (!isMounted.current) return;
       if (videoEl.paused || videoEl.ended) return;
       frameCount++;
       const elapsed = (performance.now() - startTime) / 1000;
@@ -528,13 +557,15 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
         else if (Math.abs(currentFps - 24) <= 2) displayFps = '24 FPS';
         else if (Math.abs(currentFps - 25) <= 2) displayFps = '25 FPS';
 
-        setVideoMetadata(prev => ({
-          ...prev,
-          [clipId]: {
-            ...(prev[clipId] || {}),
-            fps: displayFps
-          }
-        }));
+        if (isMounted.current) {
+          setVideoMetadata(prev => ({
+            ...prev,
+            [clipId]: {
+              ...(prev[clipId] || {}),
+              fps: displayFps
+            }
+          }));
+        }
         frameCount = 0;
         startTime = performance.now();
       }
@@ -577,20 +608,22 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
     // Standard static estimation fallback if play event doesn't trigger soon
     setTimeout(() => {
-      setVideoMetadata(prev => {
-        const item = prev[clipId];
-        if (!item || !item.fps || item.fps === 'Detecting...') {
-          const estFps = width >= 1080 ? '60 FPS (est)' : '30 FPS (est)';
-          return {
-            ...prev,
-            [clipId]: {
-              ...(item || {}),
-              fps: estFps
-            }
-          };
-        }
-        return prev;
-      });
+      if (isMounted.current) {
+        setVideoMetadata(prev => {
+          const item = prev[clipId];
+          if (!item || !item.fps || item.fps === 'Detecting...') {
+            const estFps = width >= 1080 ? '60 FPS (est)' : '30 FPS (est)';
+            return {
+              ...prev,
+              [clipId]: {
+                ...(item || {}),
+                fps: estFps
+              }
+            };
+          }
+          return prev;
+        });
+      }
     }, 1500);
   };
 
@@ -659,20 +692,22 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Filter clips based on selected tab and search
-  const filteredClips = clips.filter(clip => {
-    if (!clip) return false;
-    // 1. Tab filters
-    if (activeTab === 'myClips' && clip.creatorId !== user?.uid) return false;
-    if (activeTab === 'productReels' && !clip.productId) return false;
+  // Filter clips based on selected tab and search - wrapped in useMemo to optimize reference stability and prevent infinite rendering loops
+  const filteredClips = React.useMemo(() => {
+    return clips.filter(clip => {
+      if (!clip) return false;
+      // 1. Tab filters
+      if (activeTab === 'myClips' && clip.creatorId !== user?.uid) return false;
+      if (activeTab === 'productReels' && !clip.productId) return false;
 
-    // 2. Search filters
-    if (searchQuery.trim() === '') return true;
-    const searchLower = searchQuery.toLowerCase();
-    const hasTag = (clip.caption || '').toLowerCase().includes(searchLower);
-    const hasCreator = (clip.creatorName || '').toLowerCase().includes(searchLower);
-    return hasTag || hasCreator;
-  });
+      // 2. Search filters
+      if (searchQuery.trim() === '') return true;
+      const searchLower = searchQuery.toLowerCase();
+      const hasTag = (clip.caption || '').toLowerCase().includes(searchLower);
+      const hasCreator = (clip.creatorName || '').toLowerCase().includes(searchLower);
+      return hasTag || hasCreator;
+    });
+  }, [clips, activeTab, user?.uid, searchQuery]);
 
   // Generate 0.1s placeholder thumbnail for filtered clips when list updates
   useEffect(() => {
