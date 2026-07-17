@@ -427,6 +427,53 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     duration?: string;
     fps?: string;
   }>>({});
+  const [dynamicPlaceholderThumbnails, setDynamicPlaceholderThumbnails] = useState<Record<string, string>>({});
+  const [loadedVideoIds, setLoadedVideoIds] = useState<Record<string, boolean>>({});
+
+  // Dynamic extraction of video frame at 0.1 seconds using hidden canvas as placeholder while loading
+  const generate01sThumbnail = (clipId: string, videoUrl: string) => {
+    if (dynamicPlaceholderThumbnails[clipId]) return;
+
+    const video = document.createElement('video');
+    video.src = videoUrl;
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.currentTime = 0.1; // Extract frame at 0.1 seconds
+
+    const timeoutId = setTimeout(() => {
+      video.remove();
+    }, 8000);
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth || 180;
+        canvas.height = video.videoHeight || 320;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          setDynamicPlaceholderThumbnails(prev => ({
+            ...prev,
+            [clipId]: dataUrl
+          }));
+        }
+        clearTimeout(timeoutId);
+        video.remove();
+      } catch (err) {
+        console.error("Error drawing frame at 0.1s for clip:", clipId, err);
+        clearTimeout(timeoutId);
+        video.remove();
+      }
+    };
+
+    video.onerror = () => {
+      clearTimeout(timeoutId);
+      video.remove();
+    };
+  };
 
   // Function to extract video metadata dynamically from loaded media element
   const handleVideoMetadataLoad = (clipId: string, e: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -626,6 +673,16 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     const hasCreator = (clip.creatorName || '').toLowerCase().includes(searchLower);
     return hasTag || hasCreator;
   });
+
+  // Generate 0.1s placeholder thumbnail for filtered clips when list updates
+  useEffect(() => {
+    if (!filteredClips || filteredClips.length === 0) return;
+    filteredClips.forEach(clip => {
+      if (clip && clip.id && clip.videoUrl && !dynamicPlaceholderThumbnails[clip.id]) {
+        generate01sThumbnail(clip.id, clip.videoUrl);
+      }
+    });
+  }, [filteredClips]);
 
   // Use the custom playback hook to manage video instances robustly
   const {
@@ -1324,12 +1381,34 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           setIsBuffering(false);
                         }
                       }}
+                      onLoadedData={() => {
+                        setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true }));
+                      }}
                       onError={() => {
                         console.error("Video play/decode error for ID", clip.id);
                         setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
                       }}
                       onLoadedMetadata={(e) => handleVideoMetadataLoad(clip.id, e)}
                     />
+
+                    {/* Dynamic 0.1s Extracted Frame Placeholder Thumbnail shown while video is loading */}
+                    {!loadedVideoIds[clip.id] && (dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl) && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/90">
+                        <img
+                          referrerPolicy="no-referrer"
+                          src={dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl}
+                          alt="Loading clip preview..."
+                          className="w-full h-full object-contain pointer-events-none opacity-80"
+                        />
+                        {/* A small elegant loading spinner inside the placeholder */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+                          <svg className="animate-spin h-6 w-6 text-purple-500/80" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
                     
                     {/* Native Unsupported Codec/Format Overlay Fallback */}
                     {failedVideoIds[clip.id] && (
