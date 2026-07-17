@@ -421,6 +421,131 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [failedVideoIds, setFailedVideoIds] = useState<Record<string, boolean>>({});
+  const [videoMetadata, setVideoMetadata] = useState<Record<string, {
+    resolution?: string;
+    aspectRatio?: string;
+    duration?: string;
+    fps?: string;
+  }>>({});
+
+  // Function to extract video metadata dynamically from loaded media element
+  const handleVideoMetadataLoad = (clipId: string, e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const videoEl = e.currentTarget;
+    if (!videoEl) return;
+
+    const width = videoEl.videoWidth;
+    const height = videoEl.videoHeight;
+    const dur = videoEl.duration;
+
+    // 1. Extract Resolution
+    const resolution = `${width}x${height}`;
+
+    // 2. Extract Aspect Ratio using GCD
+    const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+    const div = gcd(width, height);
+    const aspectRatio = div > 0 ? `${width / div}:${height / div}` : '';
+
+    // 3. Extract Duration
+    const minutes = Math.floor(dur / 60);
+    const seconds = Math.floor(dur % 60);
+    const formattedDuration = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}s`;
+
+    // Initialize or update metadata state for this clip
+    setVideoMetadata(prev => ({
+      ...prev,
+      [clipId]: {
+        ...prev[clipId],
+        resolution,
+        aspectRatio,
+        duration: isNaN(dur) || dur === Infinity ? 'Unknown' : formattedDuration,
+        fps: prev[clipId]?.fps || 'Detecting...'
+      }
+    }));
+
+    // 4. Extract/Measure Frame Rate (FPS) dynamically using requestVideoFrameCallback or requestAnimationFrame
+    let frameCount = 0;
+    let startTime = performance.now();
+    let frameCallbackId: any;
+
+    const checkFps = () => {
+      if (videoEl.paused || videoEl.ended) return;
+      frameCount++;
+      const elapsed = (performance.now() - startTime) / 1000;
+      if (elapsed >= 1.0) {
+        const currentFps = Math.round(frameCount / elapsed);
+        let displayFps = `${currentFps} FPS`;
+        
+        // Snap to standard frame rates
+        if (Math.abs(currentFps - 30) <= 2) displayFps = '30 FPS';
+        else if (Math.abs(currentFps - 60) <= 2) displayFps = '60 FPS';
+        else if (Math.abs(currentFps - 24) <= 2) displayFps = '24 FPS';
+        else if (Math.abs(currentFps - 25) <= 2) displayFps = '25 FPS';
+
+        setVideoMetadata(prev => ({
+          ...prev,
+          [clipId]: {
+            ...(prev[clipId] || {}),
+            fps: displayFps
+          }
+        }));
+        frameCount = 0;
+        startTime = performance.now();
+      }
+      
+      if ('requestVideoFrameCallback' in videoEl) {
+        // @ts-ignore
+        frameCallbackId = videoEl.requestVideoFrameCallback(checkFps);
+      } else {
+        frameCallbackId = requestAnimationFrame(checkFps);
+      }
+    };
+
+    const handlePlay = () => {
+      frameCount = 0;
+      startTime = performance.now();
+      if ('requestVideoFrameCallback' in videoEl) {
+        // @ts-ignore
+        frameCallbackId = videoEl.requestVideoFrameCallback(checkFps);
+      } else {
+        frameCallbackId = requestAnimationFrame(checkFps);
+      }
+    };
+
+    const handlePause = () => {
+      if ('requestVideoFrameCallback' in videoEl) {
+        // @ts-ignore
+        if (frameCallbackId) videoEl.cancelVideoFrameCallback(frameCallbackId);
+      } else {
+        if (frameCallbackId) cancelAnimationFrame(frameCallbackId);
+      }
+    };
+
+    // Listen to play/pause events to resume/pause frame rate tracking
+    videoEl.addEventListener('play', handlePlay);
+    videoEl.addEventListener('pause', handlePause);
+
+    if (!videoEl.paused) {
+      handlePlay();
+    }
+
+    // Standard static estimation fallback if play event doesn't trigger soon
+    setTimeout(() => {
+      setVideoMetadata(prev => {
+        const item = prev[clipId];
+        if (!item || !item.fps || item.fps === 'Detecting...') {
+          const estFps = width >= 1080 ? '60 FPS (est)' : '30 FPS (est)';
+          return {
+            ...prev,
+            [clipId]: {
+              ...(item || {}),
+              fps: estFps
+            }
+          };
+        }
+        return prev;
+      });
+    }, 1500);
+  };
 
   // Set upload step back to 1 when modal opens
   useEffect(() => {
@@ -1203,6 +1328,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         console.error("Video play/decode error for ID", clip.id);
                         setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
                       }}
+                      onLoadedMetadata={(e) => handleVideoMetadataLoad(clip.id, e)}
                     />
                     
                     {/* Native Unsupported Codec/Format Overlay Fallback */}
@@ -1488,6 +1614,38 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         </div>
                       </div>
                     </div>
+
+                    {/* VIDEO METADATA ASSET IDENTIFICATION PANEL */}
+                    {videoMetadata[clip.id] && (
+                      <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto bg-black/60 border border-white/10 rounded-lg px-2.5 py-1.5 max-w-fit shadow-md backdrop-blur-sm mt-0.5">
+                        <div className="flex items-center gap-1 text-[10px] text-gray-400 font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                          <span className="text-gray-300 font-black uppercase tracking-wider text-[9px]">{language === 'ka' ? 'მონაცემები:' : 'Asset:'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 divide-x divide-white/20 text-[10px] font-mono text-gray-300">
+                          {videoMetadata[clip.id].resolution && (
+                            <span className="pl-1 text-purple-300 font-bold" title="Resolution">
+                              {videoMetadata[clip.id].resolution}
+                            </span>
+                          )}
+                          {videoMetadata[clip.id].aspectRatio && (
+                            <span className="pl-1.5 text-blue-300 font-bold" title="Aspect Ratio">
+                              {videoMetadata[clip.id].aspectRatio}
+                            </span>
+                          )}
+                          {videoMetadata[clip.id].duration && (
+                            <span className="pl-1.5 text-amber-300 font-bold" title="Duration">
+                              {videoMetadata[clip.id].duration}
+                            </span>
+                          )}
+                          {videoMetadata[clip.id].fps && (
+                            <span className="pl-1.5 text-pink-300 font-bold" title="Frame Rate">
+                              {videoMetadata[clip.id].fps}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* REAL-TIME DYNAMIC FILTERS PANEL OVERLAY */}
