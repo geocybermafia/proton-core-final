@@ -135,49 +135,49 @@ const PRESET_LOOPS = [
     id: 'potter-clay',
     nameGe: 'კერამიკა & თიხა',
     nameEn: 'Ceramic Shaping Clay',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-potter-shaping-clay-on-a-wheel-41716-large.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     sound: 'Traditional Potter - Ambient Echoes'
   },
   {
     id: 'knitting-wool',
     nameGe: 'მატყლის ქსოვა',
     nameEn: 'Wool Knitting close-up',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-knitting-wool-with-needles-41584-large.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     sound: 'Warm Fireplace Acoustics'
   },
   {
     id: 'misty-mountains',
     nameGe: 'ყაზბეგის ნისლიანი მთები',
     nameEn: 'Kazbegi Misty Mountains',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-beautiful-aerial-view-of-misty-mountains-and-forests-42404-large.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     sound: 'Caucasus Mountain Breeze'
   },
   {
     id: 'spring-gardens',
     nameGe: 'გაზაფხულის ეზო',
     nameEn: 'Spring Blossom Garden',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-4048-large.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
     sound: 'Nino - Spring Harmony'
   },
   {
     id: 'neon-city',
     nameGe: 'ღამის თბილისის ნეონები',
     nameEn: 'Night Tbilisi Lights',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-night-city-street-with-neon-lights-and-traffic-42283-large.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
     sound: 'Tbilisi Cyberpunk Synthwave'
   },
   {
     id: 'laser-abstract',
     nameGe: 'აბსტრაქტული ლაზერები',
     nameEn: 'Cosmic Laser Visualizer',
-    url: 'https://assets.mixkit.co/videos/preview/mixkit-abstract-laser-lights-background-loop-41853-large.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
     sound: 'Synth Beats - Proton Matrix'
   }
 ];
 
 const SEED_CLIPS = [
   {
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-potter-shaping-clay-on-a-wheel-41716-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     caption: 'საქართველოს თიხის ტრადიციული დამუშავება 🏺 საოცარი პროცესია, ჭედვისა და ფორმირების ხელოვნება. #clay #handmade #pottery #craft #georgia',
     creatorId: 'proton-system-clay',
     creatorName: 'ლუკა_Potter',
@@ -188,7 +188,7 @@ const SEED_CLIPS = [
     productId: ''
   },
   {
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-close-up-of-knitting-wool-with-needles-41584-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     caption: 'ნატურალური მთის მატყლის ძაფები ჩემს ახალ კოლექციაში 🧶 ხელით ნაქსოვი თბილი სვიტერები! #knitting #wool #handmade #fashion #cozy',
     creatorId: 'proton-system-wool',
     creatorName: 'ანნა_ნაქსოვი',
@@ -199,7 +199,7 @@ const SEED_CLIPS = [
     productId: ''
   },
   {
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-beautiful-aerial-view-of-misty-mountains-and-forests-42404-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     caption: 'ყაზბეგის ულამაზესი ნისლიანი ხედები დილით 🏔️ საქართველო სიყვარულია! #kazbegi #georgia #mountains #travel #nature #aerial',
     creatorId: 'proton-system-nature',
     creatorName: 'ირაკლი_Travels',
@@ -210,7 +210,7 @@ const SEED_CLIPS = [
     productId: ''
   },
   {
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-tree-with-yellow-flowers-4048-large.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
     caption: 'გაზაფხულის ნაზი ყვავილები ჩემს ეზოში 🌸 სილამაზე დეტალებშია! #spring #flowers #nature #aesthetic #georgia',
     creatorId: 'proton-system-flowers',
     creatorName: 'ნინო_Garden',
