@@ -28,7 +28,8 @@ import {
   Video,
   Eye,
   CheckCircle2,
-  Bookmark
+  Bookmark,
+  Clock
 } from 'lucide-react';
 import { 
   collection, 
@@ -63,6 +64,7 @@ interface Clip {
   id: string;
   videoUrl: string;
   thumbnailUrl?: string;
+  duration?: number;
   caption: string;
   creatorId: string;
   creatorName: string;
@@ -182,6 +184,7 @@ const LOCAL_SEED_CLIPS: Clip[] = SEED_CLIPS.map((item, index) => ({
   ...item,
   id: `seed-clip-${index + 1}`,
   likes: item.likes as string[] || [],
+  duration: [14.5, 12.0, 15.2, 9.8][index % 4],
   createdAt: { seconds: Date.now() / 1000 - (3600 * index), nanoseconds: 0 } as any
 }));
 
@@ -267,7 +270,14 @@ const FILTER_OPTIONS = [
   { id: 'glitch', labelKa: 'გლიჩი ⚡', labelEn: 'Glitch ⚡' }
 ];
 
-const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<string> => {
+const formatDuration = (secs: number | undefined): string => {
+  if (secs === undefined || isNaN(secs)) return '0:00';
+  const minutes = Math.floor(secs / 60);
+  const seconds = Math.floor(secs % 60);
+  return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+};
+
+const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<{ thumbnailUrl: string; duration: number }> => {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
     video.src = videoUrl;
@@ -306,8 +316,9 @@ const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<string> => {
           ctx.drawImage(video, 0, 0, targetW, targetH);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.65); // High compression to save Firestore space
           clearTimeout(timer);
+          const duration = video.duration || 0;
           video.remove();
-          resolve(dataUrl);
+          resolve({ thumbnailUrl: dataUrl, duration });
         } else {
           clearTimeout(timer);
           video.remove();
@@ -364,6 +375,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   
   // Custom thumbnail generated from <canvas>
   const [newClipThumbnail, setNewClipThumbnail] = useState<string>('');
+  const [newClipDuration, setNewClipDuration] = useState<number>(0);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState<boolean>(false);
 
   // Set upload step back to 1 when modal opens
@@ -371,6 +383,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     if (isCreateOpen) {
       setUploadStep(1);
       setNewClipThumbnail('');
+      setNewClipDuration(0);
     }
   }, [isCreateOpen]);
 
@@ -393,6 +406,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     
     if (!urlToLoad) {
       setNewClipThumbnail('');
+      setNewClipDuration(0);
       return;
     }
 
@@ -400,15 +414,17 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     setIsGeneratingThumbnail(true);
     
     generateThumbnailFromVideoUrl(urlToLoad)
-      .then((thumbnail) => {
+      .then((res) => {
         if (active) {
-          setNewClipThumbnail(thumbnail);
+          setNewClipThumbnail(res.thumbnailUrl);
+          setNewClipDuration(res.duration);
         }
       })
       .catch((err) => {
         console.warn("Thumbnail generation failed, falling back to placeholder:", err);
         if (active) {
           setNewClipThumbnail('');
+          setNewClipDuration(0);
         }
       })
       .finally(() => {
@@ -859,6 +875,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       id: docId,
       videoUrl: finalVideoUrl,
       thumbnailUrl: newClipThumbnail || '',
+      duration: newClipDuration || 0,
       caption: newClipCaption,
       creatorId: user.uid,
       creatorName: user.displayName || user.email?.split('@')[0] || 'Ordinary Creator',
@@ -882,6 +899,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       setNewClipSound('');
       setNewClipVideoUrl('');
       setNewClipThumbnail('');
+      setNewClipDuration(0);
       setNewClipProductId('');
       setLocalVideoFile(null);
       setUploadStep(1);
@@ -1553,6 +1571,12 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         }
                       }}
                     >
+                      {/* Video Duration Badge */}
+                      <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-[9px] font-mono font-bold text-white/90 z-10 flex items-center gap-1 shadow-sm border border-white/5 pointer-events-none">
+                        <Clock size={8} className="text-purple-400" />
+                        <span>{formatDuration(c.duration)}</span>
+                      </div>
+
                       {c.thumbnailUrl ? (
                         <img 
                           src={c.thumbnailUrl} 
@@ -1880,8 +1904,14 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                             <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-pink-500/80 text-[7px] font-black text-white uppercase tracking-widest border border-pink-400/20 shadow-md">
                               {language === 'ka' ? 'კადრი დაფიქსირდა' : 'Captured Cover'}
                             </div>
-                            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-xs p-1 rounded-lg border border-white/5 text-[8px] text-gray-300 font-mono text-center">
-                              {Math.round(newClipThumbnail.length / 1024)} KB Optimized Cover
+                            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-xs p-1 rounded-lg border border-white/5 text-[8px] text-gray-300 font-mono text-center flex items-center justify-center gap-2">
+                              <span>{Math.round(newClipThumbnail.length / 1024)} KB Optimized Cover</span>
+                              {newClipDuration > 0 && (
+                                <>
+                                  <span className="text-white/30">|</span>
+                                  <span className="text-pink-400 font-bold">{formatDuration(newClipDuration)}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         ) : (
