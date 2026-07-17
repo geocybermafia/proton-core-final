@@ -1840,88 +1840,91 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                     </div>
 
                     {/* Right Column: Dynamic Live Preview Player & Captured Thumbnail */}
-                    <div className="md:col-span-5 flex flex-col items-center justify-start bg-white/5 border border-white/5 rounded-2xl p-4 self-stretch space-y-4">
-                      <div className="w-full">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-2 flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
-                          {language === 'ka' ? 'ცოცხალი პრევიუ' : 'Live Video Preview'}
-                        </span>
-                        
-                        {(() => {
-                          const previewUrl = newClipVideoUrl || PRESET_LOOPS.find(p => p.id === selectedPresetId)?.url;
-                          if (previewUrl) {
-                            return (
-                              <div className="w-full aspect-[9/16] max-h-[180px] rounded-xl overflow-hidden relative border border-proton-border/20 bg-black shadow-lg">
-                                <video
-                                  src={previewUrl}
-                                  controls
-                                  muted
-                                  playsInline
-                                  loop
-                                  className="w-full h-full object-cover"
-                                />
-                                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-[8px] font-bold text-purple-300 uppercase tracking-widest border border-purple-500/20">
-                                  {language === 'ka' ? 'მზადაა' : 'Connected'}
+                    <div className="md:col-span-5 flex flex-col items-stretch justify-start bg-white/5 border border-white/5 rounded-2xl p-4 self-stretch space-y-4">
+                      
+                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-1 flex items-center gap-1.5 border-b border-white/5 pb-2">
+                        <Sparkles size={11} className="text-purple-400 animate-pulse" />
+                        {language === 'ka' ? 'მედია პანელი' : 'Media Preview Hub'}
+                      </span>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* Left half: Live Video Preview */}
+                        <div className="flex flex-col space-y-2">
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider text-proton-muted truncate flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+                            {language === 'ka' ? 'პრევიუ' : 'Live Player'}
+                          </span>
+                          
+                          {(() => {
+                            const previewUrl = newClipVideoUrl || PRESET_LOOPS.find(p => p.id === selectedPresetId)?.url;
+                            if (previewUrl) {
+                              return (
+                                <div className="w-full aspect-[9/16] rounded-xl overflow-hidden relative border border-proton-border/20 bg-black shadow-lg">
+                                  <video
+                                    src={previewUrl}
+                                    controls
+                                    muted
+                                    playsInline
+                                    loop
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-black/60 text-[7px] font-bold text-purple-300 uppercase tracking-widest border border-purple-500/20">
+                                    {language === 'ka' ? 'აქტიური' : 'Live'}
+                                  </div>
                                 </div>
+                              );
+                            }
+                            return (
+                              <div className="w-full aspect-[9/16] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-2 bg-proton-bg/40">
+                                <Video className="text-proton-muted opacity-25 mb-1" size={16} />
+                                <p className="text-[8px] text-proton-muted leading-relaxed">
+                                  {language === 'ka' ? 'აირჩიეთ წყარო' : 'Select source'}
+                                </p>
                               </div>
                             );
-                          }
-                          return (
-                            <div className="w-full aspect-[9/16] max-h-[180px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-4 bg-proton-bg/40">
-                              <Video className="text-proton-muted opacity-25 mb-2" size={24} />
-                              <p className="text-[10px] text-proton-muted leading-relaxed max-w-[120px]">
-                                {language === 'ka' ? 'შეარჩიეთ მედია წყარო პრევიუსთვის' : 'Select a video source to load player preview'}
+                          })()}
+                        </div>
+
+                        {/* Right half: Captured Cover */}
+                        <div className="flex flex-col space-y-2">
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider text-proton-muted truncate flex items-center gap-1">
+                            <Sparkles size={9} className="text-pink-400" />
+                            {language === 'ka' ? 'გარეკანი' : 'Cover'}
+                          </span>
+
+                          {isGeneratingThumbnail ? (
+                            <div className="w-full aspect-[9/16] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center bg-proton-bg/20 text-center gap-1.5 p-2">
+                              <svg className="animate-spin h-3 w-3 text-pink-500" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              <span className="text-[7px] uppercase tracking-wider text-proton-muted font-bold">
+                                {language === 'ka' ? 'იჭრება...' : 'Capturing...'}
+                              </span>
+                            </div>
+                          ) : newClipThumbnail ? (
+                            <div className="w-full aspect-[9/16] rounded-xl overflow-hidden relative border border-pink-500/30 bg-black shadow-lg">
+                              <img
+                                src={newClipThumbnail}
+                                alt="Canvas Cover"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-full bg-pink-500/80 text-[6px] font-black text-white uppercase tracking-widest border border-pink-400/20 shadow-md">
+                                {language === 'ka' ? 'გარეკანი' : 'Cover'}
+                              </div>
+                              <div className="absolute bottom-1.5 left-1 right-1 bg-black/60 backdrop-blur-xs py-0.5 rounded border border-white/5 text-[7px] text-gray-300 font-mono text-center truncate">
+                                {newClipDuration > 0 ? formatDuration(newClipDuration) : 'Auto'}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-[9/16] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-2 bg-proton-bg/40">
+                              <Sparkles className="text-proton-muted opacity-25 mb-1" size={14} />
+                              <p className="text-[8px] text-proton-muted leading-relaxed">
+                                {language === 'ka' ? 'ავტო გარეკანი' : 'Auto cover'}
                               </p>
                             </div>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Canvas Extracted Thumbnail Preview Card */}
-                      <div className="w-full border-t border-white/5 pt-3">
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-2 flex items-center gap-1.5">
-                          <Sparkles size={11} className="text-pink-400 animate-pulse" />
-                          {language === 'ka' ? 'კადრის კაფსულა (Canvas Cover)' : 'Canvas Captured Cover'}
-                        </span>
-
-                        {isGeneratingThumbnail ? (
-                          <div className="w-full h-[150px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center bg-proton-bg/20 text-center gap-2">
-                            <svg className="animate-spin h-4 w-4 text-pink-500" viewBox="0 0 24 24" fill="none">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            <span className="text-[9px] uppercase tracking-wider text-proton-muted font-bold">
-                              {language === 'ka' ? 'კადრი იჭრება...' : 'Capturing frame...'}
-                            </span>
-                          </div>
-                        ) : newClipThumbnail ? (
-                          <div className="w-full aspect-[9/16] max-h-[180px] rounded-xl overflow-hidden relative border border-pink-500/30 bg-black shadow-lg">
-                            <img
-                              src={newClipThumbnail}
-                              alt="Canvas Extracted Thumbnail Preview"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-pink-500/80 text-[7px] font-black text-white uppercase tracking-widest border border-pink-400/20 shadow-md">
-                              {language === 'ka' ? 'კადრი დაფიქსირდა' : 'Captured Cover'}
-                            </div>
-                            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-xs p-1 rounded-lg border border-white/5 text-[8px] text-gray-300 font-mono text-center flex items-center justify-center gap-2">
-                              <span>{Math.round(newClipThumbnail.length / 1024)} KB Optimized Cover</span>
-                              {newClipDuration > 0 && (
-                                <>
-                                  <span className="text-white/30">|</span>
-                                  <span className="text-pink-400 font-bold">{formatDuration(newClipDuration)}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="w-full h-[120px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-3 bg-proton-bg/40">
-                            <Sparkles className="text-proton-muted opacity-25 mb-1" size={16} />
-                            <p className="text-[9px] text-proton-muted leading-relaxed max-w-[140px]">
-                              {language === 'ka' ? 'პირველი კადრი ავტომატურად გამოჩნდება აქ' : 'First frame will automatically be drawn on hidden canvas'}
-                            </p>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   </motion.div>
