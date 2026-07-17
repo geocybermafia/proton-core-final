@@ -62,6 +62,7 @@ interface ClipsViewProps {
 interface Clip {
   id: string;
   videoUrl: string;
+  thumbnailUrl?: string;
   caption: string;
   creatorId: string;
   creatorName: string;
@@ -266,6 +267,67 @@ const FILTER_OPTIONS = [
   { id: 'glitch', labelKa: 'გლიჩი ⚡', labelEn: 'Glitch ⚡' }
 ];
 
+const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.src = videoUrl;
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    
+    // Seek to 0.5s to get a good first frame (avoiding any starting black screens)
+    video.currentTime = 0.5;
+
+    const timer = setTimeout(() => {
+      video.remove();
+      reject(new Error("Thumbnail generation timed out"));
+    }, 6000);
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        // Keep thumbnail size compact to stay highly performant and under Firestore's 1MB limit
+        const maxW = 240;
+        const maxH = 426;
+        
+        let targetW = video.videoWidth || maxW;
+        let targetH = video.videoHeight || maxH;
+        
+        const scale = Math.min(maxW / targetW, maxH / targetH);
+        targetW = Math.round(targetW * scale);
+        targetH = Math.round(targetH * scale);
+        
+        canvas.width = targetW;
+        canvas.height = targetH;
+        
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, targetW, targetH);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.65); // High compression to save Firestore space
+          clearTimeout(timer);
+          video.remove();
+          resolve(dataUrl);
+        } else {
+          clearTimeout(timer);
+          video.remove();
+          reject(new Error("Canvas context is null"));
+        }
+      } catch (err) {
+        clearTimeout(timer);
+        video.remove();
+        reject(err);
+      }
+    };
+
+    video.onerror = (err) => {
+      clearTimeout(timer);
+      video.remove();
+      reject(err);
+    };
+  });
+};
+
 export default function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
@@ -299,13 +361,66 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [isUploading, setIsUploading] = useState(false);
   const [localVideoFile, setLocalVideoFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Custom thumbnail generated from <canvas>
+  const [newClipThumbnail, setNewClipThumbnail] = useState<string>('');
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState<boolean>(false);
 
   // Set upload step back to 1 when modal opens
   useEffect(() => {
     if (isCreateOpen) {
       setUploadStep(1);
+      setNewClipThumbnail('');
     }
   }, [isCreateOpen]);
+
+  // Dynamic automatic canvas-based thumbnail generation from video source
+  useEffect(() => {
+    if (!isCreateOpen) return;
+    
+    // Determine the active video source
+    let urlToLoad = '';
+    if (localVideoFile) {
+      urlToLoad = newClipVideoUrl; // this is the local object URL
+    } else if (newClipVideoUrl) {
+      urlToLoad = newClipVideoUrl;
+    } else {
+      const preset = PRESET_LOOPS.find(p => p.id === selectedPresetId);
+      if (preset) {
+        urlToLoad = preset.url;
+      }
+    }
+    
+    if (!urlToLoad) {
+      setNewClipThumbnail('');
+      return;
+    }
+
+    let active = true;
+    setIsGeneratingThumbnail(true);
+    
+    generateThumbnailFromVideoUrl(urlToLoad)
+      .then((thumbnail) => {
+        if (active) {
+          setNewClipThumbnail(thumbnail);
+        }
+      })
+      .catch((err) => {
+        console.warn("Thumbnail generation failed, falling back to placeholder:", err);
+        if (active) {
+          setNewClipThumbnail('');
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsGeneratingThumbnail(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [newClipVideoUrl, selectedPresetId, localVideoFile, isCreateOpen]);
   
   // Marketplace Listings list for Tagging
   const [listings, setListings] = useState<any[]>([]);
@@ -743,6 +858,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     const clipData = {
       id: docId,
       videoUrl: finalVideoUrl,
+      thumbnailUrl: newClipThumbnail || '',
       caption: newClipCaption,
       creatorId: user.uid,
       creatorName: user.displayName || user.email?.split('@')[0] || 'Ordinary Creator',
@@ -765,6 +881,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       setNewClipCaption('');
       setNewClipSound('');
       setNewClipVideoUrl('');
+      setNewClipThumbnail('');
       setNewClipProductId('');
       setLocalVideoFile(null);
       setUploadStep(1);
@@ -1436,7 +1553,15 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         }
                       }}
                     >
-                      <video src={c.videoUrl} className="w-full h-full object-cover" muted playsInline />
+                      {c.thumbnailUrl ? (
+                        <img 
+                          src={c.thumbnailUrl} 
+                          alt={c.caption} 
+                          className="w-full h-full object-cover transition-all duration-300 group-hover:scale-105" 
+                        />
+                      ) : (
+                        <video src={c.videoUrl} className="w-full h-full object-cover" muted playsInline />
+                      )}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex flex-col justify-end p-2">
                         <div className="flex items-center gap-1 text-[10px] font-bold text-white">
                           <Heart size={10} className="fill-white" />
@@ -1685,41 +1810,84 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
                     </div>
 
-                    {/* Right Column: Dynamic Live Preview Player */}
-                    <div className="md:col-span-5 flex flex-col items-center justify-start bg-white/5 border border-white/5 rounded-2xl p-4 self-stretch">
-                      <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-3 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
-                        {language === 'ka' ? 'ცოცხალი პრევიუ' : 'Live Video Preview'}
-                      </span>
-                      
-                      {(() => {
-                        const previewUrl = newClipVideoUrl || PRESET_LOOPS.find(p => p.id === selectedPresetId)?.url;
-                        if (previewUrl) {
-                          return (
-                            <div className="w-full aspect-[9/16] max-h-[290px] rounded-xl overflow-hidden relative border border-proton-border/20 bg-black shadow-lg">
-                              <video
-                                src={previewUrl}
-                                controls
-                                muted
-                                playsInline
-                                loop
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-[8px] font-bold text-purple-300 uppercase tracking-widest border border-purple-500/20">
-                                {language === 'ka' ? 'მზადაა' : 'Connected'}
+                    {/* Right Column: Dynamic Live Preview Player & Captured Thumbnail */}
+                    <div className="md:col-span-5 flex flex-col items-center justify-start bg-white/5 border border-white/5 rounded-2xl p-4 self-stretch space-y-4">
+                      <div className="w-full">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-2 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+                          {language === 'ka' ? 'ცოცხალი პრევიუ' : 'Live Video Preview'}
+                        </span>
+                        
+                        {(() => {
+                          const previewUrl = newClipVideoUrl || PRESET_LOOPS.find(p => p.id === selectedPresetId)?.url;
+                          if (previewUrl) {
+                            return (
+                              <div className="w-full aspect-[9/16] max-h-[180px] rounded-xl overflow-hidden relative border border-proton-border/20 bg-black shadow-lg">
+                                <video
+                                  src={previewUrl}
+                                  controls
+                                  muted
+                                  playsInline
+                                  loop
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 text-[8px] font-bold text-purple-300 uppercase tracking-widest border border-purple-500/20">
+                                  {language === 'ka' ? 'მზადაა' : 'Connected'}
+                                </div>
                               </div>
+                            );
+                          }
+                          return (
+                            <div className="w-full aspect-[9/16] max-h-[180px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-4 bg-proton-bg/40">
+                              <Video className="text-proton-muted opacity-25 mb-2" size={24} />
+                              <p className="text-[10px] text-proton-muted leading-relaxed max-w-[120px]">
+                                {language === 'ka' ? 'შეარჩიეთ მედია წყარო პრევიუსთვის' : 'Select a video source to load player preview'}
+                              </p>
                             </div>
                           );
-                        }
-                        return (
-                          <div className="w-full aspect-[9/16] max-h-[290px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-4 bg-proton-bg/40">
-                            <Video className="text-proton-muted opacity-25 mb-2" size={32} />
-                            <p className="text-[10px] text-proton-muted leading-relaxed max-w-[120px]">
-                              {language === 'ka' ? 'შეარჩიეთ მედია წყარო პრევიუსთვის' : 'Select a video source to load player preview'}
+                        })()}
+                      </div>
+
+                      {/* Canvas Extracted Thumbnail Preview Card */}
+                      <div className="w-full border-t border-white/5 pt-3">
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-proton-muted mb-2 flex items-center gap-1.5">
+                          <Sparkles size={11} className="text-pink-400 animate-pulse" />
+                          {language === 'ka' ? 'კადრის კაფსულა (Canvas Cover)' : 'Canvas Captured Cover'}
+                        </span>
+
+                        {isGeneratingThumbnail ? (
+                          <div className="w-full h-[150px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center bg-proton-bg/20 text-center gap-2">
+                            <svg className="animate-spin h-4 w-4 text-pink-500" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            <span className="text-[9px] uppercase tracking-wider text-proton-muted font-bold">
+                              {language === 'ka' ? 'კადრი იჭრება...' : 'Capturing frame...'}
+                            </span>
+                          </div>
+                        ) : newClipThumbnail ? (
+                          <div className="w-full aspect-[9/16] max-h-[180px] rounded-xl overflow-hidden relative border border-pink-500/30 bg-black shadow-lg">
+                            <img
+                              src={newClipThumbnail}
+                              alt="Canvas Extracted Thumbnail Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-pink-500/80 text-[7px] font-black text-white uppercase tracking-widest border border-pink-400/20 shadow-md">
+                              {language === 'ka' ? 'კადრი დაფიქსირდა' : 'Captured Cover'}
+                            </div>
+                            <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-xs p-1 rounded-lg border border-white/5 text-[8px] text-gray-300 font-mono text-center">
+                              {Math.round(newClipThumbnail.length / 1024)} KB Optimized Cover
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-[120px] rounded-xl border border-dashed border-proton-border/20 flex flex-col items-center justify-center text-center p-3 bg-proton-bg/40">
+                            <Sparkles className="text-proton-muted opacity-25 mb-1" size={16} />
+                            <p className="text-[9px] text-proton-muted leading-relaxed max-w-[140px]">
+                              {language === 'ka' ? 'პირველი კადრი ავტომატურად გამოჩნდება აქ' : 'First frame will automatically be drawn on hidden canvas'}
                             </p>
                           </div>
-                        );
-                      })()}
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 )}
