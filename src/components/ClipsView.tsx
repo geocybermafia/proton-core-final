@@ -440,6 +440,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [showAutoFixDialog, setShowAutoFixDialog] = useState(false);
   const [selectedClipForFix, setSelectedClipForFix] = useState<Clip | null>(null);
   const [appliedFixes, setAppliedFixes] = useState<Record<string, string[]>>({}); // mapping of clipId -> array of issueIds
+  const [previewingIssueId, setPreviewingIssueId] = useState<string | null>(null);
 
   // Analyze video frame brightness using hidden canvas for true programmatic diagnostics
   const analyzeVideoBrightness = (videoUrl: string, duration: number): Promise<number[]> => {
@@ -531,6 +532,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     setIsAnalyzing(true);
     setSelectedClipForFix(clip);
     setDetectedIssues([]);
+    setPreviewingIssueId(null);
     setShowAutoFixDialog(true);
     
     try {
@@ -2944,6 +2946,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         <div className="space-y-3">
                           {detectedIssues.map((issue) => {
                             const isApplied = appliedFixes[selectedClipForFix.id]?.includes(issue.id);
+                            const isPreviewing = previewingIssueId === issue.id;
                             
                             return (
                               <div 
@@ -2984,58 +2987,93 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                                     </p>
                                   </div>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (isApplied) {
-                                        // Undo fix
-                                        const updatedApplied = (appliedFixes[selectedClipForFix.id] || []).filter(id => id !== issue.id);
-                                        setAppliedFixes(prev => ({
-                                          ...prev,
-                                          [selectedClipForFix.id]: updatedApplied
-                                        }));
-                                        // Restore trim bounds
-                                        selectedClipForFix.trimStart = 0;
-                                        selectedClipForFix.trimEnd = selectedClipForFix.duration;
-                                        showToast(
-                                          language === 'ka' 
-                                            ? "გასწორება გაუქმდა. კლიპის საწყისი საზღვრები აღდგენილია." 
-                                            : "Fix Reverted. Original clip bounds restored.",
-                                          "info"
-                                        );
-                                      } else {
-                                        // Apply fix
-                                        const updatedApplied = [...(appliedFixes[selectedClipForFix.id] || []), issue.id];
-                                        setAppliedFixes(prev => ({
-                                          ...prev,
-                                          [selectedClipForFix.id]: updatedApplied
-                                        }));
-                                        // Set actual video trim ranges
-                                        if (issue.startSec === 0) {
-                                          selectedClipForFix.trimStart = issue.endSec;
+                                  <div className="flex flex-col gap-2 flex-shrink-0 w-24">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (isApplied) {
+                                          // Undo fix
+                                          const updatedApplied = (appliedFixes[selectedClipForFix.id] || []).filter(id => id !== issue.id);
+                                          setAppliedFixes(prev => ({
+                                            ...prev,
+                                            [selectedClipForFix.id]: updatedApplied
+                                          }));
+                                          // Restore trim bounds
+                                          selectedClipForFix.trimStart = 0;
+                                          selectedClipForFix.trimEnd = selectedClipForFix.duration;
+                                          showToast(
+                                            language === 'ka' 
+                                              ? "გასწორება გაუქმდა. კლიპის საწყისი საზღვრები აღდგენილია." 
+                                              : "Fix Reverted. Original clip bounds restored.",
+                                            "info"
+                                          );
                                         } else {
-                                          selectedClipForFix.trimEnd = issue.startSec;
+                                          // Apply fix
+                                          const updatedApplied = [...(appliedFixes[selectedClipForFix.id] || []), issue.id];
+                                          setAppliedFixes(prev => ({
+                                            ...prev,
+                                            [selectedClipForFix.id]: updatedApplied
+                                          }));
+                                          // Set actual video trim ranges
+                                          if (issue.startSec === 0) {
+                                            selectedClipForFix.trimStart = issue.endSec;
+                                          } else {
+                                            selectedClipForFix.trimEnd = issue.startSec;
+                                          }
+                                          showToast(
+                                            language === 'ka' 
+                                              ? "გასწორება წარმატებით შესრულდა. კლიპი ავტომატურად მოიჭრა." 
+                                              : "Auto-Fix Applied Successfully. Video has been trimmed.",
+                                            "success"
+                                          );
                                         }
-                                        showToast(
-                                          language === 'ka' 
-                                            ? "გასწორება წარმატებით შესრულდა. კლიპი ავტომატურად მოიჭრა." 
-                                            : "Auto-Fix Applied Successfully. Video has been trimmed.",
-                                          "success"
-                                        );
-                                      }
-                                    }}
-                                    className={cn(
-                                      "px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wide uppercase flex-shrink-0 transition-all border",
-                                      isApplied
-                                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20"
-                                        : "bg-purple-600/25 text-purple-300 border-purple-500/35 hover:bg-purple-600/40"
-                                    )}
-                                  >
-                                    {isApplied 
-                                      ? (language === 'ka' ? 'გაუქმება' : 'Undo') 
-                                      : (language === 'ka' ? 'მოჭრა' : 'Trim')}
-                                  </button>
+                                      }}
+                                      className={cn(
+                                        "w-full py-1.5 rounded-lg text-[9px] font-black tracking-wider uppercase transition-all border text-center shadow-sm",
+                                        isApplied
+                                          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                          : "bg-purple-600/25 text-purple-300 border-purple-500/35 hover:bg-purple-600/40"
+                                      )}
+                                    >
+                                      {isApplied 
+                                        ? (language === 'ka' ? 'გაუქმება' : 'Undo') 
+                                        : (language === 'ka' ? 'მოჭრა' : 'Trim')}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setPreviewingIssueId(isPreviewing ? null : issue.id);
+                                      }}
+                                      className={cn(
+                                        "w-full py-1.5 rounded-lg text-[9px] font-black tracking-wider uppercase transition-all border flex items-center justify-center gap-1.5 shadow-sm",
+                                        isPreviewing
+                                          ? "bg-purple-500/35 text-purple-200 border-purple-500 hover:bg-purple-500/45 text-white animate-pulse"
+                                          : "bg-white/5 text-proton-muted border-proton-border/15 hover:border-proton-border/30 hover:text-white"
+                                      )}
+                                    >
+                                      <Eye size={10} className={cn(isPreviewing && "text-purple-400")} />
+                                      <span>{language === 'ka' ? 'პრევიუ' : 'Preview'}</span>
+                                    </button>
+                                  </div>
                                 </div>
+
+                                <AnimatePresence initial={false}>
+                                  {isPreviewing && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                      animate={{ height: "auto", opacity: 1, marginTop: 12 }}
+                                      exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <IssuePreviewPlayer 
+                                        clip={selectedClipForFix} 
+                                        issue={issue} 
+                                        language={language} 
+                                      />
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
                               </div>
                             );
                           })}
@@ -3062,6 +3100,236 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
         )}
       </AnimatePresence>
 
+    </div>
+  );
+}
+
+interface IssuePreviewPlayerProps {
+  clip: Clip;
+  issue: ClipIssue;
+  language: 'en' | 'ka';
+}
+
+export function IssuePreviewPlayer({ clip, issue, language }: IssuePreviewPlayerProps) {
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [previewMode, setPreviewMode] = useState<'trimmed' | 'cut'>('trimmed');
+  const [currentTime, setCurrentTime] = useState(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const duration = clip.duration || 10;
+
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.play().catch(() => setIsPlaying(false));
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [isPlaying]);
+
+  // Adjust starting seek position when mode changes
+  useEffect(() => {
+    if (videoRef.current) {
+      if (previewMode === 'trimmed') {
+        if (issue.startSec === 0) {
+          videoRef.current.currentTime = issue.endSec;
+        } else {
+          videoRef.current.currentTime = 0;
+        }
+      } else {
+        videoRef.current.currentTime = issue.startSec;
+      }
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  }, [previewMode, issue]);
+
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const curr = video.currentTime;
+    setCurrentTime(curr);
+
+    if (previewMode === 'trimmed') {
+      if (issue.startSec === 0) {
+        if (curr < issue.endSec) {
+          video.currentTime = issue.endSec;
+        }
+        if (curr >= duration - 0.1) {
+          video.currentTime = issue.endSec;
+        }
+      } else if (Math.abs(issue.endSec - duration) < 0.5 || issue.endSec >= duration) {
+        if (curr >= issue.startSec) {
+          video.currentTime = 0;
+        }
+      } else {
+        // mid-video cut
+        if (curr >= issue.startSec && curr < issue.endSec) {
+          video.currentTime = issue.endSec;
+        }
+        if (curr >= duration - 0.1) {
+          video.currentTime = 0;
+        }
+      }
+    } else {
+      // cut portion only
+      if (curr < issue.startSec) {
+        video.currentTime = issue.startSec;
+      }
+      if (curr >= issue.endSec) {
+        video.currentTime = issue.startSec;
+      }
+    }
+  };
+
+  const togglePlay = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  // Calculate timeline percentages for visualization
+  const cutStartPercent = (issue.startSec / duration) * 100;
+  const cutWidthPercent = ((issue.endSec - issue.startSec) / duration) * 100;
+  const playheadPercent = (currentTime / duration) * 100;
+
+  return (
+    <div className="mt-3 p-3.5 bg-black/55 border border-purple-500/15 rounded-xl space-y-3 shadow-inner shadow-purple-500/5">
+      <div className="flex gap-4">
+        {/* Video Player */}
+        <div className="relative w-24 aspect-[9/16] bg-black rounded-lg overflow-hidden border border-white/10 flex-shrink-0 group shadow-lg">
+          <video
+            ref={videoRef}
+            src={clip.videoUrl}
+            muted
+            playsInline
+            autoPlay
+            className="w-full h-full object-cover cursor-pointer"
+            onTimeUpdate={handleTimeUpdate}
+            onClick={togglePlay}
+          />
+          {/* Overlay controls */}
+          <div 
+            onClick={togglePlay}
+            className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer"
+          >
+            <div className="p-2 rounded-full bg-black/70 text-white border border-white/10 shadow-lg">
+              {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+            </div>
+          </div>
+          <div className="absolute bottom-1.5 right-1.5 px-1 py-0.5 rounded bg-black/70 text-[8px] font-mono font-black text-purple-300 border border-purple-500/20">
+            {currentTime.toFixed(1)}s
+          </div>
+        </div>
+
+        {/* Info & Mode Toggles */}
+        <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-black text-purple-300 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+              <span>{language === 'ka' ? 'ვიდეო ჭრის პრევიუ' : 'Video Cut Preview'}</span>
+            </div>
+
+            {/* Selector buttons */}
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPreviewMode('trimmed')}
+                className={cn(
+                  "py-1 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all text-center",
+                  previewMode === 'trimmed'
+                    ? "bg-purple-600/25 text-purple-200 border-purple-500/50 shadow-sm"
+                    : "bg-white/5 text-proton-muted border-transparent hover:bg-white/10"
+                )}
+              >
+                {language === 'ka' ? 'გასწორებული' : 'Trimmed Result'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewMode('cut')}
+                className={cn(
+                  "py-1 px-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider border transition-all text-center",
+                  previewMode === 'cut'
+                    ? "bg-amber-600/25 text-amber-200 border-amber-500/50 shadow-sm"
+                    : "bg-white/5 text-proton-muted border-transparent hover:bg-white/10"
+                )}
+              >
+                {language === 'ka' ? 'ამოსაჭრელი' : 'Cut Portion'}
+              </button>
+            </div>
+
+            <p className="text-[10px] text-proton-muted leading-relaxed">
+              {previewMode === 'trimmed'
+                ? (language === 'ka' 
+                    ? "ნაჩვენებია ვიდეო, სადაც წაშლილია ხარვეზის შემცველი მონაკვეთი." 
+                    : "Simulating corrected video. The player skips the detected defect smoothly.")
+                : (language === 'ka' 
+                    ? "ნაჩვენებია მხოლოდ ის კონკრეტული მონაკვეთი, რომლის მოჭრაც იგეგმება." 
+                    : "Looping only the defect segment to review precisely what is being discarded.")
+              }
+            </p>
+          </div>
+
+          {/* Timeline visualization */}
+          <div className="space-y-1.5 mt-2">
+            <div className="flex justify-between text-[8px] font-mono font-bold text-proton-muted">
+              <span>0.0s</span>
+              <span>{duration.toFixed(1)}s</span>
+            </div>
+            
+            {/* ProgressBar */}
+            <div className="relative h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+              {/* Highlight cut portion */}
+              <div
+                className="absolute h-full bg-red-500/40 border-l border-r border-red-500/50"
+                style={{
+                  left: `${cutStartPercent}%`,
+                  width: `${cutWidthPercent}%`,
+                }}
+              />
+              {/* Active preview timeline highlight */}
+              {previewMode === 'trimmed' ? (
+                <>
+                  <div 
+                    className="absolute h-full bg-emerald-500/15" 
+                    style={{ left: 0, width: `${cutStartPercent}%` }}
+                  />
+                  <div 
+                    className="absolute h-full bg-emerald-500/15" 
+                    style={{ left: `${cutStartPercent + cutWidthPercent}%`, right: 0 }}
+                  />
+                </>
+              ) : (
+                <div 
+                  className="absolute h-full bg-amber-500/15" 
+                  style={{ left: `${cutStartPercent}%`, width: `${cutWidthPercent}%` }}
+                />
+              )}
+              {/* Playhead marker */}
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-white shadow-md transition-all duration-75"
+                style={{ left: `${playheadPercent}%` }}
+              />
+            </div>
+            
+            <div className="flex justify-between items-center text-[8px] font-mono">
+              <span className="text-proton-muted">
+                {language === 'ka' ? 'მიმდინარე:' : 'Current:'} {currentTime.toFixed(1)}s
+              </span>
+              <span className={cn(
+                "font-black uppercase tracking-wider text-[7px] px-1.5 py-0.5 rounded border",
+                previewMode === 'trimmed' 
+                  ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" 
+                  : "text-amber-400 bg-amber-500/10 border-amber-500/20"
+              )}>
+                {previewMode === 'trimmed' 
+                  ? (language === 'ka' ? 'შესწორებული' : 'Trimmed Mode') 
+                  : (language === 'ka' ? 'ამოსაჭრელი ხარვეზი' : 'Cut Portion Mode')
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
