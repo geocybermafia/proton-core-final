@@ -12,7 +12,8 @@ import {
   SlidersHorizontal,
   Eye,
   EyeOff,
-  LayoutGrid
+  LayoutGrid,
+  Video
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -48,9 +49,9 @@ export const DashboardView = React.memo(({
   const [visibleWidgets, setVisibleWidgets] = React.useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('proton_dashboard_widgets');
-      return saved ? JSON.parse(saved) : ['business', 'creative', 'market', 'organizer', 'finance'];
+      return saved ? JSON.parse(saved) : ['business', 'creative', 'market', 'organizer', 'finance', 'clips'];
     } catch {
-      return ['business', 'creative', 'market', 'organizer', 'finance'];
+      return ['business', 'creative', 'market', 'organizer', 'finance', 'clips'];
     }
   });
 
@@ -69,13 +70,13 @@ export const DashboardView = React.memo(({
   };
 
   const showAllWidgets = () => {
-    const all = ['business', 'creative', 'market', 'organizer', 'finance'];
+    const all = ['business', 'creative', 'market', 'organizer', 'finance', 'clips'];
     setVisibleWidgets(all);
     localStorage.setItem('proton_dashboard_widgets', JSON.stringify(all));
   };
 
   const showEssentialOnly = () => {
-    const essential = ['business', 'finance', 'organizer'];
+    const essential = ['business', 'finance', 'organizer', 'clips'];
     setVisibleWidgets(essential);
     localStorage.setItem('proton_dashboard_widgets', JSON.stringify(essential));
   };
@@ -174,6 +175,23 @@ export const DashboardView = React.memo(({
         { label: language === 'ka' ? 'ფინანსების დაფა' : 'Budget Dashboard', view: 'finance' }
       ],
       action: () => setActiveView('finance')
+    },
+    {
+      id: 'clips',
+      title: language === 'ka' ? 'პროტონ კლიპები' : 'Proton Clips',
+      badge: language === 'ka' ? 'მოკლე ვიდეოები' : 'Short Video Portal',
+      desc: language === 'ka'
+        ? 'უყურეთ, დააკომენტარეთ და გააზიარეთ მოკლე ვიდეო კლიპები. ატვირთეთ საკუთარი და მართეთ ფილტრები.'
+        : 'Watch, comment, and share short video clips. Upload your own, build trends, and engage with the feed.',
+      icon: Video,
+      color: 'rose',
+      glowClass: 'border-rose-500/20 hover:border-rose-500/80 shadow-rose-500/5 hover:shadow-rose-500/20',
+      badgeClass: 'bg-rose-500/10 text-rose-400 border-rose-500/20',
+      iconClass: 'bg-rose-500/10 text-rose-400 group-hover:bg-rose-500 group-hover:text-black',
+      shortcuts: [
+        { label: language === 'ka' ? 'კლიპების ლენტა' : 'Browse Clips', view: 'clips' }
+      ],
+      action: () => setActiveView('clips')
     }
   ];
 

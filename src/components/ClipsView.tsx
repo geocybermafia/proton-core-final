@@ -393,6 +393,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'forYou' | 'myClips' | 'productReels'>('forYou');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFeaturesModal, setShowFeaturesModal] = useState(false);
   
   // Real-time video filters
   const [activeFilter, setActiveFilter] = useState<'normal' | 'noir' | 'vintage' | 'warm' | 'glitch'>('normal');
@@ -1477,8 +1478,17 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
         {/* Action button */}
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowFeaturesModal(true)}
+            className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-proton-card border border-proton-border/40 hover:bg-proton-accent/10 hover:text-proton-accent hover:border-proton-accent/30 text-proton-muted hover:text-proton-text font-bold text-xs transition-all cursor-pointer"
+            title={language === 'ka' ? 'ფუნქციონალი და შესაძლებლობები' : 'Features & Capabilities'}
+          >
+            <Sparkles size={14} className="text-purple-400" />
+            <span>{language === 'ka' ? 'ფუნქციონალი' : 'Features'}</span>
+          </button>
+          
+          <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs tracking-wide shadow-md shadow-purple-500/10 hover:shadow-lg transition-all"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs tracking-wide shadow-md shadow-purple-500/10 hover:shadow-lg transition-all cursor-pointer"
           >
             <Plus size={15} />
             <span>{language === 'ka' ? 'დადე კლიპი' : 'Share a Clip'}</span>
@@ -2366,6 +2376,170 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                   ))
                 )}
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CLIPS FEATURES SUMMARY MODAL */}
+      <AnimatePresence>
+        {showFeaturesModal && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="relative w-full max-w-3xl bg-proton-bg border border-proton-border/30 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col max-h-[92vh] overflow-y-auto text-proton-text"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowFeaturesModal(false)}
+                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 border border-white/10 text-proton-muted hover:text-white hover:bg-white/10 transition-all z-10 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+
+              {/* Title Header */}
+              <div className="flex items-center gap-3 pb-6 border-b border-proton-border/20">
+                <div className="p-3 rounded-2xl bg-gradient-to-tr from-purple-500/10 to-pink-500/10 border border-purple-500/20 text-purple-400">
+                  <Sparkles className="animate-spin" style={{ animationDuration: '6s' }} size={24} />
+                </div>
+                <div>
+                  <h3 className="font-black text-xl uppercase tracking-wider text-white">
+                    {language === 'ka' ? 'მოკლე კლიპების სრული ფუნქციონალი' : 'Proton Clips Feature Suite'}
+                  </h3>
+                  <p className="text-xs text-proton-muted">
+                    {language === 'ka' 
+                      ? 'მიმოიხილეთ აპლიკაციის კლიპების პორტალის უახლესი შესაძლებლობები' 
+                      : 'Overview of all advanced modules, filters, and diagnostics in the clips platform'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Grid of Capabilities */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-6">
+                
+                {/* 1. Immersive Scrolling Feed */}
+                <div className="p-4 rounded-2xl border border-proton-border/10 bg-proton-card/10 hover:bg-proton-card/30 transition-all space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                      <Video size={16} />
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? '📱 ვერტიკალური სქროლვა' : '📱 VERTICAL SCROLL FEED'}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-proton-muted">
+                    {language === 'ka' 
+                      ? 'ინსტაგრამის მსგავსი სრულეკრანიანი ინტერფეისი ვიდეოების სწრაფი და შეუფერხებელი გადაფურცვლისთვის. კლავიატურის ისრებითა და მაუსის სქროლით მართვა.'
+                      : 'Instagram-like immersive vertical feed supporting arrow keys and mouse wheel scrolling for butter-smooth media progression.'}
+                  </p>
+                </div>
+
+                {/* 2. Real-time Creative Filters */}
+                <div className="p-4 rounded-2xl border border-proton-border/10 bg-proton-card/10 hover:bg-proton-card/30 transition-all space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
+                      <Wand2 size={16} />
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? '🎨 კრეატიული ფილტრები' : '🎨 KINETIC VIDEO FILTERS'}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-proton-muted">
+                    {language === 'ka' 
+                      ? 'შეცვალეთ ვიდეოების ატმოსფერო რეალურ დროში. აირჩიეთ ფილტრებიდან: Noir, Vintage, Warm, Glitch ან Normal უნიკალური ვიზუალური ეფექტისთვის.'
+                      : 'Instantly transform video atmospheres using advanced live rendering filters. Choose between Noir, Vintage, Warm, or Glitch presets.'}
+                  </p>
+                </div>
+
+                {/* 3. Social Interaction Suite */}
+                <div className="p-4 rounded-2xl border border-proton-border/10 bg-proton-card/10 hover:bg-proton-card/30 transition-all space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                      <MessageSquare size={16} />
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? '💬 ინტერაქტიული კომენტარები' : '💬 SOCIAL SUITE'}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-proton-muted">
+                    {language === 'ka' 
+                      ? 'დააკომენტარეთ რეალურ დროში, მოიწონეთ კლიპები, დაათვალიერეთ ავტორების პროფილები და კოპირებით გააზიარეთ კლიპის პირდაპირი ბმული.'
+                      : 'Comment feeds with real-time sync, dynamic likes, creator profiles, and shareable deep links targeting specific videos.'}
+                  </p>
+                </div>
+
+                {/* 4. Canvas Diagnostics & Auto-Fix */}
+                <div className="p-4 rounded-2xl border border-proton-border/10 bg-proton-card/10 hover:bg-proton-card/30 transition-all space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                      <Sparkles size={16} />
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? '🔬 AI ვიდეო დიაგნოსტიკა' : '🔬 LIVE CANVAS DIAGNOSTICS'}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-proton-muted">
+                    {language === 'ka' 
+                      ? 'ავტომატური ტექნიკური დიაგნოსტიკა. Canvas-ის მეშვეობით აანალიზებს განათებას, გარჩევადობას, კადრების სიხშირეს (fps) და გთავაზობთ გამოსწორებას (Auto-Fix).'
+                      : 'Programmatic assessment of video brightness, frame resolution, and ratios using a hidden canvas to trigger instant Auto-Fix patches.'}
+                  </p>
+                </div>
+
+                {/* 5. Fast Caching with IndexedDB */}
+                <div className="p-4 rounded-2xl border border-proton-border/10 bg-proton-card/10 hover:bg-proton-card/30 transition-all space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                      <Clock size={16} />
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? '⚡ სწრაფი ლოკალური ქეში' : '⚡ OFFLINE BUFFER CACHE'}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-proton-muted">
+                    {language === 'ka' 
+                      ? 'ავტომატური IndexedDB მონაცემთა ბაზა, რომელიც ინახავს დიდ ვიდეოებს ლოკალურად შეუფერხებელი და დაუყოვნებლივი ჩატვირთვისთვის.'
+                      : 'Uses an integrated browser IndexedDB store to cache large video files locally for lightning-fast loading and offline availability.'}
+                  </p>
+                </div>
+
+                {/* 6. Product-Tagging Integration */}
+                <div className="p-4 rounded-2xl border border-proton-border/10 bg-proton-card/10 hover:bg-proton-card/30 transition-all space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                      <ShoppingBag size={16} />
+                    </div>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-white">
+                      {language === 'ka' ? '🛍️ პროდუქტების მიბმა' : '🛍️ PRODUCT TAGGING'}
+                    </h4>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-proton-muted">
+                    {language === 'ka' 
+                      ? 'მიაბით კლიპებს კონკრეტული ნივთები პროტონ მარკეტიდან. მომხმარებლებს შეუძლიათ შეიძინონ პროდუქტი პირდაპირ ვიდეოს ყურებისას.'
+                      : 'Link micro-video reels directly to your physical listings in the marketplace, allowing users to buy products while they watch.'}
+                  </p>
+                </div>
+
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-6 border-t border-proton-border/20 flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowFeaturesModal(false)}
+                  className="px-5 py-2.5 rounded-xl bg-proton-card border border-proton-border/40 hover:bg-zinc-800 text-proton-muted hover:text-white font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  {language === 'ka' ? 'დახურვა' : 'Close Overview'}
+                </button>
+                <button
+                  onClick={() => { setShowFeaturesModal(false); setIsCreateOpen(true); }}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-purple-500/20 transition-all cursor-pointer"
+                >
+                  {language === 'ka' ? 'ატვირთე კლიპი ახლავე' : 'Create a Clip Now'}
+                </button>
+              </div>
+
             </motion.div>
           </div>
         )}
