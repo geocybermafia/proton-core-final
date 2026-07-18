@@ -22,6 +22,8 @@ import {
   ArrowLeft,
   ChevronRight,
   ChevronLeft,
+  ChevronUp,
+  ChevronDown,
   UploadCloud,
   Check,
   TrendingUp,
@@ -441,6 +443,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [selectedClipForFix, setSelectedClipForFix] = useState<Clip | null>(null);
   const [appliedFixes, setAppliedFixes] = useState<Record<string, string[]>>({}); // mapping of clipId -> array of issueIds
   const [previewingIssueId, setPreviewingIssueId] = useState<string | null>(null);
+  const [doubleTapHearts, setDoubleTapHearts] = useState<Record<string, boolean>>({});
+  const [soundOverlay, setSoundOverlay] = useState<{ visible: boolean; muted: boolean }>({ visible: false, muted: false });
 
   // Analyze video frame brightness using hidden canvas for true programmatic diagnostics
   const analyzeVideoBrightness = (videoUrl: string, duration: number): Promise<number[]> => {
@@ -904,6 +908,40 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
     resetPlayback
   } = useClipPlayback(filteredClips, containerRef);
 
+  const handleToggleMute = () => {
+    toggleMute();
+    setSoundOverlay({ visible: true, muted: !isMuted });
+  };
+
+  useEffect(() => {
+    if (soundOverlay.visible) {
+      const timer = setTimeout(() => {
+        setSoundOverlay(prev => ({ ...prev, visible: false }));
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [soundOverlay.visible]);
+
+  const handleScrollUp = () => {
+    if (containerRef.current) {
+      const height = containerRef.current.clientHeight;
+      containerRef.current.scrollBy({
+        top: -height,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleScrollDown = () => {
+    if (containerRef.current) {
+      const height = containerRef.current.clientHeight;
+      containerRef.current.scrollBy({
+        top: height,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   // 1. Fetch Listings for Tagging
   useEffect(() => {
     const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
@@ -1130,6 +1168,18 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       }
     } catch (e) {
       console.error("Failed to toggle like:", e);
+    }
+  };
+
+  const handleDoubleTap = (clip: Clip) => {
+    setDoubleTapHearts(prev => ({ ...prev, [clip.id]: true }));
+    setTimeout(() => {
+      setDoubleTapHearts(prev => ({ ...prev, [clip.id]: false }));
+    }, 1000);
+
+    const isLikedByMe = clip.likes?.includes(user?.uid || '');
+    if (!isLikedByMe) {
+      handleLikeToggle(clip);
     }
   };
 
@@ -1529,190 +1579,255 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
             </button>
           </div>
         ) : (
-          
-          /* VERTICAL TIKTOK GRID FEEDS */
-          <div 
-            ref={containerRef}
-            onScroll={handleScroll}
-            className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth flex flex-col items-center"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {filteredClips.map((clip, idx) => {
-              const isLikedByMe = clip.likes?.includes(user?.uid || '');
-              const hasProduct = !!clip.productId;
+          <>
+            {/* Desktop Navigation buttons */}
+            <div className="hidden lg:flex flex-col gap-3 absolute right-8 z-20">
+              <button
+                onClick={handleScrollUp}
+                disabled={currentIndex === 0}
+                className="p-3 rounded-full bg-black/60 hover:bg-black/85 text-white border border-white/10 transition-all shadow-xl hover:scale-110 disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
+                title="Previous Reel"
+              >
+                <ChevronUp size={20} />
+              </button>
+              <button
+                onClick={handleScrollDown}
+                disabled={currentIndex === filteredClips.length - 1}
+                className="p-3 rounded-full bg-black/60 hover:bg-black/85 text-white border border-white/10 transition-all shadow-xl hover:scale-110 disabled:opacity-20 disabled:pointer-events-none cursor-pointer"
+                title="Next Reel"
+              >
+                <ChevronDown size={20} />
+              </button>
+            </div>
+            
+            {/* VERTICAL TIKTOK GRID FEEDS */}
+            <div 
+              ref={containerRef}
+              onScroll={handleScroll}
+              className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth flex flex-col items-center"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {filteredClips.map((clip, idx) => {
+                const isLikedByMe = clip.likes?.includes(user?.uid || '');
+                const hasProduct = !!clip.productId;
 
-              return (
-                <div 
-                  key={clip.id} 
-                  className="w-full max-w-[450px] h-full min-h-full flex-shrink-0 snap-start snap-always relative overflow-hidden bg-black/90 flex flex-col justify-between"
-                >
-                  
-                  {/* VIDEO PLAYER ELEMENT */}
-                  <div className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden">
-                    <video
-                      ref={el => registerVideoRef(idx, el)}
-                      src={clip.videoUrl}
-                      loop
-                      playsInline
-                      muted={isMuted}
-                      preload="auto"
-                      autoPlay={idx === currentIndex && isPlaying}
-                      className={cn(
-                        "w-full h-full object-contain transition-all duration-300",
-                        activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
-                        activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
-                        activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
-                        activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
-                      )}
+                return (
+                  <div 
+                    key={clip.id} 
+                    className="w-full max-w-[450px] h-full min-h-full flex-shrink-0 snap-start snap-always relative overflow-hidden bg-black/90 flex flex-col justify-between"
+                  >
+                    
+                    {/* VIDEO PLAYER ELEMENT */}
+                    <div 
+                      className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden cursor-pointer"
+                      onDoubleClick={() => handleDoubleTap(clip)}
                       onClick={() => togglePlay(idx)}
-                      onPlay={() => {
-                        if (idx === currentIndex) {
-                          setIsPlaying(true);
-                        }
-                      }}
-                      onPause={() => {
-                        if (idx === currentIndex) {
-                          setIsPlaying(false);
-                        }
-                      }}
-                      onWaiting={() => {
-                        if (idx === currentIndex) {
-                          setIsBuffering(true);
-                        }
-                      }}
-                      onPlaying={() => {
-                        if (idx === currentIndex) {
-                          setIsBuffering(false);
-                        }
-                      }}
-                      onLoadedData={() => {
-                        setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true }));
-                      }}
-                      onError={() => {
-                        console.error("Video play/decode error for ID", clip.id);
-                        setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
-                      }}
-                      onLoadedMetadata={(e) => handleVideoMetadataLoad(clip.id, e)}
-                      onTimeUpdate={(e) => {
-                        const video = e.currentTarget;
-                        const tStart = clip.trimStart || 0;
-                        const tEnd = clip.trimEnd || video.duration || Infinity;
-                        
-                        if (video.currentTime < tStart) {
-                          video.currentTime = tStart;
-                        }
-                        if (video.currentTime > tEnd) {
-                          video.currentTime = tStart;
-                          video.play().catch(() => {});
-                        }
-                      }}
-                    />
+                    >
+                      <video
+                        ref={el => registerVideoRef(idx, el)}
+                        src={clip.videoUrl}
+                        loop
+                        playsInline
+                        muted={isMuted}
+                        preload="auto"
+                        autoPlay={idx === currentIndex && isPlaying}
+                        className={cn(
+                          "w-full h-full object-contain transition-all duration-300",
+                          activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
+                          activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
+                          activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
+                          activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
+                        )}
+                        onPlay={() => {
+                          if (idx === currentIndex) {
+                            setIsPlaying(true);
+                          }
+                        }}
+                        onPause={() => {
+                          if (idx === currentIndex) {
+                            setIsPlaying(false);
+                          }
+                        }}
+                        onWaiting={() => {
+                          if (idx === currentIndex) {
+                            setIsBuffering(true);
+                          }
+                        }}
+                        onPlaying={() => {
+                          if (idx === currentIndex) {
+                            setIsBuffering(false);
+                          }
+                        }}
+                        onLoadedData={() => {
+                          setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true }));
+                        }}
+                        onError={() => {
+                          console.error("Video play/decode error for ID", clip.id);
+                          setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
+                        }}
+                        onLoadedMetadata={(e) => handleVideoMetadataLoad(clip.id, e)}
+                        onTimeUpdate={(e) => {
+                          const video = e.currentTarget;
+                          const tStart = clip.trimStart || 0;
+                          const tEnd = clip.trimEnd || video.duration || Infinity;
+                          
+                          if (video.currentTime < tStart) {
+                            video.currentTime = tStart;
+                          }
+                          if (video.currentTime > tEnd) {
+                            video.currentTime = tStart;
+                            video.play().catch(() => {});
+                          }
+                        }}
+                      />
 
-                    {/* Dynamic 0.1s Extracted Frame Placeholder Thumbnail shown while video is loading */}
-                    {!loadedVideoIds[clip.id] && (dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl) && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/90">
-                        <img
-                          referrerPolicy="no-referrer"
-                          src={dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl}
-                          alt="Loading clip preview..."
-                          className="w-full h-full object-contain pointer-events-none opacity-80"
-                        />
-                        {/* A small elegant loading spinner inside the placeholder */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-                          <svg className="animate-spin h-6 w-6 text-purple-500/80" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Native Unsupported Codec/Format Overlay Fallback */}
-                    {failedVideoIds[clip.id] && (
-                      <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center p-6 text-center gap-4">
-                        <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full animate-pulse">
-                          <AlertCircle size={28} />
-                        </div>
-                        <h4 className="text-xs font-black uppercase text-red-400 tracking-wider">
-                          {language === 'ka' ? 'შეცდომა კლიპის ჩართვისას' : 'Decoder Error / Format Unsupported'}
-                        </h4>
-                        <p className="text-[10px] sm:text-[11px] text-proton-muted max-w-[280px] leading-relaxed">
-                          {language === 'ka' 
-                            ? 'ბრაუზერს არ აქვს ამ ვიდეოს კოდეკის მხარდაჭერა. გთხოვთ გამოიყენოთ სტანდარტული MP4 (H.264).' 
-                            : 'This specific video codec is not supported by your browser. Share standard web-optimized MP4 files.'}
-                        </p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Temporarily set this clip's videoUrl state locally to a working demo preset
-                            clip.videoUrl = PRESET_LOOPS[0].url;
-                            setFailedVideoIds(prev => ({ ...prev, [clip.id]: false }));
-                            showToast(
-                              language === 'ka' ? 'ჩაირთო სტანდარტული კლიპი' : 'Playing standard fallback loop',
-                              'info'
-                            );
-                          }}
-                          className="px-3.5 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-bold hover:bg-purple-500/30 transition-all pointer-events-auto"
-                        >
-                          {language === 'ka' ? 'დემო ვიდეოს ჩართვა' : 'Play standard demo loop'}
-                        </button>
-                      </div>
-                    )}
-                    
-                    {/* Real-time CRT scanlines overlay when Glitch effect is selected */}
-                    {activeFilter === 'glitch' && (
-                      <div className="absolute inset-0 pointer-events-none z-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_3px_100%] opacity-75 mix-blend-overlay animate-pulse" />
-                    )}
-                    
-                    {/* Buffering Loader overlay */}
-                    <AnimatePresence>
-                      {isBuffering && idx === currentIndex && (
+                      {/* Double Tap Heart Overlay */}
+                      {doubleTapHearts[clip.id] && (
                         <motion.div 
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="absolute pointer-events-none z-10 bg-black/20 p-4 rounded-full flex items-center justify-center"
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: [0.3, 1.3, 1.0, 1.2, 0], opacity: [0, 1, 1, 1, 0] }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          className="absolute pointer-events-none z-30 flex items-center justify-center bg-black/15 backdrop-blur-[1px] p-6 rounded-full"
                         >
-                          <svg className="animate-spin h-8 w-8 text-purple-500" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
+                          <Heart className="text-rose-500 fill-rose-500 stroke-none drop-shadow-lg" size={80} />
                         </motion.div>
                       )}
-                    </AnimatePresence>
-                    
-                    {/* Pause icon overlay */}
-                    <AnimatePresence>
-                      {!isPlaying && idx === currentIndex && (
+
+                      {/* Sound mute state changed visual feedback overlay */}
+                      {soundOverlay.visible && idx === currentIndex && (
                         <motion.div 
                           initial={{ scale: 0.5, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 0.7 }}
+                          animate={{ scale: 1, opacity: 0.8 }}
                           exit={{ scale: 1.5, opacity: 0 }}
-                          className="absolute pointer-events-none z-10 bg-black/40 p-4 rounded-full"
+                          className="absolute pointer-events-none z-30 bg-black/70 p-4 rounded-2xl flex flex-col items-center justify-center gap-1.5 border border-white/10 shadow-2xl backdrop-blur-md"
                         >
-                          <Play className="text-white fill-white" size={28} />
+                          {soundOverlay.muted ? (
+                            <>
+                              <VolumeX className="text-white fill-white/10" size={32} />
+                              <span className="text-[10px] font-black text-white uppercase tracking-wider">{language === 'ka' ? 'დამუტდა' : 'Muted'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="text-white fill-white/10" size={32} />
+                              <span className="text-[10px] font-black text-white uppercase tracking-wider">{language === 'ka' ? 'ხმა ჩაირთო' : 'Unmuted'}</span>
+                            </>
+                          )}
                         </motion.div>
                       )}
-                    </AnimatePresence>
-                  </div>
 
-                  {/* TOP OVERLAYS (VOLUME & SEARCH TAGS ACCENT) */}
-                  <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
-                    <div className="px-2 py-1 rounded-md bg-black/40 text-[10px] font-mono text-proton-muted uppercase tracking-widest border border-white/10">
-                      Clips {idx + 1} / {filteredClips.length}
+                      {/* Dynamic 0.1s Extracted Frame Placeholder Thumbnail shown while video is loading */}
+                      {!loadedVideoIds[clip.id] && (dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl) && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/90">
+                          <img
+                            referrerPolicy="no-referrer"
+                            src={dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl}
+                            alt="Loading clip preview..."
+                            className="w-full h-full object-contain pointer-events-none opacity-80"
+                          />
+                          {/* A small elegant loading spinner inside the placeholder */}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+                            <svg className="animate-spin h-6 w-6 text-purple-500/80" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Native Unsupported Codec/Format Overlay Fallback */}
+                      {failedVideoIds[clip.id] && (
+                        <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center p-6 text-center gap-4">
+                          <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full animate-pulse">
+                            <AlertCircle size={28} />
+                          </div>
+                          <h4 className="text-xs font-black uppercase text-red-400 tracking-wider">
+                            {language === 'ka' ? 'შეცდომა კლიპის ჩართვისას' : 'Decoder Error / Format Unsupported'}
+                          </h4>
+                          <p className="text-[10px] sm:text-[11px] text-proton-muted max-w-[280px] leading-relaxed">
+                            {language === 'ka' 
+                              ? 'ბრაუზერს არ აქვს ამ ვიდეოს კოდეკის მხარდაჭერა. გთხოვთ გამოიყენოთ სტანდარტული MP4 (H.264).' 
+                              : 'This specific video codec is not supported by your browser. Share standard web-optimized MP4 files.'}
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Temporarily set this clip's videoUrl state locally to a working demo preset
+                              clip.videoUrl = PRESET_LOOPS[0].url;
+                              setFailedVideoIds(prev => ({ ...prev, [clip.id]: false }));
+                              showToast(
+                                language === 'ka' ? 'ჩაირთო სტანდარტული კლიპი' : 'Playing standard fallback loop',
+                                'info'
+                              );
+                            }}
+                            className="px-3.5 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-bold hover:bg-purple-500/30 transition-all pointer-events-auto"
+                          >
+                            {language === 'ka' ? 'დემო ვიდეოს ჩართვა' : 'Play standard demo loop'}
+                          </button>
+                        </div>
+                      )}
+                      
+                      {/* Real-time CRT scanlines overlay when Glitch effect is selected */}
+                      {activeFilter === 'glitch' && (
+                        <div className="absolute inset-0 pointer-events-none z-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_3px_100%] opacity-75 mix-blend-overlay animate-pulse" />
+                      )}
+                      
+                      {/* Buffering Loader overlay */}
+                      <AnimatePresence>
+                        {isBuffering && idx === currentIndex && (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute pointer-events-none z-10 bg-black/20 p-4 rounded-full flex items-center justify-center"
+                          >
+                            <svg className="animate-spin h-8 w-8 text-purple-500" viewBox="0 0 24 24" fill="none">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      
+                      {/* Pause icon overlay */}
+                      <AnimatePresence>
+                        {!isPlaying && idx === currentIndex && (
+                          <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 0.7 }}
+                            exit={{ scale: 1.5, opacity: 0 }}
+                            className="absolute pointer-events-none z-10 bg-black/40 p-4 rounded-full"
+                          >
+                            <Play className="text-white fill-white" size={28} />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Play Progress Bar Timeline */}
+                      {idx === currentIndex && (
+                        <ReelProgressBar 
+                          videoElement={videoRefs.current[idx] || null} 
+                          clip={clip} 
+                        />
+                      )}
                     </div>
-                    
-                    {/* Volume toggle buttons */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleMute();
-                      }}
-                      className="p-2.5 rounded-full bg-black/40 border border-white/10 text-white hover:bg-black/60 transition-all pointer-events-auto"
-                    >
-                      {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                    </button>
-                  </div>
+
+                    {/* TOP OVERLAYS (VOLUME & SEARCH TAGS ACCENT) */}
+                    <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
+                      <div className="px-2 py-1 rounded-md bg-black/40 text-[10px] font-mono text-proton-muted uppercase tracking-widest border border-white/10">
+                        Clips {idx + 1} / {filteredClips.length}
+                      </div>
+                      
+                      {/* Volume toggle buttons */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleMute();
+                        }}
+                        className="p-2.5 rounded-full bg-black/40 border border-white/10 text-white hover:bg-black/60 transition-all pointer-events-auto"
+                      >
+                        {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                      </button>
+                    </div>
 
                   {/* RIGHT SIDEBAR ACTIONS */}
                   <div className="absolute right-3 bottom-24 z-10 flex flex-col items-center gap-5">
@@ -2027,6 +2142,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
               );
             })}
           </div>
+          </>
         )}
       </div>
 
@@ -3330,6 +3446,60 @@ export function IssuePreviewPlayer({ clip, issue, language }: IssuePreviewPlayer
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+interface ReelProgressBarProps {
+  videoElement: HTMLVideoElement | null;
+  clip: Clip;
+}
+
+export function ReelProgressBar({ videoElement, clip }: ReelProgressBarProps) {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!videoElement) return;
+
+    const handleTimeUpdate = () => {
+      const start = clip.trimStart || 0;
+      const end = clip.trimEnd || videoElement.duration || 1;
+      const total = end - start;
+      const current = videoElement.currentTime - start;
+      const percent = Math.min(100, Math.max(0, (current / (total || 1)) * 100));
+      setProgress(percent);
+    };
+
+    videoElement.addEventListener('timeupdate', handleTimeUpdate);
+    return () => {
+      videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [videoElement, clip.trimStart, clip.trimEnd]);
+
+  const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    if (!videoElement) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const percent = Math.min(1, Math.max(0, clickX / (width || 1)));
+
+    const start = clip.trimStart || 0;
+    const end = clip.trimEnd || videoElement.duration || 1;
+    const total = end - start;
+
+    videoElement.currentTime = start + percent * total;
+  };
+
+  return (
+    <div
+      onClick={handleScrub}
+      className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 hover:h-2 transition-all cursor-pointer z-30 group"
+    >
+      <div
+        className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 group-hover:from-purple-400 group-hover:via-pink-400 group-hover:to-amber-400 transition-all rounded-r"
+        style={{ width: `${progress}%` }}
+      />
     </div>
   );
 }
