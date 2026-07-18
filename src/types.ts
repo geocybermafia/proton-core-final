@@ -126,3 +126,16 @@ export type Listing = {
   serviceDuration?: string;
   serviceTerms?: string;
 };
+
+export interface ClipIssue {
+  id: string;
+  type: 'black_frame' | 'silence' | 'shaky_cam' | 'low_lighting' | 'unwanted_intro';
+  titleEn: string;
+  titleKa: string;
+  descriptionEn: string;
+  descriptionKa: string;
+  suggestedActionEn: string;
+  suggestedActionKa: string;
+  startSec: number;
+  endSec: number;
+}

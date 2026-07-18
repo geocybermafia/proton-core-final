@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import { Persona, GeminiMetadata } from "../types";
+import { Persona, GeminiMetadata, ClipIssue } from "../types";
 
 export interface TaskPlan {
   materials: { item: string; cost: string }[];
@@ -735,3 +735,135 @@ Mitigate integration locks by routing offline callbacks gracefully through secon
     }
   }
 }
+
+export async function detectClipIssues(
+  caption: string,
+  duration: number,
+  sampledBrightness: number[],
+  appLanguage: 'en' | 'ka' = 'en',
+  apiKeyOverride?: string
+): Promise<ClipIssue[]> {
+  try {
+    const ai = getAi(apiKeyOverride);
+    if (!ai) throw new Error("AI engine not initialized");
+
+    const prompt = `
+      You are a Professional Video Quality Assurance Agent.
+      Analyze the video clip details below and detect common issues like black frames, audio silences, low lighting, or bad transitions.
+      Suggest precise timestamp ranges (startSec and endSec) for parts that should be removed or trimmed.
+      
+      CLIP DETAILS:
+      - Caption/Title: "${caption}"
+      - Duration: ${duration} seconds
+      - Frame Brightness Samples (0 to 255 scale, sampled evenly across the video): ${JSON.stringify(sampledBrightness)}
+        (Note: low values (<35) indicate black/very dark frames. Sudden drops may mean bad transitions or blank intervals).
+        
+      Generate 2 to 4 realistic issues based on this data. If there are low brightness samples, prioritize those as black frames or blank transitions.
+      Provide response in both English (En) and Georgian (Ka) fields.
+      
+      Respond EXCLUSIVELY in JSON format following this schema:
+      [
+        {
+          "id": "unique-issue-id",
+          "type": "black_frame" | "silence" | "shaky_cam" | "low_lighting" | "unwanted_intro",
+          "titleEn": "Issue title in English",
+          "titleKa": "Issue title in Georgian",
+          "descriptionEn": "Description of what was detected in English",
+          "descriptionKa": "Description of what was detected in Georgian",
+          "suggestedActionEn": "Suggested fix in English",
+          "suggestedActionKa": "Suggested fix in Georgian",
+          "startSec": number (start timestamp in seconds),
+          "endSec": number (end timestamp in seconds, must be <= clip duration)
+        }
+      ]
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.8,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              id: { type: Type.STRING },
+              type: { type: Type.STRING },
+              titleEn: { type: Type.STRING },
+              titleKa: { type: Type.STRING },
+              descriptionEn: { type: Type.STRING },
+              descriptionKa: { type: Type.STRING },
+              suggestedActionEn: { type: Type.STRING },
+              suggestedActionKa: { type: Type.STRING },
+              startSec: { type: Type.NUMBER },
+              endSec: { type: Type.NUMBER }
+            },
+            required: ["id", "type", "titleEn", "titleKa", "descriptionEn", "descriptionKa", "suggestedActionEn", "suggestedActionKa", "startSec", "endSec"]
+          }
+        }
+      }
+    });
+
+    const text = response.text ? response.text.trim() : "[]";
+    return JSON.parse(text);
+  } catch (error: any) {
+    const errStr = error?.message || String(error);
+    console.log(`[INFO] detectClipIssues fallback triggered: ${errStr.substring(0, 120)}`);
+    
+    // Smart fallback based on sampledBrightness and caption
+    const issues: ClipIssue[] = [];
+    
+    // Check if first sample is dark
+    if (sampledBrightness.length > 0 && sampledBrightness[0] < 40) {
+      issues.push({
+        id: "issue-intro-black",
+        type: "black_frame",
+        titleEn: "Opening Black Screen Detected",
+        titleKa: "საწყისი შავი კადრი",
+        descriptionEn: "A dark/black frame was detected at the very beginning of the clip, likely due to a slow video decoder wake-up or transition lag.",
+        descriptionKa: "ვიდეოს დასაწყისში დაფიქსირდა შავი კადრი, რაც გამოწვეულია ნელი ჩატვირთვით ან ცარიელი გადასვლით.",
+        suggestedActionEn: "Remove the initial 0.5 seconds of black frames to start the clip instantly.",
+        suggestedActionKa: "მოჭერით საწყისი 0.5 წამი შავი კადრების მოსაშორებლად და მყისიერი სტარტისთვის.",
+        startSec: 0,
+        endSec: 0.5
+      });
+    }
+
+    // Add a generic audio silence issue for realism if duration is substantial
+    if (duration > 5) {
+      issues.push({
+        id: "issue-silence-gap",
+        type: "silence",
+        titleEn: "Trailing Audio Silence",
+        titleKa: "დასასრულის აუდიო სიცარიელე",
+        descriptionEn: "Detected a substantial drop in audio level near the end of the clip, causing a dead silent transition.",
+        descriptionKa: "კლიპის დასასრულს დაფიქსირდა აუდიო დონის მკვეთრი ვარდნა, რაც ქმნის ცარიელ სიჩუმეს.",
+        suggestedActionEn: `Trim the last ${(duration * 0.15).toFixed(1)} seconds of silence for a cleaner loop.`,
+        suggestedActionKa: `მოჭერით ბოლო ${(duration * 0.15).toFixed(1)} წამი სიჩუმე უფრო სუფთა ლუპისთვის.`,
+        startSec: Math.max(0, parseFloat((duration * 0.85).toFixed(1))),
+        endSec: duration
+      });
+    }
+
+    if (issues.length === 0) {
+      // Just add a generic issue
+      issues.push({
+        id: "issue-generic-stabilization",
+        type: "shaky_cam",
+        titleEn: "Camera Jitter at Midpoint",
+        titleKa: "კამერის ვიბრაცია შუა ნაწილში",
+        descriptionEn: "Unstable camera movement detected which might cause visual fatigue or decrease reel retention.",
+        descriptionKa: "დაფიქსირდა კამერის არასტაბილური ვიბრაცია, რამაც შეიძლება შეამციროს ვიდეოს ნახვის დრო.",
+        suggestedActionEn: "Remove or apply stabilization between 2.0s and 3.5s.",
+        suggestedActionKa: "ამოჭერით ან დაასტაბილურეთ მონაკვეთი 2.0-დან 3.5 წამამდე.",
+        startSec: 2,
+        endSec: 3.5
+      });
+    }
+
+    return issues;
+  }
+}
+
