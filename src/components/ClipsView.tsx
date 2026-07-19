@@ -1628,7 +1628,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                   >
                     
                     {/* DESKTOP LEFT SIDE PANEL: ABOUT CREATOR, DETAILS, AND DIAGNOSTICS */}
-                    <div className="hidden lg:flex flex-col gap-4 w-[320px] max-h-[85vh] py-4 select-text text-left">
+                    <div className="hidden lg:flex flex-col gap-4 w-[320px] h-full max-h-full py-4 select-text text-left overflow-y-auto custom-scrollbar-minimal pr-1">
                       
                       {/* Creator Glass Card */}
                       <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
@@ -1753,7 +1753,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                     </div>
 
                     {/* CENTER VIDEO SIMULATED PHONE BEZEL FRAME */}
-                    <div className="relative w-full max-w-[390px] sm:max-w-[420px] md:max-w-[430px] h-[93%] max-h-[780px] aspect-[9/16] rounded-[38px] border-[5px] border-zinc-800 shadow-2xl bg-black overflow-hidden flex flex-col justify-between pointer-events-auto">
+                    <div className="relative h-[98%] max-h-[780px] aspect-[9/16] max-w-full rounded-[24px] sm:rounded-[38px] border-[3px] sm:border-[5px] border-zinc-800 shadow-2xl bg-black overflow-hidden flex flex-col justify-between pointer-events-auto">
                       
                       {/* SIMULATED PHONE NOTCH (Dynamic Island Indicator) */}
                       <div className="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-4.5 bg-black rounded-full z-40 flex items-center justify-center border border-white/5">
@@ -2134,7 +2134,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                     </div>
 
                     {/* DESKTOP RIGHT SIDE PANEL: ENGAGEMENT CONTROLS & DYNAMIC DIAGNOSTICS HUD */}
-                    <div className="hidden lg:flex flex-col gap-4 w-[280px] max-h-[85vh] py-4 text-left select-none">
+                    <div className="hidden lg:flex flex-col gap-4 w-[280px] h-full max-h-full py-4 text-left select-none overflow-y-auto custom-scrollbar-minimal pr-1">
                       
                       {/* Social Interactions Header */}
                       <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-4 shadow-xl text-center">

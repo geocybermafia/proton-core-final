@@ -124,7 +124,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         },
         {
           q: "How safe are orders in the Marketplace?",
-          a: "Every transaction and listing is recorded directly in Firestore. Sells and updates are fully synchronized in real-time so both parties have perfect transparency."
+          a: "Every transaction and listing is secured using advanced cloud encryption, secure communication channels, and real-time state verification. This ensures absolute transparency, safety, and peace of mind for both buyers and sellers."
         },
         {
           q: "Can I use it on mobile or other languages?",
@@ -204,7 +204,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted, onLogin,
         },
         {
           q: "რამდენად უსაფრთხოა მარკეტის შეკვეთები?",
-          a: "ყოველი ტრანზაქცია და განცხადება იწერება პირდაპირ Firestore-ში რეალურ დროში, რაც სრულ გამჭვირვალობასა და სიმშვიდეს ანიჭებს როგორც მყიდველს, ისე გამყიდველს."
+          a: "ყოველი ტრანზაქცია და განცხადება დაცულია თანამედროვე ღრუბლოვანი ტექნოლოგიებით, დაშიფრული არხებითა და ორმხრივი ვერიფიკაციით რეალურ დროში. ეს უზრუნველყოფს სრულ გამჭვირვალობას, უსაფრთხოებასა და სიმშვიდეს როგორც მყიდველისთვის, ისე გამყიდველისთვის."
         },
         {
           q: "შესაძლებელია თუ არა მისი გამოყენება ტელეფონით ან სხვადასხვა ენაზე?",
