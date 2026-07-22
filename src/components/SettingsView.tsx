@@ -1481,22 +1481,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </p>
                   </header>
 
-                  {/* Warning Toast Notification Triggered Banner */}
-                  {estimatedCost > spendingLimit && (
-                    <div className="p-5 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-4 animate-pulse">
-                      <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={20} />
-                      <div className="text-left">
-                        <p className="text-xs font-black uppercase text-rose-400">
-                          {language === 'ka' ? 'ბიუჯეტის ლიმიტი ამოიწურა!' : 'Limit Receeded!'}
-                        </p>
-                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider mt-1 leading-relaxed">
-                          {language === 'ka' 
-                            ? `მიმდინარე თვის სავარაუდო ხარჯი ($${estimatedCost.toFixed(2)}) აჭარბებს თქვენს მიერ დაწესებულ ლიმიტს ($${spendingLimit.toFixed(2)}).`
-                            : `Your calculated monthly usage of $${estimatedCost.toFixed(2)} exceeds your set limit of $${spendingLimit.toFixed(2)}.`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  {/* Budget Overview */}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">

@@ -4576,28 +4576,7 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  const [hasWarnedLimit, setHasWarnedLimit] = useState(false);
 
-  // Real-time Cost Control Warning Toast Trigger
-  useEffect(() => {
-    if (userStats && userStats.spendingLimit !== undefined) {
-      const estimatedCost = (userStats.aiTokens * 0.0000015) + (userStats.computeTimeHours * 0.05) + (userStats.storageGB * 0.02);
-      const isExceeded = estimatedCost > userStats.spendingLimit;
-      if (isExceeded) {
-        if (!hasWarnedLimit) {
-          showToast(
-            userProfile.language === 'ka'
-              ? `⚠️ ხარჯვის ლიმიტი გადაჭარბებულია! ამ თვის სავარაუდო ხარჯი ($${estimatedCost.toFixed(2)}) აჭარბებს დაწესებულ ლიმიტს ($${userStats.spendingLimit.toFixed(2)}).`
-              : `⚠️ Spending limit exceeded! Your current month's estimated cost ($${estimatedCost.toFixed(2)}) is higher than your spending limit ($${userStats.spendingLimit.toFixed(2)}).`,
-            'warning'
-          );
-          setHasWarnedLimit(true);
-        }
-      } else {
-        setHasWarnedLimit(false);
-      }
-    }
-  }, [userStats, showToast, userProfile.language, hasWarnedLimit]);
 
   // Simulate usage while session is active - optimized with batched writes to prevent continuous database polling and network overhead
   useEffect(() => {
