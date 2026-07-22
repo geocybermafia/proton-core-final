@@ -5711,7 +5711,7 @@ export default function App() {
                       <CreativeStudioHub 
                         language={userProfile.language} 
                         setActiveView={handleViewChange} 
-                        setUiMode={setUiMode} 
+                        setUiMode={handleModeChange} 
                       />
                     </Suspense>
                   )}

@@ -46,7 +46,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
       bgGlow: 'from-cyan-500/20 to-blue-500/10 hover:border-cyan-500/40 shadow-cyan-500/5',
       badge: isKa ? 'ახალი ფუნქციები' : 'Enhanced',
       action: () => {
-        setUiMode('creative', 'image');
+        setActiveView('image');
       }
     },
     {
@@ -61,7 +61,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
       bgGlow: 'from-amber-500/20 to-orange-500/10 hover:border-amber-500/40 shadow-amber-500/5',
       badge: isKa ? 'სინქრონული ხმა' : 'Real-Time Voice',
       action: () => {
-        setUiMode('creative', 'translator');
+        setActiveView('translator');
       }
     },
     {
@@ -76,7 +76,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
       bgGlow: 'from-purple-500/20 to-pink-500/10 hover:border-purple-500/40 shadow-purple-500/5',
       badge: isKa ? 'ახალი' : 'New Tool',
       action: () => {
-        setUiMode('creative', 'copywriting');
+        setActiveView('copywriting');
       }
     }
   ];
@@ -221,13 +221,13 @@ export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => vo
         systemInstruction: `You are an elite dual-language digital advertising copywriter and marketing strategist. 
 Your goal is to generate exceptionally engaging, high-converting ad copy, captions, headlines, and calls-to-action.
 You write in Georgian (using modern natural style), English, or both, as requested.
-Format your response as a structured JSON object with these exact keys:
+CRITICAL: Respond ONLY with a valid raw JSON object matching this structure:
 {
   "hook": "Punchy hook, headline, or slogan",
   "body": "Engaging description with bullet points and appropriate emojis",
   "cta": "Clear call to action and suggested hashtags"
 }
-Ensure the output is valid JSON, containing ONLY the JSON object. Do not include markdown codeblocks, "json" prefixes, or other text. If any key has quotes inside, escape them properly.`
+Do NOT include any introduction, conversational text, or markdown codeblocks before or after the JSON.`
       };
 
       const promptMessage = `Please generate ad copy for:
@@ -251,26 +251,27 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
 
       // Clean response text to ensure it's parseable JSON
       let cleanedText = aiResponse.text.trim();
-      if (cleanedText.startsWith('```')) {
-        // Remove markdown wrappers
-        cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      
+      // Extract JSON substring if wrapped in markdown or extraneous text
+      const firstBrace = cleanedText.indexOf('{');
+      const lastBrace = cleanedText.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace > firstBrace) {
+        cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
       }
 
       try {
         const parsed = JSON.parse(cleanedText);
         setResult({
           hook: parsed.hook || 'Ad Copy Headline',
-          body: parsed.body || 'Ad content was generated successfully but format was modified.',
+          body: parsed.body || 'Ad content was generated successfully.',
           cta: parsed.cta || '#marketing #leads'
         });
       } catch (parseError) {
-        // Fallback in case Gemini returned normal markdown instead of clean JSON
         console.warn("Could not parse JSON directly, setting raw fallback", parseError);
-        const parts = cleanedText.split('\n\n');
         setResult({
-          hook: parts[0] || `${brandName} - New Launch!`,
-          body: parts.slice(1, -1).join('\n\n') || cleanedText,
-          cta: parts[parts.length - 1] || 'Order today! #ad'
+          hook: `${brandName} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`,
+          body: aiResponse.text.trim(),
+          cta: '#marketing #business'
         });
       }
 

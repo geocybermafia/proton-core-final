@@ -254,33 +254,20 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string, 
   try {
     const ai = getAi(apiKeyOverride);
     if (!ai) throw new Error("AI engine not initialized");
-    const parts: any[] = [{ text: prompt + "\n\nOUTPUT ONLY THE IMAGE CONTENT." }];
-    if (imageBase64) {
-      parts.push({
-        inlineData: {
-          mimeType: "image/png",
-          data: imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, ""),
-        },
-      });
-    }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-image',
-      contents: { parts },
+    const response = await ai.models.generateImages({
+      model: 'imagen-3.0-generate-002',
+      prompt: prompt,
       config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-        },
+        numberOfImages: 1,
+        outputMimeType: 'image/jpeg',
+        aspectRatio: "1:1",
       },
     });
 
-    const candidates = response.candidates;
-    if (candidates && candidates[0] && candidates[0].content && candidates[0].content.parts) {
-      for (const part of candidates[0].content.parts) {
-        if (part.inlineData) {
-          return `data:image/png;base64,${part.inlineData.data}`;
-        }
-      }
+    const imageBytes = response.generatedImages?.[0]?.image?.imageBytes;
+    if (imageBytes) {
+      return `data:image/jpeg;base64,${imageBytes}`;
     }
     throw new Error("No image data returned from Gemini API");
   } catch (error: any) {
