@@ -734,6 +734,16 @@ const LegacyOrganizerView = ({
   }, [theme]);
 
   const themes = {
+    enterprise: {
+      container: "bg-[#0B0F17] text-[#F9FAFB]",
+      card: "bg-[#111827] border-white/10 shadow-xl rounded-[32px]",
+      accent: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
+      button: "bg-indigo-600 text-white hover:bg-indigo-500 rounded-2xl font-bold shadow-lg shadow-indigo-600/20",
+      input: "bg-[#111827] border-white/10 text-[#F9FAFB] focus:border-indigo-500 rounded-2xl",
+      label: "text-[#9CA3AF] font-bold tracking-tight",
+      muted: "text-[#9CA3AF]",
+      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: #F9FAFB !important; } .react-calendar__tile--active { background: #6366F1 !important; color: white !important; font-weight: bold; }`
+    },
     light: {
       container: "bg-[#f8fafc] text-slate-900",
       card: "bg-white border-slate-200 shadow-xl rounded-[32px]",
@@ -824,7 +834,7 @@ const LegacyOrganizerView = ({
     }
   };
 
-  const currentTheme = themes[theme];
+  const currentTheme = themes[theme] || themes.enterprise;
 
   // Dynamic workload summary for the selected calendar month
   const monthStats = useMemo(() => {
@@ -4149,8 +4159,8 @@ export default function App() {
 
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return (safeStorage.get('proton_theme') as Theme) || 'proton';
-    } catch { return 'proton'; }
+      return (safeStorage.get('proton_theme') as Theme) || 'enterprise';
+    } catch { return 'enterprise'; }
   });
 
   const [organizerTheme, setOrganizerTheme] = useState<Theme>(() => {

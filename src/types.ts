@@ -60,7 +60,7 @@ export type Workflow = {
   description?: string;
 };
 
-export type Theme = 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium' | 'forest' | 'sunset' | 'rose';
+export type Theme = 'enterprise' | 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium' | 'forest' | 'sunset' | 'rose';
 
 export type LogEntry = {
   id: string;

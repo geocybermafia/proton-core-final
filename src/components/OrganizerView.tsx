@@ -316,6 +316,16 @@ export const OrganizerView = ({
       muted: "text-rose-900",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #e11d48 !important; color: white !important; }`
     },
+    enterprise: {
+      container: "bg-[#0B0F17] text-[#F9FAFB]",
+      card: "bg-[#111827] border-white/10 shadow-2xl rounded-[32px] border",
+      accent: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
+      button: "bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-500",
+      input: "bg-[#111827] border-white/10 text-[#F9FAFB] focus:border-indigo-500 rounded-2xl border-2",
+      label: "text-[#9CA3AF] font-bold uppercase tracking-widest text-[10px]",
+      muted: "text-[#9CA3AF]",
+      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: #F9FAFB !important; } .react-calendar__tile--active { background: #6366F1 !important; color: white !important; font-weight: bold; }`
+    },
     midnight: {
       container: "bg-black text-white",
       card: "bg-zinc-900 border-white/5 shadow-2xl rounded-[32px] border",
@@ -673,6 +683,7 @@ export const OrganizerView = ({
               {language === 'ka' ? 'აქცენტი:' : 'Theme:'}
             </span>
             {[
+              { id: 'enterprise', bg: 'bg-indigo-500 border-indigo-400', title: 'Enterprise' },
               { id: 'light', bg: 'bg-white border-slate-300', title: 'Light' },
               { id: 'titanium', bg: 'bg-slate-400 border-slate-500', title: 'Titanium' },
               { id: 'proton', bg: 'bg-cyan-400 border-cyan-500', title: 'Cyber' },

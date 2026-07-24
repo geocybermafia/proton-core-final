@@ -15,6 +15,32 @@
 }
 
 :root {
+  --proton-accent: #6366f1;
+  --proton-accent-hover: #4f46e5;
+  --proton-bg: #0b0f17;
+  --proton-card: #111827;
+  --proton-border: rgba(255, 255, 255, 0.08);
+  --proton-text: #f9fafb;
+  --proton-muted: #9ca3af;
+  --proton-on-accent: #ffffff;
+  --proton-bg-image: linear-gradient(180deg, #0b0f17 0%, #111827 100%);
+  --proton-bg-size: cover;
+}
+
+[data-theme='enterprise'] {
+  --proton-accent: #6366f1;
+  --proton-accent-hover: #4f46e5;
+  --proton-bg: #0b0f17;
+  --proton-card: #111827;
+  --proton-border: rgba(255, 255, 255, 0.08);
+  --proton-text: #f9fafb;
+  --proton-muted: #9ca3af;
+  --proton-on-accent: #ffffff;
+  --proton-bg-image: linear-gradient(180deg, #0b0f17 0%, #111827 100%);
+  --proton-bg-size: cover;
+}
+
+[data-theme='proton'] {
   --proton-accent: #00f2ff;
   --proton-accent-hover: #00d8e6;
   --proton-bg: #010409;

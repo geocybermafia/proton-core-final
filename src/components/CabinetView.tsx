@@ -16,6 +16,7 @@ interface CabinetViewProps {
 }
 
 const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: string }[] = [
+  { id: 'enterprise', label: 'Enterprise', icon: Shield, color: 'bg-indigo-500', bg: 'bg-gradient-to-br from-[#0B0F17] to-[#111827] border-indigo-500/30' },
   { id: 'light', label: 'Light', icon: Sun, color: 'bg-slate-200', bg: 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-800' },
   { id: 'titanium', label: 'Titanium', icon: Circle, color: 'bg-slate-400', bg: 'bg-gradient-to-br from-slate-400 to-slate-600 border-slate-300' },
   { id: 'proton', label: 'Cyber', icon: Zap, color: 'bg-cyan-400', bg: 'bg-[radial-gradient(circle_at_50%_50%,#0d1117_0%,#010409_100%)] border-cyan-500/20' },

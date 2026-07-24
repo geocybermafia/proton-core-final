@@ -69,6 +69,7 @@ interface SettingsViewProps {
 }
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'enterprise', label: 'Enterprise', icon: <Shield size={18} />, color: 'bg-indigo-500' },
   { id: 'light', label: 'Light', icon: <Sun size={18} />, color: 'bg-slate-200' },
   { id: 'titanium', label: 'Titanium', icon: <Circle size={18} />, color: 'bg-slate-400' },
   { id: 'proton', label: 'Cyber', icon: <Zap size={18} />, color: 'bg-cyan-400' },
