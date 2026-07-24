@@ -428,6 +428,18 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState<boolean>(false);
   const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [failedVideoIds, setFailedVideoIds] = useState<Record<string, boolean>>({});
+  const [clipFallbackUrls, setClipFallbackUrls] = useState<Record<string, string>>({});
+
+  const getClipVideoUrl = React.useCallback((clip: Clip | null | undefined, idx: number = 0): string => {
+    if (!clip) return PRESET_LOOPS[0].url;
+    if (clipFallbackUrls[clip.id]) {
+      return clipFallbackUrls[clip.id];
+    }
+    if (!clip.videoUrl || clip.videoUrl.trim() === '' || clip.videoUrl.startsWith('indexeddb://')) {
+      return PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
+    }
+    return clip.videoUrl;
+  }, [clipFallbackUrls]);
   const [videoMetadata, setVideoMetadata] = useState<Record<string, {
     resolution?: string;
     aspectRatio?: string;
@@ -1351,14 +1363,21 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
 
     // If there's a local video file, attempt to convert it to base64 if small enough.
     if (localVideoFile) {
+      try {
+        const localBlobUrl = URL.createObjectURL(localVideoFile);
+        setClipFallbackUrls(prev => ({ ...prev, [docId]: localBlobUrl }));
+      } catch (e) {
+        console.warn("Failed to create local object URL:", e);
+      }
+
       if (localVideoFile.size > 700 * 1024) { // 700 KB limit for safe Base64 Firestore storage
         try {
           await saveVideoToLocalCache(docId, localVideoFile);
           finalVideoUrl = `indexeddb://${docId}`;
           showToast(
             language === 'ka' 
-              ? 'ვიდეო ფაილი დიდია (>700KB). ოპტიმალური სიჩქარისთვის ის შეინახება თქვენს ბრაუზერში!' 
-              : 'Video file is large (>700KB). Saved to local browser cache for peak speed!',
+              ? 'ვიდეო ფაილი შეინახა ბრაუზერის მეხსიერებაში!' 
+              : 'Video file saved to local browser cache!',
             'info'
           );
         } catch (err) {
@@ -1771,7 +1790,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                       >
                         <video
                           ref={el => registerVideoRef(idx, el)}
-                          src={clip.videoUrl}
+                          src={getClipVideoUrl(clip, idx)}
                           loop
                           playsInline
                           muted={isMuted}
@@ -1808,8 +1827,10 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                             setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true }));
                           }}
                           onError={() => {
-                            console.error("Video play/decode error for ID", clip.id);
-                            setFailedVideoIds(prev => ({ ...prev, [clip.id]: true }));
+                            console.warn("Video play/decode error for ID", clip.id);
+                            const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
+                            setClipFallbackUrls(prev => ({ ...prev, [clip.id]: fallbackUrl }));
+                            setFailedVideoIds(prev => ({ ...prev, [clip.id]: false }));
                           }}
                           onLoadedMetadata={(e) => handleVideoMetadataLoad(clip.id, e)}
                           onTimeUpdate={(e) => {
@@ -1896,7 +1917,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                clip.videoUrl = PRESET_LOOPS[0].url;
+                                const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
+                                setClipFallbackUrls(prev => ({ ...prev, [clip.id]: fallbackUrl }));
                                 setFailedVideoIds(prev => ({ ...prev, [clip.id]: false }));
                                 showToast(
                                   language === 'ka' ? 'ჩაირთო სტანდარტული კლიპი' : 'Playing standard fallback loop',
@@ -2449,7 +2471,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                     {language === 'ka' ? 'გალერეა ცარიელია' : 'No reels in gallery yet'}
                   </div>
                 ) : (
-                  creatorClips.map((c) => (
+                  creatorClips.map((c, cIdx) => (
                     <div 
                       key={c.id} 
                       className="aspect-[9/16] bg-black rounded-lg overflow-hidden relative cursor-pointer group border border-proton-border/10 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10 hover:border-purple-500/30"
@@ -2489,7 +2511,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         />
                       ) : (
                         <video 
-                          src={c.videoUrl} 
+                          src={getClipVideoUrl(c, cIdx)} 
                           className="w-full h-full object-cover transition-all duration-500 ease-out group-hover:scale-105 group-hover:brightness-[1.12] group-hover:contrast-[1.02]" 
                           muted 
                           playsInline 
@@ -3618,7 +3640,7 @@ export function IssuePreviewPlayer({ clip, issue, language }: IssuePreviewPlayer
         <div className="relative w-24 aspect-[9/16] bg-black rounded-lg overflow-hidden border border-white/10 flex-shrink-0 group shadow-lg">
           <video
             ref={videoRef}
-            src={clip.videoUrl}
+            src={(clip.videoUrl && !clip.videoUrl.startsWith('indexeddb://')) ? clip.videoUrl : PRESET_LOOPS[0].url}
             muted
             playsInline
             autoPlay

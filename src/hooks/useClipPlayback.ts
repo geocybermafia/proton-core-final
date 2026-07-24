@@ -84,12 +84,23 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
 
     if (activeVideo) {
       if (isPlaying) {
-        activeVideo.play().catch(error => {
-          console.warn("Playback play request failed/blocked by browser autoplay rules:", error);
-          setIsPlaying(false);
-        });
+        if (activeVideo.paused) {
+          activeVideo.play().catch(error => {
+            console.warn("Playback play request failed/blocked by browser autoplay rules:", error);
+            // If autoplay with audio fails, try muting to recover playback smoothly
+            if (!activeVideo.muted) {
+              activeVideo.muted = true;
+              setIsMuted(true);
+              activeVideo.play().catch(() => setIsPlaying(false));
+            } else {
+              setIsPlaying(false);
+            }
+          });
+        }
       } else {
-        activeVideo.pause();
+        if (!activeVideo.paused) {
+          activeVideo.pause();
+        }
       }
     }
   }, [currentIndex, isPlaying, clipsLength, serializedUrls]);

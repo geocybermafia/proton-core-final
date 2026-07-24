@@ -1,6 +1,38 @@
 import React, { useState, useMemo } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useConnect, useDisconnect, useAccount } from 'wagmi';
 import { useWeb3Ledger, LedgerTransaction } from '../hooks/useWeb3Ledger';
+
+function ConnectButton() {
+  const { isConnected, address } = useAccount();
+  const { connectors, connect, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  if (isConnected) {
+    return (
+      <button
+        onClick={() => disconnect()}
+        className="px-6 py-3 bg-[#dfc394] text-black font-bold text-xs rounded-xl shadow-lg hover:bg-[#ebd5b0] transition-all flex items-center gap-2 cursor-pointer"
+      >
+        <Wallet size={16} />
+        <span>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      disabled={isPending}
+      onClick={() => {
+        const conn = connectors.find(c => c.id === 'injected' || c.id === 'metaMask') || connectors[0];
+        if (conn) connect({ connector: conn });
+      }}
+      className="px-6 py-3 bg-[#dfc394] text-black font-bold text-xs rounded-xl shadow-lg hover:bg-[#ebd5b0] transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+    >
+      <Wallet size={16} />
+      <span>{isPending ? 'Connecting...' : 'Connect Wallet'}</span>
+    </button>
+  );
+}
 import { 
   Wallet, 
   ArrowUpRight, 

@@ -13,13 +13,18 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: false,
-    minify: false,
-    cssMinify: false,
+    reportCompressedSize: false,
+    modulePreload: false,
+    minify: 'esbuild',
+    target: 'esnext',
     rollupOptions: {
-      maxParallelFileOps: 1,
-      cache: false,
+      maxParallelFileOps: 2,
       output: {
-        manualChunks: undefined
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        }
       }
     }
   }

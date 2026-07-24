@@ -13,21 +13,15 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { MarketHubProvider } from './contexts/MarketHubContext';
 import { BrowserRouter } from 'react-router-dom';
 
-import { 
-  getDefaultConfig,
-  RainbowKitProvider,
-  darkTheme as rainbowDarkTheme
-} from '@rainbow-me/rainbowkit';
-import { WagmiProvider, http } from 'wagmi';
-import { mainnet, polygon, optimism, arbitrum, base } from 'viem/chains';
+import { createConfig, WagmiProvider, http } from 'wagmi';
+import { mainnet, polygon, optimism, arbitrum, base } from 'wagmi/chains';
+import { injected } from 'wagmi/connectors';
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import '@rainbow-me/rainbowkit/styles.css';
 
 const queryClient = new QueryClient();
-const config = getDefaultConfig({
-  appName: 'Secure Hub 7',
-  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'a5c0b933d69b32c63c1a3b1373510e1a', // Recommended: use your own project ID from https://cloud.reown.com
+const config = createConfig({
   chains: [mainnet, polygon, optimism, arbitrum, base],
+  connectors: [injected()],
   transports: {
     [mainnet.id]: http(),
     [polygon.id]: http(),
@@ -82,10 +76,6 @@ function Root() {
     <ErrorBoundary>
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
-          <RainbowKitProvider theme={rainbowDarkTheme({
-            accentColor: '#00f2ff',
-            borderRadius: 'large',
-          })}>
             <AuthProvider>
               <ToastProvider>
                 <LanguageProvider>
@@ -97,7 +87,6 @@ function Root() {
                 </LanguageProvider>
               </ToastProvider>
             </AuthProvider>
-          </RainbowKitProvider>
         </QueryClientProvider>
       </WagmiProvider>
     </ErrorBoundary>
