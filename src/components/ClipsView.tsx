@@ -1643,148 +1643,22 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                 return (
                   <div 
                     key={clip.id} 
-                    className="w-full max-w-[450px] lg:max-w-[1240px] h-full min-h-full flex-shrink-0 snap-start snap-always relative overflow-hidden bg-black/95 lg:bg-transparent flex flex-col lg:flex-row items-center justify-center lg:gap-8 lg:px-4"
+                    className="w-full h-full min-h-full flex-shrink-0 snap-start snap-always relative flex items-center justify-center p-2 sm:p-4"
                   >
-                    
-                    {/* DESKTOP LEFT SIDE PANEL: ABOUT CREATOR, DETAILS, AND DIAGNOSTICS */}
-                    <div className="hidden lg:flex flex-col gap-4 w-[320px] h-full max-h-full py-4 select-text text-left overflow-y-auto custom-scrollbar-minimal pr-1">
+                    {/* VIEWPORT-CENTRIC 9:16 REELS PLAYER CONTAINER */}
+                    <div className="relative w-full max-w-[420px] sm:max-w-[440px] aspect-[9/16] h-full max-h-[calc(100vh-120px)] rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none">
                       
-                      {/* Creator Glass Card */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => handleOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
-                            className="w-12 h-12 rounded-full border-2 border-purple-500 overflow-hidden bg-proton-bg hover:scale-105 transition-all shadow-md flex items-center justify-center text-white cursor-pointer"
-                          >
-                            {clip.creatorAvatar ? (
-                              <img referrerPolicy="no-referrer" src={clip.creatorAvatar} alt={clip.creatorName} className="w-full h-full object-cover" />
-                            ) : (
-                              <UserIcon size={20} />
-                            )}
-                          </button>
-                          
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1">
-                              <p 
-                                onClick={() => handleOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
-                                className="font-extrabold text-sm text-white hover:underline cursor-pointer truncate"
-                              >
-                                @{clip.creatorName}
-                              </p>
-                              {clip.creatorId.startsWith('proton-system') && (
-                                <CheckCircle2 size={13} className="text-purple-400 fill-white stroke-[2.5]" />
-                              )}
-                            </div>
-                            <span className="text-[10px] text-purple-400 font-mono tracking-widest uppercase">
-                              {clip.creatorId.startsWith('proton-system') ? (language === 'ka' ? 'ოფიციალური' : 'Verified Creator') : (language === 'ka' ? 'მომხმარებელი' : 'Proton Member')}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Interactive Bio/Badge */}
-                        <p className="text-[11px] text-gray-300 leading-relaxed font-normal bg-white/5 border border-white/5 rounded-xl px-2.5 py-1.5">
-                          {language === 'ka' 
-                            ? 'ამ ავტორის კრეატიული კონტენტი სპეციალურად Proton ეკოსისტემისთვის.' 
-                            : 'Creative content stream custom-built and optimized for the Proton ecosystem.'}
-                        </p>
-                      </div>
-
-                      {/* Description & Narrative Card */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-2.5 shadow-xl">
-                        <h4 className="text-[10px] font-black text-purple-400 tracking-widest uppercase">{language === 'ka' ? 'აღწერა და ტეგები' : 'Description & Tags'}</h4>
-                        <p className="text-xs font-normal text-gray-200 leading-relaxed">
-                          {clip.caption.split(' ').map((word, i) => {
-                            if (word.startsWith('#')) {
-                              return (
-                                <span 
-                                  key={i} 
-                                  onClick={() => setSearchQuery(word)}
-                                  className="text-purple-400 font-bold hover:underline cursor-pointer mr-1"
-                                >
-                                  {word}{' '}
-                                </span>
-                              );
-                            }
-                            return word + ' ';
-                          })}
-                        </p>
-
-                        {/* Sound track info */}
-                        <div className="flex items-center gap-2 mt-1 bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-gray-300">
-                          <Music size={13} className="text-purple-400 animate-pulse" />
-                          <div className="text-[11px] font-medium overflow-hidden relative h-4 flex-1">
-                            <span className="font-mono text-white/90 truncate block">
-                              {clip.soundName || 'Original Audio - Custom Record'}
-                            </span>
-                          </div>
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-gray-900 to-black border border-white/20 flex items-center justify-center animate-spin [animation-duration:6s]">
-                            <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Tagged Product Box */}
-                      {hasProduct && clip.productInfo && (
-                        <div className="bg-zinc-900/50 backdrop-blur-xl border border-pink-500/30 rounded-2xl p-3.5 flex flex-col gap-3 shadow-xl">
-                          <div className="flex items-center gap-2.5">
-                            <ShoppingBag size={14} className="text-pink-400 animate-bounce" />
-                            <span className="text-[10px] uppercase font-black tracking-widest text-pink-400">
-                              {language === 'ka' ? 'მონიშნული პროდუქტი' : 'TAGGED PRODUCT'}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/5">
-                            <div className="w-12 h-12 rounded-lg bg-pink-500/10 border border-pink-500/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                              {clip.productInfo.image ? (
-                                <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover" alt="" />
-                              ) : (
-                                <ShoppingBag size={16} className="text-pink-400" />
-                              )}
-                            </div>
-                            <div className="min-w-0 leading-tight flex-1">
-                              <h4 className="text-xs font-bold text-white truncate">
-                                {clip.productInfo.title}
-                              </h4>
-                              <p className="text-[11px] font-mono text-emerald-400 font-bold mt-1">
-                                ${clip.productInfo.price}
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => {
-                              setActiveView('market-hub');
-                              showToast(
-                                language === 'ka' 
-                                  ? `გადამისამართება პროდუქტზე: ${clip.productInfo.title}` 
-                                  : `Redirecting to tagged item: ${clip.productInfo.title}`,
-                                'info'
-                              );
-                            }}
-                            className="w-full py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
-                          >
-                            <span>{language === 'ka' ? 'შეიძინე ახლავე' : 'Purchase Item'}</span>
-                            <ChevronRight size={13} />
-                          </button>
-                        </div>
-                      )}
-
-                    </div>
-
-                    {/* CENTER VIDEO SIMULATED PHONE BEZEL FRAME */}
-                    <div className="relative h-[98%] max-h-[780px] aspect-[9/16] max-w-full rounded-[24px] sm:rounded-[38px] border-[3px] sm:border-[5px] border-zinc-800 shadow-2xl bg-black overflow-hidden flex flex-col justify-between pointer-events-auto">
-                      
-                      {/* SIMULATED PHONE NOTCH (Dynamic Island Indicator) */}
-                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-4.5 bg-black rounded-full z-40 flex items-center justify-center border border-white/5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-zinc-900/60 border border-zinc-800 flex items-center justify-center mr-1">
-                          <div className="w-1 h-1 rounded-full bg-blue-500/80" />
+                      {/* SIMULATED DYNAMIC ISLAND / TOP BEZEL */}
+                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-3.5 bg-black/80 backdrop-blur-md rounded-full z-30 flex items-center justify-center border border-white/10 pointer-events-none">
+                        <div className="w-2 h-2 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mr-1">
+                          <div className="w-1 h-1 rounded-full bg-purple-500" />
                         </div>
                         <div className="w-1.5 h-1.5 rounded-full bg-zinc-950" />
                       </div>
 
                       {/* VIDEO PLAYER ELEMENT */}
                       <div 
-                        className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden cursor-pointer rounded-[32px]"
+                        className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden cursor-pointer"
                         onDoubleClick={() => handleDoubleTap(clip)}
                         onClick={() => togglePlay(idx)}
                       >
@@ -1797,35 +1671,17 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           preload="auto"
                           autoPlay={idx === currentIndex && isPlaying}
                           className={cn(
-                            "w-full h-full object-contain transition-all duration-300",
+                            "w-full h-full object-cover transition-all duration-300",
                             activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
                             activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
                             activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
                             activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
                           )}
-                          onPlay={() => {
-                            if (idx === currentIndex) {
-                              setIsPlaying(true);
-                            }
-                          }}
-                          onPause={() => {
-                            if (idx === currentIndex) {
-                              setIsPlaying(false);
-                            }
-                          }}
-                          onWaiting={() => {
-                            if (idx === currentIndex) {
-                              setIsBuffering(true);
-                            }
-                          }}
-                          onPlaying={() => {
-                            if (idx === currentIndex) {
-                              setIsBuffering(false);
-                            }
-                          }}
-                          onLoadedData={() => {
-                            setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true }));
-                          }}
+                          onPlay={() => { if (idx === currentIndex) setIsPlaying(true); }}
+                          onPause={() => { if (idx === currentIndex) setIsPlaying(false); }}
+                          onWaiting={() => { if (idx === currentIndex) setIsBuffering(true); }}
+                          onPlaying={() => { if (idx === currentIndex) setIsBuffering(false); }}
+                          onLoadedData={() => { setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true })); }}
                           onError={() => {
                             console.warn("Video play/decode error for ID", clip.id);
                             const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
@@ -1856,11 +1712,11 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                             transition={{ duration: 0.8, ease: "easeOut" }}
                             className="absolute pointer-events-none z-30 flex items-center justify-center bg-black/15 backdrop-blur-[1px] p-6 rounded-full"
                           >
-                            <Heart className="text-rose-500 fill-rose-500 stroke-none drop-shadow-lg" size={80} />
+                            <Heart className="text-rose-500 fill-rose-500 stroke-none drop-shadow-xl" size={80} />
                           </motion.div>
                         )}
 
-                        {/* Sound mute state changed visual feedback overlay */}
+                        {/* Sound mute state feedback */}
                         {soundOverlay.visible && idx === currentIndex && (
                           <motion.div 
                             initial={{ scale: 0.5, opacity: 0 }}
@@ -1882,14 +1738,14 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           </motion.div>
                         )}
 
-                        {/* Dynamic 0.1s Extracted Frame Placeholder Thumbnail shown while video is loading */}
+                        {/* Thumbnail while loading */}
                         {!loadedVideoIds[clip.id] && (dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl) && (
                           <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/90">
                             <img
                               referrerPolicy="no-referrer"
                               src={dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl}
                               alt="Loading clip preview..."
-                              className="w-full h-full object-contain pointer-events-none opacity-80"
+                              className="w-full h-full object-cover pointer-events-none opacity-80"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
                               <svg className="animate-spin h-6 w-6 text-purple-500/80" viewBox="0 0 24 24" fill="none">
@@ -1900,7 +1756,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           </div>
                         )}
                         
-                        {/* Native Unsupported Codec/Format Overlay Fallback */}
+                        {/* Fallback player overlay */}
                         {failedVideoIds[clip.id] && (
                           <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center p-6 text-center gap-4 pointer-events-auto">
                             <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full animate-pulse">
@@ -1932,12 +1788,12 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           </div>
                         )}
                         
-                        {/* Real-time CRT scanlines overlay when Glitch effect is selected */}
+                        {/* Glitch overlay */}
                         {activeFilter === 'glitch' && (
                           <div className="absolute inset-0 pointer-events-none z-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,0,0,0.25)_50%),_linear-gradient(90deg,_rgba(255,0,0,0.06),_rgba(0,255,0,0.02),_rgba(0,0,255,0.06))] bg-[size:100%_4px,_3px_100%] opacity-75 mix-blend-overlay animate-pulse" />
                         )}
                         
-                        {/* Buffering Loader overlay */}
+                        {/* Buffering Loader */}
                         <AnimatePresence>
                           {isBuffering && idx === currentIndex && (
                             <motion.div 
@@ -1961,9 +1817,9 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                               initial={{ scale: 0.5, opacity: 0 }}
                               animate={{ scale: 1, opacity: 0.7 }}
                               exit={{ scale: 1.5, opacity: 0 }}
-                              className="absolute pointer-events-none z-10 bg-black/40 p-4 rounded-full"
+                              className="absolute pointer-events-none z-10 bg-black/40 p-4 rounded-full shadow-2xl backdrop-blur-sm"
                             >
-                              <Play className="text-white fill-white" size={28} />
+                              <Play className="text-white fill-white ml-0.5" size={32} />
                             </motion.div>
                           )}
                         </AnimatePresence>
@@ -1977,10 +1833,11 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         )}
                       </div>
 
-                      {/* TOP OVERLAYS (VOLUME & TIMING RATIO INDICATOR) */}
-                      <div className="absolute top-8 left-4 right-4 z-10 flex items-center justify-between pointer-events-none">
-                        <div className="px-2.5 py-1 rounded-md bg-black/60 text-[9px] font-mono font-black text-purple-300 uppercase tracking-widest border border-white/10">
-                          Clips {idx + 1} / {filteredClips.length}
+                      {/* TOP OVERLAYS (RATIO INDICATOR & VOLUME TOGGLE) */}
+                      <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
+                        <div className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-mono font-bold text-white/90 border border-white/15 shadow-lg flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                          <span>{idx + 1} / {filteredClips.length}</span>
                         </div>
                         
                         <button
@@ -1988,47 +1845,51 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                             e.stopPropagation();
                             handleToggleMute();
                           }}
-                          className="p-2 rounded-full bg-black/60 border border-white/10 text-white hover:bg-black/85 hover:scale-105 transition-all pointer-events-auto cursor-pointer"
+                          className="p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white hover:bg-black/85 hover:scale-105 transition-all pointer-events-auto cursor-pointer shadow-lg"
+                          title={isMuted ? "Unmute" : "Mute"}
                         >
-                          {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                          {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
                         </button>
                       </div>
 
-                      {/* MOBILE-ONLY RIGHT SIDEBAR ACTIONS (lg:hidden) */}
-                      <div className="absolute right-3 bottom-24 z-10 flex lg:hidden flex-col items-center gap-5 pointer-events-none">
+                      {/* RIGHT-SIDE OVERLAY ACTION BAR (Like, Comment, Share, Filters, Magic Fix, Delete) */}
+                      <div className="absolute right-3.5 bottom-6 z-20 flex flex-col items-center gap-4.5 pointer-events-none">
                         
                         {/* Creator avatar bubble */}
                         <div className="relative group pointer-events-auto">
                           <button
                             onClick={() => handleOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
-                            className="w-10 h-10 rounded-full border-2 border-purple-500 overflow-hidden bg-proton-bg hover:scale-105 transition-all shadow-md flex items-center justify-center text-white cursor-pointer"
+                            className="w-11 h-11 rounded-full border-2 border-purple-500 overflow-hidden bg-zinc-900 hover:scale-105 transition-all shadow-xl flex items-center justify-center text-white cursor-pointer"
                           >
                             {clip.creatorAvatar ? (
                               <img referrerPolicy="no-referrer" src={clip.creatorAvatar} alt={clip.creatorName} className="w-full h-full object-cover" />
                             ) : (
-                              <UserIcon size={16} />
+                              <UserIcon size={18} />
                             )}
                           </button>
-                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-purple-500 text-white rounded-full p-0.5 hover:scale-115 transition-all">
-                            <Plus size={8} className="stroke-[3]" />
-                          </div>
+                          <button 
+                            onClick={() => handleOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
+                            className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-purple-500 hover:bg-purple-400 text-white rounded-full p-0.5 hover:scale-110 transition-all shadow-md cursor-pointer"
+                          >
+                            <Plus size={10} className="stroke-[3]" />
+                          </button>
                         </div>
 
                         {/* Like button */}
                         <div className="flex flex-col items-center gap-1 pointer-events-auto">
                           <motion.button
-                            whileTap={{ scale: 0.8 }}
+                            whileTap={{ scale: 0.75 }}
                             onClick={() => handleLikeToggle(clip)}
                             className={cn(
-                              "p-2.5 rounded-full bg-black/40 border transition-all shadow-lg cursor-pointer",
+                              "p-3 rounded-full bg-black/50 backdrop-blur-md border transition-all shadow-xl cursor-pointer hover:scale-110",
                               isLikedByMe 
-                                ? "border-red-500/40 text-red-500 bg-red-500/10" 
-                                : "border-white/10 text-white hover:bg-black/60"
+                                ? "border-red-500/50 text-red-500 bg-red-500/20 shadow-red-500/20" 
+                                : "border-white/15 text-white hover:bg-black/75"
                             )}
                           >
-                            <Heart className={cn("h-4.5 w-4.5", isLikedByMe && "fill-red-500")} />
+                            <Heart className={cn("h-5 w-5", isLikedByMe && "fill-red-500")} />
                           </motion.button>
-                          <span className="text-[10px] font-bold text-white drop-shadow-md">
+                          <span className="text-[11px] font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             {clip.likesCount || 0}
                           </span>
                         </div>
@@ -2037,11 +1898,11 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         <div className="flex flex-col items-center gap-1 pointer-events-auto">
                           <button
                             onClick={() => setIsCommentsOpen(true)}
-                            className="p-2.5 rounded-full bg-black/40 border border-white/10 text-white hover:bg-black/60 transition-all shadow-lg cursor-pointer"
+                            className="p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer"
                           >
-                            <MessageSquare className="h-4.5 w-4.5" />
+                            <MessageSquare className="h-5 w-5" />
                           </button>
-                          <span className="text-[10px] font-bold text-white drop-shadow-md">
+                          <span className="text-[11px] font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             {clip.id.startsWith('seed-') 
                               ? (localComments[clip.id]?.length || 0)
                               : (currentIndex === idx && comments.length > 0) ? comments.length : '0'}
@@ -2052,64 +1913,125 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                         <div className="flex flex-col items-center gap-1 pointer-events-auto">
                           <button
                             onClick={() => handleShareClip(clip)}
-                            className="p-2.5 rounded-full bg-black/40 border border-white/10 text-white hover:bg-black/60 transition-all shadow-lg cursor-pointer"
+                            className="p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer"
+                            title="Share Reel"
                           >
-                            <Share2 className="h-4.5 w-4.5" />
+                            <Share2 className="h-5 w-5" />
                           </button>
                         </div>
 
-                        {/* Filters and Auto-Fix on Mobile */}
+                        {/* Filters toggle button */}
                         <div className="flex flex-col items-center gap-1 pointer-events-auto">
                           <button
                             onClick={() => setShowFiltersPanel(prev => !prev)}
                             className={cn(
-                              "p-2.5 rounded-full border transition-all shadow-lg cursor-pointer",
+                              "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
                               showFiltersPanel 
-                                ? "bg-purple-600/35 border-purple-500 text-purple-300 shadow-purple-500/20" 
-                                : "bg-black/40 border-white/10 text-white hover:bg-black/60"
+                                ? "bg-purple-600/50 border-purple-400 text-purple-200 shadow-purple-500/30" 
+                                : "bg-black/50 border-white/15 text-white hover:bg-black/75"
                             )}
+                            title="Filters"
                           >
-                            <Sparkles className="h-4.5 w-4.5" />
+                            <Sparkles className="h-5 w-5" />
                           </button>
                         </div>
 
-                        {/* Auto fix action */}
+                        {/* Magic AI Auto-Fix button */}
                         <div className="flex flex-col items-center gap-1 pointer-events-auto">
                           <button
                             onClick={() => runAutoFixAnalysis(clip)}
                             className={cn(
-                              "p-2.5 rounded-full border transition-all shadow-lg cursor-pointer",
+                              "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
                               (appliedFixes[clip.id]?.length > 0)
-                                ? "bg-emerald-600/30 border-emerald-500 text-emerald-300 shadow-emerald-500/20"
-                                : "bg-black/40 border-white/10 text-white hover:bg-black/60"
+                                ? "bg-emerald-600/40 border-emerald-400 text-emerald-200 shadow-emerald-500/30"
+                                : "bg-black/50 border-white/15 text-white hover:bg-black/75"
                             )}
+                            title="Magic AI Auto-Fix"
                           >
-                            <Wand2 className="h-4.5 w-4.5 animate-pulse" />
+                            <Wand2 className="h-5 w-5 animate-pulse text-purple-300" />
                           </button>
+                        </div>
+
+                        {/* Delete button (owner only) */}
+                        {clip.creatorId === user?.uid && (
+                          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+                            <button
+                              onClick={() => handleDeleteClip(clip)}
+                              className="p-3 rounded-full bg-red-500/20 backdrop-blur-md border border-red-500/40 text-red-400 hover:bg-red-500/40 hover:scale-110 transition-all shadow-xl cursor-pointer"
+                              title="Delete Clip"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Spinning Audio Track Vinyl/Disc Icon */}
+                        <div className="mt-1 pointer-events-auto">
+                          <div className={cn(
+                            "w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-900 via-zinc-800 to-black border-2 border-white/20 p-1 flex items-center justify-center shadow-2xl overflow-hidden",
+                            isPlaying && idx === currentIndex && "animate-spin [animation-duration:5s]"
+                          )}>
+                            <div className="w-full h-full rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center">
+                              <div className="w-2.5 h-2.5 rounded-full bg-black border border-white/30" />
+                            </div>
+                          </div>
                         </div>
 
                       </div>
 
-                      {/* MOBILE-ONLY BOTTOM CAPTION & PRODUCTS INFO BLOCK (lg:hidden) */}
-                      <div className="absolute bottom-4 left-4 right-14 z-10 pointer-events-none flex lg:hidden flex-col gap-3">
+                      {/* BOTTOM-LEFT OVERLAY: CREATOR PROFILE, CAPTION, TAGS & AUDIO TRACK */}
+                      <div className="absolute bottom-0 left-0 right-16 z-20 p-4 sm:p-5 pb-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
                         
-                        {/* Tagged Product Box */}
+                        {/* Creator Row */}
+                        <div className="flex items-center gap-2.5 pointer-events-auto">
+                          <button
+                            onClick={() => handleOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
+                            className="font-black text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline flex items-center gap-1.5 cursor-pointer truncate"
+                          >
+                            <span>@{clip.creatorName}</span>
+                            {clip.creatorId.startsWith('proton-system') && (
+                              <CheckCircle2 size={14} className="text-purple-400 fill-white stroke-[2.5]" />
+                            )}
+                          </button>
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold uppercase tracking-wider">
+                            {clip.creatorId.startsWith('proton-system') ? 'Official' : 'Creator'}
+                          </span>
+                        </div>
+
+                        {/* Caption & Hashtags */}
+                        <p className="text-xs font-normal text-white/95 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-text line-clamp-3 pointer-events-auto">
+                          {clip.caption.split(' ').map((word, i) => {
+                            if (word.startsWith('#')) {
+                              return (
+                                <span 
+                                  key={i} 
+                                  onClick={() => setSearchQuery(word)}
+                                  className="text-purple-300 font-bold hover:underline cursor-pointer mr-1"
+                                >
+                                  {word}{' '}
+                                </span>
+                              );
+                            }
+                            return word + ' ';
+                          })}
+                        </p>
+
+                        {/* Tagged Product Mini Badge */}
                         {hasProduct && clip.productInfo && (
-                          <motion.div 
-                            initial={{ x: -20, opacity: 0 }}
-                            animate={{ x: 0, opacity: 1 }}
-                            className="bg-black/85 border border-pink-500/30 rounded-xl p-2 max-w-sm pointer-events-auto flex items-center justify-between gap-3 shadow-lg backdrop-blur-md"
+                          <div 
+                            onClick={() => setActiveView('market-hub')}
+                            className="bg-black/75 hover:bg-black/90 border border-pink-500/40 rounded-xl p-2 max-w-xs pointer-events-auto flex items-center justify-between gap-2.5 shadow-xl backdrop-blur-md transition-all cursor-pointer group"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-8 h-8 rounded bg-pink-500/10 border border-pink-500/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                              <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center">
                                 {clip.productInfo.image ? (
                                   <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover" alt="" />
                                 ) : (
-                                  <ShoppingBag size={12} className="text-pink-400" />
+                                  <ShoppingBag size={13} className="text-pink-400" />
                                 )}
                               </div>
                               <div className="min-w-0 leading-tight">
-                                <h4 className="text-[10px] font-bold text-white truncate max-w-[120px]">
+                                <h4 className="text-[10px] font-bold text-white truncate max-w-[130px]">
                                   {clip.productInfo.title}
                                 </h4>
                                 <p className="text-[9px] font-mono text-emerald-400 font-bold">
@@ -2117,188 +2039,28 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                                 </p>
                               </div>
                             </div>
-                            <button
-                              onClick={() => {
-                                setActiveView('market-hub');
-                              }}
-                              className="px-2 py-0.5 rounded bg-pink-600 hover:bg-pink-500 text-[9px] font-bold text-white flex items-center gap-0.5 cursor-pointer pointer-events-auto"
-                            >
-                              <span>{language === 'ka' ? 'იყიდე' : 'Buy'}</span>
-                              <ChevronRight size={9} />
-                            </button>
-                          </motion.div>
+                            <div className="px-2 py-1 rounded-lg bg-pink-600 group-hover:bg-pink-500 text-[9px] font-bold text-white flex items-center gap-0.5 transition-all">
+                              <span>{language === 'ka' ? 'ყიდვა' : 'Buy'}</span>
+                              <ChevronRight size={10} />
+                            </div>
+                          </div>
                         )}
 
-                        {/* Caption text */}
-                        <div className="text-white drop-shadow-lg leading-relaxed pointer-events-auto">
-                          <p className="font-extrabold text-xs flex items-center gap-1 cursor-pointer" onClick={() => handleOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}>
-                            <span>@{clip.creatorName}</span>
-                            {clip.creatorId.startsWith('proton-system') && (
-                              <CheckCircle2 size={11} className="text-purple-400 fill-white stroke-[2.5]" />
-                            )}
-                          </p>
-                          <p className="text-[11px] font-normal mt-0.5 text-gray-200 select-text leading-relaxed line-clamp-2">
-                            {clip.caption}
-                          </p>
-                        </div>
-
-                        {/* Sound Track name */}
-                        <div className="flex items-center gap-1 text-gray-300">
-                          <Music size={11} className="text-purple-400 animate-bounce" />
-                          <div className="text-[9px] font-medium overflow-hidden w-28 relative h-3.5">
-                            <div className="absolute whitespace-nowrap animate-[marquee_12s_linear_infinite] font-mono text-white/80">
-                              {clip.soundName || 'Original Audio'}
+                        {/* Sound track info marquee */}
+                        <div className="flex items-center gap-2 pt-0.5 text-gray-200 pointer-events-auto">
+                          <div className="p-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
+                            <Music size={12} className="text-purple-300 animate-pulse" />
+                          </div>
+                          <div className="text-[10px] font-medium overflow-hidden max-w-[180px] relative h-4 flex items-center">
+                            <div className="whitespace-nowrap animate-[marquee_12s_linear_infinite] font-mono text-white/90 drop-shadow">
+                              {clip.soundName || 'Original Audio - Cyber Master Track'}
                             </div>
                           </div>
                         </div>
+
                       </div>
 
                     </div>
-
-                    {/* DESKTOP RIGHT SIDE PANEL: ENGAGEMENT CONTROLS & DYNAMIC DIAGNOSTICS HUD */}
-                    <div className="hidden lg:flex flex-col gap-4 w-[280px] h-full max-h-full py-4 text-left select-none overflow-y-auto custom-scrollbar-minimal pr-1">
-                      
-                      {/* Social Interactions Header */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-4 shadow-xl text-center">
-                        <h4 className="text-[10px] font-black text-purple-400 tracking-widest uppercase self-center">{language === 'ka' ? 'ინტერაქციები' : 'Clips Engagement'}</h4>
-                        
-                        <div className="grid grid-cols-2 gap-2.5">
-                          
-                          {/* Likes Button */}
-                          <button
-                            onClick={() => handleLikeToggle(clip)}
-                            className={cn(
-                              "flex flex-col items-center justify-center p-3 rounded-xl border transition-all cursor-pointer",
-                              isLikedByMe 
-                                ? "bg-red-500/10 border-red-500/30 text-red-400 shadow-lg shadow-red-500/5" 
-                                : "bg-white/5 border-white/10 text-proton-muted hover:text-white hover:bg-white/10"
-                            )}
-                          >
-                            <Heart size={18} className={cn(isLikedByMe && "fill-red-500 text-red-500")} />
-                            <span className="text-[11px] font-black mt-1 text-white">{clip.likesCount || 0}</span>
-                            <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider mt-0.5">{language === 'ka' ? 'მოწონება' : 'Likes'}</span>
-                          </button>
-
-                          {/* Comments Button */}
-                          <button
-                            onClick={() => setIsCommentsOpen(true)}
-                            className="flex flex-col items-center justify-center p-3 rounded-xl bg-white/5 border border-white/10 text-proton-muted hover:text-white hover:bg-white/10 transition-all cursor-pointer"
-                          >
-                            <MessageSquare size={18} className="text-purple-400" />
-                            <span className="text-[11px] font-black mt-1 text-white">
-                              {clip.id.startsWith('seed-') 
-                                ? (localComments[clip.id]?.length || 0)
-                                : (currentIndex === idx && comments.length > 0) ? comments.length : '0'}
-                            </span>
-                            <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider mt-0.5">{language === 'ka' ? 'აზრი' : 'Discuss'}</span>
-                          </button>
-
-                        </div>
-
-                        {/* Copy Deep Link share button */}
-                        <button
-                          onClick={() => handleShareClip(clip)}
-                          className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
-                        >
-                          <Share2 size={13} className="text-purple-400" />
-                          <span>{language === 'ka' ? 'ბმულის კოპირება' : 'Copy Direct Link'}</span>
-                        </button>
-
-                        {/* Delete option if owner */}
-                        {clip.creatorId === user?.uid && (
-                          <button
-                            onClick={() => handleDeleteClip(clip)}
-                            className="w-full py-2 rounded-xl bg-red-500/10 hover:bg-red-500/25 border border-red-500/20 text-red-400 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <Trash2 size={13} />
-                            <span>{language === 'ka' ? 'კლიპის წაშლა' : 'Delete Clip'}</span>
-                          </button>
-                        )}
-
-                      </div>
-
-                      {/* Video Effects Grid */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
-                        <h4 className="text-[10px] font-black text-purple-400 tracking-widest uppercase">{language === 'ka' ? 'კინემატოგრაფიული ფილტრები' : 'KINETIC EFFECTS'}</h4>
-                        
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {FILTER_OPTIONS.map(opt => {
-                            const isSelected = activeFilter === opt.id;
-                            return (
-                              <button
-                                key={opt.id}
-                                onClick={() => {
-                                  setActiveFilter(opt.id as any);
-                                  showToast(
-                                    language === 'ka' 
-                                      ? `ფილტრი: ${opt.labelKa}` 
-                                      : `Filter: ${opt.labelEn}`,
-                                    'success'
-                                  );
-                                }}
-                                className={cn(
-                                  "py-1.5 px-2 rounded-xl text-[10px] font-bold uppercase tracking-wider text-center transition-all border cursor-pointer",
-                                  isSelected 
-                                    ? "bg-purple-600/30 border-purple-500 text-purple-300 shadow-md shadow-purple-500/10" 
-                                    : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                                )}
-                              >
-                                {language === 'ka' ? opt.labelKa : opt.labelEn}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* AI Diagnostics & Metrics HUD */}
-                      <div className="bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col gap-3 shadow-xl">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-[10px] font-black text-purple-400 tracking-widest uppercase">{language === 'ka' ? 'AI დიაგნოსტიკის HUD' : 'DIAGNOSTICS HUD'}</h4>
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        </div>
-
-                        {videoMetadata[clip.id] ? (
-                          <div className="space-y-2 text-[10px] font-mono text-gray-400">
-                            <div className="flex justify-between items-center bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
-                              <span>RESOLUTION:</span>
-                              <span className="text-purple-300 font-bold">{videoMetadata[clip.id].resolution || 'Detecting'}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
-                              <span>RATIO:</span>
-                              <span className="text-blue-300 font-bold">{videoMetadata[clip.id].aspectRatio || '16:9 vertical'}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
-                              <span>FPS RATE:</span>
-                              <span className="text-pink-300 font-bold">{videoMetadata[clip.id].fps || '30 FPS (est)'}</span>
-                            </div>
-                            <div className="flex justify-between items-center bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
-                              <span>DURATION:</span>
-                              <span className="text-amber-300 font-bold">{videoMetadata[clip.id].duration || '0:15'}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-[10px] text-proton-muted italic">{language === 'ka' ? 'დეტექტორი იტვირთება...' : 'Streaming video analysis...'}</p>
-                        )}
-
-                        {/* Auto-Fix CTA */}
-                        <button
-                          onClick={() => runAutoFixAnalysis(clip)}
-                          className={cn(
-                            "w-full py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer",
-                            (appliedFixes[clip.id]?.length > 0)
-                              ? "bg-emerald-600/20 text-emerald-300 border border-emerald-500/35"
-                              : "bg-gradient-to-tr from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white"
-                          )}
-                        >
-                          <Wand2 size={13} className="animate-bounce" />
-                          <span>
-                            {appliedFixes[clip.id]?.length > 0 ? (language === 'ka' ? 'ვიდეო ოპტიმიზირებულია' : 'Video Optimized') : (language === 'ka' ? 'AI ავტო-გასწორება' : 'Magic AI Auto-Fix')}
-                          </span>
-                        </button>
-                      </div>
-
-                    </div>
-
                   </div>
                 );
               })}
