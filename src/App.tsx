@@ -3774,6 +3774,7 @@ export default function App() {
   const handleModeChange = (newMode: 'business' | 'creative' | 'market', targetView?: View) => {
     const getViewPath = (v: View): string => {
       switch (v) {
+        case 'clips': return '/clips';
         case 'translator': return '/translator';
         case 'creative-studio': return '/creative-studio';
         case 'copywriting': return '/copywriting';
@@ -3841,7 +3842,7 @@ export default function App() {
     if (pathname.startsWith('/translator')) return 'translator';
     if (pathname.startsWith('/market-hub')) return 'market-hub';
     if (pathname.startsWith('/market')) return 'market-hub';
-    if (pathname.startsWith('/personas')) return 'dashboard';
+    if (pathname.startsWith('/personas')) return 'personas';
     if (pathname.startsWith('/blueprints')) return 'blueprints';
     if (pathname.startsWith('/studio')) return 'image';
     if (pathname.startsWith('/organizer')) return 'organizer';
