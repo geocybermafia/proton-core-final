@@ -104,6 +104,7 @@ interface ClipsViewProps {
   language: 'en' | 'ka';
   setActiveView: (view: any) => void;
   user: any;
+  userProfile?: any;
 }
 
 interface Clip {
@@ -387,7 +388,7 @@ const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<{ thumbnailUrl
   });
 };
 
-export default function ClipsView({ language, setActiveView, user }: ClipsViewProps) {
+export default function ClipsView({ language, setActiveView, user, userProfile }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1416,8 +1417,8 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
       duration: newClipDuration || 0,
       caption: newClipCaption,
       creatorId: user.uid,
-      creatorName: user.displayName || user.email?.split('@')[0] || 'Ordinary Creator',
-      creatorAvatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80',
+      creatorName: userProfile?.name || user.displayName || user.email?.split('@')[0] || 'Proton Member',
+      creatorAvatar: userProfile?.avatar || user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80',
       likes: [],
       likesCount: 0,
       soundName: finalSound,
@@ -2053,7 +2054,7 @@ export default function ClipsView({ language, setActiveView, user }: ClipsViewPr
                           </div>
                           <div className="text-[10px] font-medium overflow-hidden max-w-[180px] relative h-4 flex items-center">
                             <div className="whitespace-nowrap animate-[marquee_12s_linear_infinite] font-mono text-white/90 drop-shadow">
-                              {clip.soundName || 'Original Audio - Cyber Master Track'}
+                              {clip.soundName || `Original Audio - @${clip.creatorName}`}
                             </div>
                           </div>
                         </div>

@@ -4212,15 +4212,15 @@ export default function App() {
   }, [workflows]);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     const defaultProfile: UserProfile = {
-      name: 'Cyber Master',
-      email: 'devdarianib@gmail.com',
+      name: 'Proton Member',
+      email: '',
       language: 'en',
       region: 'Tbilisi',
       notifications: true,
-      role: 'System Architect',
+      role: 'Proton Member',
       phoneNumber: '',
       id: 'default-user',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Cyber',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Proton',
       showCommercialHub: false
     };
     try {
@@ -4378,9 +4378,22 @@ export default function App() {
     // Sync userProfile with Firebase user if not already set meaningfully
     setUserProfile(prev => {
       const updates: Partial<UserProfile> = {};
-      if (user.displayName && (!prev.name || prev.name === 'Cyber Master')) updates.name = user.displayName;
-      if (user.email && (!prev.email || prev.email === 'devdarianib@gmail.com')) updates.email = user.email;
-      if (user.photoURL && (!prev.avatar || prev.avatar.includes('dicebear'))) updates.avatar = user.photoURL;
+      const fallbackName = user.displayName || (user.email ? user.email.split('@')[0] : 'Proton Member');
+      
+      if (!prev.name || prev.name === 'Proton Member' || prev.name === 'Cyber Master' || prev.name === 'Guest User' || user.displayName) {
+        if (prev.name !== fallbackName) {
+          updates.name = fallbackName;
+        }
+      }
+      if (user.email && (!prev.email || prev.email === 'devdarianib@gmail.com' || prev.email !== user.email)) {
+        updates.email = user.email;
+      }
+      if (user.photoURL && (!prev.avatar || prev.avatar.includes('dicebear'))) {
+        updates.avatar = user.photoURL;
+      }
+      if (user.uid && prev.id !== user.uid) {
+        updates.id = user.uid;
+      }
       
       if (Object.keys(updates).length > 0) {
         return { ...prev, ...updates };
@@ -5852,6 +5865,7 @@ export default function App() {
                         language={userProfile.language} 
                         setActiveView={handleViewChange} 
                         user={user} 
+                        userProfile={userProfile}
                       />
                     </Suspense>
                   )}
