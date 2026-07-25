@@ -91,11 +91,17 @@ export function useWeb3Ledger() {
     };
 
     const storageKey = `proton_v1_ledger_${address.toLowerCase()}`;
-    const updatedLedger = [newTx, ...ledger];
-    localStorage.setItem(storageKey, JSON.stringify(updatedLedger));
-    setLedger(updatedLedger);
+    setLedger(prev => {
+      const updatedLedger = [newTx, ...prev];
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updatedLedger));
+      } catch (err) {
+        console.warn("Failed to persist web3 transaction:", err);
+      }
+      return updatedLedger;
+    });
     refetchBalance();
-  }, [address, isConnected, ledger, chain?.name, refetchBalance]);
+  }, [address, isConnected, chain?.name, refetchBalance]);
 
   const clearLedger = useCallback(() => {
     if (!address || !isConnected) return;

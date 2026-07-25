@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeStorage } from '../lib/safeStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   TrendingUp, 
@@ -170,49 +171,35 @@ export function TechPortfolio({ language, t, currentTheme }: TechPortfolioProps)
 
   // Initialize
   useEffect(() => {
-    // Load Cash
-    const savedCash = localStorage.getItem(CASH_BALANCE_KEY);
-    if (savedCash) {
-      setCashBalance(parseFloat(savedCash));
-    } else {
-      setCashBalance(25000); // Give user $25,000 cash starting capital
-      localStorage.setItem(CASH_BALANCE_KEY, '25000');
-    }
+    try {
+      // Load Cash
+      const savedCash = safeStorage.get(CASH_BALANCE_KEY);
+      if (savedCash && !isNaN(parseFloat(savedCash))) {
+        setCashBalance(parseFloat(savedCash));
+      } else {
+        setCashBalance(25000);
+        safeStorage.set(CASH_BALANCE_KEY, '25000');
+      }
 
-    // Load User Owned Assets
-    const savedUserAssets = localStorage.getItem(USER_ASSETS_KEY);
-    if (savedUserAssets) {
-      setUserAssets(JSON.parse(savedUserAssets));
-    } else {
-      setUserAssets(defaultUserAssets);
-      localStorage.setItem(USER_ASSETS_KEY, JSON.stringify(defaultUserAssets));
-    }
+      // Load User Owned Assets
+      setUserAssets(safeStorage.getJSON(USER_ASSETS_KEY, defaultUserAssets));
 
-    // Load Market Assets list
-    const savedMarketAssets = localStorage.getItem(MARKET_ASSETS_KEY);
-    if (savedMarketAssets) {
-      setMarketAssets(JSON.parse(savedMarketAssets));
-    } else {
-      setMarketAssets(defaultMarketAssets);
-      localStorage.setItem(MARKET_ASSETS_KEY, JSON.stringify(defaultMarketAssets));
-    }
+      // Load Market Assets list
+      setMarketAssets(safeStorage.getJSON(MARKET_ASSETS_KEY, defaultMarketAssets));
 
-    // Load Day Count
-    const savedDay = localStorage.getItem(DAY_COUNT_KEY);
-    if (savedDay) {
-      setDayCount(parseInt(savedDay));
-    } else {
-      setDayCount(6);
-      localStorage.setItem(DAY_COUNT_KEY, '6');
-    }
+      // Load Day Count
+      const savedDay = safeStorage.get(DAY_COUNT_KEY);
+      if (savedDay && !isNaN(parseInt(savedDay, 10))) {
+        setDayCount(parseInt(savedDay, 10));
+      } else {
+        setDayCount(6);
+        safeStorage.set(DAY_COUNT_KEY, '6');
+      }
 
-    // Load History list
-    const savedHistory = localStorage.getItem(HISTORY_KEY);
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
-    } else {
-      setHistory(defaultHistory);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(defaultHistory));
+      // Load History list
+      setHistory(safeStorage.getJSON(HISTORY_KEY, defaultHistory));
+    } catch (e) {
+      console.warn("Failed loading TechPortfolio state:", e);
     }
   }, []);
 
@@ -224,11 +211,11 @@ export function TechPortfolio({ language, t, currentTheme }: TechPortfolioProps)
     setHistory(newHistory);
     setDayCount(newDay);
 
-    localStorage.setItem(CASH_BALANCE_KEY, newCash.toString());
-    localStorage.setItem(USER_ASSETS_KEY, JSON.stringify(newAssets));
-    localStorage.setItem(MARKET_ASSETS_KEY, JSON.stringify(newMarket));
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
-    localStorage.setItem(DAY_COUNT_KEY, newDay.toString());
+    safeStorage.set(CASH_BALANCE_KEY, newCash.toString());
+    safeStorage.set(USER_ASSETS_KEY, JSON.stringify(newAssets));
+    safeStorage.set(MARKET_ASSETS_KEY, JSON.stringify(newMarket));
+    safeStorage.set(HISTORY_KEY, JSON.stringify(newHistory));
+    safeStorage.set(DAY_COUNT_KEY, newDay.toString());
   };
 
   // Safe Total Portfolio Value Calculation

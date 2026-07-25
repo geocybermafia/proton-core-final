@@ -1,4 +1,5 @@
 import React from 'react';
+import { safeStorage } from '../lib/safeStorage';
 import { motion } from 'framer-motion';
 import { 
   Building, 
@@ -47,12 +48,7 @@ export const DashboardView = React.memo(({
 
   // Dynamic state for grid widget visibility
   const [visibleWidgets, setVisibleWidgets] = React.useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('proton_dashboard_widgets');
-      return saved ? JSON.parse(saved) : ['business', 'creative', 'market', 'organizer', 'finance', 'clips'];
-    } catch {
-      return ['business', 'creative', 'market', 'organizer', 'finance', 'clips'];
-    }
+    return safeStorage.getJSON('proton_dashboard_widgets', ['business', 'creative', 'market', 'organizer', 'finance', 'clips']);
   });
 
   const [showConfig, setShowConfig] = React.useState(false);
@@ -64,7 +60,7 @@ export const DashboardView = React.memo(({
         : [...prev, id];
       // Always keep at least one widget visible
       if (next.length === 0) return prev;
-      localStorage.setItem('proton_dashboard_widgets', JSON.stringify(next));
+      safeStorage.set('proton_dashboard_widgets', JSON.stringify(next));
       return next;
     });
   };
@@ -72,13 +68,13 @@ export const DashboardView = React.memo(({
   const showAllWidgets = () => {
     const all = ['business', 'creative', 'market', 'organizer', 'finance', 'clips'];
     setVisibleWidgets(all);
-    localStorage.setItem('proton_dashboard_widgets', JSON.stringify(all));
+    safeStorage.set('proton_dashboard_widgets', JSON.stringify(all));
   };
 
   const showEssentialOnly = () => {
     const essential = ['business', 'finance', 'organizer', 'clips'];
     setVisibleWidgets(essential);
-    localStorage.setItem('proton_dashboard_widgets', JSON.stringify(essential));
+    safeStorage.set('proton_dashboard_widgets', JSON.stringify(essential));
   };
 
   // Beautiful curated titles & metrics for the 5 Gateways

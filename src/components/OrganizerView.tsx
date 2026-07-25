@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { safeStorage } from '../lib/safeStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -90,31 +91,29 @@ export const OrganizerView = ({
 
   // Daily Vitality and Habits states
   const [dailyFocus, setDailyFocus] = useState(() => {
-    return localStorage.getItem('organizer_daily_focus') || '';
+    return safeStorage.get('organizer_daily_focus') || '';
   });
   const [waterGlasses, setWaterGlasses] = useState(() => {
-    return parseInt(localStorage.getItem('organizer_water_glasses') || '0', 10);
+    const val = parseInt(safeStorage.get('organizer_water_glasses') || '0', 10);
+    return isNaN(val) ? 0 : val;
   });
   const [mood, setMood] = useState(() => {
-    return localStorage.getItem('organizer_daily_mood') || '';
+    return safeStorage.get('organizer_daily_mood') || '';
   });
   const [scratchpad, setScratchpad] = useState(() => {
-    return localStorage.getItem('organizer_scratchpad') || '';
+    return safeStorage.get('organizer_scratchpad') || '';
   });
   const [habits, setHabits] = useState<{ id: string, labelEn: string, labelKa: string, completed: boolean }[]>(() => {
-    const saved = localStorage.getItem('organizer_habits');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-    }
-    return [
+    return safeStorage.getJSON('organizer_habits', [
       { id: 'meditation', labelEn: 'Meditation & Peace', labelKa: '🧘 მედიტაცია და სიმშვიდე', completed: false },
       { id: 'reading', labelEn: 'Reading & Growth', labelKa: '📚 კითხვა და განვითარება', completed: false },
       { id: 'workout', labelEn: 'Workout & Fitness', labelKa: '🏃 ვარჯიში და ფიტნესი', completed: false },
       { id: 'nutrition', labelEn: 'Healthy Eating', labelKa: '🥗 ჯანსაღი კვება', completed: false }
-    ];
+    ]);
   });
   const [habitStreak, setHabitStreak] = useState(() => {
-    return parseInt(localStorage.getItem('organizer_habit_streak') || '0', 10);
+    const val = parseInt(safeStorage.get('organizer_habit_streak') || '0', 10);
+    return isNaN(val) ? 0 : val;
   });
 
   // Daily reset check on mount

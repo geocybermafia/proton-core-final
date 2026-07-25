@@ -23,6 +23,16 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
+  const listingsRef = useRef<Listing[]>(listings);
+  const onSelectListingRef = useRef<(listing: Listing) => void>(onSelectListing);
+
+  useEffect(() => {
+    listingsRef.current = listings;
+  }, [listings]);
+
+  useEffect(() => {
+    onSelectListingRef.current = onSelectListing;
+  }, [onSelectListing]);
 
   // Set up custom style on mount
   useEffect(() => {
@@ -71,9 +81,13 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
         if (btn) {
           const id = btn.getAttribute('data-listing-id');
           btn.addEventListener('click', () => {
-             // Use our ref to identify the list
-             // We'll call onSelectListing
              btn.setAttribute('style', 'opacity: 0.7; transform: scale(0.98);');
+             if (id) {
+               const matched = listingsRef.current.find(l => l.id === id);
+               if (matched && onSelectListingRef.current) {
+                 onSelectListingRef.current(matched);
+               }
+             }
           });
         }
       }

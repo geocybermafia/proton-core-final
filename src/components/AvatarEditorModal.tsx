@@ -83,7 +83,7 @@ export default function AvatarEditorModal({
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.play().catch(e => console.warn("Camera video stream play deferred or blocked:", e));
         setCameraActive(true);
       }
     } catch (err: any) {

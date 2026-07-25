@@ -177,57 +177,9 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })));
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
+import { safeStorage } from './lib/safeStorage';
 import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan } from './lib/gemini';
-
-
-const safeStorage = {
-  get: (key: string) => {
-    try {
-      return localStorage.getItem(key);
-    } catch (e) {
-      return null;
-    }
-  },
-  set: (key: string, value: string) => {
-    try {
-      localStorage.setItem(key, value);
-    } catch (e: any) {
-      // Handle QuotaExceededError to guarantee critical task and workflow persistence
-      if (e.name === 'QuotaExceededError' || e.code === 22 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-        console.warn("Storage quota exceeded! Pruning chat history to make room for critical data...");
-        try {
-          const chatHistoryStr = localStorage.getItem('proton_chat_history');
-          if (chatHistoryStr) {
-            const history = JSON.parse(chatHistoryStr);
-            let pruned = false;
-            for (const personaId in history) {
-              if (Array.isArray(history[personaId]) && history[personaId].length > 15) {
-                history[personaId] = history[personaId].slice(-15);
-                pruned = true;
-              }
-            }
-            if (pruned) {
-              localStorage.setItem('proton_chat_history', JSON.stringify(history));
-              localStorage.setItem(key, value);
-              return;
-            }
-          }
-        } catch (innerError) {
-          console.error("Pruning failed:", innerError);
-        }
-        
-        try {
-          localStorage.removeItem('proton_chat_history');
-          localStorage.setItem(key, value);
-          console.log("Chat history cleared completely to free up space for critical data.");
-        } catch (lastError) {
-          console.error("Critical storage write failed:", lastError);
-        }
-      }
-    }
-  }
-};
 
 // --- Types ---
 

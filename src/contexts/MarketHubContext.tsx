@@ -122,10 +122,10 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const unsubscribe = onSnapshot(ledgerCollection, (snapshot) => {
       if (snapshot.empty) {
         // Hydrate Firestore with default seed ledger so the spreadsheet is NOT blank
-        defaultLedger.forEach(async (item) => {
+        Promise.all(defaultLedger.map((item) => {
           const itemDoc = doc(userRef, 'market_ledger', item.id);
-          await setDoc(itemDoc, item);
-        });
+          return setDoc(itemDoc, item);
+        })).catch((e) => console.warn("Market ledger initial seed failed:", e));
         setLedgerItems(defaultLedger);
       } else {
         const items: LedgerItem[] = [];
