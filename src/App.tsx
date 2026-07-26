@@ -41,7 +41,7 @@ import {
   EmailAuthProvider,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, runTransaction, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { FriendlyAssistantWidget } from './components/FriendlyAssistantWidget';
 const SettingsView = lazyWithRetry(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
 import { useToast } from './components/Toast';
@@ -4624,48 +4624,59 @@ export default function App() {
     const todayStr = new Date().toISOString().split('T')[0];
     const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
     
-    let currentCount = 0;
-    let currentDate = todayStr;
-    
     try {
-      const snap = await getDoc(statsRef);
-      if (snap.exists()) {
-        const data = snap.data();
-        currentCount = data.dailyGenerationsCount || 0;
-        currentDate = data.dailyGenerationsDate || '';
+      const allowed = await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(statsRef);
+        let currentCount = 0;
+        let currentDate = todayStr;
+
+        if (snap.exists()) {
+          const data = snap.data();
+          currentCount = typeof data.dailyGenerationsCount === 'number' ? data.dailyGenerationsCount : 0;
+          currentDate = data.dailyGenerationsDate || '';
+        }
+
+        // Reset count if it's a new day
+        if (currentDate !== todayStr) {
+          currentCount = 0;
+        }
+
+        if (currentCount >= 20) {
+          return false;
+        }
+
+        const nextCount = currentCount + 1;
+        transaction.set(statsRef, {
+          dailyGenerationsCount: nextCount,
+          dailyGenerationsDate: todayStr
+        }, { merge: true });
+
+        return true;
+      });
+
+      if (!allowed) {
+        const errMsgEn = "AI Quota Exceeded: You have reached your limit of 20 generations per day. Please try again tomorrow!";
+        const errMsgKa = "AI ლიმიტი ამოიწურა: თქვენ მიაღწიეთ დღეში მაქსიმუმ 20 გენერაციის ლიმიტს. გთხოვთ სცადოთ ხვალ!";
+        const errMsg = userProfile.language === 'ka' ? errMsgKa : errMsgEn;
+        
+        addLog('warning', errMsg);
+        alert(errMsg);
+        return false;
       }
-    } catch (err) {
-      console.warn("Could not fetch stats, permitting anyway as fallback to avoid hard blocking", err);
+
+      return true;
+    } catch (err: any) {
+      console.warn("Could not execute transaction update for AI quota", err);
+      if (err?.code === 'permission-denied' || err?.message?.includes('PERMISSION_DENIED')) {
+        const errMsgEn = "AI Quota Exceeded: You have reached your limit of 20 generations per day or update was denied by security rules.";
+        const errMsgKa = "AI ლიმიტი ამოიწურა ან მოთხოვნა უარყოფილია უსაფრთხოების წესებით.";
+        const errMsg = userProfile.language === 'ka' ? errMsgKa : errMsgEn;
+        addLog('warning', errMsg);
+        alert(errMsg);
+        return false;
+      }
       return true;
     }
-    
-    // Reset count if it's a new day
-    if (currentDate !== todayStr) {
-      currentCount = 0;
-    }
-    
-    if (currentCount >= 20) {
-      const errMsgEn = "AI Quota Exceeded: You have reached your limit of 20 generations per day. Please try again tomorrow!";
-      const errMsgKa = "AI ლიმიტი ამოიწურა: თქვენ მიაღწიეთ დღეში მაქსიმუმ 20 გენერაციის ლიმიტს. გთხოვთ სცადოთ ხვალ!";
-      const errMsg = userProfile.language === 'ka' ? errMsgKa : errMsgEn;
-      
-      addLog('warning', errMsg);
-      alert(errMsg);
-      return false;
-    }
-    
-    // Increment and update in Firebase
-    const nextCount = currentCount + 1;
-    try {
-      await setDoc(statsRef, {
-        dailyGenerationsCount: nextCount,
-        dailyGenerationsDate: todayStr
-      }, { merge: true });
-    } catch (err) {
-      console.warn("Could not write daily stats update to Firebase", err);
-    }
-    
-    return true;
   };
 
   useEffect(() => {

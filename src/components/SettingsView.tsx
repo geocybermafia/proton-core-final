@@ -350,7 +350,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await setDoc(statsRef, {
           storageGB: 1.2,
           computeTimeHours: 0.1,
-          aiTokens: 150,
+          aiTokens: Math.max(150, userStats.aiTokens),
           dailyGenerationsCount: 0,
           dailyGenerationsDate: '',
           spendingLimit: 5.00

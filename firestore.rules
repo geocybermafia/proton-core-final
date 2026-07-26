@@ -75,37 +75,86 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
+    function isValidStatsShape(data) {
+      return data.get('dailyGenerationsCount', 0) is number
+        && data.get('dailyGenerationsCount', 0) >= 0
+        && data.get('dailyGenerationsCount', 0) <= 25
+        && data.get('dailyGenerationsDate', '') is string
+        && data.get('aiTokens', 0) is number
+        && data.get('aiTokens', 0) >= 0
+        && data.get('computeTimeHours', 0) is number
+        && data.get('computeTimeHours', 0) >= 0
+        && data.get('storageGB', 0) is number
+        && data.get('storageGB', 0) >= 0
+        && data.get('spendingLimit', 0) is number
+        && data.get('spendingLimit', 0) >= 0;
+    }
+
+    function isValidStatsCreate(data) {
+      return isValidStatsShape(data)
+        && data.get('dailyGenerationsCount', 0) <= 20
+        && data.get('aiTokens', 0) <= 10000;
+    }
+
+    function isValidStatsUpdate(incoming, existing) {
+      return isValidStatsShape(incoming)
+        // 1. Quota Tampering Protection:
+        // Same date: dailyGenerationsCount must not decrease (prevents resetting count back to 0 on same date)
+        // New date: dailyGenerationsCount must reset to <= 1
+        && (
+          (incoming.get('dailyGenerationsDate', '') == existing.get('dailyGenerationsDate', '')
+            && incoming.get('dailyGenerationsCount', 0) >= existing.get('dailyGenerationsCount', 0))
+          ||
+          (incoming.get('dailyGenerationsDate', '') != existing.get('dailyGenerationsDate', '')
+            && incoming.get('dailyGenerationsCount', 0) <= 1)
+        )
+        // 2. Token & Compute Counter Protection:
+        // aiTokens and computeTimeHours can only increase or stay same, never arbitrarily decrease/reset
+        && incoming.get('aiTokens', 0) >= existing.get('aiTokens', 0)
+        && incoming.get('computeTimeHours', 0) >= existing.get('computeTimeHours', 0);
+    }
+
     // ======================================================
     // 1. PROFILES & USERS
     // ======================================================
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+        && incoming().get('ai_tokens', 0) >= existing().get('ai_tokens', 0)
+        && incoming().get('aiTokens', 0) >= existing().get('aiTokens', 0);
       
       match /workflows/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /personas/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /chatHistory/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /tasks/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /market_ledger/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /customAvatars/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read, write: if isOwner(userId);
       }
       match /stats/{id} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidStatsCreate(incoming());
+        allow update: if isOwner(userId) && isValidStatsUpdate(incoming(), existing());
+        allow delete: if false;
       }
     }
 
     match /profiles/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId)
+        && incoming().get('ai_tokens', 0) >= existing().get('ai_tokens', 0);
     }
 
     match /test/connection {
