@@ -358,10 +358,28 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           }
 
           const isService = item.listingType === 'service' || item.category === 'service';
+
+          if (!isService) {
+            const { data: updatedListings, error: updateErr } = await supabase
+              .from('listings')
+              .update({ status: 'sold', isSold: true })
+              .eq('id', item.id)
+              .neq('status', 'sold')
+              .select();
+
+            if (updateErr || !updatedListings || updatedListings.length === 0) {
+              alert(language === 'ka'
+                ? `შეცდომა: პროდუქტი "${freshTitle}" ახლახანს შეიძინა სხვა მომხმარებელმა.`
+                : `Error: Product "${freshTitle}" was just purchased by another user.`);
+              setIsPlacingCartOrders(false);
+              return;
+            }
+          }
+
           const orderData = {
             listingId: item.id,
             buyerId: user.uid,
-            sellerId: item.sellerId,
+            sellerId: freshList.sellerId || item.sellerId,
             amount: freshPrice,
             currency: freshCurrency,
             itemTitle: freshTitle,
@@ -374,12 +392,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           const { error: insertErr } = await supabase.from('orders').insert([orderData]);
           if (insertErr) {
             console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", insertErr);
-          } else if (!isService) {
-            const { error: updateErr } = await supabase
-              .from('listings')
-              .update({ status: 'sold', isSold: true })
-              .eq('id', item.id);
-            if (updateErr) console.error("[SUPABASE ERROR] Failed to update listing status:", updateErr);
+            if (!isService) {
+              await supabase
+                .from('listings')
+                .update({ status: freshList.status || 'active', isSold: false })
+                .eq('id', item.id);
+            }
+            alert(language === 'ka'
+              ? `შეცდომა შეკვეთის შექმნისას: "${freshTitle}". ოპერაცია გაუქმდა.`
+              : `Order creation failed for "${freshTitle}". Transaction rolled back.`);
+            setIsPlacingCartOrders(false);
+            return;
           }
         } else {
           const isService = item.listingType === 'service' || item.category === 'service';
@@ -1275,14 +1298,56 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       };
 
       if (isSupabaseConfigured()) {
-        const { error } = await supabase.from('orders').insert([orderData]);
-        if (error) throw error;
+        const { data: freshList, error: fetchErr } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('id', checkoutItem.id)
+          .maybeSingle();
+
+        if (fetchErr || !freshList) {
+          throw new Error(language === 'ka' ? 'პროდუქტი აღარ არსებობს.' : 'Listing no longer exists.');
+        }
+
+        if (freshList.status === 'sold' || freshList.isSold) {
+          throw new Error(language === 'ka' ? 'ეს პროდუქტი უკვე გაყიდულია.' : 'This item has already been sold.');
+        }
+
         if (!isService) {
-          const { error: updateErr } = await supabase
+          const { data: updatedListings, error: updateErr } = await supabase
             .from('listings')
             .update({ status: 'sold', isSold: true })
-            .eq('id', checkoutItem.id);
-          if (updateErr) console.error("[SUPABASE ERROR] Failed to update listing status:", updateErr);
+            .eq('id', checkoutItem.id)
+            .neq('status', 'sold')
+            .select();
+
+          if (updateErr || !updatedListings || updatedListings.length === 0) {
+            throw new Error(language === 'ka' ? 'ეს პროდუქტი ახლახანს შეიძინა სხვა მომხმარებელმა.' : 'This item was just purchased by another user.');
+          }
+        }
+
+        const verifiedOrderData = {
+          listingId: checkoutItem.id,
+          buyerId: user.uid,
+          sellerId: freshList.sellerId || checkoutItem.sellerId,
+          amount: freshList.price,
+          currency: freshList.currency || checkoutItem.currency || 'USD',
+          itemTitle: freshList.title || checkoutItem.title,
+          status: isService ? 'booked' : 'completed',
+          orderType: isService ? 'service' : 'product',
+          buyerInstructions: isService ? buyerInstructions.trim() : '',
+          createdAt: Date.now()
+        };
+
+        const { error: insertErr } = await supabase.from('orders').insert([verifiedOrderData]);
+        if (insertErr) {
+          console.error("[SUPABASE ERROR] Order insert failed, rolling back listing status:", insertErr);
+          if (!isService) {
+            await supabase
+              .from('listings')
+              .update({ status: freshList.status || 'active', isSold: false })
+              .eq('id', checkoutItem.id);
+          }
+          throw insertErr;
         }
       } else {
         await runTransaction(db, async (transaction) => {
