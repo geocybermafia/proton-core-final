@@ -55,7 +55,7 @@ export const PERSONAS: Persona[] = [
   }
 ];
 
-async function callServerGemini<T>(action: string, args: any[]): Promise<T> {
+async function callServerGemini<T>(action: string, args: any[], signal?: AbortSignal): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
@@ -75,9 +75,13 @@ async function callServerGemini<T>(action: string, args: any[]): Promise<T> {
   const response = await fetch('/api/gemini', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ action, args })
+    body: JSON.stringify({ action, args }),
+    signal
   });
   if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error("429 ResourceExhausted: Rate limit reached. Please wait a moment before trying again.");
+    }
     const errorText = await response.text();
     throw new Error(errorText || `HTTP ${response.status}`);
   }
@@ -93,16 +97,35 @@ export async function chatWithPersona(
   includeSearch: boolean = true,
   temperature: number = 0.9,
   globalInstruction?: string,
-  appLanguage: 'en' | 'ka' = 'en'
+  appLanguage: 'en' | 'ka' = 'en',
+  signal?: AbortSignal
 ): Promise<{ text: string, metadata: GeminiMetadata }> {
   try {
     const res = await callServerGemini<{ text: string, metadata: GeminiMetadata }>('chatWithPersona', [
       persona, message, history, model, includeMaps, includeSearch, temperature, globalInstruction, appLanguage
-    ]);
+    ], signal);
     return res;
   } catch (error: any) {
+    if (error?.name === 'AbortError' || error?.message?.includes('aborted')) {
+      console.log("chatWithPersona request aborted");
+      return {
+        text: "",
+        metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: 0 }
+      };
+    }
     console.error("Gemini API Client Proxy Error:", error);
     const isKa = appLanguage === 'ka';
+    const errStr = error?.message || String(error);
+    const isRateLimit = errStr.includes("429") || errStr.includes("RESOURCE_EXHAUSTED") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit");
+    
+    if (isRateLimit) {
+      return {
+        text: isKa
+          ? "⚠️ **კვოტა ამოიწურა / ლიმიტის გადაჭარბება (429 ResourceExhausted)**\n\nმოთხოვნების ლიმიტი გადაჭარბებულია. გთხოვთ დაელოდოთ 1 წუთი და სცადოთ ხელახლა."
+          : "⚠️ **Quota Exceeded / Rate Limit Reached (429 ResourceExhausted)**\n\nRate limit reached. Please wait a moment and try again.",
+        metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: 0 }
+      };
+    }
     return {
       text: isKa 
         ? "⚠️ პრობლემა შეიქმნა Gemini API-სთან კავშირისას. გთხოვთ, შეამოწმოთ თქვენი ინტერნეტ კავშირი ან სცადოთ მოგვიანებით."

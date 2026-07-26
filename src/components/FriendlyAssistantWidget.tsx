@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sparkles, 
@@ -13,9 +13,14 @@ import {
   ArrowRight,
   HelpCircle,
   Zap,
-  Globe
+  Globe,
+  Bot,
+  Send,
+  RefreshCw,
+  StopCircle
 } from 'lucide-react';
 import { View } from '../types';
+import { askAssistant } from '../services/geminiService';
 
 interface FriendlyAssistantWidgetProps {
   language: 'en' | 'ka';
@@ -37,6 +42,67 @@ export const FriendlyAssistantWidget: React.FC<FriendlyAssistantWidgetProps> = (
   const isKa = language === 'ka';
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'tools' | 'ai'>('tools');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiResponse, setAiResponse] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Clean up any pending AI requests when closing or unmounting
+  useEffect(() => {
+    if (!isOpen) {
+      if (aiAbortControllerRef.current) {
+        aiAbortControllerRef.current.abort();
+        aiAbortControllerRef.current = null;
+      }
+      setIsAiLoading(false);
+    }
+    return () => {
+      if (aiAbortControllerRef.current) {
+        aiAbortControllerRef.current.abort();
+      }
+    };
+  }, [isOpen]);
+
+  const handleAskAi = async (overridePrompt?: string) => {
+    const promptToSend = (overridePrompt || aiPrompt).trim();
+    if (!promptToSend) return;
+
+    // Abort previous pending AI request if user rapidly types, switches or regenerates
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    aiAbortControllerRef.current = controller;
+
+    setIsAiLoading(true);
+    setAiResponse('');
+
+    try {
+      const res = await askAssistant(promptToSend, language, controller.signal);
+      if (!controller.signal.aborted) {
+        setAiResponse(res);
+      }
+    } catch (err: any) {
+      if (err?.name !== 'AbortError') {
+        setAiResponse(isKa ? "⚠️ კავშირის შეცდომა." : "⚠️ Connection error.");
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setIsAiLoading(false);
+      }
+    }
+  };
+
+  const handleCancelAi = () => {
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+      aiAbortControllerRef.current = null;
+    }
+    setIsAiLoading(false);
+  };
 
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
@@ -222,70 +288,181 @@ export const FriendlyAssistantWidget: React.FC<FriendlyAssistantWidgetProps> = (
                   </button>
                 </div>
 
-                {/* Quick Search Input */}
-                <div className="mt-4 relative">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted" size={16} />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={isKa ? 'მოძებნეთ ინსტრუმენტი ან ფუნქცია...' : 'Search tools, generators, or settings...'}
-                    className="w-full bg-proton-bg/90 border border-proton-border/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-proton-text placeholder-proton-muted focus:outline-none focus:border-proton-accent transition-all shadow-inner"
-                    autoFocus
-                  />
+                {/* Sub-header Tabs: Tools / Quick AI */}
+                <div className="mt-3 flex items-center gap-2 border-t border-proton-border/30 pt-3">
+                  <button
+                    onClick={() => setActiveTab('tools')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      activeTab === 'tools'
+                        ? 'bg-proton-accent text-proton-bg shadow-sm'
+                        : 'text-proton-muted hover:text-proton-text hover:bg-proton-secondary/30'
+                    }`}
+                  >
+                    <LayoutDashboard size={14} />
+                    <span>{isKa ? 'ინსტრუმენტები' : 'Tools'}</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('ai')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      activeTab === 'ai'
+                        ? 'bg-proton-accent text-proton-bg shadow-sm'
+                        : 'text-proton-muted hover:text-proton-text hover:bg-proton-secondary/30'
+                    }`}
+                  >
+                    <Bot size={14} />
+                    <span>{isKa ? 'სწრაფი AI ასისტენტი' : 'Quick AI Assistant'}</span>
+                  </button>
                 </div>
+
+                {/* Quick Search Input for Tools Tab */}
+                {activeTab === 'tools' && (
+                  <div className="mt-3 relative">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted" size={16} />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder={isKa ? 'მოძებნეთ ინსტრუმენტი ან ფუნქცია...' : 'Search tools, generators, or settings...'}
+                      className="w-full bg-proton-bg/90 border border-proton-border/80 rounded-xl pl-10 pr-4 py-2.5 text-xs text-proton-text placeholder-proton-muted focus:outline-none focus:border-proton-accent transition-all shadow-inner"
+                      autoFocus
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Action List Scrollable Container */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
-                <div className="px-2 py-1 flex items-center justify-between text-[10px] font-bold text-proton-muted uppercase tracking-wider">
-                  <span>{isKa ? 'ხელმისაწვდომი ინსტრუმენტები' : 'Available Tools'}</span>
-                  <span>{filteredActions.length} {isKa ? 'შედეგი' : 'items'}</span>
-                </div>
+              {/* Body Content */}
+              {activeTab === 'tools' ? (
+                /* Action List Scrollable Container */
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                  <div className="px-2 py-1 flex items-center justify-between text-[10px] font-bold text-proton-muted uppercase tracking-wider">
+                    <span>{isKa ? 'ხელმისაწვდომი ინსტრუმენტები' : 'Available Tools'}</span>
+                    <span>{filteredActions.length} {isKa ? 'შედეგი' : 'items'}</span>
+                  </div>
 
-                {filteredActions.map((action) => {
-                  const IconComp = action.icon;
-                  const isActive = activeView === action.id;
+                  {filteredActions.map((action) => {
+                    const IconComp = action.icon;
+                    const isActive = activeView === action.id;
 
-                  return (
-                    <motion.button
-                      key={action.id}
-                      whileHover={{ x: 4 }}
-                      onClick={() => {
-                        onSetUiMode(action.mode, action.id);
-                        onNavigate(action.id);
-                        setIsOpen(false);
-                      }}
-                      className={`w-full p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between gap-4 group ${
-                        isActive
-                          ? 'bg-proton-accent/10 border-proton-accent/40 shadow-sm'
-                          : 'bg-proton-bg/50 border-proton-border/40 hover:bg-proton-secondary/20 hover:border-proton-border'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center bg-gradient-to-br ${action.color}`}>
-                          <IconComp size={18} />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-proton-text flex items-center gap-2">
-                            {action.title}
-                            {isActive && (
-                              <span className="px-2 py-0.5 rounded-full bg-proton-accent/20 text-proton-accent text-[9px] font-extrabold uppercase">
-                                {isKa ? 'აქტიური' : 'Active'}
-                              </span>
-                            )}
+                    return (
+                      <motion.button
+                        key={action.id}
+                        whileHover={{ x: 4 }}
+                        onClick={() => {
+                          onSetUiMode(action.mode, action.id);
+                          onNavigate(action.id);
+                          setIsOpen(false);
+                        }}
+                        className={`w-full p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between gap-4 group ${
+                          isActive
+                            ? 'bg-proton-accent/10 border-proton-accent/40 shadow-sm'
+                            : 'bg-proton-bg/50 border-proton-border/40 hover:bg-proton-secondary/20 hover:border-proton-border'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center bg-gradient-to-br ${action.color}`}>
+                            <IconComp size={18} />
                           </div>
-                          <p className="text-[11px] text-proton-muted font-medium mt-0.5">
-                            {action.desc}
-                          </p>
+                          <div>
+                            <div className="text-xs font-bold text-proton-text flex items-center gap-2">
+                              {action.title}
+                              {isActive && (
+                                <span className="px-2 py-0.5 rounded-full bg-proton-accent/20 text-proton-accent text-[9px] font-extrabold uppercase">
+                                  {isKa ? 'აქტიური' : 'Active'}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-proton-muted font-medium mt-0.5">
+                              {action.desc}
+                            </p>
+                          </div>
                         </div>
-                      </div>
 
-                      <ArrowRight size={16} className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-1 transition-all shrink-0" />
-                    </motion.button>
-                  );
-                })}
-              </div>
+                        <ArrowRight size={16} className="text-proton-muted group-hover:text-proton-accent group-hover:translate-x-1 transition-all shrink-0" />
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Quick AI Assistant Tab Content */
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-proton-text flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-proton-accent" />
+                      {isKa ? 'ჰკითხეთ Proton AI ასისტენტს:' : 'Ask Proton AI Assistant:'}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={aiPrompt}
+                        onChange={(e) => setAiPrompt(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAskAi();
+                        }}
+                        placeholder={isKa ? 'მაგ: როგორ შევქმნა პროექტი Proton AI-ში?' : 'e.g. How do I optimize my workflow?'}
+                        className="flex-1 bg-proton-bg/90 border border-proton-border/80 rounded-xl px-4 py-2.5 text-xs text-proton-text placeholder-proton-muted focus:outline-none focus:border-proton-accent transition-all shadow-inner"
+                        autoFocus
+                      />
+                      {isAiLoading ? (
+                        <button
+                          onClick={handleCancelAi}
+                          className="px-3.5 py-2.5 rounded-xl bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-bold flex items-center gap-1.5 hover:bg-red-500/30 transition-all shrink-0"
+                          title={isKa ? 'მოთხოვნის გაუქმება (Abort)' : 'Cancel pending request (Abort)'}
+                        >
+                          <StopCircle size={14} className="animate-pulse" />
+                          <span>{isKa ? 'გაუქმება' : 'Cancel'}</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleAskAi()}
+                          disabled={!aiPrompt.trim()}
+                          className="px-3.5 py-2.5 rounded-xl bg-proton-accent text-proton-bg text-xs font-bold flex items-center gap-1.5 disabled:opacity-50 hover:bg-proton-accent/90 transition-all shrink-0 shadow-md shadow-proton-accent/20"
+                        >
+                          <Send size={14} />
+                          <span>{isKa ? 'გაგზავნა' : 'Send'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Response Box */}
+                  {isAiLoading && (
+                    <div className="p-4 rounded-2xl bg-proton-bg/60 border border-proton-accent/30 flex items-center justify-between gap-3 text-xs text-proton-accent">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="w-4 h-4 animate-spin text-proton-accent" />
+                        <span>{isKa ? 'AI პასუხის მომზადება...' : 'Generating AI response...'}</span>
+                      </div>
+                      <button
+                        onClick={handleCancelAi}
+                        className="text-[11px] underline hover:text-red-400 text-proton-muted font-bold"
+                      >
+                        {isKa ? 'შეწყვეტა' : 'Stop'}
+                      </button>
+                    </div>
+                  )}
+
+                  {!isAiLoading && aiResponse && (
+                    <div className="p-4 rounded-2xl bg-proton-bg/80 border border-proton-border/80 space-y-3">
+                      <div className="flex items-center justify-between text-xs font-extrabold text-proton-accent border-b border-proton-border/40 pb-2">
+                        <span className="flex items-center gap-1.5">
+                          <Bot size={14} />
+                          {isKa ? 'ასისტენტის პასუხი:' : 'Assistant Response:'}
+                        </span>
+                        <button
+                          onClick={() => handleAskAi()}
+                          className="flex items-center gap-1 text-[10px] font-bold text-proton-muted hover:text-proton-text transition-colors"
+                          title={isKa ? 'ხელახლა გენერაცია (Regenerate)' : 'Regenerate answer'}
+                        >
+                          <RefreshCw size={12} />
+                          <span>{isKa ? 'ხელახლა' : 'Regenerate'}</span>
+                        </button>
+                      </div>
+                      <p className="text-xs text-proton-text leading-relaxed whitespace-pre-wrap">
+                        {aiResponse}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Bottom Context Help Tip & Language Switcher */}
               <div className="p-4 bg-proton-bg/80 border-t border-proton-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

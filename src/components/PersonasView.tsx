@@ -156,7 +156,15 @@ export default function PersonasView({
   const [isDecommissioning, setIsDecommissioning] = useState(false);
   const [decomTarget, setDecomTarget] = useState<Persona | null>(null);
 
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+      aiAbortControllerRef.current = null;
+    }
+    setIsSending(false);
+
     if (selectedPersona) {
       setEditingInstructions(selectedPersona.systemInstruction || '');
     } else {
@@ -399,6 +407,12 @@ export default function PersonasView({
     setShowTools(false);
     setIsSending(true);
 
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    aiAbortControllerRef.current = controller;
+
     const chatRef = doc(db, 'users', auth.currentUser.uid, 'chatHistory', selectedPersona.id);
 
     try {
@@ -429,10 +443,16 @@ export default function PersonasView({
           true,
           0.9,
           selectedPersona.systemInstruction,
-          language
+          language,
+          controller.signal
         );
         aiResponseText = result.text;
         metadata = result.metadata;
+      }
+
+      if (controller.signal.aborted) {
+        console.log("Chat response discarded because request was aborted");
+        return;
       }
 
       const aiMessage: ChatMessage = {
