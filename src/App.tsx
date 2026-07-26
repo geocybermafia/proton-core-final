@@ -4483,7 +4483,7 @@ export default function App() {
         const dbLanguage = data.language as 'en' | 'ka';
         const isStale = snap.metadata.fromCache;
         setUserProfile(prev => {
-          const targetLanguage = (dbLanguage && !isStale) ? dbLanguage : (prev.language || language);
+          const targetLanguage = (dbLanguage && !isStale) ? dbLanguage : prev.language;
           return {
             ...prev,
             ...data,
@@ -4504,7 +4504,7 @@ export default function App() {
     });
 
     return () => unsubscribe();
-  }, [user, language]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) return;
