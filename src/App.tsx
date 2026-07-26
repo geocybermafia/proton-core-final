@@ -24,6 +24,8 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
   });
 }
 
+import { useThemeSync } from './hooks/useThemeSync';
+
 const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
 // Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
 const LocalFileScanner = lazyWithRetry(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })));
@@ -4127,6 +4129,8 @@ export default function App() {
       return (safeStorage.get('proton_organizer_theme') as Theme) || 'midnight';
     } catch { return 'midnight'; }
   });
+
+  useThemeSync(setTheme, setOrganizerTheme);
 
   useEffect(() => {
     safeStorage.set('proton_organizer_theme', organizerTheme);
