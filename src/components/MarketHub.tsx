@@ -1084,118 +1084,97 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, [listings]);
 
   const filteredListings = useMemo(() => {
-    let result = [...allListings];
-    
-    // Filter by View Mode
-    if (viewMode === 'my-listings') {
-      console.log('Fetching listings for user:', user?.uid);
-      if (profileSubMode === 'selling') {
-        result = result.filter(l => l.sellerId === user?.uid);
-      } else {
-        // Handled by different UI section
-        return [];
-      }
+    const isMyListings = viewMode === 'my-listings';
+    if (isMyListings && profileSubMode !== 'selling') {
+      return [];
     }
 
-    // Bypass main marketplace browsing criteria if we are in 'my-listings' mode to ensure all user items remain fully visible
-    if (viewMode !== 'my-listings') {
-      // Filter out sold items from public browsing
-      result = result.filter(l => l.status !== 'sold' && !l.isSold);
+    const minP = minPrice !== '' ? parseFloat(minPrice) : null;
+    const maxP = maxPrice !== '' ? parseFloat(maxPrice) : null;
+    const searchLower = search ? search.toLowerCase() : null;
+    const activeCityLower = activeCity ? activeCity.toLowerCase() : null;
 
-      // Filter by Listing Type (Product vs Service vs Project)
+    // Single pass map to attach converted price and avoid redundant currency calculations
+    const itemsWithConvertedPrice = allListings.map(l => ({
+      item: l,
+      convertedPrice: convertPrice(l.price, l.currency || 'USD', displayCurrency)
+    }));
+
+    const filtered = itemsWithConvertedPrice.filter(({ item: l, convertedPrice }) => {
+      if (isMyListings) {
+        return l.sellerId === user?.uid;
+      }
+
+      // Filter out sold items
+      if (l.status === 'sold' || (l as any).isSold) return false;
+
+      // Filter by Listing Type
       if (activeListingType !== 'all') {
         if (activeListingType === 'service') {
-          result = result.filter(l => l.listingType === 'service' || l.category === 'service');
+          if (l.listingType !== 'service' && l.category !== 'service') return false;
         } else if (activeListingType === 'project') {
-          result = result.filter(l => l.listingType === 'project' || l.category === 'project');
+          if (l.listingType !== 'project' && l.category !== 'project') return false;
         } else {
-          result = result.filter(l => l.listingType === 'product' || (!l.listingType && l.category !== 'service' && l.category !== 'project'));
+          if (l.listingType === 'service' || l.category === 'service' || l.listingType === 'project' || l.category === 'project') return false;
         }
       }
 
       // Filter by Category
-      if (activeCategory !== 'all') {
-        result = result.filter(l => l.category === activeCategory);
-      }
+      if (activeCategory !== 'all' && l.category !== activeCategory) return false;
 
       // Filter by Country
-      if (activeCountry !== 'GLOBAL') {
-        result = result.filter(l => l.country === activeCountry);
-      }
+      if (activeCountry !== 'GLOBAL' && l.country !== activeCountry) return false;
 
       // Filter by City
-      if (activeCity) {
-        result = result.filter(l => l.city.toLowerCase().includes(activeCity.toLowerCase()));
-      }
+      if (activeCityLower && (!l.city || !l.city.toLowerCase().includes(activeCityLower))) return false;
 
       // Filter by Price
-      if (minPrice !== '') {
-        result = result.filter(l => convertPrice(l.price, l.currency || 'USD', displayCurrency) >= parseFloat(minPrice));
-      }
-      if (maxPrice !== '') {
-        result = result.filter(l => convertPrice(l.price, l.currency || 'USD', displayCurrency) <= parseFloat(maxPrice));
-      }
-    }
+      if (minP !== null && convertedPrice < minP) return false;
+      if (maxP !== null && convertedPrice > maxP) return false;
 
-    // Filter by Search
-    if (search) {
-      const s = search.toLowerCase();
-      result = result.filter(l => {
-        const title = language === 'ka' ? (l.titleGe || l.title) : l.title;
-        const desc = language === 'ka' ? (l.descriptionGe || l.description) : l.description;
-        return title.toLowerCase().includes(s) || 
-               desc.toLowerCase().includes(s) ||
-               l.sellerName.toLowerCase().includes(s) ||
-               (l.city && l.city.toLowerCase().includes(s)) ||
-               (l.country && l.country.toLowerCase().includes(s));
-      });
-    }
+      // Filter by Search
+      if (searchLower) {
+        const title = (language === 'ka' ? (l.titleGe || l.title) : l.title) || '';
+        const desc = (language === 'ka' ? (l.descriptionGe || l.description) : l.description) || '';
+        const matchesSearch = 
+          title.toLowerCase().includes(searchLower) ||
+          desc.toLowerCase().includes(searchLower) ||
+          (l.sellerName && l.sellerName.toLowerCase().includes(searchLower)) ||
+          (l.city && l.city.toLowerCase().includes(searchLower)) ||
+          (l.country && l.country.toLowerCase().includes(searchLower));
+        if (!matchesSearch) return false;
+      }
 
-    // Filter by Favorites
-    if (showOnlyFavorites) {
-      result = result.filter(l => favorites.includes(l.id));
-    }
+      // Filter by Favorites
+      if (showOnlyFavorites && !favorites.includes(l.id)) return false;
+
+      return true;
+    });
 
     // Sorting Engine
     if (sortBy === 'rating') {
-      result.sort((a, b) => {
+      filtered.sort((aObj, bObj) => {
+        const a = aObj.item;
+        const b = bObj.item;
         const ratingA = sellerRatings[a.sellerId]?.avg || 0;
         const ratingB = sellerRatings[b.sellerId]?.avg || 0;
         const countA = sellerRatings[a.sellerId]?.count || 0;
         const countB = sellerRatings[b.sellerId]?.count || 0;
         
-        if (ratingB !== ratingA) {
-          return ratingB - ratingA;
-        }
-        if (countB !== countA) {
-          return countB - countA;
-        }
-        const timeA = safeParseDate(a.createdAt);
-        const timeB = safeParseDate(b.createdAt);
-        return timeB - timeA;
+        if (ratingB !== ratingA) return ratingB - ratingA;
+        if (countB !== countA) return countB - countA;
+        return safeParseDate(b.createdAt) - safeParseDate(a.createdAt);
       });
     } else if (sortBy === 'newest') {
-      result.sort((a, b) => {
-        const timeA = safeParseDate(a.createdAt);
-        const timeB = safeParseDate(b.createdAt);
-        return timeB - timeA;
-      });
+      filtered.sort((aObj, bObj) => safeParseDate(bObj.item.createdAt) - safeParseDate(aObj.item.createdAt));
     } else if (sortBy === 'priceAsc') {
-      result.sort((a, b) => {
-        const priceA = convertPrice(a.price, a.currency || 'USD', displayCurrency);
-        const priceB = convertPrice(b.price, b.currency || 'USD', displayCurrency);
-        return priceA - priceB;
-      });
+      filtered.sort((aObj, bObj) => aObj.convertedPrice - bObj.convertedPrice);
     } else if (sortBy === 'priceDesc') {
-      result.sort((a, b) => {
-        const priceA = convertPrice(a.price, a.currency || 'USD', displayCurrency);
-        const priceB = convertPrice(b.price, b.currency || 'USD', displayCurrency);
-        return priceB - priceA;
-      });
+      filtered.sort((aObj, bObj) => bObj.convertedPrice - aObj.convertedPrice);
     }
 
-    return result;
-  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency]);
+    return filtered.map(r => r.item);
+  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, profileSubMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency, showOnlyFavorites, favorites]);
 
   const marketMetrics = useMemo(() => {
     const total = listings.length;

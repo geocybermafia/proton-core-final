@@ -1856,8 +1856,11 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       }
     }
 
+    let lastOrientUpdate = 0;
     const onOrientationChange = (event: DeviceOrientationEvent) => {
-      if (isMounted) {
+      const now = Date.now();
+      if (isMounted && now - lastOrientUpdate > 150) {
+        lastOrientUpdate = now;
         setOrientation({
           alpha: event.alpha || 0,
           beta: event.beta || 0,
@@ -3699,11 +3702,18 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const handleResize = () => {
-      setViewportWidth(window.innerWidth);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        setViewportWidth(window.innerWidth);
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {

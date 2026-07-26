@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { safeStorage } from '../lib/safeStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import Calendar from 'react-calendar';
@@ -540,30 +540,74 @@ export const OrganizerView = ({
         ? true
         : task.category?.toLowerCase() === categoryFilter.toLowerCase();
 
+      const selectedYear = selectedCalendarDate ? selectedCalendarDate.getFullYear() : null;
+      const selectedMonth = selectedCalendarDate ? selectedCalendarDate.getMonth() : null;
+      const selectedDay = selectedCalendarDate ? selectedCalendarDate.getDate() : null;
+
       const dateMatch = (!isCalendarFilterActive || !selectedCalendarDate)
         ? true
         : task.dueDate && (() => {
             const d = new Date(task.dueDate);
-            const s = selectedCalendarDate;
-            return d.getDate() === s.getDate() &&
-                   d.getMonth() === s.getMonth() &&
-                   d.getFullYear() === s.getFullYear();
+            return d.getDate() === selectedDay &&
+                   d.getMonth() === selectedMonth &&
+                   d.getFullYear() === selectedYear;
           })();
       
       return contentMatch && statusMatch && energyMatch && categoryMatch && dateMatch;
     });
   }, [tasks, searchQuery, filterStatus, language, energyFilter, categoryFilter, isCalendarFilterActive, selectedCalendarDate]);
 
+  // Pre-computed map of date keys "YYYY-M-D" to task status indicators for O(1) calendar tile lookup
+  const tasksDateMap = useMemo(() => {
+    const map = new Map<string, { hasPending: boolean }>();
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      if (!t.dueDate) continue;
+      const d = new Date(t.dueDate);
+      if (isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const existing = map.get(key);
+      const isPending = !t.completed;
+      if (!existing) {
+        map.set(key, { hasPending: isPending });
+      } else if (isPending) {
+        existing.hasPending = true;
+      }
+    }
+    return map;
+  }, [tasks]);
+
+  const renderTileContent = useCallback(({ date, view }: any) => {
+    if (view === 'month') {
+      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+      const entry = tasksDateMap.get(key);
+      if (entry) {
+        return (
+          <div className="flex justify-center gap-0.5 mt-1">
+            <span className={cn(
+              "w-1 h-1 rounded-full",
+              entry.hasPending ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+            )} />
+          </div>
+        );
+      }
+    }
+    return null;
+  }, [tasksDateMap]);
+
   // Filtered tasks specifically for the selected date on the calendar
   const selectedDateTasks = useMemo(() => {
     if (!selectedCalendarDate) return [];
+    const sYear = selectedCalendarDate.getFullYear();
+    const sMonth = selectedCalendarDate.getMonth();
+    const sDay = selectedCalendarDate.getDate();
+
     return tasks.filter(task => {
       if (!task.dueDate) return false;
       const d = new Date(task.dueDate);
-      const s = selectedCalendarDate;
-      return d.getDate() === s.getDate() &&
-             d.getMonth() === s.getMonth() &&
-             d.getFullYear() === s.getFullYear();
+      return d.getDate() === sDay &&
+             d.getMonth() === sMonth &&
+             d.getFullYear() === sYear;
     });
   }, [tasks, selectedCalendarDate]);
 
@@ -1431,29 +1475,7 @@ export const OrganizerView = ({
                     setCurrentViewDate(dateVal);
                   }
                 }}
-                tileContent={({ date, view }: any) => {
-                  if (view === 'month') {
-                    const dayTasks = tasks.filter(t => {
-                      if (!t.dueDate) return false;
-                      const d = new Date(t.dueDate);
-                      return d.getDate() === date.getDate() &&
-                             d.getMonth() === date.getMonth() &&
-                             d.getFullYear() === date.getFullYear();
-                    });
-                    if (dayTasks.length > 0) {
-                      const hasPending = dayTasks.some(t => !t.completed);
-                      return (
-                        <div className="flex justify-center gap-0.5 mt-1">
-                          <span className={cn(
-                            "w-1 h-1 rounded-full",
-                            hasPending ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
-                          )} />
-                        </div>
-                      );
-                    }
-                  }
-                  return null;
-                }}
+                tileContent={renderTileContent}
               />
 
               {/* Dynamic Monthly Workload Summary Panel */}
