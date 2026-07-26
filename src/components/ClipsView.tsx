@@ -729,8 +729,17 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     let startTime = performance.now();
     let frameCallbackId: any;
 
+    const detachListeners = () => {
+      handlePause();
+      videoEl.removeEventListener('play', handlePlay);
+      videoEl.removeEventListener('pause', handlePause);
+    };
+
     const checkFps = () => {
-      if (!isMounted.current) return;
+      if (!isMounted.current) {
+        detachListeners();
+        return;
+      }
       if (videoEl.paused || videoEl.ended) return;
       frameCount++;
       const elapsed = (performance.now() - startTime) / 1000;
@@ -753,8 +762,8 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
             }
           }));
         }
-        frameCount = 0;
-        startTime = performance.now();
+        detachListeners();
+        return;
       }
       
       if ('requestVideoFrameCallback' in videoEl) {
@@ -788,6 +797,8 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     // Listen to play/pause events to resume/pause frame rate tracking
     videoEl.addEventListener('play', handlePlay);
     videoEl.addEventListener('pause', handlePause);
+    videoEl.addEventListener('ended', detachListeners, { once: true });
+    videoEl.addEventListener('error', detachListeners, { once: true });
 
     if (!videoEl.paused) {
       handlePlay();
@@ -811,6 +822,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
           return prev;
         });
       }
+      detachListeners();
     }, 1500);
   };
 

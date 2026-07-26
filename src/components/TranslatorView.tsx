@@ -233,6 +233,10 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
       if (recognition.current) {
         recognition.current.stop();
       }
+      if (audioContext.current) {
+        audioContext.current.close().catch(() => {});
+        audioContext.current = null;
+      }
     };
   }, []);
 
@@ -363,6 +367,11 @@ Guidelines:
           const source = context.createBufferSource();
           source.buffer = audioBuffer;
           source.connect(context.destination);
+          source.onended = () => {
+            if (audioContext.current && audioContext.current.state === 'running') {
+              audioContext.current.suspend().catch(() => {});
+            }
+          };
           source.start();
         }
       }

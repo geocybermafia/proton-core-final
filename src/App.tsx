@@ -1789,6 +1789,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
   useEffect(() => {
     console.log("[Stress Test Logs] HardwareView mounted. Registering optimal system monitoring listeners.");
+    let isMounted = true;
     
     const hasGeoloc = 'geolocation' in navigator;
     const hasBattery = 'getBattery' in navigator;
@@ -1808,11 +1809,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     if (hasGeoloc) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setLocation({ 
-            lat: pos.coords.latitude, 
-            lng: pos.coords.longitude, 
-            accuracy: pos.coords.accuracy 
-          });
+          if (isMounted) {
+            setLocation({ 
+              lat: pos.coords.latitude, 
+              lng: pos.coords.longitude, 
+              accuracy: pos.coords.accuracy 
+            });
+          }
         },
         (err) => console.warn("Geolocation permission not available directly"),
         { enableHighAccuracy: false } // Low-accuracy is lightweight and prevents heavy hardware polling
@@ -1821,13 +1824,14 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
     let batteryInstance: any = null;
     const onBatteryChange = () => {
-      if (batteryInstance) {
+      if (isMounted && batteryInstance) {
         setBattery({ level: batteryInstance.level, charging: batteryInstance.charging });
       }
     };
 
     if (hasBattery) {
       (navigator as any).getBattery().then((bat: any) => {
+        if (!isMounted) return;
         batteryInstance = bat;
         setBattery({ level: bat.level, charging: bat.charging });
         bat.addEventListener('levelchange', onBatteryChange);
@@ -1837,7 +1841,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
     let conn: any = null;
     const onNetworkChange = () => {
-      if (conn) {
+      if (isMounted && conn) {
         setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
       }
     };
@@ -1851,11 +1855,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     }
 
     const onOrientationChange = (event: DeviceOrientationEvent) => {
-      setOrientation({
-        alpha: event.alpha || 0,
-        beta: event.beta || 0,
-        gamma: event.gamma || 0
-      });
+      if (isMounted) {
+        setOrientation({
+          alpha: event.alpha || 0,
+          beta: event.beta || 0,
+          gamma: event.gamma || 0
+        });
+      }
     };
 
     if (hasOrientation) {
@@ -1866,6 +1872,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     requestHardwareAccess();
 
     return () => {
+      isMounted = false;
       console.log("[Stress Test Logs] Cleaning up all active system monitoring listeners safely to prevent memory leaks.");
       if (batteryInstance) {
         batteryInstance.removeEventListener('levelchange', onBatteryChange);

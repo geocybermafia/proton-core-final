@@ -73,29 +73,36 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
     markersLayerRef.current = markersLayer;
     mapRef.current = map;
 
-    // Listen to custom details/buy button clicks in popups
-    map.on('popupopen', (e) => {
+    // Listen to custom details/buy button clicks in popups with proper cleanup
+    const handlePopupOpen = (e: L.PopupEvent) => {
       const container = e.popup.getElement();
       if (container) {
-        const btn = container.querySelector('.popup-buy-btn');
+        const btn = container.querySelector('.popup-buy-btn') as HTMLElement | null;
         if (btn) {
           const id = btn.getAttribute('data-listing-id');
-          btn.addEventListener('click', () => {
-             btn.setAttribute('style', 'opacity: 0.7; transform: scale(0.98);');
-             if (id) {
-               const matched = listingsRef.current.find(l => l.id === id);
-               if (matched && onSelectListingRef.current) {
-                 onSelectListingRef.current(matched);
-               }
-             }
+          const handleBuyClick = () => {
+            btn.setAttribute('style', 'opacity: 0.7; transform: scale(0.98);');
+            if (id) {
+              const matched = listingsRef.current.find(l => l.id === id);
+              if (matched && onSelectListingRef.current) {
+                onSelectListingRef.current(matched);
+              }
+            }
+          };
+          btn.addEventListener('click', handleBuyClick);
+          map.once('popupclose', () => {
+            btn.removeEventListener('click', handleBuyClick);
           });
         }
       }
-    });
+    };
+
+    map.on('popupopen', handlePopupOpen);
 
     // Cleanup on unmount
     return () => {
       if (mapRef.current) {
+        mapRef.current.off('popupopen', handlePopupOpen);
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -191,14 +198,19 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
           className: 'custom-leaflet-popup-container'
         });
 
-        // Dynamic click binding inside map component directly
+        // Dynamic click binding inside map component directly with cleanup
         marker.on('popupopen', () => {
           setTimeout(() => {
             const btn = document.getElementById(`btn-buy-${listing.id}`);
             if (btn) {
               btn.onclick = () => {
-                onSelectListing(listing);
+                if (onSelectListingRef.current) {
+                  onSelectListingRef.current(listing);
+                }
               };
+              marker.once('popupclose', () => {
+                if (btn) btn.onclick = null;
+              });
             }
           }, 50);
         });
