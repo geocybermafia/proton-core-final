@@ -231,8 +231,8 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
               <h4 className="text-[10px] font-black uppercase text-proton-text tracking-widest">{(t as any).recent_orders}</h4>
               <Package size={14} className="text-proton-muted" />
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto custom-scrollbar-minimal touch-pan-x">
+              <table className="w-full text-left text-xs min-w-[420px]">
                 <thead>
                   <tr className="border-b border-proton-border uppercase text-[10px] font-black text-proton-muted tracking-widest">
                     <th className="px-6 py-4">Item</th>
@@ -256,7 +256,7 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
                               <img src={order.image} className="w-full h-full object-cover" />
                             </div>
                             <div>
-                              <p className="font-black text-proton-text truncate max-w-[120px]">{order.title}</p>
+                              <p className="font-black text-proton-text truncate max-w-[180px] sm:max-w-xs md:max-w-none">{order.title}</p>
                               <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">${order.price}</p>
                             </div>
                           </div>

@@ -578,7 +578,7 @@ export default function PersonasView({
       <div className={cn(
         "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full min-h-0",
         mobileShowChat 
-          ? "fixed inset-0 z-[80] bg-proton-bg lg:relative lg:inset-auto lg:z-auto lg:bg-proton-card lg:border lg:border-proton-border lg:rounded-2xl" 
+          ? "fixed inset-0 z-[80] bg-proton-bg lg:relative lg:inset-auto lg:z-auto lg:bg-proton-card lg:border lg:border-proton-border lg:rounded-2xl h-[100dvh] lg:h-full" 
           : "hidden lg:flex lg:relative lg:border lg:border-proton-border lg:rounded-2xl"
       )}>
         <AnimatePresence mode="wait">
@@ -608,7 +608,7 @@ export default function PersonasView({
                        )}
                     </div>
                     <div>
-                       <h3 className="font-extrabold text-sm sm:text-base tracking-tight text-proton-text truncate max-w-[120px] sm:max-w-xs">
+                       <h3 className="font-extrabold text-sm sm:text-base tracking-tight text-proton-text truncate max-w-[200px] sm:max-w-xs md:max-w-md">
                          {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
                        </h3>
                        <div className="flex items-center gap-2 text-[9px] font-black tracking-[0.2em] text-proton-accent uppercase mt-0.5">
@@ -616,7 +616,7 @@ export default function PersonasView({
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-proton-accent opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-proton-accent"></span>
                           </span>
-                          <span className="truncate max-w-[100px] sm:max-w-none">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
+                          <span className="truncate max-w-[180px] sm:max-w-none">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
                        </div>
                     </div>
                  </div>
@@ -841,7 +841,7 @@ export default function PersonasView({
                  <div ref={chatEndRef} />
               </div>
 
-              <footer className="p-4 sm:p-6 border-t border-proton-border bg-white/[0.02] shrink-0 pb-safe">
+              <footer className="p-3 sm:p-6 border-t border-proton-border bg-white/[0.02] shrink-0 pb-20 lg:pb-6">
                  <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
                     <AnimatePresence>
                       {showTools && (

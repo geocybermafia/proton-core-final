@@ -556,18 +556,18 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                   />
                 </div>
 
-                <div className="flex gap-2.5">
+                <div className="flex flex-col xs:flex-row gap-2.5 w-full">
                   <button 
                     onClick={handleSimulateDeposit}
                     disabled={!demoAmount}
-                    className="flex-1 px-4 py-2.5 bg-[#dfc394]/10 hover:bg-[#dfc394]/20 border border-[#dfc394]/20 text-[#dfc394] text-[9px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer"
+                    className="flex-1 px-3 sm:px-4 py-2.5 bg-[#dfc394]/10 hover:bg-[#dfc394]/20 border border-[#dfc394]/20 text-[#dfc394] text-[9px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer text-center"
                   >
                     {cur.connected.simulateDeposit}
                   </button>
                   <button 
                     onClick={handleSimulateTransfer}
                     disabled={!demoAmount || !demoRecipient}
-                    className="flex-1 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer"
+                    className="flex-1 px-3 sm:px-4 py-2.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 text-[9px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95 cursor-pointer text-center"
                   >
                     {cur.connected.simulateTransfer}
                   </button>

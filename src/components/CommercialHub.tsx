@@ -211,7 +211,7 @@ app.post('/api/checkout/session', async (req, res) => {
       <div className="flex flex-wrap gap-2 p-1.5 bg-proton-bg border border-proton-border rounded-2xl max-w-4xl">
         <button
           onClick={() => setActiveSubTab('valuation')}
-          className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+          className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'valuation'
               ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
@@ -222,7 +222,7 @@ app.post('/api/checkout/session', async (req, res) => {
         </button>
         <button
           onClick={() => setActiveSubTab('whitelabel')}
-          className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+          className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'whitelabel'
               ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
@@ -233,7 +233,7 @@ app.post('/api/checkout/session', async (req, res) => {
         </button>
         <button
           onClick={() => setActiveSubTab('pitch')}
-          className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+          className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'pitch'
               ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
@@ -244,7 +244,7 @@ app.post('/api/checkout/session', async (req, res) => {
         </button>
         <button
           onClick={() => setActiveSubTab('stripe')}
-          className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+          className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'stripe'
               ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
