@@ -206,9 +206,19 @@ export const OrganizerView = ({
     tasksRef.current = tasks;
   }, [tasks]);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Stopwatch ticking logic
   useEffect(() => {
     if (!activeTimerTaskId) return;
+
+    let isTimerActive = true;
 
     // Load initial task time if not already tracked locally
     const initialTask = tasksRef.current.find(tk => tk.id === activeTimerTaskId);
@@ -223,6 +233,7 @@ export const OrganizerView = ({
 
     let tickCount = 0;
     const interval = setInterval(() => {
+      if (!isTimerActive || !isMountedRef.current) return;
       setLocalTimerSeconds(prev => {
         const nextSec = (prev[activeTimerTaskId] || 0) + 1;
         
@@ -242,6 +253,7 @@ export const OrganizerView = ({
     }, 1000);
 
     return () => {
+      isTimerActive = false;
       clearInterval(interval);
     };
   }, [activeTimerTaskId, onEditTask]);
@@ -489,6 +501,7 @@ export const OrganizerView = ({
     setIsBreakingDown(prev => ({ ...prev, [task.id]: true }));
     try {
       const steps = await breakdownTask(task.content, language);
+      if (!isMountedRef.current) return;
       const newSubtasks = steps.map((stepContent, index) => ({
         id: `sub-${Date.now()}-${index}`,
         content: stepContent,
@@ -496,13 +509,16 @@ export const OrganizerView = ({
       }));
       onEditTask(task.id, { subtasks: newSubtasks });
     } catch (error: any) {
+      if (!isMountedRef.current) return;
       console.error("Failed to auto breakdown task with AI:", error);
       const msg = error?.message || String(error);
       alert(language === 'ka' 
         ? `ავტომატური დაყოფა ვერ მოხერხდა: ${msg}` 
         : `Failed to auto breakdown task: ${msg}`);
     } finally {
-      setIsBreakingDown(prev => ({ ...prev, [task.id]: false }));
+      if (isMountedRef.current) {
+        setIsBreakingDown(prev => ({ ...prev, [task.id]: false }));
+      }
     }
   };
 

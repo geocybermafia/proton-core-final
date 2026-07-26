@@ -41,7 +41,20 @@ export const FriendlyAssistantWidget: React.FC<FriendlyAssistantWidgetProps> = (
   // Global Ctrl+K / Cmd+K listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isEditable = Boolean(
+        target && (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.getAttribute('contenteditable') === 'true'
+        )
+      );
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        if (isEditable && !isOpen) {
+          return;
+        }
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }

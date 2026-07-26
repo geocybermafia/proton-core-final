@@ -97,36 +97,46 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   ];
 
   useEffect(() => {
+    let isSubscribed = true;
+
     if (!user) {
       // Offline / LocalStorage mode
       try {
         const localData = localStorage.getItem('proton_market_hub_ledger');
         if (localData) {
-          setLedgerItems(JSON.parse(localData));
+          if (isSubscribed) setLedgerItems(JSON.parse(localData));
         } else {
-          setLedgerItems(defaultLedger);
-          localStorage.setItem('proton_market_hub_ledger', JSON.stringify(defaultLedger));
+          if (isSubscribed) {
+            setLedgerItems(defaultLedger);
+            localStorage.setItem('proton_market_hub_ledger', JSON.stringify(defaultLedger));
+          }
         }
       } catch (e) {
-        setLedgerItems(defaultLedger);
+        if (isSubscribed) setLedgerItems(defaultLedger);
       }
-      setLoading(false);
-      return;
+      if (isSubscribed) setLoading(false);
+      return () => {
+        isSubscribed = false;
+      };
     }
 
-    // Firebase Persistent Sync
+    // Reset ledger state during authorization transition to prevent transient state pollution
     setLoading(true);
+    setLedgerItems([]);
+
     const userRef = doc(db, 'users', user.uid);
     const ledgerCollection = collection(userRef, 'market_ledger');
 
     const unsubscribe = onSnapshot(ledgerCollection, (snapshot) => {
+      if (!isSubscribed) return;
+
       if (snapshot.empty) {
         // Hydrate Firestore with default seed ledger so the spreadsheet is NOT blank
         Promise.all(defaultLedger.map((item) => {
           const itemDoc = doc(userRef, 'market_ledger', item.id);
           return setDoc(itemDoc, item);
         })).catch((e) => console.warn("Market ledger initial seed failed:", e));
-        setLedgerItems(defaultLedger);
+        if (isSubscribed) setLedgerItems(defaultLedger);
       } else {
         const items: LedgerItem[] = [];
         snapshot.forEach((doc) => {
@@ -134,22 +144,26 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
         // Sort by date or ID
         items.sort((a, b) => b.id.localeCompare(a.id));
-        setLedgerItems(items);
+        if (isSubscribed) setLedgerItems(items);
       }
-      setLoading(false);
+      if (isSubscribed) setLoading(false);
     }, (error) => {
+      if (!isSubscribed) return;
       console.error("Firestore Market Ledger Sync Error:", error);
       // Fallback to local
       try {
         const localData = localStorage.getItem('proton_market_hub_ledger');
-        setLedgerItems(localData ? JSON.parse(localData) : defaultLedger);
+        if (isSubscribed) setLedgerItems(localData ? JSON.parse(localData) : defaultLedger);
       } catch {
-        setLedgerItems(defaultLedger);
+        if (isSubscribed) setLedgerItems(defaultLedger);
       }
-      setLoading(false);
+      if (isSubscribed) setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
   }, [user]);
 
   // Persist to local storage helper for local state robustness
