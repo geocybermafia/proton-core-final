@@ -188,8 +188,10 @@ service cloud.firestore {
       allow get: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       
       allow create: if isVerified() && isValidId(orderId) && isValidOrder(incoming())
-        // Relational Sync (Pillar 1/7) - Optional: verify listing exists and has correct price
-        && exists(/databases/$(database)/documents/listings/$(incoming().listingId));
+        // Relational Sync & Price Validation
+        && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
+        && incoming().amount == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price
+        && incoming().sellerId == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId;
         
       allow update: if isVerified() && (existing().buyerId == request.auth.uid || existing().sellerId == request.auth.uid)
         && incoming().buyerId == existing().buyerId

@@ -1296,11 +1296,21 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             throw new Error('This item has already been sold.');
           }
 
-          const newOrderRef = doc(collection(db, 'orders'));
-          transaction.set(newOrderRef, {
-            ...orderData,
+          const verifiedOrderData = {
+            listingId: checkoutItem.id,
+            buyerId: user.uid,
+            sellerId: freshData.sellerId || checkoutItem.sellerId,
+            amount: freshData.price,
+            currency: freshData.currency || checkoutItem.currency || 'USD',
+            itemTitle: freshData.title || checkoutItem.title,
+            status: isService ? 'booked' : 'completed',
+            orderType: isService ? 'service' : 'product',
+            buyerInstructions: isService ? buyerInstructions.trim() : '',
             createdAt: serverTimestamp()
-          });
+          };
+
+          const newOrderRef = doc(collection(db, 'orders'));
+          transaction.set(newOrderRef, verifiedOrderData);
 
           if (!isService) {
             transaction.update(listingRef, {
