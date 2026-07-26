@@ -235,7 +235,11 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  const rawMsg = errInfo.error || 'Unknown Firestore error';
+  const cleanMsg = `Firestore ${operationType} failed${path ? ` on '${path}'` : ''}: ${rawMsg}`;
+  const customErr = new Error(cleanMsg);
+  (customErr as any).firestoreErrorInfo = errInfo;
+  throw customErr;
 }
 
 export const CATEGORY_EMOJIS: Record<string, string> = {

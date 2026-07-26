@@ -55,5 +55,9 @@ export function handleFirestoreError(
     addLog('error', `Firestore ${operationType} failed on ${path}`, errorInfo);
   }
 
-  throw new Error(JSON.stringify(errorInfo));
+  const rawErrorMsg = errorInfo.error || 'Unknown Firestore error';
+  const cleanMessage = `Firestore ${operationType} failed${path ? ` on '${path}'` : ''}: ${rawErrorMsg}`;
+  const customError = new Error(cleanMessage);
+  (customError as any).firestoreErrorInfo = errorInfo;
+  throw customError;
 }

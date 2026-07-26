@@ -791,49 +791,75 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   useEffect(() => {
     if (!user || authLoading) return;
-    const qListings = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(24));
-    const unsubscribeListings = onSnapshot(qListings, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Listing[];
 
-      // Reclaim / heal corrupted listings where sellerName matches the logged-in user but sellerId is wrong
-      const loggedUser = auth.currentUser;
-      if (loggedUser) {
-        data.forEach((l) => {
-          const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
-          const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
-          const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
+    let unsub: (() => void) | null = null;
 
-          // If the logged-in user is NOT the admin 'devdarianib@gmail.com', AND the listing's sellerName matches their name,
-          // but the listing's sellerId is NOT their UID, then it was corrupted! Let's claim it back.
-          if (loggedUser.email !== 'devdarianib@gmail.com') {
-            const isMatch = sellerNameLower && (
-              sellerNameLower === userEmailPrefix ||
-              sellerNameLower === userDisplayName
-            );
-            if (isMatch && l.sellerId !== loggedUser.uid) {
-              console.log(`[DATA RECOVERY] Reclaiming listing '${l.title}' (${l.id}) for true owner ${loggedUser.email}. Restoring sellerId to:`, loggedUser.uid);
-              updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid })
-                .then(() => {
-                  console.log(`[DATA RECOVERY] Successfully claimed back listing '${l.id}' for user.`);
-                })
-                .catch((e) => {
-                  console.error(`[DATA RECOVERY ERROR] Failed to reclaim listing '${l.id}':`, e);
-                });
-            }
+    const tryFetchListings = (useOrderBy: boolean) => {
+      try {
+        const qListings = useOrderBy 
+          ? query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(24))
+          : query(collection(db, 'listings'), limit(24));
+
+        unsub = onSnapshot(qListings, (snapshot) => {
+          const data = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Listing[];
+
+          if (!useOrderBy) {
+            data.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
+          }
+
+          // Reclaim / heal corrupted listings where sellerName matches the logged-in user but sellerId is wrong
+          const loggedUser = auth.currentUser;
+          if (loggedUser) {
+            data.forEach((l) => {
+              const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
+              const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
+              const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
+
+              // If the logged-in user is NOT the admin 'devdarianib@gmail.com', AND the listing's sellerName matches their name,
+              // but the listing's sellerId is NOT their UID, then it was corrupted! Let's claim it back.
+              if (loggedUser.email !== 'devdarianib@gmail.com') {
+                const isMatch = sellerNameLower && (
+                  sellerNameLower === userEmailPrefix ||
+                  sellerNameLower === userDisplayName
+                );
+                if (isMatch && l.sellerId !== loggedUser.uid) {
+                  console.log(`[DATA RECOVERY] Reclaiming listing '${l.title}' (${l.id}) for true owner ${loggedUser.email}. Restoring sellerId to:`, loggedUser.uid);
+                  updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid })
+                    .then(() => {
+                      console.log(`[DATA RECOVERY] Successfully claimed back listing '${l.id}' for user.`);
+                    })
+                    .catch((e) => {
+                      console.error(`[DATA RECOVERY ERROR] Failed to reclaim listing '${l.id}':`, e);
+                    });
+                }
+              }
+            });
+          }
+
+          setListings(data);
+          setLoading(false);
+        }, (error) => {
+          console.warn(`[MarketHub] Listings listener failed (useOrderBy=${useOrderBy}):`, error);
+          if (useOrderBy) {
+            tryFetchListings(false);
+          } else {
+            setLoading(false);
           }
         });
+      } catch (e) {
+        console.warn("[MarketHub] Query execution exception:", e);
+        setLoading(false);
       }
+    };
 
-      setListings(data);
-      setLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'listings');
-    });
+    tryFetchListings(true);
 
-    return () => unsubscribeListings();
+    return () => {
+      if (unsub) unsub();
+    };
   }, [user, authLoading]);
 
   useEffect(() => {

@@ -3982,6 +3982,30 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // Offline-to-Online Data Reconciliation Effect
+  useEffect(() => {
+    if (isFirestoreActive && user) {
+      try {
+        const rawLocalTasks = safeStorage.get('proton_tasks');
+        if (rawLocalTasks) {
+          const localTasks: Task[] = JSON.parse(rawLocalTasks);
+          if (Array.isArray(localTasks) && localTasks.length > 0) {
+            localTasks.forEach(task => {
+              if (task.id) {
+                const docRef = doc(db, 'users', user.uid, 'tasks', task.id);
+                setDoc(docRef, sanitizeForFirestore(task), { merge: true }).catch(err => {
+                  console.warn("[Offline Reconciliation] Task sync deferred for:", task.id, err);
+                });
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("[Offline Reconciliation] Error during safeStorage task sync:", e);
+      }
+    }
+  }, [isFirestoreActive, user]);
   const [showOptimizationModal, setShowOptimizationModal] = useState(false);
   const [showBetaModal, setShowBetaModal] = useState(false);
   const [isSafeMode, setIsSafeMode] = useState(false);
