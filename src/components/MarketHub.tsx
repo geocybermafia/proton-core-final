@@ -1410,12 +1410,26 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         alert(language === 'ka' ? "ავტორიზაცია აუცილებელია." : "Authentication is required.");
         return;
       }
+
+      const targetOrder = orders.find(o => o.id === orderId);
+      if (!targetOrder) {
+        alert(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.");
+        return;
+      }
+
+      if (targetOrder.sellerId !== user.uid) {
+        alert(language === 'ka' 
+          ? "მხოლოდ გამყიდველს/შემსრულებელს შეუძლია შეკვეთის სტატუსის შეცვლა." 
+          : "Only the seller or service provider is authorized to update order status.");
+        return;
+      }
+
       if (isSupabaseConfigured()) {
         const { error } = await supabase
           .from('orders')
           .update({ status: newStatus })
           .eq('id', orderId)
-          .or(`buyerId.eq.${user.uid},sellerId.eq.${user.uid}`);
+          .eq('sellerId', user.uid);
         if (error) throw error;
       } else {
         await updateDoc(doc(db, 'orders', orderId), {

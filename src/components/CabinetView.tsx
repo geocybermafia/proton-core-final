@@ -112,6 +112,12 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
   };
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    if (!user) return;
+    const targetOrder = sellerOrders.find(o => o.id === orderId);
+    if (!targetOrder || targetOrder.sellerId !== user.uid) {
+      console.error("Only the seller is authorized to update order status.");
+      return;
+    }
     try {
       await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
     } catch (e) {

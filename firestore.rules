@@ -200,7 +200,13 @@ service cloud.firestore {
         && incoming().amount == existing().amount
         && incoming().currency == existing().currency
         && incoming().itemTitle == existing().itemTitle
-        && incoming().createdAt == existing().createdAt;
+        && incoming().createdAt == existing().createdAt
+        // Role-Based Status Update Authorization (C4 Fix)
+        && (
+          (isOwner(existing().sellerId) && incoming().status in ['pending', 'booked', 'in_progress', 'shipped', 'completed', 'delivered', 'cancelled', 'refunded'])
+          ||
+          (isOwner(existing().buyerId) && incoming().status == existing().status)
+        );
       allow delete: if false;
     }
 
