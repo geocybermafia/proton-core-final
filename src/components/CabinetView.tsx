@@ -241,7 +241,16 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-proton-border/50">
-                  {sellerOrders.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-8">
+                        <div className="flex items-center justify-center gap-2 text-proton-muted font-bold text-xs uppercase tracking-widest animate-pulse">
+                          <RefreshCw size={14} className="animate-spin text-proton-accent" />
+                          <span>{(t as any).loading || 'Syncing orders...'}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : sellerOrders.length === 0 ? (
                     <tr>
                       <td colSpan={3} className="px-6 py-12 text-center text-proton-muted font-bold italic uppercase tracking-widest opacity-40">
                         {(t as any).no_orders}

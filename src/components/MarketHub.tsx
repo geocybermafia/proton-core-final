@@ -2098,7 +2098,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
   if (authLoading) {
     return (
-      <div className="min-h-[600px] bg-[#070708] rounded-[36px] border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden">
+      <div className={cn("min-h-[600px] rounded-[36px] border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden", currentTheme.card)}>
         <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-[#dfb257]/[0.02] blur-[120px] pointer-events-none rounded-full" />
         <div className="flex flex-col items-center gap-5 relative z-10">
           <Loader2 className="w-12 h-12 animate-spin text-[#dfb257] opacity-80" />
@@ -3650,7 +3650,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsFiltersOpen(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] lg:hidden"
                 />
                 <motion.div 
                   initial={{ x: '100%' }}
@@ -3658,7 +3658,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                   className={cn(
-                    "fixed right-0 top-16 bottom-0 w-[85%] max-w-sm z-[70] p-8 lg:hidden border-l border-white/5 flex flex-col backdrop-blur-[20px] max-h-[calc(100vh-theme(spacing.16))] overflow-y-auto",
+                    "fixed right-0 top-16 bottom-0 w-[85%] max-w-sm z-[140] p-8 lg:hidden border-l border-white/5 flex flex-col backdrop-blur-[20px] max-h-[calc(100vh-theme(spacing.16))] overflow-y-auto",
                     currentTheme.card
                   )}
                 >
@@ -4441,7 +4441,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
       <AnimatePresence>
         {isCartOpen && (
-          <div className="fixed inset-0 z-[100] flex items-stretch sm:items-center justify-end p-0 sm:p-4">
+          <div className="fixed inset-0 z-[140] flex items-stretch sm:items-center justify-end p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4586,7 +4586,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {checkoutItem && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4619,7 +4619,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 </div>
 
                 <div className="bg-white/5 rounded-[32px] p-6 border border-white/5 flex items-center gap-6">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
                     {checkoutItem.image ? (
                       <img src={checkoutItem.image} alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} className="w-full h-full object-cover" />
                     ) : (
@@ -4661,11 +4661,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   <div className="space-y-4 bg-white/5 rounded-[32px] p-6 border border-white/5 text-left">
                     <h4 className="text-xs font-black uppercase tracking-wider text-white">⚡ {language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Rules'}</h4>
                     <div className="grid grid-cols-2 gap-4 text-xs font-medium">
-                      <div className="bg-white/5 rounded-xl p-3">
+                      <div className="bg-white/5 rounded-lg p-3">
                         <span className="block text-[8px] uppercase tracking-wider opacity-40 mb-1">{language === 'ka' ? 'შესრულების ვადა' : 'Duration'}</span>
                         <span className="text-white font-bold">{checkoutItem.serviceDuration || (language === 'ka' ? 'შეთანხმებით' : 'Flexible')}</span>
                       </div>
-                      <div className="bg-white/5 rounded-xl p-3">
+                      <div className="bg-white/5 rounded-lg p-3">
                         <span className="block text-[8px] uppercase tracking-wider opacity-40 mb-1">{language === 'ka' ? 'პირობა' : 'Requirements'}</span>
                         <span className="text-white font-bold truncate block">{checkoutItem.serviceTerms || (language === 'ka' ? 'სტანდარტული' : 'Standard')}</span>
                       </div>
@@ -4716,7 +4716,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {activeChatListing && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4729,7 +4729,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
-              className="relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden bg-[#121212]"
+              className={cn(
+                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden",
+                currentTheme.card
+              )}
             >
               <div className="p-6 sm:p-10 pb-24 sm:pb-10 space-y-6 flex flex-col h-[85vh] md:h-[600px] max-h-[90vh]">
                 <div className="flex items-center justify-between">
@@ -4763,7 +4766,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 </div>
 
                 {/* Messages Body */}
-                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-black/20 rounded-[24px] p-4 border border-white/5">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-black/20 rounded-2xl p-4 border border-white/5">
                   {messagesList.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
                       <span className="text-2xl opacity-40">🤝</span>
@@ -4781,7 +4784,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <div 
                         key={msg.id} 
                         className={cn(
-                          "flex flex-col max-w-[85%] rounded-[24px] p-4 text-xs font-medium space-y-1",
+                          "flex flex-col max-w-[85%] rounded-xl p-4 text-xs font-medium space-y-1",
                           msg.senderId === user?.uid 
                             ? "bg-[#2e5bff] text-white ml-auto rounded-tr-none shadow-[0_4px_10px_rgba(46,91,255,0.2)]" 
                             : "bg-white/10 text-white mr-auto rounded-tl-none"
@@ -4823,7 +4826,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {selectedVendor && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

@@ -322,7 +322,7 @@ export const DashboardView = React.memo(({
                     type="button"
                     onClick={() => toggleWidget(gate.id)}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-2xl border transition-all text-left group active:scale-95 cursor-pointer",
+                      "flex items-center gap-3 p-3 rounded-xl border transition-all text-left group active:scale-95 cursor-pointer",
                       isVisible 
                         ? "bg-proton-accent/5 border-proton-accent/40 text-proton-text" 
                         : "bg-transparent border-proton-border/40 text-proton-muted hover:border-proton-border"

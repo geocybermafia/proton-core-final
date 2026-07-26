@@ -229,7 +229,7 @@ export const FriendlyAssistantWidget: React.FC<FriendlyAssistantWidgetProps> = (
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.92 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-proton-accent via-cyan-500 to-blue-600 text-proton-bg font-black text-xs shadow-2xl shadow-proton-accent/25 hover:shadow-proton-accent/40 transition-all border border-white/20 group"
+        className="fixed bottom-6 right-6 z-[90] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-gradient-to-r from-proton-accent via-cyan-500 to-blue-600 text-proton-bg font-black text-xs shadow-2xl shadow-proton-accent/25 hover:shadow-proton-accent/40 transition-all border border-white/20 group"
         title={isKa ? 'სწრაფი ასისტენტი და ნავიგაცია (Ctrl+K)' : 'Quick AI Assistant & Nav (Ctrl+K)'}
         id="friendly-assistant-trigger"
       >
@@ -245,7 +245,7 @@ export const FriendlyAssistantWidget: React.FC<FriendlyAssistantWidgetProps> = (
       {/* Modal Quick Launcher */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 sm:p-6">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
