@@ -558,8 +558,8 @@ export default function PersonasView({
                  <div className="font-bold text-sm tracking-tight truncate group-hover:text-proton-text transition-colors">
                    {language === 'ka' ? (p.nameGe || p.name) : p.name}
                  </div>
-                 <div className="text-[9px] font-black uppercase tracking-widest opacity-60 truncate mt-0.5 text-proton-muted flex items-center gap-1">
-                   <span className="inline-block w-1 h-1 rounded-full bg-proton-muted" />
+                 <div className="text-[10px] font-bold uppercase tracking-widest truncate mt-0.5 text-proton-text-light flex items-center gap-1">
+                   <span className="inline-block w-1 h-1 rounded-full bg-proton-accent" />
                    {language === 'ka' ? (p.roleGe || p.role) : p.role}
                  </div>
               </div>
@@ -689,7 +689,7 @@ export default function PersonasView({
                           <Sparkles size={13} className="animate-bounce" />
                           {language === 'ka' ? 'სისტემური ინსტრუქციები' : 'System Cogitative Instructions'}
                         </label>
-                        <span className="text-[9px] text-proton-muted uppercase font-mono tracking-wider opacity-60">
+                        <span className="text-[10px] text-proton-text-light font-mono font-bold uppercase tracking-wider">
                            {language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}
                         </span>
                       </div>
@@ -705,7 +705,7 @@ export default function PersonasView({
                             <p className="text-[10px] font-black uppercase tracking-wider text-proton-text group-hover:text-proton-accent transition-colors">
                               {language === 'ka' ? p.titleKa : p.titleEn}
                             </p>
-                            <p className="text-[9px] text-proton-muted leading-relaxed line-clamp-2 mt-1">
+                            <p className="text-[10px] text-proton-text-light/90 font-medium leading-relaxed line-clamp-2 mt-1">
                               {language === 'ka' ? p.descKa : p.descEn}
                             </p>
                           </button>

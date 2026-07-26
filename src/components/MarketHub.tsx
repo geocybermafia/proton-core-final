@@ -4549,7 +4549,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
               {/* Action buttons at bottom */}
               {cart.length > 0 && (
-                <div className="p-6 border-t border-white/5 space-y-4 shrink-0 bg-black/40">
+                <div className="p-6 pb-24 sm:pb-6 border-t border-white/5 space-y-4 shrink-0 bg-black/40">
                   <div className="flex items-center justify-between">
                     <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                       {language === 'ka' ? 'ჯამური ღირებულება' : 'Total Price'}
@@ -4604,7 +4604,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 currentTheme.card
               )}
             >
-              <div className="p-6 sm:p-10 space-y-8 max-h-[85vh] md:max-h-[600px] overflow-y-auto custom-scrollbar-minimal">
+              <div className="p-6 sm:p-10 pb-24 sm:pb-10 space-y-8 max-h-[85vh] md:max-h-[600px] overflow-y-auto custom-scrollbar-minimal">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-black uppercase tracking-tight text-white">
                     {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
@@ -4731,7 +4731,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className="relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden bg-[#121212]"
             >
-              <div className="p-6 sm:p-10 space-y-6 flex flex-col h-[85vh] md:h-[600px] max-h-[90vh]">
+              <div className="p-6 sm:p-10 pb-24 sm:pb-10 space-y-6 flex flex-col h-[85vh] md:h-[600px] max-h-[90vh]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
@@ -4841,7 +4841,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 currentTheme.card
               )}
             >
-              <div className="p-6 sm:p-8 space-y-6 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-none">
+              <div className="p-6 sm:p-8 pb-24 sm:pb-8 space-y-6 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-none">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
                   <div className="flex items-center gap-3">

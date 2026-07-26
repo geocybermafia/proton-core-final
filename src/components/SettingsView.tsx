@@ -579,7 +579,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 "text-[10px] font-black uppercase tracking-wider",
                                 Math.abs(aiSettings.temperature - item.val) < 0.05 ? "text-proton-accent" : "text-proton-text"
                               )}>{item.label}</span>
-                              <span className="text-[8px] text-proton-muted block font-medium uppercase tracking-tight mt-1 truncate leading-normal">{item.desc}</span>
+                              <span className="text-[10px] text-proton-text-light/90 block font-semibold uppercase tracking-tight mt-1 truncate leading-normal">{item.desc}</span>
                             </button>
                           ))}
                         </div>
@@ -1719,9 +1719,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-center gap-2">
                               <span className="text-[10px] font-black uppercase tracking-wider text-proton-text truncate">{item.label}</span>
-                              <span className="text-[8px] font-mono text-proton-muted shrink-0 bg-proton-secondary/20 px-2 py-0.5 rounded border border-proton-border/10">{item.req}</span>
+                              <span className="text-[10px] font-mono text-proton-text-light font-bold shrink-0 bg-proton-secondary/30 px-2 py-0.5 rounded border border-proton-border/30">{item.req}</span>
                             </div>
-                            <p className="text-[9px] text-proton-muted truncate font-mono mt-0.5">{item.desc}</p>
+                            <p className="text-[10px] text-proton-text-light/90 truncate font-mono mt-0.5">{item.desc}</p>
                           </div>
                         </div>
                       ))}

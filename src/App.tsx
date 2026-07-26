@@ -5496,15 +5496,15 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="min-h-16 h-auto md:h-16 border-b border-proton-border flex items-center justify-between px-4 sm:px-6 md:px-8 py-3 md:py-0 gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
+        <header className="min-h-14 sm:min-h-16 h-auto md:h-16 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-6 md:px-8 py-2 md:py-0 gap-x-2 sm:gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
           {/* Left Section: User & Status */}
-          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 max-w-full">
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)]"
+              className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)]"
               title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Hide Sidebar') : (language === 'ka' ? 'საიდბარი' : 'Show Sidebar')}
             >
-              <Grid size={18} className={cn("transition-transform duration-500", isSidebarOpen ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
+              <Grid size={16} className={cn("transition-transform duration-500 sm:w-[18px] sm:h-[18px]", isSidebarOpen ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
             </button>
 
             {activeView !== 'dashboard' && (
@@ -5513,10 +5513,10 @@ export default function App() {
                   setUiMode('business');
                   handleViewChange('dashboard');
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[10px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0"
+                className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[9px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0"
                 title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
               >
-                <ArrowLeft size={13} className="stroke-[2.5]" />
+                <ArrowLeft size={12} className="stroke-[2.5] sm:w-[13px] sm:h-[13px]" />
                 <span>{language === 'ka' ? 'მთავარი' : 'Home'}</span>
               </button>
             )}
@@ -5589,8 +5589,8 @@ export default function App() {
           </nav>
           
           {/* Right Section: System Controls */}
-          <div className="flex items-center justify-end gap-2 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
-            <div className="flex items-center gap-2 md:gap-3 shrink-0">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
+            <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
               {/* Elegant Compact Language Selector for 1-click accessibility */}
               <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
                 <button
@@ -5605,7 +5605,7 @@ export default function App() {
                     }
                   }}
                   className={cn(
-                    "px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
+                    "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
                     language === 'en' 
                       ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
                       : "text-proton-muted hover:text-proton-text-light"
@@ -5626,7 +5626,7 @@ export default function App() {
                     }
                   }}
                   className={cn(
-                    "px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
+                    "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
                     language === 'ka' 
                       ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
                       : "text-proton-muted hover:text-proton-text-light"
@@ -5639,10 +5639,10 @@ export default function App() {
 
               <button 
                 onClick={handleSignOut}
-                className="w-10 h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0"
+                className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0"
                 title="Firebase Sign Out"
               >
-                <LogOut size={18} />
+                <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
             </div>
           </div>
