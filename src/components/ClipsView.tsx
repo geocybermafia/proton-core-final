@@ -2492,29 +2492,29 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       {/* CREATE NEW REEL MODAL */}
       <AnimatePresence>
         {isCreateOpen && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto">
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ type: "spring", duration: 0.5 }}
-              className="relative w-full max-w-2xl bg-proton-bg border border-proton-border/30 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-proton-text"
+              className="relative w-full max-w-2xl bg-proton-bg border border-proton-border/30 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col max-h-[88dvh] sm:max-h-[85vh] overflow-hidden text-proton-text my-auto"
             >
               {/* Close Button */}
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="absolute top-5 right-5 p-2 rounded-xl bg-white/5 border border-white/10 text-proton-muted hover:text-white hover:bg-white/10 transition-all z-10"
+                className="absolute top-3 right-3 sm:top-5 sm:right-5 p-2 rounded-xl bg-white/5 border border-white/10 text-proton-muted hover:text-white hover:bg-white/10 transition-all z-10"
               >
                 <X size={16} />
               </button>
 
               {/* Title Header */}
-              <div className="flex items-center gap-2.5 pb-4 border-b border-proton-border/10">
+              <div className="flex items-center gap-2.5 pb-3 sm:pb-4 border-b border-proton-border/10 shrink-0 pr-8">
                 <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
                   <Video className="animate-pulse" size={18} />
                 </div>
                 <div>
-                  <h3 className="font-black text-sm uppercase tracking-wider text-white">
+                  <h3 className="font-black text-xs sm:text-sm uppercase tracking-wider text-white">
                     {language === 'ka' ? 'კრეატორთა სტუდია' : 'Creator Studio'}
                   </h3>
                   <p className="text-[10px] text-proton-muted">
@@ -2524,7 +2524,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
               </div>
 
               {/* STEP PROGRESS WIZARD INDICATOR */}
-              <div className="py-4 px-2 flex items-center justify-between gap-2 border-b border-proton-border/10">
+              <div className="py-2.5 sm:py-4 px-1 sm:px-2 flex items-center justify-between gap-1.5 sm:gap-2 border-b border-proton-border/10 shrink-0">
                 {[
                   { step: 1, labelKa: 'ვიდეო ფაილი', labelEn: 'Video File' },
                   { step: 2, labelKa: 'აღწერა & ტეგები', labelEn: 'Caption & Tags' },
@@ -2570,7 +2570,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
               </div>
 
               {/* MAIN CONTENT WORKSPACE */}
-              <div className="flex-1 overflow-y-auto py-5 pr-1 space-y-6">
+              <div className="flex-1 overflow-y-auto max-h-[60vh] sm:max-h-[75vh] py-3 sm:py-5 pr-1 space-y-4 sm:space-y-6 custom-scrollbar">
                 
                 {/* STEP 1: VIDEO MEDIA SOURCE SELECTION */}
                 {uploadStep === 1 && (
@@ -2996,7 +2996,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
               </div>
 
               {/* ACTION FOOTER */}
-              <div className="pt-4 border-t border-proton-border/10 flex items-center justify-between gap-3">
+              <div className="sticky bottom-0 z-20 shrink-0 pt-3 sm:pt-4 pb-1 sm:pb-0 bg-proton-bg border-t border-proton-border/10 flex items-center justify-between gap-2 sm:gap-3 mt-auto pb-safe">
                 
                 {/* Back Button */}
                 {uploadStep > 1 ? (
@@ -3077,21 +3077,21 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       {/* AI AUTO-FIX OVERLAY DIALOG */}
       <AnimatePresence>
         {showAutoFixDialog && selectedClipForFix && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto">
             <div className="absolute inset-0" onClick={() => setShowAutoFixDialog(false)} />
             
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-lg bg-proton-bg border border-proton-border/30 rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10"
+              className="relative w-full max-w-lg bg-proton-bg border border-proton-border/30 rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10 max-h-[88dvh] sm:max-h-[85vh] my-auto"
             >
               {/* Modal Header */}
-              <div className="p-4 border-b border-proton-border/20 flex items-center justify-between bg-gradient-to-r from-purple-950/20 to-indigo-950/20">
+              <div className="p-3.5 sm:p-4 border-b border-proton-border/20 flex items-center justify-between bg-gradient-to-r from-purple-950/20 to-indigo-950/20 shrink-0">
                 <div className="flex items-center gap-2">
                   <Wand2 className="text-purple-400 animate-pulse" size={18} />
                   <div>
-                    <h3 className="font-black text-sm text-white">
+                    <h3 className="font-black text-xs sm:text-sm text-white">
                       {language === 'ka' ? 'AI ვიდეო ოპტიმიზატორი' : 'Gemini Auto-Fix Video Co-Pilot'}
                     </h3>
                     <p className="text-[10px] text-proton-muted">
@@ -3108,7 +3108,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
               </div>
 
               {/* Scrollable Contents */}
-              <div className="p-5 overflow-y-auto max-h-[60vh] space-y-5">
+              <div className="p-4 sm:p-5 overflow-y-auto flex-1 max-h-[60vh] sm:max-h-[70vh] space-y-4 sm:space-y-5 custom-scrollbar">
                 {isAnalyzing ? (
                   <div className="py-12 flex flex-col items-center justify-center text-center gap-4">
                     <div className="relative">
@@ -3323,7 +3323,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
               </div>
 
               {/* Action Footer */}
-              <div className="p-4 border-t border-proton-border/20 bg-proton-bg/40 backdrop-blur-md flex items-center justify-end gap-3">
+              <div className="p-3.5 sm:p-4 border-t border-proton-border/20 bg-proton-bg/95 backdrop-blur-md flex items-center justify-end gap-3 shrink-0 sticky bottom-0 z-20 pb-safe">
                 <button
                   type="button"
                   onClick={() => setShowAutoFixDialog(false)}
