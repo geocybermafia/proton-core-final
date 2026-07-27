@@ -1374,94 +1374,122 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
 
     let finalVideoUrl = newClipVideoUrl.trim();
     let finalSound = newClipSound.trim() || 'Original Sound';
-
     const docId = `clip-${Math.random().toString(36).substring(2, 11)}`;
 
-    // If there's a local video file, attempt to upload directly to Firebase Storage
-    if (localVideoFile) {
-      try {
-        const localBlobUrl = URL.createObjectURL(localVideoFile);
-        setClipFallbackUrls(prev => ({ ...prev, [docId]: localBlobUrl }));
-      } catch (e) {
-        console.warn("Failed to create local object URL:", e);
-      }
-
-      try {
-        // Upload to Firebase Storage pipeline
-        const downloadUrl = await uploadClipVideo(
-          user.uid,
-          docId,
-          localVideoFile,
-          (progress) => setUploadProgress(progress)
-        );
-        finalVideoUrl = downloadUrl;
-      } catch (storageErr) {
-        console.warn("Firebase Storage upload failed, attempting fallback:", storageErr);
-        // Fallback to local cache / base64 if Firebase Storage fails
-        if (localVideoFile.size > 700 * 1024) {
-          try {
-            await saveVideoToLocalCache(docId, localVideoFile);
-            finalVideoUrl = `indexeddb://${docId}`;
-            showToast(
-              language === 'ka' 
-                ? 'ვიდეო ფაილი შეინახა ლოკალურ მეხსიერებაში (Storage Fallback)' 
-                : 'Video file saved to local browser cache (Storage Fallback)',
-              'info'
-            );
-          } catch (err) {
-            console.error("Failed to save to local IndexedDB:", err);
-          }
-        } else {
-          try {
-            const base64String = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(localVideoFile);
-            });
-            finalVideoUrl = base64String;
-          } catch (err) {
-            console.error("Base64 video conversion error:", err);
-          }
-        }
-      }
-    }
-
-    // If no custom URL or local conversion, use selected preset
-    if (!finalVideoUrl) {
-      const preset = PRESET_LOOPS.find(p => p.id === selectedPresetId);
-      if (preset) {
-        finalVideoUrl = preset.url;
-        if (!newClipSound.trim()) {
-          finalSound = preset.sound;
-        }
-      }
-    }
-
-    const clipData = {
-      id: docId,
-      videoUrl: finalVideoUrl,
-      thumbnailUrl: newClipThumbnail || '',
-      duration: newClipDuration || 0,
-      caption: newClipCaption,
-      creatorId: user.uid,
-      creatorName: userProfile?.name || user.displayName || user.email?.split('@')[0] || 'Proton Member',
-      creatorAvatar: userProfile?.avatar || user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80',
-      likes: [],
-      likesCount: 0,
-      soundName: finalSound,
-      productId: newClipProductId || '',
-      createdAt: serverTimestamp()
-    };
+    console.log(`[handleCreateReel] Initializing clip publishing pipeline (Doc ID: ${docId})...`);
 
     try {
+      // Step 1: Handle local video file upload or conversion
+      if (localVideoFile) {
+        console.log(`[handleCreateReel] Step 1: Processing local video file "${localVideoFile.name}" (${localVideoFile.size} bytes)...`);
+        
+        try {
+          const localBlobUrl = URL.createObjectURL(localVideoFile);
+          setClipFallbackUrls(prev => ({ ...prev, [docId]: localBlobUrl }));
+        } catch (blobErr) {
+          console.warn("[handleCreateReel] Failed to create local Blob preview URL:", blobErr);
+        }
+
+        try {
+          console.log('[handleCreateReel] Step 1a: Uploading video to Firebase Storage...');
+          const downloadUrl = await uploadClipVideo(
+            user.uid,
+            docId,
+            localVideoFile,
+            (progress) => {
+              console.log(`[handleCreateReel] Storage upload progress snapshot: ${progress}%`);
+              setUploadProgress(progress);
+            }
+          );
+          finalVideoUrl = downloadUrl;
+          console.log('[handleCreateReel] Step 1a: Firebase Storage upload succeeded with URL:', downloadUrl);
+        } catch (storageErr) {
+          console.error('[handleCreateReel] Step 1a: Firebase Storage upload failed or timed out:', storageErr);
+          showToast(
+            language === 'ka' 
+              ? 'Storage-ში ატვირთვა ვერ მოხერხდა, გადავდივართ ალტერნატიულ რეჟიმზე' 
+              : 'Firebase Storage upload failed, trying local fallback storage',
+            'warning'
+          );
+
+          // Fallback to local cache / base64 if Firebase Storage fails
+          if (localVideoFile.size > 700 * 1024) {
+            try {
+              console.log('[handleCreateReel] Step 1b: Saving large file to local IndexedDB cache...');
+              await saveVideoToLocalCache(docId, localVideoFile);
+              finalVideoUrl = `indexeddb://${docId}`;
+              showToast(
+                language === 'ka' 
+                  ? 'ვიდეო ფაილი შეინახა ლოკალურ მეხსიერებაში' 
+                  : 'Video file saved to local browser cache',
+                'info'
+              );
+            } catch (indexedDbErr) {
+              console.error("[handleCreateReel] Step 1b: Failed to save to local IndexedDB:", indexedDbErr);
+            }
+          } else {
+            try {
+              console.log('[handleCreateReel] Step 1b: Converting small file to Base64 data URL...');
+              const base64String = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(localVideoFile);
+              });
+              finalVideoUrl = base64String;
+              console.log('[handleCreateReel] Step 1b: Base64 data URL generated successfully.');
+            } catch (base64Err) {
+              console.error("[handleCreateReel] Step 1b: Base64 conversion failed:", base64Err);
+            }
+          }
+        }
+      }
+
+      // Step 2: Fallback to preset loops if video URL is still missing
+      if (!finalVideoUrl) {
+        console.log('[handleCreateReel] Step 2: No custom file or URL provided. Falling back to preset loops...');
+        const preset = PRESET_LOOPS.find(p => p.id === selectedPresetId);
+        if (preset) {
+          finalVideoUrl = preset.url;
+          if (!newClipSound.trim()) {
+            finalSound = preset.sound;
+          }
+          console.log('[handleCreateReel] Preset loop selected:', preset.id);
+        }
+      }
+
+      if (!finalVideoUrl) {
+        throw new Error('No valid video URL or file source could be resolved.');
+      }
+
+      // Step 3: Write clip document to Firestore
+      console.log(`[handleCreateReel] Step 3: Preparing Firestore document for clip "${docId}"...`);
+      const clipData = {
+        id: docId,
+        videoUrl: finalVideoUrl,
+        thumbnailUrl: newClipThumbnail || '',
+        duration: newClipDuration || 0,
+        caption: newClipCaption,
+        creatorId: user.uid,
+        creatorName: userProfile?.name || user.displayName || user.email?.split('@')[0] || 'Proton Member',
+        creatorAvatar: userProfile?.avatar || user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80',
+        likes: [],
+        likesCount: 0,
+        soundName: finalSound,
+        productId: newClipProductId || '',
+        createdAt: serverTimestamp()
+      };
+
+      console.log('[handleCreateReel] Calling setDoc(db, "clips", docId)...');
       await setDoc(doc(db, 'clips', docId), clipData);
+      console.log(`[handleCreateReel] Step 3: Firestore document created successfully for clip "${docId}"!`);
+
       showToast(
         language === 'ka' ? 'კლიპი წარმატებით აიტვირთა!' : 'Clip uploaded successfully!',
         'success'
       );
-      
-      // Reset fields
+
+      // Reset form state
       setNewClipCaption('');
       setNewClipSound('');
       setNewClipVideoUrl('');
@@ -1474,13 +1502,17 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       setIsCreateOpen(false);
       setActiveTab('myClips'); // Switch to My Clips to see the post!
       setCurrentIndex(0);
+
     } catch (error) {
-      console.error("Failed to upload clip:", error);
+      console.error("[handleCreateReel] Uncaught error during reel creation pipeline:", error);
       showToast(
-        language === 'ka' ? 'ატვირთვისას მოხდა შეცდომა' : 'Failed to upload clip',
+        language === 'ka' 
+          ? `ატვირთვისას მოხდა შეცდომა: ${(error as Error).message || ''}` 
+          : `Failed to upload clip: ${(error as Error).message || 'Unknown error'}`,
         'error'
       );
     } finally {
+      console.log('[handleCreateReel] Pipeline completed. Resetting loading states...');
       setIsUploading(false);
       setUploadProgress(0);
     }
