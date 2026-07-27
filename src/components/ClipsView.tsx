@@ -1301,23 +1301,27 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
         return next;
       });
 
-      // 3. Immediately purge local IndexedDB video cache
-      deleteVideoFromLocalCache(deletedId);
+      // 3. Immediately purge local IndexedDB video cache optimistically
+      await deleteVideoFromLocalCache(deletedId);
 
       if (currentIndex > 0) {
         setCurrentIndex(prev => Math.max(0, prev - 1));
       }
 
-      // 4. Delete from Firestore database
+      // 4. Delete from Firestore database and re-confirm cache invalidation
       try {
         await deleteDoc(doc(db, 'clips', deletedId));
+        
+        // Explicitly invalidate/clear local cache after successful Firestore delete operation
+        await deleteVideoFromLocalCache(deletedId);
+
         showToast(
           language === 'ka' ? 'კლიპი წარმატებით წაიშალა' : 'Clip deleted successfully',
           'success'
         );
       } catch (e) {
         console.error("Error deleting clip from Firestore:", e);
-        // Revert optimistic deletion if server call failed
+        // Revert optimistic deletion tracking if server call failed
         deletedClipIdsRef.current.delete(deletedId);
         showToast(
           language === 'ka' ? 'წაშლა ვერ მოხერხდა' : 'Failed to delete clip from server',

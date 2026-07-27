@@ -3910,6 +3910,34 @@ export default function App() {
     }
   }, [activeView]);
 
+  // Mobile Navigation IntersectionObserver for performant visibility toggling
+  const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
+  const mobileNavSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const sentinel = mobileNavSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry) {
+          setIsMobileNavVisible(entry.isIntersecting);
+        }
+      },
+      {
+        root: document.getElementById('main-scroll-container'),
+        threshold: 0.1,
+        rootMargin: '0px',
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeView]);
+
   // Lock html and body overflow when user is logged in to prevent whole-screen browser scroll leaks
   useEffect(() => {
     if (user) {
@@ -5449,16 +5477,31 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Nav (Mobile Only) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl">
+      <nav 
+        className={cn(
+          "md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/98 backdrop-blur-md border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl transition-all duration-300 ease-in-out",
+          (isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas')
+            ? "translate-y-0 opacity-100 pointer-events-auto"
+            : "translate-y-full opacity-0 pointer-events-none"
+        )}
+      >
         {[
           { id: 'dashboard', icon: LayoutDashboard, label: language === 'ka' ? 'მთავარი' : 'Home' },
           { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'კრეატივი' : 'Creative' },
           { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
           { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
         ].map((item) => {
-          const isActive = item.id === 'control-hub'
-            ? (activeView === 'profile' || activeView === 'settings' || isMobileControlOpen)
-            : activeView === item.id;
+          let isActive = false;
+          if (item.id === 'dashboard') {
+            isActive = activeView === 'dashboard';
+          } else if (item.id === 'creative-studio') {
+            isActive = ['creative-studio', 'image', 'copywriting', 'translator', 'personas', 'blueprints', 'clips'].includes(activeView);
+          } else if (item.id === 'market-hub') {
+            isActive = ['market-hub', 'market', 'commercial'].includes(activeView);
+          } else if (item.id === 'control-hub') {
+            isActive = isMobileControlOpen || ['profile', 'settings', 'organizer', 'finance', 'business-hub', 'compute', 'device', 'documentation'].includes(activeView);
+          }
+
           return (
             <button
               key={item.id}
@@ -5655,6 +5698,8 @@ export default function App() {
             (activeView === 'personas' || activeView === 'clips') ? "overflow-hidden" : "overflow-y-auto"
           )}
         >
+          {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
+          <div ref={mobileNavSentinelRef} id="mobile-nav-sentinel" className="h-px w-full shrink-0 pointer-events-none opacity-0" />
           <div className={cn(
             "mx-auto px-1 w-full flex-1 min-h-0 flex flex-col",
             (activeView === 'personas' || activeView === 'clips') 
