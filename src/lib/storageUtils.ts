@@ -38,20 +38,36 @@ export async function uploadFileToStorage(
   return new Promise((resolve, reject) => {
     let isSettled = false;
 
+    const settleResolve = (downloadUrl: string, fullPath: string) => {
+      if (isSettled) return;
+      isSettled = true;
+      clearTimeout(timeoutId);
+      console.log(`[StorageUtils] Successfully resolved upload for "${path}":`, downloadUrl);
+      resolve({ downloadUrl, fullPath });
+    };
+
+    const settleReject = (error: any) => {
+      if (isSettled) return;
+      isSettled = true;
+      clearTimeout(timeoutId);
+      console.error(`[StorageUtils] Upload rejected for path "${path}":`, error);
+      reject(error);
+    };
+
     // Timeout guard to prevent infinite hanging
     const timeoutId = setTimeout(() => {
       if (!isSettled) {
-        isSettled = true;
         console.error(`[StorageUtils] Upload timed out after ${timeoutMs}ms for path "${path}". Canceling task...`);
         try {
           uploadTask.cancel();
         } catch (e) {
           console.warn('[StorageUtils] Failed to cancel upload task:', e);
         }
-        reject(new Error(`Firebase Storage upload timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
+        settleReject(new Error(`Firebase Storage upload timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
       }
     }, timeoutMs);
 
+    // Observer for progress and completion
     uploadTask.on(
       'state_changed',
       (snapshot) => {
@@ -64,32 +80,34 @@ export async function uploadFileToStorage(
         }
       },
       (error) => {
-        if (isSettled) return;
-        isSettled = true;
-        clearTimeout(timeoutId);
-        console.error(`[StorageUtils] uploadTask error state for path "${path}":`, error);
-        reject(error);
+        settleReject(error);
       },
       async () => {
         if (isSettled) return;
-        console.log(`[StorageUtils] File bytes transferred successfully for "${path}". Fetching download URL...`);
+        console.log(`[StorageUtils] Observer completed for "${path}". Fetching download URL...`);
         try {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          if (isSettled) return;
-          isSettled = true;
-          clearTimeout(timeoutId);
-          console.log(`[StorageUtils] Successfully obtained download URL for "${path}":`, downloadUrl);
-          resolve({
-            downloadUrl,
-            fullPath: uploadTask.snapshot.ref.fullPath,
-          });
+          settleResolve(downloadUrl, uploadTask.snapshot.ref.fullPath);
         } catch (err) {
-          if (isSettled) return;
-          isSettled = true;
-          clearTimeout(timeoutId);
-          console.error(`[StorageUtils] getDownloadURL failed for path "${path}":`, err);
-          reject(err);
+          settleReject(err);
         }
+      }
+    );
+
+    // Secondary backup: Promise handler on uploadTask
+    uploadTask.then(
+      async (snapshot) => {
+        if (isSettled) return;
+        console.log(`[StorageUtils] Task promise resolved for "${path}". Fetching download URL...`);
+        try {
+          const downloadUrl = await getDownloadURL(snapshot.ref);
+          settleResolve(downloadUrl, snapshot.ref.fullPath);
+        } catch (err) {
+          settleReject(err);
+        }
+      },
+      (error) => {
+        settleReject(error);
       }
     );
   });

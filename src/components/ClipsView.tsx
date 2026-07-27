@@ -85,6 +85,18 @@ const saveVideoToLocalCache = async (id: string, file: File | Blob): Promise<voi
   }
 };
 
+const deleteVideoFromLocalCache = async (id: string): Promise<void> => {
+  try {
+    const db = await initDB();
+    const transaction = db.transaction('videos', 'readwrite');
+    const store = transaction.objectStore('videos');
+    store.delete(id);
+    console.log(`[IndexedDB] Cache entry deleted for clip "${id}"`);
+  } catch (e) {
+    console.warn("[IndexedDB] Deletion from local cache failed:", e);
+  }
+};
+
 const getVideoFromLocalCache = async (id: string): Promise<Blob | null> => {
   try {
     const db = await initDB();
@@ -458,6 +470,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
   const [showAutoFixDialog, setShowAutoFixDialog] = useState(false);
   const [selectedClipForFix, setSelectedClipForFix] = useState<Clip | null>(null);
   const [appliedFixes, setAppliedFixes] = useState<Record<string, string[]>>({}); // mapping of clipId -> array of issueIds
+  const deletedClipIdsRef = useRef<Set<string>>(new Set());
   const [previewingIssueId, setPreviewingIssueId] = useState<string | null>(null);
   const [doubleTapHearts, setDoubleTapHearts] = useState<Record<string, boolean>>({});
   const [soundOverlay, setSoundOverlay] = useState<{ visible: boolean; muted: boolean }>({ visible: false, muted: false });
@@ -994,7 +1007,9 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
         return;
       }
 
-      const rawClips = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Clip));
+      const rawClips = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Clip))
+        .filter(c => !deletedClipIdsRef.current.has(c.id));
 
       // Resolve tagged product info and local IndexedDB URLs
       const populatedClips = await Promise.all(rawClips.map(async (clip) => {
@@ -1258,22 +1273,54 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     }
   };
 
-  // Delete Clip
+  // Delete Clip with Optimistic UI & Local Cache Invalidation
   const handleDeleteClip = async (clip: Clip) => {
     if (window.confirm(language === 'ka' ? 'ნამდვილად გსურთ ამ კლიპის წაშლა?' : 'Are you sure you want to delete this clip?')) {
+      const deletedId = clip.id;
+
+      // Mark as deleted in ref to prevent snapshot resurrection
+      deletedClipIdsRef.current.add(deletedId);
+
+      // 1. Optimistically remove from local React states
+      setClips(prev => prev.filter(c => c.id !== deletedId));
+      setCreatorClips(prev => prev.filter(c => c.id !== deletedId));
+
+      // 2. Revoke and clean up fallback ObjectURLs and local comments
+      setClipFallbackUrls(prev => {
+        const next = { ...prev };
+        if (next[deletedId]) {
+          try { URL.revokeObjectURL(next[deletedId]); } catch (e) {}
+          delete next[deletedId];
+        }
+        return next;
+      });
+
+      setLocalComments(prev => {
+        const next = { ...prev };
+        delete next[deletedId];
+        return next;
+      });
+
+      // 3. Immediately purge local IndexedDB video cache
+      deleteVideoFromLocalCache(deletedId);
+
+      if (currentIndex > 0) {
+        setCurrentIndex(prev => Math.max(0, prev - 1));
+      }
+
+      // 4. Delete from Firestore database
       try {
-        await deleteDoc(doc(db, 'clips', clip.id));
+        await deleteDoc(doc(db, 'clips', deletedId));
         showToast(
           language === 'ka' ? 'კლიპი წარმატებით წაიშალა' : 'Clip deleted successfully',
           'success'
         );
-        if (currentIndex > 0) {
-          setCurrentIndex(prev => prev - 1);
-        }
       } catch (e) {
-        console.error("Error deleting clip:", e);
+        console.error("Error deleting clip from Firestore:", e);
+        // Revert optimistic deletion if server call failed
+        deletedClipIdsRef.current.delete(deletedId);
         showToast(
-          language === 'ka' ? 'წაშლა ვერ მოხერხდა' : 'Failed to delete clip',
+          language === 'ka' ? 'წაშლა ვერ მოხერხდა' : 'Failed to delete clip from server',
           'error'
         );
       }
