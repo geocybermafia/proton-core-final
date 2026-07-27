@@ -53,6 +53,7 @@ import {
   setDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { uploadClipVideo } from '../lib/storageUtils';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from './Toast';
@@ -420,6 +421,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
   const [selectedPresetId, setSelectedPresetId] = useState('potter-clay');
   const [newClipProductId, setNewClipProductId] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [localVideoFile, setLocalVideoFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
@@ -1368,13 +1370,14 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     }
 
     setIsUploading(true);
+    setUploadProgress(0);
 
     let finalVideoUrl = newClipVideoUrl.trim();
     let finalSound = newClipSound.trim() || 'Original Sound';
 
     const docId = `clip-${Math.random().toString(36).substring(2, 11)}`;
 
-    // If there's a local video file, attempt to convert it to base64 if small enough.
+    // If there's a local video file, attempt to upload directly to Firebase Storage
     if (localVideoFile) {
       try {
         const localBlobUrl = URL.createObjectURL(localVideoFile);
@@ -1383,30 +1386,43 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
         console.warn("Failed to create local object URL:", e);
       }
 
-      if (localVideoFile.size > 700 * 1024) { // 700 KB limit for safe Base64 Firestore storage
-        try {
-          await saveVideoToLocalCache(docId, localVideoFile);
-          finalVideoUrl = `indexeddb://${docId}`;
-          showToast(
-            language === 'ka' 
-              ? 'ვიდეო ფაილი შეინახა ბრაუზერის მეხსიერებაში!' 
-              : 'Video file saved to local browser cache!',
-            'info'
-          );
-        } catch (err) {
-          console.error("Failed to save to local IndexedDB:", err);
-        }
-      } else {
-        try {
-          const base64String = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(localVideoFile);
-          });
-          finalVideoUrl = base64String;
-        } catch (err) {
-          console.error("Base64 video conversion error:", err);
+      try {
+        // Upload to Firebase Storage pipeline
+        const downloadUrl = await uploadClipVideo(
+          user.uid,
+          docId,
+          localVideoFile,
+          (progress) => setUploadProgress(progress)
+        );
+        finalVideoUrl = downloadUrl;
+      } catch (storageErr) {
+        console.warn("Firebase Storage upload failed, attempting fallback:", storageErr);
+        // Fallback to local cache / base64 if Firebase Storage fails
+        if (localVideoFile.size > 700 * 1024) {
+          try {
+            await saveVideoToLocalCache(docId, localVideoFile);
+            finalVideoUrl = `indexeddb://${docId}`;
+            showToast(
+              language === 'ka' 
+                ? 'ვიდეო ფაილი შეინახა ლოკალურ მეხსიერებაში (Storage Fallback)' 
+                : 'Video file saved to local browser cache (Storage Fallback)',
+              'info'
+            );
+          } catch (err) {
+            console.error("Failed to save to local IndexedDB:", err);
+          }
+        } else {
+          try {
+            const base64String = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(localVideoFile);
+            });
+            finalVideoUrl = base64String;
+          } catch (err) {
+            console.error("Base64 video conversion error:", err);
+          }
         }
       }
     }
@@ -1453,6 +1469,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       setNewClipDuration(0);
       setNewClipProductId('');
       setLocalVideoFile(null);
+      setUploadProgress(0);
       setUploadStep(1);
       setIsCreateOpen(false);
       setActiveTab('myClips'); // Switch to My Clips to see the post!
@@ -1465,6 +1482,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       );
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -3034,7 +3052,11 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span>{language === 'ka' ? 'ქვეყნდება...' : 'Publishing...'}</span>
+                        <span>
+                          {uploadProgress > 0 
+                            ? `${language === 'ka' ? 'იტვირთება' : 'Uploading'} ${uploadProgress}%`
+                            : (language === 'ka' ? 'ქვეყნდება...' : 'Publishing...')}
+                        </span>
                       </>
                     ) : (
                       <>

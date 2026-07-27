@@ -1,6 +1,7 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import firebaseConfig from '../firebase-applet-config.json';
 
@@ -16,6 +17,9 @@ export const db = initializeFirestore(app, {
 }, firebaseConfig.firestoreDatabaseId);
 
 export const auth = getAuth(app);
+
+// Initialize Firebase Storage
+export const storage = getStorage(app);
 
 // Set persistence explicitly to LOCAL (default, but good to be explicit for "secure session management")
 setPersistence(auth, browserLocalPersistence);
