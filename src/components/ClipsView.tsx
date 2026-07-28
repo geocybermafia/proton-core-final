@@ -1967,7 +1967,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                       </div>
 
                       {/* RIGHT-SIDE OVERLAY ACTION BAR (Like, Comment, Share, Filters, Magic Fix, Delete) */}
-                      <div className="absolute right-3.5 bottom-6 z-20 flex flex-col items-center gap-4.5 pointer-events-none">
+                      <div className="absolute right-3.5 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col items-center gap-4.5 pointer-events-none">
                         
                         {/* Creator avatar bubble */}
                         <div className="relative group pointer-events-auto">
@@ -2094,7 +2094,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                       </div>
 
                       {/* BOTTOM-LEFT OVERLAY: CREATOR PROFILE, CAPTION, TAGS & AUDIO TRACK */}
-                      <div className="absolute bottom-0 left-0 right-16 z-20 p-4 sm:p-5 pb-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
+                      <div className="absolute bottom-0 left-0 right-16 z-20 p-4 sm:p-5 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
                         
                         {/* Creator Row */}
                         <div className="flex items-center gap-2.5 pointer-events-auto">
