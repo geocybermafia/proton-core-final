@@ -28,6 +28,13 @@ import {
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { Persona, View, GlobalAiSettings, Theme, GeminiMetadata } from '../types';
+import { 
+  ProtonCard, 
+  ProtonButton, 
+  ProtonInput, 
+  ProtonBadge, 
+  ProtonIconBox 
+} from '../ui';
 
 export const DashboardView = React.memo(({ 
   setActiveView, 
@@ -266,63 +273,71 @@ export const DashboardView = React.memo(({
 
         {/* Quick AI Command / Search Input Box */}
         <form onSubmit={handleQuickSubmit} className="relative z-10 pt-2">
-          <div className="relative flex items-center">
-            <Sparkles className="absolute left-4 text-proton-accent animate-pulse" size={18} />
-            <input 
-              type="text"
-              value={quickQuery}
-              onChange={(e) => setQuickQuery(e.target.value)}
-              placeholder={language === 'ka' 
-                ? 'ჩაწერეთ შეკითხვა AI-სთვის ან მოძებნეთ ფუნქცია...' 
-                : 'Ask AI anything or launch a workflow...'}
-              className="w-full pl-11 pr-28 py-3.5 rounded-xl bg-proton-bg/80 border border-proton-accent/30 text-proton-text placeholder-proton-muted text-sm font-medium focus:outline-none focus:border-proton-accent focus:ring-1 focus:ring-proton-accent/50 shadow-inner transition-all"
-            />
-            <button 
-              type="submit"
-              className="absolute right-2 px-4 py-2 rounded-lg bg-proton-accent hover:bg-proton-accent/90 text-proton-bg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
-            >
-              <Zap size={14} />
-              {language === 'ka' ? 'გაგზავნა' : 'Ask'}
-            </button>
-          </div>
+          <ProtonInput 
+            type="text"
+            value={quickQuery}
+            onChange={(e) => setQuickQuery(e.target.value)}
+            placeholder={language === 'ka' 
+              ? 'ჩაწერეთ შეკითხვა AI-სთვის ან მოძებნეთ ფუნქცია...' 
+              : 'Ask AI anything or launch a workflow...'}
+            leftIcon={<Sparkles className="text-proton-accent animate-pulse" size={18} />}
+            className="pr-28 py-3.5 bg-proton-bg/80 border-proton-accent/30 shadow-inner"
+            rightElement={
+              <ProtonButton 
+                type="submit"
+                size="sm"
+                leftIcon={<Zap size={14} />}
+              >
+                {language === 'ka' ? 'გაგზავნა' : 'Ask'}
+              </ProtonButton>
+            }
+          />
 
           {/* Quick Action Chips */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
             <span className="text-[10px] font-mono uppercase text-proton-muted font-bold mr-1">
               {language === 'ka' ? 'სწრაფი ბრძანებები:' : 'Quick Shortcuts:'}
             </span>
-            <button 
+            <ProtonButton 
               type="button"
+              variant="subtle"
+              size="sm"
               onClick={() => setActiveView('personas')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all cursor-pointer flex items-center gap-1"
+              leftIcon={<Bot size={11} />}
+              className="py-1 px-2.5 text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20"
             >
-              <Bot size={11} />
               {language === 'ka' ? 'AI ჩატი' : 'AI Assistant'}
-            </button>
-            <button 
+            </ProtonButton>
+            <ProtonButton 
               type="button"
+              variant="subtle"
+              size="sm"
               onClick={() => setUiMode('creative', 'image')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1"
+              leftIcon={<Image size={11} />}
+              className="py-1 px-2.5 text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
             >
-              <Image size={11} />
               {language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}
-            </button>
-            <button 
+            </ProtonButton>
+            <ProtonButton 
               type="button"
+              variant="subtle"
+              size="sm"
               onClick={() => setActiveView('organizer')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all cursor-pointer flex items-center gap-1"
+              leftIcon={<CalendarIcon size={11} />}
+              className="py-1 px-2.5 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
             >
-              <CalendarIcon size={11} />
               {language === 'ka' ? 'დავალებები' : 'Tasks'}
-            </button>
-            <button 
+            </ProtonButton>
+            <ProtonButton 
               type="button"
+              variant="subtle"
+              size="sm"
               onClick={() => setActiveView('clips')}
-              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer flex items-center gap-1"
+              leftIcon={<Video size={11} />}
+              className="py-1 px-2.5 text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
             >
-              <Video size={11} />
               {language === 'ka' ? 'კლიპები' : 'Clips'}
-            </button>
+            </ProtonButton>
           </div>
         </form>
       </motion.div>
@@ -335,30 +350,32 @@ export const DashboardView = React.memo(({
         }}
         className="grid grid-cols-2 sm:grid-cols-4 gap-4"
       >
-        <div 
+        <ProtonCard 
+          variant="interactive"
+          padding="compact"
           onClick={() => setActiveView('personas')}
-          className="p-4 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card/70 transition-all cursor-pointer group flex items-center gap-3.5"
+          className="flex items-center gap-3.5"
         >
-          <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <ProtonIconBox variant="accent" size="md" className="group-hover:scale-110">
             <Bot size={20} />
-          </div>
+          </ProtonIconBox>
           <div>
             <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
               {language === 'ka' ? 'AI ასისტენტები' : 'AI Companions'}
             </div>
             <div className="text-base font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
               <span>{personas.length || 8}</span>
-              <span className="text-[9px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+              <ProtonBadge variant="emerald" size="sm">
                 {language === 'ka' ? 'აქტიური' : 'Active'}
-              </span>
+              </ProtonBadge>
             </div>
           </div>
-        </div>
+        </ProtonCard>
 
-        <div className="p-4 rounded-xl border border-proton-border bg-proton-card/30 transition-all flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+        <ProtonCard variant="subtle" padding="compact" className="flex items-center gap-3.5">
+          <ProtonIconBox variant="amber" size="md">
             <Cpu size={20} />
-          </div>
+          </ProtonIconBox>
           <div>
             <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
               {language === 'ka' ? 'AI მოდელი' : 'AI Engine'}
@@ -368,15 +385,17 @@ export const DashboardView = React.memo(({
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
           </div>
-        </div>
+        </ProtonCard>
 
-        <div 
+        <ProtonCard 
+          variant="interactive"
+          padding="compact"
           onClick={() => setActiveView('organizer')}
-          className="p-4 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card/70 transition-all cursor-pointer group flex items-center gap-3.5"
+          className="flex items-center gap-3.5"
         >
-          <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <ProtonIconBox variant="purple" size="md" className="group-hover:scale-110">
             <CalendarIcon size={20} />
-          </div>
+          </ProtonIconBox>
           <div>
             <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
               {language === 'ka' ? 'დავალებები' : 'Task Manager'}
@@ -386,15 +405,17 @@ export const DashboardView = React.memo(({
               <ArrowRight size={12} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
-        </div>
+        </ProtonCard>
 
-        <div 
+        <ProtonCard 
+          variant="interactive"
+          padding="compact"
           onClick={() => setActiveView('clips')}
-          className="p-4 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card/70 transition-all cursor-pointer group flex items-center gap-3.5"
+          className="flex items-center gap-3.5"
         >
-          <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+          <ProtonIconBox variant="rose" size="md" className="group-hover:scale-110">
             <Video size={20} />
-          </div>
+          </ProtonIconBox>
           <div>
             <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
               {language === 'ka' ? 'ვიდეო ჰაბი' : 'Clips Hub'}
@@ -404,7 +425,7 @@ export const DashboardView = React.memo(({
               <ArrowRight size={12} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
             </div>
           </div>
-        </div>
+        </ProtonCard>
       </motion.div>
 
       {/* Main Gateways Portal Grid */}
@@ -420,19 +441,15 @@ export const DashboardView = React.memo(({
             </p>
           </div>
           
-          <button
+          <ProtonButton
             type="button"
             onClick={() => setShowConfig(!showConfig)}
-            className={cn(
-              "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border active:scale-95 cursor-pointer",
-              showConfig 
-                ? "bg-proton-accent text-proton-bg border-proton-accent font-black" 
-                : "bg-proton-card/50 hover:bg-proton-card border-proton-border text-proton-muted hover:text-proton-text font-bold"
-            )}
+            variant={showConfig ? "primary" : "secondary"}
+            size="sm"
+            leftIcon={<SlidersHorizontal size={12} />}
           >
-            <SlidersHorizontal size={12} />
             {language === 'ka' ? 'ვიჯეტების მორგება' : 'Customize Widgets'}
-          </button>
+          </ProtonButton>
         </div>
 
         {/* Dynamic Widget Customizer Panel */}
@@ -441,85 +458,88 @@ export const DashboardView = React.memo(({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="p-5 rounded-3xl border border-proton-border bg-proton-card/20 backdrop-blur-md space-y-4 overflow-hidden"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-proton-border/20 pb-3">
-              <div className="space-y-0.5">
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-proton-text">
-                  {language === 'ka' ? 'ვიჯეტების ჩვენების პარამეტრები' : 'Widget Visibility Preferences'}
-                </h4>
-                <p className="text-[9px] text-proton-muted font-mono uppercase">
-                  {language === 'ka' 
-                    ? 'გამორთეთ არაარსებითი მეტრიკები საწყისი ჩატვირთვის დასაჩქარებლად' 
-                    : 'Toggle non-essential modules to optimize your dashboard performance'}
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={showAllWidgets}
-                  className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[9px] font-bold text-proton-accent uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  {language === 'ka' ? 'ყველა' : 'Show All'}
-                </button>
-                <button
-                  type="button"
-                  onClick={showEssentialOnly}
-                  className="px-2.5 py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[9px] font-bold text-proton-muted hover:text-proton-text uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  {language === 'ka' ? 'ძირითადი' : 'Essential Only'}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-              {gateways.map((gate) => {
-                const isVisible = visibleWidgets.includes(gate.id);
-                const GateIcon = gate.icon;
-                return (
-                  <button
-                    key={gate.id}
+            <ProtonCard variant="glass" padding="default" className="space-y-4 overflow-hidden mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-proton-border/20 pb-3">
+                <div className="space-y-0.5">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-proton-text">
+                    {language === 'ka' ? 'ვიჯეტების ჩვენების პარამეტრები' : 'Widget Visibility Preferences'}
+                  </h4>
+                  <p className="text-[9px] text-proton-muted font-mono uppercase">
+                    {language === 'ka' 
+                      ? 'გამორთეთ არაარსებითი მეტრიკები საწყისი ჩატვირთვის დასაჩქარებლად' 
+                      : 'Toggle non-essential modules to optimize your dashboard performance'}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2 shrink-0">
+                  <ProtonButton
                     type="button"
-                    onClick={() => toggleWidget(gate.id)}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl border transition-all text-left group active:scale-95 cursor-pointer",
-                      isVisible 
-                        ? "bg-proton-accent/5 border-proton-accent/40 text-proton-text" 
-                        : "bg-transparent border-proton-border/40 text-proton-muted hover:border-proton-border"
-                    )}
+                    onClick={showAllWidgets}
+                    variant="subtle"
+                    size="sm"
+                    className="px-2.5 py-1 text-[9px]"
                   >
-                    <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center border shrink-0",
-                      isVisible 
-                        ? "bg-proton-accent/10 border-proton-accent/20 text-proton-accent" 
-                        : "bg-zinc-900 border-zinc-800 text-zinc-600"
-                    )}>
-                      <GateIcon size={16} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-black uppercase tracking-wider truncate">
-                        {gate.title.split(' ')[0]}
+                    {language === 'ka' ? 'ყველა' : 'Show All'}
+                  </ProtonButton>
+                  <ProtonButton
+                    type="button"
+                    onClick={showEssentialOnly}
+                    variant="ghost"
+                    size="sm"
+                    className="px-2.5 py-1 text-[9px]"
+                  >
+                    {language === 'ka' ? 'ძირითადი' : 'Essential Only'}
+                  </ProtonButton>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                {gateways.map((gate) => {
+                  const isVisible = visibleWidgets.includes(gate.id);
+                  const GateIcon = gate.icon;
+                  return (
+                    <button
+                      key={gate.id}
+                      type="button"
+                      onClick={() => toggleWidget(gate.id)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border transition-all text-left group active:scale-95 cursor-pointer",
+                        isVisible 
+                          ? "bg-proton-accent/5 border-proton-accent/40 text-proton-text" 
+                          : "bg-transparent border-proton-border/40 text-proton-muted hover:border-proton-border"
+                      )}
+                    >
+                      <ProtonIconBox 
+                        variant={isVisible ? "accent" : "neutral"} 
+                        size="sm"
+                      >
+                        <GateIcon size={16} />
+                      </ProtonIconBox>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-black uppercase tracking-wider truncate">
+                          {gate.title.split(' ')[0]}
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {isVisible ? (
+                            <>
+                              <Eye size={10} className="text-emerald-500 shrink-0" />
+                              <span className="text-[8px] font-mono font-bold text-emerald-500 uppercase tracking-widest">{language === 'ka' ? 'აქტიური' : 'Active'}</span>
+                            </>
+                          ) : (
+                            <>
+                              <EyeOff size={10} className="text-zinc-600 shrink-0" />
+                              <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">{language === 'ka' ? 'დამალული' : 'Hidden'}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        {isVisible ? (
-                          <>
-                            <Eye size={10} className="text-emerald-500 shrink-0" />
-                            <span className="text-[8px] font-mono font-bold text-emerald-500 uppercase tracking-widest">{language === 'ka' ? 'აქტიური' : 'Active'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <EyeOff size={10} className="text-zinc-600 shrink-0" />
-                            <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">{language === 'ka' ? 'დამალული' : 'Hidden'}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </ProtonCard>
           </motion.div>
         )}
 
