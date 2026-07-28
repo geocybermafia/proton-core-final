@@ -546,6 +546,12 @@ export const DashboardView = React.memo(({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {gateways.filter(gate => visibleWidgets.includes(gate.id)).map((gate) => {
             const IconComponent = gate.icon;
+            const badgeVariant = 
+              gate.color === 'cyan' ? 'accent' :
+              gate.color === 'amber' ? 'amber' :
+              gate.color === 'emerald' ? 'emerald' :
+              gate.color === 'purple' ? 'purple' : 'accent';
+
             return (
               <motion.div
                 key={gate.id}
@@ -556,85 +562,78 @@ export const DashboardView = React.memo(({
                 whileHover={{ 
                   y: -6,
                   scale: 1.015,
-                  boxShadow: "0 25px 40px rgba(0,0,0,0.4)"
                 }}
                 whileTap={{ scale: 0.985 }}
-                className={cn(
-                  "bg-proton-card/40 hover:bg-proton-card/80 border rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 group shadow-lg cursor-pointer overflow-hidden relative",
-                  gate.glowClass
-                )}
-                onClick={gate.action}
               >
-                {/* Visual Accent glow line */}
-                <div className={cn(
-                  "absolute top-0 left-0 w-full h-1 bg-gradient-to-r opacity-50 transition-opacity duration-300 group-hover:opacity-100",
-                  gate.color === 'cyan' ? 'from-cyan-500/50 to-transparent' :
-                  gate.color === 'amber' ? 'from-amber-500/50 to-transparent' :
-                  gate.color === 'emerald' ? 'from-emerald-500/50 to-transparent' :
-                  gate.color === 'purple' ? 'from-purple-500/50 to-transparent' :
-                  'from-proton-accent/50 to-transparent'
-                )} />
+                <ProtonCard
+                  variant="interactive"
+                  padding="spacious"
+                  mode={gate.id as any}
+                  className="flex flex-col justify-between h-full overflow-hidden"
+                  onClick={gate.action}
+                >
+                  {/* Visual Accent glow line */}
+                  <div className={cn(
+                    "absolute top-0 left-0 w-full h-1 bg-gradient-to-r opacity-60 transition-opacity duration-300 group-hover:opacity-100",
+                    gate.color === 'cyan' ? 'from-cyan-500 to-transparent' :
+                    gate.color === 'amber' ? 'from-amber-500 to-transparent' :
+                    gate.color === 'emerald' ? 'from-emerald-500 to-transparent' :
+                    gate.color === 'purple' ? 'from-purple-500 to-transparent' :
+                    'from-proton-accent to-transparent'
+                  )} />
 
-                <div className="space-y-4 w-full">
-                  <div className="flex items-center justify-between w-full">
-                    {/* Mode Tag */}
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border",
-                      gate.badgeClass
-                    )}>
-                      {gate.badge}
-                    </span>
+                  <div className="space-y-4 w-full">
+                    <div className="flex items-center justify-between w-full">
+                      {/* Mode Tag */}
+                      <ProtonBadge variant={badgeVariant as any} size="sm">
+                        {gate.badge}
+                      </ProtonBadge>
 
-                    <ArrowUpRight className="text-proton-muted group-hover:text-proton-text group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" size={16} />
+                      <ArrowUpRight className="text-proton-muted group-hover:text-proton-text group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" size={16} />
+                    </div>
+
+                    {/* Header Title & Icon */}
+                    <div className="flex items-start gap-4">
+                      <ProtonIconBox 
+                        variant={badgeVariant as any} 
+                        size="lg"
+                        className="group-hover:scale-105 transition-transform"
+                      >
+                        <IconComponent size={24} />
+                      </ProtonIconBox>
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-black tracking-tight text-proton-text uppercase group-hover:text-proton-accent transition-colors">
+                          {gate.title}
+                        </h3>
+                        <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">
+                          {gate.desc}
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Header Title & Icon */}
-                  <div className="flex items-start gap-4">
-                    <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all shrink-0 border border-transparent",
-                      gate.iconClass
-                    )}>
-                      <IconComponent size={24} />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="text-xl font-black tracking-tight text-proton-text uppercase group-hover:text-proton-accent transition-colors">
-                        {gate.title}
-                      </h3>
-                      <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">
-                        {gate.desc}
-                      </p>
-                    </div>
+                  {/* Shortcuts & Quick actions */}
+                  <div className="mt-6 pt-4 border-t border-proton-border/30 flex flex-wrap gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                    {gate.shortcuts.map((sc, i) => (
+                      <ProtonButton
+                        key={i}
+                        type="button"
+                        variant="subtle"
+                        size="sm"
+                        onClick={() => {
+                          if (gate.id === 'business' || gate.id === 'creative' || gate.id === 'market') {
+                            setUiMode(gate.id, sc.view as any);
+                          } else {
+                            setActiveView(sc.view as any);
+                          }
+                        }}
+                        className="py-1 px-2.5 text-[9px] font-mono font-bold uppercase tracking-wider"
+                      >
+                        {sc.label}
+                      </ProtonButton>
+                    ))}
                   </div>
-                </div>
-
-                {/* Shortcuts & Quick actions */}
-                <div className="mt-6 pt-4 border-t border-proton-border/30 flex flex-wrap gap-2 w-full" onClick={(e) => e.stopPropagation()}>
-                  {gate.shortcuts.map((sc, i) => (
-                    <motion.button
-                      key={i}
-                      type="button"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        if (gate.id === 'business' || gate.id === 'creative' || gate.id === 'market') {
-                          setUiMode(gate.id, sc.view as any);
-                        } else {
-                          setActiveView(sc.view as any);
-                        }
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider backdrop-blur-sm border transition-all cursor-pointer",
-                        gate.color === 'cyan' ? 'bg-cyan-500/5 text-cyan-400 border-cyan-500/10 hover:bg-cyan-500 hover:text-black' :
-                        gate.color === 'amber' ? 'bg-amber-500/5 text-amber-400 border-amber-500/10 hover:bg-amber-500 hover:text-black' :
-                        gate.color === 'emerald' ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/10 hover:bg-emerald-500 hover:text-black' :
-                        gate.color === 'purple' ? 'bg-purple-500/5 text-purple-400 border-purple-500/10 hover:bg-purple-500 hover:text-white' :
-                        'bg-proton-accent/5 text-proton-accent border-proton-accent/10 hover:bg-proton-accent hover:text-proton-on-accent'
-                      )}
-                    >
-                      {sc.label}
-                    </motion.button>
-                  ))}
-                </div>
+                </ProtonCard>
               </motion.div>
             );
           })}
