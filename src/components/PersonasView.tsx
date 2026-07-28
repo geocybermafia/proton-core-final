@@ -841,7 +841,7 @@ export default function PersonasView({
                  <div ref={chatEndRef} />
               </div>
 
-              <footer className="p-3 sm:p-6 border-t border-proton-border bg-white/[0.02] shrink-0 pb-20 lg:pb-6">
+              <footer className="p-3 sm:p-6 border-t border-proton-border bg-white/[0.02] shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-6">
                  <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
                     <AnimatePresence>
                       {showTools && (
