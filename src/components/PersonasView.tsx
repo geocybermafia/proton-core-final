@@ -13,6 +13,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Markdown from 'react-markdown';
 import { createPortal } from 'react-dom';
 import { chatWithPersona, generateOrEditImage } from '../lib/gemini';
+import {
+  ProtonCard,
+  ProtonButton,
+  ProtonInput,
+  ProtonModal,
+  ProtonBadge,
+  ProtonAvatar,
+  ProtonIconBox,
+} from '../ui';
 
 // Cyber Preset Avatars
 const AVATAR_PRESETS = [
@@ -505,66 +514,70 @@ export default function PersonasView({
     <div className="flex flex-col h-full overflow-hidden w-full lg:flex-row gap-4 sm:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       
       {/* Persona Selector */}
-      <div className={cn(
-        "w-full lg:w-80 bg-proton-card border border-proton-border rounded-2xl overflow-hidden flex flex-col shadow-xl backdrop-blur-md relative h-full min-h-0",
-        mobileShowChat ? "hidden lg:flex" : "flex"
-      )}>
-        <div className="p-5 border-b border-proton-border bg-white/5 flex justify-between items-center">
+      <ProtonCard 
+        padding="none"
+        className={cn(
+          "w-full lg:w-80 flex flex-col h-full min-h-0",
+          mobileShowChat ? "hidden lg:flex" : "flex"
+        )}
+      >
+        <div className="p-5 border-b border-proton-border bg-proton-card/40 flex justify-between items-center">
           <span className="text-[10px] font-black uppercase tracking-[0.25em] text-proton-text flex items-center gap-2">
             <Cpu size={14} className="text-proton-accent" />
             {t.title}
           </span>
-          <button 
+          <ProtonButton 
             onClick={() => setIsCreatorOpen(true)}
             title={language === 'ka' ? 'დაამატე ახალი აგენტი' : 'Deploy New Agent'}
-            className="p-1.5 hover:bg-proton-accent/25 hover:text-proton-text hover:-translate-y-0.5 border border-proton-accent/30 rounded-lg text-proton-accent transition-all duration-300 shadow-[0_0_10px_rgba(0,242,255,0.1)] cursor-pointer"
+            variant="subtle"
+            size="sm"
+            className="p-1.5 min-w-0"
           >
              <Plus size={18} strokeWidth={2.5} />
-          </button>
+          </ProtonButton>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar-minimal">
-          {personas.map((p) => (
-            <motion.button
-              layout
-              key={p.id}
-              onClick={() => {
-                setSelectedPersona(p);
-                setMobileShowChat(true);
-              }}
-              className={cn(
-                "w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-300 text-left group border text-xs select-none relative cursor-pointer",
-                selectedPersona?.id === p.id 
-                  ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent shadow-[0_0_20px_rgba(0,242,255,0.05)] ring-1 ring-proton-accent/20" 
-                  : "bg-white/5 border-white/5 text-proton-muted hover:border-white/10 hover:bg-white/10"
-              )}
-            >
-              {selectedPersona?.id === p.id && (
-                <div className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-proton-accent rounded-r-full" />
-              )}
-              
-              <div className="w-10 h-10 rounded-xl overflow-hidden border border-proton-border shrink-0 bg-proton-bg flex items-center justify-center relative shadow-inner">
-                {isUrl(p.avatar) ? (
-                    <img src={p.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                    <span className="text-xl leading-none">{p.avatar || '🤖'}</span>
+          {personas.map((p) => {
+            const isSelected = selectedPersona?.id === p.id;
+            return (
+              <motion.button
+                layout
+                key={p.id}
+                onClick={() => {
+                  setSelectedPersona(p);
+                  setMobileShowChat(true);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-4 p-3.5 rounded-xl transition-all duration-300 text-left group border text-xs select-none relative cursor-pointer",
+                  isSelected 
+                    ? "bg-proton-accent/10 border-proton-accent/40 text-proton-accent shadow-[0_0_20px_rgba(6,182,212,0.1)] ring-1 ring-proton-accent/20" 
+                    : "bg-proton-bg/40 border-proton-border/40 text-proton-muted hover:border-proton-border hover:bg-proton-card"
                 )}
-                {selectedPersona?.id === p.id && (
-                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-proton-accent border-2 border-proton-card rounded-full shadow-[0_0_5px_rgba(0,242,255,1)]" />
+              >
+                {isSelected && (
+                  <div className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-proton-accent rounded-r-full" />
                 )}
-              </div>
+                
+                <ProtonAvatar 
+                  src={isUrl(p.avatar) ? p.avatar : undefined}
+                  name={!isUrl(p.avatar) ? (p.avatar || '🤖') : undefined}
+                  size="md"
+                  status={isSelected ? 'online' : undefined}
+                />
 
-              <div className="flex-1 min-w-0">
-                 <div className="font-bold text-sm tracking-tight truncate group-hover:text-proton-text transition-colors">
-                   {language === 'ka' ? (p.nameGe || p.name) : p.name}
-                 </div>
-                 <div className="text-[10px] font-bold uppercase tracking-widest truncate mt-0.5 text-proton-text-light flex items-center gap-1">
-                   <span className="inline-block w-1 h-1 rounded-full bg-proton-accent" />
-                   {language === 'ka' ? (p.roleGe || p.role) : p.role}
-                 </div>
-              </div>
-            </motion.button>
-          ))}
+                <div className="flex-1 min-w-0">
+                   <div className="font-bold text-sm tracking-tight truncate group-hover:text-proton-text transition-colors">
+                     {language === 'ka' ? (p.nameGe || p.name) : p.name}
+                   </div>
+                   <div className="text-[10px] font-bold uppercase tracking-widest truncate mt-0.5 text-proton-muted flex items-center gap-1">
+                     <span className="inline-block w-1 h-1 rounded-full bg-proton-accent" />
+                     {language === 'ka' ? (p.roleGe || p.role) : p.role}
+                   </div>
+                </div>
+              </motion.button>
+            );
+          })}
 
           {personas.length === 0 && (
              <div className="text-center py-16 opacity-40 text-[10px] font-black uppercase tracking-widest leading-loose p-6 border border-dashed border-proton-border rounded-xl">
@@ -572,7 +585,7 @@ export default function PersonasView({
              </div>
           )}
         </div>
-      </div>
+      </ProtonCard>
 
       {/* Chat Interface */}
       <div className={cn(
@@ -965,310 +978,238 @@ export default function PersonasView({
       </div>
 
       {/* 1. CREATOR OVERLAY MODAL */}
-      <AnimatePresence>
-        {isCreatorOpen && createPortal(
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 sm:p-6 md:p-10 backdrop-blur-md"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="bg-proton-card border border-proton-border rounded-3xl w-full max-w-2xl overflow-hidden shadow-[0_0_50px_rgba(0,242,255,0.15)] flex flex-col h-[90vh] max-h-[700px]"
-            >
-              <header className="p-6 px-8 border-b border-proton-border bg-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-proton-accent/10 border border-proton-accent/20 rounded-xl text-proton-accent">
-                    <Laptop size={18} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-widest text-proton-text">
-                      {language === 'ka' ? 'აგენტის დეპლოიმენტი' : 'System Assistant Deployment'}
-                    </h3>
-                    <p className="text-[9px] text-proton-muted uppercase font-mono tracking-widest opacity-60 mt-0.5">
-                      Configure AI Council Entity Parameters
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsCreatorOpen(false)}
-                  className="p-2 hover:bg-white/10 rounded-xl text-proton-muted hover:text-proton-text transition-colors cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
-              </header>
-
-              <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar-minimal">
-                {/* Main forms */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      Agent Name (English) *
-                    </label>
-                    <input 
-                      type="text" 
-                      value={newPersonaNameEn}
-                      onChange={(e) => setNewPersonaNameEn(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      onKeyUp={(e) => e.stopPropagation()}
-                      onKeyPress={(e) => e.stopPropagation()}
-                      placeholder="e.g. Sentry Code"
-                      className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      სახელი (ქართულად)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={newPersonaNameKa}
-                      onChange={(e) => setNewPersonaNameKa(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      onKeyUp={(e) => e.stopPropagation()}
-                      onKeyPress={(e) => e.stopPropagation()}
-                      placeholder="მაგ. სენტრი კოდი"
-                      className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      Agent Specialty Role (e.g. Architect)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={newPersonaRole}
-                      onChange={(e) => setNewPersonaRole(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      onKeyUp={(e) => e.stopPropagation()}
-                      onKeyPress={(e) => e.stopPropagation()}
-                      placeholder="e.g. System Audit Specialist"
-                      className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      Cognitive Language Node
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['English', 'Georgian', 'Mixed'].map((l) => (
-                        <button
-                          key={l}
-                          type="button"
-                          onClick={() => setNewPersonaLang(l as any)}
-                          className={cn(
-                            "py-3 rounded-xl text-[9px] font-black uppercase tracking-wider border cursor-pointer select-none transition-all",
-                            newPersonaLang === l 
-                              ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent shadow-sm" 
-                              : "bg-white/5 border-transparent text-proton-muted hover:bg-white/10"
-                          )}
-                        >
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      Brief Description (English)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={newPersonaDesc}
-                      onChange={(e) => setNewPersonaDesc(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      onKeyUp={(e) => e.stopPropagation()}
-                      onKeyPress={(e) => e.stopPropagation()}
-                      placeholder="e.g. Security audit intelligence engine..."
-                      className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      მოკლე აღწერა (ქართულად)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={newPersonaDescKa}
-                      onChange={(e) => setNewPersonaDescKa(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      onKeyUp={(e) => e.stopPropagation()}
-                      onKeyPress={(e) => e.stopPropagation()}
-                      placeholder="მაგ. უსაფრთხოების აუდიტის ინტელექტუალი..."
-                      className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Avatar Presets Swiper */}
-                <div className="space-y-3 p-4 bg-white/[0.01] border border-proton-border/50 rounded-2xl">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      Select Neural Identity Avatar
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAvatarType('preset')}
-                        className={cn("text-[8px] font-black uppercase tracking-widest transition-colors", selectedAvatarType === 'preset' ? "text-proton-accent" : "text-proton-muted hover:text-white")}
-                      >
-                        Presets
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAvatarType('url')}
-                        className={cn("text-[8px] font-black uppercase tracking-widest transition-colors", selectedAvatarType === 'url' ? "text-proton-accent" : "text-proton-muted hover:text-white")}
-                      >
-                        Image Link
-                      </button>
-                    </div>
-                  </div>
-
-                  {selectedAvatarType === 'preset' ? (
-                    <div className="flex flex-wrap gap-2.5">
-                      {AVATAR_PRESETS.map((av, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setNewPersonaAvatarEmoji(av.emoji)}
-                          title={language === 'ka' ? av.labelKa : av.labelEn}
-                          className={cn(
-                            "w-11 h-11 rounded-xl text-xl flex items-center justify-center border transition-all cursor-pointer select-none",
-                            newPersonaAvatarEmoji === av.emoji 
-                              ? "bg-proton-accent/15 border-proton-accent text-proton-accent scale-110 shadow-[0_0_12px_rgba(0,242,255,0.15)]" 
-                              : "bg-white/5 border-transparent text-proton-muted hover:bg-white/10 hover:scale-105"
-                          )}
-                        >
-                          {av.emoji}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <input 
-                      type="text" 
-                      value={newPersonaAvatarUrl}
-                      onChange={(e) => setNewPersonaAvatarUrl(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                      onKeyUp={(e) => e.stopPropagation()}
-                      onKeyPress={(e) => e.stopPropagation()}
-                      placeholder="Https://images.unsplash.com/photo-example..."
-                      className="w-full bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-mono"
-                    />
-                  )}
-                </div>
-
-                {/* System Prompt/Instructions Box */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-proton-muted block">
-                      Cogitative Instructions / System Brain Prompt
-                    </label>
-                    <span className="text-[8px] text-proton-accent font-black uppercase tracking-wider">Provides System Guidelines</span>
-                  </div>
-                  <textarea 
-                    value={newPersonaInstructions}
-                    onChange={(e) => setNewPersonaInstructions(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                    onKeyUp={(e) => e.stopPropagation()}
-                    onKeyPress={(e) => e.stopPropagation()}
-                    placeholder="E.g. Analyze all user statements for business priorities. Structure answers inside highly clean markdown tags..."
-                    className="w-full h-28 bg-proton-bg border border-proton-border focus:border-proton-accent/40 rounded-xl p-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-proton-accent/10 transition-all font-mono leading-relaxed"
-                  />
-                </div>
+      <ProtonModal
+        isOpen={isCreatorOpen}
+        onClose={() => setIsCreatorOpen(false)}
+        size="lg"
+        title={
+          <div className="flex items-center gap-3">
+            <ProtonIconBox variant="accent" size="sm">
+              <Laptop size={18} />
+            </ProtonIconBox>
+            <div>
+              <div className="text-sm font-black uppercase tracking-widest text-proton-text">
+                {language === 'ka' ? 'აგენტის დეპლოიმენტი' : 'System Assistant Deployment'}
               </div>
+              <div className="text-[9px] text-proton-muted uppercase font-mono tracking-widest opacity-60 mt-0.5 font-normal">
+                Configure AI Council Entity Parameters
+              </div>
+            </div>
+          </div>
+        }
+        footer={
+          <>
+            <ProtonButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCreatorOpen(false)}
+            >
+              Cancel
+            </ProtonButton>
+            <ProtonButton
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handleCreatePersona}
+              isLoading={isCreatingPersona}
+              disabled={!newPersonaNameEn.trim()}
+              rightIcon={<Check size={14} strokeWidth={3} />}
+            >
+              Deploy intelligence
+            </ProtonButton>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          {/* Main forms */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ProtonInput 
+              label="Agent Name (English) *"
+              type="text" 
+              value={newPersonaNameEn}
+              onChange={(e) => setNewPersonaNameEn(e.target.value)}
+              placeholder="e.g. Sentry Code"
+            />
+            <ProtonInput 
+              label="სახელი (ქართულად)"
+              type="text" 
+              value={newPersonaNameKa}
+              onChange={(e) => setNewPersonaNameKa(e.target.value)}
+              placeholder="მაგ. სენტრი კოდი"
+            />
+          </div>
 
-              <footer className="p-6 px-8 border-t border-proton-border bg-white/5 flex justify-end gap-3 shrink-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ProtonInput 
+              label="Agent Specialty Role (e.g. Architect)"
+              type="text" 
+              value={newPersonaRole}
+              onChange={(e) => setNewPersonaRole(e.target.value)}
+              placeholder="e.g. System Audit Specialist"
+            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-proton-text uppercase tracking-wider font-mono">
+                Cognitive Language Node
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {['English', 'Georgian', 'Mixed'].map((l) => (
+                  <ProtonButton
+                    key={l}
+                    type="button"
+                    variant={newPersonaLang === l ? 'subtle' : 'ghost'}
+                    size="sm"
+                    onClick={() => setNewPersonaLang(l as any)}
+                    className="py-2.5 text-[10px]"
+                  >
+                    {l}
+                  </ProtonButton>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ProtonInput 
+              label="Brief Description (English)"
+              type="text" 
+              value={newPersonaDesc}
+              onChange={(e) => setNewPersonaDesc(e.target.value)}
+              placeholder="e.g. Security audit intelligence engine..."
+            />
+            <ProtonInput 
+              label="მოკლე აღწერა (ქართულად)"
+              type="text" 
+              value={newPersonaDescKa}
+              onChange={(e) => setNewPersonaDescKa(e.target.value)}
+              placeholder="მაგ. უსაფრთხოების აუდიტის ინტელექტუალი..."
+            />
+          </div>
+
+          {/* Avatar Presets Swiper */}
+          <div className="space-y-3 p-4 bg-proton-bg/40 border border-proton-border/50 rounded-2xl">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-semibold text-proton-text uppercase tracking-wider font-mono">
+                Select Neural Identity Avatar
+              </label>
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsCreatorOpen(false)}
-                  className="px-5 py-2.5 hover:bg-white/5 hover:border-white/10 border border-transparent rounded-xl text-[10px] font-black uppercase tracking-widest text-proton-muted transition-colors cursor-pointer"
+                  onClick={() => setSelectedAvatarType('preset')}
+                  className={cn("text-[10px] font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer", selectedAvatarType === 'preset' ? "text-proton-accent" : "text-proton-muted hover:text-white")}
                 >
-                  Cancel
+                  Presets
                 </button>
                 <button
                   type="button"
-                  onClick={handleCreatePersona}
-                  disabled={isCreatingPersona || !newPersonaNameEn.trim()}
-                  className="px-6 py-2.5 bg-proton-accent hover:bg-proton-accent-hover text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 cursor-pointer shadow-lg shadow-proton-accent/20 flex items-center gap-2"
+                  onClick={() => setSelectedAvatarType('url')}
+                  className={cn("text-[10px] font-mono font-bold uppercase tracking-widest transition-colors cursor-pointer", selectedAvatarType === 'url' ? "text-proton-accent" : "text-proton-muted hover:text-white")}
                 >
-                  {isCreatingPersona ? 'Compiling Model...' : 'Deploy intelligence'}
-                  <Check size={14} strokeWidth={3} />
+                  Image Link
                 </button>
-              </footer>
-            </motion.div>
-          </motion.div>,
-          document.body
-        )}
-      </AnimatePresence>
+              </div>
+            </div>
+
+            {selectedAvatarType === 'preset' ? (
+              <div className="flex flex-wrap gap-2.5">
+                {AVATAR_PRESETS.map((av, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setNewPersonaAvatarEmoji(av.emoji)}
+                    title={language === 'ka' ? av.labelKa : av.labelEn}
+                    className={cn(
+                      "w-11 h-11 rounded-xl text-xl flex items-center justify-center border transition-all cursor-pointer select-none",
+                      newPersonaAvatarEmoji === av.emoji 
+                        ? "bg-proton-accent/15 border-proton-accent text-proton-accent scale-110 shadow-[0_0_12px_rgba(6,182,212,0.15)]" 
+                        : "bg-proton-card/50 border-proton-border/40 text-proton-muted hover:bg-proton-card hover:scale-105"
+                    )}
+                  >
+                    {av.emoji}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <ProtonInput 
+                type="text" 
+                value={newPersonaAvatarUrl}
+                onChange={(e) => setNewPersonaAvatarUrl(e.target.value)}
+                placeholder="https://images.unsplash.com/photo-example..."
+              />
+            )}
+          </div>
+
+          {/* System Prompt/Instructions Box */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-semibold text-proton-text uppercase tracking-wider font-mono">
+                Cogitative Instructions / System Brain Prompt
+              </label>
+              <ProtonBadge variant="accent" size="sm">Provides System Guidelines</ProtonBadge>
+            </div>
+            <textarea 
+              value={newPersonaInstructions}
+              onChange={(e) => setNewPersonaInstructions(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
+              onKeyPress={(e) => e.stopPropagation()}
+              placeholder="E.g. Analyze all user statements for business priorities. Structure answers inside highly clean markdown tags..."
+              className="w-full h-28 bg-proton-bg border border-proton-border focus:border-proton-accent focus:ring-1 focus:ring-proton-accent/50 rounded-xl p-4 text-xs text-proton-text focus:outline-none transition-all font-mono leading-relaxed"
+            />
+          </div>
+        </div>
+      </ProtonModal>
 
       {/* 2. DECOMMISSION (DELETE) CONFIRMATION MODAL */}
-      <AnimatePresence>
-        {isDecommissioning && decomTarget && createPortal(
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              transition={{ type: "spring", stiffness: 350, damping: 25 }}
-              className="bg-proton-card border border-proton-border rounded-2xl w-full max-w-md overflow-hidden shadow-[0_0_40px_rgba(239,68,68,0.2)]"
+      <ProtonModal
+        isOpen={isDecommissioning && !!decomTarget}
+        onClose={() => {
+          setIsDecommissioning(false);
+          setDecomTarget(null);
+        }}
+        size="sm"
+        title={language === 'ka' ? 'აგენტის დეკომისიონირება' : 'Secure Decommission Protocol'}
+        description={
+          decomTarget ? (
+            <span className="text-rose-400 font-mono font-bold">
+              Permanent deletion: {language === 'ka' ? decomTarget.nameGe : decomTarget.name}
+            </span>
+          ) : undefined
+        }
+        footer={
+          <>
+            <ProtonButton
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setIsDecommissioning(false);
+                setDecomTarget(null);
+              }}
             >
-              <div className="p-6 text-center space-y-4">
-                <div className="w-16 h-16 rounded-[25px] bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mx-auto animate-pulse">
-                  <ShieldAlert size={32} />
-                </div>
-                <div className="space-y-1.5">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-proton-text">
-                    {language === 'ka' ? 'აგენტის დეკომისიონირება' : 'Secure Decommission Protocol'}
-                  </h3>
-                  <p className="text-[10px] text-red-400/80 uppercase font-mono tracking-widest">
-                    Permanent deletion: {language === 'ka' ? decomTarget.nameGe : decomTarget.name}
-                  </p>
-                </div>
-                <p className="text-xs text-proton-muted leading-relaxed font-light mt-3">
-                  {language === 'ka' 
-                    ? `დარწმუნებული ხართ, რომ გსურთ აგენტის წაშლა? ეს ქმედება მთლიანად გაასუფთავებს მის სისტემურ ინსტრუქციებსა და საუბრის მეხსიერებას.` 
-                    : `Are you absolutely certain you wish to decommission ${decomTarget.name} from the neural matrix? All associated system prompt boundaries and chat interactions will be permanently wiped.`
-                  }
-                </p>
-              </div>
-
-              <footer className="p-4 bg-white/5 border-t border-proton-border/50 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setIsDecommissioning(false);
-                    setDecomTarget(null);
-                  }}
-                  className="px-4 py-2 hover:bg-white/5 border border-transparent rounded-lg text-[9px] font-black uppercase tracking-widest text-proton-muted transition-colors cursor-pointer"
-                >
-                  {language === 'ka' ? 'გაუქმება' : 'Abort'}
-                </button>
-                <button
-                  onClick={handleDecommission}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-red-500/20"
-                >
-                  {language === 'ka' ? 'წაშლა' : 'Decommission'}
-                </button>
-              </footer>
-            </motion.div>
-          </motion.div>,
-          document.body
-        )}
-      </AnimatePresence>
+              {language === 'ka' ? 'გაუქმება' : 'Abort'}
+            </ProtonButton>
+            <ProtonButton
+              variant="danger"
+              size="sm"
+              onClick={handleDecommission}
+            >
+              {language === 'ka' ? 'წაშლა' : 'Decommission'}
+            </ProtonButton>
+          </>
+        }
+      >
+        <div className="text-center space-y-4 py-2">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mx-auto animate-pulse">
+            <ShieldAlert size={32} />
+          </div>
+          <p className="text-xs text-proton-muted leading-relaxed font-normal">
+            {language === 'ka' 
+              ? `დარწმუნებული ხართ, რომ გსურთ აგენტის წაშლა? ეს ქმედება მთლიანად გაასუფთავებს მის სისტემურ ინსტრუქციებსა და საუბრის მეხსიერებას.` 
+              : `Are you absolutely certain you wish to decommission ${decomTarget?.name} from the neural matrix? All associated system prompt boundaries and chat interactions will be permanently wiped.`
+            }
+          </p>
+        </div>
+      </ProtonModal>
 
     </div>
   );
