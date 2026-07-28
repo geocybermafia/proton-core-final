@@ -2259,6 +2259,117 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             )}
           </div>
         </div>
+
+        {/* Market Hub Quick Section Navigation Sub-bar */}
+        <div className="w-full flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 pt-2 border-t border-proton-border/20">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveBottomTab('home');
+              setViewMode('browse');
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
+              activeBottomTab === 'home' && viewMode === 'browse'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+            )}
+          >
+            <LayoutGrid size={13} />
+            <span>{language === 'ka' ? 'მთავარი' : 'Home'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveBottomTab('categories');
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
+              activeBottomTab === 'categories'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+            )}
+          >
+            <Tag size={13} />
+            <span>{language === 'ka' ? 'კატეგორია' : 'Category'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFormData({
+                title: '',
+                titleGe: '',
+                description: '',
+                descriptionGe: '',
+                price: '',
+                currency: language === 'ka' ? 'GEL' : 'USD',
+                category: 'technics',
+                country: language === 'ka' ? 'GEO' : 'USA',
+                city: '',
+                location: '',
+                images: [],
+                lat: undefined,
+                lng: undefined,
+                condition: 'new',
+                isNegotiable: false,
+                listingType: 'product',
+                serviceDuration: '',
+                serviceTerms: ''
+              });
+              setViewMode('create');
+              setActiveBottomTab('home');
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
+              viewMode === 'create'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+            )}
+          >
+            <Plus size={13} className="stroke-[2.5]" />
+            <span>{language === 'ka' ? 'დამატება' : 'Add Listing'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveBottomTab('messages');
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 relative cursor-pointer",
+              activeBottomTab === 'messages'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+            )}
+          >
+            <MessageCircle size={13} />
+            <span>{language === 'ka' ? 'ჩატი' : 'Chat'}</span>
+            {groupedChats.length > 0 && (
+              <span className="inline-flex items-center justify-center h-3.5 px-1 text-[8px] font-black leading-none text-proton-on-accent bg-proton-accent rounded-full border border-proton-bg">
+                {groupedChats.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveBottomTab('home');
+              setViewMode('my-listings');
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
+              viewMode === 'my-listings'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+            )}
+          >
+            <User size={13} />
+            <span>{language === 'ka' ? 'კაბინეტი' : 'Profile'}</span>
+          </button>
+        </div>
       </div>
 
       <div className="p-6 lg:p-10 grow relative">
@@ -5335,120 +5446,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       </motion.div>
     )}
   </AnimatePresence>
-
-  {/* Mobile Sticky 5-Tab Navigation Bar */}
-  <div className="md:hidden fixed bottom-0 left-0 w-full bg-proton-card/98 backdrop-blur-md border-t border-proton-border/30 h-[calc(4.75rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] py-1.5 z-[100] grid grid-cols-5 items-center px-1 shadow-lg">
-    {/* Tab 1: Home */}
-    <button
-      onClick={() => {
-        setActiveBottomTab('home');
-        setViewMode('browse');
-      }}
-      className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
-        activeBottomTab === 'home' && viewMode === 'browse' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
-      )}
-    >
-      <LayoutGrid size={22} className="stroke-[2]" />
-      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
-        {language === 'ka' ? 'მთავარი' : 'Home'}
-      </span>
-    </button>
-
-    {/* Tab 2: Categories */}
-    <button
-      onClick={() => {
-        setActiveBottomTab('categories');
-      }}
-      className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
-        activeBottomTab === 'categories' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
-      )}
-    >
-      <Tag size={22} className="stroke-[2]" />
-      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
-        {language === 'ka' ? 'კატეგორია' : 'Category'}
-      </span>
-    </button>
-
-    {/* Tab 3: Balanced Add [➕] Listing Button */}
-    <button
-      onClick={() => {
-        setFormData({
-          title: '',
-          titleGe: '',
-          description: '',
-          descriptionGe: '',
-          price: '',
-          currency: language === 'ka' ? 'GEL' : 'USD',
-          category: 'technics',
-          country: language === 'ka' ? 'GEO' : 'USA',
-          city: '',
-          location: '',
-          images: [],
-          lat: undefined,
-          lng: undefined,
-          condition: 'new',
-          isNegotiable: false,
-          listingType: 'product',
-          serviceDuration: '',
-          serviceTerms: ''
-        });
-        setViewMode('create');
-        setActiveBottomTab('home');
-      }}
-      className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
-        viewMode === 'create' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
-      )}
-      title={language === 'ka' ? 'განცხადების დამატება' : 'Add Listing'}
-    >
-      <Plus size={22} className="stroke-[2.5]" />
-      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
-        {language === 'ka' ? 'დამატება' : 'Add'}
-      </span>
-    </button>
-
-    {/* Tab 4: Chat messages */}
-    <button
-      onClick={() => {
-        setActiveBottomTab('messages');
-      }}
-      className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 relative py-1.5",
-        activeBottomTab === 'messages' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
-      )}
-    >
-      <div className="relative">
-        <MessageCircle size={22} className="stroke-[2]" />
-        {groupedChats.length > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center h-4 w-4 text-[8px] font-black leading-none text-proton-on-accent bg-proton-accent rounded-full">
-            {groupedChats.length}
-          </span>
-        )}
-      </div>
-      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
-        {language === 'ka' ? 'ჩატი' : 'Chat'}
-      </span>
-    </button>
-
-    {/* Tab 5: My cabinet / Profile */}
-    <button
-      onClick={() => {
-        setActiveBottomTab('home');
-        setViewMode('my-listings');
-      }}
-      className={cn(
-        "flex flex-col items-center justify-center w-full h-full transition-all duration-200 py-1.5",
-        viewMode === 'my-listings' ? "text-proton-accent font-bold" : "text-proton-muted font-medium"
-      )}
-    >
-      <User size={22} className="stroke-[2]" />
-      <span className="text-[10px] font-bold mt-1.5 uppercase tracking-wider block text-center">
-        {language === 'ka' ? 'კაბინეტი' : 'Profile'}
-      </span>
-    </button>
-  </div>
 </div>
   );
 });
