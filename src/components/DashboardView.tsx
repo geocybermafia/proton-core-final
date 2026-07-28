@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { safeStorage } from '../lib/safeStorage';
 import { motion } from 'framer-motion';
 import { 
@@ -14,7 +14,16 @@ import {
   Eye,
   EyeOff,
   LayoutGrid,
-  Video
+  Video,
+  Search,
+  Bot,
+  Zap,
+  CheckCircle2,
+  Cpu,
+  ArrowRight,
+  MessageSquare,
+  Image,
+  Layers
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -25,26 +34,30 @@ export const DashboardView = React.memo(({
   language = 'en',
   setUiMode,
   aiSettings,
-  setAiSettings
+  setAiSettings,
+  personas = []
 }: { 
-  personas: Persona[], 
+  personas?: Persona[], 
   activeView: View, 
   setActiveView: (v: View) => void,
-  chatHistory: any,
+  chatHistory?: any,
   language: 'en' | 'ka',
-  user: any,
+  user?: any,
   uiMode: 'business' | 'creative' | 'market',
   setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void,
   aiSettings: GlobalAiSettings,
-  setLastGeminiMetadata: (m: GeminiMetadata | null) => void,
-  trackFirestore: <T>(promise: Promise<T>) => Promise<T>,
-  isCreativeMode: boolean,
-  theme: Theme,
-  setTheme: (t: Theme) => void,
-  isSystemActive: boolean,
+  setLastGeminiMetadata?: (m: GeminiMetadata | null) => void,
+  trackFirestore?: <T>(promise: Promise<T>) => Promise<T>,
+  isCreativeMode?: boolean,
+  theme?: Theme,
+  setTheme?: (t: Theme) => void,
+  isSystemActive?: boolean,
   setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>
 }) => {
   const t = translations[language];
+
+  // Quick Command Search State
+  const [quickQuery, setQuickQuery] = useState('');
 
   // Dynamic state for grid widget visibility
   const [visibleWidgets, setVisibleWidgets] = React.useState<string[]>(() => {
@@ -77,7 +90,13 @@ export const DashboardView = React.memo(({
     safeStorage.set('proton_dashboard_widgets', JSON.stringify(essential));
   };
 
-  // Beautiful curated titles & metrics for the 5 Gateways
+  const handleQuickSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickQuery.trim()) return;
+    setActiveView('personas');
+  };
+
+  // Beautiful curated titles & metrics for the Gateways
   const gateways = [
     {
       id: 'business',
@@ -204,7 +223,7 @@ export const DashboardView = React.memo(({
           }
         }
       }}
-      className="space-y-12 pb-20 max-w-6xl mx-auto px-4"
+      className="space-y-8 pb-20 max-w-6xl mx-auto px-4"
     >
       {/* Elegantly Crafted Hub Hero Section */}
       <motion.div 
@@ -212,12 +231,12 @@ export const DashboardView = React.memo(({
           hidden: { opacity: 0, y: 30 },
           visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
         }}
-        className="p-6 md:p-10 rounded-2xl sm:rounded-3xl border border-proton-border bg-gradient-to-br from-proton-card via-proton-card/90 to-proton-accent/5 shadow-2xl relative overflow-hidden transition-all duration-300"
+        className="p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-proton-border bg-gradient-to-br from-proton-card via-proton-card/90 to-proton-accent/5 shadow-2xl relative overflow-hidden transition-all duration-300 space-y-6"
       >
         <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
         
-        <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8 relative z-10">
-          <div className="space-y-3 text-center md:text-left flex-1">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-6 relative z-10">
+          <div className="space-y-3 text-left flex-1">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
               {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
@@ -234,7 +253,7 @@ export const DashboardView = React.memo(({
             </p>
           </div>
           
-          <div className="flex items-center shrink-0">
+          <div className="hidden md:flex items-center shrink-0">
             <motion.div 
               whileHover={{ scale: 1.08, rotate: 45 }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -242,6 +261,148 @@ export const DashboardView = React.memo(({
             >
               <Grid className="text-proton-accent" size={30} />
             </motion.div>
+          </div>
+        </div>
+
+        {/* Quick AI Command / Search Input Box */}
+        <form onSubmit={handleQuickSubmit} className="relative z-10 pt-2">
+          <div className="relative flex items-center">
+            <Sparkles className="absolute left-4 text-proton-accent animate-pulse" size={18} />
+            <input 
+              type="text"
+              value={quickQuery}
+              onChange={(e) => setQuickQuery(e.target.value)}
+              placeholder={language === 'ka' 
+                ? 'ჩაწერეთ შეკითხვა AI-სთვის ან მოძებნეთ ფუნქცია...' 
+                : 'Ask AI anything or launch a workflow...'}
+              className="w-full pl-11 pr-28 py-3.5 rounded-xl bg-proton-bg/80 border border-proton-accent/30 text-proton-text placeholder-proton-muted text-sm font-medium focus:outline-none focus:border-proton-accent focus:ring-1 focus:ring-proton-accent/50 shadow-inner transition-all"
+            />
+            <button 
+              type="submit"
+              className="absolute right-2 px-4 py-2 rounded-lg bg-proton-accent hover:bg-proton-accent/90 text-proton-bg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+            >
+              <Zap size={14} />
+              {language === 'ka' ? 'გაგზავნა' : 'Ask'}
+            </button>
+          </div>
+
+          {/* Quick Action Chips */}
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            <span className="text-[10px] font-mono uppercase text-proton-muted font-bold mr-1">
+              {language === 'ka' ? 'სწრაფი ბრძანებები:' : 'Quick Shortcuts:'}
+            </span>
+            <button 
+              type="button"
+              onClick={() => setActiveView('personas')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Bot size={11} />
+              {language === 'ka' ? 'AI ჩატი' : 'AI Assistant'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => setUiMode('creative', 'image')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Image size={11} />
+              {language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveView('organizer')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all cursor-pointer flex items-center gap-1"
+            >
+              <CalendarIcon size={11} />
+              {language === 'ka' ? 'დავალებები' : 'Tasks'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => setActiveView('clips')}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all cursor-pointer flex items-center gap-1"
+            >
+              <Video size={11} />
+              {language === 'ka' ? 'კლიპები' : 'Clips'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+
+      {/* Live Workspace Overview Metrics Bar */}
+      <motion.div 
+        variants={{
+          hidden: { opacity: 0, y: 20 },
+          visible: { opacity: 1, y: 0 }
+        }}
+        className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+      >
+        <div 
+          onClick={() => setActiveView('personas')}
+          className="p-4 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card/70 transition-all cursor-pointer group flex items-center gap-3.5"
+        >
+          <div className="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Bot size={20} />
+          </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
+              {language === 'ka' ? 'AI ასისტენტები' : 'AI Companions'}
+            </div>
+            <div className="text-base font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
+              <span>{personas.length || 8}</span>
+              <span className="text-[9px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                {language === 'ka' ? 'აქტიური' : 'Active'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-xl border border-proton-border bg-proton-card/30 transition-all flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <Cpu size={20} />
+          </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
+              {language === 'ka' ? 'AI მოდელი' : 'AI Engine'}
+            </div>
+            <div className="text-sm font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
+              <span>Gemini 2.5</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setActiveView('organizer')}
+          className="p-4 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card/70 transition-all cursor-pointer group flex items-center gap-3.5"
+        >
+          <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <CalendarIcon size={20} />
+          </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
+              {language === 'ka' ? 'დავალებები' : 'Task Manager'}
+            </div>
+            <div className="text-sm font-extrabold text-proton-text flex items-center gap-1 mt-0.5">
+              <span>{language === 'ka' ? 'ორგანიზატორი' : 'Organizer'}</span>
+              <ArrowRight size={12} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setActiveView('clips')}
+          className="p-4 rounded-xl border border-proton-border bg-proton-card/30 hover:bg-proton-card/70 transition-all cursor-pointer group flex items-center gap-3.5"
+        >
+          <div className="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <Video size={20} />
+          </div>
+          <div>
+            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
+              {language === 'ka' ? 'ვიდეო ჰაბი' : 'Clips Hub'}
+            </div>
+            <div className="text-sm font-extrabold text-proton-text flex items-center gap-1 mt-0.5">
+              <span>{language === 'ka' ? 'კლიპების ლენტა' : 'Video Feed'}</span>
+              <ArrowRight size={12} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
+            </div>
           </div>
         </div>
       </motion.div>
@@ -312,7 +473,7 @@ export const DashboardView = React.memo(({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               {gateways.map((gate) => {
                 const isVisible = visibleWidgets.includes(gate.id);
                 const GateIcon = gate.icon;
@@ -329,7 +490,7 @@ export const DashboardView = React.memo(({
                     )}
                   >
                     <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center border",
+                      "w-8 h-8 rounded-lg flex items-center justify-center border shrink-0",
                       isVisible 
                         ? "bg-proton-accent/10 border-proton-accent/20 text-proton-accent" 
                         : "bg-zinc-900 border-zinc-800 text-zinc-600"
@@ -464,3 +625,4 @@ export const DashboardView = React.memo(({
 });
 
 DashboardView.displayName = 'DashboardView';
+
