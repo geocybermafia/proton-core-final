@@ -212,35 +212,35 @@ export const DashboardView = React.memo(({
           hidden: { opacity: 0, y: 30 },
           visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
         }}
-        className="p-8 md:p-12 rounded-[40px] border border-proton-border bg-gradient-to-br from-proton-accent/5 via-transparent to-transparent shadow-2xl relative overflow-hidden transition-all duration-500 animate-in fade-in"
+        className="p-6 md:p-10 rounded-2xl sm:rounded-3xl border border-proton-border bg-gradient-to-br from-proton-card via-proton-card/90 to-proton-accent/5 shadow-2xl relative overflow-hidden transition-all duration-300"
       >
         <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
         
         <div className="flex flex-col md:flex-row items-center justify-between w-full gap-8 relative z-10">
           <div className="space-y-3 text-center md:text-left flex-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-mono font-black uppercase tracking-[0.2em] bg-zinc-900 text-proton-accent border border-zinc-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-              {language === 'ka' ? 'ციფრული სამუშაო სახლი' : 'MY DIGITAL HOME'}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
+              {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
             </div>
             
-            <h1 className="font-black tracking-tighter uppercase leading-none text-4xl sm:text-5xl md:text-6xl text-proton-text">
+            <h1 className="font-extrabold tracking-tight uppercase leading-none text-3xl sm:text-4xl md:text-5xl text-proton-text">
               {language === 'ka' ? 'კეთილი იყოს შენი მობრძანება' : 'WELCOME TO PROTON'}
             </h1>
             
-            <p className="text-proton-muted font-medium max-w-2xl text-sm sm:text-base leading-relaxed">
+            <p className="text-proton-muted font-normal max-w-2xl text-sm sm:text-base leading-relaxed">
               {language === 'ka' 
-                ? 'ეს არის შენი პერსონალური ციფრული სივრცე. აქ შეგიძლია გაესაუბრო ჭკვიან AI ასისტენტებს, შექმნა კრეატიული ხელოვნება, გაყიდო ან შეიძინო ნივთები ადგილობრივ მარკეტზე და მართო ყოველდღიური საქმეები მარტივად და ინტუიციურად.'
-                : 'This is your cozy, personal digital workspace. Chat with friendly AI companions, design stunning visual arts, trade items in the neighborhood market, and track your daily tasks or budgets effortlessly.'}
+                ? 'ეს არის შენი პერსონალური ციფრული სივრცე. აქ შეგიძლია გაესაუბრო ჭკვიან AI ასისტენტებს, შექმნა კრეატიული ხელოვნება, გაყიდო ან შეიძინო ნივთები ადგილობრივ მარკეტზე და მართო ყოველდღიური საქმეები მარტივად.'
+                : 'This is your personal digital workspace. Chat with smart AI companions, design visual graphics, trade items in the marketplace, and track your daily tasks or workflows effortlessly.'}
             </p>
           </div>
           
           <div className="flex items-center shrink-0">
             <motion.div 
-              whileHover={{ scale: 1.1, rotate: 90 }}
+              whileHover={{ scale: 1.08, rotate: 45 }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
-              className="w-20 h-20 rounded-full bg-proton-accent/5 flex items-center justify-center border border-proton-accent/10 backdrop-blur-sm shadow-inner cursor-pointer"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20 backdrop-blur-sm shadow-inner cursor-pointer"
             >
-              <Grid className="text-proton-accent animate-spin" style={{ animationDuration: '40s' }} size={32} />
+              <Grid className="text-proton-accent" size={30} />
             </motion.div>
           </div>
         </div>
@@ -379,7 +379,7 @@ export const DashboardView = React.memo(({
                 }}
                 whileTap={{ scale: 0.985 }}
                 className={cn(
-                  "bg-proton-card/30 hover:bg-proton-card/70 border rounded-[36px] p-6 flex flex-col justify-between transition-all duration-300 group shadow-lg cursor-pointer overflow-hidden relative",
+                  "bg-proton-card/40 hover:bg-proton-card/80 border rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 group shadow-lg cursor-pointer overflow-hidden relative",
                   gate.glowClass
                 )}
                 onClick={gate.action}
