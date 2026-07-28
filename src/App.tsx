@@ -3693,6 +3693,113 @@ const sanitizeForFirestore = (data: any): any => {
   return data;
 };
 
+interface MobileNavItemProps {
+  id: string;
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+  onClick: (id: string) => void;
+}
+
+const MobileNavItem = React.memo(({ id, icon: Icon, label, isActive, onClick }: MobileNavItemProps) => {
+  const handleClick = useCallback(() => {
+    onClick(id);
+  }, [id, onClick]);
+
+  return (
+    <button
+      onClick={handleClick}
+      className={cn(
+        "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 relative",
+        isActive ? "text-proton-accent" : "text-proton-muted"
+      )}
+    >
+      <Icon size={18} className={cn(isActive && "animate-pulse")} />
+      <span className="text-[8px] font-sans font-bold uppercase tracking-wider">{label}</span>
+      {isActive && (
+        <motion.div 
+          initial={{ scaleX: 0, opacity: 0 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          exit={{ scaleX: 0, opacity: 0 }}
+          className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]"
+        />
+      )}
+    </button>
+  );
+});
+MobileNavItem.displayName = 'MobileNavItem';
+
+interface MobileBottomNavProps {
+  isMobileNavVisible: boolean;
+  isMobileControlOpen: boolean;
+  activeView: View;
+  currentPath: string;
+  language: string;
+  setIsMobileControlOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  handleViewChange: (view: View) => void;
+}
+
+const MobileBottomNav = React.memo(({
+  isMobileNavVisible,
+  isMobileControlOpen,
+  activeView,
+  currentPath,
+  language,
+  setIsMobileControlOpen,
+  handleViewChange,
+}: MobileBottomNavProps) => {
+  const navItems = useMemo(() => [
+    { id: 'dashboard', icon: LayoutDashboard, label: language === 'ka' ? 'მთავარი' : 'Home' },
+    { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'კრეატივი' : 'Creative' },
+    { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
+    { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
+  ], [language]);
+
+  const activeStates = useMemo(() => ({
+    dashboard: activeView === 'dashboard' || currentPath === '/' || currentPath === '/dashboard',
+    'creative-studio': ['creative-studio', 'image', 'copywriting', 'translator', 'personas', 'blueprints', 'clips'].includes(activeView) ||
+      ['/creative-studio', '/studio', '/copywriting', '/translator', '/personas', '/blueprints', '/clips', '/reels'].some(path => currentPath.startsWith(path)),
+    'market-hub': ['market-hub', 'market', 'commercial'].includes(activeView) ||
+      ['/market-hub', '/market', '/commercial'].some(path => currentPath.startsWith(path)),
+    'control-hub': isMobileControlOpen || ['profile', 'settings', 'organizer', 'finance', 'business-hub', 'compute', 'device', 'documentation'].includes(activeView) ||
+      ['/profile', '/settings', '/organizer', '/finance', '/business-hub', '/business', '/compute', '/device', '/documentation'].some(path => currentPath.startsWith(path)),
+  }), [activeView, currentPath, isMobileControlOpen]);
+
+  const handleItemClick = useCallback((id: string) => {
+    if (id === 'control-hub') {
+      setIsMobileControlOpen(prev => !prev);
+    } else {
+      setIsMobileControlOpen(false);
+      handleViewChange(id as View);
+    }
+  }, [setIsMobileControlOpen, handleViewChange]);
+
+  const isVisible = isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas';
+
+  return (
+    <nav 
+      className={cn(
+        "md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/98 backdrop-blur-md border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl transition-all duration-300 ease-in-out",
+        isVisible
+          ? "translate-y-0 opacity-100 pointer-events-auto"
+          : "translate-y-full opacity-0 pointer-events-none"
+      )}
+    >
+      {navItems.map((item) => (
+        <MobileNavItem
+          key={item.id}
+          id={item.id}
+          icon={item.icon}
+          label={item.label}
+          isActive={!!activeStates[item.id as keyof typeof activeStates]}
+          onClick={handleItemClick}
+        />
+      ))}
+    </nav>
+  );
+});
+MobileBottomNav.displayName = 'MobileBottomNav';
+
 export default function App() {
   const { user, loading: authLoading, initialized: authInitialized, logout } = useAuth();
   const { showToast } = useToast();
@@ -5477,61 +5584,15 @@ export default function App() {
       </AnimatePresence>
 
       {/* Bottom Nav (Mobile Only) */}
-      <nav 
-        className={cn(
-          "md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/98 backdrop-blur-md border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl transition-all duration-300 ease-in-out",
-          (isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas')
-            ? "translate-y-0 opacity-100 pointer-events-auto"
-            : "translate-y-full opacity-0 pointer-events-none"
-        )}
-      >
-        {[
-          { id: 'dashboard', icon: LayoutDashboard, label: language === 'ka' ? 'მთავარი' : 'Home' },
-          { id: 'creative-studio', icon: Sparkles, label: language === 'ka' ? 'კრეატივი' : 'Creative' },
-          { id: 'market-hub', icon: ShoppingBag, label: language === 'ka' ? 'მარკეტი' : 'Market' },
-          { id: 'control-hub', icon: Settings, label: language === 'ka' ? 'მართვა' : 'Control' },
-        ].map((item) => {
-          let isActive = false;
-          if (item.id === 'dashboard') {
-            isActive = activeView === 'dashboard';
-          } else if (item.id === 'creative-studio') {
-            isActive = ['creative-studio', 'image', 'copywriting', 'translator', 'personas', 'blueprints', 'clips'].includes(activeView);
-          } else if (item.id === 'market-hub') {
-            isActive = ['market-hub', 'market', 'commercial'].includes(activeView);
-          } else if (item.id === 'control-hub') {
-            isActive = isMobileControlOpen || ['profile', 'settings', 'organizer', 'finance', 'business-hub', 'compute', 'device', 'documentation'].includes(activeView);
-          }
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.id === 'control-hub') {
-                  setIsMobileControlOpen(!isMobileControlOpen);
-                } else {
-                  setIsMobileControlOpen(false);
-                  handleViewChange(item.id as any);
-                }
-              }}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 relative",
-                isActive ? "text-proton-accent" : "text-proton-muted"
-              )}
-            >
-              <item.icon size={18} className={cn(isActive && "animate-pulse")} />
-              <span className="text-[8px] font-sans font-bold uppercase tracking-wider">{item.label}</span>
-              {isActive && (
-                <motion.div 
-                  initial={{ scaleX: 0, opacity: 0 }}
-                  animate={{ scaleX: 1, opacity: 1 }}
-                  exit={{ scaleX: 0, opacity: 0 }}
-                  className="absolute -top-px left-1/2 -translate-x-1/2 w-8 h-0.5 bg-proton-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]"
-                />
-              )}
-            </button>
-          );
-        })}
-      </nav>
+      <MobileBottomNav
+        isMobileNavVisible={isMobileNavVisible}
+        isMobileControlOpen={isMobileControlOpen}
+        activeView={activeView}
+        currentPath={location.pathname}
+        language={language}
+        setIsMobileControlOpen={setIsMobileControlOpen}
+        handleViewChange={handleViewChange}
+      />
 
       <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg overflow-hidden">
         {/* Subtle Background Gradients */}
