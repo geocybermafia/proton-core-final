@@ -779,13 +779,14 @@ Query: "${query}"
                   </div>
 
                   {/* Shortcuts & Quick actions */}
-                  <div className="mt-6 pt-4 border-t border-proton-border/30 flex flex-wrap gap-2 w-full" onClick={(e) => e.stopPropagation()}>
+                  <div className="mt-6 pt-4 border-t border-proton-border/30 grid grid-cols-1 min-[380px]:grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 w-full" onClick={(e) => e.stopPropagation()}>
                     {gate.shortcuts.map((sc, i) => (
                       <ProtonButton
                         key={i}
                         type="button"
                         variant="subtle"
                         size="sm"
+                        title={sc.label}
                         onClick={() => {
                           if (gate.id === 'business' || gate.id === 'creative' || gate.id === 'market') {
                             setUiMode(gate.id, sc.view as any);
@@ -793,9 +794,9 @@ Query: "${query}"
                             setActiveView(sc.view as any);
                           }
                         }}
-                        className="py-1 px-2.5 text-[9px] font-mono font-bold uppercase tracking-wider"
+                        className="w-full sm:w-auto py-1.5 sm:py-1 px-2 sm:px-2.5 text-[9px] min-[380px]:text-[10px] font-mono font-bold uppercase tracking-wider whitespace-nowrap truncate min-w-0 justify-center"
                       >
-                        {sc.label}
+                        <span className="truncate min-w-0 whitespace-nowrap">{sc.label}</span>
                       </ProtonButton>
                     ))}
                   </div>

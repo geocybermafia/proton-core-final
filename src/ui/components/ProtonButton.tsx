@@ -60,7 +60,7 @@ export const ProtonButton = React.forwardRef<HTMLButtonElement, ProtonButtonProp
       ) : (
         leftIcon && <span className="shrink-0 flex items-center">{leftIcon}</span>
       )}
-      {children && <span>{children}</span>}
+      {children && <span className="truncate min-w-0">{children}</span>}
       {!isLoading && rightIcon && <span className="shrink-0 flex items-center">{rightIcon}</span>}
     </button>
   );
