@@ -4354,7 +4354,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                              SYSTEM ACTIVE
                           </div>
                           
-                          <div className="h-48 rounded-[24px] overflow-hidden">
+                          <div className="w-full h-64 min-h-[250px] rounded-[24px] overflow-hidden relative">
                              <MapPicker 
                                 lat={formData.lat}
                                 lng={formData.lng}

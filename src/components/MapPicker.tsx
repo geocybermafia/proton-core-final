@@ -98,12 +98,45 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
       onChange(clickLat, clickLng);
     });
 
+    // Step One: Multiple invalidateSize calls to guarantee tile rendering post modal animation
+    const invalidateTimers = [50, 150, 300, 600, 1000].map(delay =>
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, delay)
+    );
+
     // Cleanup unmount
     return () => {
+      invalidateTimers.forEach(t => clearTimeout(t));
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
+    };
+  }, []);
+
+  // Step Three: ResizeObserver Integration for Container Resizing & Drawer Toggles
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    let rafId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      });
+    });
+
+    observer.observe(container);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
     };
   }, []);
 
@@ -207,8 +240,8 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
         </button>
       </div>
 
-      <div className="relative w-full h-80 rounded-[30px] overflow-hidden border border-white/5 shadow-inner bg-[#0a0a0a]">
-        <div ref={mapContainerRef} className="w-full h-full z-0" />
+      <div className="relative w-full h-64 min-h-[250px] rounded-[30px] overflow-hidden border border-white/5 shadow-inner bg-[#0a0a0a]">
+        <div ref={mapContainerRef} className="w-full h-full min-h-[250px] z-0 bg-[#0a0a0a]" />
         
         {/* Coordinate indicator overlay */}
         <div className="absolute top-4 left-4 z-10 pointer-events-none">

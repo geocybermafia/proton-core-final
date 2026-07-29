@@ -99,13 +99,46 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
 
     map.on('popupopen', handlePopupOpen);
 
+    // Multiple delayed invalidateSize calls for animation transitions
+    const invalidateTimers = [50, 150, 300, 600, 1000].map(delay =>
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, delay)
+    );
+
     // Cleanup on unmount
     return () => {
+      invalidateTimers.forEach(t => clearTimeout(t));
       if (mapRef.current) {
         mapRef.current.off('popupopen', handlePopupOpen);
         mapRef.current.remove();
         mapRef.current = null;
       }
+    };
+  }, []);
+
+  // Handle parent container resize via ResizeObserver
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    let rafId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      });
+    });
+
+    observer.observe(container);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
     };
   }, []);
 

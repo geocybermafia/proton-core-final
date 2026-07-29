@@ -250,3 +250,33 @@ body, #root {
   background: var(--proton-muted);
 }
 
+/* Leaflet Map Canvas & Tile Rendering Fixes */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 200px;
+  background-color: #0a0a0a !important;
+  outline: none;
+}
+
+.leaflet-tile-container {
+  will-change: transform;
+}
+
+.leaflet-tile-container img,
+.leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+  mix-blend-mode: normal;
+  box-shadow: none !important;
+}
+
+.leaflet-pane {
+  z-index: 1;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 2;
+}
+

@@ -23,6 +23,72 @@ import {
   ProtonIconBox,
 } from '../ui';
 
+// Helper component for safe avatar rendering with image error handling
+function PersonaAvatarView({ 
+  avatar, 
+  name, 
+  size = 'md',
+  className,
+  status
+}: { 
+  avatar?: string; 
+  name?: string; 
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  status?: 'online' | 'offline' | 'busy' | 'away';
+}) {
+  const [hasImageError, setHasImageError] = useState(false);
+  const trimmed = avatar?.trim() || '';
+  const isUrl = trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:image/');
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [avatar]);
+
+  const sizeClasses = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-12 h-12 text-xl',
+    xl: 'w-16 h-16 text-2xl',
+  };
+
+  const getInitials = (str?: string) => {
+    if (!str) return '🤖';
+    const parts = str.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return str.slice(0, 2).toUpperCase();
+  };
+
+  const fallback = (!isUrl && trimmed) ? trimmed : (name ? getInitials(name) : '🤖');
+
+  return (
+    <div className="relative inline-block shrink-0">
+      <div className={cn("rounded-xl overflow-hidden bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center select-none font-bold text-proton-text", sizeClasses[size], className)}>
+        {isUrl && !hasImageError ? (
+          <img
+            src={trimmed}
+            alt={name || 'Agent'}
+            onError={() => setHasImageError(true)}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span>{fallback}</span>
+        )}
+      </div>
+      {status && (
+        <span
+          className={cn(
+            'absolute bottom-0 right-0 rounded-full ring-2 ring-proton-bg w-2.5 h-2.5',
+            status === 'online' ? 'bg-emerald-500' : 'bg-zinc-500'
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
 // Cyber Preset Avatars
 const AVATAR_PRESETS = [
   { emoji: '🤖', labelEn: 'Cortex Matrix', labelKa: 'კორტექს მატრიქსი' },
@@ -287,6 +353,18 @@ export default function PersonasView({
     return () => unsubscribe();
   }, [selectedPersona]);
 
+  const isValidAvatarUrl = (url: string) => {
+    if (!url) return false;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('data:image/')) return true;
+    try {
+      const parsed = new URL(trimmed);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   // Create Custom Persona
   const handleCreatePersona = async () => {
     if (!auth.currentUser) return;
@@ -295,7 +373,16 @@ export default function PersonasView({
 
     setIsCreatingPersona(true);
     const generatedId = "persona_" + Date.now().toString();
-    const finalAvatar = selectedAvatarType === 'preset' ? newPersonaAvatarEmoji : newPersonaAvatarUrl.trim();
+    
+    let finalAvatar = newPersonaAvatarEmoji;
+    if (selectedAvatarType === 'url') {
+      const trimmedUrl = newPersonaAvatarUrl.trim();
+      if (isValidAvatarUrl(trimmedUrl)) {
+        finalAvatar = trimmedUrl;
+      } else {
+        finalAvatar = newPersonaAvatarEmoji || '🤖';
+      }
+    }
 
     const payload: Persona = {
       id: generatedId,
@@ -559,9 +646,9 @@ export default function PersonasView({
                   <div className="absolute left-0 top-1/4 bottom-1/4 w-[3px] bg-proton-accent rounded-r-full" />
                 )}
                 
-                <ProtonAvatar 
-                  src={isUrl(p.avatar) ? p.avatar : undefined}
-                  name={!isUrl(p.avatar) ? (p.avatar || '🤖') : undefined}
+                <PersonaAvatarView 
+                  avatar={p.avatar}
+                  name={language === 'ka' ? (p.nameGe || p.name) : p.name}
                   size="md"
                   status={isSelected ? 'online' : undefined}
                 />
@@ -613,14 +700,12 @@ export default function PersonasView({
                        <ArrowLeft size={16} />
                      </button>
                      
-                    <div className="w-12 h-12 rounded-xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center overflow-hidden">
-                       {isUrl(selectedPersona.avatar) ? (
-                            <img src={selectedPersona.avatar} alt="" className="w-full h-full object-cover" />
-                       ) : (
-                            <span className="text-2xl">{selectedPersona.avatar || '🤖'}</span>
-                       )}
-                    </div>
-                    <div>
+                     <PersonaAvatarView 
+                        avatar={selectedPersona.avatar}
+                        name={language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
+                        size="lg"
+                     />
+                     <div>
                        <h3 className="font-extrabold text-sm sm:text-base tracking-tight text-proton-text truncate max-w-[200px] sm:max-w-xs md:max-w-md">
                          {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
                        </h3>
@@ -1130,12 +1215,33 @@ export default function PersonasView({
                 ))}
               </div>
             ) : (
-              <ProtonInput 
-                type="text" 
-                value={newPersonaAvatarUrl}
-                onChange={(e) => setNewPersonaAvatarUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/photo-example..."
-              />
+              <div className="space-y-3">
+                <ProtonInput 
+                  type="text" 
+                  value={newPersonaAvatarUrl}
+                  onChange={(e) => setNewPersonaAvatarUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/photo-example..."
+                />
+                {newPersonaAvatarUrl.trim() && (
+                  <div className="flex items-center gap-3 p-3 bg-proton-bg/60 border border-proton-border/40 rounded-xl text-xs">
+                    <PersonaAvatarView 
+                      avatar={newPersonaAvatarUrl.trim()} 
+                      name={newPersonaNameEn || 'New Agent'} 
+                      size="md" 
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-proton-text truncate">Avatar Live Preview</div>
+                      <div className="text-[10px] text-proton-muted mt-0.5">
+                        {isValidAvatarUrl(newPersonaAvatarUrl) ? (
+                          <span className="text-emerald-400 font-mono font-bold">✓ Valid URL Format</span>
+                        ) : (
+                          <span className="text-amber-400 font-mono font-bold">⚠ Invalid URL Format — Will Fallback Gracefully</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

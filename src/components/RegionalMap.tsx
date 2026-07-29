@@ -42,16 +42,44 @@ export default function RegionalMap({ listings, selectedListing, onSelectListing
       maxZoom: 19,
     }).addTo(map);
 
-    // Initial resize trigger to fix canvas container size issues
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
+    // Initial resize triggers to fix canvas container size issues post-animation
+    const invalidateTimers = [50, 150, 300, 600, 1000].map(delay =>
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, delay)
+    );
 
     return () => {
+      invalidateTimers.forEach(t => clearTimeout(t));
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
+    };
+  }, []);
+
+  // ResizeObserver for dynamic container adjustments
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    let rafId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      });
+    });
+
+    observer.observe(container);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      observer.disconnect();
     };
   }, []);
 

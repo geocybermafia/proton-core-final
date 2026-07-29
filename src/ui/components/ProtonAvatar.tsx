@@ -6,6 +6,7 @@ export interface ProtonAvatarProps extends React.HTMLAttributes<HTMLDivElement> 
   src?: string;
   alt?: string;
   name?: string;
+  fallbackEmoji?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   status?: 'online' | 'offline' | 'busy' | 'away';
   className?: string;
@@ -15,12 +16,18 @@ export const ProtonAvatar: React.FC<ProtonAvatarProps> = ({
   src,
   alt = 'Avatar',
   name,
+  fallbackEmoji,
   size = 'md',
   status,
   className,
   ...props
 }) => {
   const [imageError, setImageError] = useState(false);
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [src]);
+
   // Border radius constraint: Avatars MUST use rounded-full
   const baseRadius = protonRadius.classes.avatar; // 'rounded-full'
 
@@ -48,12 +55,31 @@ export const ProtonAvatar: React.FC<ProtonAvatarProps> = ({
   };
 
   const getInitials = (str?: string) => {
-    if (!str) return '?';
+    if (!str) return '🤖';
     const parts = str.trim().split(' ');
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
     }
     return str.slice(0, 2).toUpperCase();
+  };
+
+  const renderContent = () => {
+    if (src && !imageError) {
+      return (
+        <img
+          src={src}
+          alt={alt}
+          onError={() => setImageError(true)}
+          className="w-full h-full object-cover"
+        />
+      );
+    }
+
+    if (fallbackEmoji) {
+      return <span className="text-base select-none">{fallbackEmoji}</span>;
+    }
+
+    return <span className="font-mono tracking-wider">{getInitials(name || alt)}</span>;
   };
 
   return (
@@ -66,16 +92,7 @@ export const ProtonAvatar: React.FC<ProtonAvatarProps> = ({
           className
         )}
       >
-        {src && !imageError ? (
-          <img
-            src={src}
-            alt={alt}
-            onError={() => setImageError(true)}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="font-mono tracking-wider">{getInitials(name || alt)}</span>
-        )}
+        {renderContent()}
       </div>
 
       {status && (
