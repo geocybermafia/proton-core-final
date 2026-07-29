@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { translateText, generateSpeech } from '../lib/gemini';
 import { cn } from '../lib/utils';
+import { useToast } from './Toast';
 
 // --- Creative Glossary ---
 const CREATIVE_GLOSSARY = {
@@ -86,7 +87,20 @@ interface Message {
   timestamp: Date;
 }
 
-export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+export interface TranslatorViewProps {
+  onBack?: () => void;
+  language?: 'en' | 'ka';
+}
+
+export const TranslatorView: React.FC<TranslatorViewProps> = ({ onBack, language }) => {
+  let showToast: (msg: string, type?: any, duration?: number) => void;
+  try {
+    const toastContext = useToast();
+    showToast = toastContext.showToast;
+  } catch {
+    showToast = (msg: string) => console.log('Toast:', msg);
+  }
+
   const [activeSide, setActiveSide] = useState<'top' | 'bottom' | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -95,6 +109,12 @@ export const TranslatorView: React.FC<{ onBack?: () => void }> = ({ onBack }) =>
   const [faceToFace, setFaceToFace] = useState(false); // Default to normal for individual use
   const [interimTranscript, setInterimTranscript] = useState('');
   
+  // Speech synthesis state sync
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
   // Robust state management
   const [status, setStatus] = useState<'idle' | 'starting' | 'recording' | 'stopping' | 'processing'>('idle');
   
@@ -325,15 +345,126 @@ Guidelines:
     }
   };
 
-  const playTTS = async (text: string, lang: string) => {
+  const stopSpeech = () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.stop();
+      } catch {}
+      currentSourceRef.current = null;
+    }
+    setIsSpeaking(false);
+    setSpeakingId(null);
+  };
+
+  const handleSpeechTrigger = (text: string, lang: string, messageId?: string) => {
+    const targetId = messageId || 'active';
+    if (isSpeaking && speakingId === targetId) {
+      stopSpeech();
+      return;
+    }
+    stopSpeech();
+    playTTS(text, lang, targetId);
+  };
+
+  const playTTS = async (text: string, lang: string, messageId?: string) => {
+    const targetId = messageId || 'active';
+    const isKa = language === 'ka' || bottomLang === 'Georgian';
+
+    const speakWithBrowserTTS = () => {
+      // Step One: Browser Capability & Support Pre-check
+      const isSpeechSynthesisSupported = 
+        typeof window !== 'undefined' && 
+        'speechSynthesis' in window && 
+        'SpeechSynthesisUtterance' in window;
+
+      if (!isSpeechSynthesisSupported) {
+        setIsSpeaking(false);
+        setSpeakingId(null);
+        showToast(
+          isKa 
+            ? 'თქვენს ბრაუზერს ხმოვანი სინთეზის (Speech Synthesis) მხარდაჭერა არ აქვს.'
+            : 'Speech synthesis is not supported by your browser.',
+          'warning',
+          5000
+        );
+        return;
+      }
+
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        const bcp = Object.values(SUPPORTED_LANGUAGES).find(l => l.ttsLangCode === lang)?.bcp47 || 'en-US';
+        utterance.lang = bcp;
+
+        // Step Three: Active Playback State Sync
+        utterance.onstart = () => {
+          setIsSpeaking(true);
+          setSpeakingId(targetId);
+        };
+
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setSpeakingId(null);
+        };
+
+        // Step Two: Permission & Error Listener Handling
+        utterance.onerror = (event: any) => {
+          console.warn('SpeechSynthesisUtterance error:', event);
+          setIsSpeaking(false);
+          setSpeakingId(null);
+
+          // Step Four: Fallback Toast Notification
+          showToast(
+            isKa 
+              ? 'ხმოვანი სიგნალის დაკვრა დაბლოკილია. გთხოვთ შეამოწმოთ ბრაუზერის აუდიო ნებართვები.'
+              : 'Audio playback was blocked or failed. Please check your browser speech & audio permissions.',
+            'warning',
+            5000
+          );
+        };
+
+        (utterance as any).onblocked = () => {
+          setIsSpeaking(false);
+          setSpeakingId(null);
+          showToast(
+            isKa
+              ? 'ხმოვანი სინთეზი დაბლოკილია ბრაუზერის მიერ.'
+              : 'Speech synthesis is blocked by browser policies.',
+            'warning',
+            5000
+          );
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('Browser TTS error:', err);
+        setIsSpeaking(false);
+        setSpeakingId(null);
+        showToast(
+          isKa 
+            ? 'ხმოვანი სიგნალის დაკვრა დაბლოკილია. გთხოვთ შეამოწმოთ ბრაუზერის აუდიო ნებართვები.'
+            : 'Audio playback was blocked or failed. Please check your browser speech & audio permissions.',
+          'warning',
+          5000
+        );
+      }
+    };
+
     try {
+      setIsSpeaking(true);
+      setSpeakingId(targetId);
+
       const langName = Object.values(SUPPORTED_LANGUAGES).find(l => l.ttsLangCode === lang)?.name || 'English';
       const prompt = `Say in ${langName}: ${text}`;
       const voiceName = lang === 'ka' ? 'Kore' : 'Zephyr';
-      
+
       const base64Audio = await generateSpeech(prompt, voiceName);
       if (base64Audio) {
-        // Convert base64 to binary safely
         const binaryString = atob(base64Audio);
         const len = binaryString.length;
         const bytes = new Uint8Array(len);
@@ -345,43 +476,46 @@ Guidelines:
           const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext;
           audioContext.current = new AudioContextClass({ sampleRate: 24000 });
         }
-        
+
         const context = audioContext.current;
         if (context) {
           if (context.state === 'suspended') {
             await context.resume();
           }
 
-          // Manual decode 16-bit PCM to Float32 safely using DataView to handle any alignment, size or endianness issues
           const length = Math.floor(bytes.byteLength / 2);
           const float32Data = new Float32Array(length);
           const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
           for (let i = 0; i < length; i++) {
-            const int16Val = dataView.getInt16(i * 2, true); // true for Little Endian
-            float32Data[i] = int16Val / 32768.0; // Normalize Int16 to [-1, 1]
+            const int16Val = dataView.getInt16(i * 2, true);
+            float32Data[i] = int16Val / 32768.0;
           }
 
           const audioBuffer = context.createBuffer(1, float32Data.length, 24000);
           audioBuffer.getChannelData(0).set(float32Data);
 
           const source = context.createBufferSource();
+          currentSourceRef.current = source;
           source.buffer = audioBuffer;
           source.connect(context.destination);
+
           source.onended = () => {
+            currentSourceRef.current = null;
+            setIsSpeaking(false);
+            setSpeakingId(null);
             if (audioContext.current && audioContext.current.state === 'running') {
               audioContext.current.suspend().catch(() => {});
             }
           };
+
           source.start();
+          return;
         }
       }
+      speakWithBrowserTTS();
     } catch (error) {
-      console.error('TTS error:', error);
-      // Fallback to browser TTS if Gemini TTS fails
-      const utterance = new SpeechSynthesisUtterance(text);
-      const bcp = Object.values(SUPPORTED_LANGUAGES).find(l => l.ttsLangCode === lang)?.bcp47 || 'en-US';
-      utterance.lang = bcp;
-      window.speechSynthesis.speak(utterance);
+      console.warn('Gemini TTS error/unavailable, falling back to browser Speech Synthesis:', error);
+      speakWithBrowserTTS();
     }
   };
 
@@ -493,16 +627,38 @@ Guidelines:
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  className="space-y-6"
+                  className="space-y-6 flex flex-col items-center"
                 >
                   <p className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1] text-blue-50">
                     {messages[0].translatedText}
                   </p>
-                  <div className="flex flex-col items-center gap-2">
+                  <div className="flex flex-col items-center gap-3">
                     <div className="h-px w-12 bg-blue-500/30" />
-                    <p className="text-sm md:text-base text-white/40 font-medium font-mono uppercase tracking-widest leading-relaxed">
-                      {messages[0].text}
-                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                      <p className="text-sm md:text-base text-white/40 font-medium font-mono uppercase tracking-widest leading-relaxed">
+                        {messages[0].text}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ttsCode = SUPPORTED_LANGUAGES[topLang]?.ttsLangCode || 'en';
+                          handleSpeechTrigger(messages[0].translatedText, ttsCode, messages[0].id);
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full border transition-all cursor-pointer flex items-center gap-2 text-xs font-bold",
+                          isSpeaking && speakingId === messages[0].id
+                            ? "bg-blue-500 border-blue-400 text-white animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-105"
+                            : "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20"
+                        )}
+                        title="Read translation aloud (Speech Synthesis)"
+                        aria-label="Play audio translation"
+                      >
+                        <Volume2 size={15} className={cn(isSpeaking && speakingId === messages[0].id && "animate-bounce")} />
+                        <span className="text-[10px] font-black uppercase tracking-wider">
+                          {isSpeaking && speakingId === messages[0].id ? 'Playing...' : 'Listen'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ) : (
@@ -711,7 +867,11 @@ Guidelines:
               </AnimatePresence>
             </div>
           </div>
-          <button className="w-10 h-10 rounded-full border border-white/10 text-white/40 hover:bg-white/5 transition-all flex items-center justify-center">
+          <button 
+            onClick={() => setShowHistory(true)}
+            className="w-10 h-10 rounded-full border border-white/10 text-white/40 hover:bg-white/5 transition-all flex items-center justify-center cursor-pointer"
+            title="Translation History"
+          >
              <History size={18} />
           </button>
         </div>
@@ -733,16 +893,38 @@ Guidelines:
               <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                className="space-y-6"
+                className="space-y-6 flex flex-col items-center"
               >
                 <p className="text-3xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1] text-amber-50">
                   {messages[0].translatedText}
                 </p>
-                <div className="flex flex-col items-center gap-2">
+                <div className="flex flex-col items-center gap-3">
                    <div className="h-px w-12 bg-amber-500/30" />
-                   <p className="text-sm md:text-base text-white/40 font-medium font-mono uppercase tracking-widest leading-relaxed">
-                    {messages[0].text}
-                  </p>
+                   <div className="flex flex-wrap items-center justify-center gap-3">
+                     <p className="text-sm md:text-base text-white/40 font-medium font-mono uppercase tracking-widest leading-relaxed">
+                      {messages[0].text}
+                     </p>
+                     <button
+                        type="button"
+                        onClick={() => {
+                          const ttsCode = SUPPORTED_LANGUAGES[bottomLang]?.ttsLangCode || 'ka';
+                          handleSpeechTrigger(messages[0].translatedText, ttsCode, messages[0].id);
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full border transition-all cursor-pointer flex items-center gap-2 text-xs font-bold",
+                          isSpeaking && speakingId === messages[0].id
+                            ? "bg-amber-500 border-amber-400 text-black font-bold animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)] scale-105"
+                            : "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20"
+                        )}
+                        title="Read translation aloud (Speech Synthesis)"
+                        aria-label="Play audio translation"
+                      >
+                        <Volume2 size={15} className={cn(isSpeaking && speakingId === messages[0].id && "animate-bounce")} />
+                        <span className="text-[10px] font-black uppercase tracking-wider">
+                          {isSpeaking && speakingId === messages[0].id ? 'მოსმენა...' : 'მოსმენა'}
+                        </span>
+                      </button>
+                   </div>
                 </div>
               </motion.div>
             ) : (
@@ -879,6 +1061,89 @@ Guidelines:
                   <p className="text-xs font-medium text-white/90 leading-relaxed">{permissionError}</p>
                </div>
             </div>
+          </motion.div>
+        )}
+
+        {showHistory && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg bg-zinc-950 border border-zinc-800 rounded-3xl p-6 space-y-4 max-h-[80vh] flex flex-col shadow-2xl"
+            >
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+                <div className="flex items-center gap-2 text-amber-400 font-bold">
+                  <History size={20} />
+                  <h3 className="text-lg font-extrabold uppercase tracking-wide">
+                    {language === 'ka' ? 'თარგმანების ისტორია' : 'Translation History'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 font-bold text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                {messages.length === 0 ? (
+                  <div className="text-center py-10 text-zinc-500 font-mono text-sm">
+                    {language === 'ka' ? 'ისტორია ცარიელია' : 'No translation history yet.'}
+                  </div>
+                ) : (
+                  messages.map((msg) => {
+                    const targetLangName = msg.sender === 'top' ? bottomLang : topLang;
+                    const targetTtsCode = SUPPORTED_LANGUAGES[targetLangName]?.ttsLangCode || 'en';
+                    const isItemSpeaking = isSpeaking && speakingId === msg.id;
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 space-y-2 relative group"
+                      >
+                        <div className="flex justify-between items-center text-[10px] font-mono text-zinc-400">
+                          <span className="uppercase font-bold tracking-wider text-amber-400">
+                            {msg.sender === 'top' ? topLang : bottomLang} → {targetLangName}
+                          </span>
+                          <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+
+                        <p className="text-xs text-zinc-400 italic">"{msg.text}"</p>
+                        
+                        <div className="flex items-center justify-between gap-3 pt-1 border-t border-zinc-800/60">
+                          <p className="text-sm font-bold text-white leading-relaxed">
+                            {msg.translatedText}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => handleSpeechTrigger(msg.translatedText, targetTtsCode, msg.id)}
+                            className={cn(
+                              "p-2 rounded-xl border transition-all shrink-0 flex items-center gap-1.5 cursor-pointer",
+                              isItemSpeaking
+                                ? "bg-amber-500 text-black border-amber-400 animate-pulse font-bold"
+                                : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white"
+                            )}
+                            title="Read aloud"
+                          >
+                            <Volume2 size={16} className={cn(isItemSpeaking && "animate-bounce")} />
+                            <span className="text-[10px] uppercase font-mono">
+                              {isItemSpeaking ? 'Stop' : 'Play'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
