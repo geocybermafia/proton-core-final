@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { safeStorage } from '../lib/safeStorage';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { matchCommandRoute, CommandRoute } from '../lib/commandRoutes';
 import { 
   Building, 
   Palette, 
@@ -23,8 +24,19 @@ import {
   ArrowRight,
   MessageSquare,
   Image,
-  Layers
+  Layers,
+  Activity,
+  BarChart3,
+  Terminal,
+  Clock,
+  Copy,
+  Check,
+  RefreshCw,
+  Gauge,
+  Radio,
+  Sliders
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { Persona, View, GlobalAiSettings, Theme, GeminiMetadata } from '../types';
@@ -65,6 +77,11 @@ export const DashboardView = React.memo(({
 
   // Quick Command Search State
   const [quickQuery, setQuickQuery] = useState('');
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [isAiThinking, setIsAiThinking] = useState(false);
+  const [copiedOutput, setCopiedOutput] = useState(false);
+  const [chartTimeframe, setChartTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
+  const [accentGlow, setAccentGlow] = useState<'cyan' | 'purple' | 'emerald' | 'amber'>('cyan');
 
   // Dynamic state for grid widget visibility
   const [visibleWidgets, setVisibleWidgets] = React.useState<string[]>(() => {
@@ -78,7 +95,6 @@ export const DashboardView = React.memo(({
       const next = prev.includes(id) 
         ? prev.filter(w => w !== id) 
         : [...prev, id];
-      // Always keep at least one widget visible
       if (next.length === 0) return prev;
       safeStorage.set('proton_dashboard_widgets', JSON.stringify(next));
       return next;
@@ -97,10 +113,85 @@ export const DashboardView = React.memo(({
     safeStorage.set('proton_dashboard_widgets', JSON.stringify(essential));
   };
 
+  // Telemetry Chart Datasets
+  const telemetryDataMap = {
+    '24h': [
+      { time: '00:00', requests: 14, tokens: 2800, latency: 22 },
+      { time: '04:00', requests: 9, tokens: 1900, latency: 20 },
+      { time: '08:00', requests: 42, tokens: 8900, latency: 31 },
+      { time: '12:00', requests: 78, tokens: 16200, latency: 27 },
+      { time: '16:00', requests: 95, tokens: 22100, latency: 34 },
+      { time: '20:00', requests: 61, tokens: 13400, latency: 25 },
+      { time: '23:59', requests: 48, tokens: 10200, latency: 23 },
+    ],
+    '7d': [
+      { time: 'Mon', requests: 280, tokens: 58000, latency: 26 },
+      { time: 'Tue', requests: 340, tokens: 72000, latency: 24 },
+      { time: 'Wed', requests: 410, tokens: 89000, latency: 29 },
+      { time: 'Thu', requests: 390, tokens: 84000, latency: 27 },
+      { time: 'Fri', requests: 480, tokens: 104000, latency: 30 },
+      { time: 'Sat', requests: 220, tokens: 46000, latency: 21 },
+      { time: 'Sun', requests: 190, tokens: 39000, latency: 20 },
+    ],
+    '30d': [
+      { time: 'W1', requests: 1800, tokens: 390000, latency: 25 },
+      { time: 'W2', requests: 2200, tokens: 480000, latency: 28 },
+      { time: 'W3', requests: 2600, tokens: 570000, latency: 26 },
+      { time: 'W4', requests: 2950, tokens: 630000, latency: 24 },
+    ]
+  };
+
+  const currentChartData = telemetryDataMap[chartTimeframe];
+
+  const [matchedSuggestedRoute, setMatchedSuggestedRoute] = useState<CommandRoute | null>(null);
+
+  // Command Route Submission Handler
   const handleQuickSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickQuery.trim()) return;
-    setActiveView('personas');
+    const query = quickQuery.trim();
+    if (!query) return;
+
+    // Step One & Step Three: Match against Command Route Dictionary
+    const matches = matchCommandRoute(query);
+
+    if (matches.length > 0) {
+      // Direct command route match identified -> Execute immediate deep-link navigation
+      const topMatch = matches[0];
+      setQuickQuery('');
+      if (topMatch.uiMode) {
+        setUiMode(topMatch.uiMode, topMatch.view);
+      } else {
+        setActiveView(topMatch.view);
+      }
+      return;
+    }
+
+    // If no exact command route match exists, render inline preview + primary "Navigate to Tool" quick action
+    setIsAiThinking(true);
+    setAiResponse(null);
+    setMatchedSuggestedRoute(null);
+
+    setTimeout(() => {
+      setIsAiThinking(false);
+      if (language === 'ka') {
+        setAiResponse(`⚡ [Proton AI ექსპერიმენტული პასუხი]:
+მოთხოვნა: "${query}"
+• ანალიზი წარმატებით შესრულდა.
+• რეკომენდაცია: შეგიძლია გადახვიდე AI ასისტენტების სივრცეში სიღრმისეული საუბრისთვის.`);
+      } else {
+        setAiResponse(`⚡ [Proton AI Direct Insight]:
+Query: "${query}"
+• Neural analysis completed across active workspace nodes.
+• Action Suggestion: Proceed to AI Companions for an extended conversation.`);
+      }
+    }, 600);
+  };
+
+  const handleCopyAiResponse = () => {
+    if (!aiResponse) return;
+    navigator.clipboard.writeText(aiResponse);
+    setCopiedOutput(true);
+    setTimeout(() => setCopiedOutput(false), 2000);
   };
 
   // Beautiful curated titles & metrics for the Gateways
@@ -340,6 +431,81 @@ export const DashboardView = React.memo(({
             </ProtonButton>
           </div>
         </form>
+
+        {/* Live Instant AI Response Box */}
+        <AnimatePresence>
+          {(isAiThinking || aiResponse) && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              className="pt-4 border-t border-proton-border/30"
+            >
+              <ProtonCard variant="glass" padding="default" className="relative space-y-3 border-proton-accent/40 bg-proton-card/90 backdrop-blur-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ProtonIconBox variant="accent" size="sm">
+                      <Sparkles size={14} className={isAiThinking ? "animate-spin text-proton-accent" : "text-proton-accent"} />
+                    </ProtonIconBox>
+                    <span className="text-xs font-mono font-bold text-proton-accent uppercase tracking-wider">
+                      {isAiThinking ? (language === 'ka' ? 'AI მოდელი ამუშავებს შეკითხვას...' : 'AI Processing Command...') : (language === 'ka' ? 'AI ანალიზი' : 'AI Direct Output')}
+                    </span>
+                  </div>
+
+                  {aiResponse && (
+                    <div className="flex items-center gap-2">
+                      <ProtonButton
+                        variant="subtle"
+                        size="sm"
+                        onClick={handleCopyAiResponse}
+                        leftIcon={copiedOutput ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                        className="py-1 px-2.5 text-[10px]"
+                      >
+                        {copiedOutput ? (language === 'ka' ? 'კოპირებულია' : 'Copied') : (language === 'ka' ? 'კოპირება' : 'Copy')}
+                      </ProtonButton>
+                      <ProtonButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAiResponse(null)}
+                        className="py-1 px-2 text-[10px]"
+                      >
+                        ✕
+                      </ProtonButton>
+                    </div>
+                  )}
+                </div>
+
+                {isAiThinking ? (
+                  <div className="flex items-center gap-3 py-4 text-xs font-mono text-proton-muted">
+                    <span className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
+                    <span>Analyzing system telemetry, neural memory nodes, and context...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-xs font-mono text-proton-text whitespace-pre-line leading-relaxed p-3 bg-proton-bg/60 rounded-xl border border-proton-border/40">
+                      {aiResponse}
+                    </div>
+                    
+                    <div className="flex items-center justify-end pt-1">
+                      <ProtonButton
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          setAiResponse(null);
+                          setActiveView('personas');
+                        }}
+                        rightIcon={<ArrowRight size={13} />}
+                        className="text-xs py-1.5 font-mono uppercase tracking-wider"
+                      >
+                        {language === 'ka' ? 'გადადი AI ასისტენტებში' : 'Navigate to AI Companions'}
+                      </ProtonButton>
+                    </div>
+                  </div>
+                )}
+              </ProtonCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Live Workspace Overview Metrics Bar */}

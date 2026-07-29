@@ -55,6 +55,7 @@ const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudi
 const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })));
 const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
 const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
+import { HeaderQuickSearch } from './components/HeaderQuickSearch';
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
@@ -5663,34 +5664,42 @@ export default function App() {
             </div>
           </div>
 
-          {/* Center Section: Main Navigation (Icons Only) */}
-          <nav className="hidden xl:flex items-center justify-center gap-4 sm:gap-6 lg:gap-8 flex-1 min-w-0 px-4">
-            {(uiMode === 'business' ? [
-              { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
-              { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
-              ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
-            ] : uiMode === 'creative' ? [
-              { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub', icon: Sparkles },
-              { id: 'image', label: t.sidebar.image, icon: ImageIcon },
-              { id: 'translator', label: t.sidebar.translator, icon: Languages },
-              { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
-            ] : [
-              { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
-              { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video },
-            ]).map((link) => (
-              <button
-                key={link.id}
-                onClick={() => handleViewChange(link.id as any)}
-                title={link.label}
-                className={cn(
-                  "p-3 rounded-xl transition-all flex items-center justify-center shrink-0",
-                  activeView === link.id ? "bg-proton-accent/10 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
-                )}
-              >
-                <link.icon size={18} />
-              </button>
-            ))}
-          </nav>
+          {/* Center Section: Quick Command Search Bar & Nav Icons */}
+          <div className="flex items-center justify-center gap-3 flex-1 min-w-0 px-2 sm:px-4">
+            <HeaderQuickSearch 
+              language={userProfile.language}
+              setActiveView={handleViewChange}
+              setUiMode={handleModeChange}
+            />
+
+            <nav className="hidden xl:flex items-center justify-center gap-2 lg:gap-3 shrink-0">
+              {(uiMode === 'business' ? [
+                { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
+                { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
+                ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
+              ] : uiMode === 'creative' ? [
+                { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub', icon: Sparkles },
+                { id: 'image', label: t.sidebar.image, icon: ImageIcon },
+                { id: 'translator', label: t.sidebar.translator, icon: Languages },
+                { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
+              ] : [
+                { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
+                { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video },
+              ]).map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => handleViewChange(link.id as any)}
+                  title={link.label}
+                  className={cn(
+                    "p-2.5 rounded-xl transition-all flex items-center justify-center shrink-0",
+                    activeView === link.id ? "bg-proton-accent/10 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
+                  )}
+                >
+                  <link.icon size={16} />
+                </button>
+              ))}
+            </nav>
+          </div>
           
           {/* Right Section: System Controls */}
           <div className="flex items-center justify-end gap-1.5 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
