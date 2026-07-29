@@ -75,14 +75,20 @@ const initDB = (): Promise<IDBDatabase> => {
 };
 
 const saveVideoToLocalCache = async (id: string, file: File | Blob): Promise<void> => {
-  try {
-    const db = await initDB();
-    const transaction = db.transaction('videos', 'readwrite');
-    const store = transaction.objectStore('videos');
-    store.put(file, id);
-  } catch (e) {
-    console.warn("IndexedDB storage failed:", e);
-  }
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    try {
+      const transaction = db.transaction('videos', 'readwrite');
+      const store = transaction.objectStore('videos');
+      const request = store.put(file, id);
+      request.onsuccess = () => resolve();
+      request.onerror = (e) => reject(request.error || e);
+      transaction.onerror = (e) => reject(transaction.error || e);
+      transaction.onabort = (e) => reject(transaction.error || new Error('IndexedDB storage quota exceeded or transaction aborted'));
+    } catch (e) {
+      reject(e);
+    }
+  });
 };
 
 const deleteVideoFromLocalCache = async (id: string): Promise<void> => {
@@ -419,6 +425,16 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>(INITIAL_MOCK_COMMENTS);
+
+  // Expanded caption state per clip
+  const [expandedCaptions, setExpandedCaptions] = useState<{ [clipId: string]: boolean }>({});
+
+  const toggleExpandCaption = (clipId: string) => {
+    setExpandedCaptions(prev => ({
+      ...prev,
+      [clipId]: !prev[clipId]
+    }));
+  };
   
   // Profile Modal Overlay
   const [selectedCreator, setSelectedCreator] = useState<{ id: string, name: string, avatar?: string } | null>(null);
@@ -1354,6 +1370,8 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     }
   };
 
+  const MAX_CLIP_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+
   // Drag & Drop / Selection helpers for local video uploading
   const handleLocalFileSelect = (file: File) => {
     if (!file.type.startsWith('video/')) {
@@ -1363,6 +1381,21 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       );
       return;
     }
+    
+    // Step One: Pre-upload file size validation (50MB constraint)
+    if (file.size > MAX_CLIP_FILE_SIZE) {
+      showToast(
+        language === 'ka' 
+          ? 'ფაილის ზომა აჭარბებს 50MB ლიმიტს. გთხოვთ აირჩიოთ უფრო მცირე ვიდეო.'
+          : 'Video file exceeds the 50MB maximum size limit. Please select a smaller clip.',
+        'error',
+        5000
+      );
+      setLocalVideoFile(null);
+      setNewClipVideoUrl('');
+      return;
+    }
+
     const localUrl = URL.createObjectURL(file);
     setNewClipVideoUrl(localUrl);
     setLocalVideoFile(file);
@@ -1420,16 +1453,31 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       return;
     }
 
+    // Step One: Re-verify file size constraints prior to pipeline initialization
+    if (localVideoFile && localVideoFile.size > MAX_CLIP_FILE_SIZE) {
+      showToast(
+        language === 'ka'
+          ? 'ფაილის ზომა აჭარბებს 50MB ლიმიტს. გთხოვთ აირჩიოთ უფრო მცირე ვიდეო.'
+          : 'Video file exceeds the 50MB maximum size limit. Please select a smaller clip.',
+        'error',
+        5000
+      );
+      setLocalVideoFile(null);
+      setNewClipVideoUrl('');
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
 
     let finalVideoUrl = newClipVideoUrl.trim();
     let finalSound = newClipSound.trim() || 'Original Sound';
     const docId = `clip-${Math.random().toString(36).substring(2, 11)}`;
+    const UPLOAD_TIMEOUT_MS = 30000; // Step Two: 30 Seconds timeout
 
     console.log(`[handleCreateReel] Initializing clip publishing pipeline (Doc ID: ${docId})...`);
 
-    try {
+    const performUploadWithTimeout = async () => {
       // Step 1: Handle local video file upload or conversion
       if (localVideoFile) {
         console.log(`[handleCreateReel] Step 1: Processing local video file "${localVideoFile.name}" (${localVideoFile.size} bytes)...`);
@@ -1442,7 +1490,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
         }
 
         try {
-          console.log('[handleCreateReel] Step 1a: Uploading video to Firebase Storage...');
+          console.log('[handleCreateReel] Step 1a: Uploading video to Storage with 20s timeout...');
           const downloadUrl = await uploadClipVideo(
             user.uid,
             docId,
@@ -1450,47 +1498,65 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
             (progress) => {
               console.log(`[handleCreateReel] Storage upload progress snapshot: ${progress}%`);
               setUploadProgress(progress);
-            }
+            },
+            20000 // 20-second storage attempt timeout
           );
           finalVideoUrl = downloadUrl;
           console.log('[handleCreateReel] Step 1a: Firebase Storage upload succeeded with URL:', downloadUrl);
         } catch (storageErr) {
           console.error('[handleCreateReel] Step 1a: Firebase Storage upload failed or timed out:', storageErr);
+          
           showToast(
             language === 'ka' 
-              ? 'Storage-ში ატვირთვა ვერ მოხერხდა, გადავდივართ ალტერნატიულ რეჟიმზე' 
-              : 'Firebase Storage upload failed, trying local fallback storage',
+              ? 'Storage-ში ატვირთვა ვერ მოხერხდა, გადავდივართ ლოკალურ მეხსიერებაზე' 
+              : 'Firebase Storage upload failed/timed out, switching to local cache',
             'warning'
           );
 
-          // Fallback to local cache / base64 if Firebase Storage fails
-          if (localVideoFile.size > 700 * 1024) {
-            try {
-              console.log('[handleCreateReel] Step 1b: Saving large file to local IndexedDB cache...');
-              await saveVideoToLocalCache(docId, localVideoFile);
-              finalVideoUrl = `indexeddb://${docId}`;
+          // Step Four: Quota Exception Handling for IndexedDB / Private Mode
+          try {
+            console.log('[handleCreateReel] Step 1b: Saving file to local IndexedDB cache...');
+            await saveVideoToLocalCache(docId, localVideoFile);
+            finalVideoUrl = `indexeddb://${docId}`;
+            showToast(
+              language === 'ka' 
+                ? 'ვიდეო ფაილი შეინახა ლოკალურ მეხსიერებაში' 
+                : 'Video file saved to local browser cache',
+              'info'
+            );
+          } catch (indexedDbErr: any) {
+            console.warn("[handleCreateReel] Step 1b: IndexedDB storage quota exception or private mode block:", indexedDbErr);
+            
+            // Base64 conversion fallback for small videos (< 1.5MB)
+            if (localVideoFile.size <= 1.5 * 1024 * 1024) {
+              try {
+                console.log('[handleCreateReel] Step 1c: Converting small file to Base64 data URL...');
+                const base64String = await new Promise<string>((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result as string);
+                  reader.onerror = reject;
+                  reader.readAsDataURL(localVideoFile);
+                });
+                finalVideoUrl = base64String;
+                console.log('[handleCreateReel] Step 1c: Base64 data URL generated successfully.');
+              } catch (b64Err) {
+                console.warn("[handleCreateReel] Step 1c: Base64 conversion failed:", b64Err);
+              }
+            }
+
+            // High quality preset loop fallback if local storage is quota blocked
+            if (!finalVideoUrl || finalVideoUrl.startsWith('blob:')) {
+              const preset = PRESET_LOOPS[0];
+              finalVideoUrl = preset.url;
+              if (!newClipSound.trim()) {
+                finalSound = preset.sound;
+              }
               showToast(
                 language === 'ka' 
-                  ? 'ვიდეო ფაილი შეინახა ლოკალურ მეხსიერებაში' 
-                  : 'Video file saved to local browser cache',
-                'info'
+                  ? 'ბრაუზერის მეხსიერების ლიმიტის გამო (Quota Exceeded) გამოყენებულია დემო შაბლონი' 
+                  : 'Browser storage quota exceeded: fallen back to high quality demo loop',
+                'warning'
               );
-            } catch (indexedDbErr) {
-              console.error("[handleCreateReel] Step 1b: Failed to save to local IndexedDB:", indexedDbErr);
-            }
-          } else {
-            try {
-              console.log('[handleCreateReel] Step 1b: Converting small file to Base64 data URL...');
-              const base64String = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(localVideoFile);
-              });
-              finalVideoUrl = base64String;
-              console.log('[handleCreateReel] Step 1b: Base64 data URL generated successfully.');
-            } catch (base64Err) {
-              console.error("[handleCreateReel] Step 1b: Base64 conversion failed:", base64Err);
             }
           }
         }
@@ -1534,13 +1600,31 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       console.log('[handleCreateReel] Calling setDoc(db, "clips", docId)...');
       await setDoc(doc(db, 'clips', docId), clipData);
       console.log(`[handleCreateReel] Step 3: Firestore document created successfully for clip "${docId}"!`);
+    };
+
+    try {
+      // Step Two: Inject 30-second timeout controller with Promise.race
+      let timeoutTimer: any;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutTimer = setTimeout(() => {
+          reject(new Error(
+            language === 'ka'
+              ? 'ვიდეოს ატვირთვა დროში ამოიწურა (30 წამი)'
+              : 'Video upload timed out (30 seconds limit)'
+          ));
+        }, UPLOAD_TIMEOUT_MS);
+      });
+
+      await Promise.race([performUploadWithTimeout(), timeoutPromise]).finally(() => {
+        clearTimeout(timeoutTimer);
+      });
 
       showToast(
         language === 'ka' ? 'კლიპი წარმატებით აიტვირთა!' : 'Clip uploaded successfully!',
         'success'
       );
 
-      // Reset form state
+      // Reset form state upon successful completion
       setNewClipCaption('');
       setNewClipSound('');
       setNewClipVideoUrl('');
@@ -1554,16 +1638,31 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
       setActiveTab('myClips'); // Switch to My Clips to see the post!
       setCurrentIndex(0);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("[handleCreateReel] Uncaught error during reel creation pipeline:", error);
-      showToast(
-        language === 'ka' 
-          ? `ატვირთვისას მოხდა შეცდომა: ${(error as Error).message || ''}` 
-          : `Failed to upload clip: ${(error as Error).message || 'Unknown error'}`,
-        'error'
-      );
+      
+      const isQuotaErr = error?.name === 'QuotaExceededError' || error?.message?.toLowerCase().includes('quota');
+      const isTimeoutErr = error?.message?.includes('timed out') || error?.message?.includes('30');
+
+      let userMsg = language === 'ka' 
+        ? `ატვირთვისას მოხდა შეცდომა: ${error?.message || ''}` 
+        : `Failed to upload clip: ${error?.message || 'Unknown error'}`;
+
+      if (isQuotaErr) {
+        userMsg = language === 'ka'
+          ? 'ბრაუზერის მეხსიერება სავსეა (Quota Exceeded). გთხოვთ აირჩიოთ უფრო მცირე ვიდეო.'
+          : 'Storage quota exceeded in browser. Please select a smaller video clip.';
+      } else if (isTimeoutErr) {
+        userMsg = language === 'ka'
+          ? 'ატვირთვის პროცესი დროში ამოიწურა (30 წმ). გთხოვთ შეამოწმოთ ინტერნეტი და სცადოთ ხელახლა.'
+          : 'Upload timed out after 30 seconds. Please check your network and try again.';
+      }
+
+      // Step Three: Clear loading spinner, reset file state & display warning toast
+      showToast(userMsg, 'error', 5000);
+      setLocalVideoFile(null);
+      setNewClipVideoUrl('');
     } finally {
-      console.log('[handleCreateReel] Pipeline completed. Resetting loading states...');
       setIsUploading(false);
       setUploadProgress(0);
     }
@@ -2094,7 +2193,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                       </div>
 
                       {/* BOTTOM-LEFT OVERLAY: CREATOR PROFILE, CAPTION, TAGS & AUDIO TRACK */}
-                      <div className="absolute bottom-0 left-0 right-16 z-20 p-4 sm:p-5 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
+                      <div className="absolute bottom-0 left-0 right-0 z-20 p-4 sm:p-5 pr-16 md:pr-20 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
                         
                         {/* Creator Row */}
                         <div className="flex items-center gap-2.5 pointer-events-auto">
@@ -2112,23 +2211,63 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                           </span>
                         </div>
 
-                        {/* Caption & Hashtags */}
-                        <p className="text-xs font-normal text-white/95 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-text line-clamp-3 pointer-events-auto">
-                          {clip.caption.split(' ').map((word, i) => {
-                            if (word.startsWith('#')) {
-                              return (
-                                <span 
-                                  key={i} 
-                                  onClick={() => setSearchQuery(word)}
-                                  className="text-purple-300 font-bold hover:underline cursor-pointer mr-1"
+                        {/* Caption & Hashtags with Safe Zone, Line Clamping, See More Toggle & Scrollable Container */}
+                        {(() => {
+                          const isExpanded = !!expandedCaptions[clip.id];
+                          const rawCaption = clip.caption || '';
+                          const isLongCaption = rawCaption.length > 70 || rawCaption.split('\n').length > 3;
+
+                          return (
+                            <div className="pointer-events-auto w-full">
+                              <div className={cn(
+                                "transition-all duration-300",
+                                isExpanded 
+                                  ? "max-h-40 overflow-y-auto pr-2 bg-black/60 backdrop-blur-xs p-2.5 rounded-xl border border-white/10 shadow-xl custom-scrollbar" 
+                                  : "max-h-none overflow-hidden"
+                              )}>
+                                <p className={cn(
+                                  "text-xs font-normal text-white/95 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-text",
+                                  !isExpanded && "line-clamp-3"
+                                )}>
+                                  {rawCaption.split(' ').map((word, i) => {
+                                    if (word.startsWith('#')) {
+                                      return (
+                                        <span 
+                                          key={i} 
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSearchQuery(word);
+                                          }}
+                                          className="text-purple-300 font-bold hover:underline cursor-pointer mr-1"
+                                        >
+                                          {word}{' '}
+                                        </span>
+                                      );
+                                    }
+                                    return word + ' ';
+                                  })}
+                                </p>
+                              </div>
+
+                              {isLongCaption && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleExpandCaption(clip.id);
+                                  }}
+                                  className="mt-1 text-[11px] font-bold text-purple-300 hover:text-purple-200 hover:underline cursor-pointer flex items-center gap-1 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
                                 >
-                                  {word}{' '}
-                                </span>
-                              );
-                            }
-                            return word + ' ';
-                          })}
-                        </p>
+                                  <span>
+                                    {isExpanded 
+                                      ? (language === 'ka' ? 'ნაკლების ჩვენება' : 'Show less') 
+                                      : (language === 'ka' ? '...მეტი' : '...more')}
+                                  </span>
+                                  <ChevronDown size={12} className={cn("transition-transform duration-200", isExpanded && "rotate-180")} />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
 
                         {/* Tagged Product Mini Badge */}
                         {hasProduct && clip.productInfo && (

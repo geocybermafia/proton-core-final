@@ -58,6 +58,8 @@ const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(modu
 import { HeaderQuickSearch } from './components/HeaderQuickSearch';
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
+import { useSystemHealth } from './hooks/useSystemHealth';
+import { SystemStatusBadge } from './components/SystemStatusBadge';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
 import BusinessHubView from './components/BusinessHubView';
@@ -3805,6 +3807,7 @@ export default function App() {
   const { user, loading: authLoading, initialized: authInitialized, logout } = useAuth();
   const { showToast } = useToast();
   const { language, setLanguage } = useLanguage();
+  const systemHealth = useSystemHealth(language);
 
   const [viewportWidth, setViewportWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1024);
 
@@ -5630,13 +5633,11 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <div className={cn(
                   "w-1.5 h-1.5 rounded-full animate-pulse",
-                  activeView === 'dashboard'
-                    ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]"
-                    : uiMode === 'business' 
-                      ? "bg-proton-accent shadow-[0_0_8px_var(--proton-accent)]" 
-                      : uiMode === 'creative' 
-                        ? "bg-amber-500 shadow-[0_0_8px_#ff9f1c]" 
-                        : "bg-sky-500 shadow-[0_0_8px_#0ea5e9]"
+                  systemHealth.status === 'optimal'
+                    ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                    : systemHealth.status === 'degraded'
+                      ? "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
+                      : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
                 )} />
                 <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono">
                   PROTON // {
@@ -5649,6 +5650,14 @@ export default function App() {
                           : (language === 'ka' ? 'მარკეტი' : 'MARKET')
                   }
                 </span>
+                <SystemStatusBadge
+                  status={systemHealth.status}
+                  latency={systemHealth.latency}
+                  language={language}
+                  size="sm"
+                  showLatency={false}
+                  onClick={() => systemHealth.checkHealth()}
+                />
               </div>
               <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
                 {activeView === 'dashboard' ? (
@@ -5813,6 +5822,7 @@ export default function App() {
                       setTheme={setTheme}
                       isSystemActive={isSystemActive}
                       setAiSettings={setAiSettings}
+                      systemHealth={systemHealth}
                     />
                   )}
                   {activeView === 'business-hub' && (

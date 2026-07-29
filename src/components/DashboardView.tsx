@@ -40,6 +40,8 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import { Persona, View, GlobalAiSettings, Theme, GeminiMetadata } from '../types';
+import { SystemStatusBadge } from './SystemStatusBadge';
+import { SystemHealthState } from '../hooks/useSystemHealth';
 import { 
   ProtonCard, 
   ProtonButton, 
@@ -54,7 +56,8 @@ export const DashboardView = React.memo(({
   setUiMode,
   aiSettings,
   setAiSettings,
-  personas = []
+  personas = [],
+  systemHealth
 }: { 
   personas?: Persona[], 
   activeView: View, 
@@ -71,7 +74,8 @@ export const DashboardView = React.memo(({
   theme?: Theme,
   setTheme?: (t: Theme) => void,
   isSystemActive?: boolean,
-  setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>
+  setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>,
+  systemHealth?: SystemHealthState
 }) => {
   const t = translations[language];
 
@@ -335,9 +339,20 @@ Query: "${query}"
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-6 relative z-10">
           <div className="space-y-3 text-left flex-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
-              {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
+                {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
+              </div>
+              {systemHealth && (
+                <SystemStatusBadge 
+                  status={systemHealth.status} 
+                  latency={systemHealth.latency} 
+                  language={language}
+                  size="sm"
+                  onClick={() => systemHealth.checkHealth()}
+                />
+              )}
             </div>
             
             <h1 className="font-extrabold tracking-tight uppercase leading-none text-3xl sm:text-4xl md:text-5xl text-proton-text">
@@ -538,17 +553,29 @@ Query: "${query}"
           </div>
         </ProtonCard>
 
-        <ProtonCard variant="subtle" padding="compact" className="flex items-center gap-3.5">
-          <ProtonIconBox variant="amber" size="md">
-            <Cpu size={20} />
+        <ProtonCard 
+          variant="subtle" 
+          padding="compact" 
+          className="flex items-center gap-3.5 cursor-pointer hover:border-proton-accent/40 transition-all"
+          onClick={() => systemHealth?.checkHealth()}
+        >
+          <ProtonIconBox 
+            variant={systemHealth?.status === 'optimal' ? 'emerald' : systemHealth?.status === 'degraded' ? 'amber' : 'rose'} 
+            size="md"
+          >
+            <Activity size={20} />
           </ProtonIconBox>
           <div>
             <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
-              {language === 'ka' ? 'AI მოდელი' : 'AI Engine'}
+              {language === 'ka' ? 'სისტემის სტატუსი' : 'System Health'}
             </div>
             <div className="text-sm font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
-              <span>Gemini 2.5</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <SystemStatusBadge 
+                status={systemHealth?.status || 'optimal'} 
+                latency={systemHealth?.latency} 
+                language={language}
+                size="sm"
+              />
             </div>
           </div>
         </ProtonCard>

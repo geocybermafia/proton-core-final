@@ -120,7 +120,8 @@ export async function uploadClipVideo(
   userId: string,
   clipId: string,
   file: File | Blob,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  timeoutMs: number = 30000
 ): Promise<string> {
   const fileExt = file instanceof File && file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
   const path = `clips/${userId}/${clipId}.${fileExt}`;
@@ -136,7 +137,7 @@ export async function uploadClipVideo(
       },
     },
     onProgress,
-  });
+  }, timeoutMs);
 
   return result.downloadUrl;
 }
