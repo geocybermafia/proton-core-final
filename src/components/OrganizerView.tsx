@@ -237,22 +237,28 @@ export const OrganizerView = ({
     let tickCount = 0;
     const interval = setInterval(() => {
       if (!isTimerActive || !isMountedRef.current) return;
+      
+      tickCount++;
+      const currentTaskSec = localTimerSeconds[activeTimerTaskId];
+      
       setLocalTimerSeconds(prev => {
         const nextSec = (prev[activeTimerTaskId] || 0) + 1;
-        
-        // Every 30 seconds, perform a silent database flush as a backup safety fallback
-        tickCount++;
-        if (tickCount >= 30) {
-          tickCount = 0;
-          console.log(`[Stress Test Logs] Periodic safety backup save of active task stopwatch: ${activeTimerTaskId} with ${nextSec} seconds.`);
-          onEditTask(activeTimerTaskId, { elapsedTime: nextSec });
-        }
-        
         return {
           ...prev,
           [activeTimerTaskId]: nextSec
         };
       });
+
+      if (tickCount >= 30) {
+        tickCount = 0;
+        const nextSec = (currentTaskSec !== undefined ? currentTaskSec : initialSeconds) + 1;
+        console.log(`[Stress Test Logs] Periodic safety backup save of active task stopwatch: ${activeTimerTaskId} with ${nextSec} seconds.`);
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            onEditTask(activeTimerTaskId, { elapsedTime: nextSec });
+          }
+        }, 0);
+      }
     }, 1000);
 
     return () => {
