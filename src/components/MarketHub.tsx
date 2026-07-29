@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -54,6 +54,7 @@ import { cn } from '../lib/utils';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useMarketHub } from '../contexts/MarketHubContext';
+import { useToast } from './Toast';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
@@ -89,12 +90,35 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
+  const { showToast } = useToast();
   const aiAbortControllerRef = useRef<AbortController | null>(null);
+  const isGeneratingRef = useRef<boolean>(false);
+
+  const cancelAndResetAiSpec = useCallback((notifyUser = true) => {
+    const wasGenerating = isGeneratingRef.current;
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+      aiAbortControllerRef.current = null;
+    }
+    setIsAiGenerating(false);
+    isGeneratingRef.current = false;
+
+    if (wasGenerating && notifyUser) {
+      showToast(
+        language === 'ka' 
+          ? 'AI ტექნიკური სპეციფიკაციის გენერირება გაუქმდა' 
+          : 'AI spec generation was canceled',
+        'info',
+        4000
+      );
+    }
+  }, [language, showToast]);
 
   useEffect(() => {
     return () => {
       if (aiAbortControllerRef.current) {
         aiAbortControllerRef.current.abort();
+        aiAbortControllerRef.current = null;
       }
     };
   }, []);
@@ -259,6 +283,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, [allUserMessages, user]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
+
+  useEffect(() => {
+    if (viewMode !== 'create' && viewMode !== 'edit') {
+      if (isGeneratingRef.current || aiAbortControllerRef.current) {
+        cancelAndResetAiSpec(true);
+      }
+    }
+  }, [viewMode, cancelAndResetAiSpec]);
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
@@ -1528,6 +1560,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     aiAbortControllerRef.current = controller;
 
     setIsAiGenerating(true);
+    isGeneratingRef.current = true;
     try {
       if (!user) return;
 
@@ -1612,9 +1645,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         setFormData(prev => ({ ...prev, description: template }));
       }
     } finally {
-      if (!controller.signal.aborted) {
-        setIsAiGenerating(false);
+      if (aiAbortControllerRef.current === controller) {
+        aiAbortControllerRef.current = null;
       }
+      setIsAiGenerating(false);
+      isGeneratingRef.current = false;
     }
   };
 

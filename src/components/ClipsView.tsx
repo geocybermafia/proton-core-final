@@ -32,7 +32,8 @@ import {
   Eye,
   CheckCircle2,
   Bookmark,
-  Clock
+  Clock,
+  LogIn
 } from 'lucide-react';
 import { 
   collection, 
@@ -50,9 +51,11 @@ import {
   arrayUnion,
   arrayRemove,
   limit,
-  setDoc
+  setDoc,
+  increment
 } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
+import { db, auth, googleProvider } from '../firebase';
 import { uploadClipVideo } from '../lib/storageUtils';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -124,6 +127,7 @@ interface ClipsViewProps {
   setActiveView: (view: any) => void;
   user: any;
   userProfile?: any;
+  onOpenAuthModal?: () => void;
 }
 
 interface Clip {
@@ -407,7 +411,7 @@ const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<{ thumbnailUrl
   });
 };
 
-export default function ClipsView({ language, setActiveView, user, userProfile }: ClipsViewProps) {
+export default function ClipsView({ language, setActiveView, user, userProfile, onOpenAuthModal }: ClipsViewProps) {
   const { showToast } = useToast();
   const [clips, setClips] = useState<Clip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -436,6 +440,10 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     }));
   };
   
+  // Anonymous session interaction & draft preservation modal
+  const [showAuthModalPrompt, setShowAuthModalPrompt] = useState(false);
+  const [pendingActionType, setPendingActionType] = useState<'like' | 'comment' | null>(null);
+
   // Profile Modal Overlay
   const [selectedCreator, setSelectedCreator] = useState<{ id: string, name: string, avatar?: string } | null>(null);
   const [creatorClips, setCreatorClips] = useState<Clip[]>([]);
@@ -1151,6 +1159,122 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     };
   }, [currentIndex, filteredClips.length, togglePlay, setCurrentIndex]);
 
+  // Step Four: Post-Auth Restoration & Auto-Submit for Pending Drafts & Likes
+  useEffect(() => {
+    if (!user) return;
+
+    // 1. Restore and auto-submit pending comment draft
+    const pendingCommentRaw = sessionStorage.getItem('pending_clip_comment');
+    if (pendingCommentRaw) {
+      try {
+        const { clipId, text } = JSON.parse(pendingCommentRaw);
+        if (clipId && text && text.trim()) {
+          sessionStorage.removeItem('pending_clip_comment');
+          
+          const commentData = {
+            clipId,
+            userId: user.uid,
+            userName: user.displayName || user.email?.split('@')[0] || 'User',
+            userAvatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&fit=crop&q=80',
+            text: text.trim(),
+            createdAt: serverTimestamp()
+          };
+
+          if (clipId.startsWith('seed-')) {
+            const mockCommentId = `comment-seed-${Math.random().toString(36).substring(2, 11)}`;
+            const newCommentObj: ClipComment = {
+              id: mockCommentId,
+              clipId,
+              userId: user.uid,
+              userName: commentData.userName,
+              userAvatar: commentData.userAvatar,
+              text: commentData.text,
+              createdAt: new Date()
+            };
+            setLocalComments(prev => ({
+              ...prev,
+              [clipId]: [...(prev[clipId] || []), newCommentObj]
+            }));
+          } else {
+            addDoc(collection(db, 'clips', clipId, 'comments'), commentData).catch(e => {
+              console.error("Auto comment post error:", e);
+            });
+          }
+
+          setNewComment('');
+          showToast(
+            language === 'ka' 
+              ? 'თქვენი დამახსოვრებული კომენტარი ავტომატურად გამოქვეყნდა!' 
+              : 'Your pending comment draft was automatically posted!',
+            'success',
+            5000
+          );
+        }
+      } catch (e) {
+        console.warn("Failed parsing pending_clip_comment:", e);
+        sessionStorage.removeItem('pending_clip_comment');
+      }
+    }
+
+    // 2. Restore and auto-submit pending like action
+    const pendingLikeRaw = sessionStorage.getItem('pending_clip_like');
+    if (pendingLikeRaw) {
+      try {
+        const { clipId } = JSON.parse(pendingLikeRaw);
+        if (clipId) {
+          sessionStorage.removeItem('pending_clip_like');
+          
+          if (clipId.startsWith('seed-')) {
+            setClips(prev => prev.map(c => {
+              if (c.id === clipId) {
+                const likesList = c.likes || [];
+                const isLiked = likesList.includes(user.uid);
+                const newLikes = isLiked ? likesList : [...likesList, user.uid];
+                const newLikesCount = isLiked ? c.likesCount : (c.likesCount || 0) + 1;
+                return { ...c, likes: newLikes, likesCount: newLikesCount };
+              }
+              return c;
+            }));
+          } else {
+            const docRef = doc(db, 'clips', clipId);
+            updateDoc(docRef, {
+              likes: arrayUnion(user.uid),
+              likesCount: increment(1)
+            }).catch(console.error);
+          }
+
+          showToast(
+            language === 'ka' ? 'კლიპი ავტომატურად მოიწონეთ!' : 'Clip liked automatically!',
+            'success',
+            4000
+          );
+        }
+      } catch (e) {
+        console.warn("Failed parsing pending_clip_like:", e);
+        sessionStorage.removeItem('pending_clip_like');
+      }
+    }
+
+    setShowAuthModalPrompt(false);
+  }, [user, language]);
+
+  // Restore unsaved draft into input box if user is anonymous
+  useEffect(() => {
+    if (!user && filteredClips[currentIndex]) {
+      const pendingCommentRaw = sessionStorage.getItem('pending_clip_comment');
+      if (pendingCommentRaw) {
+        try {
+          const { clipId, text } = JSON.parse(pendingCommentRaw);
+          if (clipId === filteredClips[currentIndex].id && text) {
+            setNewComment(text);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  }, [currentIndex, filteredClips, user]);
+
   // 4. Fetch comments for selected clip
   useEffect(() => {
     if (!isCommentsOpen || !filteredClips[currentIndex]) return;
@@ -1181,12 +1305,23 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     return () => unsubscribe();
   }, [isCommentsOpen, currentIndex, clips, localComments]);
 
-  // Toggle Like with Firestore
+  // Toggle Like with Firestore (with Anonymous Interception & Pending Stashing)
   const handleLikeToggle = async (clip: Clip) => {
     if (!user) {
+      try {
+        sessionStorage.setItem('pending_clip_like', JSON.stringify({ clipId: clip.id }));
+      } catch (e) {
+        console.warn("sessionStorage save error:", e);
+      }
+      setPendingActionType('like');
+      setShowAuthModalPrompt(true);
+      if (onOpenAuthModal) onOpenAuthModal();
       showToast(
-        language === 'ka' ? 'ავტორიზაცია საჭიროა მოსაწონებლად' : 'Please sign in to like clips',
-        'warning'
+        language === 'ka' 
+          ? 'ავტორიზაცია საჭიროა მოწონებისთვის. მოქმედება დამახსოვრებულია.' 
+          : 'Please sign in to like clips. Your action has been saved!',
+        'info',
+        5000
       );
       return;
     }
@@ -1242,12 +1377,34 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
     }
   };
 
-  // Post Comment
+  // Post Comment (with Anonymous Interception & Draft Preservation)
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !newComment.trim() || !filteredClips[currentIndex]) return;
+    if (!newComment.trim() || !filteredClips[currentIndex]) return;
 
     const clipId = filteredClips[currentIndex].id;
+
+    if (!user) {
+      try {
+        sessionStorage.setItem('pending_clip_comment', JSON.stringify({
+          clipId,
+          text: newComment.trim()
+        }));
+      } catch (e) {
+        console.warn("sessionStorage comment draft error:", e);
+      }
+      setPendingActionType('comment');
+      setShowAuthModalPrompt(true);
+      if (onOpenAuthModal) onOpenAuthModal();
+      showToast(
+        language === 'ka' 
+          ? 'ავტორიზაციის შემდეგ თქვენი კომენტარი ავტომატურად გამოქვეყნდება!' 
+          : 'Sign in to post your comment. Your draft is saved and will auto-submit!',
+        'info',
+        5000
+      );
+      return;
+    }
     const commentData = {
       clipId,
       userId: user.uid,
@@ -2397,21 +2554,37 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                 )}
               </div>
 
-              {/* Post Comment Input bar */}
+              {/* Post Comment Input bar with Anonymous Draft Preservation */}
               <form onSubmit={handlePostComment} className="p-4 border-t border-proton-border/20 bg-proton-bg/80 backdrop-blur-md">
                 <div className="relative">
                   <input
                     type="text"
                     value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder={user ? (language === 'ka' ? 'დაწერე კომენტარი...' : 'Add a comment...') : (language === 'ka' ? 'კომენტარისთვის გაიარეთ ავტორიზაცია' : 'Sign in to comment')}
-                    disabled={!user}
-                    className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 pl-4 pr-12 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all disabled:opacity-50"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewComment(val);
+                      if (!user && filteredClips[currentIndex]) {
+                        try {
+                          if (val.trim()) {
+                            sessionStorage.setItem('pending_clip_comment', JSON.stringify({
+                              clipId: filteredClips[currentIndex].id,
+                              text: val
+                            }));
+                          } else {
+                            sessionStorage.removeItem('pending_clip_comment');
+                          }
+                        } catch (err) {
+                          // ignore
+                        }
+                      }
+                    }}
+                    placeholder={user ? (language === 'ka' ? 'დაწერე კომენტარი...' : 'Add a comment...') : (language === 'ka' ? 'დაწერე კომენტარი (საჭიროებს შესვლას)...' : 'Add a comment (sign in to post)...')}
+                    className="w-full bg-proton-bg/60 border border-proton-border/20 focus:border-purple-500/50 outline-none rounded-xl py-2 pl-4 pr-12 text-xs text-proton-text placeholder:text-proton-muted/60 transition-all"
                   />
                   <button
                     type="submit"
-                    disabled={!user || !newComment.trim()}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white disabled:opacity-40 disabled:pointer-events-none hover:scale-105 transition-all"
+                    disabled={!newComment.trim()}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white disabled:opacity-40 disabled:pointer-events-none hover:scale-105 transition-all cursor-pointer"
                   >
                     <Send size={12} />
                   </button>
@@ -3555,6 +3728,100 @@ export default function ClipsView({ language, setActiveView, user, userProfile }
                 </button>
               </div>
 
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* AUTH PROMPT MODAL FOR ANONYMOUS USERS WITH DRAFT PRESERVATION */}
+      <AnimatePresence>
+        {showAuthModalPrompt && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 select-none font-sans">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAuthModalPrompt(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
+              className="relative bg-[#121318] w-full max-w-md rounded-3xl border border-purple-500/30 shadow-[0_0_50px_rgba(168,85,247,0.2)] overflow-hidden p-6 sm:p-8 space-y-5 text-center"
+            >
+              {/* Top Close Button */}
+              <button
+                onClick={() => setShowAuthModalPrompt(false)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-inner">
+                  <LogIn size={26} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-wide text-white uppercase">
+                    {language === 'ka' ? 'ავტორიზაცია საჭიროა' : 'Sign In Required'}
+                  </h3>
+                  <p className="text-xs text-purple-300 font-mono mt-1 font-bold">
+                    {language === 'ka' ? 'Proton Clips სესია' : 'Proton Clips Session'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10 text-left space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
+                  <CheckCircle2 size={16} />
+                  <span>
+                    {language === 'ka' ? 'შენახული მოქმედება / დრაფტი' : 'Saved Action & Draft Safe'}
+                  </span>
+                </div>
+                <p className="text-xs text-white/80 leading-relaxed font-sans">
+                  {pendingActionType === 'comment'
+                    ? (language === 'ka' 
+                        ? 'თქვენი კომენტარის ტექსტი უსაფრთხოდ შენახულია. სისტემაში შესვლისთანავე იგი ავტომატურად გამოქვეყნდება!' 
+                        : 'Your comment draft is safely stored in your browser. As soon as you sign in, it will be automatically posted!')
+                    : (language === 'ka'
+                        ? 'თქვენი მოწონება შენახულია. შესვლისთანავე კლიპი ავტომატურად მოიწონება!'
+                        : 'Your like action is queued. As soon as you sign in, the clip will be automatically liked!')
+                  }
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      await signInWithPopup(auth, googleProvider);
+                    } catch (err: any) {
+                      console.warn("Sign in popup error:", err);
+                      if (onOpenAuthModal) onOpenAuthModal();
+                    }
+                  }}
+                  className="w-full py-3.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-purple-600/30 transition-all active:scale-98 flex items-center justify-center gap-2.5 cursor-pointer"
+                >
+                  <Sparkles size={16} />
+                  <span>
+                    {language === 'ka' ? 'Google-ით შესვლა / ავტორიზაცია' : 'Sign in with Google'}
+                  </span>
+                </button>
+
+                {onOpenAuthModal && (
+                  <button
+                    onClick={() => {
+                      setShowAuthModalPrompt(false);
+                      onOpenAuthModal();
+                    }}
+                    className="w-full py-2.5 px-4 bg-transparent hover:bg-white/5 text-white/60 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    {language === 'ka' ? 'სხვა ავტორიზაციის მეთოდი' : 'Other Sign In Options'}
+                  </button>
+                )}
+              </div>
             </motion.div>
           </div>
         )}
