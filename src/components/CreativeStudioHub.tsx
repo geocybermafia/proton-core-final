@@ -191,6 +191,7 @@ export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => vo
 
   // Result state
   const [result, setResult] = useState<{ hook: string; body: string; cta: string } | null>(null);
+  const [showAllHashtags, setShowAllHashtags] = useState(false);
 
   const handleCopy = (text: string, section: string) => {
     navigator.clipboard.writeText(text);
@@ -504,15 +505,15 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                       {copiedSection === 'cta' ? (isKa ? 'კოპირებულია!' : 'Copied!') : (isKa ? 'კოპირება' : 'Copy')}
                     </button>
                   </div>
-                  <div className="bg-proton-bg p-4 rounded-xl border border-proton-border text-xs font-mono text-purple-400">
+                  <div className="bg-proton-bg p-4 rounded-xl border border-proton-border text-xs font-mono text-purple-400 break-words [word-break:break-word] whitespace-pre-wrap">
                     {result.cta}
                   </div>
                 </div>
               </div>
 
               {/* Interactive Mockup Social Card */}
-              <div className="bg-[#0f1423] p-6 rounded-3xl border border-white/5 space-y-4 shadow-xl">
-                <div className="flex justify-between items-center border-b border-white/5 pb-3">
+              <div className="bg-[#0f1423] p-5 sm:p-6 rounded-3xl border border-white/5 space-y-4 shadow-xl min-h-[380px] sm:min-h-[420px] flex flex-col justify-between w-full overflow-hidden transition-all">
+                <div className="flex justify-between items-center border-b border-white/5 pb-3 shrink-0">
                   <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
                     {platform === 'facebook' ? 'Facebook Mockup' : platform === 'instagram' ? 'Instagram Mockup' : platform === 'linkedin' ? 'LinkedIn Mockup' : platform === 'google' ? 'Google Search Mockup' : 'TikTok Mockup'}
                   </span>
@@ -524,50 +525,97 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                 </div>
 
                 {platform === 'google' ? (
-                  <div className="space-y-2 p-4 bg-white/5 rounded-2xl border border-white/5 font-sans">
+                  <div className="space-y-2 p-4 bg-white/5 rounded-2xl border border-white/5 font-sans break-words [word-break:break-word] max-h-64 overflow-y-auto">
                     <div className="text-[11px] text-[#8ab4f8] flex items-center gap-1">
-                      <span>Sponsored • www.${brandName.toLowerCase().replace(/\s+/g, '')}.com</span>
+                      <span>Sponsored • www.{brandName.toLowerCase().replace(/\s+/g, '')}.com</span>
                     </div>
-                    <h4 className="text-lg font-medium text-[#c58af9] hover:underline cursor-pointer leading-tight">
+                    <h4 className="text-lg font-medium text-[#c58af9] hover:underline cursor-pointer leading-tight break-words">
                       {result.hook}
                     </h4>
-                    <p className="text-xs text-[#bdc1c6] leading-relaxed line-clamp-3">
+                    <p className="text-xs text-[#bdc1c6] leading-relaxed line-clamp-3 break-words">
                       {result.body.substring(0, 160)}... {result.cta}
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4 font-sans">
+                  <div className="flex-1 space-y-4 font-sans flex flex-col justify-between min-h-0">
                     {/* Mock Profile */}
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                        {brandName.substring(0, 2).toUpperCase()}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                        {brandName.substring(0, 2).toUpperCase() || 'AD'}
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white tracking-wide">{brandName}</h4>
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-white tracking-wide truncate">{brandName || 'Brand Name'}</h4>
                         <p className="text-[9px] text-white/40">Sponsored • Just now</p>
                       </div>
                     </div>
 
-                    {/* Post Text */}
-                    <div className="space-y-2">
-                      <p className="text-xs text-white/90 font-bold leading-snug">{result.hook}</p>
-                      <p className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap">{result.body}</p>
-                      <p className="text-xs text-purple-400 font-mono">{result.cta}</p>
+                    {/* Post Text Container: Step 1 (Max height + scroll), Step 2 (Word break defense), Step 3 (Hashtag drawer) */}
+                    <div className="max-h-64 sm:max-h-72 overflow-y-auto pr-2 space-y-3 font-sans break-words [word-break:break-word] whitespace-pre-wrap scrollbar-thin scrollbar-thumb-white/10">
+                      <p className="text-xs text-white/90 font-bold leading-snug break-words [word-break:break-word]">{result.hook}</p>
+                      <p className="text-xs text-white/70 leading-relaxed whitespace-pre-wrap break-words [word-break:break-word]">{result.body}</p>
+                      
+                      {/* Hashtag & CTA Drawer Block */}
+                      {(() => {
+                        const hashtagRegex = /(#[\w\u10A0-\u10FF\u1C90-\u1CBF_-]+)/g;
+                        const matches = result.cta.match(hashtagRegex) || [];
+
+                        if (matches.length <= 10) {
+                          return (
+                            <p className="text-xs text-purple-400 font-mono break-words [word-break:break-word] whitespace-pre-wrap leading-relaxed pt-1">
+                              {result.cta}
+                            </p>
+                          );
+                        }
+
+                        const nonHashtagText = result.cta.replace(hashtagRegex, '').trim();
+                        const visibleTags = showAllHashtags ? matches : matches.slice(0, 10);
+
+                        return (
+                          <div className="space-y-2 pt-2 border-t border-white/5">
+                            <div className="text-xs text-purple-400 font-mono break-words [word-break:break-word] whitespace-pre-wrap leading-relaxed flex flex-wrap gap-1">
+                              {nonHashtagText && (
+                                <span className="text-white/80 font-sans font-medium block w-full mb-1">
+                                  {nonHashtagText}
+                                </span>
+                              )}
+                              {visibleTags.map((tag, idx) => (
+                                <span key={idx} className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/20 transition-all inline-block text-[11px]">
+                                  {tag}
+                                </span>
+                              ))}
+                              {!showAllHashtags && (
+                                <span className="text-white/40 font-sans text-[11px] self-center">...</span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowAllHashtags(!showAllHashtags)}
+                              className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 px-2.5 py-1 rounded-full border border-purple-500/20 transition-all cursor-pointer"
+                            >
+                              {showAllHashtags ? (
+                                <span>{isKa ? '▲ ნაკლების ჩვენება' : '▲ Show less'}</span>
+                              ) : (
+                                <span>{isKa ? `▼ ყველა ჰეშთეგის გამოჩენა (${matches.length})` : `▼ Show all hashtags (${matches.length})`}</span>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* Interactive buttons */}
-                    <div className="flex items-center justify-between border-t border-white/5 pt-3 text-white/40 text-xs">
-                      <button className="flex items-center gap-1.5 hover:text-white transition-colors">
+                    <div className="flex items-center justify-between border-t border-white/5 pt-3 text-white/40 text-xs shrink-0">
+                      <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
                         <Bookmark size={14} />
                         <span>Save Ad</span>
                       </button>
-                      <button className="flex items-center gap-1.5 hover:text-white transition-colors">
+                      <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
                         <Share2 size={14} />
                         <span>Share</span>
                       </button>
                       <button 
                         onClick={() => handleCopy(`${result.hook}\n\n${result.body}\n\n${result.cta}`, 'all')}
-                        className="flex items-center gap-1.5 text-purple-400 font-bold hover:text-purple-300 transition-colors"
+                        className="flex items-center gap-1.5 text-purple-400 font-bold hover:text-purple-300 transition-colors cursor-pointer"
                       >
                         <Copy size={14} />
                         <span>Copy Entire Ad</span>
