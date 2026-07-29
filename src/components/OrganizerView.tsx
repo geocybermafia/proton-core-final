@@ -195,6 +195,9 @@ export const OrganizerView = ({
   const [editingDescription, setEditingDescription] = useState('');
   const [editingPriority, setEditingPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [editingCategory, setEditingCategory] = useState('');
+  const [editingDueDate, setEditingDueDate] = useState<Date | null>(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
+  const highlightTimeoutRef = useRef<any>(null);
 
   // Timer/Stopwatch states - optimized to batch Firestore updates to avoid lagging on slow hardware
   const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
@@ -476,23 +479,70 @@ export const OrganizerView = ({
     setEditingDescription(language === 'ka' ? (task.descriptionGe || task.description || '') : (task.description || ''));
     setEditingPriority(task.priority || 'medium');
     setEditingCategory(task.category || '');
+    setEditingDueDate(task.dueDate ? new Date(task.dueDate) : null);
   };
 
   const saveEditMode = (id: string) => {
     if (!editingContent.trim()) return;
-    onEditTask(id, {
+
+    const targetTask = tasks.find(t => t.id === id);
+    const wasCompleted = targetTask ? targetTask.completed : false;
+    const updatedDueDateMs = editingDueDate ? editingDueDate.getTime() : undefined;
+
+    const updates: Partial<Task> = {
       content: editingContent.trim(),
       contentGe: editingContent.trim(),
       description: editingDescription.trim() || undefined,
       descriptionGe: editingDescription.trim() || undefined,
       priority: editingPriority,
-      category: editingCategory.trim() || undefined
-    });
+      category: editingCategory.trim() || undefined,
+      dueDate: updatedDueDateMs,
+    };
+
+    // Step One: Reinstatement (reset status to completed: false)
+    if (wasCompleted) {
+      updates.completed = false;
+    }
+
+    onEditTask(id, updates);
     setEditingTaskId(null);
+
+    // Step One: Update active view filters so reinstated/edited task is included in queries immediately
+    if (wasCompleted && filterStatus === 'completed') {
+      setFilterStatus('all');
+    }
+    if (editingCategory.trim() && categoryFilter && categoryFilter.toLowerCase() !== editingCategory.trim().toLowerCase()) {
+      setCategoryFilter(null);
+    }
+
+    // Step Four: Calendar Month/Date View Synchronization
+    if (updatedDueDateMs) {
+      const newDueDateObj = new Date(updatedDueDateMs);
+      setSelectedCalendarDate(newDueDateObj);
+      setCurrentViewDate(newDueDateObj);
+    }
+
+    // Step Three: Visual Pulse Highlight Feedback (1.5 seconds)
+    setHighlightedTaskId(id);
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedTaskId(null);
+    }, 1500);
+
+    // Step Two: Auto-Scroll & DOM Focus Target
+    setTimeout(() => {
+      const el = document.getElementById(`task-card-${id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
   };
 
   const cancelEditMode = () => {
     setEditingTaskId(null);
+    setEditingDueDate(null);
   };
 
   const handleAiBreakdown = async (task: Task) => {
@@ -1461,6 +1511,7 @@ export const OrganizerView = ({
               <Calendar 
                 className="mx-auto" 
                 value={selectedCalendarDate}
+                activeStartDate={currentViewDate}
                 onActiveStartDateChange={({ activeStartDate }: any) => {
                   if (activeStartDate) {
                     setCurrentViewDate(activeStartDate);
@@ -1789,7 +1840,7 @@ export const OrganizerView = ({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1">
                 <label className={cn("text-[8px] font-black uppercase tracking-widest", currentTheme.label)}>
                   {language === 'ka' ? 'პრიორიტეტი' : 'Priority'}
@@ -1814,6 +1865,23 @@ export const OrganizerView = ({
                   value={editingCategory}
                   placeholder="e.g. Marketing"
                   onChange={e => setEditingCategory(e.target.value)}
+                  className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all scroll-m-24 md:scroll-m-0", currentTheme.input)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className={cn("text-[8px] font-black uppercase tracking-widest", currentTheme.label)}>
+                  {language === 'ka' ? 'ვადა / თარიღი' : 'Due Date'}
+                </label>
+                <input 
+                  type="date"
+                  value={editingDueDate ? (() => {
+                    const y = editingDueDate.getFullYear();
+                    const m = String(editingDueDate.getMonth() + 1).padStart(2, '0');
+                    const d = String(editingDueDate.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                  })() : ''}
+                  onChange={e => setEditingDueDate(e.target.value ? new Date(e.target.value + "T00:00:00") : null)}
                   className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all scroll-m-24 md:scroll-m-0", currentTheme.input)}
                 />
               </div>
@@ -1847,11 +1915,13 @@ export const OrganizerView = ({
       <motion.div 
         layout
         key={task.id} 
+        id={`task-card-${task.id}`}
         className={cn(
           "p-6 rounded-[24px] border transition-all group flex flex-col gap-4 relative overflow-hidden", 
           currentTheme.card, 
           task.completed && "opacity-40 select-none border-proton-border/20",
-          isOverdue && "border-red-500/40 bg-red-500/[0.02] shadow-[0_0_15px_rgba(239,68,68,0.05)]"
+          isOverdue && "border-red-500/40 bg-red-500/[0.02] shadow-[0_0_15px_rgba(239,68,68,0.05)]",
+          highlightedTaskId === task.id && "ring-2 ring-amber-400 border-amber-400 animate-pulse shadow-[0_0_25px_rgba(245,158,11,0.5)] z-30"
         )}
       >
         {/* Overdue left accent bar */}
