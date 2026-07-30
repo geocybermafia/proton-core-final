@@ -333,194 +333,199 @@ Query: "${query}"
           hidden: { opacity: 0, y: 30 },
           visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
         }}
-        className="p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-proton-border bg-gradient-to-br from-proton-card via-proton-card/90 to-proton-accent/5 shadow-2xl relative overflow-hidden transition-all duration-300 space-y-6"
       >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
-        
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-6 relative z-10">
-          <div className="space-y-3 text-left flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
-                {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
+        <ProtonCard
+          variant="default"
+          padding="none"
+          className="p-6 md:p-8 sm:rounded-3xl bg-gradient-to-br from-proton-card via-proton-card/90 to-proton-accent/5 shadow-2xl space-y-6 duration-300"
+        >
+          <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
+          
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-6 relative z-10">
+            <div className="space-y-3 text-left flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
+                  {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
+                </div>
+                {systemHealth && (
+                  <SystemStatusBadge 
+                    status={systemHealth.status} 
+                    latency={systemHealth.latency} 
+                    language={language}
+                    size="sm"
+                    onClick={() => systemHealth.checkHealth()}
+                  />
+                )}
               </div>
-              {systemHealth && (
-                <SystemStatusBadge 
-                  status={systemHealth.status} 
-                  latency={systemHealth.latency} 
-                  language={language}
-                  size="sm"
-                  onClick={() => systemHealth.checkHealth()}
-                />
-              )}
+              
+              <h1 className="font-extrabold tracking-tight uppercase leading-none text-3xl sm:text-4xl md:text-5xl text-proton-text">
+                {language === 'ka' ? 'კეთილი იყოს შენი მობრძანება' : 'WELCOME TO PROTON'}
+              </h1>
+              
+              <p className="text-proton-muted font-normal max-w-2xl text-sm sm:text-base leading-relaxed">
+                {language === 'ka' 
+                  ? 'ეს არის შენი პერსონალური ციფრული სივრცე. აქ შეგიძლია გაესაუბრო ჭკვიან AI ასისტენტებს, შექმნა კრეატიული ხელოვნება, გაყიდო ან შეიძინო ნივთები ადგილობრივ მარკეტზე და მართო ყოველდღიური საქმეები მარტივად.'
+                  : 'This is your personal digital workspace. Chat with smart AI companions, design visual graphics, trade items in the marketplace, and track your daily tasks or workflows effortlessly.'}
+              </p>
             </div>
             
-            <h1 className="font-extrabold tracking-tight uppercase leading-none text-3xl sm:text-4xl md:text-5xl text-proton-text">
-              {language === 'ka' ? 'კეთილი იყოს შენი მობრძანება' : 'WELCOME TO PROTON'}
-            </h1>
-            
-            <p className="text-proton-muted font-normal max-w-2xl text-sm sm:text-base leading-relaxed">
-              {language === 'ka' 
-                ? 'ეს არის შენი პერსონალური ციფრული სივრცე. აქ შეგიძლია გაესაუბრო ჭკვიან AI ასისტენტებს, შექმნა კრეატიული ხელოვნება, გაყიდო ან შეიძინო ნივთები ადგილობრივ მარკეტზე და მართო ყოველდღიური საქმეები მარტივად.'
-                : 'This is your personal digital workspace. Chat with smart AI companions, design visual graphics, trade items in the marketplace, and track your daily tasks or workflows effortlessly.'}
-            </p>
-          </div>
-          
-          <div className="hidden md:flex items-center shrink-0">
-            <motion.div 
-              whileHover={{ scale: 1.08, rotate: 45 }}
-              transition={{ type: "spring", stiffness: 200, damping: 15 }}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20 backdrop-blur-sm shadow-inner cursor-pointer"
-            >
-              <Grid className="text-proton-accent" size={30} />
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Quick AI Command / Search Input Box */}
-        <form onSubmit={handleQuickSubmit} className="relative z-10 pt-2">
-          <ProtonInput 
-            type="text"
-            value={quickQuery}
-            onChange={(e) => setQuickQuery(e.target.value)}
-            placeholder={language === 'ka' 
-              ? 'ჩაწერეთ შეკითხვა AI-სთვის ან მოძებნეთ ფუნქცია...' 
-              : 'Ask AI anything or launch a workflow...'}
-            leftIcon={<Sparkles className="text-proton-accent animate-pulse" size={18} />}
-            className="pr-28 py-3.5 bg-proton-bg/80 border-proton-accent/30 shadow-inner"
-            rightElement={
-              <ProtonButton 
-                type="submit"
-                size="sm"
-                leftIcon={<Zap size={14} />}
+            <div className="hidden md:flex items-center shrink-0">
+              <motion.div 
+                whileHover={{ scale: 1.08, rotate: 45 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20 backdrop-blur-sm shadow-inner cursor-pointer"
               >
-                {language === 'ka' ? 'გაგზავნა' : 'Ask'}
-              </ProtonButton>
-            }
-          />
-
-          {/* Quick Action Chips */}
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            <span className="text-[10px] font-mono uppercase text-proton-muted font-bold mr-1">
-              {language === 'ka' ? 'სწრაფი ბრძანებები:' : 'Quick Shortcuts:'}
-            </span>
-            <ProtonButton 
-              type="button"
-              variant="subtle"
-              size="sm"
-              onClick={() => setActiveView('personas')}
-              leftIcon={<Bot size={11} />}
-              className="py-1 px-2.5 text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20"
-            >
-              {language === 'ka' ? 'AI ჩატი' : 'AI Assistant'}
-            </ProtonButton>
-            <ProtonButton 
-              type="button"
-              variant="subtle"
-              size="sm"
-              onClick={() => setUiMode('creative', 'image')}
-              leftIcon={<Image size={11} />}
-              className="py-1 px-2.5 text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
-            >
-              {language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}
-            </ProtonButton>
-            <ProtonButton 
-              type="button"
-              variant="subtle"
-              size="sm"
-              onClick={() => setActiveView('organizer')}
-              leftIcon={<CalendarIcon size={11} />}
-              className="py-1 px-2.5 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
-            >
-              {language === 'ka' ? 'დავალებები' : 'Tasks'}
-            </ProtonButton>
-            <ProtonButton 
-              type="button"
-              variant="subtle"
-              size="sm"
-              onClick={() => setActiveView('clips')}
-              leftIcon={<Video size={11} />}
-              className="py-1 px-2.5 text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
-            >
-              {language === 'ka' ? 'კლიპები' : 'Clips'}
-            </ProtonButton>
+                <Grid className="text-proton-accent" size={30} />
+              </motion.div>
+            </div>
           </div>
-        </form>
 
-        {/* Live Instant AI Response Box */}
-        <AnimatePresence>
-          {(isAiThinking || aiResponse) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -10 }}
-              animate={{ opacity: 1, height: 'auto', y: 0 }}
-              exit={{ opacity: 0, height: 0, y: -10 }}
-              className="pt-4 border-t border-proton-border/30"
-            >
-              <ProtonCard variant="glass" padding="default" className="relative space-y-3 border-proton-accent/40 bg-proton-card/90 backdrop-blur-xl">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ProtonIconBox variant="accent" size="sm">
-                      <Sparkles size={14} className={isAiThinking ? "animate-spin text-proton-accent" : "text-proton-accent"} />
-                    </ProtonIconBox>
-                    <span className="text-xs font-mono font-bold text-proton-accent uppercase tracking-wider">
-                      {isAiThinking ? (language === 'ka' ? 'AI მოდელი ამუშავებს შეკითხვას...' : 'AI Processing Command...') : (language === 'ka' ? 'AI ანალიზი' : 'AI Direct Output')}
-                    </span>
+          {/* Quick AI Command / Search Input Box */}
+          <form onSubmit={handleQuickSubmit} className="relative z-10 pt-2">
+            <ProtonInput 
+              type="text"
+              value={quickQuery}
+              onChange={(e) => setQuickQuery(e.target.value)}
+              placeholder={language === 'ka' 
+                ? 'ჩაწერეთ შეკითხვა AI-სთვის ან მოძებნეთ ფუნქცია...' 
+                : 'Ask AI anything or launch a workflow...'}
+              leftIcon={<Sparkles className="text-proton-accent animate-pulse" size={18} />}
+              className="pr-28 py-3.5 bg-proton-bg/80 border-proton-accent/30 shadow-inner"
+              rightElement={
+                <ProtonButton 
+                  type="submit"
+                  size="sm"
+                  leftIcon={<Zap size={14} />}
+                >
+                  {language === 'ka' ? 'გაგზავნა' : 'Ask'}
+                </ProtonButton>
+              }
+            />
+
+            {/* Quick Action Chips */}
+            <div className="flex flex-wrap items-center gap-2 mt-3">
+              <span className="text-[10px] font-mono uppercase text-proton-muted font-bold mr-1">
+                {language === 'ka' ? 'სწრაფი ბრძანებები:' : 'Quick Shortcuts:'}
+              </span>
+              <ProtonButton 
+                type="button"
+                variant="subtle"
+                size="sm"
+                onClick={() => setActiveView('personas')}
+                leftIcon={<Bot size={11} />}
+                className="py-1 px-2.5 text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20"
+              >
+                {language === 'ka' ? 'AI ჩატი' : 'AI Assistant'}
+              </ProtonButton>
+              <ProtonButton 
+                type="button"
+                variant="subtle"
+                size="sm"
+                onClick={() => setUiMode('creative', 'image')}
+                leftIcon={<Image size={11} />}
+                className="py-1 px-2.5 text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+              >
+                {language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}
+              </ProtonButton>
+              <ProtonButton 
+                type="button"
+                variant="subtle"
+                size="sm"
+                onClick={() => setActiveView('organizer')}
+                leftIcon={<CalendarIcon size={11} />}
+                className="py-1 px-2.5 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
+              >
+                {language === 'ka' ? 'დავალებები' : 'Tasks'}
+              </ProtonButton>
+              <ProtonButton 
+                type="button"
+                variant="subtle"
+                size="sm"
+                onClick={() => setActiveView('clips')}
+                leftIcon={<Video size={11} />}
+                className="py-1 px-2.5 text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+              >
+                {language === 'ka' ? 'კლიპები' : 'Clips'}
+              </ProtonButton>
+            </div>
+          </form>
+
+          {/* Live Instant AI Response Box */}
+          <AnimatePresence>
+            {(isAiThinking || aiResponse) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: 'auto', y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                className="pt-4 border-t border-proton-border/30"
+              >
+                <ProtonCard variant="glass" padding="default" className="relative space-y-3 border-proton-accent/40 bg-proton-card/90 backdrop-blur-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ProtonIconBox variant="accent" size="sm">
+                        <Sparkles size={14} className={isAiThinking ? "animate-spin text-proton-accent" : "text-proton-accent"} />
+                      </ProtonIconBox>
+                      <span className="text-xs font-mono font-bold text-proton-accent uppercase tracking-wider">
+                        {isAiThinking ? (language === 'ka' ? 'AI მოდელი ამუშავებს შეკითხვას...' : 'AI Processing Command...') : (language === 'ka' ? 'AI ანალიზი' : 'AI Direct Output')}
+                      </span>
+                    </div>
+
+                    {aiResponse && (
+                      <div className="flex items-center gap-2">
+                        <ProtonButton
+                          variant="subtle"
+                          size="sm"
+                          onClick={handleCopyAiResponse}
+                          leftIcon={copiedOutput ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                          className="py-1 px-2.5 text-[10px]"
+                        >
+                          {copiedOutput ? (language === 'ka' ? 'კოპირებულია' : 'Copied') : (language === 'ka' ? 'კოპირება' : 'Copy')}
+                        </ProtonButton>
+                        <ProtonButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setAiResponse(null)}
+                          className="py-1 px-2 text-[10px]"
+                        >
+                          ✕
+                        </ProtonButton>
+                      </div>
+                    )}
                   </div>
 
-                  {aiResponse && (
-                    <div className="flex items-center gap-2">
-                      <ProtonButton
-                        variant="subtle"
-                        size="sm"
-                        onClick={handleCopyAiResponse}
-                        leftIcon={copiedOutput ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                        className="py-1 px-2.5 text-[10px]"
-                      >
-                        {copiedOutput ? (language === 'ka' ? 'კოპირებულია' : 'Copied') : (language === 'ka' ? 'კოპირება' : 'Copy')}
-                      </ProtonButton>
-                      <ProtonButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setAiResponse(null)}
-                        className="py-1 px-2 text-[10px]"
-                      >
-                        ✕
-                      </ProtonButton>
+                  {isAiThinking ? (
+                    <div className="flex items-center gap-3 py-4 text-xs font-mono text-proton-muted">
+                      <span className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
+                      <span>Analyzing system telemetry, neural memory nodes, and context...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="text-xs font-mono text-proton-text whitespace-pre-line leading-relaxed p-3 bg-proton-bg/60 rounded-xl border border-proton-border/40">
+                        {aiResponse}
+                      </div>
+                      
+                      <div className="flex items-center justify-end pt-1">
+                        <ProtonButton
+                          variant="primary"
+                          size="sm"
+                          onClick={() => {
+                            setAiResponse(null);
+                            setActiveView('personas');
+                          }}
+                          rightIcon={<ArrowRight size={13} />}
+                          className="text-xs py-1.5 font-mono uppercase tracking-wider"
+                        >
+                          {language === 'ka' ? 'გადადი AI ასისტენტებში' : 'Navigate to AI Companions'}
+                        </ProtonButton>
+                      </div>
                     </div>
                   )}
-                </div>
-
-                {isAiThinking ? (
-                  <div className="flex items-center gap-3 py-4 text-xs font-mono text-proton-muted">
-                    <span className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
-                    <span>Analyzing system telemetry, neural memory nodes, and context...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="text-xs font-mono text-proton-text whitespace-pre-line leading-relaxed p-3 bg-proton-bg/60 rounded-xl border border-proton-border/40">
-                      {aiResponse}
-                    </div>
-                    
-                    <div className="flex items-center justify-end pt-1">
-                      <ProtonButton
-                        variant="primary"
-                        size="sm"
-                        onClick={() => {
-                          setAiResponse(null);
-                          setActiveView('personas');
-                        }}
-                        rightIcon={<ArrowRight size={13} />}
-                        className="text-xs py-1.5 font-mono uppercase tracking-wider"
-                      >
-                        {language === 'ka' ? 'გადადი AI ასისტენტებში' : 'Navigate to AI Companions'}
-                      </ProtonButton>
-                    </div>
-                  </div>
-                )}
-              </ProtonCard>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </ProtonCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </ProtonCard>
       </motion.div>
 
       {/* Live Workspace Overview Metrics Bar */}
