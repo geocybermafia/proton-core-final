@@ -776,6 +776,30 @@ export const OrganizerView = ({
     return Array.from(cats);
   }, [tasks]);
 
+  // Synchronize category filter if active category is deleted or no longer exists in tasks
+  useEffect(() => {
+    if (categoryFilter !== null) {
+      const exists = uniqueCategories.some(cat => cat.toLowerCase() === categoryFilter.toLowerCase());
+      if (!exists) {
+        setCategoryFilter(null);
+      }
+    }
+  }, [uniqueCategories, categoryFilter]);
+
+  const handleDeleteTask = useCallback((id: string) => {
+    const taskToDelete = tasks.find(t => t.id === id);
+    if (taskToDelete?.category && categoryFilter && taskToDelete.category.toLowerCase() === categoryFilter.toLowerCase()) {
+      const remainingWithCat = tasks.filter(t => t.id !== id && t.category?.toLowerCase() === categoryFilter.toLowerCase());
+      if (remainingWithCat.length === 0) {
+        setCategoryFilter(null);
+      }
+    }
+    if (activeTimerTaskId === id) {
+      setActiveTimerTaskId(null);
+    }
+    onDeleteTask(id);
+  }, [tasks, categoryFilter, activeTimerTaskId, onDeleteTask]);
+
   return (
     <div className={cn("space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
       
@@ -2058,7 +2082,7 @@ export const OrganizerView = ({
             </button>
             <button 
               type="button"
-              onClick={() => onDeleteTask(task.id)} 
+              onClick={() => handleDeleteTask(task.id)} 
               className={cn("p-2 rounded-xl transition-all hover:scale-110 opacity-0 group-hover:opacity-100 text-proton-text hover:text-red-500")}
               title={language === 'ka' ? 'წაშლა' : 'Delete Task'}
             >
