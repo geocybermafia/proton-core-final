@@ -7,6 +7,8 @@ import { protonSpacing } from '../tokens/spacing';
 export interface ProtonButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'subtle';
   size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
+  justify?: 'start' | 'center' | 'between' | 'end';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -16,6 +18,8 @@ export interface ProtonButtonProps extends React.ButtonHTMLAttributes<HTMLButton
 export const ProtonButton = React.forwardRef<HTMLButtonElement, ProtonButtonProps>(({
   variant = 'primary',
   size = 'md',
+  fullWidth = false,
+  justify = 'center',
   isLoading = false,
   leftIcon,
   rightIcon,
@@ -42,15 +46,24 @@ export const ProtonButton = React.forwardRef<HTMLButtonElement, ProtonButtonProp
     lg: protonSpacing.control.lg,
   };
 
+  const justifyClasses = {
+    start: 'justify-start text-left',
+    center: 'justify-center text-center',
+    between: 'justify-between',
+    end: 'justify-end text-right',
+  };
+
   return (
     <button
       ref={ref}
       disabled={disabled || isLoading}
       className={cn(
         baseRadius,
-        'inline-flex items-center justify-center gap-2 font-medium tracking-wide transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:transform-none select-none',
+        'inline-flex items-center gap-2 font-medium tracking-wide transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:pointer-events-none disabled:transform-none select-none',
         variantClasses[variant],
         sizeClasses[size],
+        justifyClasses[justify],
+        fullWidth && 'w-full',
         className
       )}
       {...props}
@@ -60,7 +73,13 @@ export const ProtonButton = React.forwardRef<HTMLButtonElement, ProtonButtonProp
       ) : (
         leftIcon && <span className="shrink-0 flex items-center">{leftIcon}</span>
       )}
-      {children && <span className="truncate min-w-0">{children}</span>}
+      {children && (
+        typeof children === 'string' || typeof children === 'number' ? (
+          <span className="truncate min-w-0">{children}</span>
+        ) : (
+          <div className="flex-1 min-w-0 flex items-center gap-2">{children}</div>
+        )
+      )}
       {!isLoading && rightIcon && <span className="shrink-0 flex items-center">{rightIcon}</span>}
     </button>
   );

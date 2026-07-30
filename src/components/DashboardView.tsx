@@ -697,15 +697,18 @@ Query: "${query}"
                   const isVisible = visibleWidgets.includes(gate.id);
                   const GateIcon = gate.icon;
                   return (
-                    <button
+                    <ProtonButton
                       key={gate.id}
                       type="button"
+                      variant="ghost"
+                      fullWidth
+                      justify="start"
                       onClick={() => toggleWidget(gate.id)}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl border transition-all text-left group active:scale-95 cursor-pointer",
+                        "h-auto p-3 gap-3 border transition-all text-left group active:scale-95 cursor-pointer font-normal",
                         isVisible 
-                          ? "bg-proton-accent/5 border-proton-accent/40 text-proton-text" 
-                          : "bg-transparent border-proton-border/40 text-proton-muted hover:border-proton-border"
+                          ? "bg-proton-accent/5 border-proton-accent/40 text-proton-text hover:bg-proton-accent/10" 
+                          : "bg-transparent border-proton-border/40 text-proton-muted hover:border-proton-border hover:bg-proton-card/50"
                       )}
                     >
                       <ProtonIconBox 
@@ -733,7 +736,7 @@ Query: "${query}"
                           )}
                         </div>
                       </div>
-                    </button>
+                    </ProtonButton>
                   );
                 })}
               </div>
