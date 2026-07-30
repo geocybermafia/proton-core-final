@@ -239,6 +239,9 @@ export default function PersonasView({
       aiAbortControllerRef.current = null;
     }
     setIsSending(false);
+    setInput('');
+    setShowTools(false);
+    setSelectedTool(null);
 
     if (selectedPersona) {
       setEditingInstructions(selectedPersona.systemInstruction || '');
@@ -246,6 +249,7 @@ export default function PersonasView({
       setEditingInstructions('');
     }
     setIsEditingInstructions(false);
+    setIsSavingInstructions(false);
     setSaveSuccess(false);
     setSaveError(null);
     setShowConfirmClear(false);
@@ -568,6 +572,10 @@ export default function PersonasView({
       setIsSending(false);
 
     } catch (error: any) {
+      if (controller.signal.aborted) {
+        console.log("Chat error handler ignored because request was aborted due to persona change");
+        return;
+      }
       console.warn("Failed to send message or process via Gemini:", error);
       setIsSending(false);
       
