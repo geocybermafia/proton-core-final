@@ -5887,7 +5887,7 @@ export default function App() {
                       />
                     </Suspense>
                   )}
-                  {activeView === 'blueprints' && (
+                  {(activeView === 'blueprints' || activeView === 'workflows') && (
                     <WorkflowsView 
                       workflows={workflows}
                       setWorkflows={setWorkflows}
