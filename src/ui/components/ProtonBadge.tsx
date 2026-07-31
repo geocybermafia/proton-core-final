@@ -3,9 +3,10 @@ import { cn } from '../../lib/utils';
 import { protonRadius } from '../tokens/radius';
 
 export interface ProtonBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'accent' | 'emerald' | 'amber' | 'rose' | 'purple' | 'neutral' | 'outline';
+  variant?: 'accent' | 'emerald' | 'amber' | 'rose' | 'purple' | 'neutral' | 'outline' | 'surface-accent';
   size?: 'sm' | 'md';
   pulse?: boolean;
+  ping?: boolean;
   children: React.ReactNode;
 }
 
@@ -13,6 +14,7 @@ export const ProtonBadge: React.FC<ProtonBadgeProps> = ({
   variant = 'accent',
   size = 'md',
   pulse = false,
+  ping = false,
   className,
   children,
   ...props
@@ -22,6 +24,7 @@ export const ProtonBadge: React.FC<ProtonBadgeProps> = ({
 
   const variantClasses = {
     accent: 'bg-proton-accent/10 border-proton-accent/25 text-proton-accent',
+    'surface-accent': 'bg-proton-bg/80 border-proton-accent/30 text-proton-accent shadow-sm',
     emerald: 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400',
     amber: 'bg-amber-500/10 border-amber-500/25 text-amber-400',
     rose: 'bg-rose-500/10 border-rose-500/25 text-rose-400',
@@ -32,6 +35,7 @@ export const ProtonBadge: React.FC<ProtonBadgeProps> = ({
 
   const dotClasses = {
     accent: 'bg-proton-accent',
+    'surface-accent': 'bg-proton-accent',
     emerald: 'bg-emerald-400',
     amber: 'bg-amber-400',
     rose: 'bg-rose-400',
@@ -42,22 +46,30 @@ export const ProtonBadge: React.FC<ProtonBadgeProps> = ({
 
   const sizeClasses = {
     sm: 'px-2.5 py-0.5 text-[9px]',
-    md: 'px-3 py-1 text-[10px]',
+    md: 'px-3 py-1.5 text-[10px]',
   };
+
+  const showDot = pulse || ping;
 
   return (
     <span
       className={cn(
         baseRadius,
-        'inline-flex items-center gap-1.5 border font-mono font-bold uppercase tracking-wider select-none shrink-0',
+        'inline-flex items-center gap-2 border font-mono font-bold uppercase tracking-wider select-none shrink-0',
         variantClasses[variant],
         sizeClasses[size],
         className
       )}
       {...props}
     >
-      {pulse && (
-        <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse shrink-0', dotClasses[variant])} />
+      {showDot && (
+        <span
+          className={cn(
+            'w-1.5 h-1.5 rounded-full shrink-0',
+            ping ? 'animate-ping' : 'animate-pulse',
+            dotClasses[variant]
+          )}
+        />
       )}
       <span>{children}</span>
     </span>

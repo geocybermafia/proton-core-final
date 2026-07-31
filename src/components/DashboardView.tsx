@@ -344,10 +344,9 @@ Query: "${query}"
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-6 relative z-10">
             <div className="space-y-3 text-left flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-proton-bg/80 text-proton-accent border border-proton-accent/30 shadow-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-ping" />
+                <ProtonBadge variant="surface-accent" size="md" ping>
                   {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
-                </div>
+                </ProtonBadge>
                 {systemHealth && (
                   <SystemStatusBadge 
                     status={systemHealth.status} 
