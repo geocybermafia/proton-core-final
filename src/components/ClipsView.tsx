@@ -2223,7 +2223,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                       </div>
 
                       {/* RIGHT-SIDE OVERLAY ACTION BAR (Like, Comment, Share, Filters, Magic Fix, Delete) */}
-                      <div className="absolute right-3.5 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col items-center gap-4.5 pointer-events-none">
+                      <div className="absolute right-3.5 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col items-center gap-2.5 sm:gap-3.5 md:gap-4.5 pointer-events-none">
                         
                         {/* Creator avatar bubble */}
                         <div className="relative group pointer-events-auto">
