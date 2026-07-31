@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
 
 function lazyWithRetry<T extends React.ComponentType<any>>(
   componentImport: () => Promise<{ default: T } | { [key: string]: any }>
@@ -3920,10 +3920,7 @@ export default function App() {
     setTimeout(() => setIsTransitioning(false), 2000);
   };
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-ui-mode', uiMode);
-    safeStorage.set('proton_ui_mode', uiMode);
-  }, [uiMode]);
+
 
   // Helper mapping pathnames to specific Views
   const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
@@ -4308,10 +4305,11 @@ export default function App() {
     safeStorage.set('proton_organizer_theme', organizerTheme);
   }, [organizerTheme]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-ui-mode', uiMode);
     safeStorage.set('proton_theme', theme);
+    safeStorage.set('proton_ui_mode', uiMode);
   }, [theme, uiMode]);
   
   const [chatHistory, setChatHistory] = useState<PersonaHistory>(() => {
