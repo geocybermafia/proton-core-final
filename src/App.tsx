@@ -3007,31 +3007,35 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
               {isKa ? 'ვიზუალური შედეგი' : 'ACTIVE VIEWPORT'}
             </h3>
             
-            <div className="flex justify-center items-center bg-[#090d16] rounded-2xl border border-white/5 overflow-hidden relative min-h-[300px] md:min-h-[400px]">
+            <div className="flex justify-center items-center bg-[#090d16] rounded-2xl border border-white/5 overflow-hidden relative min-h-[320px] sm:min-h-[420px] p-3 sm:p-4 w-full">
               {image ? (
-                <div className={cn(
-                  "w-full h-full p-2 flex justify-center items-center",
-                  selectedRatio === '16:9' ? 'aspect-video' : selectedRatio === '9:16' ? 'aspect-[9/16]' : 'aspect-square'
-                )}>
-                  <img src={image} alt="Generated" className="rounded-xl w-full h-full object-contain" referrerPolicy="no-referrer" />
-                  
-                  {/* Download Action overlay */}
-                  <div className="absolute bottom-4 right-4 flex gap-2">
-                    <a 
-                      href={image} 
-                      download="proton_neural_artwork.png"
-                      className="p-2.5 rounded-xl bg-black/80 border border-white/10 text-proton-text hover:bg-black transition-all hover:scale-110"
-                      title={isKa ? 'ჩამოტვირთვა' : 'Download image'}
-                    >
-                      <Download size={14} />
-                    </a>
-                    <button
-                      onClick={() => handleCopyPrompt(prompt, 'main')}
-                      className="p-2.5 rounded-xl bg-black/80 border border-white/10 text-proton-text hover:bg-black transition-all hover:scale-110"
-                      title={isKa ? 'პრომპტის კოპირება' : 'Copy prompt'}
-                    >
-                      {copiedId === 'main' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                    </button>
+                <div className="w-full h-full min-h-[280px] max-h-[60vh] sm:max-h-[500px] flex justify-center items-center relative overflow-hidden">
+                  <div className={cn(
+                    "relative max-w-full max-h-full flex justify-center items-center rounded-xl overflow-hidden border border-white/10 bg-black/40 transition-all duration-300",
+                    selectedRatio === '16:9' ? 'aspect-video w-full max-w-full' : 
+                    selectedRatio === '9:16' ? 'aspect-[9/16] h-full max-h-[55vh] sm:max-h-[480px] w-auto max-w-full' : 
+                    'aspect-square h-full max-h-[55vh] sm:max-h-[440px] w-auto max-w-full'
+                  )}>
+                    <img src={image} alt="Generated" className="rounded-xl w-full h-full object-contain" referrerPolicy="no-referrer" />
+                    
+                    {/* Download Action overlay */}
+                    <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                      <a 
+                        href={image} 
+                        download="proton_neural_artwork.png"
+                        className="p-2.5 rounded-xl bg-black/80 border border-white/10 text-proton-text hover:bg-black transition-all hover:scale-110 shadow-lg backdrop-blur-md"
+                        title={isKa ? 'ჩამოტვირთვა' : 'Download image'}
+                      >
+                        <Download size={14} />
+                      </a>
+                      <button
+                        onClick={() => handleCopyPrompt(prompt, 'main')}
+                        className="p-2.5 rounded-xl bg-black/80 border border-white/10 text-proton-text hover:bg-black transition-all hover:scale-110 shadow-lg backdrop-blur-md"
+                        title={isKa ? 'პრომპტის კოპირება' : 'Copy prompt'}
+                      >
+                        {copiedId === 'main' ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
