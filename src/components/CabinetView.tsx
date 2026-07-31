@@ -13,6 +13,7 @@ interface CabinetViewProps {
   profile: UserProfile | null;
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  onUpdateProfile?: (updates: Partial<UserProfile>) => void;
 }
 
 const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: string }[] = [
@@ -27,7 +28,7 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
   { id: 'midnight', label: 'Dark', icon: Moon, color: 'bg-slate-900', bg: 'bg-gradient-to-br from-neutral-900 to-black border-neutral-800' },
 ];
 
-export default function CabinetView({ profile, theme, setTheme }: CabinetViewProps) {
+export default function CabinetView({ profile, theme, setTheme, onUpdateProfile }: CabinetViewProps) {
   const { user } = useAuth();
   const [isDesignOpen, setIsDesignOpen] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -102,6 +103,9 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
   const t = translations[lang as keyof typeof translations]?.cabinet || translations.en.cabinet;
 
   const handleUpdate = async (field: string, value: any) => {
+    if (onUpdateProfile) {
+      onUpdateProfile({ [field]: value });
+    }
     if (!user) return;
     const docRef = doc(db, 'users', user.uid);
     try {
@@ -482,8 +486,8 @@ export default function CabinetView({ profile, theme, setTheme }: CabinetViewPro
       <AvatarEditorModal
          isOpen={isAvatarModalOpen}
          onClose={() => setIsAvatarModalOpen(false)}
-         currentAvatar={profile.avatar || undefined}
-         userName={profile.name}
+         currentAvatar={profile?.avatar || undefined}
+         userName={profile?.name || 'User'}
          lang={lang}
          onSave={(newAvatarBase64) => handleUpdate('avatar', newAvatarBase64)}
       />

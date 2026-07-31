@@ -4384,6 +4384,13 @@ export default function App() {
     }
     return defaultProfile;
   });
+
+  const handleUpdateUserProfile = useCallback((updates: Partial<UserProfile>) => {
+    setUserProfile(prev => ({
+      ...prev,
+      ...updates
+    }));
+  }, []);
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
     try {
       const saved = safeStorage.get('proton_favorite_personas');
@@ -5441,14 +5448,12 @@ export default function App() {
           )} onClick={() => handleViewChange('profile')}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-bold shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
-                {user ? (
-                  user.photoURL ? (
-                    <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="text-sm font-black uppercase">{(user.displayName || user.email || 'U').charAt(0).toUpperCase()}</span>
-                  )
+                {userProfile.avatar ? (
+                  <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : user?.photoURL ? (
+                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <UserIcon size={18} />
+                  <span className="text-sm font-black uppercase">{(userProfile.name || user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}</span>
                 )}
               </div>
               <AnimatePresence mode="wait">
@@ -5959,6 +5964,7 @@ export default function App() {
                         profile={userProfile} 
                         theme={theme} 
                         setTheme={setTheme} 
+                        onUpdateProfile={handleUpdateUserProfile}
                       />
                     </Suspense>
                   )}
