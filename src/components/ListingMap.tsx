@@ -2,12 +2,14 @@ import React, { useEffect, useRef } from 'react';
 import { Listing } from '../types';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { LayoutGrid } from 'lucide-react';
 
 interface ListingMapProps {
   listings: Listing[];
   onSelectListing: (listing: Listing) => void;
   language: 'en' | 'ka';
   currentTheme: any;
+  onClose?: () => void;
 }
 
 // Custom CSS styling for the markers
@@ -19,7 +21,7 @@ const markerStyle = `
   }
 `;
 
-export function ListingMap({ listings, onSelectListing, language, currentTheme }: ListingMapProps) {
+export function ListingMap({ listings, onSelectListing, language, currentTheme, onClose }: ListingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
@@ -284,7 +286,7 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
   }, []);
 
   return (
-    <div className="relative w-full h-[550px] md:h-[650px] rounded-[40px] overflow-hidden border border-white/5 shadow-2xl bg-[#0a0a0a] group animate-in fade-in duration-500">
+    <div className="relative w-full h-[380px] sm:h-[500px] md:h-[650px] rounded-[32px] sm:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl bg-[#0a0a0a] group animate-in fade-in duration-500">
       <div 
         ref={mapContainerRef} 
         className="w-full h-full z-0" 
@@ -292,8 +294,8 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
       />
       
       {/* Decorative Overlays */}
-      <div className="absolute top-6 left-6 z-10 pointer-events-none">
-        <div className="px-4 py-2.5 bg-black/85 backdrop-blur-xl rounded-2xl border border-white/10 flex items-center gap-2 shadow-2xl">
+      <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-10 pointer-events-none">
+        <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-black/85 backdrop-blur-xl rounded-2xl border border-white/10 flex items-center gap-2 shadow-2xl">
           <div className="w-1.5 h-1.5 rounded-full bg-[#2e5bff] animate-pulse" />
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white">
             {language === 'ka' ? 'ლოკაციების რუკა' : 'Live Asset Map'}
@@ -303,9 +305,24 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme }
           </span>
         </div>
       </div>
+
+      {/* Close / Switch to Grid button */}
+      {onClose && (
+        <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 pointer-events-auto">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-2 bg-black/85 backdrop-blur-xl rounded-xl border border-white/10 text-white hover:text-[#dfb257] hover:border-[#dfb257]/30 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-2xl active:scale-95 transition-all cursor-pointer"
+            title={language === 'ka' ? 'ბადეზე გადასვლა' : 'Switch to Grid'}
+          >
+            <LayoutGrid size={12} className="text-[#dfb257]" />
+            <span>{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+          </button>
+        </div>
+      )}
       
       {/* Map Guidelines instructions */}
-      <div className="absolute bottom-6 left-6 z-10 pointer-events-none hidden md:block">
+      <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 z-10 pointer-events-none hidden md:block">
         <div className="px-4 py-2 bg-black/80 backdrop-blur-md rounded-xl border border-white/5 text-[8px] text-gray-500 font-black uppercase tracking-[0.1em]">
           {language === 'ka' ? 'დააწკაპუნეთ მარკერზე შესყიდვისთვის' : 'Click markers to initiate purchase flow'}
         </div>

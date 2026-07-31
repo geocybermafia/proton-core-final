@@ -3101,16 +3101,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 </div>
               )}
 
-              {viewMode === 'browse' && displayMode === 'map' ? (
-              <ListingMap 
-                listings={filteredListings}
-                onSelectListing={(listing) => {
-                  setCheckoutItem(listing);
-                }}
-                language={language}
-                currentTheme={currentTheme}
-              />
-            ) : (
+              {viewMode === 'browse' && displayMode === 'map' && (
+                <div className="mb-8 animate-in fade-in duration-300">
+                  <ListingMap 
+                    listings={filteredListings}
+                    onSelectListing={(listing) => {
+                      setCheckoutItem(listing);
+                    }}
+                    onClose={() => setDisplayMode('grid')}
+                    language={language}
+                    currentTheme={currentTheme}
+                  />
+                </div>
+              )}
+
               <div className="space-y-8">
                 {viewMode === 'my-listings' && activeBottomTab === 'messages' && (
                   /* Dedicated Desktop Inbox / Direct Messages layout */
@@ -3718,7 +3722,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           </div>
         )}
       </div>
-      )}
 
             {!loading && listings.length === 0 && (
               <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-zinc-950/40 border border-zinc-900 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
