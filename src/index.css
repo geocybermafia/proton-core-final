@@ -280,3 +280,19 @@ body, #root {
   z-index: 2;
 }
 
+/* Hide third-party extension overlays & Surfe.be injected badges/banners */
+#surfe-be,
+#surfebe_banner,
+.surfebe,
+.surfebe-ext,
+[id*="surfe"],
+[class*="surfe"],
+iframe[src*="surfe"],
+div[id*="surfe_"],
+div[class*="surfe_"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+

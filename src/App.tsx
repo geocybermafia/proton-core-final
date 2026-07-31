@@ -42,7 +42,6 @@ import {
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, runTransaction, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { FriendlyAssistantWidget } from './components/FriendlyAssistantWidget';
 const SettingsView = lazyWithRetry(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
@@ -6025,18 +6024,6 @@ export default function App() {
         </div>
       </div>
     </main>
-
-    <FriendlyAssistantWidget 
-      language={userProfile.language}
-      activeView={activeView}
-      uiMode={uiMode}
-      onNavigate={handleViewChange}
-      onSetLanguage={(lang) => {
-        setLanguage(lang);
-        setUserProfile(prev => ({ ...prev, language: lang }));
-      }}
-      onSetUiMode={handleModeChange}
-    />
 
       <AnimatePresence>
         {showLogs && (
