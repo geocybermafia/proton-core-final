@@ -34,47 +34,27 @@ export function useWeb3Ledger() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored) as LedgerTransaction[];
-        setLedger(parsed);
+        // Filter out legacy mock seed transactions if present in storage
+        const clean = parsed.filter(tx => tx.id !== 'tx-001' && tx.id !== 'tx-002');
+        if (clean.length !== parsed.length) {
+          localStorage.setItem(storageKey, JSON.stringify(clean));
+        }
+        setLedger(clean);
       } catch (err) {
         console.error('Failed to parse Web3 ledger storage:', err);
         setLedger([]);
       }
     } else {
-      // Seed initial mock transactional history for the developer simulation/playground
-      const initialTransactions: LedgerTransaction[] = [
-        {
-          id: 'tx-001',
-          timestamp: Date.now() - 3600000 * 24 * 3, // 3 days ago
-          type: 'DEPOSIT',
-          amount: '1.25',
-          token: 'ETH',
-          targetAddress: address,
-          txHash: '0x3a9f...e62b',
-          status: 'SUCCESS',
-          network: chain?.name || 'Ethereum Mainnet'
-        },
-        {
-          id: 'tx-002',
-          timestamp: Date.now() - 3600000 * 4, // 4 hours ago
-          type: 'CONTRACT',
-          amount: '0.045',
-          token: 'ETH',
-          targetAddress: '0x71C7656EC7ab88b098defB751B7401B5f6d1476B',
-          txHash: '0x9d4b...4f7a',
-          status: 'SUCCESS',
-          network: chain?.name || 'Ethereum Mainnet'
-        }
-      ];
-      localStorage.setItem(storageKey, JSON.stringify(initialTransactions));
-      setLedger(initialTransactions);
+      setLedger([]);
     }
-  }, [address, isConnected, chain?.name]);
+  }, [address, isConnected]);
 
   const addTransaction = useCallback((
     type: 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'CONTRACT',
     amount: string,
     targetAddress: string,
-    token: string = 'ETH'
+    token: string = 'ETH',
+    txHash?: string
   ) => {
     if (!address || !isConnected) return;
 
@@ -85,7 +65,7 @@ export function useWeb3Ledger() {
       amount,
       token,
       targetAddress,
-      txHash: `0x${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('').slice(0, 4)}...${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('').slice(-4)}`,
+      txHash: txHash || '',
       status: 'SUCCESS',
       network: chain?.name || 'Ethereum Mainnet'
     };

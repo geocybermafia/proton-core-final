@@ -173,7 +173,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
 
   const getNumericBalance = () => {
     const match = balance.match(/^([0-9.]+)/);
-    return match ? parseFloat(match[1]) : 1.25;
+    return match ? parseFloat(match[1]) : 0;
   };
 
   const sparklineData = useMemo(() => {
