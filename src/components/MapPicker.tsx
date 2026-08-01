@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapPin, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, Loader2, AlertTriangle, RotateCcw, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface MapPickerProps {
@@ -17,6 +17,7 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const [detecting, setDetecting] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   // Initialize Map
   useEffect(() => {
@@ -189,14 +190,20 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
     }
   }, [lat, lng]);
 
-  // Geolocation detector
+  // Geolocation detector with graceful error handling
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
-      alert(language === 'ka' ? 'გეოლოკაცია არ არის მხარდაჭერილი თქვენი ბრაუზერის მიერ.' : 'Geolocation is not supported by your browser.');
+      setGeoError(
+        language === 'ka'
+          ? 'გეოლოკაცია არ არის მხარდაჭერილი. მიუთითეთ ლოკაცია რუკაზე ხელით.'
+          : 'Geolocation is not supported. Please click on the map to pin location manually.'
+      );
       return;
     }
 
     setDetecting(true);
+    setGeoError(null);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setDetecting(false);
@@ -206,15 +213,27 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
           mapRef.current.setView([latitude, longitude], 15);
         }
       },
-      (error) => {
+      (error: GeolocationPositionError) => {
         setDetecting(false);
-        console.error("Geolocation error:", error);
-        alert(language === 'ka' 
-          ? 'ლოკაციის დადგენა ვერ მოხერხდა. მიუთითეთ ხელით რუკაზე.' 
-          : 'Could not fetch geolocation. Please click on the map to pin manually.'
-        );
+        console.warn("MapPicker GeolocationPositionError:", error.code, error.message);
+
+        let msg = language === 'ka'
+          ? 'ლოკაციის დადგენა ვერ მოხერხდა. მიუთითეთ ლოკაცია რუკაზე ხელით.'
+          : 'Could not fetch location. Please click on map to pin manually.';
+
+        if (error.code === error.PERMISSION_DENIED) {
+          msg = language === 'ka'
+            ? 'ლოკაციაზე წვდომა უარყოფილია. აირჩიეთ კოორდინატები რუკაზე წკაპით.'
+            : 'Location permission denied. Click anywhere on the map to place pin.';
+        } else if (error.code === error.TIMEOUT) {
+          msg = language === 'ka'
+            ? 'ლოკაციის მოთხოვნის დრო ამოიწურა. სცადეთ ხელახლა ან მიუთითეთ ხელით.'
+            : 'Location request timed out. Please retry or pick location manually.';
+        }
+
+        setGeoError(msg);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 7000 }
     );
   };
 
@@ -229,7 +248,7 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
           type="button"
           onClick={handleDetectLocation}
           disabled={detecting}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-wider text-white transition-all disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-wider text-white transition-all disabled:opacity-50 cursor-pointer"
         >
           {detecting ? (
             <Loader2 size={10} className="animate-spin text-[#2e5bff]" />
@@ -239,6 +258,35 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
           {language === 'ka' ? 'ჩემი ლოკაცია' : 'Auto Detect'}
         </button>
       </div>
+
+      {/* Non-intrusive Geolocation Error Banner */}
+      {geoError && (
+        <div className="px-3.5 py-2 bg-black/90 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2 text-[10px] text-amber-300 shadow-md">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={12} className="text-amber-400 shrink-0" />
+            <span className="leading-tight">{geoError}</span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={handleDetectLocation}
+              disabled={detecting}
+              className="p-1 text-amber-300 hover:text-white transition-colors"
+              title={language === 'ka' ? 'ხელახლა ცდა' : 'Retry'}
+            >
+              <RotateCcw size={11} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setGeoError(null)}
+              className="p-1 text-amber-400/80 hover:text-amber-200 transition-colors"
+              title={language === 'ka' ? 'დახურვა' : 'Dismiss'}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="relative w-full h-64 min-h-[250px] rounded-[30px] overflow-hidden border border-white/5 shadow-inner bg-[#0a0a0a]">
         <div ref={mapContainerRef} className="w-full h-full min-h-[250px] z-0 bg-[#0a0a0a]" />

@@ -176,7 +176,8 @@ import {
   Play,
   Pause,
   Tag,
-  Video
+  Video,
+  Menu
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })));
@@ -3867,6 +3868,7 @@ export default function App() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isControlExpanded, setIsControlExpanded] = useState(false);
   const [isMobileControlOpen, setIsMobileControlOpen] = useState(false);
+  const [isMobileNavDrawerOpen, setIsMobileNavDrawerOpen] = useState(false);
 
   const handleModeChange = (newMode: 'business' | 'creative' | 'market', targetView?: View) => {
     const getViewPath = (v: View): string => {
@@ -5594,6 +5596,185 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Mobile Slide-out Navigation Drawer Overlay */}
+      <AnimatePresence>
+        {isMobileNavDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileNavDrawerOpen(false)}
+              className="md:hidden fixed inset-0 bg-black/70 backdrop-blur-md z-[90]"
+            />
+
+            {/* Slide-over Drawer Panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="md:hidden fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-proton-card/95 border-l border-proton-border shadow-2xl backdrop-blur-xl flex flex-col p-6 z-[95] overflow-y-auto custom-scrollbar-minimal"
+            >
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-proton-border/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-proton-accent/10 border border-proton-accent/30 flex items-center justify-center text-proton-accent">
+                    <Grid size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black uppercase tracking-wider text-proton-text">
+                      {language === 'ka' ? 'ნავიგაცია' : 'Navigation Menu'}
+                    </h3>
+                    <p className="text-[9px] font-mono text-proton-muted">PROTON OS // MODULES</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsMobileNavDrawerOpen(false)}
+                  className="p-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* View Links Section */}
+              <div className="flex-1 py-4 space-y-5">
+                {/* Main Hubs */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black font-mono uppercase tracking-widest text-proton-muted px-1">
+                    {language === 'ka' ? 'მთავარი ჰაბები' : 'Core Hubs'}
+                  </p>
+                  <div className="space-y-1">
+                    {[
+                      { id: 'dashboard', label: language === 'ka' ? 'მთავარი დაფა' : 'Home Dashboard', icon: LayoutDashboard },
+                      { id: 'business-hub', label: language === 'ka' ? 'ბიზნეს ჰაბი' : 'Business Hub', icon: Briefcase },
+                      { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio', icon: Sparkles },
+                      { id: 'market-hub', label: language === 'ka' ? 'მარკეტის ჰაბი' : 'Market Hub', icon: ShoppingBag },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          handleViewChange(item.id as View);
+                          setIsMobileNavDrawerOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3.5 py-3 rounded-2xl border transition-all text-left",
+                          activeView === item.id
+                            ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold shadow-sm"
+                            : "bg-proton-bg/40 border-proton-border/40 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon size={16} className={activeView === item.id ? "text-proton-accent" : "text-proton-muted"} />
+                          <span className="text-xs font-bold uppercase tracking-wide">{item.label}</span>
+                        </div>
+                        <ChevronRight size={14} className={cn("transition-transform", activeView === item.id ? "text-proton-accent translate-x-0.5" : "text-proton-muted opacity-40")} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Applications & Modules */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black font-mono uppercase tracking-widest text-proton-muted px-1">
+                    {language === 'ka' ? 'აპლიკაციები & ინსტრუმენტები' : 'Modules & Applications'}
+                  </p>
+                  <div className="space-y-1">
+                    {[
+                      { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video, badge: 'LIVE' },
+                      { id: 'personas', label: language === 'ka' ? 'AI პერსონები' : 'AI Personas', icon: Users },
+                      { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
+                      { id: 'image', label: t.sidebar.image, icon: ImageIcon },
+                      { id: 'translator', label: t.sidebar.translator, icon: Languages },
+                      { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
+                      { id: 'organizer', label: t.sidebar.organizer, icon: CalendarIcon },
+                      ...(userProfile.showCommercialHub ? [{ id: 'commercial', label: t.sidebar.commercial, icon: TrendingUp }] : []),
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          handleViewChange(item.id as View);
+                          setIsMobileNavDrawerOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left",
+                          activeView === item.id
+                            ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold shadow-sm"
+                            : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon size={15} className={activeView === item.id ? "text-proton-accent" : "text-proton-muted"} />
+                          <span className="text-xs font-bold uppercase tracking-wide">{item.label}</span>
+                        </div>
+                        {item.badge ? (
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-proton-accent/20 text-proton-accent">{item.badge}</span>
+                        ) : (
+                          <ChevronRight size={14} className={cn("transition-transform", activeView === item.id ? "text-proton-accent translate-x-0.5" : "text-proton-muted opacity-40")} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Account & System */}
+                <div className="space-y-2 pt-2 border-t border-proton-border/30">
+                  <p className="text-[10px] font-black font-mono uppercase tracking-widest text-proton-muted px-1">
+                    {language === 'ka' ? 'ანგარიში & სისტემა' : 'System & Cabinet'}
+                  </p>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        handleViewChange('profile');
+                        setIsMobileNavDrawerOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left",
+                        activeView === 'profile'
+                          ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
+                          : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <UserIcon size={15} className={activeView === 'profile' ? "text-proton-accent" : "text-proton-muted"} />
+                        <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'პირადი კაბინეტი' : 'Personal Cabinet'}</span>
+                      </div>
+                      <ChevronRight size={14} className="text-proton-muted opacity-40" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        handleViewChange('settings');
+                        setIsMobileNavDrawerOpen(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left",
+                        activeView === 'settings'
+                          ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
+                          : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Settings size={15} className={activeView === 'settings' ? "text-proton-accent" : "text-proton-muted"} />
+                        <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}</span>
+                      </div>
+                      <ChevronRight size={14} className="text-proton-muted opacity-40" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Drawer Footer */}
+              <div className="pt-4 border-t border-proton-border/50 flex items-center justify-between text-[10px] font-mono text-proton-muted">
+                <span>PROTON OS v2.5</span>
+                <span className="text-proton-accent">ONLINE</span>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Bottom Nav (Mobile Only) */}
       <MobileBottomNav
         isMobileNavVisible={isMobileNavVisible}
@@ -5688,7 +5869,7 @@ export default function App() {
               setUiMode={handleModeChange}
             />
 
-            <nav className="hidden xl:flex items-center justify-center gap-2 lg:gap-3 shrink-0">
+            <nav className="hidden md:flex items-center justify-center gap-2 lg:gap-3 shrink-0">
               {(uiMode === 'business' ? [
                 { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
                 { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
@@ -5715,6 +5896,15 @@ export default function App() {
                 </button>
               ))}
             </nav>
+
+            {/* Mobile Hamburger Navigation Trigger */}
+            <button
+              onClick={() => setIsMobileNavDrawerOpen(prev => !prev)}
+              className="md:hidden p-2 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent transition-all shrink-0 flex items-center justify-center"
+              title={isMobileNavDrawerOpen ? (language === 'ka' ? 'მენიუს დახურვა' : 'Close Menu') : (language === 'ka' ? 'მენიუს გახსნა' : 'Open Menu')}
+            >
+              {isMobileNavDrawerOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
           </div>
           
           {/* Right Section: System Controls */}

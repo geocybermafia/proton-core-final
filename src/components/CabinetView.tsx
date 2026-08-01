@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { UserProfile, Theme } from '../types';
-import { User as UserIcon, Camera, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, Camera, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc, increment, collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -133,8 +134,55 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
   
   const isUrl = (str: string) => str.startsWith('http') || str.startsWith('data:image');
 
+  const handleGoogleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (err) {
+      console.error("Sign in failed:", err);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-20 max-w-7xl mx-auto">
+      {/* UNAUTHENTICATED CTA CARD */}
+      {!user && (
+        <section className="bg-gradient-to-r from-proton-card via-proton-card to-proton-accent/10 border border-proton-accent/30 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 -mr-8 -mt-8 w-48 h-48 bg-proton-accent/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10">
+            <div className="flex items-center gap-5 text-center sm:text-left">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-proton-accent/10 border border-proton-accent/30 flex items-center justify-center text-proton-accent shrink-0 shadow-inner">
+                <LogIn size={28} />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight text-proton-text">
+                    {lang === 'ka' ? 'ავტორიზაცია აუცილებელია' : 'Sign In Required'}
+                  </h3>
+                  <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[9px] font-black uppercase tracking-widest rounded-md">
+                    GUEST NODE
+                  </span>
+                </div>
+                <p className="text-xs text-proton-muted font-medium max-w-xl leading-relaxed">
+                  {lang === 'ka' 
+                    ? 'გაიარეთ ავტორიზაცია Google-ის ანგარიშით, რათა მიიღოთ სრული წვდომა გამყიდველის პანელზე, შეინახოთ პარამეტრები და მართოთ შეკვეთები.'
+                    : 'Sign in with your Google account to access your full seller dashboard, save system preferences, and manage listings across sessions.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              className="px-6 py-3.5 bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black uppercase text-xs tracking-widest rounded-xl shadow-lg shadow-proton-accent/20 flex items-center gap-2.5 shrink-0 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+            >
+              <LogIn size={16} />
+              <span>{lang === 'ka' ? 'Google-ით შესვლა' : 'Sign In with Google'}</span>
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* 1. COMPACT HEADER */}
       <section className="relative overflow-hidden group">
          <div className="absolute inset-0 bg-proton-card border border-proton-border rounded-2xl shadow-xl transition-all duration-500 group-hover:border-proton-accent/30" />

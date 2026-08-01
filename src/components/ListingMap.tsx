@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Listing } from '../types';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Navigation, Loader2, AlertTriangle, RotateCcw, X } from 'lucide-react';
 
 interface ListingMapProps {
   listings: Listing[];
@@ -21,12 +21,18 @@ const markerStyle = `
   }
 `;
 
+const DEFAULT_CENTER: [number, number] = [41.7151, 44.8271];
+
 export function ListingMap({ listings, onSelectListing, language, currentTheme, onClose }: ListingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const listingsRef = useRef<Listing[]>(listings);
   const onSelectListingRef = useRef<(listing: Listing) => void>(onSelectListing);
+  const userMarkerRef = useRef<L.Marker | null>(null);
+
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   useEffect(() => {
     listingsRef.current = listings;
@@ -274,6 +280,88 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
 
   }, [listings, language]);
 
+  // Geolocation detector with graceful error fallback handling
+  const handleLocateUser = () => {
+    if (!navigator.geolocation) {
+      setGeoError(
+        language === 'ka'
+          ? 'გეოლოკაცია არ არის მხარდაჭერილი თქვენი ბრაუზერის მიერ. რუკა დაბრუნდა სტანდარტულ კოორდინატებზე (თბილისი).'
+          : 'Geolocation is not supported by your browser. Defaulting to regional view (Tbilisi).'
+      );
+      if (mapRef.current) {
+        mapRef.current.setView(DEFAULT_CENTER, 8);
+      }
+      return;
+    }
+
+    setLocating(true);
+    setGeoError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const { latitude, longitude } = position.coords;
+
+        if (mapRef.current) {
+          mapRef.current.setView([latitude, longitude], 13);
+
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng([latitude, longitude]);
+          } else {
+            const userIconHtml = `
+              <div class="relative w-8 h-8 flex items-center justify-center">
+                <div class="absolute w-6 h-6 rounded-full bg-emerald-500/30 animate-ping"></div>
+                <div class="w-5 h-5 rounded-full bg-[#141414] border-2 border-emerald-400 shadow-lg shadow-emerald-500/50 flex items-center justify-center">
+                  <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                </div>
+              </div>
+            `;
+            const userIcon = L.divIcon({
+              className: 'custom-map-pin',
+              html: userIconHtml,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16]
+            });
+
+            userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon })
+              .bindPopup(
+                `<div class="p-2 text-center text-xs font-bold text-emerald-400 bg-[#141414] rounded-lg">${
+                  language === 'ka' ? 'თქვენი მიმდინარე ლოკაცია' : 'Your Current Location'
+                }</div>`
+              )
+              .addTo(mapRef.current);
+          }
+        }
+      },
+      (error: GeolocationPositionError) => {
+        setLocating(false);
+        console.warn("GeolocationPositionError:", error.code, error.message);
+
+        let errorMsg = language === 'ka'
+          ? 'ლოკაციის დადგენა ვერ მოხერხდა. რუკა გადავიდა სტანდარტულ ხედზე (თბილისი).'
+          : 'Location access denied or unavailable. Centered map on default region (Tbilisi).';
+
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = language === 'ka'
+            ? 'ლოკაციაზე წვდომა უარყოფილია. რუკა ნაჩვენებია სტანდარტულ რეგიონზე (თბილისი).'
+            : 'Location permission denied by user. Centered map on default region (Tbilisi).';
+        } else if (error.code === error.TIMEOUT) {
+          errorMsg = language === 'ka'
+            ? 'ლოკაციის მოთხოვნის დრო ამოიწურა. რუკა დაბრუნდა სტანდარტულ ხედზე.'
+            : 'Location request timed out. Showing default regional map (Tbilisi).';
+        }
+
+        setGeoError(errorMsg);
+
+        // Fallback gracefully to default regional coordinates
+        if (mapRef.current) {
+          mapRef.current.setView(DEFAULT_CENTER, 8);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 7000, maximumAge: 30000 }
+    );
+  };
+
   // Handle parent container resize
   useEffect(() => {
     const handleResize = () => {
@@ -293,6 +381,37 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
         style={{ background: '#0a0a0a' }}
       />
       
+      {/* Geolocation Fallback Contextual Banner */}
+      {geoError && (
+        <div className="absolute top-16 left-4 right-4 sm:left-6 sm:right-6 z-20 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="px-4 py-3 bg-black/90 backdrop-blur-xl rounded-2xl border border-amber-500/30 text-amber-300 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle size={16} className="text-amber-400 shrink-0" />
+              <span className="font-medium leading-tight text-[11px] text-amber-200">{geoError}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={handleLocateUser}
+                disabled={locating}
+                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-wider text-amber-200 transition-all flex items-center gap-1 cursor-pointer"
+              >
+                {locating ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+                <span>{language === 'ka' ? 'ხელახლა ცდა' : 'Retry'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setGeoError(null)}
+                className="p-1 hover:bg-white/10 rounded-lg text-amber-400/80 hover:text-amber-200 transition-all cursor-pointer"
+                title={language === 'ka' ? 'დახურვა' : 'Dismiss'}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Decorative Overlays */}
       <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-10 pointer-events-none">
         <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-black/85 backdrop-blur-xl rounded-2xl border border-white/10 flex items-center gap-2 shadow-2xl">
@@ -306,9 +425,24 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
         </div>
       </div>
 
-      {/* Close / Switch to Grid button */}
-      {onClose && (
-        <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 pointer-events-auto">
+      {/* Controls Overlay Top Right: Locate Me + Grid Button */}
+      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 pointer-events-auto flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleLocateUser}
+          disabled={locating}
+          className="px-3 py-2 bg-black/85 backdrop-blur-xl rounded-xl border border-white/10 text-white hover:text-[#2e5bff] hover:border-[#2e5bff]/30 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-2xl active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+          title={language === 'ka' ? 'ჩემი ლოკაცია' : 'Locate Me'}
+        >
+          {locating ? (
+            <Loader2 size={12} className="animate-spin text-[#2e5bff]" />
+          ) : (
+            <Navigation size={12} className="text-[#2e5bff]" />
+          )}
+          <span>{language === 'ka' ? 'ჩემი ლოკაცია' : 'Locate Me'}</span>
+        </button>
+
+        {onClose && (
           <button
             type="button"
             onClick={onClose}
@@ -318,8 +452,8 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
             <LayoutGrid size={12} className="text-[#dfb257]" />
             <span>{language === 'ka' ? 'ბადე' : 'Grid'}</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
       
       {/* Map Guidelines instructions */}
       <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-6 z-10 pointer-events-none hidden md:block">
