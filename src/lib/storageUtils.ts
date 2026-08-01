@@ -16,6 +16,16 @@ export interface UploadResult {
   fullPath: string;
 }
 
+function dispatchProtonDebugEvent(detail: any) {
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('proton-debug-event', { detail }));
+    } catch {
+      // Non-blocking debug dispatcher
+    }
+  }
+}
+
 /**
  * Uploads a file or Blob to Firebase Storage using uploadBytesResumable with progress tracking and timeout protection.
  */
@@ -29,6 +39,12 @@ export async function uploadFileToStorage(
 
   if (!storage) {
     console.error('[StorageUtils] Firebase Storage instance is not initialized in firebase.ts!');
+    dispatchProtonDebugEvent({
+      type: 'storage-error',
+      path,
+      code: 'storage/uninitialized',
+      message: 'Firebase Storage instance is not initialized.'
+    });
     throw new Error('Firebase Storage instance is not initialized.');
   }
 
@@ -43,6 +59,11 @@ export async function uploadFileToStorage(
       isSettled = true;
       clearTimeout(timeoutId);
       console.log(`[StorageUtils] Successfully resolved upload for "${path}":`, downloadUrl);
+      dispatchProtonDebugEvent({
+        type: 'storage-success',
+        path,
+        downloadUrl
+      });
       resolve({ downloadUrl, fullPath });
     };
 
@@ -51,6 +72,12 @@ export async function uploadFileToStorage(
       isSettled = true;
       clearTimeout(timeoutId);
       console.error(`[StorageUtils] Upload rejected for path "${path}":`, error);
+      dispatchProtonDebugEvent({
+        type: 'storage-error',
+        path,
+        code: error?.code || 'UNKNOWN_ERROR',
+        message: error?.message || String(error)
+      });
       reject(error);
     };
 
@@ -74,6 +101,11 @@ export async function uploadFileToStorage(
         if (snapshot.totalBytes > 0) {
           const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
           console.log(`[StorageUtils] Progress for "${path}": ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
+          dispatchProtonDebugEvent({
+            type: 'storage-progress',
+            path,
+            progress
+          });
           if (onProgress && !isSettled) {
             onProgress(progress);
           }

@@ -59,6 +59,7 @@ import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 import { useSystemHealth } from './hooks/useSystemHealth';
 import { SystemStatusBadge } from './components/SystemStatusBadge';
+import { DebugPanel } from './components/debug/DebugPanel';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
 import BusinessHubView from './components/BusinessHubView';
@@ -6282,6 +6283,8 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      {import.meta.env.DEV && <DebugPanel />}
     </div>
   );
 }
