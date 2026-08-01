@@ -280,19 +280,53 @@ body, #root {
   z-index: 2;
 }
 
-/* Hide third-party extension overlays & Surfe.be injected badges/banners */
-#surfe-be,
-#surfebe_banner,
-.surfebe,
-.surfebe-ext,
-[id*="surfe"],
-[class*="surfe"],
-iframe[src*="surfe"],
-div[id*="surfe_"],
-div[class*="surfe_"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
+/* React Calendar Global Custom Overrides */
+.react-calendar {
+  background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+  font-family: inherit;
 }
+
+.react-calendar__navigation button {
+  color: var(--proton-text) !important;
+  font-weight: bold !important;
+  min-width: 44px !important;
+  border-radius: 8px;
+}
+
+.react-calendar__navigation button:enabled:hover {
+  background-color: var(--proton-border) !important;
+}
+
+.react-calendar__month-view__weekdays {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--proton-muted);
+}
+
+.react-calendar__tile {
+  padding: 0.8em 0.1em !important;
+  font-size: 0.8rem !important;
+  color: var(--proton-text) !important;
+  border-radius: 12px;
+  transition: all 0.2s;
+}
+
+.react-calendar__tile:enabled:hover {
+  background: var(--proton-border) !important;
+}
+
+.react-calendar__tile--now {
+  background: transparent !important;
+  border: 1px solid var(--proton-accent) !important;
+}
+
+.react-calendar__tile--active {
+  background: var(--proton-accent) !important;
+  color: var(--proton-on-accent) !important;
+  font-weight: bold;
+}
+
 

@@ -21,9 +21,6 @@ function getAi(apiKeyOverride?: string) {
   const apiKey = rawKey.trim();
   
   if (!aiInstances.has(apiKey)) {
-    const maskedKey = apiKey.substring(0, 6) + "..." + apiKey.substring(apiKey.length - 4);
-    console.log(`[CONFIG SECURE MAP ACTIVATION] Initialized Gemini API Key: ${maskedKey} (Length: ${apiKey.length})`);
-    
     const instance = new GoogleGenAI({ 
       apiKey,
       httpOptions: {
@@ -91,7 +88,7 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
   } catch (error: any) {
     const endTime = performance.now();
     const errStr = error?.message || String(error);
-    console.log(`[INFO] chatWithPersona API rate-limited or error encountered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] chatWithPersona rate-limited or error: ${errStr.substring(0, 120)}`);
     
     let text = "";
     if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.toLowerCase().includes("resource_exhausted")) {
@@ -145,7 +142,7 @@ export async function generateNewPersona(basePersona: Persona, prompt: string, a
     return newPersona;
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] generateNewPersona fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] generateNewPersona fallback triggered: ${errStr.substring(0, 120)}`);
     return {
       id: `persona-${Date.now()}`,
       name: `${prompt.substring(0, 15)} Advisor`,
@@ -174,7 +171,7 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
     return response.text || "Could not generate summary.";
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] summarizeConversation fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] summarizeConversation fallback triggered: ${errStr.substring(0, 120)}`);
     return "💡 **საუბრის შეჯამება (Offline Mode)**:\n\n* **ბიზნეს იდეები:** განხილულია ქართულ ბაზარზე მორგებული ავთენტური მარკეტინგისა და ტექნოლოგიური სტრატეგიები.\n* **ავტომატიზაცია:** დაგეგმილია ბიზნეს ნაკადების (Workflows) გააქტიურება დაყოვნების შესამცირებლად.\n* **გაფართოება:** რეკომენდებულია პარამეტრებში „AI სიმულაციური რეჟიმის“ ჩართვა შეზღუდვების ასაცილებლად.";
   }
 }
@@ -193,7 +190,7 @@ export async function analyzeWorkflow(workflow: { name: string, trigger: string,
     return response.text || "Could not analyze workflow.";
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] analyzeWorkflow fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] analyzeWorkflow fallback triggered: ${errStr.substring(0, 120)}`);
     return `### 📊 ბიზნეს ნაკადის დიაგნოსტიკა და ოპტიმიზაცია (Offline Mode)
   
 **სახელი:** ${workflow.name}
@@ -245,7 +242,7 @@ export async function generatePersonaAvatar(persona: Persona, apiKeyOverride?: s
     throw new Error("No image data returned from Gemini API");
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] generatePersonaAvatar fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] generatePersonaAvatar fallback triggered: ${errStr.substring(0, 120)}`);
     return persona.avatar || "🤖";
   }
 }
@@ -272,7 +269,7 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string, 
     throw new Error("No image data returned from Gemini API");
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] generateOrEditImage fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] generateOrEditImage fallback triggered: ${errStr.substring(0, 120)}`);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
       <rect width="100%" height="100%" fill="#0c111d"/>
       <circle cx="200" cy="200" r="160" fill="url(#grad)" opacity="0.15"/>
@@ -321,7 +318,7 @@ export async function generateSpeech(text: string, voiceName: string = 'Kore', a
     return base64Audio.replace(/^data:audio\/[a-z0-9]+;base64,/, "");
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] generateSpeech fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] generateSpeech fallback triggered: ${errStr.substring(0, 120)}`);
     // Return standard 1-second blank WAV audio in base64
     return "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
   }
@@ -380,7 +377,7 @@ export async function architectTask(project: string, temperature: number = 0.9, 
     };
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] architectTask fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] architectTask fallback triggered: ${errStr.substring(0, 120)}`);
     const endTime = performance.now();
     const materials = [
       { item: "Proton Cloud Infrastructure Node (Local)", cost: "0 GEL (Offline Tier)" },
@@ -422,7 +419,7 @@ export async function translateText(
     return response.text || '';
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] translateText fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] translateText fallback triggered: ${errStr.substring(0, 120)}`);
     const textLower = text.toLowerCase();
     if (targetLanguage === 'Georgian' || targetLanguage === 'georgian' || targetLanguage.includes("ქართულ")) {
       if (textLower.includes("hello") || textLower.includes("hi")) return "გამარჯობა, სასიამოვნოა თქვენთან შეხვედრა!";
@@ -463,7 +460,7 @@ export async function generateTechSpec(title: string, category: string, apiKeyOv
     return response.text || "";
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] generateTechSpec fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] generateTechSpec fallback triggered: ${errStr.substring(0, 120)}`);
     return `Professional specification for **${title}** (${category}). Fully inspected, guaranteed high fidelity, and ready for immediate deployment in local workflows. Supports seamless integrations with modern services.`;
   }
 }
@@ -504,7 +501,7 @@ Do not include any other text, markdown wrapper, or explanation, just the raw JS
     return JSON.parse(text);
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] breakdownTask fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] breakdownTask fallback triggered: ${errStr.substring(0, 120)}`);
     if (appLanguage === 'ka') {
       return [
         `დაგეგმეთ საწყისი ეტაპები დავალებისთვის: "${taskContent}"`,
@@ -608,7 +605,7 @@ Respond EXCLUSIVELY in JSON format following this schema:
     };
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] generateStrategicObjective fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] generateStrategicObjective fallback triggered: ${errStr.substring(0, 120)}`);
     if (appLanguage === 'ka') {
       return {
         title: "სისტემის ლოკალური რეპლიკაცია",
@@ -676,7 +673,7 @@ The analysis must include:
     return response.text || "No analysis could be generated.";
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] expandObjectiveAnalysis fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] expandObjectiveAnalysis fallback triggered: ${errStr.substring(0, 120)}`);
     if (appLanguage === 'ka') {
       return `### 📊 სტრატეგიული ანალიზი (Offline Mode): ${title}
       
@@ -797,7 +794,7 @@ export async function detectClipIssues(
     return JSON.parse(text);
   } catch (error: any) {
     const errStr = error?.message || String(error);
-    console.log(`[INFO] detectClipIssues fallback triggered: ${errStr.substring(0, 120)}`);
+    console.warn(`[Gemini API] detectClipIssues fallback triggered: ${errStr.substring(0, 120)}`);
     
     // Smart fallback based on sampledBrightness and caption
     const issues: ClipIssue[] = [];

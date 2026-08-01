@@ -1794,7 +1794,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   };
 
   useEffect(() => {
-    console.log("[Stress Test Logs] HardwareView mounted. Registering optimal system monitoring listeners.");
     let isMounted = true;
     
     const hasGeoloc = 'geolocation' in navigator;
@@ -1882,7 +1881,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
     return () => {
       isMounted = false;
-      console.log("[Stress Test Logs] Cleaning up all active system monitoring listeners safely to prevent memory leaks.");
       if (batteryInstance) {
         batteryInstance.removeEventListener('levelchange', onBatteryChange);
         batteryInstance.removeEventListener('chargingchange', onBatteryChange);
@@ -4088,7 +4086,7 @@ export default function App() {
           await setDoc(configRef, { isCreativeMode: false }, { merge: true });
         }
       } catch (e) {
-        console.log("System config already exists or restricted.");
+        // System config exists or restricted
       }
     };
     bootstrapConfig();
@@ -4248,7 +4246,6 @@ export default function App() {
       data: details
     };
     setLogs(prev => [newLog, ...prev].slice(0, 100));
-    console.log(`[SYSTEM ${type.toUpperCase()}] ${message}`, details || '');
 
     // Hybrid database routing: High-frequency operational logs run through Supabase
     if (isSupabaseConfigured()) {
@@ -4265,10 +4262,8 @@ export default function App() {
           console.warn("[HYBRID DB] Operational log failed to sync to Supabase:", error.message);
         }
       }).catch((err: any) => {
-        console.log("[HYBRID DB] Catch-all: Supabase request error:", err?.message || err);
+        console.warn("[HYBRID DB] Catch-all: Supabase request error:", err?.message || err);
       });
-    } else {
-      console.log("[HYBRID DB] Telemetry skipped: Supabase not configured.");
     }
   }, []);
 
@@ -4524,8 +4519,6 @@ export default function App() {
       setBootstrapComplete(true);
       return;
     }
-
-    console.log("User detected, fetching data:", user.email);
     
     // Sync userProfile with Firebase user if not already set meaningfully
     setUserProfile(prev => {
@@ -4748,7 +4741,6 @@ export default function App() {
   // Simulate usage while session is active - optimized with batched writes to prevent continuous database polling and network overhead
   useEffect(() => {
     if (!user) return;
-    console.log("[Stress Test Logs] Initializing optimized session usage tracker. Batching stats writes every 5 minutes to reduce database load.");
     
     const interval = setInterval(() => {
       const statsRef = doc(db, 'users', user.uid, 'stats', 'current');

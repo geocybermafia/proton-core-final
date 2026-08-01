@@ -49,9 +49,8 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
     }
 
     const currentUid = user.uid;
-    console.log('[DIAGNOSTIC EFFECT] onSnapshot subscription initiated for UID:', currentUid, 'Length:', currentUid.length);
 
-    // Fetch Seller Listings with exact synchrony and diagnostic logging as requested by user
+    // Fetch Seller Listings
     const qListings = query(
       collection(db, 'listings'),
       where('sellerId', '==', currentUid)
@@ -59,11 +58,6 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
 
     const unsubListings = onSnapshot(qListings, (snapshot) => {
       const matchedListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      console.log('Fetching listings for user:', user?.uid || currentUid);
-      console.log('[DIAGNOSTIC Firestore Event] onSnapshot triggered for Listings in CabinetView. UID:', currentUid);
-      console.log('[DIAGNOSTIC Data Integrity] Total listings matched for seller:', matchedListings.length);
-      
-      console.log('[DIAGNOSTIC Data Integrity] filteredListings for user inside CabinetView:', matchedListings);
       setSellerListings(matchedListings);
     }, (err) => {
       console.error('[DIAGNOSTIC EVENT ERROR] listings subscription failed:', err);
@@ -82,7 +76,6 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
         const timeB = b.createdAt?.seconds || b.createdAt || 0;
         return timeB - timeA;
       });
-      console.log('[DIAGNOSTIC Orders Event] Received orders matching sellerId:', currentUid, ordersData);
       setSellerOrders(ordersData);
       setLoading(false);
     }, (err) => {
@@ -90,7 +83,6 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
     });
 
     return () => {
-      console.log('[DIAGNOSTIC EFFECT] Unsubscribing listeners for UID:', currentUid);
       unsubListings();
       unsubOrders();
     };

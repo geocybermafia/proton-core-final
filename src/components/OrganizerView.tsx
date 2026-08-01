@@ -232,8 +232,6 @@ export const OrganizerView = ({
       [activeTimerTaskId]: prev[activeTimerTaskId] !== undefined ? prev[activeTimerTaskId] : initialSeconds
     }));
 
-    console.log(`[Stress Test Logs] Starting optimized local timer tick for task: ${activeTimerTaskId}. Current accumulated: ${initialSeconds}s`);
-
     let tickCount = 0;
     const interval = setInterval(() => {
       if (!isTimerActive || !isMountedRef.current) return;
@@ -252,7 +250,6 @@ export const OrganizerView = ({
       if (tickCount >= 30) {
         tickCount = 0;
         const nextSec = (currentTaskSec !== undefined ? currentTaskSec : initialSeconds) + 1;
-        console.log(`[Stress Test Logs] Periodic safety backup save of active task stopwatch: ${activeTimerTaskId} with ${nextSec} seconds.`);
         setTimeout(() => {
           if (isMountedRef.current) {
             onEditTask(activeTimerTaskId, { elapsedTime: nextSec });
@@ -446,7 +443,6 @@ export const OrganizerView = ({
     if (activeTimerTaskId) {
       const activeSeconds = localTimerSeconds[activeTimerTaskId];
       if (activeSeconds !== undefined) {
-        console.log(`[Stress Test Logs] Toggling timer off or switching. Flushing ${activeSeconds}s to Firestore for task: ${activeTimerTaskId}`);
         onEditTask(activeTimerTaskId, { elapsedTime: activeSeconds });
       }
     }

@@ -108,7 +108,6 @@ const deleteVideoFromLocalCache = async (id: string): Promise<void> => {
     const transaction = db.transaction('videos', 'readwrite');
     const store = transaction.objectStore('videos');
     store.delete(id);
-    console.log(`[IndexedDB] Cache entry deleted for clip "${id}"`);
   } catch (e) {
     console.warn("[IndexedDB] Deletion from local cache failed:", e);
   }
@@ -1688,13 +1687,9 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
     const docId = `clip-${Math.random().toString(36).substring(2, 11)}`;
     const UPLOAD_TIMEOUT_MS = 30000; // Step Two: 30 Seconds timeout
 
-    console.log(`[handleCreateReel] Initializing clip publishing pipeline (Doc ID: ${docId})...`);
-
     const performUploadWithTimeout = async () => {
       // Step 1: Handle local video file upload or conversion
       if (localVideoFile) {
-        console.log(`[handleCreateReel] Step 1: Processing local video file "${localVideoFile.name}" (${localVideoFile.size} bytes)...`);
-        
         try {
           const localBlobUrl = URL.createObjectURL(localVideoFile);
           setClipFallbackUrls(prev => ({ ...prev, [docId]: localBlobUrl }));
@@ -1703,19 +1698,16 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
         }
 
         try {
-          console.log('[handleCreateReel] Step 1a: Uploading video to Storage with 20s timeout...');
           const downloadUrl = await uploadClipVideo(
             user.uid,
             docId,
             localVideoFile,
             (progress) => {
-              console.log(`[handleCreateReel] Storage upload progress snapshot: ${progress}%`);
               setUploadProgress(progress);
             },
             20000 // 20-second storage attempt timeout
           );
           finalVideoUrl = downloadUrl;
-          console.log('[handleCreateReel] Step 1a: Firebase Storage upload succeeded with URL:', downloadUrl);
         } catch (storageErr) {
           console.error('[handleCreateReel] Step 1a: Firebase Storage upload failed or timed out:', storageErr);
           
@@ -1728,7 +1720,6 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
 
           // Step Four: Quota Exception Handling for IndexedDB / Private Mode
           try {
-            console.log('[handleCreateReel] Step 1b: Saving file to local IndexedDB cache...');
             await saveVideoToLocalCache(docId, localVideoFile);
             finalVideoUrl = `indexeddb://${docId}`;
             showToast(
@@ -1744,7 +1735,6 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
             // Base64 conversion fallback ONLY for small videos (<= 1.5MB) to avoid memory overflow / Firestore limits
             if (localVideoFile.size <= 1.5 * 1024 * 1024) {
               try {
-                console.log('[handleCreateReel] Step 1c: Converting small file to Base64 data URL...');
                 const base64String = await new Promise<string>((resolve, reject) => {
                   const reader = new FileReader();
                   reader.onload = () => resolve(reader.result as string);
@@ -1754,7 +1744,6 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                 if (base64String && base64String.length > 0) {
                   finalVideoUrl = base64String;
                   base64Resolved = true;
-                  console.log('[handleCreateReel] Step 1c: Base64 data URL generated successfully.');
                 }
               } catch (b64Err) {
                 console.warn("[handleCreateReel] Step 1c: Base64 conversion failed:", b64Err);
@@ -1774,14 +1763,12 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
 
       // Step 2: Fallback to preset loops if video URL is still missing
       if (!finalVideoUrl) {
-        console.log('[handleCreateReel] Step 2: No custom file or URL provided. Falling back to preset loops...');
         const preset = PRESET_LOOPS.find(p => p.id === selectedPresetId);
         if (preset) {
           finalVideoUrl = preset.url;
           if (!newClipSound.trim()) {
             finalSound = preset.sound;
           }
-          console.log('[handleCreateReel] Preset loop selected:', preset.id);
         }
       }
 
@@ -1790,7 +1777,6 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
       }
 
       // Step 3: Write clip document to Firestore
-      console.log(`[handleCreateReel] Step 3: Preparing Firestore document for clip "${docId}"...`);
       const clipData = {
         id: docId,
         videoUrl: finalVideoUrl,
@@ -1807,9 +1793,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
         createdAt: serverTimestamp()
       };
 
-      console.log('[handleCreateReel] Calling setDoc(db, "clips", docId)...');
       await setDoc(doc(db, 'clips', docId), clipData);
-      console.log(`[handleCreateReel] Step 3: Firestore document created successfully for clip "${docId}"!`);
     };
 
     try {

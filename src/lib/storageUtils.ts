@@ -35,8 +35,6 @@ export async function uploadFileToStorage(
 ): Promise<UploadResult> {
   const { path, file, metadata, onProgress } = options;
 
-  console.log(`[StorageUtils] Initializing upload to path "${path}" (Size: ${file.size} bytes, Type: ${file.type || 'unknown'})`);
-
   if (!storage) {
     console.error('[StorageUtils] Firebase Storage instance is not initialized in firebase.ts!');
     dispatchProtonDebugEvent({
@@ -58,7 +56,6 @@ export async function uploadFileToStorage(
       if (isSettled) return;
       isSettled = true;
       clearTimeout(timeoutId);
-      console.log(`[StorageUtils] Successfully resolved upload for "${path}":`, downloadUrl);
       dispatchProtonDebugEvent({
         type: 'storage-success',
         path,
@@ -100,7 +97,6 @@ export async function uploadFileToStorage(
       (snapshot) => {
         if (snapshot.totalBytes > 0) {
           const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          console.log(`[StorageUtils] Progress for "${path}": ${progress}% (${snapshot.bytesTransferred}/${snapshot.totalBytes} bytes)`);
           dispatchProtonDebugEvent({
             type: 'storage-progress',
             path,
@@ -116,7 +112,6 @@ export async function uploadFileToStorage(
       },
       async () => {
         if (isSettled) return;
-        console.log(`[StorageUtils] Observer completed for "${path}". Fetching download URL...`);
         try {
           const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
           settleResolve(downloadUrl, uploadTask.snapshot.ref.fullPath);
@@ -130,7 +125,6 @@ export async function uploadFileToStorage(
     uploadTask.then(
       async (snapshot) => {
         if (isSettled) return;
-        console.log(`[StorageUtils] Task promise resolved for "${path}". Fetching download URL...`);
         try {
           const downloadUrl = await getDownloadURL(snapshot.ref);
           settleResolve(downloadUrl, snapshot.ref.fullPath);
