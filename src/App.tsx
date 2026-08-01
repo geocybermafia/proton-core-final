@@ -4196,11 +4196,6 @@ export default function App() {
       setUiMode('business');
     }
 
-    if (!user && view !== 'translator' && view !== 'market' && view !== 'market-hub') {
-      setShowAuth(true);
-      return;
-    }
-
     const isUserAdmin = (auth.currentUser?.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
     const isCreativeActive = isCreativeMode || isUserAdmin;
     if (!isCreativeActive && !isSafeMode && (view === 'compute')) {
@@ -5034,26 +5029,6 @@ export default function App() {
       <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
         <Loader2 className="w-8 h-8 text-proton-accent animate-spin" />
       </div>
-    );
-  }
-
-  if (!user && activeView !== 'translator' && activeView !== 'market') {
-    if (showAuth) {
-      return (
-        <AuthFlow 
-          onGoogleSignIn={handleGoogleSignIn} 
-          onBack={() => setShowAuth(false)}
-          language={userProfile.language} 
-        />
-      );
-    }
-    return (
-      <LandingPage 
-        onGetStarted={() => setShowAuth(true)} 
-        onLogin={() => setShowAuth(true)} 
-        language={userProfile.language} 
-        onLanguageChange={(lang) => setUserProfile(prev => ({ ...prev, language: lang }))}
-      />
     );
   }
 
@@ -5956,13 +5931,24 @@ export default function App() {
                 </button>
               </div>
 
-              <button 
-                onClick={handleSignOut}
-                className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0"
-                title="Firebase Sign Out"
-              >
-                <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
-              </button>
+              {user ? (
+                <button 
+                  onClick={handleSignOut}
+                  className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0 cursor-pointer"
+                  title="Firebase Sign Out"
+                >
+                  <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setShowAuth(true)}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
+                  title={language === 'ka' ? 'შესვლა' : 'Sign In'}
+                >
+                  <LogIn size={14} />
+                  <span className="hidden xs:inline">{language === 'ka' ? 'შესვლა' : 'Sign In'}</span>
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -6207,6 +6193,7 @@ export default function App() {
                         setActiveView={handleViewChange} 
                         user={user} 
                         userProfile={userProfile}
+                        onOpenAuthModal={() => setShowAuth(true)}
                       />
                     </Suspense>
                   )}
@@ -6471,6 +6458,35 @@ export default function App() {
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAuth && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto"
+            onClick={() => setShowAuth(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <AuthFlow 
+                onGoogleSignIn={async () => {
+                  await handleGoogleSignIn();
+                  setShowAuth(false);
+                }} 
+                onBack={() => setShowAuth(false)}
+                language={userProfile.language} 
+              />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
