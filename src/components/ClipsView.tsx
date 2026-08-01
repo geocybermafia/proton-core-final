@@ -65,15 +65,23 @@ import { ClipIssue } from '../types';
 // Simple IndexedDB wrapper for local caching of larger videos
 const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('proton-clips-cache', 1);
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if (!db.objectStoreNames.contains('videos')) {
-        db.createObjectStore('videos');
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      reject(new Error('IndexedDB is not supported in this browser environment'));
+      return;
+    }
+    try {
+      const request = indexedDB.open('proton-clips-cache', 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('videos')) {
+          db.createObjectStore('videos');
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('IndexedDB access denied or private browsing restriction'));
+    } catch (e) {
+      reject(e);
+    }
   });
 };
 
@@ -1684,7 +1692,8 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
           } catch (indexedDbErr: any) {
             console.warn("[handleCreateReel] Step 1b: IndexedDB storage quota exception or private mode block:", indexedDbErr);
             
-            // Base64 conversion fallback for small videos (< 1.5MB)
+            let base64Resolved = false;
+            // Base64 conversion fallback ONLY for small videos (<= 1.5MB) to avoid memory overflow / Firestore limits
             if (localVideoFile.size <= 1.5 * 1024 * 1024) {
               try {
                 console.log('[handleCreateReel] Step 1c: Converting small file to Base64 data URL...');
@@ -1694,26 +1703,22 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                   reader.onerror = reject;
                   reader.readAsDataURL(localVideoFile);
                 });
-                finalVideoUrl = base64String;
-                console.log('[handleCreateReel] Step 1c: Base64 data URL generated successfully.');
+                if (base64String && base64String.length > 0) {
+                  finalVideoUrl = base64String;
+                  base64Resolved = true;
+                  console.log('[handleCreateReel] Step 1c: Base64 data URL generated successfully.');
+                }
               } catch (b64Err) {
                 console.warn("[handleCreateReel] Step 1c: Base64 conversion failed:", b64Err);
               }
             }
 
-            // High quality preset loop fallback if local storage is quota blocked
-            if (!finalVideoUrl || finalVideoUrl.startsWith('blob:')) {
-              const preset = PRESET_LOOPS[0];
-              finalVideoUrl = preset.url;
-              if (!newClipSound.trim()) {
-                finalSound = preset.sound;
-              }
-              showToast(
-                language === 'ka' 
-                  ? 'ბრაუზერის მეხსიერების ლიმიტის გამო (Quota Exceeded) გამოყენებულია დემო შაბლონი' 
-                  : 'Browser storage quota exceeded: fallen back to high quality demo loop',
-                'warning'
-              );
+            // If IndexedDB write failed and Base64 fallback failed or file is too large (> 1.5MB)
+            if (!base64Resolved) {
+              const errorMessage = language === 'ka'
+                ? 'ვიდეო ფაილი ძალიან დიდია ამ ბრაუზერის რეჟიმისთვის ან მეხსიერების ლიმიტი (Quota) ამოიწურა. სცადეთ უფრო მცირე ფაილი ან გამორთეთ Private Browsing.'
+                : 'Video too large to upload in this browser mode. Try a smaller file or exit private browsing.';
+              throw new Error(errorMessage);
             }
           }
         }
@@ -1798,25 +1803,29 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
     } catch (error: any) {
       console.error("[handleCreateReel] Uncaught error during reel creation pipeline:", error);
       
-      const isQuotaErr = error?.name === 'QuotaExceededError' || error?.message?.toLowerCase().includes('quota');
-      const isTimeoutErr = error?.message?.includes('timed out') || error?.message?.includes('30');
+      const rawMsg = error?.message || '';
+      const isQuotaErr = error?.name === 'QuotaExceededError' || rawMsg.toLowerCase().includes('quota') || rawMsg.toLowerCase().includes('private') || rawMsg.toLowerCase().includes('browser mode');
+      const isTimeoutErr = rawMsg.includes('timed out') || rawMsg.includes('30');
 
-      let userMsg = language === 'ka' 
-        ? `ატვირთვისას მოხდა შეცდომა: ${error?.message || ''}` 
-        : `Failed to upload clip: ${error?.message || 'Unknown error'}`;
-
-      if (isQuotaErr) {
+      let userMsg = rawMsg;
+      if (isQuotaErr && (!rawMsg || rawMsg.includes('QuotaExceededError'))) {
         userMsg = language === 'ka'
-          ? 'ბრაუზერის მეხსიერება სავსეა (Quota Exceeded). გთხოვთ აირჩიოთ უფრო მცირე ვიდეო.'
-          : 'Storage quota exceeded in browser. Please select a smaller video clip.';
-      } else if (isTimeoutErr) {
+          ? 'ბრაუზერის მეხსიერების ლიმიტი ამოიწურა (Quota Exceeded). სცადეთ უფრო მცირე ფაილი ან გამორთეთ Private Browsing.'
+          : 'Video too large to upload in this browser mode. Try a smaller file or exit private browsing.';
+      } else if (isTimeoutErr && (!rawMsg || rawMsg.includes('timed out'))) {
         userMsg = language === 'ka'
           ? 'ატვირთვის პროცესი დროში ამოიწურა (30 წმ). გთხოვთ შეამოწმოთ ინტერნეტი და სცადოთ ხელახლა.'
           : 'Upload timed out after 30 seconds. Please check your network and try again.';
       }
 
+      if (!userMsg) {
+        userMsg = language === 'ka' 
+          ? 'ატვირთვისას მოხდა შეცდომა' 
+          : 'Failed to upload clip';
+      }
+
       // Step Three: Clear loading spinner, reset file state & display warning toast
-      showToast(userMsg, 'error', 5000);
+      showToast(userMsg, 'error', 6000);
       setLocalVideoFile(null);
       setNewClipVideoUrl('');
     } finally {
