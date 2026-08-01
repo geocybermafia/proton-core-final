@@ -1,4 +1,5 @@
 import { auth } from '../firebase';
+import { collection, query, orderBy, limit, getDocs, Firestore } from 'firebase/firestore';
 
 export enum OperationType {
   CREATE = 'create',
@@ -61,3 +62,36 @@ export function handleFirestoreError(
   (customError as any).firestoreErrorInfo = errorInfo;
   throw customError;
 }
+
+/**
+ * Standard collection paths according to Firebase Security Rules:
+ * 1. Root collection `listings` (was market_listings)
+ * 2. Nested personas path `/users/{userId}/personas` (was user_personas)
+ * 3. Root collection `system_logs` with fallback handling
+ */
+export const FIRESTORE_COLLECTIONS = {
+  LISTINGS: 'listings',
+  PERSONAS: (userId: string) => `users/${userId}/personas`,
+  SYSTEM_LOGS: 'system_logs',
+} as const;
+
+/**
+ * Helper to fetch system logs with fallback handling for permission boundaries.
+ * If system_logs is restricted or inaccessible via Firestore security rules,
+ * catches permission errors and returns an empty array gracefully.
+ */
+export async function fetchSystemLogsFallback(
+  db: Firestore,
+  limitCount = 50
+): Promise<any[]> {
+  try {
+    const logsRef = collection(db, FIRESTORE_COLLECTIONS.SYSTEM_LOGS);
+    const q = query(logsRef, orderBy('timestamp', 'desc'), limit(limitCount));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error: any) {
+    console.warn('[SystemLogs Fallback] Gracefully caught permission boundary or inaccessible collection:', error?.message || error);
+    return [];
+  }
+}
+
