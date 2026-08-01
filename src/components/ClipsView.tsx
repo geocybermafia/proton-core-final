@@ -2114,7 +2114,9 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                           onPlay={() => { if (idx === currentIndex) setIsPlaying(true); }}
                           onPause={() => { if (idx === currentIndex) setIsPlaying(false); }}
                           onWaiting={() => { if (idx === currentIndex) setIsBuffering(true); }}
+                          onStalled={() => { if (idx === currentIndex) setIsBuffering(true); }}
                           onPlaying={() => { if (idx === currentIndex) setIsBuffering(false); }}
+                          onCanPlay={() => { if (idx === currentIndex) setIsBuffering(false); }}
                           onLoadedData={() => { setLoadedVideoIds(prev => ({ ...prev, [clip.id]: true })); }}
                           onError={() => {
                             console.warn("Video play/decode error for ID", clip.id);
@@ -2172,20 +2174,29 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                           </motion.div>
                         )}
 
-                        {/* Thumbnail while loading */}
-                        {!loadedVideoIds[clip.id] && (dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl) && (
-                          <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/90">
-                            <img
-                              referrerPolicy="no-referrer"
-                              src={dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl}
-                              alt="Loading clip preview..."
-                              className="w-full h-full object-cover pointer-events-none opacity-80"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
-                              <svg className="animate-spin h-6 w-6 text-purple-500/80" viewBox="0 0 24 24" fill="none">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
+                        {/* Thumbnail or blurred skeleton overlay while initializing / loading */}
+                        {!loadedVideoIds[clip.id] && (
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-950 overflow-hidden">
+                            {(dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl) ? (
+                              <img
+                                referrerPolicy="no-referrer"
+                                src={dynamicPlaceholderThumbnails[clip.id] || clip.thumbnailUrl}
+                                alt="Loading clip preview..."
+                                className="w-full h-full object-cover pointer-events-none opacity-60 blur-xs scale-105"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 bg-gradient-to-b from-purple-950/40 via-zinc-900/80 to-zinc-950 animate-pulse" />
+                            )}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/40 backdrop-blur-xs">
+                              <div className="p-3.5 rounded-full bg-purple-500/10 border border-purple-500/20 backdrop-blur-md shadow-2xl">
+                                <svg className="animate-spin h-7 w-7 text-purple-400" viewBox="0 0 24 24" fill="none">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                              </div>
+                              <span className="text-[10px] font-mono font-bold tracking-widest text-purple-300 uppercase animate-pulse">
+                                {language === 'ka' ? 'ვიდეო იტვირთება...' : 'Initializing Reel...'}
+                              </span>
                             </div>
                           </div>
                         )}

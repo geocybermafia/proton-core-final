@@ -99,7 +99,7 @@ export const DebugPanel: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] font-mono text-xs select-none">
+    <div className="fixed bottom-4 left-4 z-[9999] font-mono text-xs select-none">
       {/* Collapsed Badge Trigger */}
       {!isOpen && (
         <button

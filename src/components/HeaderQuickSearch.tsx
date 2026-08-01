@@ -127,7 +127,7 @@ export const HeaderQuickSearch: React.FC<HeaderQuickSearchProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute left-0 right-0 top-full mt-2 z-50 bg-proton-card/95 border border-proton-border rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-80 overflow-y-auto custom-scrollbar-minimal"
+            className="absolute left-0 right-0 top-full mt-2 z-50 bg-proton-card/95 border border-proton-border rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar-minimal"
           >
             {matchedRoutes.length > 0 ? (
               <div className="p-2 space-y-1">
