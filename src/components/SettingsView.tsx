@@ -1415,7 +1415,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </p>
 
                       {integrityLogs.length > 0 && (
-                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-[9px] text-proton-text/90 space-y-1.5 shadow-inner text-left">
+                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-[9px] text-proton-text/90 space-y-1.5 shadow-inner text-left break-all whitespace-pre-wrap">
                           {integrityLogs.map((log, index) => (
                             <div key={index} className="flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1 duration-200">
                               <span className="text-proton-accent font-black shrink-0">&gt;</span>
@@ -1827,7 +1827,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         exit={{ opacity: 0, y: -5 }}
                         className="space-y-4 text-left"
                       >
-                        <div className="bg-zinc-950 p-5 rounded-[24px] border border-zinc-800 font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar-minimal shadow-inner relative group">
+                        <div className="bg-zinc-950 p-5 rounded-[24px] border border-zinc-800 font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar-minimal shadow-inner relative group break-all whitespace-pre-wrap">
                           <span className="absolute top-4 right-4 text-[8px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 select-none">
                             head template
                           </span>

@@ -2080,7 +2080,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                     className="w-full h-full min-h-full flex-shrink-0 snap-start snap-always relative flex items-center justify-center p-2 sm:p-4"
                   >
                     {/* VIEWPORT-CENTRIC 9:16 REELS PLAYER CONTAINER */}
-                    <div className="relative w-full max-w-[420px] sm:max-w-[440px] aspect-[9/16] h-full max-h-[calc(100vh-120px)] rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none">
+                    <div className="relative w-full max-w-[420px] sm:max-w-[440px] aspect-[9/16] h-[calc(100dvh-5rem)] md:h-full max-h-[calc(100dvh-5rem)] md:max-h-[calc(100vh-120px)] rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none">
                       
                       {/* SIMULATED DYNAMIC ISLAND / TOP BEZEL */}
                       <div className="absolute top-2 left-1/2 -translate-x-1/2 w-24 h-3.5 bg-black/80 backdrop-blur-md rounded-full z-30 flex items-center justify-center border border-white/10 pointer-events-none">

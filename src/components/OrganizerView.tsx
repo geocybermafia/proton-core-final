@@ -801,7 +801,7 @@ export const OrganizerView = ({
   }, [tasks, categoryFilter, activeTimerTaskId, onDeleteTask]);
 
   return (
-    <div className={cn("space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
+    <div className={cn("max-w-7xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
       
       {/* Header controls */}
       <div className="flex flex-col xl:flex-row items-center justify-between gap-6 pb-2">

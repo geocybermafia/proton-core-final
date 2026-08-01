@@ -5956,7 +5956,7 @@ export default function App() {
         <div 
           id="main-scroll-container"
           className={cn(
-            "flex-1 min-h-0 overscroll-y-none relative z-10 custom-scrollbar-minimal flex flex-col",
+            "flex-1 min-h-0 overscroll-y-none relative z-10 custom-scrollbar-minimal flex flex-col overflow-x-hidden",
             (activeView === 'personas' || activeView === 'clips') ? "overflow-hidden" : "overflow-y-auto"
           )}
         >

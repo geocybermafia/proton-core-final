@@ -362,7 +362,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.35 }}
-            className="space-y-6 relative z-10"
+            className="space-y-6 relative z-10 max-w-7xl mx-auto w-full"
           >
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-zinc-900">

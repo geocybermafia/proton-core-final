@@ -413,7 +413,7 @@ Query: "${query}"
                 size="sm"
                 onClick={() => setActiveView('personas')}
                 leftIcon={<Bot size={11} />}
-                className="py-1 px-2.5 text-[10px] bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20"
+                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20"
               >
                 {language === 'ka' ? 'AI ჩატი' : 'AI Assistant'}
               </ProtonButton>
@@ -423,7 +423,7 @@ Query: "${query}"
                 size="sm"
                 onClick={() => setUiMode('creative', 'image')}
                 leftIcon={<Image size={11} />}
-                className="py-1 px-2.5 text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
               >
                 {language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}
               </ProtonButton>
@@ -433,7 +433,7 @@ Query: "${query}"
                 size="sm"
                 onClick={() => setActiveView('organizer')}
                 leftIcon={<CalendarIcon size={11} />}
-                className="py-1 px-2.5 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
+                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
               >
                 {language === 'ka' ? 'დავალებები' : 'Tasks'}
               </ProtonButton>
@@ -443,7 +443,7 @@ Query: "${query}"
                 size="sm"
                 onClick={() => setActiveView('clips')}
                 leftIcon={<Video size={11} />}
-                className="py-1 px-2.5 text-[10px] bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
               >
                 {language === 'ka' ? 'კლიპები' : 'Clips'}
               </ProtonButton>

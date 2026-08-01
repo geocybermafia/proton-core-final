@@ -612,8 +612,8 @@ export default function PersonasView({
       <ProtonCard 
         padding="none"
         className={cn(
-          "w-full lg:w-80 flex flex-col h-full min-h-0",
-          mobileShowChat ? "hidden lg:flex" : "flex"
+          "w-full md:w-80 flex flex-col h-full min-h-0",
+          (mobileShowChat || selectedPersona) ? "hidden md:flex" : "flex"
         )}
       >
         <div className="p-5 border-b border-proton-border bg-proton-card/40 flex justify-between items-center">
@@ -686,8 +686,8 @@ export default function PersonasView({
       <div className={cn(
         "flex-1 bg-proton-card overflow-hidden flex flex-col shadow-xl backdrop-blur-md h-full min-h-0",
         mobileShowChat 
-          ? "fixed inset-0 z-[80] bg-proton-bg lg:relative lg:inset-auto lg:z-auto lg:bg-proton-card lg:border lg:border-proton-border lg:rounded-2xl h-[100dvh] lg:h-full" 
-          : "hidden lg:flex lg:relative lg:border lg:border-proton-border lg:rounded-2xl"
+          ? "fixed inset-0 z-[80] bg-proton-bg md:relative md:inset-auto md:z-auto md:bg-proton-card md:border md:border-proton-border md:rounded-2xl h-[100dvh] md:h-full" 
+          : "hidden md:flex md:relative md:border md:border-proton-border md:rounded-2xl"
       )}>
         <AnimatePresence mode="wait">
         {selectedPersona ? (
