@@ -1157,11 +1157,25 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
   // Keyboard controls for ArrowUp, ArrowDown, and Spacebar utilizing hook actions
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA' ||
-        document.activeElement?.tagName === 'SELECT'
-      ) {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const targetEl = e.target as HTMLElement | null;
+
+      const isEditableOrInput = (el: HTMLElement | null): boolean => {
+        if (!el) return false;
+        const tagName = el.tagName ? el.tagName.toUpperCase() : '';
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tagName)) return true;
+        if (el.isContentEditable) return true;
+        if (el.getAttribute && (el.getAttribute('contenteditable') === 'true' || el.getAttribute('contenteditable') === '')) return true;
+
+        const role = el.getAttribute ? el.getAttribute('role') : null;
+        if (role && ['textbox', 'combobox', 'listbox', 'menu', 'menuitem', 'searchbox', 'option', 'spinbutton'].includes(role)) return true;
+
+        if (el.getAttribute && (el.getAttribute('data-no-shortcut') === 'true' || el.getAttribute('data-prevent-keyboard-scroll') === 'true')) return true;
+
+        return !!el.closest?.('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"], [role="combobox"], [role="listbox"], [role="menu"], [role="menuitem"], [role="searchbox"], [role="option"], [role="spinbutton"], [data-no-shortcut="true"], [data-prevent-keyboard-scroll="true"]');
+      };
+
+      if (isEditableOrInput(activeEl) || isEditableOrInput(targetEl)) {
         return;
       }
 
