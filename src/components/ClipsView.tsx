@@ -437,6 +437,40 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>(INITIAL_MOCK_COMMENTS);
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+
+  // Dynamic visual viewport listener for comments drawer mobile keyboard support
+  useEffect(() => {
+    if (!isCommentsOpen) {
+      setViewportHeight(null);
+      return;
+    }
+
+    const updateViewportHeight = () => {
+      if (typeof window !== 'undefined' && window.visualViewport) {
+        setViewportHeight(window.visualViewport.height);
+      } else if (typeof window !== 'undefined') {
+        setViewportHeight(window.innerHeight);
+      }
+    };
+
+    updateViewportHeight();
+
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      const vv = window.visualViewport;
+      vv.addEventListener('resize', updateViewportHeight);
+      vv.addEventListener('scroll', updateViewportHeight);
+      return () => {
+        vv.removeEventListener('resize', updateViewportHeight);
+        vv.removeEventListener('scroll', updateViewportHeight);
+      };
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', updateViewportHeight);
+      return () => {
+        window.removeEventListener('resize', updateViewportHeight);
+      };
+    }
+  }, [isCommentsOpen]);
 
   // Expanded caption state per clip
   const [expandedCaptions, setExpandedCaptions] = useState<{ [clipId: string]: boolean }>({});
@@ -2498,7 +2532,13 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
       {/* COMMENTS BOTTOM/RIGHT DRAWER */}
       <AnimatePresence>
         {isCommentsOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex justify-end">
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex justify-end"
+            style={{
+              height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+              maxHeight: '100dvh'
+            }}
+          >
             <div className="absolute inset-0" onClick={() => setIsCommentsOpen(false)} />
             
             <motion.div
@@ -2506,10 +2546,14 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 24, stiffness: 220 }}
-              className="relative w-full max-w-md h-full bg-proton-bg border-l border-proton-border/30 flex flex-col shadow-2xl z-10"
+              className="relative w-full max-w-md bg-proton-bg border-l border-proton-border/30 flex flex-col shadow-2xl z-10"
+              style={{
+                height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+                maxHeight: '100dvh'
+              }}
             >
               {/* Comment Drawer Header */}
-              <div className="p-4 border-b border-proton-border/20 flex items-center justify-between bg-proton-bg/40 backdrop-blur-md">
+              <div className="p-4 border-b border-proton-border/20 flex items-center justify-between bg-proton-bg/40 backdrop-blur-md shrink-0">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="text-purple-400" size={16} />
                   <h3 className="font-bold text-sm">
@@ -2518,14 +2562,14 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                 </div>
                 <button
                   onClick={() => setIsCommentsOpen(false)}
-                  className="p-1.5 rounded-lg bg-proton-bg/60 border border-proton-border/10 text-proton-muted hover:text-white hover:bg-proton-bg/80 transition-all"
+                  className="p-1.5 rounded-lg bg-proton-bg/60 border border-proton-border/10 text-proton-muted hover:text-white hover:bg-proton-bg/80 transition-all cursor-pointer"
                 >
                   <X size={15} />
                 </button>
               </div>
 
               {/* Scrollable Feed Comments */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
                 {commentsLoading ? (
                   <div className="h-32 flex items-center justify-center text-xs font-mono text-proton-muted animate-pulse uppercase tracking-wider">
                     {language === 'ka' ? 'კომენტარები იტვირთება...' : 'Streaming Comments...'}
@@ -2571,11 +2615,16 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
               </div>
 
               {/* Post Comment Input bar with Anonymous Draft Preservation */}
-              <form onSubmit={handlePostComment} className="p-4 border-t border-proton-border/20 bg-proton-bg/80 backdrop-blur-md">
+              <form onSubmit={handlePostComment} className="p-4 border-t border-proton-border/20 bg-proton-bg/80 backdrop-blur-md shrink-0">
                 <div className="relative">
                   <input
                     type="text"
                     value={newComment}
+                    onFocus={(e) => {
+                      setTimeout(() => {
+                        e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                      }, 100);
+                    }}
                     onChange={(e) => {
                       const val = e.target.value;
                       setNewComment(val);
