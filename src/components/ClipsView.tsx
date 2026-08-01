@@ -1855,101 +1855,108 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
       `}</style>
       
       {/* HEADER CONTROLS */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-proton-border/30 px-2">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-purple-500/10 to-pink-500/10 border border-purple-500/20 text-purple-400">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-proton-border/30 px-1 sm:px-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-2.5 rounded-xl bg-gradient-to-tr from-purple-500/10 to-pink-500/10 border border-purple-500/20 text-purple-400 shrink-0">
             <Video size={20} className="animate-pulse" />
           </div>
-          <div>
-            <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-              <span>Proton Clips</span>
-              <span className="text-[10px] uppercase bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black px-1.5 py-0.5 rounded-full tracking-wider">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
+              <span className="truncate">Proton Clips</span>
+              <span className="text-[10px] uppercase bg-gradient-to-r from-purple-500 to-pink-500 text-white font-black px-1.5 py-0.5 rounded-full tracking-wider shrink-0">
                 Reels
               </span>
             </h1>
-            <p className="text-xs text-proton-muted">
+            <p className="text-xs text-proton-muted truncate">
               {language === 'ka' ? 'გააზიარე მოკლე ვიდეოები, აღმოაჩინე ნიჭიერი ხალხი და ადგილობრივი ნაწარმი' : 'Explore vertical video stories from ordinary creators and marketplace makers'}
             </p>
           </div>
         </div>
 
         {/* Action button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowFeaturesModal(true)}
-            className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-proton-card border border-proton-border/40 hover:bg-proton-accent/10 hover:text-proton-accent hover:border-proton-accent/30 text-proton-muted hover:text-proton-text font-bold text-xs transition-all cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-proton-card border border-proton-border/40 hover:bg-proton-accent/10 hover:text-proton-accent hover:border-proton-accent/30 text-proton-muted hover:text-proton-text font-bold text-xs transition-all cursor-pointer whitespace-nowrap min-h-[36px]"
             title={language === 'ka' ? 'ფუნქციონალი და შესაძლებლობები' : 'Features & Capabilities'}
           >
-            <Sparkles size={14} className="text-purple-400" />
+            <Sparkles size={14} className="text-purple-400 shrink-0" />
             <span>{language === 'ka' ? 'ფუნქციონალი' : 'Features'}</span>
           </button>
           
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs tracking-wide shadow-md shadow-purple-500/10 hover:shadow-lg transition-all cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs tracking-wide shadow-md shadow-purple-500/10 hover:shadow-lg transition-all cursor-pointer whitespace-nowrap min-h-[36px]"
           >
-            <Plus size={15} />
+            <Plus size={15} className="shrink-0" />
             <span>{language === 'ka' ? 'დადე კლიპი' : 'Share a Clip'}</span>
           </button>
         </div>
       </div>
 
       {/* FILTER & SEARCH BAR */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 py-3 px-2">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 py-3 px-1 sm:px-2 w-full max-w-full overflow-hidden">
         
         {/* Navigation Tabs */}
-        <div className="flex items-center bg-proton-bg/60 p-1 rounded-xl border border-proton-border/20 self-start">
+        <div 
+          className="w-full md:w-auto max-w-full overflow-x-auto flex items-center gap-1 bg-proton-bg/60 p-1 rounded-xl border border-proton-border/20 scrollbar-none"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <button
             onClick={() => { setActiveTab('forYou'); setCurrentIndex(0); }}
             className={cn(
-              "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+              "px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px]",
               activeTab === 'forYou' 
                 ? "bg-purple-500/20 text-purple-400 shadow-sm font-semibold border border-purple-500/30" 
                 : "text-proton-muted hover:text-white"
             )}
           >
-            <TrendingUp size={13} />
+            <TrendingUp size={13} className="shrink-0" />
             <span>{language === 'ka' ? 'ყველასთვის' : 'For You'}</span>
           </button>
           <button
             onClick={() => { setActiveTab('productReels'); setCurrentIndex(0); }}
             className={cn(
-              "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+              "px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px]",
               activeTab === 'productReels' 
                 ? "bg-pink-500/20 text-pink-400 shadow-sm font-semibold border border-pink-500/30" 
                 : "text-proton-muted hover:text-white"
             )}
           >
-            <ShoppingBag size={13} />
+            <ShoppingBag size={13} className="shrink-0" />
             <span>{language === 'ka' ? 'მარკეტ კლიპები' : 'Product Reels'}</span>
           </button>
           <button
             onClick={() => { setActiveTab('myClips'); setCurrentIndex(0); }}
             className={cn(
-              "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5",
+              "px-3 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap min-h-[36px]",
               activeTab === 'myClips' 
                 ? "bg-amber-500/20 text-amber-400 shadow-sm font-semibold border border-amber-500/30" 
                 : "text-proton-muted hover:text-white"
             )}
           >
-            <UserIcon size={13} />
+            <UserIcon size={13} className="shrink-0" />
             <span>{language === 'ka' ? 'ჩემი კლიპები' : 'My Clips'}</span>
           </button>
         </div>
 
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-proton-muted" />
+        <div className="relative w-full md:max-w-md">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-proton-muted shrink-0 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setCurrentIndex(0); }}
             placeholder={language === 'ka' ? 'ძიება ჰეშთეგით (#tech) ან ავტორით...' : 'Search tags (#handmade) or creators...'}
-            className="w-full pl-9 pr-4 py-1.5 bg-proton-bg/40 text-xs border border-proton-border/20 rounded-xl focus:border-purple-500/50 outline-none text-proton-text placeholder:text-proton-muted/60 transition-all"
+            className="w-full pl-9 pr-8 py-2 bg-proton-bg/40 text-xs border border-proton-border/20 rounded-xl focus:border-purple-500/50 outline-none text-proton-text placeholder:text-proton-muted/60 transition-all min-h-[36px]"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-proton-muted hover:text-white">
-              <X size={12} />
+            <button 
+              onClick={() => setSearchQuery('')} 
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-proton-muted hover:text-white cursor-pointer rounded-lg hover:bg-white/10"
+              title="Clear search"
+            >
+              <X size={13} />
             </button>
           )}
         </div>
