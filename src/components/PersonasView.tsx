@@ -703,328 +703,258 @@ export default function PersonasView({
           ? "fixed inset-0 z-[80] bg-black/90 md:relative md:inset-auto md:z-auto md:bg-black/70 md:border md:border-cyan-500/30 md:rounded-2xl h-[100dvh] md:h-full" 
           : "hidden md:flex md:relative"
       )}>
-        <AnimatePresence mode="wait">
-        {selectedPersona ? (
-           <motion.div 
-             key={selectedPersona.id}
-             initial={{ opacity: 0, scale: 0.99 }}
-             animate={{ opacity: 1, scale: 1 }}
-             exit={{ opacity: 0, scale: 0.99 }}
-             transition={{ duration: 0.2 }}
-             className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden"
-           >
-              {/* Header */}
-              <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative flex-shrink-0 w-full z-20">
-                 {/* Top neon line */}
-                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
-                 
-                 <div className="flex items-center gap-3.5">
-                     <button
-                       onClick={() => setMobileShowChat(false)}
-                       className="lg:hidden p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-xl text-cyan-400 cursor-pointer mr-1"
-                       title={language === "ka" ? "უკან" : "Back"}
-                     >
-                       <ArrowLeft size={16} />
-                     </button>
-                     
-                     <PersonaAvatarView 
-                        avatar={selectedPersona.avatar}
-                        name={language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
-                        size="lg"
-                     />
-                     <div>
-                       <div className="flex items-center gap-2">
-                         <h3 className="font-mono font-black text-sm sm:text-base tracking-tight text-cyan-100 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
-                           {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
-                         </h3>
-                         <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,243,255,0.2)]">
-                           {language === 'ka' ? 'დროებით მიუწვდომელია' : 'Temporarily Unavailable'}
-                         </span>
-                       </div>
-                       <div className="flex items-center gap-2 text-[9px] font-mono font-bold tracking-[0.2em] text-cyan-400 uppercase mt-0.5">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)]"></span>
-                          </span>
-                          <span className="truncate max-w-[160px] sm:max-w-none text-slate-300">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
-                       </div>
-                    </div>
-                 </div>
-
-                 {/* Action Buttons */}
-                 <div className="flex gap-2 items-center">
-                    {showConfirmClear ? (
-                      <div className="flex items-center gap-1.5 bg-red-950/70 border border-red-500/50 px-2 py-1 rounded-xl h-9 animate-in fade-in zoom-in-95 duration-200 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                        <span className="text-[10px] font-mono font-bold uppercase text-red-300 tracking-wider">
-                          {language === 'ka' ? 'წავშალო?' : 'Clear?'}
+        {/* Permanent Locked Header */}
+        <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative flex-shrink-0 w-full z-20">
+           {/* Top neon line */}
+           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
+           
+           <div className="flex items-center gap-3.5">
+               <button
+                 onClick={() => setMobileShowChat(false)}
+                 className="lg:hidden p-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 rounded-xl text-cyan-400 cursor-pointer mr-1"
+                 title={language === "ka" ? "უკან" : "Back"}
+               >
+                 <ArrowLeft size={16} />
+               </button>
+               
+               {selectedPersona ? (
+                 <>
+                   <PersonaAvatarView 
+                      avatar={selectedPersona.avatar}
+                      name={language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
+                      size="lg"
+                   />
+                   <div>
+                     <div className="flex items-center gap-2">
+                       <h3 className="font-mono font-black text-sm sm:text-base tracking-tight text-cyan-100 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
+                         {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
+                       </h3>
+                       <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,243,255,0.2)]">
+                         {language === 'ka' ? 'დროებით მიუწვდომელია' : 'Temporarily Unavailable'}
+                       </span>
+                     </div>
+                     <div className="flex items-center gap-2 text-[9px] font-mono font-bold tracking-[0.2em] text-cyan-400 uppercase mt-0.5">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)]"></span>
                         </span>
-                        <button
-                          onClick={handleClearChat}
-                          className="px-2 py-1 bg-red-500 hover:bg-red-400 text-black rounded-lg text-[9px] font-mono font-black cursor-pointer transition-all shadow-[0_0_10px_rgba(239,68,68,0.5)]"
-                        >
-                          {language === 'ka' ? 'კი' : 'Yes'}
-                        </button>
-                        <button
-                          onClick={() => setShowConfirmClear(false)}
-                          className="px-2 py-1 bg-black/60 hover:bg-white/10 text-slate-300 rounded-lg text-[9px] font-mono font-bold cursor-pointer transition-colors border border-slate-700"
-                        >
-                          {language === 'ka' ? 'არა' : 'No'}
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => setShowConfirmClear(true)}
-                        className="p-2.5 bg-black/40 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-cyan-500/40 hover:shadow-[0_0_12px_rgba(0,243,255,0.2)] cursor-pointer"
-                        title={language === 'ka' ? 'ჩატის გასუფთავება' : 'Clear Chat History'}
-                      >
-                         <RotateCcw size={16} />
-                      </button>
-                    )}
-                    <button 
-                       onClick={() => setIsEditingInstructions(!isEditingInstructions)}
-                       className={cn(
-                          "p-2.5 rounded-xl transition-all border cursor-pointer",
-                          isEditingInstructions 
-                            ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(0,243,255,0.3)]" 
-                            : "bg-black/40 text-slate-400 border-cyan-900/30 hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:text-cyan-300 hover:shadow-[0_0_12px_rgba(0,243,255,0.2)]"
-                       )}
-                       title={language === 'ka' ? 'სისტემური ინსტრუქციების რედაქტირება' : 'Edit System Instructions'}
-                    >
-                       <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setDecomTarget(selectedPersona);
-                        setIsDecommissioning(true);
-                      }}
-                      className="p-2.5 bg-black/40 hover:bg-red-500/20 hover:text-red-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-red-500/40 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)] cursor-pointer"
-                      title={language === 'ka' ? 'აგენტის წაშლა' : 'Delete Agent'}
-                    >
-                       <Trash2 size={16} />
-                    </button>
-                 </div>
-              </header>
-
-              {/* System Instructions Editor / Presets Drawer */}
-              <AnimatePresence>
-                {isEditingInstructions && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border-b border-cyan-500/30 bg-black/90 backdrop-blur-xl shadow-[0_0_25px_rgba(0,243,255,0.15)] flex-shrink-0 w-full z-20"
-                  >
-                    <div className="p-5 space-y-4">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-mono font-black uppercase tracking-widest text-cyan-400 flex items-center gap-2">
-                          <Sparkles size={14} className="animate-pulse text-cyan-400" />
-                          {language === 'ka' ? '⚡ სისტემური ინსტრუქციები' : '⚡ SYSTEM COGITATIVE BOUNDARIES'}
-                        </label>
-                        <span className="text-[9px] font-mono text-cyan-300/80 font-bold uppercase tracking-wider bg-cyan-950/60 px-2.5 py-0.5 rounded border border-cyan-500/30">
-                           {language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}
-                        </span>
-                      </div>
-
-                      {/* Presets Grid */}
-                      <div className="flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-black/60 p-2.5 rounded-xl border border-cyan-500/30 custom-scrollbar-minimal pb-3 md:pb-2.5">
-                        {INSTRUCTION_PRESETS.map((p, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => setEditingInstructions(p.prompt)}
-                            className="p-2.5 text-left bg-cyan-950/20 hover:bg-cyan-500/15 border border-cyan-900/40 hover:border-cyan-400/80 hover:shadow-[0_0_12px_rgba(0,243,255,0.25)] rounded-xl group transition-all cursor-pointer shrink-0 w-52 md:w-auto hover:scale-[1.01]"
-                          >
-                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-200 group-hover:text-cyan-300 transition-colors">
-                              {language === 'ka' ? p.titleKa : p.titleEn}
-                            </p>
-                            <p className="text-[9px] font-sans text-slate-400 leading-relaxed line-clamp-2 mt-1">
-                              {language === 'ka' ? p.descKa : p.descEn}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
-                      
-                      <textarea
-                        value={editingInstructions}
-                        onChange={(e) => setEditingInstructions(e.target.value)}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        onKeyUp={(e) => e.stopPropagation()}
-                        onKeyPress={(e) => e.stopPropagation()}
-                        className="w-full h-24 sm:h-32 p-3.5 bg-black/80 border border-cyan-500/40 rounded-xl text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,243,255,0.3)] focus:ring-1 focus:ring-cyan-400 transition-all font-mono leading-relaxed"
-                        placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუმენტი ან ინსტრუქცია...' : 'Specify precise cogitative boundary parameters for the model target...'}
-                      />
-
-                      <div className="flex justify-between items-center">
-                        <div>
-                          {saveSuccess && (
-                            <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider animate-pulse flex items-center gap-1.5">
-                              <Check size={14} />
-                              {language === 'ka' ? 'წარმატებით შეინახა!' : 'Instructions synchronized successfully'}
-                            </span>
-                          )}
-                          {saveError && (
-                            <span className="text-xs font-mono text-rose-400 font-bold flex items-center gap-1.5">
-                              <ShieldAlert size={14} />
-                              ✗ {saveError}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setIsEditingInstructions(false)}
-                            className="px-3.5 py-1.5 bg-black/40 hover:bg-white/10 border border-slate-800 hover:border-slate-600 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                          >
-                            {language === 'ka' ? 'გაუქმება' : 'Close'}
-                          </button>
-                          <button
-                            onClick={handleSaveInstructions}
-                            disabled={isSavingInstructions}
-                            className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-black rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(0,243,255,0.4)]"
-                          >
-                            {isSavingInstructions 
-                              ? (language === 'ka' ? 'ინახება...' : 'Compiling...')
-                              : (language === 'ka' ? 'შენახვა' : 'Synchronize')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Chat Container with Human-Centered Maintenance Card */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col items-center justify-center custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
-                 <motion.div 
-                   initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                   transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-                   className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden my-auto"
-                 >
-                   {/* Subtle top ambient bar */}
-                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0" />
-
-                   {/* Small Status Badge */}
-                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium mb-6">
-                     <span className="relative flex h-2 w-2">
-                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                       <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
-                     </span>
-                     <span>
-                       {language === 'ka' ? 'გაუმჯობესების პროცესშია' : 'Improving'}
-                     </span>
+                        <span className="truncate max-w-[160px] sm:max-w-none text-slate-300">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
+                     </div>
+                  </div>
+                 </>
+               ) : (
+                 <>
+                   <div className="w-12 h-12 rounded-xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.15)]">
+                     <Users size={20} />
                    </div>
-
-                   {/* Icon */}
-                   <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 shadow-[0_0_25px_rgba(0,243,255,0.15)]">
-                     <Sparkles size={32} className="text-cyan-400" />
-                   </div>
-
-                   {/* Title */}
-                   <h3 className="text-lg sm:text-xl font-semibold text-slate-100 mb-2.5 tracking-tight font-sans">
-                     {language === 'ka' 
-                       ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია` 
-                       : `${selectedPersona.name} is temporarily unavailable`
-                     }
-                   </h3>
-
-                   {/* Short Description */}
-                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-sm font-sans">
-                     {language === 'ka'
-                       ? 'ჩვენ ვაუმჯობესებთ ამ ასისტენტს. იგი მალე კვლავ ხელმისაწვდომი იქნება.'
-                       : "We're making improvements to this assistant. It will be available again soon."
-                     }
-                   </p>
-
-                   {/* Optional Reassuring Note */}
-                   <div className="pt-4 border-t border-cyan-500/15 w-full text-center">
-                     <p className="text-xs text-slate-400 font-sans">
-                       {language === 'ka' ? 'გმადლობთ მოთმინებისთვის.' : 'Thank you for your patience.'}
+                   <div>
+                     <h3 className="font-mono font-black text-sm sm:text-base tracking-tight text-cyan-100">
+                       {language === 'ka' ? 'აირჩიეთ ასისტენტი' : 'Select Assistant'}
+                     </h3>
+                     <p className="text-[9px] font-mono uppercase tracking-widest text-slate-400">
+                       {language === 'ka' ? 'სისტემა მზადაა' : 'System Ready'}
                      </p>
                    </div>
-                 </motion.div>
+                 </>
+               )}
+           </div>
 
-                 {/* Scroll Anchor */}
-                 <div ref={chatEndRef} />
+           {/* Action Buttons */}
+           {selectedPersona && (
+             <div className="flex gap-2 items-center">
+                {showConfirmClear ? (
+                  <div className="flex items-center gap-1.5 bg-red-950/70 border border-red-500/50 px-2 py-1 rounded-xl h-9 animate-in fade-in zoom-in-95 duration-200 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                    <span className="text-[10px] font-mono font-bold uppercase text-red-300 tracking-wider">
+                      {language === 'ka' ? 'წავშალო?' : 'Clear?'}
+                    </span>
+                    <button
+                      onClick={handleClearChat}
+                      className="px-2 py-1 bg-red-500 hover:bg-red-400 text-black rounded-lg text-[9px] font-mono font-black cursor-pointer transition-all shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                    >
+                      {language === 'ka' ? 'კი' : 'Yes'}
+                    </button>
+                    <button
+                      onClick={() => setShowConfirmClear(false)}
+                      className="px-2 py-1 bg-black/60 hover:bg-white/10 text-slate-300 rounded-lg text-[9px] font-mono font-bold cursor-pointer transition-colors border border-slate-700"
+                    >
+                      {language === 'ka' ? 'არა' : 'No'}
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => setShowConfirmClear(true)}
+                    className="p-2.5 bg-black/40 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-cyan-500/40 hover:shadow-[0_0_12px_rgba(0,243,255,0.2)] cursor-pointer"
+                    title={language === 'ka' ? 'ჩატის გასუფთავება' : 'Clear Chat History'}
+                  >
+                     <RotateCcw size={16} />
+                  </button>
+                )}
+                <button 
+                   onClick={() => setIsEditingInstructions(!isEditingInstructions)}
+                   className={cn(
+                      "p-2.5 rounded-xl transition-all border cursor-pointer",
+                      isEditingInstructions 
+                        ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(0,243,255,0.3)]" 
+                        : "bg-black/40 text-slate-400 border-cyan-900/30 hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:text-cyan-300 hover:shadow-[0_0_12px_rgba(0,243,255,0.2)]"
+                   )}
+                   title={language === 'ka' ? 'სისტემური ინსტრუქციების რედაქტირება' : 'Edit System Instructions'}
+                >
+                   <Edit2 size={16} />
+                </button>
+                <button 
+                  onClick={() => {
+                    setDecomTarget(selectedPersona);
+                    setIsDecommissioning(true);
+                  }}
+                  className="p-2.5 bg-black/40 hover:bg-red-500/20 hover:text-red-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-red-500/40 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)] cursor-pointer"
+                  title={language === 'ka' ? 'აგენტის წაშლა' : 'Delete Agent'}
+                >
+                   <Trash2 size={16} />
+                </button>
+             </div>
+           )}
+        </header>
+
+        {/* System Instructions Editor Drawer */}
+        <AnimatePresence>
+          {isEditingInstructions && selectedPersona && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden border-b border-cyan-500/30 bg-black/90 backdrop-blur-xl shadow-[0_0_25px_rgba(0,243,255,0.15)] flex-shrink-0 w-full z-20"
+            >
+              <div className="p-5 space-y-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-mono font-black uppercase tracking-widest text-cyan-400 flex items-center gap-2">
+                    <Sparkles size={14} className="animate-pulse text-cyan-400" />
+                    {language === 'ka' ? '⚡ სისტემური ინსტრუქციები' : '⚡ SYSTEM COGITATIVE BOUNDARIES'}
+                  </label>
+                  <span className="text-[9px] font-mono text-cyan-300/80 font-bold uppercase tracking-wider bg-cyan-950/60 px-2.5 py-0.5 rounded border border-cyan-500/30">
+                     {language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}
+                  </span>
+                </div>
+
+                {/* Presets Grid */}
+                <div className="flex overflow-x-auto md:grid md:grid-cols-2 lg:grid-cols-4 gap-2.5 bg-black/60 p-2.5 rounded-xl border border-cyan-500/30 custom-scrollbar-minimal pb-3 md:pb-2.5">
+                  {INSTRUCTION_PRESETS.map((p, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setEditingInstructions(p.prompt)}
+                      className="p-2.5 text-left bg-cyan-950/20 hover:bg-cyan-500/15 border border-cyan-900/40 hover:border-cyan-400/80 hover:shadow-[0_0_12px_rgba(0,243,255,0.25)] rounded-xl group transition-all cursor-pointer shrink-0 w-52 md:w-auto hover:scale-[1.01]"
+                    >
+                      <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-200 group-hover:text-cyan-300 transition-colors">
+                        {language === 'ka' ? p.titleKa : p.titleEn}
+                      </p>
+                      <p className="text-[9px] font-sans text-slate-400 leading-relaxed line-clamp-2 mt-1">
+                        {language === 'ka' ? p.descKa : p.descEn}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                
+                <textarea
+                  value={editingInstructions}
+                  onChange={(e) => setEditingInstructions(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyUp={(e) => e.stopPropagation()}
+                  onKeyPress={(e) => e.stopPropagation()}
+                  className="w-full h-24 sm:h-32 p-3.5 bg-black/80 border border-cyan-500/40 rounded-xl text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,243,255,0.3)] focus:ring-1 focus:ring-cyan-400 transition-all font-mono leading-relaxed"
+                  placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუმენტი ან ინსტრუქცია...' : 'Specify precise cogitative boundary parameters for the model target...'}
+                />
+
+                <div className="flex justify-between items-center">
+                  <div>
+                    {saveSuccess && (
+                      <span className="text-xs font-mono text-emerald-400 font-bold uppercase tracking-wider animate-pulse flex items-center gap-1.5">
+                        <Check size={14} />
+                        {language === 'ka' ? 'წარმატებით შეინახა!' : 'Instructions synchronized successfully'}
+                      </span>
+                    )}
+                    {saveError && (
+                      <span className="text-xs font-mono text-rose-400 font-bold flex items-center gap-1.5">
+                        <ShieldAlert size={14} />
+                        ✗ {saveError}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setIsEditingInstructions(false)}
+                      className="px-3.5 py-1.5 bg-black/40 hover:bg-white/10 border border-slate-800 hover:border-slate-600 rounded-xl text-[10px] font-mono font-bold uppercase tracking-widest text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      {language === 'ka' ? 'გაუქმება' : 'Close'}
+                    </button>
+                    <button
+                      onClick={handleSaveInstructions}
+                      disabled={isSavingInstructions}
+                      className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-black rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(0,243,255,0.4)]"
+                    >
+                      {isSavingInstructions 
+                        ? (language === 'ka' ? 'ინახება...' : 'Compiling...')
+                        : (language === 'ka' ? 'შენახვა' : 'Synchronize')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chat / Maintenance Container */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col items-center justify-center custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
+          {selectedPersona ? (
+            <motion.div 
+              key={selectedPersona.id}
+              initial={{ opacity: 0, scale: 0.98, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden my-auto"
+            >
+              {/* Subtle top ambient bar */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0" />
+
+              {/* Small Status Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium mb-6">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                </span>
+                <span>
+                  {language === 'ka' ? 'გაუმჯობესების პროცესშია' : 'Improving'}
+                </span>
               </div>
 
-              <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 mt-auto pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
-                 <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
-                    <AnimatePresence>
-                      {showTools && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          className="absolute bottom-full mb-3 left-0 w-64 bg-black/90 border border-cyan-500/40 rounded-2xl shadow-[0_0_30px_rgba(0,243,255,0.2)] p-3 z-[60] backdrop-blur-xl"
-                        >
-                          <p className="text-[9px] font-mono font-black uppercase tracking-[0.2em] text-cyan-400 px-2 py-1 mb-2 opacity-80 flex items-center gap-1.5 border-b border-cyan-500/20 pb-1.5">
-                            <Laptop size={12} />
-                            {t.tools.title}
-                          </p>
-                          <div className="grid gap-1.5">
-                            {aiTools.map((tool) => (
-                              <button
-                                key={tool.id}
-                                onClick={() => {
-                                  setSelectedTool(tool.id);
-                                  setShowTools(false);
-                                }}
-                                className={cn(
-                                  "flex items-center gap-3 w-full p-2 rounded-xl text-[10px] font-mono font-bold uppercase tracking-wider transition-all cursor-pointer border",
-                                  selectedTool === tool.id 
-                                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(0,243,255,0.2)]" 
-                                    : "bg-black/40 border-cyan-900/30 hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300 hover:border-cyan-500/40"
-                                )}
-                              >
-                                <div className={cn("p-1.5 rounded-lg shrink-0", tool.bg, tool.color)}>
-                                  <tool.icon size={14} />
-                                </div>
-                                <span>{tool.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+              {/* Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 shadow-[0_0_25px_rgba(0,243,255,0.15)]">
+                <Sparkles size={32} className="text-cyan-400" />
+              </div>
 
-                    {/* Input Area - Disabled in Maintenance Mode */}
-                    <div className="relative group flex items-center">
-                      <div className="absolute left-3.5 z-40 flex items-center gap-2">
-                        <button 
-                          disabled={true}
-                          className="p-2 rounded-xl border border-slate-800 bg-black/40 text-slate-600 cursor-not-allowed opacity-50"
-                          title={language === 'ka' ? 'ინსტრუმენტები მიუწვდომელია' : 'Tools unavailable'}
-                        >
-                           <Sparkles size={16} className="text-slate-500" />
-                        </button>
-                      </div>
+              {/* Title */}
+              <h3 className="text-lg sm:text-xl font-semibold text-slate-100 mb-2.5 tracking-tight font-sans">
+                {language === 'ka' 
+                  ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია` 
+                  : `${selectedPersona.name} is temporarily unavailable`
+                }
+              </h3>
 
-                      <input 
-                        type="text" 
-                        disabled={true}
-                        value=""
-                        readOnly={true}
-                        placeholder={
-                          language === 'ka' 
-                            ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია.` 
-                            : `${selectedPersona.name} is temporarily unavailable.`
-                        }
-                        className="w-full bg-black/50 border border-slate-700/50 rounded-2xl pl-14 pr-14 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-400 placeholder:text-slate-500 font-sans tracking-wide cursor-not-allowed opacity-60 shadow-inner"
-                      />
+              {/* Short Description */}
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-sm font-sans">
+                {language === 'ka'
+                  ? 'ჩვენ ვაუმჯობესებთ ამ ასისტენტს. იგი მალე კვლავ ხელმისაწვდომი იქნება.'
+                  : "We're making improvements to this assistant. It will be available again soon."
+                }
+              </p>
 
-                      <div className="absolute right-2.5 flex items-center gap-2 z-40">
-                        <button 
-                          disabled={true}
-                          className="p-2.5 bg-slate-800/80 text-slate-500 font-extrabold rounded-xl border border-slate-700/40 opacity-40 cursor-not-allowed shadow-none"
-                        >
-                           <Send size={16} strokeWidth={2.5} />
-                        </button>
-                      </div>
-                    </div>
-                 </div>
-              </footer>
+              {/* Optional Reassuring Note */}
+              <div className="pt-4 border-t border-cyan-500/15 w-full text-center">
+                <p className="text-xs text-slate-400 font-sans">
+                  {language === 'ka' ? 'გმადლობთ მოთმინებისთვის.' : 'Thank you for your patience.'}
+                </p>
+              </div>
             </motion.div>
-        ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-6">
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-8 space-y-6 my-auto">
                <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)]">
                      <Users size={40} strokeWidth={1.5} />
                </div>
@@ -1037,8 +967,55 @@ export default function PersonasView({
                   </p>
                </div>
             </div>
-         )}
-         </AnimatePresence>
+          )}
+
+          {/* Scroll Anchor */}
+          <div ref={chatEndRef} />
+        </div>
+
+        {/* Permanent Locked Footer */}
+        <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 mt-auto pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
+           <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
+              {/* Input Area - Disabled in Maintenance Mode */}
+              <div className="relative group flex items-center">
+                <div className="absolute left-3.5 z-40 flex items-center gap-2">
+                  <button 
+                    disabled={true}
+                    className="p-2 rounded-xl border border-slate-800 bg-black/40 text-slate-600 cursor-not-allowed opacity-50"
+                    title={language === 'ka' ? 'ინსტრუმენტები მიუწვდომელია' : 'Tools unavailable'}
+                  >
+                     <Sparkles size={16} className="text-slate-500" />
+                  </button>
+                </div>
+
+                <input 
+                  type="text" 
+                  disabled={true}
+                  value=""
+                  readOnly={true}
+                  placeholder={
+                    selectedPersona 
+                      ? (language === 'ka' 
+                          ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია.` 
+                          : `${selectedPersona.name} is temporarily unavailable.`)
+                      : (language === 'ka'
+                          ? 'აირჩიეთ ასისტენტი საუბრის დასაწყებად...'
+                          : 'Select an assistant from the sidebar to begin...')
+                  }
+                  className="w-full bg-black/50 border border-slate-700/50 rounded-2xl pl-14 pr-14 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-400 placeholder:text-slate-500 font-sans tracking-wide cursor-not-allowed opacity-60 shadow-inner"
+                />
+
+                <div className="absolute right-2.5 flex items-center gap-2 z-40">
+                  <button 
+                    disabled={true}
+                    className="p-2.5 bg-slate-800/80 text-slate-500 font-extrabold rounded-xl border border-slate-700/40 opacity-40 cursor-not-allowed shadow-none"
+                  >
+                     <Send size={16} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+           </div>
+        </footer>
       </div>
 
 
