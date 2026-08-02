@@ -738,12 +738,12 @@ export default function PersonasView({
                            {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
                          </h3>
                          <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,243,255,0.2)]">
-                           HUD_ONLINE
+                           {language === 'ka' ? 'დროებით მიუწვდომელია' : 'Temporarily Unavailable'}
                          </span>
                        </div>
                        <div className="flex items-center gap-2 text-[9px] font-mono font-bold tracking-[0.2em] text-cyan-400 uppercase mt-0.5">
                           <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)]"></span>
                           </span>
                           <span className="truncate max-w-[160px] sm:max-w-none text-slate-300">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
@@ -891,106 +891,57 @@ export default function PersonasView({
                 )}
               </AnimatePresence>
 
-              {/* Chat Container with Cyberpunk HUD Message Bubbles */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 space-y-5 custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
-                 
-                 {messages.map((m, idx) => {
-                    const isUser = m.role === 'user';
-                    return (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{ duration: 0.25 }}
-                        key={m.id ? `${m.id}-${idx}` : `msg-${idx}`} 
-                        className={cn(
-                          "flex gap-3 max-w-[90%] sm:max-w-[85%] items-start",
-                          isUser ? "ml-auto flex-row-reverse" : ""
-                        )}
-                      >
-                         {/* Avatar Icon */}
-                         <div className={cn(
-                            "w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border text-xs shadow-md font-mono font-bold transition-all duration-300",
-                            isUser 
-                              ? "bg-gradient-to-br from-fuchsia-600 to-purple-800 border-fuchsia-400/60 text-white shadow-[0_0_12px_rgba(217,70,239,0.5)]" 
-                              : "bg-gradient-to-br from-cyan-950 to-slate-900 border-cyan-400/60 text-cyan-300 shadow-[0_0_12px_rgba(0,243,255,0.3)]"
-                         )}>
-                            {isUser ? <User size={16} strokeWidth={2.5} /> : <Bot size={16} strokeWidth={2.5} />}
-                         </div>
-                         
-                         {/* Message Bubble Container */}
-                         <div className={cn(
-                            "p-4 px-5 rounded-2xl leading-relaxed text-xs backdrop-blur-md transition-all duration-300 relative group",
-                            isUser 
-                              ? "bg-gradient-to-r from-fuchsia-950/70 via-purple-950/60 to-fuchsia-900/50 border border-fuchsia-500/50 text-fuchsia-100 rounded-tr-none shadow-[0_0_20px_rgba(217,70,239,0.15)] hover:shadow-[0_0_25px_rgba(217,70,239,0.25)] hover:border-fuchsia-400/80 font-medium" 
-                              : "bg-gradient-to-r from-cyan-950/60 via-slate-950/80 to-cyan-950/40 border border-cyan-500/40 text-cyan-50 rounded-tl-none shadow-[0_0_20px_rgba(0,243,255,0.15)] hover:shadow-[0_0_25px_rgba(0,243,255,0.25)] hover:border-cyan-400/80 font-light"
-                         )}>
-                            {/* Corner role indicator */}
-                            <div className={cn(
-                              "text-[8px] font-mono font-bold uppercase tracking-widest mb-1.5 opacity-60 flex items-center gap-1",
-                              isUser ? "text-fuchsia-300 justify-end" : "text-cyan-400"
-                            )}>
-                              {isUser ? "USER_INPUT" : `${selectedPersona.name.toUpperCase()}_RESPONSE`}
-                            </div>
+              {/* Chat Container with Human-Centered Maintenance Card */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col items-center justify-center custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
+                 <motion.div 
+                   initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                   animate={{ opacity: 1, scale: 1, y: 0 }}
+                   transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+                   className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden my-auto"
+                 >
+                   {/* Subtle top ambient bar */}
+                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0" />
 
-                            {isUser ? (
-                              <p className="whitespace-pre-line tracking-wide leading-relaxed font-sans">{m.content}</p>
-                            ) : (
-                              <div className="prose prose-invert prose-xs max-w-none text-cyan-50 selection:bg-cyan-500/40 leading-relaxed tracking-wide space-y-2 font-sans">
-                                <Markdown
-                                  components={{
-                                    p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed font-light text-cyan-100/90">{children}</p>,
-                                    ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1 text-cyan-200">{children}</ul>,
-                                    ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-cyan-200">{children}</ol>,
-                                    li: ({ children }) => <li className="text-cyan-200/80">{children}</li>,
-                                    strong: ({ children }) => <strong className="font-extrabold text-cyan-300 drop-shadow-[0_0_6px_rgba(0,243,255,0.6)]">{children}</strong>,
-                                    pre: ({ children }) => <pre className="bg-black/90 border border-cyan-500/40 p-3.5 rounded-xl font-mono text-[10px] overflow-x-auto text-amber-300 my-3 leading-relaxed w-full custom-scrollbar-minimal shadow-[0_0_15px_rgba(0,243,255,0.1)]">{children}</pre>,
-                                    code: ({ children, ...props }) => {
-                                      const contentStr = String(children || '');
-                                      const isInline = !contentStr.includes('\n');
-                                      return isInline ? (
-                                        <code className="bg-cyan-950/80 px-1.5 py-0.5 rounded font-mono text-[9px] text-amber-300 border border-cyan-500/30">{children}</code>
-                                      ) : (
-                                        <code className="block font-mono text-[10px] text-cyan-100 leading-relaxed">{children}</code>
-                                      );
-                                    }
-                                  }}
-                                >
-                                  {m.content}
-                                </Markdown>
-                              </div>
-                            )}
-                         </div>
-                      </motion.div>
-                    );
-                 })}
-                 
-                 {messages.length === 0 && (
-                    <div className="flex flex-col items-center justify-center h-full opacity-40 py-20 text-center space-y-4">
-                       <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)]">
-                         <Bot size={44} className="animate-pulse" />
-                       </div>
-                       <p className="text-[11px] font-mono font-black uppercase tracking-[0.3em] text-cyan-400 max-w-sm">
-                         {t.start_convo.replace('{name}', language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name)}
-                       </p>
-                    </div>
-                 )}
-                 {isSending && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex gap-3 items-center"
-                    >
-                       <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-400/60 flex items-center justify-center text-cyan-300 shadow-[0_0_12px_rgba(0,243,255,0.3)]">
-                          <Bot size={16} className="text-cyan-400 animate-spin" />
-                       </div>
-                       <div className="px-4 py-2.5 bg-black/80 rounded-2xl flex gap-2 border border-cyan-500/40 shadow-[0_0_15px_rgba(0,243,255,0.2)] items-center">
-                          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" />
-                          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.2s]" />
-                          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce [animation-delay:0.4s]" />
-                          <span className="text-[9px] font-mono text-cyan-400 uppercase tracking-widest ml-1 font-bold">NEURAL_PROCESSING...</span>
-                       </div>
-                    </motion.div>
-                 )}
+                   {/* Small Status Badge */}
+                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium mb-6">
+                     <span className="relative flex h-2 w-2">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                     </span>
+                     <span>
+                       {language === 'ka' ? 'გაუმჯობესების პროცესშია' : 'Improving'}
+                     </span>
+                   </div>
+
+                   {/* Icon */}
+                   <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 shadow-[0_0_25px_rgba(0,243,255,0.15)]">
+                     <Sparkles size={32} className="text-cyan-400" />
+                   </div>
+
+                   {/* Title */}
+                   <h3 className="text-lg sm:text-xl font-semibold text-slate-100 mb-2.5 tracking-tight font-sans">
+                     {language === 'ka' 
+                       ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია` 
+                       : `${selectedPersona.name} is temporarily unavailable`
+                     }
+                   </h3>
+
+                   {/* Short Description */}
+                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6 max-w-sm font-sans">
+                     {language === 'ka'
+                       ? 'ჩვენ ვაუმჯობესებთ ამ ასისტენტს. იგი მალე კვლავ ხელმისაწვდომი იქნება.'
+                       : "We're making improvements to this assistant. It will be available again soon."
+                     }
+                   </p>
+
+                   {/* Optional Reassuring Note */}
+                   <div className="pt-4 border-t border-cyan-500/15 w-full text-center">
+                     <p className="text-xs text-slate-400 font-sans">
+                       {language === 'ka' ? 'გმადლობთ მოთმინებისთვის.' : 'Thank you for your patience.'}
+                     </p>
+                   </div>
+                 </motion.div>
+
                  {/* Scroll Anchor */}
                  <div ref={chatEndRef} />
               </div>
@@ -1035,64 +986,35 @@ export default function PersonasView({
                       )}
                     </AnimatePresence>
 
-                    {/* Cyber Input Prompt Wrapper */}
+                    {/* Input Area - Disabled in Maintenance Mode */}
                     <div className="relative group flex items-center">
                       <div className="absolute left-3.5 z-40 flex items-center gap-2">
                         <button 
-                          onClick={() => setShowTools(!showTools)}
-                          className={cn(
-                            "p-2 rounded-xl transition-all border shrink-0 cursor-pointer",
-                            showTools || selectedTool 
-                              ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(0,243,255,0.3)]" 
-                              : "bg-black/60 border-cyan-900/40 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40"
-                          )}
-                          title="Toggle AI Tools Mode"
+                          disabled={true}
+                          className="p-2 rounded-xl border border-slate-800 bg-black/40 text-slate-600 cursor-not-allowed opacity-50"
+                          title={language === 'ka' ? 'ინსტრუმენტები მიუწვდომელია' : 'Tools unavailable'}
                         >
-                           {selectedTool ? (
-                             <div className="flex items-center">
-                               {React.createElement(aiTools.find(t => t.id === selectedTool)?.icon || Sparkles, { size: 16, className: "text-cyan-400" })}
-                             </div>
-                           ) : (
-                             <Sparkles size={16} className="text-cyan-400" />
-                           )}
+                           <Sparkles size={16} className="text-slate-500" />
                         </button>
                       </div>
 
                       <input 
                         type="text" 
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          e.stopPropagation();
-                          if (e.key === 'Enter') handleSendMessage();
-                        }}
-                        onKeyUp={(e) => e.stopPropagation()}
-                        onKeyPress={(e) => e.stopPropagation()}
-                        placeholder={selectedTool 
-                          ? `[CYBER_${(aiTools.find(t => t.id === selectedTool)?.label || '').toUpperCase()}] PROMPT...` 
-                          : t.chat_placeholder.replace('{name}', language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name)
+                        disabled={true}
+                        value=""
+                        readOnly={true}
+                        placeholder={
+                          language === 'ka' 
+                            ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია.` 
+                            : `${selectedPersona.name} is temporarily unavailable.`
                         }
-                        className={cn(
-                          "w-full bg-black/90 border border-cyan-500/40 rounded-2xl pl-14 py-3.5 sm:py-4 focus:outline-none transition-all text-xs sm:text-sm text-cyan-100 placeholder:text-cyan-600/50 font-mono tracking-wide shadow-inner",
-                          selectedTool 
-                            ? "pr-24 border-cyan-400 shadow-[0_0_20px_rgba(0,243,255,0.15)] ring-1 ring-cyan-400/30" 
-                            : "pr-14 focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(0,243,255,0.25)] focus:ring-1 focus:ring-cyan-400/40"
-                        )}
+                        className="w-full bg-black/50 border border-slate-700/50 rounded-2xl pl-14 pr-14 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-400 placeholder:text-slate-500 font-sans tracking-wide cursor-not-allowed opacity-60 shadow-inner"
                       />
 
                       <div className="absolute right-2.5 flex items-center gap-2 z-40">
-                        {selectedTool && (
-                          <button 
-                            onClick={() => setSelectedTool(null)}
-                            className="p-1 px-1.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 text-[8px] font-mono font-bold rounded-md transition-colors"
-                          >
-                            ESC
-                          </button>
-                        )}
                         <button 
-                          onClick={handleSendMessage}
-                          disabled={!input.trim() || isSending}
-                          className="p-2.5 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 disabled:opacity-20 disabled:grayscale text-black font-extrabold rounded-xl transition-all shadow-[0_0_15px_rgba(0,243,255,0.4)] hover:shadow-[0_0_22px_rgba(0,243,255,0.6)] cursor-pointer hover:scale-105 active:scale-95"
+                          disabled={true}
+                          className="p-2.5 bg-slate-800/80 text-slate-500 font-extrabold rounded-xl border border-slate-700/40 opacity-40 cursor-not-allowed shadow-none"
                         >
                            <Send size={16} strokeWidth={2.5} />
                         </button>
@@ -1103,26 +1025,23 @@ export default function PersonasView({
             </motion.div>
         ) : (
             <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-6">
-               <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)] animate-pulse">
+               <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)]">
                      <Users size={40} strokeWidth={1.5} />
                </div>
                <div className="space-y-2 max-w-sm">
-                 <h4 className="text-lg font-mono font-black uppercase tracking-widest text-cyan-200">AI Council Inactive</h4>
-                 <p className="text-xs font-mono text-slate-400 leading-relaxed uppercase tracking-wider"> 
-                     Select or deploy an active neural assistant from the collective panel to initialize communication.
-                 </p>
-                 <button 
-                    onClick={() => setIsCreatorOpen(true)}
-                    className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-black border border-cyan-300 rounded-xl text-[10px] font-mono font-black uppercase tracking-widest transition-all duration-300 shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] cursor-pointer hover:scale-105"
-                 >
-                    <Plus size={14} strokeWidth={3} />
-                    {language === 'ka' ? 'დაამატე აგენტი' : 'Deploy Neural Agent'}
-                 </button>
+                  <h3 className="text-lg font-semibold text-slate-200 tracking-tight font-sans">
+                     {language === 'ka' ? 'აირჩიეთ ასისტენტი' : 'Select an assistant'}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-sans leading-relaxed">
+                     {language === 'ka' ? 'აირჩიეთ სასურველი ასისტენტი მარცხენა მენიუდან დასაწყებად.' : 'Choose an assistant from the sidebar to get started.'}
+                  </p>
                </div>
             </div>
          )}
          </AnimatePresence>
       </div>
+
+
 
       {/* 1. CREATOR OVERLAY MODAL */}
       <ProtonModal
