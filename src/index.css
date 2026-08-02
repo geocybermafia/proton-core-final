@@ -188,17 +188,8 @@
   background-attachment: fixed;
 }
 
-html {
+html, body, #root {
   height: 100%;
-}
-
-@media (max-width: 639px) {
-  html {
-    font-size: 16.5px;
-  }
-}
-
-body, #root {
   min-height: 100%;
 }
 
