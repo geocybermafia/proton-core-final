@@ -46,8 +46,8 @@ export const translations = {
       run: "Run Analysis",
       evaluating: "Evaluating System Performance...",
       latency: "Testing Memory Latency...",
-      matrix: "Benchmarking Matrix Flux...",
-      running: "Processing neural pathways...",
+      matrix: "Evaluating system performance...",
+      running: "Processing request...",
       awaiting: "Awaiting Sensor Data...",
       bench_score: "Final Score",
       status_optimal: "Performance Optimal. Systems synchronized.",
@@ -181,7 +181,7 @@ export const translations = {
     },
     personas: {
       title: "AI Council",
-      description: "Manage your specialized AI personas and neural agents.",
+      description: "Manage your specialized AI assistants and smart agents.",
       available: "Active",
       busy: "Processing",
       start_convo: "Initialize session with {name}",
@@ -234,7 +234,7 @@ export const translations = {
       footer_text: "© 2026 Proton Intelligence Systems. All rights reserved."
     },
     hardware: {
-      title: "Neural Hardware Info",
+      title: "Hardware Diagnostic",
       description: "Hardware telemetry and sensor diagnostics.",
       request_access: "Request Hardware Access",
       status_active: "Active",
@@ -248,7 +248,7 @@ export const translations = {
       optimal: "Optimal",
       optimization: "Optimization",
       awaiting: "Awaiting State",
-      compute: "Compute Nodes",
+      compute: "System Resources",
       cpu_load: "CPU LOAD",
       ram_usage: "MEMORY",
       disk_io: "DISK I/O",
@@ -262,7 +262,7 @@ export const translations = {
       geo_subtitle: "Vector Position",
       lat: "Latitude",
       lng: "Longitude",
-      location_secured: "Node Secured",
+      location_secured: "Connection Secured",
       location_sync: "Satellite Linked"
     },
     systems: {
@@ -271,7 +271,7 @@ export const translations = {
       cloud_status: "Cloud Link",
       connected: "Connected",
       offline: "Offline",
-      security: "Node Security",
+      security: "System Security",
       active: "Active",
       latency: "Network Latency",
       data_sync: "Data Sync",
@@ -317,7 +317,7 @@ export const translations = {
       locked: "Logic Locked",
       confirm_action: "Confirm System Action",
       builder: {
-        node_library: "Node Library",
+        node_library: "Action Library",
         trigger_lead: "Trigger: Inbound Lead",
         trigger_time: "Trigger: Time Interval",
         action_crm: "Action: CRM Sync",
@@ -329,19 +329,19 @@ export const translations = {
         workflow_name: "Workflow Name",
         placeholder_name: "Enter strategy title...",
         save_workflow: "Deploy Strategy",
-        empty_canvas: "Neural Canvas Empty",
-        empty_desc: "Deploy logic nodes from the architect library to begin automation."
+        empty_canvas: "Canvas is empty",
+        empty_desc: "Add action blocks from the library to begin automating your workflow."
       }
     },
     image_studio: {
       title: "Image Studio",
-      description: "Visual assets neural generation.",
+      description: "Generate images and visual assets.",
       safety_error: "Content filter restricted this prompt.",
-      fail_error: "Generation node failure.",
+      fail_error: "Image generation failed.",
       subtitle: "Professional Graphics Engine",
       placeholder: "Describe the visual vision...",
-      offline: "AI Node Offline",
-      generating: "Rendering Reality...",
+      offline: "AI Service Unavailable",
+      generating: "Creating visual asset...",
       generate_btn: "Generate Asset",
       limited: "Budget Constraint Reached"
     },
@@ -366,7 +366,7 @@ export const translations = {
       theme_enterprise: "Enterprise",
       theme_light: "Light",
       theme_titanium: "Titanium",
-      theme_proton: "Cyber",
+      theme_proton: "Proton Dark",
       theme_forest: "Forest",
       theme_sunset: "Sunset",
       theme_rose: "Rose",
@@ -399,7 +399,7 @@ export const translations = {
       camera_error: "Camera stream failed"
     },
     settings: {
-      title: "Neural Settings",
+      title: "System Settings",
       subtitle: "Management Control Center",
       description: "Global system configuration.",
       ai_config: "AI Assistant",
@@ -408,7 +408,7 @@ export const translations = {
       security: "Security",
       save: "Save Config",
       ai_desc: "Configure system intelligence parameters.",
-      temperature: "Creativity Bias (Temp)",
+      temperature: "Creativity Level",
       search: "Search Grounding",
       maps: "Maps Integration",
       voice: "Voice Synthesis",
@@ -416,10 +416,10 @@ export const translations = {
       profile_desc: "Manage your personal profile.",
       profile_picture: "Profile Picture",
       upload_avatar: "Upload New Photo",
-      name: "Neural Alias",
-      email: "Contact Node",
+      name: "Display Name",
+      email: "Email Address",
       region: "Operating Region",
-      phone: "Comms Link",
+      phone: "Phone Number",
       appearance_desc: "Customize management interface visualization.",
       zen: "Zen Mode (Focus)"
     },

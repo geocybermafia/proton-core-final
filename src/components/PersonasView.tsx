@@ -89,18 +89,18 @@ function PersonaAvatarView({
   );
 }
 
-// Cyber Preset Avatars
+// Preset Avatars
 const AVATAR_PRESETS = [
-  { emoji: '🤖', labelEn: 'Cortex Matrix', labelKa: 'კორტექს მატრიქსი' },
-  { emoji: '⚡', labelEn: 'Hyperion Vector', labelKa: 'ჰიპერიონ ვექტორი' },
-  { emoji: '🧠', labelEn: 'Synapse System', labelKa: 'სინაფსის ბირთვი' },
-  { emoji: '🔮', labelEn: 'Oracle Node', labelKa: 'ორაკულ ნოდი' },
-  { emoji: '👾', labelEn: 'Specter Logic', labelKa: 'სპექტრის ლოგიკა' },
+  { emoji: '🤖', labelEn: 'Smart Assistant', labelKa: 'ჭკვიანი ასისტენტი' },
+  { emoji: '⚡', labelEn: 'Analytics Agent', labelKa: 'ანალიტიკური აგენტი' },
+  { emoji: '🧠', labelEn: 'Core Logic', labelKa: 'ძირითადი ლოგიკა' },
+  { emoji: '🔮', labelEn: 'Knowledge Base', labelKa: 'ცოდნის ბაზა' },
+  { emoji: '👾', labelEn: 'Automation Bot', labelKa: 'ავტომატიზაციის ბოტი' },
   { emoji: '⚙️', labelEn: 'Engine Operator', labelKa: 'ოპერატორი' },
-  { emoji: '🛰️', labelEn: 'Orbit Link', labelKa: 'ორბიტალური ლინკი' },
-  { emoji: '🛡️', labelEn: 'Sentry Protocol', labelKa: 'სენტრი პროტოკოლი' },
-  { emoji: '🧪', labelEn: 'Helix Analytica', labelKa: 'ჰელიქს ანალიტიკა' },
-  { emoji: '🎨', labelEn: 'Nova Synthesizer', labelKa: 'ნოვა სინთეზატორი' },
+  { emoji: '🛰️', labelEn: 'Connect Assistant', labelKa: 'კავშირის ასისტენტი' },
+  { emoji: '🛡️', labelEn: 'Security Guard', labelKa: 'უსაფრთხოება' },
+  { emoji: '🧪', labelEn: 'Data Analyst', labelKa: 'მონაცემთა ანალიტიკოსი' },
+  { emoji: '🎨', labelEn: 'Content Creator', labelKa: 'კონტენტის ავტორი' },
 ];
 
 // System Instruction Presets
@@ -124,13 +124,13 @@ const INSTRUCTION_PRESETS = [
     titleKa: "კრეატიული ავტორი",
     descEn: "Draft high-converting newsletters.",
     descKa: "საინტერესო ტექსტების მომზადება.",
-    prompt: "You are a specialized marketing strategist and sci-fi copywriter. Write engaging, vivid, formatted promotional texts, copy blocks, and email templates with clear bulleted priorities."
+    prompt: "You are a specialized marketing strategist and creative copywriter. Write engaging, vivid, formatted promotional texts, copy blocks, and email templates with clear bulleted priorities."
   },
   {
     titleEn: "Workflow diagnostic",
     titleKa: "პროცესის დიაგნოსტიკა",
-    descEn: "Audit systemic node bottlenecks.",
-    descKa: "ნოდური გრაფების დაგეგმარება.",
+    descEn: "Audit process bottlenecks.",
+    descKa: "პროცესების დაგეგმარება.",
     prompt: "Perform structural logic analysis. Detect scheduling, sequence, and parameter inconsistencies in visual blueprints. Deliver actionable recommendations in tabular or bullet form."
   }
 ];
@@ -689,7 +689,7 @@ export default function PersonasView({
 
           {personas.length === 0 && (
             <div className="text-center py-16 text-[10px] font-mono font-bold uppercase tracking-widest leading-loose p-6 border border-dashed border-cyan-500/30 rounded-xl bg-black/40 text-cyan-500/60">
-              {language === 'ka' ? '⚡ ინტელექტის მოდულები არ არის სინქრონიზებული' : '⚡ NO NEURAL UNITS DEPLOYED'}
+              {language === 'ka' ? '⚡ ინტელექტის მოდულები არ არის სინქრონიზებული' : '⚡ NO AGENTS CREATED YET'}
             </div>
           )}
         </div>
@@ -798,7 +798,7 @@ export default function PersonasView({
                         setIsDecommissioning(true);
                       }}
                       className="p-2.5 bg-black/40 hover:bg-red-500/20 hover:text-red-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-red-500/40 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)] cursor-pointer"
-                      title={language === 'ka' ? 'აგენტის დეკომისიონირება' : 'Decommission Agent'}
+                      title={language === 'ka' ? 'აგენტის წაშლა' : 'Delete Agent'}
                     >
                        <Trash2 size={16} />
                     </button>
@@ -1118,7 +1118,7 @@ export default function PersonasView({
             />
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-cyan-300 uppercase tracking-wider font-mono">
-                Cognitive Language Node
+                Language Preference
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {['English', 'Georgian', 'Mixed'].map((l) => (
@@ -1161,7 +1161,7 @@ export default function PersonasView({
           <div className="space-y-3 p-4 bg-black/60 border border-cyan-500/30 rounded-2xl">
             <div className="flex justify-between items-center">
               <label className="text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider">
-                Select Neural Identity Avatar
+                Select Avatar Icon
               </label>
               <div className="flex gap-2">
                 <button
@@ -1260,7 +1260,7 @@ export default function PersonasView({
           setDecomTarget(null);
         }}
         size="sm"
-        title={language === 'ka' ? 'აგენტის დეკომისიონირება' : 'Secure Decommission Protocol'}
+        title={language === 'ka' ? 'აგენტის წაშლა' : 'Confirm Delete Agent'}
         description={
           decomTarget ? (
             <span className="text-rose-400 font-mono font-bold">
@@ -1279,7 +1279,7 @@ export default function PersonasView({
               }}
               className="font-mono text-slate-400"
             >
-              {language === 'ka' ? 'გაუქმება' : 'Abort'}
+              {language === 'ka' ? 'გაუქმება' : 'Cancel'}
             </ProtonButton>
             <ProtonButton
               variant="danger"
@@ -1287,7 +1287,7 @@ export default function PersonasView({
               onClick={handleDecommission}
               className="bg-red-600 hover:bg-red-500 text-white font-mono font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)]"
             >
-              {language === 'ka' ? 'წაშლა' : 'Decommission'}
+              {language === 'ka' ? 'წაშლა' : 'Delete Agent'}
             </ProtonButton>
           </>
         }
@@ -1299,7 +1299,7 @@ export default function PersonasView({
           <p className="text-xs font-mono text-slate-300 leading-relaxed font-normal">
             {language === 'ka' 
               ? `დარწმუნებული ხართ, რომ გსურთ აგენტის წაშლა? ეს ქმედება მთლიანად გაასუფთავებს მის სისტემურ ინსტრუქციებსა და საუბრის მეხსიერებას.` 
-              : `Are you absolutely certain you wish to decommission ${decomTarget?.name} from the neural matrix? All associated system prompt boundaries and chat interactions will be permanently wiped.`
+              : `Are you sure you want to delete ${decomTarget?.name}? All system instructions and chat history will be permanently deleted.`
             }
           </p>
         </div>

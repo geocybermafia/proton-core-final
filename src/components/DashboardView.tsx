@@ -185,7 +185,7 @@ export const DashboardView = React.memo(({
       } else {
         setAiResponse(`⚡ [Proton AI Direct Insight]:
 Query: "${query}"
-• Neural analysis completed across active workspace nodes.
+• Analysis completed across active workspace tools.
 • Action Suggestion: Proceed to AI Companions for an extended conversation.`);
       }
     }, 600);

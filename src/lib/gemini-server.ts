@@ -287,7 +287,7 @@ export async function generateOrEditImage(prompt: string, imageBase64?: string, 
         <path d="M-50,0 Q0,-80 50,0" fill="none" stroke="#00f2ff" stroke-dasharray="4,4" stroke-width="2"/>
         <path d="M-50,0 Q0,80 50,0" fill="none" stroke="#bc77ff" stroke-dasharray="4,4" stroke-width="2"/>
       </g>
-      <text x="200" y="320" fill="#00f2ff" font-family="monospace" font-size="12" letter-spacing="2" text-anchor="middle" opacity="0.8">PROTON COMPUTE LAYER</text>
+      <text x="200" y="320" fill="#00f2ff" font-family="monospace" font-size="12" letter-spacing="2" text-anchor="middle" opacity="0.8">PROTON SYSTEM LAYER</text>
       <text x="200" y="340" fill="#a4b3c6" font-family="sans-serif" font-size="10" font-weight="bold" text-anchor="middle" opacity="0.6">OFFLINE GENERATION FOR: ${prompt.toUpperCase().substring(0, 30)}...</text>
     </svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;

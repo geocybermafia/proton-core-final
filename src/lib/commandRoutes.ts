@@ -73,7 +73,7 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     uiMode: 'creative',
     titleEn: 'AI Translator',
     titleKa: 'AI მთარგმნელი',
-    descriptionEn: 'Multi-language AI translation and localization node',
+    descriptionEn: 'Multi-language AI translation and localization tool',
     descriptionKa: 'მრავალენოვანი AI თარგმნა და ლოკალიზაცია',
     category: 'utility'
   },
