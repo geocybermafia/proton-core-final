@@ -620,7 +620,7 @@ export default function PersonasView({
         {/* Top neon line indicator */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
 
-        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative shrink-0">
+        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative flex-shrink-0 w-full z-20">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)] animate-pulse" />
             <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-cyan-400 flex items-center gap-2">
@@ -714,7 +714,7 @@ export default function PersonasView({
              className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden"
            >
               {/* Header */}
-              <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative shrink-0">
+              <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative flex-shrink-0 w-full z-20">
                  {/* Top neon line */}
                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
                  
@@ -812,7 +812,7 @@ export default function PersonasView({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border-b border-cyan-500/30 bg-black/90 backdrop-blur-xl shadow-[0_0_25px_rgba(0,243,255,0.15)] shrink-0"
+                    className="overflow-hidden border-b border-cyan-500/30 bg-black/90 backdrop-blur-xl shadow-[0_0_25px_rgba(0,243,255,0.15)] flex-shrink-0 w-full z-20"
                   >
                     <div className="p-5 space-y-4">
                       <div className="flex justify-between items-center">
@@ -892,7 +892,7 @@ export default function PersonasView({
               </AnimatePresence>
 
               {/* Chat Container with Human-Centered Maintenance Card */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col items-center justify-center custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col items-center justify-center custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
                  <motion.div 
                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
                    animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -946,7 +946,7 @@ export default function PersonasView({
                  <div ref={chatEndRef} />
               </div>
 
-              <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative">
+              <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
                  <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
                     <AnimatePresence>
                       {showTools && (
