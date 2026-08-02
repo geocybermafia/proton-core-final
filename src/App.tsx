@@ -5753,7 +5753,7 @@ export default function App() {
         handleViewChange={handleViewChange}
       />
 
-      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg overflow-hidden">
+      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg min-h-screen w-full">
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[150px] pointer-events-none -mr-40 -mt-40 z-0" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
@@ -5947,17 +5947,14 @@ export default function App() {
 
         <div 
           id="main-scroll-container"
-          className={cn(
-            "flex-1 min-h-0 w-full relative z-10 flex flex-col",
-            (activeView === 'personas' || activeView === 'clips') ? "overflow-hidden h-full" : "overflow-y-auto overflow-x-hidden custom-scrollbar-minimal"
-          )}
+          className="flex-1 min-h-0 w-full relative z-10 flex flex-col overflow-y-auto custom-scrollbar-minimal"
         >
           {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
           <div ref={mobileNavSentinelRef} id="mobile-nav-sentinel" className="h-px w-full shrink-0 pointer-events-none opacity-0" />
           <div 
             className={cn(
               "w-full flex-1 min-h-0 flex flex-col",
-              (activeView === 'personas' || activeView === 'clips') 
+              activeView === 'personas'
                 ? "h-full overflow-hidden max-w-none p-2 sm:p-3 md:p-4" 
                 : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
             )}
@@ -5971,7 +5968,7 @@ export default function App() {
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
                 className={cn(
                   "w-full flex-1 min-h-0 flex flex-col",
-                  (activeView === 'personas' || activeView === 'clips') ? "h-full overflow-hidden" : ""
+                  activeView === 'personas' ? "h-full overflow-hidden" : ""
                 )}
               >
               {uiMode === 'market' && (activeView as string) === 'market-hub' ? (

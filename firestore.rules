@@ -17,9 +17,6 @@ service cloud.firestore {
     }
 
     function isVerified() {
-      // In many production apps, email verification is required.
-      // Keeping it commented or optional based on app context.
-      // return isSignedIn() && request.auth.token.email_verified == true;
       return isSignedIn();
     }
 
@@ -39,19 +36,29 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    // Safely get string property or default
+    function getStr(data, key, defVal) {
+      return (key in data && data[key] is string) ? data[key] : defVal;
+    }
+
+    // Safely get number property or default
+    function getNum(data, key, defVal) {
+      return (key in data && data[key] is number) ? data[key] : defVal;
+    }
+
     // ======================================================
-    // ENTITY VALIDATORS (PILLAR 2)
+    // ENTITY VALIDATORS
     // ======================================================
     
     function isValidListingShape(data) {
-      return (data.get('title', '') is string && data.get('title', '').size() <= 200)
-        && (data.get('price', 0) is number && data.get('price', 0) >= 0)
-        && (data.get('category', '') is string && data.get('category', '').size() <= 50)
-        && (data.get('country', '') is string && data.get('country', '').size() <= 50)
-        && (data.get('city', '') is string && data.get('city', '').size() <= 50)
-        && (data.get('status', 'active') in ['active', 'sold'])
-        && (data.get('description', '') is string && data.get('description', '').size() <= 5000)
-        && (data.get('image', '') is string && data.get('image', '').size() <= 2000000); // Allow up to 2MB for base64
+      return getStr(data, 'title', '').size() <= 200
+        && getNum(data, 'price', 0) >= 0
+        && getStr(data, 'category', '').size() <= 50
+        && getStr(data, 'country', '').size() <= 50
+        && getStr(data, 'city', '').size() <= 50
+        && (getStr(data, 'status', 'active') in ['active', 'sold'])
+        && getStr(data, 'description', '').size() <= 5000
+        && getStr(data, 'image', '').size() <= 2000000;
     }
 
     function isValidListingCreate(data) {
@@ -75,55 +82,12 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
-    function isValidStatsShape(data) {
-      return data.get('dailyGenerationsCount', 0) is number
-        && data.get('dailyGenerationsCount', 0) >= 0
-        && data.get('dailyGenerationsCount', 0) <= 25
-        && data.get('dailyGenerationsDate', '') is string
-        && data.get('aiTokens', 0) is number
-        && data.get('aiTokens', 0) >= 0
-        && data.get('computeTimeHours', 0) is number
-        && data.get('computeTimeHours', 0) >= 0
-        && data.get('storageGB', 0) is number
-        && data.get('storageGB', 0) >= 0
-        && data.get('spendingLimit', 0) is number
-        && data.get('spendingLimit', 0) >= 0;
-    }
-
-    function isValidStatsCreate(data) {
-      return isValidStatsShape(data)
-        && data.get('dailyGenerationsCount', 0) <= 20
-        && data.get('aiTokens', 0) <= 10000;
-    }
-
-    function isValidStatsUpdate(incoming, existing) {
-      return isValidStatsShape(incoming)
-        // 1. Quota Tampering Protection:
-        // Same date: dailyGenerationsCount must not decrease (prevents resetting count back to 0 on same date)
-        // New date: dailyGenerationsCount must reset to <= 1
-        && (
-          (incoming.get('dailyGenerationsDate', '') == existing.get('dailyGenerationsDate', '')
-            && incoming.get('dailyGenerationsCount', 0) >= existing.get('dailyGenerationsCount', 0))
-          ||
-          (incoming.get('dailyGenerationsDate', '') != existing.get('dailyGenerationsDate', '')
-            && incoming.get('dailyGenerationsCount', 0) <= 1)
-        )
-        // 2. Token & Compute Counter Protection:
-        // aiTokens and computeTimeHours can only increase or stay same, never arbitrarily decrease/reset
-        && incoming.get('aiTokens', 0) >= existing.get('aiTokens', 0)
-        && incoming.get('computeTimeHours', 0) >= existing.get('computeTimeHours', 0);
-    }
-
     // ======================================================
     // 1. PROFILES & USERS
     // ======================================================
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId)
-        && incoming().get('ai_tokens', 0) >= existing().get('ai_tokens', 0)
-        && incoming().get('aiTokens', 0) >= existing().get('aiTokens', 0);
-      
+      allow read, write: if isOwner(userId);
+
       match /workflows/{id} {
         allow read, write: if isOwner(userId);
       }
@@ -143,18 +107,15 @@ service cloud.firestore {
         allow read, write: if isOwner(userId);
       }
       match /stats/{id} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidStatsCreate(incoming());
-        allow update: if isOwner(userId) && isValidStatsUpdate(incoming(), existing());
-        allow delete: if false;
+        allow read, write: if isOwner(userId);
+      }
+      match /usage/{id} {
+        allow read, write: if isOwner(userId);
       }
     }
 
     match /profiles/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId)
-        && incoming().get('ai_tokens', 0) >= existing().get('ai_tokens', 0);
+      allow read, write: if isOwner(userId);
     }
 
     match /test/connection {
@@ -162,33 +123,27 @@ service cloud.firestore {
     }
 
     // ======================================================
-    // 2. LISTINGS (PILLAR 3 & 8)
+    // 2. LISTINGS
     // ======================================================
     match /listings/{listingId} {
       allow read: if isSignedIn();
       allow create: if isVerified() && isValidId(listingId) && isValidListingCreate(incoming());
       allow update: if isVerified() && isValidId(listingId) && (
-        // Action: Edit by owner
         (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
-        // Action: Mark as sold
         (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
-        // Action: Self-healing / Claim restored listings globally
         (existing().sellerId == "rCWg6xJA2rfnnEWMbOFQdMJljxD3" && incoming().sellerId == request.auth.uid && isValidListingShape(incoming()))
       );
       allow delete: if isVerified() && isValidId(listingId) && isOwner(existing().sellerId);
     }
 
     // ======================================================
-    // 3. ORDERS (NEW - PILLAR 8)
+    // 3. ORDERS
     // ======================================================
     match /orders/{orderId} {
-      // Secure List Queries (Pillar 8)
-      // Users can only see orders they bought or sold
       allow list: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       allow get: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       
       allow create: if isVerified() && isValidId(orderId) && isValidOrder(incoming())
-        // Relational Sync & Price Validation
         && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
         && incoming().amount == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price
         && incoming().sellerId == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId;
@@ -201,7 +156,6 @@ service cloud.firestore {
         && incoming().currency == existing().currency
         && incoming().itemTitle == existing().itemTitle
         && incoming().createdAt == existing().createdAt
-        // Role-Based Status Update Authorization (C4 Fix)
         && (
           (isOwner(existing().sellerId) && incoming().status in ['pending', 'booked', 'in_progress', 'shipped', 'completed', 'delivered', 'cancelled', 'refunded'])
           ||
@@ -211,10 +165,10 @@ service cloud.firestore {
     }
 
     // ======================================================
-    // 6. SELLER REVIEWS & RATINGS (NEW - TRUST & SAFETY)
+    // 6. SELLER REVIEWS & RATINGS
     // ======================================================
     match /seller_reviews/{reviewId} {
-      allow read: if isSignedIn(); // Viewable only by logged-in users
+      allow read: if isSignedIn();
       allow create: if isVerified() && isValidId(reviewId) 
         && incoming().buyerId == request.auth.uid 
         && incoming().sellerId != request.auth.uid 
@@ -235,17 +189,17 @@ service cloud.firestore {
     }
 
     // ======================================================
-    // 7. CHAT MESSAGES BETWEEN TRADERS (NEW)
+    // 7. CHAT MESSAGES BETWEEN TRADERS
     // ======================================================
     match /market_messages/{messageId} {
       allow read, list: if isSignedIn() && (
-        request.auth.uid in resource.data.get('participants', []) ||
-        resource.data.get('senderId', '') == request.auth.uid || 
-        resource.data.get('receiverId', '') == request.auth.uid || 
-        resource.data.get('sellerId', '') == request.auth.uid
+        ('participants' in resource.data && request.auth.uid in resource.data.participants) ||
+        getStr(resource.data, 'senderId', '') == request.auth.uid || 
+        getStr(resource.data, 'receiverId', '') == request.auth.uid || 
+        getStr(resource.data, 'sellerId', '') == request.auth.uid
       );
       allow create: if isVerified() && isValidId(messageId) 
-        && (incoming().get('senderId', '') == request.auth.uid || request.auth.uid in incoming().get('participants', []));
+        && (getStr(incoming(), 'senderId', '') == request.auth.uid || ('participants' in incoming() && request.auth.uid in incoming().participants));
       allow update, delete: if false;
     }
 
@@ -254,11 +208,11 @@ service cloud.firestore {
     // ======================================================
     match /system/config {
       allow read: if true;
-      allow write: if false; // Only via admin (not implemented here)
+      allow write: if false;
     }
 
     // ======================================================
-    // 5. AI OPTIMIZATION (PILLAR 8)
+    // 5. AI OPTIMIZATION
     // ======================================================
     match /shared_specs/{specId} {
       allow read: if isSignedIn();
@@ -267,14 +221,8 @@ service cloud.firestore {
         && incoming().createdAt == request.time;
     }
 
-    match /users/{userId}/usage/ai {
-      allow get: if isOwner(userId);
-      allow write: if isOwner(userId)
-        && incoming().lastAiGen == request.time;
-    }
-
     // ======================================================
-    // 8. PROTON CLIPS (TIKTOK/REELS SHORT VIDEOS)
+    // 8. PROTON CLIPS
     // ======================================================
     match /clips/{clipId} {
       allow read: if isSignedIn();
@@ -285,11 +233,9 @@ service cloud.firestore {
         && incoming().creatorName is string && incoming().creatorName.size() <= 200
         && incoming().createdAt == request.time;
       allow update: if isVerified() && isValidId(clipId) && (
-        // Action 1: Like/Unlike (can only alter likes array and likesCount)
         (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likesCount']) 
           && incoming().likes is list && incoming().likes.size() <= 100000
           && (incoming().likesCount is number || incoming().likesCount is int)) ||
-        // Action 2: Edit caption/soundName by owner
         (existing().creatorId == request.auth.uid 
           && incoming().creatorId == request.auth.uid 
           && incoming().videoUrl == existing().videoUrl
