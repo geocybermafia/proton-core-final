@@ -5759,7 +5759,7 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="min-h-14 sm:min-h-16 h-auto md:h-16 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-6 md:px-8 py-2 md:py-0 gap-x-2 sm:gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
+        <header className="min-h-14 sm:min-h-16 h-auto md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-6 md:px-8 py-2 md:py-0 gap-x-2 sm:gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
           {/* Left Section: User & Status */}
           <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 max-w-full">
             <button 

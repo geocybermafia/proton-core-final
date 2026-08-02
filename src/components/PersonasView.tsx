@@ -606,19 +606,19 @@ export default function PersonasView({
   const isUrl = (str: string) => str?.startsWith('http') || str?.startsWith('data:image');
 
   return (
-    <div className="flex flex-col h-full overflow-hidden w-full lg:flex-row gap-4 sm:gap-6 animate-in fade-in duration-500 relative">
+    <div className="flex flex-col flex-1 min-h-0 h-full w-full md:flex-row gap-4 sm:gap-6 animate-in fade-in duration-500 relative overflow-hidden">
       
       {/* Persona Selector Sidebar */}
       <div 
         className={cn(
-          "w-full md:w-80 flex flex-col h-full min-h-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.1)] relative overflow-hidden",
+          "w-full md:w-80 flex flex-col h-full min-h-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.1)] relative overflow-hidden shrink-0",
           (mobileShowChat || selectedPersona) ? "hidden md:flex" : "flex"
         )}
       >
         {/* Top neon line indicator */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
 
-        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative">
+        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)] animate-pulse" />
             <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-cyan-400 flex items-center gap-2">
@@ -636,7 +636,7 @@ export default function PersonasView({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar-minimal">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar-minimal">
           {personas.map((p) => {
             const isSelected = selectedPersona?.id === p.id;
             return (
