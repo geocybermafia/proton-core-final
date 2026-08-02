@@ -5947,22 +5947,21 @@ export default function App() {
 
         <div 
           id="main-scroll-container"
-          style={(activeView === 'personas' || activeView === 'clips') ? { height: 'calc(100dvh - 4rem)', minHeight: 'calc(100dvh - 4rem)', flex: '1 1 0%' } : undefined}
           className={cn(
-            "flex-1 min-h-0 overscroll-y-none relative z-10 custom-scrollbar-minimal flex flex-col overflow-x-hidden",
-            (activeView === 'personas' || activeView === 'clips') ? "h-full flex-1 min-h-0 overflow-hidden" : "overflow-y-auto"
+            "flex-1 min-h-0 w-full relative z-10 flex flex-col",
+            (activeView === 'personas' || activeView === 'clips') ? "overflow-hidden h-full" : "overflow-y-auto overflow-x-hidden custom-scrollbar-minimal"
           )}
         >
           {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
           <div ref={mobileNavSentinelRef} id="mobile-nav-sentinel" className="h-px w-full shrink-0 pointer-events-none opacity-0" />
           <div 
-            style={(activeView === 'personas' || activeView === 'clips') ? { height: '100%', minHeight: '100%', display: 'flex', flexDirection: 'column' } : undefined}
             className={cn(
-            "mx-auto px-1 w-full flex-1 min-h-0 flex flex-col",
-            (activeView === 'personas' || activeView === 'clips') 
-              ? "h-full flex-1 min-h-0 flex flex-col overflow-hidden max-w-none p-1 sm:p-3 md:p-4 pb-4" 
-              : "max-w-7xl px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
-          )}>
+              "w-full flex-1 min-h-0 flex flex-col",
+              (activeView === 'personas' || activeView === 'clips') 
+                ? "h-full overflow-hidden max-w-none p-2 sm:p-3 md:p-4" 
+                : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
+            )}
+          >
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
@@ -5970,10 +5969,9 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                style={(activeView === 'personas' || activeView === 'clips') ? { height: '100%', minHeight: '100%', display: 'flex', flexDirection: 'column', flex: '1 1 0%' } : undefined}
                 className={cn(
-                  "w-full",
-                  (activeView === 'personas' || activeView === 'clips') ? "w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden" : ""
+                  "w-full flex-1 min-h-0 flex flex-col",
+                  (activeView === 'personas' || activeView === 'clips') ? "h-full overflow-hidden" : ""
                 )}
               >
               {uiMode === 'market' && (activeView as string) === 'market-hub' ? (

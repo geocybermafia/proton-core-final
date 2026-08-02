@@ -607,13 +607,11 @@ export default function PersonasView({
 
   return (
     <div 
-      style={{ height: '100%', minHeight: '100%', display: 'flex' }}
       className="w-full h-full flex-1 min-h-0 flex flex-col md:flex-row gap-4 relative overflow-hidden animate-in fade-in duration-500"
     >
       
       {/* Persona Selector Sidebar */}
       <div 
-        style={{ height: '100%', minHeight: '100%' }}
         className={cn(
           "w-full md:w-80 flex flex-col h-full min-h-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.1)] relative overflow-hidden shrink-0",
           (mobileShowChat || selectedPersona) ? "hidden md:flex" : "flex"
@@ -699,7 +697,6 @@ export default function PersonasView({
 
       {/* Main Chat Interface */}
       <div 
-        style={{ height: '100%', minHeight: '100%' }}
         className={cn(
         "flex-1 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl overflow-hidden flex flex-col shadow-[0_0_35px_rgba(0,243,255,0.1)] h-full min-h-0 relative",
         mobileShowChat 
@@ -714,8 +711,7 @@ export default function PersonasView({
              animate={{ opacity: 1, scale: 1 }}
              exit={{ opacity: 0, scale: 0.99 }}
              transition={{ duration: 0.2 }}
-             style={{ height: '100%', minHeight: '100%', display: 'flex', flexDirection: 'column' }}
-             className="flex-1 min-h-0 flex flex-col overflow-hidden"
+             className="w-full h-full flex-1 min-h-0 flex flex-col overflow-hidden"
            >
               {/* Header */}
               <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative shrink-0">
