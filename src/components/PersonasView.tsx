@@ -607,20 +607,20 @@ export default function PersonasView({
 
   return (
     <div 
-      className="w-full h-full flex-1 min-h-0 flex flex-col md:flex-row gap-4 relative overflow-hidden animate-in fade-in duration-500"
+      className="w-full h-full flex flex-col md:flex-row gap-4 p-4 min-h-0 overflow-hidden box-border relative animate-in fade-in duration-500"
     >
       
       {/* Persona Selector Sidebar */}
       <div 
         className={cn(
-          "w-full md:w-80 flex flex-col h-full min-h-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.1)] relative overflow-hidden shrink-0",
+          "w-full md:w-80 flex flex-col h-full min-h-0 flex-shrink-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.1)] relative overflow-hidden",
           (mobileShowChat || selectedPersona) ? "hidden md:flex" : "flex"
         )}
       >
         {/* Top neon line indicator */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
 
-        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative flex-shrink-0 w-full z-20">
+        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative flex-shrink-0 z-10 w-full">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)] animate-pulse" />
             <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-cyan-400 flex items-center gap-2">
@@ -698,7 +698,7 @@ export default function PersonasView({
       {/* Main Chat Interface */}
       <div 
         className={cn(
-        "flex-1 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl overflow-hidden flex flex-col shadow-[0_0_35px_rgba(0,243,255,0.1)] h-full min-h-0 relative",
+        "flex-1 flex flex-col h-full min-h-0 overflow-hidden backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_35px_rgba(0,243,255,0.1)] relative",
         mobileShowChat 
           ? "fixed inset-0 z-[80] bg-black/90 md:relative md:inset-auto md:z-auto md:bg-black/70 md:border md:border-cyan-500/30 md:rounded-2xl h-[100dvh] md:h-full" 
           : "hidden md:flex md:relative"
@@ -946,7 +946,7 @@ export default function PersonasView({
                  <div ref={chatEndRef} />
               </div>
 
-              <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
+              <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 mt-auto pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
                  <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
                     <AnimatePresence>
                       {showTools && (

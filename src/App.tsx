@@ -5947,7 +5947,10 @@ export default function App() {
 
         <div 
           id="main-scroll-container"
-          className="flex-1 min-h-0 w-full relative z-10 flex flex-col overflow-y-auto custom-scrollbar-minimal"
+          className={cn(
+            "flex-1 min-h-0 w-full relative z-10 flex flex-col",
+            activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto custom-scrollbar-minimal"
+          )}
         >
           {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
           <div ref={mobileNavSentinelRef} id="mobile-nav-sentinel" className="h-px w-full shrink-0 pointer-events-none opacity-0" />
@@ -5955,7 +5958,7 @@ export default function App() {
             className={cn(
               "w-full flex-1 min-h-0 flex flex-col",
               activeView === 'personas'
-                ? "h-full overflow-hidden max-w-none p-2 sm:p-3 md:p-4" 
+                ? "h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0" 
                 : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
             )}
           >
