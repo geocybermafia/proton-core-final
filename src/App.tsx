@@ -5947,7 +5947,7 @@ export default function App() {
 
         <div 
           id="main-scroll-container"
-          style={(activeView === 'personas' || activeView === 'clips') ? { height: 'calc(100% - 4rem)', minHeight: 'calc(100% - 4rem)', flex: '1 1 0%' } : undefined}
+          style={(activeView === 'personas' || activeView === 'clips') ? { height: 'calc(100dvh - 4rem)', minHeight: 'calc(100dvh - 4rem)', flex: '1 1 0%' } : undefined}
           className={cn(
             "flex-1 min-h-0 overscroll-y-none relative z-10 custom-scrollbar-minimal flex flex-col overflow-x-hidden",
             (activeView === 'personas' || activeView === 'clips') ? "h-full flex-1 min-h-0 overflow-hidden" : "overflow-y-auto"
