@@ -607,7 +607,7 @@ export default function PersonasView({
 
   return (
     <div 
-      className="w-full h-full flex flex-col md:flex-row gap-4 p-4 min-h-0 overflow-hidden box-border relative animate-in fade-in duration-500"
+      className="w-full h-full min-h-0 flex-1 flex flex-col md:flex-row gap-4 p-3 sm:p-4 overflow-hidden box-border relative animate-in fade-in duration-500"
     >
       
       {/* Persona Selector Sidebar */}
@@ -704,7 +704,7 @@ export default function PersonasView({
           : "hidden md:flex md:relative"
       )}>
         {/* Permanent Locked Header */}
-        <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative flex-shrink-0 w-full z-20">
+        <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative flex-shrink-0 shrink-0 w-full z-30 top-0 block">
            {/* Top neon line */}
            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-emerald-400 opacity-80" />
            

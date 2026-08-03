@@ -5958,17 +5958,17 @@ export default function App() {
             className={cn(
               "w-full flex-1 min-h-0 flex flex-col",
               activeView === 'personas'
-                ? "h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0" 
+                ? "h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0" 
                 : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
             )}
           >
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                initial={activeView === 'personas' ? { opacity: 0 } : { opacity: 0, y: 15 }}
+                animate={activeView === 'personas' ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                exit={activeView === 'personas' ? { opacity: 0 } : { opacity: 0, y: -15 }}
+                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                 className={cn(
                   "w-full flex-1 min-h-0 flex flex-col",
                   activeView === 'personas' ? "h-full overflow-hidden" : ""
