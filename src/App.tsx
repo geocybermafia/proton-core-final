@@ -5753,7 +5753,7 @@ export default function App() {
         handleViewChange={handleViewChange}
       />
 
-      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg min-h-screen w-full">
+      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg w-full">
         {/* Subtle Background Gradients */}
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-proton-accent/5 rounded-full blur-[150px] pointer-events-none -mr-40 -mt-40 z-0" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
