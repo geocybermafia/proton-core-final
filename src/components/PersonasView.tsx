@@ -631,7 +631,7 @@ export default function PersonasView({
           </div>
           <button 
             onClick={() => setIsCreatorOpen(true)}
-            title={language === 'ka' ? 'დაამატე ახალი აგენტი' : 'Deploy New Agent'}
+            title={language === 'ka' ? 'დაამატეთ ახალი აგენტი' : 'Deploy New Agent'}
             className="p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,243,255,0.3)] transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
           >
             <Plus size={16} strokeWidth={2.5} />
@@ -935,7 +935,7 @@ export default function PersonasView({
               {/* Title */}
               <h3 className="text-lg sm:text-xl font-semibold text-slate-100 mb-2.5 tracking-tight font-sans">
                 {language === 'ka' 
-                  ? `${selectedPersona?.nameGe || selectedPersona?.name} დროებით მიუწვდომელია` 
+                  ? `პერსონაჟი „${selectedPersona?.nameGe || selectedPersona?.name}“ დროებით მიუწვდომელია` 
                   : `${selectedPersona?.name} is temporarily unavailable`
                 }
               </h3>

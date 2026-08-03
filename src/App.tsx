@@ -1011,7 +1011,7 @@ const LegacyOrganizerView = ({
                     <div key={lev} className="space-y-1">
                       <div className="flex justify-between text-[10px] font-black uppercase">
                         <span className={color}>{t[`energy_${lev}` as keyof typeof t]}</span>
-                        <span className="opacity-40">{count} {language === 'ka' ? 'დარჩა' : 'left'}</span>
+                        <span className="opacity-40">{language === 'ka' ? `დარჩენილია: ${count}` : `${count} left`}</span>
                       </div>
                       <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                         <motion.div 
@@ -1608,7 +1608,7 @@ const LegacyOrganizerView = ({
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
-                                  {completedCount} / {dayTasks.length} {language === 'ka' ? 'შესრულებული' : 'done'}
+                                  {completedCount} / {dayTasks.length} {language === 'ka' ? 'შესრულებულია' : 'done'}
                                 </span>
                                 <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-mono font-black", 
                                   isHigh ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"

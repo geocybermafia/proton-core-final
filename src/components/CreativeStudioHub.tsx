@@ -69,7 +69,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
       title: isKa ? 'სარეკლამო კოპირაიტინგი' : 'Advertising Copywriting',
       subtitle: isKa ? 'მარკეტინგული გენერატორი' : 'Marketing Ad Writer',
       desc: isKa 
-        ? 'პროფესიონალური სარეკლამო ასლების, ლოზუნგებისა და პოსტების გენერაცია მორგებული ტონით, პლატფორმებითა და სოციალური მედიის მოკაპებით.'
+        ? 'პროფესიონალური სარეკლამო ტექსტების, ლოზუნგებისა და პოსტების გენერაცია მორგებული ტონით, პლატფორმებითა და სოციალური მედიის მაკეტებით.'
         : 'Generate persuasive marketing copy, slogans, and social media captions with customizable tones, platforms, and interactive previews.',
       icon: FileText,
       color: 'purple',
@@ -92,11 +92,11 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
             {isKa ? 'კრეატიული სტუდია' : 'CREATIVE STUDIO HUB'}
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none text-proton-text">
-            {isKa ? 'გამოავლინე შენი შემოქმედებითი პოტენციალი' : 'Unleash Your Creative Power'}
+            {isKa ? 'გამოავლინეთ თქვენი შემოქმედებითი პოტენციალი' : 'Unleash Your Creative Power'}
           </h1>
           <p className="text-proton-muted text-base font-medium leading-relaxed">
             {isKa 
-              ? 'გამოიყენე პროტონის მოწინავე ხელოვნური ინტელექტი ილუსტრაციების შესაქმნელად, მყისიერი ორენოვანი თარგმანისთვის ან გაყიდვების გამზომი სარეკლამო კამპანიების დასაწერად.'
+              ? 'გამოიყენეთ პროტონის მოწინავე ხელოვნური ინტელექტი ილუსტრაციების შესაქმნელად, მყისიერი ორენოვანი თარგმანისთვის ან გაყიდვებზე ორიენტირებული სარეკლამო ტექსტების დასაწერად.'
               : 'Utilize advanced Proton computing systems to render custom graphics, perform synchronous speech translation, or generate highly engaging marketing content.'}
           </p>
         </div>
@@ -301,7 +301,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
               {isKa ? 'სარეკლამო კოპირაიტინგი' : 'Ad Copywriting Studio'}
             </h2>
             <p className="text-proton-muted text-sm mt-1">
-              {isKa ? 'შექმენი გაყიდვებზე ორიენტირებული ტექსტები და სარეკლამო ასლები' : 'Generate persuasive, high-converting copy in seconds'}
+              {isKa ? 'შექმენით გაყიდვებზე ორიენტირებული ტექსტები და სარეკლამო მასალები' : 'Generate persuasive, high-converting copy in seconds'}
             </p>
           </div>
         </div>
@@ -337,7 +337,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={isKa ? 'აღწერე რა არის შენი პროდუქტი, რა უპირატესობები აქვს ან რა აქციას სთავაზობ მომხმარებელს...' : 'Describe what you offer, its key advantages, or specific special discounts...'}
+              placeholder={isKa ? 'აღწერეთ რა არის თქვენი პროდუქტი, რა უპირატესობები აქვს ან რა აქციას სთავაზობთ მომხმარებელს...' : 'Describe what you offer, its key advantages, or specific special discounts...'}
               className="w-full bg-proton-bg border border-proton-border rounded-xl px-4 py-3 focus:outline-none focus:border-purple-400 transition-all h-32 text-sm resize-none shadow-inner"
             />
           </div>
@@ -432,7 +432,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
             ) : (
               <>
                 <FileText size={18} />
-                {isKa ? 'სარეკლამო ასლის გენერაცია' : 'Generate Ad Copies'}
+                {isKa ? 'სარეკლამო ტექსტის გენერაცია' : 'Generate Ad Copies'}
               </>
             )}
           </button>
@@ -593,7 +593,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                               className="text-[11px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-500/10 hover:bg-purple-500/20 px-2.5 py-1 rounded-full border border-purple-500/20 transition-all cursor-pointer"
                             >
                               {showAllHashtags ? (
-                                <span>{isKa ? '▲ ნაკლების ჩვენება' : '▲ Show less'}</span>
+                                <span>{isKa ? '▲ შეკეცვა' : '▲ Show less'}</span>
                               ) : (
                                 <span>{isKa ? `▼ ყველა ჰეშთეგის გამოჩენა (${matches.length})` : `▼ Show all hashtags (${matches.length})`}</span>
                               )}
@@ -636,7 +636,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
               </h3>
               <p className="text-xs text-proton-muted max-w-sm font-medium leading-relaxed">
                 {isKa 
-                  ? 'შეიყვანე ბრენდის სახელი და სასურველი პროდუქტის აღწერა მარცხნივ, რათა მიიღო პროფესიონალური და კონვერტირებადი სარეკლამო ასლები.'
+                  ? 'შეიყვანეთ ბრენდის სახელი და სასურველი პროდუქტის აღწერა მარცხნივ, რათა მიიღოთ პროფესიონალური სარეკლამო ტექსტები.'
                   : 'Enter your brand details and product description on the left parameters drawer to let AI render optimized social copy and visual previews.'}
               </p>
             </div>
