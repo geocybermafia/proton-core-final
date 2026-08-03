@@ -905,13 +905,13 @@ export default function PersonasView({
         {/* Dedicated Layout Branching: Maintenance Viewport | Empty State Viewport | Active Chat Viewport */}
         {isMaintenanceActive ? (
           /* Dedicated Maintenance Viewport */
-          <div className="flex-1 min-h-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full overflow-y-auto custom-scrollbar-minimal">
+          <div className="flex-1 min-h-0 flex flex-col items-center overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full custom-scrollbar-minimal">
             <motion.div 
               key={selectedPersona?.id}
               initial={{ opacity: 0, scale: 0.98, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden shrink-0"
+              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden shrink-0 my-auto"
             >
               {/* Subtle top ambient bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0" />
@@ -958,8 +958,8 @@ export default function PersonasView({
           </div>
         ) : !selectedPersona ? (
           /* Empty State Viewport */
-          <div className="flex-1 min-h-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full">
-            <div className="flex flex-col items-center justify-center text-center p-8 space-y-6">
+          <div className="flex-1 min-h-0 flex flex-col items-center overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full custom-scrollbar-minimal">
+            <div className="flex flex-col items-center justify-center text-center p-8 space-y-6 my-auto shrink-0">
                <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)]">
                      <Users size={40} strokeWidth={1.5} />
                </div>
