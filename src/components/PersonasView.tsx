@@ -604,6 +604,7 @@ export default function PersonasView({
   };
 
   const isUrl = (str: string) => str?.startsWith('http') || str?.startsWith('data:image');
+  const isMaintenanceActive = Boolean(selectedPersona && (selectedPersona as any).underMaintenance !== false);
 
   return (
     <div 
@@ -901,15 +902,16 @@ export default function PersonasView({
           )}
         </AnimatePresence>
 
-        {/* Chat / Maintenance Container */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col items-center justify-center custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
-          {selectedPersona ? (
+        {/* Dedicated Layout Branching: Maintenance Viewport | Empty State Viewport | Active Chat Viewport */}
+        {isMaintenanceActive ? (
+          /* Dedicated Maintenance Viewport */
+          <div className="flex-1 min-h-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full overflow-y-auto custom-scrollbar-minimal">
             <motion.div 
-              key={selectedPersona.id}
+              key={selectedPersona?.id}
               initial={{ opacity: 0, scale: 0.98, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden my-auto"
+              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden shrink-0"
             >
               {/* Subtle top ambient bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0" />
@@ -933,8 +935,8 @@ export default function PersonasView({
               {/* Title */}
               <h3 className="text-lg sm:text-xl font-semibold text-slate-100 mb-2.5 tracking-tight font-sans">
                 {language === 'ka' 
-                  ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია` 
-                  : `${selectedPersona.name} is temporarily unavailable`
+                  ? `${selectedPersona?.nameGe || selectedPersona?.name} დროებით მიუწვდომელია` 
+                  : `${selectedPersona?.name} is temporarily unavailable`
                 }
               </h3>
 
@@ -953,8 +955,11 @@ export default function PersonasView({
                 </p>
               </div>
             </motion.div>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center p-8 space-y-6 my-auto">
+          </div>
+        ) : !selectedPersona ? (
+          /* Empty State Viewport */
+          <div className="flex-1 min-h-0 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full">
+            <div className="flex flex-col items-center justify-center text-center p-8 space-y-6">
                <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)]">
                      <Users size={40} strokeWidth={1.5} />
                </div>
@@ -967,11 +972,33 @@ export default function PersonasView({
                   </p>
                </div>
             </div>
-          )}
-
-          {/* Scroll Anchor */}
-          <div ref={chatEndRef} />
-        </div>
+          </div>
+        ) : (
+          /* Active Chat Viewport */
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col space-y-4 custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={cn(
+                  "flex gap-3 max-w-[85%] sm:max-w-[75%]",
+                  msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
+                )}
+              >
+                <div className={cn(
+                  "p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed",
+                  msg.role === 'user'
+                    ? "bg-cyan-500/20 text-cyan-100 border border-cyan-400/40 rounded-tr-none"
+                    : "bg-black/60 text-slate-200 border border-cyan-900/40 rounded-tl-none backdrop-blur-md"
+                )}>
+                  <div className="markdown-body">
+                    <Markdown>{msg.content}</Markdown>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+        )}
 
         {/* Permanent Locked Footer */}
         <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 mt-auto pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
