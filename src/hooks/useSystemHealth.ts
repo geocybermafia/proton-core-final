@@ -104,24 +104,24 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
       if (status === 'offline') {
         showToast(
           language === 'ka' 
-            ? '⚠️ კავშირი გაწყდა: ოპერაციები ხორციელდება ოფლაინ ლოკალურ რეჟიმში' 
-            : '⚠️ System Connection Lost: Operating in offline cache mode',
+            ? '⚠️ ინტერნეტთან კავშირი გაწყდა: აპლიკაცია გადავიდა ოფლაინ რეჟიმში' 
+            : '⚠️ System Connection Lost: Operating in offline mode',
           'error',
           5000
         );
       } else if (status === 'degraded') {
         showToast(
           language === 'ka'
-            ? '⚡ სისტემის დაყოვნება გაიზარდა: სტატუსი შეფერხებულია'
-            : '⚡ Network Latency Elevated: System status degraded',
+            ? '⚡ ინტერნეტი შენელებულია: რეაგირების დრო გაზრდილია'
+            : '⚡ Network Latency Elevated: System response delayed',
           'warning',
           4000
         );
       } else if (status === 'optimal' && (prev === 'offline' || prev === 'degraded')) {
         showToast(
           language === 'ka'
-            ? '✅ სისტემური კავშირი აღდგენილია: სტატუსი ოპტიმალურია'
-            : '✅ System Connection Restored: Status optimal',
+            ? '✅ ინტერნეტთან კავშირი აღდგენილია'
+            : '✅ Connection Restored: System optimal',
           'success',
           4000
         );

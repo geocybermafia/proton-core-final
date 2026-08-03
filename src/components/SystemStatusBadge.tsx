@@ -58,8 +58,8 @@ export const SystemStatusBadge: React.FC<SystemStatusBadgeProps> = ({
         status === 'optimal'
           ? (language === 'ka' ? 'სისტემა მუშაობს გამართულად' : `System Optimal ${latency ? `(${latency}ms)` : ''}`)
           : status === 'degraded'
-            ? (language === 'ka' ? 'მაღალი დაყოვნება ან ქსელის შეფერხება' : `Degraded latency (${latency || '>1500'}ms)`)
-            : (language === 'ka' ? 'ქსელთან კავშირი გაწყვეტილია' : 'Network offline. Using cached data.')
+            ? (language === 'ka' ? 'ინტერნეტთან კავშირი შენელებულია' : 'Network connection is slow')
+            : (language === 'ka' ? 'ინტერნეტთან კავშირი გაწყვეტილია. გამოიყენება შენახული მონაცემები.' : 'Network offline. Using cached data.')
       }
     >
       <ProtonBadge

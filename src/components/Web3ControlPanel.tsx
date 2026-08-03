@@ -64,9 +64,9 @@ const translations = {
     statusStandalone: "სტატუსი: მოლოდინი",
     requiresValidation: "დასაწყებად დაუკავშირეთ თქვენი Web3 საფულე, რათა ჩატვირთოთ აქტიური ბალანსის მონაცემები და მოახდინოთ ტრანზაქციების ისტორიის სინქრონიზაცია.",
     initHandshake: "საფულის დაკავშირება",
-    evmBadge: "EVM თავსებადი",
+    evmBadge: "ციფრული საფულე",
     shieldBadge: "დაცული კავშირი",
-    activeLedgerBadge: "აქტიური რეესტრი",
+    activeLedgerBadge: "ციფრული საფულე",
     
     features: {
       f1_title: "EVM ინტეგრაცია",
@@ -84,16 +84,16 @@ const translations = {
       networkSync: "ქსელის სტატუსი",
       lockSecured: "კავშირი: დაცული",
       diagnostics: "ინფორმაცია",
-      auditNodes: "ტრანზაქცია რეესტრში",
+      auditNodes: "ტრანზაქციების ისტორია",
       compileMem: "სტატუსი: აქტიური",
       sandboxTitle: "ტრანზაქციების სიმულატორი",
-      resetLedger: "რეესტრის გასუფთავება",
+      resetLedger: "ისტორიის გასუფთავება",
       demoAmount: "სიმულაციური რაოდენობა (ETH)",
       recipientAddr: "მიმღების მისამართი",
       simulateDeposit: "შემოსულის სიმულაცია",
       simulateTransfer: "გადარიცხვის სიმულაცია",
       ledgerState: "სტატუსი: აქტიური მონიტორინგი",
-      noRecords: "ტრანზაქციების ისტორია ცარიელია",
+      noRecords: "ტრანზაქციების ისტორია ცარიელია. განახორციელეთ სიმულაცია ან დაუკავშირეთ საფულე.",
       receiveTx: "შემოსული ტრანზაქცია",
       transferTx: "გადარიცხვის ტრანზაქცია"
     }

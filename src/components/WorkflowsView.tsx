@@ -700,7 +700,7 @@ export default function WorkflowsView({
                         e.stopPropagation();
                         if (!isCreativeMode) return;
                         setConfirmation({
-                          message: "გსურთ ვორქფლოუს ეფექტურობის ანალიზი Gemini-ს მიერ?",
+                          message: "გსურთ პროცესის ეფექტურობის ანალიზის გაშვება?",
                           action: () => handleAnalyze(wf)
                         });
                       }}

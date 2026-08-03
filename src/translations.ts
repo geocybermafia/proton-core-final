@@ -800,7 +800,7 @@ export const translations = {
       subtitle: "გრაფიკული ძრავი",
       placeholder: "აღწერეთ თქვენი ხედვა...",
       offline: "AI კვანძი გათიშულია",
-      generating: "რეალობის რენდერი...",
+      generating: "სურათის გენერაცია...",
       generate_btn: "გენერაცია",
       limited: "ბიუჯეტი ამოიწურა"
     },
