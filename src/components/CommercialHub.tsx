@@ -675,7 +675,7 @@ app.post('/api/checkout/session', async (req, res) => {
                             <td className="py-3.5 px-4 text-center">
                               {!isSettled ? (
                                 <button
-                                  onClick={() => updateOrderStatus(order.id, 'completed')}
+                                  onClick={() => updateOrderStatus?.(order.id, 'completed')}
                                   className="px-2.5 py-1 rounded-lg bg-proton-accent/15 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent/30 text-[10px] font-bold uppercase tracking-wider transition"
                                 >
                                   {language === 'ka' ? 'დადასტურება' : 'Settle Order'}

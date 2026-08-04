@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { Workflow, WorkflowStep, Persona, Theme } from '../types';
@@ -6,12 +6,13 @@ import { translations } from '../translations';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, Lock, Zap, Edit2, Trash2, Clock, ChevronDown, X, Loader2, Sparkles, Activity, Link
+  Plus, Lock, Zap, Edit2, Trash2, Clock, ChevronDown, X, Loader2, Sparkles, Activity, Link, ShoppingBag, AlertTriangle, CheckCircle2, ArrowRight, Download, Bot
 } from 'lucide-react';
 import { handleFirestoreError } from '../lib/firebaseUtils';
 import { analyzeWorkflow } from '../lib/gemini';
 import { useToast } from './Toast';
 import Markdown from 'react-markdown';
+import { useSeller, useSellerStats } from '../contexts/SellerContext';
 
 function lazyWithRetry<T extends React.ComponentType<any>>(
   componentImport: () => Promise<{ default: T } | { [key: string]: any }>
@@ -541,6 +542,176 @@ export default function WorkflowsView({
   const [confirmation, setConfirmation] = useState<{ action: () => void; message: string } | null>(null);
   const { showToast } = useToast();
 
+  // Subscribe to SellerContext events for automation bridge execution
+  const { sellerOrders } = useSeller();
+  const sellerStats = useSellerStats();
+  const lowStockItems = sellerStats.lowStockItems;
+
+  // Processed event refs to prevent infinite loops
+  const processedNewOrdersRef = useRef<Set<string>>(new Set());
+  const processedCompletedOrdersRef = useRef<Set<string>>(new Set());
+  const processedLowStockRef = useRef<Set<string>>(new Set());
+
+  // Automation Event Execution Bridge Listener
+  useEffect(() => {
+    // 1. Process New Orders Trigger (onOrderReceived)
+    sellerOrders.forEach((order) => {
+      if (!processedNewOrdersRef.current.has(order.id)) {
+        processedNewOrdersRef.current.add(order.id);
+
+        const matchingWfs = workflows.filter(wf => 
+          wf.status !== 'inactive' && (
+            wf.trigger === 'onOrderReceived' ||
+            wf.trigger.toLowerCase().includes('order received') ||
+            wf.trigger.toLowerCase().includes('new order') ||
+            wf.nodes?.some((n: any) => n.subtype === 'onOrderReceived')
+          )
+        );
+
+        matchingWfs.forEach((wf) => {
+          setTimeout(() => {
+            showToast(
+              language === 'ka'
+                ? `⚡ [ავტომატიზაცია]: ${wf.name} გააქტიურდა შეკვეთაზე #${order.id.slice(-6)} ($${order.amount})`
+                : `⚡ [Workflow Triggered]: ${wf.name} for Order #${order.id.slice(-6)} ($${order.amount})`,
+              'info'
+            );
+          }, 150);
+        });
+      }
+
+      // 2. Process Completed Orders Trigger (onOrderCompleted)
+      if (
+        (order.status === 'completed' || order.status === 'delivered' || order.status === 'shipped') && 
+        !processedCompletedOrdersRef.current.has(order.id)
+      ) {
+        processedCompletedOrdersRef.current.add(order.id);
+
+        const matchingWfs = workflows.filter(wf => 
+          wf.status !== 'inactive' && (
+            wf.trigger === 'onOrderCompleted' ||
+            wf.trigger.toLowerCase().includes('order completed') ||
+            wf.trigger.toLowerCase().includes('post-sale') ||
+            wf.nodes?.some((n: any) => n.subtype === 'onOrderCompleted')
+          )
+        );
+
+        matchingWfs.forEach((wf) => {
+          setTimeout(() => {
+            showToast(
+              language === 'ka'
+                ? `⚡ [ავტომატიზაცია]: ${wf.name} გააქტიურდა შეკვეთის დასრულებაზე`
+                : `⚡ [Workflow Triggered]: ${wf.name} for Completed Order #${order.id.slice(-6)}`,
+              'success'
+            );
+          }, 300);
+        });
+      }
+    });
+
+    // 3. Process Low Stock Alerts Trigger (onLowStock)
+    lowStockItems.forEach((item) => {
+      if (!processedLowStockRef.current.has(item.id)) {
+        processedLowStockRef.current.add(item.id);
+
+        const matchingWfs = workflows.filter(wf => 
+          wf.status !== 'inactive' && (
+            wf.trigger === 'onLowStock' ||
+            wf.trigger.toLowerCase().includes('low stock') ||
+            wf.trigger.toLowerCase().includes('inventory warning') ||
+            wf.nodes?.some((n: any) => n.subtype === 'onLowStock')
+          )
+        );
+
+        matchingWfs.forEach((wf) => {
+          setTimeout(() => {
+            showToast(
+              language === 'ka'
+                ? `⚠️ [ავტომატიზაცია]: ${wf.name} - დაბალი მარაგი: ${item.title} (${item.quantity} დარჩა)`
+                : `⚠️ [Workflow Triggered]: ${wf.name} - Low Stock Warning: ${item.title} (${item.quantity} left)`,
+              'warning'
+            );
+          }, 450);
+        });
+      }
+    });
+  }, [sellerOrders, lowStockItems, workflows, showToast, language]);
+
+  // Preset Template 1-Click Installer
+  const installTemplate = async (templateKey: 'orderReceived' | 'lowStock' | 'orderCompleted') => {
+    let templateWf: Workflow;
+    if (templateKey === 'orderReceived') {
+      templateWf = {
+        id: `wf-ord-rec-${Date.now()}`,
+        name: language === 'ka' ? 'ავტო-შეტყობინება ახალ შეკვეთაზე' : 'Auto-Alert on New Order',
+        trigger: 'onOrderReceived',
+        action: language === 'ka' ? 'Slack / სისტემური შეტყობინება' : 'Instant Slack / System Notification',
+        personaId: personas[0]?.id || '',
+        status: 'active',
+        description: 'Dispatches instant alerts and records inbound order details when a new transaction arrives.',
+        nodes: [
+          { id: 'n1', type: 'trigger', subtype: 'onOrderReceived', label: 'Trigger: On Order Received' },
+          { id: 'n2', type: 'action', subtype: 'slack', label: 'Action: Slack / Toast Alert' },
+          { id: 'n3', type: 'action', subtype: 'crm', label: 'Action: CRM Sync' }
+        ],
+        steps: [
+          { id: 's1', label: 'Detect Order', description: 'Listens to SellerContext order events' },
+          { id: 's2', label: 'Send Alert', description: 'Broadcasts order notification' }
+        ]
+      };
+    } else if (templateKey === 'lowStock') {
+      templateWf = {
+        id: `wf-low-stk-${Date.now()}`,
+        name: language === 'ka' ? 'დაბალი მარაგის გაფრთხილება' : 'Low Stock Inventory Warning',
+        trigger: 'onLowStock',
+        action: language === 'ka' ? 'ელფოსტის შეტყობინება და ჟურნალი' : 'Email Alert & Inventory Log',
+        personaId: personas[0]?.id || '',
+        status: 'active',
+        description: 'Triggers automated inventory warnings when item quantities drop to 3 units or fewer.',
+        nodes: [
+          { id: 'n1', type: 'trigger', subtype: 'onLowStock', label: 'Trigger: On Low Stock Alert' },
+          { id: 'n2', type: 'action', subtype: 'email', label: 'Action: Send Email Warning' },
+          { id: 'n3', type: 'logic', subtype: 'wait', label: 'Logic: Wait 24 Hours' }
+        ],
+        steps: [
+          { id: 's1', label: 'Check Stock', description: 'Monitors seller listing stock thresholds' },
+          { id: 's2', label: 'Notify Owner', description: 'Sends email alert to merchant' }
+        ]
+      };
+    } else {
+      templateWf = {
+        id: `wf-ord-comp-${Date.now()}`,
+        name: language === 'ka' ? 'გაყიდვისშემდგომი მადლობა და ჟურნალი' : 'Post-Sale Thank You & Log',
+        trigger: 'onOrderCompleted',
+        action: language === 'ka' ? 'ფინანსური სეტლმენტი და მადლობის წერილი' : 'Finance Settlement & Thank You Email',
+        personaId: personas[0]?.id || '',
+        status: 'active',
+        description: 'Reconciles financial ledger and dispatches thank you confirmation on completed orders.',
+        nodes: [
+          { id: 'n1', type: 'trigger', subtype: 'onOrderCompleted', label: 'Trigger: On Order Completed' },
+          { id: 'n2', type: 'action', subtype: 'crm', label: 'Action: Finance Ledger Sync' },
+          { id: 'n3', type: 'action', subtype: 'email', label: 'Action: Customer Thank You Email' }
+        ],
+        steps: [
+          { id: 's1', label: 'Confirm Order', description: 'Triggers upon merchant order delivery confirmation' },
+          { id: 's2', label: 'Ledger Settlement', description: 'Reconciles 5% platform fee and net earnings' }
+        ]
+      };
+    }
+
+    setWorkflows(prev => [templateWf, ...prev]);
+    if (user && db) {
+      const docRef = doc(db, 'users', user.uid, 'workflows', templateWf.id);
+      await setDoc(docRef, sanitizeForFirestore(templateWf)).catch(e => handleFirestoreError(e, 'create', docRef.path));
+    }
+    showToast(
+      language === 'ka' 
+        ? `შაბლონი "${templateWf.name}" წარმატებით დაინსტალირდა!` 
+        : `Template "${templateWf.name}" installed successfully!`,
+      'success'
+    );
+  };
+
   const handleSave = async (updatedWorkflow: Workflow) => {
     setWorkflows(workflows.map(wf => wf.id === updatedWorkflow.id ? updatedWorkflow : wf));
     setEditingWorkflow(null);
@@ -620,6 +791,113 @@ export default function WorkflowsView({
           {isCreativeMode ? <Plus size={20} /> : <Lock size={16} />}
           {isCreativeMode ? t.add_workflow : t.locked}
         </button>
+      </div>
+
+      {/* 1-Click Preset Merchant Automation Templates */}
+      <div className="proton-glass p-6 sm:p-8 rounded-[32px] border border-proton-border space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-proton-border/45 pb-4">
+          <div>
+            <h3 className="text-base font-black uppercase tracking-wider text-white flex items-center gap-2">
+              <Zap className="text-proton-accent" size={18} />
+              {language === 'ka' ? 'მერჩანტის ავტომატიზაციის მზა შაბლონები' : 'Preset Merchant Automation Templates'}
+            </h3>
+            <p className="text-xs text-proton-muted">
+              {language === 'ka' 
+                ? 'ერთ დაჭერაში დააინსტალირეთ შეკვეთების, მარაგებისა და გაყიდვების ავტომატური პროცესები.' 
+                : '1-click install pre-configured workflow pipelines connected directly to SellerContext event triggers.'}
+            </p>
+          </div>
+          <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            {language === 'ka' ? 'მოვლენების ხიდი აქტიურია' : 'Event Bridge Active'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Template 1: Auto-Alert on New Order */}
+          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border hover:border-proton-accent/40 transition-all space-y-3 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
+                  <ShoppingBag size={12} />
+                  onOrderReceived
+                </span>
+                <span className="text-[10px] text-proton-muted font-mono">Template 1</span>
+              </div>
+              <h4 className="font-bold text-sm text-white">
+                {language === 'ka' ? 'ავტო-შეტყობინება ახალ შეკვეთაზე' : 'Auto-Alert on New Order'}
+              </h4>
+              <p className="text-xs text-proton-muted leading-relaxed">
+                {language === 'ka' 
+                  ? 'მყისიერი შეტყობინება და CRM ჩანაწერი ახალი შეკვეთის მიღებისთანავე.' 
+                  : 'Sends real-time alerts & logs details to CRM instantly when a buyer submits a new order.'}
+              </p>
+            </div>
+            <button
+              onClick={() => installTemplate('orderReceived')}
+              className="w-full py-2.5 px-3 rounded-xl bg-proton-accent/10 hover:bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-2"
+            >
+              <Download size={14} />
+              {language === 'ka' ? 'ინსტალაცია (1-Click)' : 'Install Flow'}
+            </button>
+          </div>
+
+          {/* Template 2: Low Stock Inventory Warning */}
+          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border hover:border-proton-accent/40 transition-all space-y-3 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
+                  <AlertTriangle size={12} />
+                  onLowStock
+                </span>
+                <span className="text-[10px] text-proton-muted font-mono">Template 2</span>
+              </div>
+              <h4 className="font-bold text-sm text-white">
+                {language === 'ka' ? 'დაბალი მარაგის გაფრთხილება' : 'Low Stock Inventory Warning'}
+              </h4>
+              <p className="text-xs text-proton-muted leading-relaxed">
+                {language === 'ka' 
+                  ? 'ავტომატური გაფრთხილება ელფოსტაზე, როდესაც ნივთის მარაგი 3 ერთეულზე ნაკლებია.' 
+                  : 'Triggers automated email & inventory alerts when product stock drops below threshold.'}
+              </p>
+            </div>
+            <button
+              onClick={() => installTemplate('lowStock')}
+              className="w-full py-2.5 px-3 rounded-xl bg-proton-accent/10 hover:bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-2"
+            >
+              <Download size={14} />
+              {language === 'ka' ? 'ინსტალაცია (1-Click)' : 'Install Flow'}
+            </button>
+          </div>
+
+          {/* Template 3: Post-Sale Thank You & Log */}
+          <div className="p-4 rounded-2xl bg-proton-bg/40 border border-proton-border hover:border-proton-accent/40 transition-all space-y-3 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[9px] font-mono font-bold uppercase tracking-wider flex items-center gap-1">
+                  <CheckCircle2 size={12} />
+                  onOrderCompleted
+                </span>
+                <span className="text-[10px] text-proton-muted font-mono">Template 3</span>
+              </div>
+              <h4 className="font-bold text-sm text-white">
+                {language === 'ka' ? 'გაყიდვისშემდგომი მადლობა და ჟურნალი' : 'Post-Sale Thank You & Log'}
+              </h4>
+              <p className="text-xs text-proton-muted leading-relaxed">
+                {language === 'ka' 
+                  ? 'ფინანსური სეტლმენტის ბალანსის გაანგარიშება და მადლობის გაგზავნა შეკვეთის დასრულებისას.' 
+                  : 'Executes ledger settlement and dispatches customer confirmation on order completion.'}
+              </p>
+            </div>
+            <button
+              onClick={() => installTemplate('orderCompleted')}
+              className="w-full py-2.5 px-3 rounded-xl bg-proton-accent/10 hover:bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-2"
+            >
+              <Download size={14} />
+              {language === 'ka' ? 'ინსტალაცია (1-Click)' : 'Install Flow'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {confirmation && (

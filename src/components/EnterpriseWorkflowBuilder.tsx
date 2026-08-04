@@ -19,7 +19,9 @@ import {
   Hourglass,
   Database,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ShoppingBag,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -33,6 +35,9 @@ interface WorkflowNode {
 }
 
 const NODE_TYPES = [
+  { id: 'onOrderReceived', type: 'trigger', subtype: 'onOrderReceived', icon: ShoppingBag, color: 'text-emerald-500', bgColor: 'bg-emerald-50' },
+  { id: 'onOrderCompleted', type: 'trigger', subtype: 'onOrderCompleted', icon: CheckCircle2, color: 'text-teal-500', bgColor: 'bg-teal-50' },
+  { id: 'onLowStock', type: 'trigger', subtype: 'onLowStock', icon: AlertTriangle, color: 'text-amber-500', bgColor: 'bg-amber-50' },
   { id: 'lead', type: 'trigger', subtype: 'lead', icon: Bot, color: 'text-indigo-500', bgColor: 'bg-indigo-50' },
   { id: 'time', type: 'trigger', subtype: 'time', icon: Clock, color: 'text-blue-500', bgColor: 'bg-blue-50' },
   { id: 'crm', type: 'action', subtype: 'crm', icon: Database, color: 'text-orange-500', bgColor: 'bg-orange-50' },
@@ -57,6 +62,9 @@ export const EnterpriseWorkflowBuilder = ({
   const [workflowName, setWorkflowName] = useState(workflow.name || '');
 
   const nodeLibraryLabels: Record<string, string> = {
+    onOrderReceived: language === 'ka' ? 'ტრიგერი: მიღებულია შეკვეთა' : 'Trigger: On Order Received',
+    onOrderCompleted: language === 'ka' ? 'ტრიგერი: შეკვეთა დასრულდა' : 'Trigger: On Order Completed',
+    onLowStock: language === 'ka' ? 'ტრიგერი: დაბალი მარაგის განგაში' : 'Trigger: On Low Stock Alert',
     lead: t.trigger_lead,
     time: t.trigger_time,
     crm: t.action_crm,
