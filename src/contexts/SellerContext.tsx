@@ -26,6 +26,19 @@ export interface CreateListingPayload {
   listingType?: 'product' | 'service' | 'project';
 }
 
+export interface CreateOrderPayload {
+  listingId: string;
+  sellerId: string;
+  buyerId?: string;
+  amount: number;
+  currency?: string;
+  itemTitle: string;
+  orderType?: 'service' | 'product' | string;
+  buyerInstructions?: string;
+  source?: string;
+  clipId?: string;
+}
+
 export interface SellerContextType {
   allListings: Listing[];
   sellerListings: Listing[];
@@ -40,6 +53,7 @@ export interface SellerContextType {
   deleteLedgerItem?: (id: string) => Promise<void>;
   createDraftListing: (payload: CreateListingPayload) => Promise<Listing>;
   publishListing: (payload: CreateListingPayload) => Promise<Listing>;
+  createOrder: (payload: CreateOrderPayload) => Promise<Order>;
   updateOrderStatus?: (orderId: string, status: string) => Promise<void>;
 }
 
@@ -389,6 +403,63 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return createDraftListing({ ...payload, status: payload.status || 'active' });
   }, [createDraftListing]);
 
+  const createOrder = useCallback(async (payload: CreateOrderPayload): Promise<Order> => {
+    const newId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? `ord-${crypto.randomUUID()}`
+      : `ord-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    const newOrder: Order = {
+      id: newId,
+      listingId: payload.listingId,
+      buyerId: payload.buyerId || user?.uid || 'guest-buyer',
+      sellerId: payload.sellerId,
+      amount: payload.amount,
+      currency: payload.currency || 'USD',
+      itemTitle: payload.itemTitle,
+      status: 'pending',
+      orderType: payload.orderType || 'product',
+      buyerInstructions: payload.buyerInstructions || '',
+      createdAt: Date.now(),
+      source: payload.source,
+      clipId: payload.clipId
+    };
+
+    try {
+      const docRef = doc(db, 'orders', newId);
+      await setDoc(docRef, newOrder);
+    } catch (err) {
+      console.warn("[SellerContext] Firestore create order warning (using local state fallback):", err);
+    }
+
+    setSellerOrders(prev => [newOrder, ...prev]);
+    setBuyerOrders(prev => [newOrder, ...prev]);
+
+    // Also record inbound transaction in ledger if merchant is receiving
+    if (user && user.uid === payload.sellerId) {
+      const ledgerEntry: LedgerItem = {
+        id: `TX-CLIP-${Date.now().toString(36).toUpperCase()}`,
+        date: new Date().toISOString().split('T')[0],
+        description: `Shoppable Clip Sale: ${payload.itemTitle}`,
+        category: 'Clip Video Sales',
+        type: 'inbound',
+        value: payload.amount,
+        volume: 1,
+        total: payload.amount,
+        status: 'completed',
+        operator: `Clip-${payload.clipId || 'tag'}`
+      };
+      setLedgerItems(prev => [ledgerEntry, ...prev]);
+      try {
+        const ledgerDocRef = doc(db, 'users', user.uid, 'market_ledger', ledgerEntry.id);
+        await setDoc(ledgerDocRef, ledgerEntry);
+      } catch (e) {
+        console.warn("[SellerContext] Ledger entry save warning:", e);
+      }
+    }
+
+    return newOrder;
+  }, [user]);
+
   const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
     setSellerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
     setBuyerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
@@ -421,6 +492,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deleteLedgerItem,
     createDraftListing,
     publishListing,
+    createOrder,
     updateOrderStatus
   }), [
     allListings,
@@ -436,6 +508,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deleteLedgerItem,
     createDraftListing,
     publishListing,
+    createOrder,
     updateOrderStatus
   ]);
 
@@ -463,6 +536,8 @@ export interface SellerStats {
   pendingOrderCount: number;
   completedOrderCount: number;
   pendingOrders: Order[];
+  clipOrdersCount: number;
+  clipGrossRevenue: number;
 }
 
 export const useSellerStats = (): SellerStats => {
@@ -494,17 +569,21 @@ export const useSellerStats = (): SellerStats => {
     const activeListingCount = activeListings.length > 0 ? activeListings.length : sellerListings.length;
 
     const lowStockItems = sellerListings
-      .filter(l => (l.quantity !== undefined && l.quantity <= 3) || l.status === 'low_stock')
+      .filter(l => (l.stock !== undefined && l.stock <= 3) || (l.quantity !== undefined && l.quantity <= 3) || l.status === 'low_stock')
       .map(l => ({
         id: l.id,
         title: l.title || l.titleGe || 'Listing Item',
-        quantity: l.quantity ?? 1
+        quantity: l.stock ?? l.quantity ?? 1
       }));
 
     // If no explicit low stock items found in listings, provide sample low-stock items if listings exist
     const finalLowStockItems = lowStockItems.length > 0 
       ? lowStockItems 
       : (sellerListings.length > 0 ? [{ id: sellerListings[0].id, title: sellerListings[0].title || 'Listing', quantity: 2 }] : []);
+
+    const clipOrders = sellerOrders.filter(o => o.source === 'clip');
+    const clipOrdersCount = clipOrders.length;
+    const clipGrossRevenue = clipOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
 
     return {
       grossRevenue,
@@ -514,7 +593,9 @@ export const useSellerStats = (): SellerStats => {
       lowStockItems: finalLowStockItems,
       pendingOrderCount: pendingOrders.length,
       completedOrderCount: completedOrders.length,
-      pendingOrders
+      pendingOrders,
+      clipOrdersCount,
+      clipGrossRevenue
     };
   }, [sellerListings, sellerOrders, ledgerItems]);
 };

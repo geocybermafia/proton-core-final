@@ -578,6 +578,7 @@ export default function PersonasView({
     : 'All listings sufficiently stocked'
 }
 • Order Pipeline Status: ${sellerStats.pendingOrderCount} Pending Fulfillment, ${sellerStats.completedOrderCount} Completed Orders
+• Shoppable Video Clips Sales: ${sellerStats.clipOrdersCount} orders generated $${sellerStats.clipGrossRevenue.toLocaleString()} USD
 ${
   sellerStats.pendingOrders.length > 0
     ? `• Pending Orders Details:\n${sellerStats.pendingOrders

@@ -33,7 +33,11 @@ import {
   CheckCircle2,
   Bookmark,
   Clock,
-  LogIn
+  LogIn,
+  Tag,
+  CreditCard,
+  Wallet,
+  PackageCheck
 } from 'lucide-react';
 import { 
   collection, 
@@ -59,8 +63,9 @@ import { db, auth, googleProvider } from '../firebase';
 import { uploadClipVideo } from '../lib/storageUtils';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSeller } from '../contexts/SellerContext';
 import { useToast } from './Toast';
-import { ClipIssue } from '../types';
+import { ClipIssue, Listing } from '../types';
 
 // Simple IndexedDB wrapper for local caching of larger videos
 const initDB = (): Promise<IDBDatabase> => {
@@ -539,6 +544,106 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
   const [previewingIssueId, setPreviewingIssueId] = useState<string | null>(null);
   const [doubleTapHearts, setDoubleTapHearts] = useState<Record<string, boolean>>({});
   const [soundOverlay, setSoundOverlay] = useState<{ visible: boolean; muted: boolean }>({ visible: false, muted: false });
+
+  // Merchant Product Tagging & Instant Shoppable Checkout States
+  const { sellerListings, allListings, createOrder } = useSeller();
+  const [taggingClip, setTaggingClip] = useState<Clip | null>(null);
+  const [taggingProductId, setTaggingProductId] = useState<string>('');
+  const [isSavingTag, setIsSavingTag] = useState<boolean>(false);
+
+  const [checkoutClip, setCheckoutClip] = useState<Clip | null>(null);
+  const [checkoutQuantity, setCheckoutQuantity] = useState<number>(1);
+  const [checkoutInstructions, setCheckoutInstructions] = useState<string>('');
+  const [checkoutPaymentMethod, setCheckoutPaymentMethod] = useState<'wallet' | 'card' | 'crypto'>('wallet');
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+  const [checkoutSuccessOrder, setCheckoutSuccessOrder] = useState<any | null>(null);
+
+  // Save product tag to clip handler
+  const handleSaveTagProduct = async () => {
+    if (!taggingClip) return;
+    setIsSavingTag(true);
+    try {
+      const newProdId = taggingProductId;
+      
+      // Update Firestore clip document if persistent
+      if (!taggingClip.id.startsWith('seed-')) {
+        await updateDoc(doc(db, 'clips', taggingClip.id), {
+          productId: newProdId
+        });
+      }
+
+      // Resolve product metadata
+      let foundProd: Listing | undefined = sellerListings.find(l => l.id === newProdId) || allListings.find(l => l.id === newProdId) || listings.find(l => l.id === newProdId);
+      
+      // Optimistically update local clips state
+      setClips(prev => prev.map(c => {
+        if (c.id === taggingClip.id) {
+          return {
+            ...c,
+            productId: newProdId,
+            productInfo: foundProd ? {
+              id: foundProd.id,
+              title: foundProd.title,
+              price: foundProd.price || 0,
+              image: foundProd.images?.[0] || foundProd.image || '',
+              category: foundProd.category || '',
+              status: foundProd.status
+            } : undefined
+          };
+        }
+        return c;
+      }));
+
+      showToast(
+        newProdId 
+          ? (language === 'ka' ? 'პროდუქტი წარმატებით მიება ვიდეოს!' : 'Product attached to video clip!')
+          : (language === 'ka' ? 'პროდუქტის ტეგი ამოშლილია' : 'Product tag removed from clip'),
+        'success'
+      );
+      setTaggingClip(null);
+    } catch (err) {
+      console.error("Failed to tag product:", err);
+      showToast(language === 'ka' ? 'პროდუქტის მიბმა ვერ მოხერხდა' : 'Failed to update product tag', 'error');
+    } finally {
+      setIsSavingTag(false);
+    }
+  };
+
+  // Instant shoppable order submission handler
+  const handleCompleteCheckout = async () => {
+    if (!checkoutClip || !checkoutClip.productInfo) return;
+    setIsSubmittingOrder(true);
+    try {
+      const product = checkoutClip.productInfo;
+      const unitPrice = product.price || 0;
+      const totalAmount = unitPrice * checkoutQuantity;
+      const sellerId = product.sellerId || checkoutClip.creatorId || 'merchant-main';
+
+      const order = await createOrder({
+        listingId: product.id || checkoutClip.productId || 'lst-sample',
+        sellerId: sellerId,
+        amount: totalAmount,
+        currency: 'USD',
+        itemTitle: product.title,
+        orderType: 'product',
+        buyerInstructions: checkoutInstructions || 'Instant Shoppable Clip Purchase',
+        source: 'clip',
+        clipId: checkoutClip.id
+      });
+
+      setCheckoutSuccessOrder(order);
+      showToast(
+        language === 'ka' ? 'შეკვეთა წარმატებით განთავსდა!' : 'Order placed successfully from Clip!',
+        'success',
+        6000
+      );
+    } catch (err) {
+      console.error("Checkout error:", err);
+      showToast(language === 'ka' ? 'შეკვეთის განთავსება ვერ მოხერხდა' : 'Failed to process checkout', 'error');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
 
   // Analyze video frame brightness using hidden canvas for true programmatic diagnostics
   const analyzeVideoBrightness = (videoUrl: string, duration: number): Promise<number[]> => {
@@ -2381,6 +2486,31 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                           </button>
                         </div>
 
+                        {/* Tag Product Button (Creator / Merchant) */}
+                        {(clip.creatorId === user?.uid || (user && sellerListings.length > 0)) && (
+                          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTaggingClip(clip);
+                                setTaggingProductId(clip.productId || '');
+                              }}
+                              className={cn(
+                                "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
+                                clip.productId 
+                                  ? "bg-pink-600/50 border-pink-400 text-pink-200 shadow-pink-500/30"
+                                  : "bg-black/50 border-white/15 text-white hover:bg-black/75"
+                              )}
+                              title={language === 'ka' ? 'პროდუქტის მიბმა' : 'Tag Product'}
+                            >
+                              <Tag className="h-5 w-5 text-pink-300" />
+                            </button>
+                            <span className="text-[9px] font-bold text-white/90 drop-shadow">
+                              {clip.productId ? (language === 'ka' ? 'მიბმულია' : 'Tagged') : (language === 'ka' ? 'მიბმა' : 'Tag')}
+                            </span>
+                          </div>
+                        )}
+
                         {/* Delete button (owner only) */}
                         {clip.creatorId === user?.uid && (
                           <div className="flex flex-col items-center gap-1 pointer-events-auto">
@@ -2485,35 +2615,80 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                           );
                         })()}
 
-                        {/* Tagged Product Mini Badge */}
-                        {hasProduct && clip.productInfo && (
-                          <div 
-                            onClick={() => setActiveView('market-hub')}
-                            className="bg-black/75 hover:bg-black/90 border border-pink-500/40 rounded-xl p-2 max-w-xs pointer-events-auto flex items-center justify-between gap-2.5 shadow-xl backdrop-blur-md transition-all cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                {clip.productInfo.image ? (
-                                  <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover" alt="" />
-                                ) : (
-                                  <ShoppingBag size={13} className="text-pink-400" />
-                                )}
+                        {/* Tagged Product Interactive Overlay Widget */}
+                        {hasProduct && clip.productInfo && (() => {
+                          const isSoldOut = clip.productInfo.status === 'sold' || (clip.productInfo as any).isSold || (clip.productInfo as any).quantity === 0;
+
+                          if (isSoldOut) {
+                            return (
+                              <div 
+                                className="bg-black/80 border border-gray-600/40 rounded-xl p-2 max-w-xs pointer-events-auto flex items-center justify-between gap-2.5 shadow-xl backdrop-blur-md opacity-80"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-8 h-8 rounded-lg bg-gray-500/10 border border-gray-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                    {clip.productInfo.image ? (
+                                      <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover grayscale" alt="" />
+                                    ) : (
+                                      <ShoppingBag size={13} className="text-gray-400" />
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 leading-tight">
+                                    <h4 className="text-[10px] font-bold text-gray-300 truncate max-w-[120px]">
+                                      {clip.productInfo.title}
+                                    </h4>
+                                    <p className="text-[9px] font-mono text-gray-400 line-through font-bold">
+                                      ${clip.productInfo.price}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="px-2 py-1 rounded-lg bg-gray-700 text-[9px] font-bold text-gray-300 flex items-center gap-0.5">
+                                  <span>{language === 'ka' ? 'ამოსყიდულია' : 'Sold Out'}</span>
+                                </div>
                               </div>
-                              <div className="min-w-0 leading-tight">
-                                <h4 className="text-[10px] font-bold text-white truncate max-w-[130px]">
-                                  {clip.productInfo.title}
-                                </h4>
-                                <p className="text-[9px] font-mono text-emerald-400 font-bold">
-                                  ${clip.productInfo.price}
-                                </p>
+                            );
+                          }
+
+                          return (
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsPlaying(false);
+                                setCheckoutClip(clip);
+                                setCheckoutQuantity(1);
+                                setCheckoutInstructions('');
+                                setCheckoutSuccessOrder(null);
+                              }}
+                              className="bg-black/85 hover:bg-black border border-pink-500/50 rounded-xl p-2 max-w-xs pointer-events-auto flex items-center justify-between gap-2.5 shadow-2xl shadow-pink-500/10 backdrop-blur-md transition-all cursor-pointer group hover:scale-[1.02]"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+                                  {clip.productInfo.image ? (
+                                    <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover" alt="" />
+                                  ) : (
+                                    <ShoppingBag size={13} className="text-pink-400" />
+                                  )}
+                                  <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-black animate-ping" />
+                                </div>
+                                <div className="min-w-0 leading-tight">
+                                  <h4 className="text-[10px] font-bold text-white truncate max-w-[125px]">
+                                    {clip.productInfo.title}
+                                  </h4>
+                                  <p className="text-[9px] font-mono text-emerald-400 font-bold flex items-center gap-1">
+                                    ${clip.productInfo.price}
+                                    <span className="text-[7px] text-pink-300 font-sans uppercase font-extrabold bg-pink-500/20 px-1 rounded">
+                                      {language === 'ka' ? 'კლიპიდან' : 'Clip Tag'}
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 group-hover:from-pink-500 group-hover:to-purple-500 text-[9px] font-extrabold text-white flex items-center gap-1 shadow-md transition-all">
+                                <ShoppingBag size={10} />
+                                <span>{language === 'ka' ? 'ყიდვა' : 'Buy Now'}</span>
+                                <ChevronRight size={10} />
                               </div>
                             </div>
-                            <div className="px-2 py-1 rounded-lg bg-pink-600 group-hover:bg-pink-500 text-[9px] font-bold text-white flex items-center gap-0.5 transition-all">
-                              <span>{language === 'ka' ? 'ყიდვა' : 'Buy'}</span>
-                              <ChevronRight size={10} />
-                            </div>
-                          </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Sound track info marquee */}
                         <div className="flex items-center gap-2 pt-0.5 text-gray-200 pointer-events-auto">
@@ -3896,6 +4071,404 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
                   </button>
                 )}
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MERCHANT PRODUCT TAGGING MODAL */}
+      <AnimatePresence>
+        {taggingClip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-zinc-900 border border-purple-500/30 rounded-2xl shadow-2xl p-5 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <Tag className="text-pink-400" size={18} />
+                  <h3 className="font-extrabold text-white text-sm">
+                    {language === 'ka' ? 'პროდუქტის მიბმა კლიპზე' : 'Tag Product to Video Clip'}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setTaggingClip(null)}
+                  className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Clip preview banner */}
+              <div className="my-3 p-3 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
+                <div className="w-12 h-16 rounded-lg bg-black border border-white/10 overflow-hidden flex-shrink-0 relative">
+                  {taggingClip.thumbnailUrl ? (
+                    <img src={taggingClip.thumbnailUrl} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <video src={getClipVideoUrl(taggingClip)} className="w-full h-full object-cover" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-white line-clamp-1">
+                    {taggingClip.caption || 'Clip'}
+                  </p>
+                  <p className="text-[10px] text-proton-muted">
+                    @{taggingClip.creatorName}
+                  </p>
+                </div>
+              </div>
+
+              {/* Products list selection */}
+              <div className="flex-1 overflow-y-auto space-y-3 my-2 pr-1 custom-scrollbar">
+                <label className="block text-[11px] font-extrabold uppercase tracking-widest text-proton-muted">
+                  {language === 'ka' ? 'აირჩიეთ პროდუქტი (თქვენი მარკეტიდან)' : 'Select Active Product'}
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => setTaggingProductId('')}
+                  className={cn(
+                    "w-full p-3 rounded-xl border text-left text-xs font-bold transition-all flex items-center justify-between",
+                    taggingProductId === ''
+                      ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                      : "bg-white/5 border-white/10 text-gray-300 hover:bg-white/10"
+                  )}
+                >
+                  <span>{language === 'ka' ? '🚫 პროდუქტის ტეგის მოხსნა (არაფერი)' : '🚫 No Product Tag (Remove Tag)'}</span>
+                  {taggingProductId === '' && <Check size={14} className="text-purple-400" />}
+                </button>
+
+                {/* Seller listings section */}
+                {sellerListings.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest block">
+                      {language === 'ka' ? 'თქვენი პროდუქტები' : 'Your Merchant Listings'}
+                    </span>
+                    <div className="grid grid-cols-1 gap-2">
+                      {sellerListings.map((item) => {
+                        const isSelected = taggingProductId === item.id;
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setTaggingProductId(item.id)}
+                            className={cn(
+                              "p-3 rounded-xl border transition-all flex items-center gap-3 cursor-pointer",
+                              isSelected
+                                ? "bg-pink-600/20 border-pink-500 ring-1 ring-pink-500/50"
+                                : "bg-proton-bg/60 border-proton-border/20 hover:border-pink-500/40"
+                            )}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-black border border-white/10 overflow-hidden flex-shrink-0">
+                              {item.images?.[0] || item.image ? (
+                                <img src={item.images?.[0] || item.image} className="w-full h-full object-cover" alt="" />
+                              ) : (
+                                <ShoppingBag className="m-auto text-pink-400 mt-2.5" size={16} />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                              <div className="flex items-center gap-2 text-[10px] text-emerald-400 font-mono font-bold">
+                                <span>${item.price}</span>
+                                <span className="text-proton-muted font-sans">• {item.category || 'Product'}</span>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <div className="p-1 rounded-full bg-pink-500 text-white">
+                                <Check size={12} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* All Marketplace Listings fallback */}
+                <div className="space-y-2 pt-2">
+                  <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest block">
+                    {language === 'ka' ? 'მარკეტფლეისის ყველა პროდუქტი' : 'All Marketplace Products'}
+                  </span>
+                  <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto">
+                    {(allListings.length > 0 ? allListings : listings).map((item) => {
+                      const isSelected = taggingProductId === item.id;
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => setTaggingProductId(item.id)}
+                          className={cn(
+                            "p-2.5 rounded-xl border transition-all flex items-center gap-3 cursor-pointer",
+                            isSelected
+                              ? "bg-purple-600/20 border-purple-500"
+                              : "bg-white/5 border-white/10 hover:bg-white/10"
+                          )}
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-black overflow-hidden flex-shrink-0">
+                            {item.images?.[0] || item.image ? (
+                              <img src={item.images?.[0] || item.image} className="w-full h-full object-cover" alt="" />
+                            ) : (
+                              <ShoppingBag className="m-auto text-purple-400 mt-2" size={14} />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                            <span className="text-[10px] text-emerald-400 font-mono font-bold">${item.price}</span>
+                          </div>
+                          {isSelected && <Check size={12} className="text-purple-400" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal actions */}
+              <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTaggingClip(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white"
+                >
+                  {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingTag}
+                  onClick={handleSaveTagProduct}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 text-xs font-black text-white hover:opacity-90 transition-all flex items-center gap-1.5 shadow-lg shadow-pink-500/20"
+                >
+                  {isSavingTag ? (
+                    <span>{language === 'ka' ? 'ინახება...' : 'Saving...'}</span>
+                  ) : (
+                    <>
+                      <Tag size={13} />
+                      <span>{language === 'ka' ? 'ტეგის შენახვა' : 'Save Product Tag'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* SHOPPABLE INSTANT CHECKOUT MODAL OVER VIDEO */}
+      <AnimatePresence>
+        {checkoutClip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="w-full max-w-md bg-zinc-900 border border-pink-500/40 rounded-3xl shadow-2xl p-6 relative overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Background ambient glow */}
+              <div className="absolute -top-20 -right-20 w-48 h-48 bg-pink-600/20 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Modal Close Button */}
+              <button
+                onClick={() => {
+                  setCheckoutClip(null);
+                  setCheckoutSuccessOrder(null);
+                  setIsPlaying(true);
+                }}
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10"
+              >
+                <X size={18} />
+              </button>
+
+              {checkoutSuccessOrder ? (
+                /* SUCCESS STATE VIEW */
+                <div className="py-8 text-center space-y-4 my-auto">
+                  <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
+                    <CheckCircle2 size={36} className="animate-bounce" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-black text-white">
+                      {language === 'ka' ? 'შეკვეთა მიღებულია!' : 'Order Placed Successfully!'}
+                    </h3>
+                    <p className="text-xs text-proton-muted max-w-xs mx-auto">
+                      {language === 'ka' 
+                        ? 'გმადლობთ კლიპიდან შეძენისთვის. გამყიდველი მიიღებს შეტყობინებას.' 
+                        : 'Thank you for buying directly from this clip loop! Merchant has been notified.'}
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2 font-mono text-xs text-gray-300">
+                    <div className="flex justify-between">
+                      <span className="text-proton-muted">Order ID:</span>
+                      <span className="text-purple-400 font-bold">{checkoutSuccessOrder.id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-proton-muted">Item:</span>
+                      <span className="text-white truncate max-w-[180px]">{checkoutSuccessOrder.itemTitle}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-proton-muted">Total Paid:</span>
+                      <span className="text-emerald-400 font-bold">${checkoutSuccessOrder.amount} USD</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-proton-muted">Source:</span>
+                      <span className="text-pink-400 font-bold">Shoppable Clip #{checkoutClip.id.slice(0, 6)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setCheckoutClip(null);
+                      setCheckoutSuccessOrder(null);
+                      setIsPlaying(true);
+                    }}
+                    className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+                  >
+                    {language === 'ka' ? 'ვიდეოების ყურების გაგრძელება' : 'Continue Watching Clips'}
+                  </button>
+                </div>
+              ) : (
+                /* CHECKOUT FORM VIEW */
+                <div className="space-y-4 overflow-y-auto custom-scrollbar pr-1 my-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-full bg-pink-500/20 border border-pink-500/40 text-[10px] font-black text-pink-300 uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles size={11} className="text-pink-400 animate-pulse" />
+                      {language === 'ka' ? 'სწრაფი შეძენა' : 'Shoppable Clip Checkout'}
+                    </span>
+                  </div>
+
+                  {/* Tagged Product Header Card */}
+                  {checkoutClip.productInfo && (
+                    <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-xl bg-black border border-white/10 overflow-hidden flex-shrink-0">
+                        {checkoutClip.productInfo.image ? (
+                          <img src={checkoutClip.productInfo.image} className="w-full h-full object-cover" alt="" />
+                        ) : (
+                          <ShoppingBag size={24} className="m-auto text-pink-400 mt-3" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <h4 className="text-xs font-black text-white truncate">
+                          {checkoutClip.productInfo.title}
+                        </h4>
+                        <p className="text-[10px] text-proton-muted">
+                          {language === 'ka' ? 'გამყიდველი:' : 'Seller:'} @{checkoutClip.creatorName}
+                        </p>
+                        <p className="text-sm font-mono font-bold text-emerald-400">
+                          ${checkoutClip.productInfo.price} USD
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quantity Selector */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
+                    <span className="text-xs font-bold text-gray-300">
+                      {language === 'ka' ? 'რაოდენობა:' : 'Quantity:'}
+                    </span>
+                    <div className="flex items-center gap-3 bg-black/60 px-3 py-1 rounded-xl border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutQuantity(q => Math.max(1, q - 1))}
+                        className="text-gray-400 hover:text-white font-bold text-sm px-1"
+                      >
+                        -
+                      </button>
+                      <span className="text-xs font-mono font-bold text-white w-4 text-center">
+                        {checkoutQuantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutQuantity(q => Math.min(10, q + 1))}
+                        className="text-gray-400 hover:text-white font-bold text-sm px-1"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Instructions Input */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-widest text-proton-muted">
+                      {language === 'ka' ? 'შენიშვნა გამყიდველისთვის / მისამართი' : 'Delivery Note / Size / Color'}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={checkoutInstructions}
+                      onChange={(e) => setCheckoutInstructions(e.target.value)}
+                      placeholder={language === 'ka' ? 'მაგ. ზომა M, მიწოდება თბილისში...' : 'e.g. Delivery address, size M, express contact...'}
+                      className="w-full bg-black/60 border border-white/10 focus:border-pink-500/50 outline-none rounded-xl p-2.5 text-xs text-white placeholder:text-gray-500 transition-all resize-none font-sans"
+                    />
+                  </div>
+
+                  {/* Payment Method Selector */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-extrabold uppercase tracking-widest text-proton-muted">
+                      {language === 'ka' ? 'გადახდის მეთოდი' : 'Payment Method'}
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'wallet', labelKa: '⚡ Wallet', labelEn: '⚡ Proton Pay' },
+                        { id: 'card', labelKa: '💳 ბარათი', labelEn: '💳 Card' },
+                        { id: 'crypto', labelKa: '🪙 კრიპტო', labelEn: '🪙 Crypto' }
+                      ].map((pm) => (
+                        <button
+                          key={pm.id}
+                          type="button"
+                          onClick={() => setCheckoutPaymentMethod(pm.id as any)}
+                          className={cn(
+                            "py-2 px-1 rounded-xl border text-[10px] font-extrabold transition-all text-center cursor-pointer",
+                            checkoutPaymentMethod === pm.id
+                              ? "bg-pink-600/30 border-pink-500 text-pink-300 shadow-md shadow-pink-500/10"
+                              : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+                          )}
+                        >
+                          {language === 'ka' ? pm.labelKa : pm.labelEn}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price Summary */}
+                  <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/20 space-y-1.5">
+                    <div className="flex justify-between text-xs text-gray-300">
+                      <span>{language === 'ka' ? 'პროდუქტის ფასი:' : 'Item Subtotal:'}</span>
+                      <span className="font-mono">${((checkoutClip.productInfo?.price || 0) * checkoutQuantity).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-300">
+                      <span>{language === 'ka' ? 'Proton საკომისიო:' : 'Platform Fee:'}</span>
+                      <span className="font-mono text-emerald-400 font-bold">$0.00 (Zero Fee)</span>
+                    </div>
+                    <div className="pt-1 border-t border-white/10 flex justify-between text-sm font-black text-white">
+                      <span>{language === 'ka' ? 'სულ გადასახდელი:' : 'Total Amount:'}</span>
+                      <span className="font-mono text-emerald-400">
+                        ${((checkoutClip.productInfo?.price || 0) * checkoutQuantity).toFixed(2)} USD
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Confirm Purchase Action */}
+                  <button
+                    type="button"
+                    disabled={isSubmittingOrder}
+                    onClick={handleCompleteCheckout}
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-pink-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-pink-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isSubmittingOrder ? (
+                      <span>{language === 'ka' ? 'მუშავდება...' : 'Processing Order...'}</span>
+                    ) : (
+                      <>
+                        <ShoppingBag size={15} />
+                        <span>
+                          {language === 'ka' 
+                            ? `ყიდვის დადასტურება • $${((checkoutClip.productInfo?.price || 0) * checkoutQuantity).toFixed(2)}`
+                            : `Confirm & Buy • $${((checkoutClip.productInfo?.price || 0) * checkoutQuantity).toFixed(2)}`}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

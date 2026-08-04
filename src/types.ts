@@ -125,7 +125,7 @@ export type Listing = {
   lat?: number;
   lng?: number;
   createdAt: number;
-  status: 'active' | 'sold';
+  status: 'active' | 'sold' | 'low_stock' | string;
   isSold?: boolean;
   condition?: 'new' | 'used' | 'refurbished' | string;
   isNegotiable?: boolean;
@@ -133,6 +133,7 @@ export type Listing = {
   serviceDuration?: string;
   serviceTerms?: string;
   stock?: number;
+  quantity?: number;
 };
 
 export interface Order {
@@ -147,6 +148,8 @@ export interface Order {
   orderType?: 'service' | 'product' | string;
   buyerInstructions?: string;
   createdAt: any;
+  source?: string;
+  clipId?: string;
 }
 
 export interface ClipIssue {
