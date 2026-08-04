@@ -4474,12 +4474,95 @@ export default function App() {
   const [isSystemActive] = useState(true);
   const [bootstrapComplete, setBootstrapComplete] = useState(false);
   
+  const { sellerOrders, updateOrderStatus } = useSeller();
+
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const saved = safeStorage.get('proton_tasks');
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+
+  // Phase D.2: Automated Order-to-Organizer Automation Pipeline & Two-Way Sync Engine
+  useEffect(() => {
+    if (!sellerOrders || sellerOrders.length === 0) return;
+
+    setTasks(prevTasks => {
+      let updated = false;
+      const nextTasks = [...prevTasks];
+
+      sellerOrders.forEach(order => {
+        // 1. Auto-generate structured task for pending or booked orders if not already present
+        if (order.status === 'pending' || order.status === 'booked') {
+          const existingIndex = nextTasks.findIndex(t => 
+            t.id === `order-task-${order.id}` || 
+            t.orderId === order.id || 
+            t.metadata?.orderId === order.id
+          );
+
+          if (existingIndex === -1) {
+            const orderShortId = order.id.slice(-6);
+            const titleEn = `Fulfill Order #${orderShortId}: ${order.itemTitle || 'Market Listing'}`;
+            const titleKa = `შეკვეთის შეფუთვა და გაგზავნა #${orderShortId}: ${order.itemTitle || 'მარკეტის ობიექტი'}`;
+
+            const orderTimestamp = typeof order.createdAt === 'number' ? order.createdAt : Date.now();
+            const newTask: Task = {
+              id: `order-task-${order.id}`,
+              content: titleEn,
+              contentGe: titleKa,
+              completed: false,
+              priority: 'high',
+              category: 'Fulfillment',
+              dueDate: orderTimestamp + 24 * 60 * 60 * 1000,
+              description: `Order ID: ${order.id} | Buyer: ${order.buyerId} | Amount: $${order.amount} ${order.currency || 'USD'}`,
+              descriptionGe: `შეკვეთის ID: ${order.id} | მყიდველი: ${order.buyerId} | თანხა: $${order.amount} ${order.currency || 'USD'}`,
+              orderId: order.id,
+              orderAmount: order.amount,
+              metadata: {
+                orderId: order.id,
+                amount: order.amount,
+                buyerId: order.buyerId,
+                itemTitle: order.itemTitle
+              },
+              timestamp: Date.now()
+            };
+
+            nextTasks.unshift(newTask);
+            updated = true;
+
+            if (user) {
+              const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
+              trackFirestore(setDoc(docRef, sanitizeForFirestore(newTask)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
+            }
+          }
+        }
+
+        // 2. Order -> Task status sync: Completed or shipped orders complete task
+        if (order.status === 'completed' || order.status === 'shipped') {
+          const existingIndex = nextTasks.findIndex(t => 
+            t.id === `order-task-${order.id}` || 
+            t.orderId === order.id || 
+            t.metadata?.orderId === order.id
+          );
+
+          if (existingIndex !== -1 && !nextTasks[existingIndex].completed) {
+            nextTasks[existingIndex] = {
+              ...nextTasks[existingIndex],
+              completed: true
+            };
+            updated = true;
+
+            if (user) {
+              const docRef = doc(db, 'users', user.uid, 'tasks', nextTasks[existingIndex].id);
+              trackFirestore(setDoc(docRef, sanitizeForFirestore(nextTasks[existingIndex])), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
+            }
+          }
+        }
+      });
+
+      return updated ? nextTasks : prevTasks;
+    });
+  }, [sellerOrders, user, trackFirestore]);
   const [userStats, setUserStats] = useState<{
     storageGB: number;
     workHours: number;
@@ -4988,7 +5071,14 @@ export default function App() {
   const handleToggleTask = useCallback((id: string) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
-        const updated = { ...t, completed: !t.completed };
+        const nextCompleted = !t.completed;
+        const updated = { ...t, completed: nextCompleted };
+
+        const targetOrderId = t.orderId || t.metadata?.orderId;
+        if (targetOrderId && updateOrderStatus) {
+          updateOrderStatus(targetOrderId, nextCompleted ? 'completed' : 'pending');
+        }
+
         if (user) {
           const docRef = doc(db, 'users', user.uid, 'tasks', id);
           trackFirestore(setDoc(docRef, sanitizeForFirestore(updated)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
@@ -4997,7 +5087,7 @@ export default function App() {
       }
       return t;
     }));
-  }, [user, trackFirestore]);
+  }, [user, trackFirestore, updateOrderStatus]);
 
   const handleDeleteTask = useCallback((id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
@@ -6155,6 +6245,7 @@ export default function App() {
                         uiMode={uiMode === 'market' ? 'business' : uiMode}
                         theme={organizerTheme}
                         setTheme={setOrganizerTheme}
+                        onNavigateView={handleViewChange}
                       />
                     </Suspense>
                   )}

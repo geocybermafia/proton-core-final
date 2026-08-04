@@ -97,6 +97,13 @@ export type Task = {
   energyCost?: 'low' | 'medium' | 'high';
   estimatedTime?: number; // in minutes
   elapsedTime?: number; // in seconds
+  orderId?: string;
+  orderAmount?: number;
+  metadata?: {
+    orderId?: string;
+    amount?: number;
+    [key: string]: any;
+  };
 };
 
 export type Listing = {

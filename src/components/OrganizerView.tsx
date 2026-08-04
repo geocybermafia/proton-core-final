@@ -31,7 +31,9 @@ import {
   Smile,
   PenTool,
   Sparkles,
-  Loader2
+  Loader2,
+  Package,
+  ShoppingBag
 } from 'lucide-react';
 import { Task, Workflow, Theme } from '../types';
 import { translations } from '../translations';
@@ -61,6 +63,7 @@ interface OrganizerViewProps {
   uiMode: 'business' | 'creative';
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  onNavigateView?: (view: any) => void;
 }
 
 export const OrganizerView = ({
@@ -75,6 +78,7 @@ export const OrganizerView = ({
   uiMode,
   theme,
   setTheme,
+  onNavigateView,
 }: OrganizerViewProps) => {
   const t = translations[language].organizer;
   const commonT = translations[language].common || { add: language === 'ka' ? 'დამატება' : 'Add' };
@@ -1127,26 +1131,49 @@ export const OrganizerView = ({
           )}
 
           {/* Quick status selection row */}
-          <div className="flex bg-proton-secondary/10 p-1 rounded-2xl border border-proton-border/20 gap-1.5">
-            {(['all', 'pending', 'completed'] as const).map(status => (
-              <button
-                key={status}
-                onClick={() => {
-                  setFilterStatus(status);
-                  setCategoryFilter(null); // Reset tag filter on global tab swap
-                }}
-                className={cn(
-                  "flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  filterStatus === status 
-                    ? "bg-proton-text text-proton-bg"
-                    : "text-proton-muted hover:text-proton-text hover:bg-white/5"
-                )}
-              >
-                {status === 'all' ? (language === 'ka' ? 'სრული ბუფერი' : 'All Tasks') : 
-                 status === 'pending' ? (language === 'ka' ? 'შესასრულებელი' : 'To Do Pending') :
-                 (language === 'ka' ? 'შესრულებული' : 'Done & Logged')}
-              </button>
-            ))}
+          <div className="flex bg-proton-secondary/10 p-1 rounded-2xl border border-proton-border/20 gap-1.5 flex-wrap sm:flex-nowrap">
+            {(['all', 'pending', 'fulfillments', 'completed'] as const).map(status => {
+              const pendingFulfillmentCount = tasks.filter(t => !t.completed && (t.orderId || t.metadata?.orderId || t.category === 'Fulfillment')).length;
+              const isActive = status === 'fulfillments'
+                ? categoryFilter?.toLowerCase() === 'fulfillment'
+                : filterStatus === status && categoryFilter === null;
+
+              return (
+                <button
+                  key={status}
+                  onClick={() => {
+                    if (status === 'fulfillments') {
+                      setFilterStatus('all');
+                      setCategoryFilter('Fulfillment');
+                    } else {
+                      setFilterStatus(status);
+                      setCategoryFilter(null);
+                    }
+                  }}
+                  className={cn(
+                    "flex-1 py-2.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5",
+                    isActive
+                      ? "bg-proton-text text-proton-bg font-black shadow-md"
+                      : "text-proton-muted hover:text-proton-text hover:bg-white/5"
+                  )}
+                >
+                  {status === 'all' ? (language === 'ka' ? 'სრული ბუფერი' : 'All Tasks') : 
+                   status === 'pending' ? (language === 'ka' ? 'შესასრულებელი' : 'To Do Pending') :
+                   status === 'fulfillments' ? (
+                     <>
+                       <Package size={12} className={cn(isActive ? "text-proton-bg" : "text-emerald-400")} />
+                       <span>{language === 'ka' ? 'შეკვეთები' : 'Fulfillments'}</span>
+                       {pendingFulfillmentCount > 0 && (
+                         <span className="ml-1 px-1.5 py-0.2 text-[8px] bg-emerald-500 text-black font-black rounded-full">
+                           {pendingFulfillmentCount}
+                         </span>
+                       )}
+                     </>
+                   ) :
+                   (language === 'ka' ? 'შესრულებული' : 'Done & Logged')}
+                </button>
+              );
+            })}
           </div>
 
           {/* Task Render Section */}
@@ -1999,6 +2026,31 @@ export const OrganizerView = ({
             
             {/* Tag indicators and dynamic elapsed time row */}
             <div className="flex items-center gap-3 mt-3 flex-wrap">
+              {(task.orderId || task.metadata?.orderId || task.category === 'Fulfillment') && (
+                <span className="text-[8px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 flex items-center gap-1 shadow-sm">
+                  <Package size={9} />
+                  {language === 'ka' ? 'შეკვეთის შეფუთვა' : 'Pending Fulfillment'}
+                  {(task.orderAmount || task.metadata?.amount) && (
+                    <span className="ml-1 px-1 bg-emerald-500/20 rounded font-mono text-[9px] text-emerald-300">
+                      ${task.orderAmount || task.metadata?.amount}
+                    </span>
+                  )}
+                </span>
+              )}
+              {(task.orderId || task.metadata?.orderId) && onNavigateView && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigateView('market');
+                  }}
+                  className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-all flex items-center gap-1 cursor-pointer"
+                  title={language === 'ka' ? 'შეკვეთის ნახვა მარკეტში' : 'View Order in Market Control Center'}
+                >
+                  <ShoppingBag size={8} />
+                  {language === 'ka' ? 'მარკეტი' : 'Market Order'}
+                </button>
+              )}
               {isOverdue && (
                 <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border border-red-500/20 bg-red-500/10 text-red-500 flex items-center gap-1 animate-pulse">
                   <AlertTriangle size={8} />

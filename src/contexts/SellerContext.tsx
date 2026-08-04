@@ -40,7 +40,37 @@ export interface SellerContextType {
   deleteLedgerItem?: (id: string) => Promise<void>;
   createDraftListing: (payload: CreateListingPayload) => Promise<Listing>;
   publishListing: (payload: CreateListingPayload) => Promise<Listing>;
+  updateOrderStatus?: (orderId: string, status: string) => Promise<void>;
 }
+
+const defaultSampleOrders: Order[] = [
+  {
+    id: 'ord-982145',
+    listingId: 'lst-sample-1',
+    buyerId: 'buyer-zuerich-302',
+    sellerId: 'guest-seller',
+    amount: 250,
+    currency: 'USD',
+    itemTitle: 'Zürich UI Suprematist License & Assets',
+    status: 'pending',
+    orderType: 'product',
+    buyerInstructions: 'Express fulfillment to Zurich Tech Node',
+    createdAt: Date.now() - 3600000
+  },
+  {
+    id: 'ord-982146',
+    listingId: 'lst-sample-2',
+    buyerId: 'buyer-tbilisi-305',
+    sellerId: 'guest-seller',
+    amount: 1250,
+    currency: 'USD',
+    itemTitle: 'Saperavi Smart Contract Retainer',
+    status: 'pending',
+    orderType: 'service',
+    buyerInstructions: 'Priority configuration required',
+    createdAt: Date.now() - 7200000
+  }
+];
 
 const defaultLedger: LedgerItem[] = [
   {
@@ -93,7 +123,7 @@ const SellerContext = createContext<SellerContextType | undefined>(undefined);
 export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [allListings, setAllListings] = useState<Listing[]>([]);
-  const [sellerOrders, setSellerOrders] = useState<Order[]>([]);
+  const [sellerOrders, setSellerOrders] = useState<Order[]>(defaultSampleOrders);
   const [buyerOrders, setBuyerOrders] = useState<Order[]>([]);
   const [ledgerItems, setLedgerItems] = useState<LedgerItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -128,7 +158,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // 2. Real-time Orders Listener (Seller & Buyer)
   useEffect(() => {
     if (!user) {
-      setSellerOrders([]);
+      setSellerOrders(defaultSampleOrders);
       setBuyerOrders([]);
       return;
     }
@@ -141,7 +171,9 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           .from('orders')
           .select('*')
           .eq('sellerId', user.uid);
-        if (active && sData) setSellerOrders(sData as Order[]);
+        if (active && sData) {
+          setSellerOrders(sData.length > 0 ? (sData as Order[]) : defaultSampleOrders);
+        }
 
         const { data: bData } = await supabase
           .from('orders')
@@ -174,7 +206,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           id: doc.id,
           ...doc.data()
         })) as Order[];
-        setSellerOrders(data);
+        setSellerOrders(data.length > 0 ? data : defaultSampleOrders);
       }, (err) => {
         console.warn("[SellerContext] Seller orders warning:", err);
       });
@@ -357,6 +389,20 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return createDraftListing({ ...payload, status: payload.status || 'active' });
   }, [createDraftListing]);
 
+  const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
+    setSellerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    setBuyerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+
+    if (user) {
+      try {
+        const docRef = doc(db, 'orders', orderId);
+        await setDoc(docRef, { status }, { merge: true });
+      } catch (err) {
+        console.warn("[SellerContext] DB update order status warning:", err);
+      }
+    }
+  }, [user]);
+
   const refresh = useCallback(async () => {
     // Manual re-trigger signal if needed
   }, []);
@@ -374,7 +420,8 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateLedgerItem,
     deleteLedgerItem,
     createDraftListing,
-    publishListing
+    publishListing,
+    updateOrderStatus
   }), [
     allListings,
     sellerListings,
@@ -388,7 +435,8 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     updateLedgerItem,
     deleteLedgerItem,
     createDraftListing,
-    publishListing
+    publishListing,
+    updateOrderStatus
   ]);
 
   return (
