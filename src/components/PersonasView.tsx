@@ -5,7 +5,7 @@ import { Persona, ChatMessage } from '../types';
 import { 
   Send, User, Bot, Plus, Trash2, Edit2, Users, Image as ImageIcon, 
   FileText, Zap, Sparkles, ChevronUp, X, Check, Globe, HelpCircle, Laptop,
-  Terminal, ShieldAlert, Cpu, ArrowLeft, RotateCcw
+  Terminal, ShieldAlert, Cpu, ArrowLeft, RotateCcw, Loader2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Markdown from 'react-markdown';
 import { createPortal } from 'react-dom';
 import { chatWithPersona, generateOrEditImage } from '../lib/gemini';
+import { useSellerStats } from '../contexts/SellerContext';
 import {
   ProtonCard,
   ProtonButton,
@@ -22,6 +23,25 @@ import {
   ProtonAvatar,
   ProtonIconBox,
 } from '../ui';
+
+const STORE_MANAGER_PERSONA: Persona = {
+  id: "proton-store-manager",
+  name: "Proton Store Manager",
+  nameGe: "მაღაზიის მენეჯერი AI",
+  role: "Merchant E-Commerce Copilot",
+  roleGe: "ელ-კომერციის და მაღაზიის ასისტენტი",
+  description: "Autonomous Merchant Copilot with real-time awareness of store revenue, inventory status, low-stock warnings, and order fulfillments.",
+  descriptionGe: "ავტონომიური მაღაზიის AI ასისტენტი შემოსავლების, მარაგების, დაბალი ნაშთების გაფრთხილებებისა და შეკვეთების რეალურ დროში ცოდნით.",
+  avatar: "🏪",
+  language: 'Mixed',
+  systemInstruction: `You are 'Proton Store Manager' (მაღაზიის მენეჯერი AI), the dedicated AI Merchant Copilot for Proton Store & E-Commerce Control Hub.
+You have real-time live visibility into store revenue metrics (Gross Revenue, Today's Sales, Wallet Balance), inventory status (Active Listings, Low Stock items), and order pipelines (Pending Orders, Fulfillment tasks).
+When merchants ask about sales performance, inventory, customer responses, or restock planning:
+1. Provide accurate, clear, data-driven summaries formatted with bold metrics and clean markdown bullet points.
+2. Draft professional, helpful customer communication messages for pending order fulfillments when requested.
+3. Suggest concrete restock strategies for low stock items.
+Always respond in English and/or Georgian (Mkhedruli script) matching user intent.`
+};
 
 // Helper component for safe avatar rendering with image error handling
 function PersonaAvatarView({ 
@@ -178,8 +198,23 @@ export default function PersonasView({
   checkAndIncrementAiQuota?: any
 }) {
   const t = translations[language].personas;
-  const [personas, setPersonas] = useState<Persona[]>(initialPersonas || []);
-  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
+  const sellerStats = useSellerStats();
+
+  const [personas, setPersonas] = useState<Persona[]>(() => {
+    const base = initialPersonas && initialPersonas.length > 0 ? initialPersonas : [];
+    if (!base.some(p => p.id === 'proton-store-manager')) {
+      return [STORE_MANAGER_PERSONA, ...base];
+    }
+    return base;
+  });
+
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(() => {
+    if (initialPersonaId && personas.length > 0) {
+      const found = personas.find(p => p.id === initialPersonaId);
+      if (found) return found;
+    }
+    return personas.find(p => p.id === 'proton-store-manager') || personas[0] || null;
+  });
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (initialHistory && selectedPersona && initialHistory[selectedPersona.id]) {
       return initialHistory[selectedPersona.id];
@@ -304,23 +339,20 @@ export default function PersonasView({
 
   // Sync Personas with initial props
   useEffect(() => {
-    if (initialPersonas) {
-      setPersonas(initialPersonas);
-      if (initialPersonaId) {
-        const found = initialPersonas.find(p => p.id === initialPersonaId);
-        if (found) {
-          setSelectedPersona(found);
-          setMobileShowChat(true);
-        }
-      } else if (selectedPersona) {
-        // Keep currently selected persona in sync with latest initialPersonas data (e.g. system instructions)
-        const updatedSelf = initialPersonas.find(p => p.id === selectedPersona.id);
-        if (updatedSelf) {
-          setSelectedPersona(updatedSelf);
-        }
-      } else if (initialPersonas.length > 0 && !selectedPersona) {
-        setSelectedPersona(initialPersonas[0]);
+    let list = initialPersonas && initialPersonas.length > 0 ? initialPersonas : [];
+    if (!list.some(p => p.id === 'proton-store-manager')) {
+      list = [STORE_MANAGER_PERSONA, ...list];
+    }
+    setPersonas(list);
+
+    if (initialPersonaId) {
+      const found = list.find(p => p.id === initialPersonaId);
+      if (found) {
+        setSelectedPersona(found);
+        setMobileShowChat(true);
       }
+    } else if (!selectedPersona) {
+      setSelectedPersona(list.find(p => p.id === 'proton-store-manager') || list[0]);
     }
   }, [initialPersonas, initialPersonaId]);
 
@@ -534,6 +566,32 @@ export default function PersonasView({
           : `Here is your generated visual:\n\n![Generated Visual](${imageUrl})`;
         metadata = { promptTokenCount: 150, candidatesTokenCount: 500, totalTokenCount: 650, latency: 1200 };
       } else {
+        const storeContextString = `
+[REAL-TIME MERCHANT STORE TELEMETRY & CONTEXT]
+• Gross Revenue: $${sellerStats.grossRevenue.toLocaleString()} USD
+• Today's Sales Revenue: $${sellerStats.todayRevenue.toLocaleString()} USD
+• Wallet Balance: $${sellerStats.walletBalance.toLocaleString()} USD
+• Active Listings Count: ${sellerStats.activeListingCount}
+• Low Stock Inventory Items (${sellerStats.lowStockItems.length}): ${
+  sellerStats.lowStockItems.length > 0
+    ? sellerStats.lowStockItems.map(i => `${i.title} (Qty: ${i.quantity})`).join(', ')
+    : 'All listings sufficiently stocked'
+}
+• Order Pipeline Status: ${sellerStats.pendingOrderCount} Pending Fulfillment, ${sellerStats.completedOrderCount} Completed Orders
+${
+  sellerStats.pendingOrders.length > 0
+    ? `• Pending Orders Details:\n${sellerStats.pendingOrders
+        .map(
+          o =>
+            `  - Order #${o.id} | Item: "${o.itemTitle || 'Market Listing'}" | Amount: $${o.amount} ${o.currency || 'USD'} | Buyer: ${o.buyerId}${o.buyerInstructions ? ` | Instructions: "${o.buyerInstructions}"` : ''}`
+        )
+        .join('\n')}`
+    : '• Pending Orders Details: None'
+}
+`;
+
+        const dynamicGlobalInstruction = `${selectedPersona.systemInstruction || ''}\n\n${storeContextString}\n\n${aiSettings?.systemInstruction || ''}`.trim();
+
         const result = await chatWithPersona(
           selectedPersona,
           finalPrompt,
@@ -542,7 +600,7 @@ export default function PersonasView({
           false,
           true,
           0.9,
-          selectedPersona.systemInstruction,
+          dynamicGlobalInstruction,
           language,
           controller.signal
         );
@@ -604,7 +662,7 @@ export default function PersonasView({
   };
 
   const isUrl = (str: string) => str?.startsWith('http') || str?.startsWith('data:image');
-  const isMaintenanceActive = Boolean(selectedPersona && (selectedPersona as any).underMaintenance !== false);
+  const isMaintenanceActive = Boolean(selectedPersona && (selectedPersona as any).underMaintenance === true);
 
   return (
     <div 
@@ -1000,44 +1058,109 @@ export default function PersonasView({
           </div>
         )}
 
-        {/* Permanent Locked Footer */}
+        {/* Active Footer with Quick Action Chips & Interactive Prompt Input */}
         <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
            <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
-              {/* Input Area - Disabled in Maintenance Mode */}
+              {/* Quick Action Prompt Chips for Merchant Copilot & Store Guidance */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar-minimal">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const storeMgr = personas.find(p => p.id === 'proton-store-manager') || selectedPersona;
+                    if (storeMgr) setSelectedPersona(storeMgr);
+                    setInput(language === 'ka' 
+                      ? "📋 შეაჯამე დღევანდელი გაყიდვები, შემოსავლები და მომლოდინე შეკვეთები." 
+                      : "📋 Summarize today's sales, revenue & pending orders.");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,243,255,0.1)] shrink-0"
+                >
+                  <FileText size={13} className="text-cyan-400" />
+                  <span>{language === 'ka' ? "📋 გაყიდვების & შეკვეთების შეჯამება" : "📋 Summarize Today's Sales & Orders"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const storeMgr = personas.find(p => p.id === 'proton-store-manager') || selectedPersona;
+                    if (storeMgr) setSelectedPersona(storeMgr);
+                    setInput(language === 'ka' 
+                      ? "⚠️ შეადგინე მარაგების შევსების გეგმა დაბალი ნაშთის მქონე პროდუქტებისთვის." 
+                      : "⚠️ Draft restock plan for low stock items.");
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-amber-950/60 hover:bg-amber-500/20 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.1)] shrink-0"
+                >
+                  <Zap size={13} className="text-amber-400" />
+                  <span>{language === 'ka' ? "⚠️ დაბალი ნაშთების შევსების გეგმა" : "⚠️ Draft Restock Plan for Low Stock"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const storeMgr = personas.find(p => p.id === 'proton-store-manager') || selectedPersona;
+                    if (storeMgr) setSelectedPersona(storeMgr);
+                    const pendingId = sellerStats.pendingOrders[0]?.id || 'ord-982145';
+                    setInput(language === 'ka' 
+                      ? `✉️ მოამზადე საპასუხო შეტყობინება მყიდველისთვის შეკვეთაზე #${pendingId.slice(-6)}.` 
+                      : `✉️ Draft customer message for pending order #${pendingId.slice(-6)}.`);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-500/20 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.1)] shrink-0"
+                >
+                  <Send size={13} className="text-emerald-400" />
+                  <span>{language === 'ka' ? "✉️ შეტყობინება შეკვეთაზე" : "✉️ Draft Customer Message for Order"}</span>
+                </button>
+              </div>
+
+              {/* Input Area */}
               <div className="relative group flex items-center">
                 <div className="absolute left-3.5 z-40 flex items-center gap-2">
                   <button 
-                    disabled={true}
-                    className="p-2 rounded-xl border border-slate-800 bg-black/40 text-slate-600 cursor-not-allowed opacity-50"
-                    title={language === 'ka' ? 'ინსტრუმენტები მიუწვდომელია' : 'Tools unavailable'}
+                    type="button"
+                    onClick={() => setShowTools(!showTools)}
+                    disabled={isSending || isMaintenanceActive}
+                    className={cn(
+                      "p-2 rounded-xl border transition-all cursor-pointer",
+                      showTools
+                        ? "bg-cyan-500/30 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(0,243,255,0.3)]"
+                        : "border-cyan-500/30 bg-cyan-950/40 text-cyan-400 hover:bg-cyan-500/20"
+                    )}
+                    title={language === 'ka' ? 'AI ინსტრუმენტები' : 'AI Tools'}
                   >
-                     <Sparkles size={16} className="text-slate-500" />
+                    <Sparkles size={16} className="text-cyan-400 animate-pulse" />
                   </button>
                 </div>
 
                 <input 
                   type="text" 
-                  disabled={true}
-                  value=""
-                  readOnly={true}
+                  disabled={isSending || isMaintenanceActive}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
                   placeholder={
                     selectedPersona 
                       ? (language === 'ka' 
-                          ? `${selectedPersona.nameGe || selectedPersona.name} დროებით მიუწვდომელია.` 
-                          : `${selectedPersona.name} is temporarily unavailable.`)
+                          ? `ჰკითხეთ ${selectedPersona.nameGe || selectedPersona.name}-ს...` 
+                          : `Ask ${selectedPersona.name}...`)
                       : (language === 'ka'
                           ? 'აირჩიეთ ასისტენტი საუბრის დასაწყებად...'
                           : 'Select an assistant from the sidebar to begin...')
                   }
-                  className="w-full bg-black/50 border border-slate-700/50 rounded-2xl pl-14 pr-14 py-3.5 sm:py-4 text-xs sm:text-sm text-slate-400 placeholder:text-slate-500 font-sans tracking-wide cursor-not-allowed opacity-60 shadow-inner"
+                  className="w-full bg-black/80 border border-cyan-500/40 rounded-2xl pl-14 pr-16 py-3.5 sm:py-4 text-xs sm:text-sm text-cyan-100 placeholder:text-cyan-600/60 font-sans tracking-wide focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(0,243,255,0.25)] transition-all"
                 />
 
                 <div className="absolute right-2.5 flex items-center gap-2 z-40">
                   <button 
-                    disabled={true}
-                    className="p-2.5 bg-slate-800/80 text-slate-500 font-extrabold rounded-xl border border-slate-700/40 opacity-40 cursor-not-allowed shadow-none"
+                    type="button"
+                    disabled={isSending || !input.trim() || isMaintenanceActive}
+                    onClick={handleSendMessage}
+                    className="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold rounded-xl border border-cyan-400 transition-all cursor-pointer shadow-[0_0_12px_rgba(0,243,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={language === 'ka' ? 'გაგზავნა' : 'Send'}
                   >
-                     <Send size={16} strokeWidth={2.5} />
+                    {isSending ? <Loader2 size={16} className="animate-spin text-black" /> : <Send size={16} strokeWidth={2.5} />}
                   </button>
                 </div>
               </div>
