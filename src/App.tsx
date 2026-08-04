@@ -45,6 +45,7 @@ import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, del
 const SettingsView = lazyWithRetry(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
+import { useSeller } from './contexts/SellerContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })));
 const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
@@ -145,6 +146,7 @@ import {
   Sunrise,
   Image,
   ShoppingBag,
+  Store,
   Info,
   Volume2,
   LayoutDashboard,
@@ -2699,6 +2701,9 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
 
 const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndIncrementAiQuota, onBack }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean, checkAndIncrementAiQuota: () => Promise<boolean>, onBack?: () => void }) => {
   const isKa = language === 'ka';
+  const { showToast } = useToast();
+  const { createDraftListing } = useSeller();
+
   const [prompt, setPrompt] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -2706,6 +2711,8 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
   const [selectedRatio, setSelectedRatio] = useState<'1:1' | '16:9' | '9:16'>('1:1');
   const [selectedStyle, setSelectedStyle] = useState<string>('none');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [exportingDraft, setExportingDraft] = useState(false);
+  const [lastCreatedListingId, setLastCreatedListingId] = useState<string | null>(null);
   
   // History state with LocalStorage persistence
   const [historyList, setHistoryList] = useState<{ id: string; url: string; prompt: string; ratio: string; style: string; timestamp: number }[]>(() => {
@@ -2716,6 +2723,34 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
       return [];
     }
   });
+
+  const handleExportToMarket = async () => {
+    if (!image) return;
+    setExportingDraft(true);
+    try {
+      const title = prompt.trim().slice(0, 60) || 'AI Generated Neural Artwork';
+      const description = `Neural Artwork generated in Creative Studio.\n\nPrompt: ${prompt}\nRatio: ${selectedRatio}\nStyle: ${selectedStyle}`;
+      const newListing = await createDraftListing({
+        title,
+        description,
+        images: [image],
+        status: 'draft',
+        price: 0,
+        category: 'Digital Artwork & Design',
+        listingType: 'product'
+      });
+      setLastCreatedListingId(newListing.id);
+      showToast(
+        isKa ? 'ნამუშევრის დრაფტი შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
+        'success'
+      );
+    } catch (err) {
+      console.error("Failed to export artwork to market:", err);
+      showToast(isKa ? 'შეცდომა დრაფტის შექმნისას' : 'Failed to create listing draft', 'error');
+    } finally {
+      setExportingDraft(false);
+    }
+  };
 
   const t = translations[language].image_studio;
 
@@ -3018,8 +3053,17 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
                   )}>
                     <img src={image} alt="Generated" className="rounded-xl w-full h-full object-contain" referrerPolicy="no-referrer" />
                     
-                    {/* Download Action overlay */}
-                    <div className="absolute bottom-3 right-3 flex gap-2 z-10">
+                    {/* Download & Export Action overlay */}
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10 flex-wrap justify-end">
+                      <button
+                        onClick={handleExportToMarket}
+                        disabled={exportingDraft}
+                        className="px-3 py-2.5 rounded-xl bg-purple-600/90 border border-purple-400/30 text-white font-bold text-xs hover:bg-purple-600 transition-all hover:scale-105 shadow-lg backdrop-blur-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        title={isKa ? 'ექსპორტი მარკეტზე (დრაფტის შექმნა)' : 'Export to Market as Listing Draft'}
+                      >
+                        {exportingDraft ? <Loader2 size={14} className="animate-spin" /> : <Store size={14} />}
+                        <span className="text-[11px] uppercase tracking-wider">{isKa ? 'ექსპორტი მარკეტზე' : 'Export to Market'}</span>
+                      </button>
                       <a 
                         href={image} 
                         download="proton_neural_artwork.png"
@@ -6061,6 +6105,8 @@ export default function App() {
                         language={userProfile.language} 
                         onBack={() => handleViewChange('creative-studio')} 
                         checkAndIncrementAiQuota={checkAndIncrementAiQuota}
+                        setActiveView={handleViewChange}
+                        setUiMode={handleModeChange}
                       />
                     </Suspense>
                   )}

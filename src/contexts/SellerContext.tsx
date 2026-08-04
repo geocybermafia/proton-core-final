@@ -16,6 +16,16 @@ import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
+export interface CreateListingPayload {
+  title: string;
+  description: string;
+  images?: string[];
+  status?: 'draft' | 'active' | 'sold' | string;
+  price?: number;
+  category?: string;
+  listingType?: 'product' | 'service' | 'project';
+}
+
 export interface SellerContextType {
   allListings: Listing[];
   sellerListings: Listing[];
@@ -28,6 +38,8 @@ export interface SellerContextType {
   addLedgerItem?: (item: Omit<LedgerItem, 'id' | 'total'>) => Promise<void>;
   updateLedgerItem?: (id: string, updates: Partial<LedgerItem>) => Promise<void>;
   deleteLedgerItem?: (id: string) => Promise<void>;
+  createDraftListing: (payload: CreateListingPayload) => Promise<Listing>;
+  publishListing: (payload: CreateListingPayload) => Promise<Listing>;
 }
 
 const defaultLedger: LedgerItem[] = [
@@ -305,6 +317,46 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [user]);
 
+  const createDraftListing = useCallback(async (payload: CreateListingPayload): Promise<Listing> => {
+    const newId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? `lst-${crypto.randomUUID()}`
+      : `lst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    const newListing: Listing = {
+      id: newId,
+      title: payload.title || 'Untitled Listing Draft',
+      description: payload.description || '',
+      price: typeof payload.price === 'number' ? payload.price : 0,
+      currency: 'USD',
+      sellerId: user?.uid || 'guest-seller',
+      sellerName: user?.displayName || user?.email || 'Proton Merchant',
+      images: payload.images || [],
+      image: payload.images?.[0] || '',
+      category: payload.category || 'Digital Assets',
+      location: 'Zürich / Global',
+      country: 'Switzerland',
+      city: 'Zürich',
+      createdAt: Date.now(),
+      status: (payload.status as any) || 'draft',
+      isSold: false,
+      listingType: payload.listingType || 'product'
+    };
+
+    try {
+      const docRef = doc(db, 'listings', newId);
+      await setDoc(docRef, newListing);
+    } catch (err) {
+      console.warn("[SellerContext] Firestore listing save warning (using local state fallback):", err);
+    }
+
+    setAllListings(prev => [newListing, ...prev.filter(l => l.id !== newListing.id)]);
+    return newListing;
+  }, [user]);
+
+  const publishListing = useCallback(async (payload: CreateListingPayload): Promise<Listing> => {
+    return createDraftListing({ ...payload, status: payload.status || 'active' });
+  }, [createDraftListing]);
+
   const refresh = useCallback(async () => {
     // Manual re-trigger signal if needed
   }, []);
@@ -320,7 +372,9 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refresh,
     addLedgerItem,
     updateLedgerItem,
-    deleteLedgerItem
+    deleteLedgerItem,
+    createDraftListing,
+    publishListing
   }), [
     allListings,
     sellerListings,
@@ -332,7 +386,9 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refresh,
     addLedgerItem,
     updateLedgerItem,
-    deleteLedgerItem
+    deleteLedgerItem,
+    createDraftListing,
+    publishListing
   ]);
 
   return (

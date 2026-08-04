@@ -13,12 +13,16 @@ import {
   Zap,
   Volume2,
   Share2,
-  Bookmark
+  Bookmark,
+  Store,
+  ShoppingBag,
+  ExternalLink
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { chatWithPersona } from '../lib/gemini';
 import { Persona } from '../types';
 import { useToast } from './Toast';
+import { useSeller } from '../contexts/SellerContext';
 
 interface CreativeStudioHubProps {
   language: 'en' | 'ka';
@@ -173,13 +177,22 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
   );
 };
 
-export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => void; checkAndIncrementAiQuota: () => Promise<boolean> }> = ({ 
+export const CopywritingView: React.FC<{ 
+  language: 'en' | 'ka'; 
+  onBack: () => void; 
+  checkAndIncrementAiQuota: () => Promise<boolean>;
+  setActiveView?: (view: any) => void;
+  setUiMode?: (mode: any, view?: any) => void;
+}> = ({ 
   language, 
   onBack,
-  checkAndIncrementAiQuota
+  checkAndIncrementAiQuota,
+  setActiveView,
+  setUiMode
 }) => {
   const isKa = language === 'ka';
   const { showToast } = useToast();
+  const { createDraftListing } = useSeller();
 
   const [brandName, setBrandName] = useState('');
   const [description, setDescription] = useState('');
@@ -188,6 +201,8 @@ export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => vo
   const [targetLang, setTargetLang] = useState('both');
   const [loading, setLoading] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [exportingDraft, setExportingDraft] = useState(false);
+  const [lastCreatedListingId, setLastCreatedListingId] = useState<string | null>(null);
 
   // Result state
   const [result, setResult] = useState<{ hook: string; body: string; cta: string } | null>(null);
@@ -197,6 +212,33 @@ export const CopywritingView: React.FC<{ language: 'en' | 'ka'; onBack: () => vo
     navigator.clipboard.writeText(text);
     setCopiedSection(section);
     setTimeout(() => setCopiedSection(null), 2000);
+  };
+
+  const handleExportToMarket = async () => {
+    if (!result) return;
+    setExportingDraft(true);
+    try {
+      const title = result.hook || `${brandName || 'Proton'} - Ad Copy`;
+      const fullDesc = `${result.body}\n\n${result.cta}`;
+      const newListing = await createDraftListing({
+        title,
+        description: fullDesc,
+        status: 'draft',
+        price: 0,
+        category: 'Marketing & Copywriting',
+        listingType: 'service'
+      });
+      setLastCreatedListingId(newListing.id);
+      showToast(
+        isKa ? 'დრაფტი წარმატებით შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
+        'success'
+      );
+    } catch (err) {
+      console.error("Failed to export listing draft:", err);
+      showToast(isKa ? 'შეცდომა დრაფტის შექმნისას' : 'Failed to create listing draft', 'error');
+    } finally {
+      setExportingDraft(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -444,12 +486,36 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
             <div className="space-y-6">
               {/* Tool Output Container */}
               <div className="bg-proton-card p-6 rounded-3xl border border-proton-border space-y-6">
-                <div className="flex justify-between items-center pb-4 border-b border-proton-border/50">
+                <div className="flex justify-between items-center pb-4 border-b border-proton-border/50 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
                     <span className="text-xs font-black uppercase tracking-widest text-proton-text">
                       {isKa ? 'გენერირებული ასლი' : 'GENERATED COPY SUCCESS'}
                     </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={handleExportToMarket}
+                      disabled={exportingDraft}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold text-xs hover:bg-purple-500 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                      title={isKa ? 'ექსპორტი მარკეტზე (დრაფტის შექმნა)' : 'Export to Market as Listing Draft'}
+                    >
+                      {exportingDraft ? <Loader2 size={13} className="animate-spin" /> : <Store size={13} />}
+                      <span>{isKa ? 'ექსპორტი მარკეტზე' : 'Export to Market'}</span>
+                    </button>
+                    {lastCreatedListingId && (
+                      <button
+                        onClick={() => {
+                          if (setUiMode) setUiMode('market', 'market-hub');
+                          if (setActiveView) setActiveView('market-hub');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs hover:bg-emerald-500 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer animate-in fade-in slide-in-from-right-2"
+                        title={isKa ? 'გადავლა მარკეტის მართვის ცენტრში' : 'View in Market Control Center'}
+                      >
+                        <ShoppingBag size={13} />
+                        <span>{isKa ? 'ნახვა მარკეტზე →' : 'View in Market →'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -604,22 +670,34 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                     </div>
 
                     {/* Interactive buttons */}
-                    <div className="flex items-center justify-between border-t border-white/5 pt-3 text-white/40 text-xs shrink-0">
-                      <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
-                        <Bookmark size={14} />
-                        <span>Save Ad</span>
-                      </button>
-                      <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
-                        <Share2 size={14} />
-                        <span>Share</span>
-                      </button>
-                      <button 
-                        onClick={() => handleCopy(`${result.hook}\n\n${result.body}\n\n${result.cta}`, 'all')}
-                        className="flex items-center gap-1.5 text-purple-400 font-bold hover:text-purple-300 transition-colors cursor-pointer"
-                      >
-                        <Copy size={14} />
-                        <span>Copy Entire Ad</span>
-                      </button>
+                    <div className="flex items-center justify-between border-t border-white/5 pt-3 text-white/40 text-xs shrink-0 flex-wrap gap-2">
+                      <div className="flex items-center gap-3">
+                        <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+                          <Bookmark size={14} />
+                          <span>Save Ad</span>
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer">
+                          <Share2 size={14} />
+                          <span>Share</span>
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={handleExportToMarket}
+                          disabled={exportingDraft}
+                          className="flex items-center gap-1.5 text-purple-300 font-bold hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          {exportingDraft ? <Loader2 size={14} className="animate-spin" /> : <Store size={14} />}
+                          <span>{isKa ? 'ექსპორტი მარკეტზე' : 'Export to Market'}</span>
+                        </button>
+                        <button 
+                          onClick={() => handleCopy(`${result.hook}\n\n${result.body}\n\n${result.cta}`, 'all')}
+                          className="flex items-center gap-1.5 text-purple-400 font-bold hover:text-purple-300 transition-colors cursor-pointer"
+                        >
+                          <Copy size={14} />
+                          <span>Copy Entire Ad</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
