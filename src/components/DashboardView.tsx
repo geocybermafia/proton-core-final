@@ -49,6 +49,7 @@ import {
   ProtonBadge, 
   ProtonIconBox 
 } from '../ui';
+import { useSellerStats } from '../hooks/useSellerStats';
 
 export const DashboardView = React.memo(({ 
   setActiveView, 
@@ -198,6 +199,21 @@ Query: "${query}"
     setTimeout(() => setCopiedOutput(false), 2000);
   };
 
+  // Consume live seller statistics from SellerProvider (Zero Firestore queries here)
+  const {
+    activeListings,
+    inactiveListings,
+    draftListings,
+    pendingOrders,
+    completedOrders,
+    grossRevenue,
+    monthlyRevenue,
+    todayRevenue,
+    walletBalance,
+    lowStockItemsCount,
+    recentOrders
+  } = useSellerStats();
+
   // Beautiful curated titles & metrics for the Gateways
   const gateways = [
     {
@@ -243,17 +259,25 @@ Query: "${query}"
     {
       id: 'market',
       title: language === 'ka' ? 'პროტონ მარკეტი' : 'Proton Market',
-      badge: language === 'ka' ? 'ელ-კომერცია' : 'E-Commerce Marketplace',
-      desc: language === 'ka'
-        ? 'განათავსეთ განცხადებები, შეიძინეთ ან გაყიდეთ ნივთები და მომსახურებები.'
-        : 'Publish listings, buy or sell items and services, and manage your orders.',
+      badge: pendingOrders.length > 0
+        ? (language === 'ka' ? `მარკეტი (${pendingOrders.length} შეკვეთა)` : `E-Commerce (${pendingOrders.length} Pending)`)
+        : (language === 'ka' ? 'ელ-კომერცია' : 'E-Commerce Marketplace'),
+      desc: activeListings.length === 0 && pendingOrders.length === 0
+        ? (language === 'ka' 
+            ? 'ჯერ არ გაქვთ აქტიური განცხადებები. განათავსეთ თქვენი პირველი პროდუქტი ან მომსახურება.' 
+            : 'No active listings published yet. Publish your first product or service to start selling.')
+        : (language === 'ka'
+            ? `${activeListings.length} აქტიური განცხადება • ${pendingOrders.length} მომლოდინე შეკვეთა${lowStockItemsCount > 0 ? ` • ${lowStockItemsCount} დაბალი მარაგით` : ''}`
+            : `${activeListings.length} Active Listings • ${pendingOrders.length} Pending Orders${lowStockItemsCount > 0 ? ` • ${lowStockItemsCount} Low Stock` : ''}`),
       icon: ShoppingBag,
       color: 'emerald',
       glowClass: 'border-emerald-500/20 hover:border-emerald-500/80 shadow-emerald-500/5 hover:shadow-emerald-500/20',
       badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
       iconClass: 'bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500 group-hover:text-black',
       shortcuts: [
-        { label: language === 'ka' ? 'მარკეტის დათვალიერება' : 'Browse listings', view: 'market-hub' }
+        { label: language === 'ka' ? 'მარკეტის დათვალიერება' : 'Browse listings', view: 'market-hub' },
+        ...(activeListings.length > 0 ? [{ label: language === 'ka' ? `აქტიური (${activeListings.length})` : `Listings (${activeListings.length})`, view: 'market-hub' }] : []),
+        ...(pendingOrders.length > 0 ? [{ label: language === 'ka' ? `შეკვეთები (${pendingOrders.length})` : `Orders (${pendingOrders.length})`, view: 'market-hub' }] : [])
       ],
       action: () => {
         setUiMode('market', 'market-hub');
@@ -279,17 +303,24 @@ Query: "${query}"
     {
       id: 'finance',
       title: language === 'ka' ? 'ფინანსების მართვა' : 'Finance Tracker',
-      badge: language === 'ka' ? 'ბიუჯეტი და ფინანსები' : 'Personal & Business Budgeting',
-      desc: language === 'ka'
-        ? 'აკონტროლეთ შემოსავლები და გასავლები, მართეთ ბიუჯეტი და ტრანზაქციების ისტორია.'
-        : 'Track income and expenses, manage your budget, and review transaction history.',
+      badge: walletBalance > 0 
+        ? `$${walletBalance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${language === 'ka' ? 'ბალანსი' : 'Balance'}`
+        : (language === 'ka' ? 'ბიუჯეტი და ფინანსები' : 'Personal & Business Budgeting'),
+      desc: grossRevenue === 0
+        ? (language === 'ka' 
+            ? 'ბალანსი: $0.00 • შემოსავალი გამოჩნდება პირველი წარმატებული გაყიდვის შემდეგ.' 
+            : 'Balance: $0.00 • Revenue will appear after your first completed sale.')
+        : (language === 'ka'
+            ? `სულ: $${grossRevenue.toLocaleString()} • თვიური: $${monthlyRevenue.toLocaleString()} • დღეს: $${todayRevenue.toLocaleString()}`
+            : `Total Revenue: $${grossRevenue.toLocaleString()} • Monthly: $${monthlyRevenue.toLocaleString()} • Today: $${todayRevenue.toLocaleString()}`),
       icon: TrendingUp,
       color: 'amber',
       glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
       badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
       iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
       shortcuts: [
-        { label: language === 'ka' ? 'ფინანსების დაფა' : 'Budget Dashboard', view: 'finance' }
+        { label: language === 'ka' ? 'ფინანსების დაფა' : 'Budget Dashboard', view: 'finance' },
+        ...(completedOrders.length > 0 ? [{ label: language === 'ka' ? `გაყიდვები (${completedOrders.length})` : `Sales (${completedOrders.length})`, view: 'finance' }] : [])
       ],
       action: () => setActiveView('finance')
     },
@@ -347,6 +378,16 @@ Query: "${query}"
                 <ProtonBadge variant="surface-accent" size="md" ping>
                   {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
                 </ProtonBadge>
+                {activeListings.length > 0 && (
+                  <ProtonBadge variant="emerald" size="sm">
+                    {activeListings.length} {language === 'ka' ? 'აქტიური განცხადება' : 'Active Listings'}
+                  </ProtonBadge>
+                )}
+                {pendingOrders.length > 0 && (
+                  <ProtonBadge variant="amber" size="sm" ping>
+                    {pendingOrders.length} {language === 'ka' ? 'მომლოდინე შეკვეთა' : 'Pending Orders'}
+                  </ProtonBadge>
+                )}
                 {systemHealth && (
                   <SystemStatusBadge 
                     status={systemHealth.status} 
