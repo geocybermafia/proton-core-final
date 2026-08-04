@@ -125,7 +125,22 @@ export type Listing = {
   listingType?: 'product' | 'service' | 'project';
   serviceDuration?: string;
   serviceTerms?: string;
+  stock?: number;
 };
+
+export interface Order {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  amount: number;
+  currency: string;
+  itemTitle: string;
+  status: 'booked' | 'completed' | 'pending' | 'cancelled' | string;
+  orderType?: 'service' | 'product' | string;
+  buyerInstructions?: string;
+  createdAt: any;
+}
 
 export interface ClipIssue {
   id: string;

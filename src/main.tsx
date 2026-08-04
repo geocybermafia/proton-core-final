@@ -10,6 +10,7 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './components/Toast';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { SellerProvider } from './contexts/SellerContext';
 import { MarketHubProvider } from './contexts/MarketHubContext';
 import { BrowserRouter } from 'react-router-dom';
 
@@ -79,11 +80,13 @@ function Root() {
             <AuthProvider>
               <ToastProvider>
                 <LanguageProvider>
-                  <MarketHubProvider>
-                    <BrowserRouter>
-                      <App />
-                    </BrowserRouter>
-                  </MarketHubProvider>
+                  <SellerProvider>
+                    <MarketHubProvider>
+                      <BrowserRouter>
+                        <App />
+                      </BrowserRouter>
+                    </MarketHubProvider>
+                  </SellerProvider>
                 </LanguageProvider>
               </ToastProvider>
             </AuthProvider>

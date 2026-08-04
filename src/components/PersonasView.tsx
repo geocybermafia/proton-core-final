@@ -975,7 +975,7 @@ export default function PersonasView({
           </div>
         ) : (
           /* Active Chat Viewport */
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-28 sm:pb-8 flex flex-col space-y-4 custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 flex flex-col space-y-4 custom-scrollbar-minimal bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -1001,7 +1001,7 @@ export default function PersonasView({
         )}
 
         {/* Permanent Locked Footer */}
-        <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 mt-auto pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
+        <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
            <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
               {/* Input Area - Disabled in Maintenance Mode */}
               <div className="relative group flex items-center">
