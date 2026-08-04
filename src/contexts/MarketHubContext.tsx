@@ -14,6 +14,10 @@ export interface LedgerItem {
   total: number;
   status: 'active' | 'completed' | 'pending';
   operator: string;
+  grossAmount?: number;
+  platformFee?: number;
+  netAmount?: number;
+  orderId?: string;
 }
 
 interface MarketHubContextType {

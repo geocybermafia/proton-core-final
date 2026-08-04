@@ -461,7 +461,18 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [user]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
-    setSellerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
+    let updatedOrder: Order | undefined;
+
+    setSellerOrders(prev => prev.map(o => {
+      if (o.id === orderId) {
+        const gross = o.amount || 0;
+        const fee = o.platformFee ?? Math.round(gross * 0.05 * 100) / 100;
+        const net = o.netAmount ?? (gross - fee);
+        updatedOrder = { ...o, status, grossAmount: gross, platformFee: fee, netAmount: net };
+        return updatedOrder;
+      }
+      return o;
+    }));
     setBuyerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
 
     if (user) {
@@ -472,7 +483,43 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.warn("[SellerContext] DB update order status warning:", err);
       }
     }
-  }, [user]);
+
+    if ((status === 'completed' || status === 'delivered' || status === 'shipped') && updatedOrder) {
+      const gross = updatedOrder.amount || 0;
+      const fee = updatedOrder.platformFee ?? Math.round(gross * 0.05 * 100) / 100;
+      const net = updatedOrder.netAmount ?? (gross - fee);
+
+      const existingTx = ledgerItems.find(item => item.orderId === orderId || item.id === `TX-ORD-${orderId}`);
+      if (!existingTx) {
+        const ledgerEntry: LedgerItem = {
+          id: `TX-ORD-${orderId}`,
+          date: new Date().toISOString().split('T')[0],
+          description: `Merchant Settlement: ${updatedOrder.itemTitle}`,
+          category: 'Merchant Settlement',
+          type: 'inbound',
+          value: net,
+          volume: 1,
+          total: net,
+          grossAmount: gross,
+          platformFee: fee,
+          netAmount: net,
+          orderId: orderId,
+          status: 'completed',
+          operator: 'Settlement-Engine'
+        };
+
+        setLedgerItems(prev => [ledgerEntry, ...prev.filter(i => i.id !== ledgerEntry.id)]);
+        if (user) {
+          try {
+            const ledgerDocRef = doc(db, 'users', user.uid, 'market_ledger', ledgerEntry.id);
+            await setDoc(ledgerDocRef, ledgerEntry);
+          } catch (e) {
+            console.warn("[SellerContext] Settlement ledger entry save warning:", e);
+          }
+        }
+      }
+    }
+  }, [user, ledgerItems]);
 
   const refresh = useCallback(async () => {
     // Manual re-trigger signal if needed
@@ -529,6 +576,9 @@ export const useSeller = () => {
 
 export interface SellerStats {
   grossRevenue: number;
+  totalPlatformFees: number;
+  totalNetRevenue: number;
+  taxEstimate: number;
   todayRevenue: number;
   walletBalance: number;
   activeListingCount: number;
@@ -544,26 +594,31 @@ export const useSellerStats = (): SellerStats => {
   const { sellerListings, sellerOrders, ledgerItems } = useSeller();
 
   return useMemo(() => {
-    const completedOrders = sellerOrders.filter(o => o.status === 'completed' || o.status === 'shipped');
+    const completedOrders = sellerOrders.filter(o => o.status === 'completed' || o.status === 'shipped' || o.status === 'delivered');
     const pendingOrders = sellerOrders.filter(o => o.status === 'pending' || o.status === 'booked');
 
-    const ordersRevenue = completedOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const ledgerRevenue = ledgerItems
-      .filter(l => l.type === 'inbound' && l.status === 'completed')
-      .reduce((sum, l) => sum + (l.total || ((l.value || 0) * (l.volume || 1))), 0);
+    const ordersGross = completedOrders.reduce((sum, o) => sum + (o.grossAmount ?? o.amount ?? 0), 0);
+    const ordersFees = completedOrders.reduce((sum, o) => sum + (o.platformFee ?? Math.round((o.amount || 0) * 0.05 * 100) / 100), 0);
 
-    const grossRevenue = ordersRevenue + ledgerRevenue;
+    const ledgerInbound = ledgerItems.filter(l => l.type === 'inbound' && l.status === 'completed');
+    const ledgerGross = ledgerInbound.reduce((sum, l) => sum + (l.grossAmount ?? l.total ?? ((l.value || 0) * (l.volume || 1))), 0);
+    const ledgerFees = ledgerInbound.reduce((sum, l) => sum + (l.platformFee ?? Math.round((l.total || l.value || 0) * 0.05 * 100) / 100), 0);
+
+    const grossRevenue = ordersGross + ledgerGross;
+    const totalPlatformFees = ordersFees + ledgerFees;
+    const totalNetRevenue = grossRevenue - totalPlatformFees;
+    const taxEstimate = Math.round(totalNetRevenue * 0.18 * 100) / 100;
 
     const now = Date.now();
     const oneDayAgo = now - 24 * 60 * 60 * 1000;
     const todayRevenue = completedOrders
       .filter(o => (o.createdAt || 0) >= oneDayAgo)
-      .reduce((sum, o) => sum + (o.amount || 0), 0);
+      .reduce((sum, o) => sum + (o.grossAmount ?? o.amount ?? 0), 0);
 
     const outboundLedger = ledgerItems
       .filter(l => l.type === 'outbound' && l.status === 'completed')
       .reduce((sum, l) => sum + (l.total || ((l.value || 0) * (l.volume || 1))), 0);
-    const walletBalance = grossRevenue - outboundLedger;
+    const walletBalance = Math.max(0, totalNetRevenue - outboundLedger);
 
     const activeListings = sellerListings.filter(l => l.status === 'active' || !l.status);
     const activeListingCount = activeListings.length > 0 ? activeListings.length : sellerListings.length;
@@ -587,6 +642,9 @@ export const useSellerStats = (): SellerStats => {
 
     return {
       grossRevenue,
+      totalPlatformFees,
+      totalNetRevenue,
+      taxEstimate,
       todayRevenue,
       walletBalance,
       activeListingCount: activeListingCount || 3,

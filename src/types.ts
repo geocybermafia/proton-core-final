@@ -144,12 +144,15 @@ export interface Order {
   amount: number;
   currency: string;
   itemTitle: string;
-  status: 'booked' | 'completed' | 'pending' | 'cancelled' | string;
+  status: 'booked' | 'completed' | 'pending' | 'cancelled' | 'shipped' | 'delivered' | string;
   orderType?: 'service' | 'product' | string;
   buyerInstructions?: string;
   createdAt: any;
   source?: string;
   clipId?: string;
+  grossAmount?: number;
+  platformFee?: number;
+  netAmount?: number;
 }
 
 export interface ClipIssue {

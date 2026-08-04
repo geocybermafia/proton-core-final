@@ -25,15 +25,35 @@ import {
   Copy,
   Receipt,
   FileCode,
-  Check
+  Check,
+  Wallet,
+  Send,
+  ArrowDownRight,
+  Percent,
+  DollarSign,
+  CreditCard,
+  AlertCircle,
+  CheckCircle
 } from 'lucide-react';
 import { generateOrEditImage } from '../lib/gemini';
+import { useSeller, useSellerStats } from '../contexts/SellerContext';
 
 interface CommercialHubProps {
   language: 'en' | 'ka';
 }
 
 export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
+  // Real-time Seller Context data binding
+  const { sellerOrders, ledgerItems, addLedgerItem, updateOrderStatus } = useSeller();
+  const sellerStats = useSellerStats();
+
+  // Payout & Withdrawal Pipeline state
+  const [payoutAmount, setPayoutAmount] = useState<string>('');
+  const [payoutMethod, setPayoutMethod] = useState<'sepa' | 'crypto' | 'stripe'>('sepa');
+  const [payoutAccount, setPayoutAccount] = useState<string>('');
+  const [payoutProcessing, setPayoutProcessing] = useState<boolean>(false);
+  const [payoutSuccessMsg, setPayoutSuccessMsg] = useState<string>('');
+
   // Stats state for Valuation Calculator
   const [activeUsers, setActiveUsers] = useState<number>(1200);
   const [pricingTier, setPricingTier] = useState<number>(29);
@@ -70,6 +90,7 @@ export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
   const t = {
     title: language === 'ka' ? 'კომერციალიზაციისა და გაყიდვის ცენტრი' : 'SaaS Commercialization & Exit Hub',
     subtitle: language === 'ka' ? 'პროდუქტის ბიზნეს-ღირებულების გაზრდისა და გასხვისების პორტალი' : 'Increase your project value, white-label, calculate valuation & prepare for acquisition',
+    tabFinance: language === 'ka' ? 'ფინანსები და ანგარიშსწორება' : 'Finance & Settlements',
     tabValuation: language === 'ka' ? 'ფასის კალკულატორი' : 'Valuation Engine',
     tabWhiteLabel: language === 'ka' ? 'თეთრი იარლიყი (White-Label)' : 'White-Label Engine',
     tabPitch: language === 'ka' ? 'პრეზენტაცია (Pitch Deck)' : 'SaaS Pitch Deck',
@@ -105,6 +126,42 @@ export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
     // Stripe section
     stripeTitle: language === 'ka' ? 'Stripe გადახდები და დეველოპერის პორტალი' : 'Stripe SaaS Billing & Developer SDK',
     stripeDesc: language === 'ka' ? 'მყიდველი დაინახავს, რომ ბილინგის სტრუქტურა სრულიად მზად არის და მხოლოდ საკუთარი API გასაღებები სჭირდება.' : 'Full SaaS subscription tiers configured with pre-styled webhooks and Node.js proxy code.',
+  };
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = Number(payoutAmount);
+    if (isNaN(val) || val <= 0) return;
+    if (val > sellerStats.walletBalance) {
+      alert(language === 'ka' ? 'თანხა აღემატება ხელმისაწვდომ ბალანსს' : 'Amount exceeds available wallet balance');
+      return;
+    }
+    setPayoutProcessing(true);
+    try {
+      if (addLedgerItem) {
+        await addLedgerItem({
+          date: new Date().toISOString().split('T')[0],
+          description: `Payout Withdrawal (${payoutMethod.toUpperCase()}: ${payoutAccount || 'Default'})`,
+          category: 'Payout Withdrawal',
+          type: 'outbound',
+          value: val,
+          volume: 1,
+          status: 'completed',
+          operator: 'Merchant-Finance-Portal'
+        });
+      }
+      setPayoutSuccessMsg(
+        language === 'ka' 
+          ? `გადარიცხვა $${val.toLocaleString()} USD წარმატებით შესრულდა!` 
+          : `Payout of $${val.toLocaleString()} USD executed successfully!`
+      );
+      setPayoutAmount('');
+      setTimeout(() => setPayoutSuccessMsg(''), 4000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPayoutProcessing(false);
+    }
   };
 
   const slides = [
@@ -182,7 +239,7 @@ app.post('/api/checkout/session', async (req, res) => {
     }
   };
 
-  const [activeSubTab, setActiveSubTab] = useState<'valuation' | 'whitelabel' | 'pitch' | 'stripe'>('valuation');
+  const [activeSubTab, setActiveSubTab] = useState<'finance' | 'valuation' | 'whitelabel' | 'pitch' | 'stripe'>('finance');
 
   return (
     <div className="space-y-8" id="acquisition-hub-container">
@@ -208,7 +265,18 @@ app.post('/api/checkout/session', async (req, res) => {
       </div>
 
       {/* Sub tabs navigation */}
-      <div className="flex flex-wrap gap-2 p-1.5 bg-proton-bg border border-proton-border rounded-2xl max-w-4xl">
+      <div className="flex flex-wrap gap-2 p-1.5 bg-proton-bg border border-proton-border rounded-2xl max-w-5xl">
+        <button
+          onClick={() => setActiveSubTab('finance')}
+          className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+            activeSubTab === 'finance'
+              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
+              : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <Wallet size={15} />
+          {t.tabFinance}
+        </button>
         <button
           onClick={() => setActiveSubTab('valuation')}
           className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
@@ -265,6 +333,417 @@ app.post('/api/checkout/session', async (req, res) => {
           transition={{ duration: 0.3 }}
           className="w-full"
         >
+          {/* TAB 0: ORDER-TO-FINANCE SETTLEMENT & PAYOUT HUB */}
+          {activeSubTab === 'finance' && (
+            <div className="space-y-8">
+              {/* Top 4 Financial Reconciled Metrics */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Net Revenue */}
+                <div className="proton-glass p-5 rounded-2xl border border-proton-accent/30 bg-gradient-to-br from-proton-accent/10 to-transparent flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-mono uppercase text-proton-muted tracking-wider">
+                      {language === 'ka' ? 'წმინდა შემოსავალი' : 'Net Revenue'}
+                    </span>
+                    <div className="p-2 rounded-xl bg-proton-accent/10 text-proton-accent">
+                      <DollarSign size={16} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-white font-mono tracking-tight">
+                      ${sellerStats.totalNetRevenue.toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1 mt-1">
+                      <ArrowUpRight size={12} />
+                      {language === 'ka' ? 'საკომისიოს გამოკლებით' : 'Settled Net Earnings'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Gross Revenue */}
+                <div className="proton-glass p-5 rounded-2xl border border-proton-border flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-mono uppercase text-proton-muted tracking-wider">
+                      {language === 'ka' ? 'სრული შემოსავალი' : 'Gross Revenue'}
+                    </span>
+                    <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
+                      <Coins size={16} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-white font-mono tracking-tight">
+                      ${sellerStats.grossRevenue.toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-proton-muted font-mono block mt-1">
+                      {language === 'ka' ? 'შეკვეთებისა და გაყიდვების ჯამი' : 'Total Order Volume'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Platform Fee Deductions (5%) */}
+                <div className="proton-glass p-5 rounded-2xl border border-proton-border flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-mono uppercase text-proton-muted tracking-wider">
+                      {language === 'ka' ? 'პლატფორმის საკომისიო (5%)' : 'Fee Deductions (5%)'}
+                    </span>
+                    <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
+                      <Percent size={16} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-rose-400 font-mono tracking-tight">
+                      -${sellerStats.totalPlatformFees.toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-rose-300/80 font-mono block mt-1">
+                      {language === 'ka' ? 'ავტომატური ეკოსისტემური საკომისიო' : 'Platform Ecosystem Fee'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tax Estimate (18%) */}
+                <div className="proton-glass p-5 rounded-2xl border border-proton-border flex flex-col justify-between">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-mono uppercase text-proton-muted tracking-wider">
+                      {language === 'ka' ? 'საგადასახადო შეფასება (18%)' : 'Tax Estimate (18%)'}
+                    </span>
+                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+                      <Receipt size={16} />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-black text-purple-300 font-mono tracking-tight">
+                      ${sellerStats.taxEstimate.toLocaleString()}
+                    </div>
+                    <span className="text-[10px] text-purple-400/80 font-mono block mt-1">
+                      {language === 'ka' ? 'სავარაუდო დღგ / მოგების გადასახადი' : 'Projected Corporate / VAT Tax'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Middle Grid: Payout Pipeline & Balance Overview */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Available Balance Box */}
+                <div className="lg:col-span-5 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-accent/40 bg-gradient-to-br from-proton-accent/5 via-proton-bg to-proton-bg flex flex-col justify-between space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-proton-muted">
+                        {language === 'ka' ? 'ხელმისაწვდომი ბალანსი' : 'Available Wallet Balance'}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1">
+                        <CheckCircle size={12} />
+                        {language === 'ka' ? 'გასატანად მზადაა' : 'Ready for Payout'}
+                      </span>
+                    </div>
+
+                    <div className="text-4xl sm:text-5xl font-black text-white font-mono tracking-tight mb-2">
+                      ${sellerStats.walletBalance.toLocaleString()}
+                      <span className="text-sm text-proton-accent ml-2 font-sans font-bold">USD</span>
+                    </div>
+
+                    <p className="text-xs text-proton-muted leading-relaxed font-mono">
+                      {language === 'ka' 
+                        ? 'ეს თანხა დათვლილია რეალური შეკვეთების სრული შემოსავლიდან 5%-იანი საკომისიოსა და გატანილი თანხების გამოკლებით.' 
+                        : 'Reconciled wallet balance automatically synced from completed merchant orders and historical payout deductions.'}
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-proton-bg border border-proton-border space-y-2">
+                    <div className="flex justify-between text-xs font-mono">
+                      <span className="text-proton-muted">{language === 'ka' ? 'დამუშავების დრო:' : 'Processing Speed:'}</span>
+                      <span className="text-white font-bold">{language === 'ka' ? 'მყისიერი / 24 სთ' : 'Instant / 24 Hours'}</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-mono">
+                      <span className="text-proton-muted">{language === 'ka' ? 'მინიმალური გატანა:' : 'Minimum Payout:'}</span>
+                      <span className="text-white font-bold">$10.00 USD</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payout & Withdrawal Pipeline Form */}
+                <div className="lg:col-span-7 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-6">
+                  <div className="flex items-center justify-between border-b border-proton-border/45 pb-4">
+                    <div>
+                      <h3 className="text-lg font-black uppercase text-white flex items-center gap-2">
+                        <Send className="text-proton-accent" size={18} />
+                        {language === 'ka' ? 'თანხის გატანის მილსადენი' : 'Payout & Withdrawal Pipeline'}
+                      </h3>
+                      <p className="text-xs text-proton-muted">
+                        {language === 'ka' ? 'გადარიცხეთ ბალანსი თქვენს საბანკო ანგარიშზე, კრიპტო საფულეზე ან Stripe Express-ზე.' : 'Withdraw merchant funds directly to your preferred settlement rail.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {payoutSuccessMsg && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold flex items-center gap-2"
+                    >
+                      <CheckCircle size={16} />
+                      <span>{payoutSuccessMsg}</span>
+                    </motion.div>
+                  )}
+
+                  <form onSubmit={handleWithdraw} className="space-y-4">
+                    {/* Method Selection */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono text-proton-muted uppercase tracking-wider block">
+                        {language === 'ka' ? 'გატანის მეთოდი' : 'Settlement Payout Rail'}
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPayoutMethod('sepa')}
+                          className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                            payoutMethod === 'sepa'
+                              ? 'bg-proton-accent/15 border-proton-accent text-proton-accent'
+                              : 'bg-proton-bg border-proton-border text-proton-muted hover:text-white'
+                          }`}
+                        >
+                          <Building size={16} />
+                          <span>SEPA / IBAN</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPayoutMethod('crypto')}
+                          className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                            payoutMethod === 'crypto'
+                              ? 'bg-proton-accent/15 border-proton-accent text-proton-accent'
+                              : 'bg-proton-bg border-proton-border text-proton-muted hover:text-white'
+                          }`}
+                        >
+                          <Coins size={16} />
+                          <span>Crypto (USDT)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPayoutMethod('stripe')}
+                          className={`py-2.5 px-3 rounded-xl border text-xs font-mono font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                            payoutMethod === 'stripe'
+                              ? 'bg-proton-accent/15 border-proton-accent text-proton-accent'
+                              : 'bg-proton-bg border-proton-border text-proton-muted hover:text-white'
+                          }`}
+                        >
+                          <CreditCard size={16} />
+                          <span>Stripe Express</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Payout Amount */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] font-mono text-proton-muted uppercase">
+                        <span>{language === 'ka' ? 'გასატანი თანხა ($ USD)' : 'Payout Amount ($ USD)'}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPayoutAmount(String(sellerStats.walletBalance))}
+                          className="text-proton-accent hover:underline font-bold"
+                        >
+                          MAX (${sellerStats.walletBalance})
+                        </button>
+                      </div>
+                      <input 
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={payoutAmount}
+                        onChange={(e) => setPayoutAmount(e.target.value)}
+                        className="w-full bg-proton-bg border border-proton-border hover:border-proton-accent/40 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-proton-accent font-mono transition-all"
+                      />
+                    </div>
+
+                    {/* Account Destination */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono text-proton-muted uppercase tracking-wider block">
+                        {payoutMethod === 'sepa' 
+                          ? (language === 'ka' ? 'საბანკო IBAN ანგარიში' : 'Bank Account IBAN')
+                          : payoutMethod === 'crypto'
+                            ? (language === 'ka' ? 'USDT/SOL საფულის მისამართი' : 'USDT / SOL Wallet Address')
+                            : (language === 'ka' ? 'Stripe Connect ID / Email' : 'Stripe Express Account ID')}
+                      </label>
+                      <input 
+                        type="text"
+                        placeholder={
+                          payoutMethod === 'sepa'
+                            ? 'GE29NB0000000123456789'
+                            : payoutMethod === 'crypto'
+                              ? '0x71C765... or Sol...Wallet'
+                              : 'acct_1M3928194821'
+                        }
+                        value={payoutAccount}
+                        onChange={(e) => setPayoutAccount(e.target.value)}
+                        className="w-full bg-proton-bg border border-proton-border hover:border-proton-accent/40 rounded-xl px-4 py-3 text-white text-xs focus:outline-none focus:border-proton-accent font-mono transition-all"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={payoutProcessing || sellerStats.walletBalance <= 0}
+                      className="w-full py-3.5 px-4 bg-proton-accent text-proton-bg hover:opacity-90 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,242,255,0.2)] disabled:opacity-50"
+                    >
+                      {payoutProcessing ? (
+                        <>
+                          <RefreshCw className="animate-spin" size={16} />
+                          <span>{language === 'ka' ? 'მუშავდება...' : 'Processing Payout...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send size={16} />
+                          <span>{language === 'ka' ? 'თანხის გატანის მოთხოვნა' : 'Initiate Settlement Payout'}</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Order-to-Finance Settlement Table */}
+              <div className="proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-proton-border/45 pb-4">
+                  <div>
+                    <h3 className="text-base font-black uppercase text-white flex items-center gap-2">
+                      <Receipt className="text-proton-accent" size={18} />
+                      {language === 'ka' ? 'შეკვეთების ფინანსური რეესტრი' : 'Reconciled Settlement Ledger'}
+                    </h3>
+                    <p className="text-xs text-proton-muted">
+                      {language === 'ka' 
+                        ? 'ყველა შესრულებული შეკვეთის ავტომატური რეესტრი 5%-იანი საკომისიოსა და წმინდა სეტლმენტის ჩვენებით.' 
+                        : 'Real-time order reconciliation with automatic 5% platform fee calculation and settlement status.'}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono text-proton-accent font-bold bg-proton-accent/10 border border-proton-accent/20 px-3 py-1 rounded-full">
+                    {sellerOrders.length + ledgerItems.length} {language === 'ka' ? 'ჩანაწერი' : 'Total Transactions'}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-proton-border/60 text-[10px] font-mono uppercase tracking-widest text-proton-muted">
+                        <th className="py-3 px-4">ID / Date</th>
+                        <th className="py-3 px-4">{language === 'ka' ? 'დასახელება' : 'Item / Description'}</th>
+                        <th className="py-3 px-4">{language === 'ka' ? 'კატეგორია' : 'Category'}</th>
+                        <th className="py-3 px-4 text-right">{language === 'ka' ? 'სრული ფასი' : 'Gross Amount'}</th>
+                        <th className="py-3 px-4 text-right">{language === 'ka' ? 'საკომისიო (5%)' : 'Platform Fee'}</th>
+                        <th className="py-3 px-4 text-right">{language === 'ka' ? 'წმინდა სეტლმენტი' : 'Net Settlement'}</th>
+                        <th className="py-3 px-4 text-center">{language === 'ka' ? 'სტატუსი' : 'Status'}</th>
+                        <th className="py-3 px-4 text-center">{language === 'ka' ? 'მოქმედება' : 'Action'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-proton-border/30 text-xs font-mono">
+                      {/* Orders */}
+                      {sellerOrders.map((order) => {
+                        const gross = order.grossAmount ?? order.amount ?? 0;
+                        const fee = order.platformFee ?? Math.round(gross * 0.05 * 100) / 100;
+                        const net = order.netAmount ?? (gross - fee);
+                        const isSettled = order.status === 'completed' || order.status === 'delivered' || order.status === 'shipped';
+
+                        return (
+                          <tr key={order.id} className="hover:bg-white/5 transition-colors">
+                            <td className="py-3.5 px-4 font-bold text-proton-accent">
+                              <div>{order.id}</div>
+                              <span className="text-[9px] text-proton-muted font-normal">
+                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'Recent'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-white font-medium max-w-xs truncate">
+                              {order.itemTitle}
+                            </td>
+                            <td className="py-3.5 px-4 text-proton-muted">
+                              <span className="px-2 py-0.5 rounded bg-proton-bg border border-proton-border text-[10px]">
+                                {order.orderType || 'Merchant Order'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-bold text-white">
+                              ${gross.toLocaleString()}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-rose-400">
+                              -${fee.toLocaleString()}
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-black text-emerald-400">
+                              ${net.toLocaleString()}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                                isSettled 
+                                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                  : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                              }`}>
+                                {isSettled ? 'Settled' : order.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              {!isSettled ? (
+                                <button
+                                  onClick={() => updateOrderStatus(order.id, 'completed')}
+                                  className="px-2.5 py-1 rounded-lg bg-proton-accent/15 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent/30 text-[10px] font-bold uppercase tracking-wider transition"
+                                >
+                                  {language === 'ka' ? 'დადასტურება' : 'Settle Order'}
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-proton-muted/60">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {/* Ledger Items */}
+                      {ledgerItems.map((item) => {
+                        const gross = item.grossAmount ?? item.total ?? ((item.value || 0) * (item.volume || 1));
+                        const fee = item.platformFee ?? Math.round(gross * (item.type === 'inbound' ? 0.05 : 0) * 100) / 100;
+                        const net = item.netAmount ?? (gross - fee);
+                        const isOutbound = item.type === 'outbound';
+
+                        return (
+                          <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                            <td className="py-3.5 px-4 font-bold text-purple-300">
+                              <div>{item.id}</div>
+                              <span className="text-[9px] text-proton-muted font-normal">{item.date}</span>
+                            </td>
+                            <td className="py-3.5 px-4 text-white font-medium max-w-xs truncate">
+                              {item.description}
+                            </td>
+                            <td className="py-3.5 px-4 text-proton-muted">
+                              <span className="px-2 py-0.5 rounded bg-proton-bg border border-proton-border text-[10px]">
+                                {item.category}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-bold text-white">
+                              {isOutbound ? `-$${gross.toLocaleString()}` : `$${gross.toLocaleString()}`}
+                            </td>
+                            <td className="py-3.5 px-4 text-right text-rose-400">
+                              {isOutbound ? '—' : `-$${fee.toLocaleString()}`}
+                            </td>
+                            <td className={`py-3.5 px-4 text-right font-black ${isOutbound ? 'text-rose-400' : 'text-emerald-400'}`}>
+                              {isOutbound ? `-$${gross.toLocaleString()}` : `$${net.toLocaleString()}`}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border bg-emerald-500/10 border-emerald-500/30 text-emerald-400">
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className="text-[10px] text-proton-muted/60">—</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {sellerOrders.length === 0 && ledgerItems.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-proton-muted text-xs font-mono">
+                            {language === 'ka' ? 'ჩანაწერები არ მოიძებნა' : 'No settlement entries recorded yet.'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: VALUATION ENGINE */}
           {activeSubTab === 'valuation' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
