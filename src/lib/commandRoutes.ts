@@ -34,6 +34,7 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     descriptionKa: 'ვიდეო ფიდი, AI კლიპები და რგოლები',
     category: 'creative'
   },
+  /* Temporarily hidden Personas route
   {
     id: 'personas',
     keywords: ['personas', 'persona', 'chat', 'ai', 'companion', 'assistant', 'bot', 'council', 'agent', 'ჩატი', 'ასისტენტი', 'აგენტი', 'ბოტი', 'საუბარი'],
@@ -44,6 +45,7 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     descriptionKa: 'საუბარი სპეციალიზებულ AI აგენტებთან',
     category: 'ai'
   },
+  */
   {
     id: 'creative',
     keywords: ['creative', 'studio', 'art', 'design', 'hub', 'კრეატივი', 'სტუდია', 'დიზაინი', 'ჰაბი'],

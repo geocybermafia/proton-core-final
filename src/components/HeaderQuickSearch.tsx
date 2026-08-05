@@ -73,10 +73,8 @@ export const HeaderQuickSearch: React.FC<HeaderQuickSearchProps> = ({
       if (matchedRoutes.length > 0 && matchedRoutes[selectedIndex]) {
         executeRoute(matchedRoutes[selectedIndex]);
       } else if (query.trim()) {
-        // Fallback: Default to AI Personas assistant if query is general text
         setQuery('');
         setIsOpen(false);
-        setActiveView('personas');
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
@@ -185,19 +183,6 @@ export const HeaderQuickSearch: React.FC<HeaderQuickSearchProps> = ({
                 <p className="text-xs text-proton-muted font-mono">
                   {language === 'ka' ? `ბრძანება "${query}" ვერ მოიძებნა მარშრუტების სიაში.` : `No direct route found for "${query}".`}
                 </p>
-                <ProtonButton
-                  size="sm"
-                  variant="subtle"
-                  onClick={() => {
-                    setQuery('');
-                    setIsOpen(false);
-                    setActiveView('personas');
-                  }}
-                  leftIcon={<Bot size={12} className="text-proton-accent" />}
-                  className="w-full justify-center text-xs"
-                >
-                  {language === 'ka' ? 'დასვით შეკითხვა AI ჩატი-ს' : 'Ask AI Companion in Chat'}
-                </ProtonButton>
               </div>
             )}
           </motion.div>

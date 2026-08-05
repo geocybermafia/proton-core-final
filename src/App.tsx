@@ -3981,7 +3981,7 @@ export default function App() {
     if (pathname.startsWith('/translator')) return 'translator';
     if (pathname.startsWith('/market-hub')) return 'market-hub';
     if (pathname.startsWith('/market')) return 'market-hub';
-    if (pathname.startsWith('/personas')) return 'personas';
+    if (pathname.startsWith('/personas')) return 'dashboard';
     if (pathname.startsWith('/blueprints')) return 'blueprints';
     if (pathname.startsWith('/studio')) return 'image';
     if (pathname.startsWith('/organizer')) return 'organizer';
@@ -4008,7 +4008,7 @@ export default function App() {
       case 'translator': return '/translator';
       case 'market-hub': return '/market-hub';
       case 'market': return '/market-hub';
-      case 'personas': return '/personas';
+      case 'personas': return '/dashboard';
       case 'blueprints': return '/blueprints';
       case 'image': return '/studio';
       case 'organizer': return '/organizer';
@@ -4030,18 +4030,12 @@ export default function App() {
     navigate(getPathnameFromView(view));
   }, [navigate, getPathnameFromView]);
 
-  // Synchronize persona ID from deep-linking URL (/personas/:id)
+  // Synchronize persona ID from deep-linking URL (/personas/:id) & auto-redirect disabled personas route
   useEffect(() => {
-    if (location.pathname.startsWith('/personas/')) {
-      const parts = location.pathname.split('/');
-      const pId = parts[parts.length - 1];
-      if (pId && pId !== 'personas') {
-        setSelectedPersonaId(pId);
-      }
-    } else if (location.pathname === '/personas') {
-      setSelectedPersonaId(null);
+    if (location.pathname.startsWith('/personas')) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [location.pathname]);
+  }, [location.pathname, navigate]);
 
   // Scroll main container & window to top on view changes with layout safety and multi-stage timing
   useEffect(() => {
@@ -5788,7 +5782,6 @@ export default function App() {
                   <div className="space-y-1">
                     {[
                       { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video, badge: 'LIVE' },
-                      { id: 'personas', label: language === 'ka' ? 'AI პერსონები' : 'AI Personas', icon: Users },
                       { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
                       { id: 'image', label: t.sidebar.image, icon: ImageIcon },
                       { id: 'translator', label: t.sidebar.translator, icon: Languages },
@@ -6465,7 +6458,7 @@ export default function App() {
                     { label: t.sidebar.dashboard, status: 'Online', color: 'text-green-400', icon: LayoutDashboard },
                     { label: t.sidebar.organizer, status: 'Online', color: 'text-green-400', icon: CalendarIcon },
                     { label: t.sidebar.blueprints, status: 'Restoring', color: 'text-amber-400', icon: WorkflowIcon },
-                    { label: t.sidebar.personas, status: 'Syncing', color: 'text-proton-accent', icon: Users },
+                    { label: t.sidebar.translator, status: 'Online', color: 'text-green-400', icon: Languages },
                   ].map((sys, i) => (
                     <div key={sys.label} className="p-4 rounded-3xl bg-proton-bg border border-proton-border flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-proton-card border border-proton-border flex items-center justify-center text-proton-muted">

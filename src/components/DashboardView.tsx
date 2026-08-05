@@ -452,16 +452,6 @@ Query: "${query}"
                 type="button"
                 variant="subtle"
                 size="sm"
-                onClick={() => setActiveView('personas')}
-                leftIcon={<Bot size={11} />}
-                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20"
-              >
-                {language === 'ka' ? 'AI ჩატი' : 'AI Assistant'}
-              </ProtonButton>
-              <ProtonButton 
-                type="button"
-                variant="subtle"
-                size="sm"
                 onClick={() => setUiMode('creative', 'image')}
                 leftIcon={<Image size={11} />}
                 className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
@@ -547,16 +537,12 @@ Query: "${query}"
                       
                       <div className="flex items-center justify-end pt-1">
                         <ProtonButton
-                          variant="primary"
+                          variant="secondary"
                           size="sm"
-                          onClick={() => {
-                            setAiResponse(null);
-                            setActiveView('personas');
-                          }}
-                          rightIcon={<ArrowRight size={13} />}
+                          onClick={() => setAiResponse(null)}
                           className="text-xs py-1.5 font-mono uppercase tracking-wider"
                         >
-                          {language === 'ka' ? 'გადადი AI ასისტენტებში' : 'Navigate to AI Companions'}
+                          {language === 'ka' ? 'დახურვა' : 'Close'}
                         </ProtonButton>
                       </div>
                     </div>
@@ -579,18 +565,18 @@ Query: "${query}"
         <ProtonCard 
           variant="interactive"
           padding="compact"
-          onClick={() => setActiveView('personas')}
+          onClick={() => setUiMode('creative', 'creative-studio')}
           className="flex items-center gap-3.5"
         >
           <ProtonIconBox variant="accent" size="md" className="group-hover:scale-110">
-            <Bot size={20} />
+            <Sparkles size={20} />
           </ProtonIconBox>
           <div>
             <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
-              {language === 'ka' ? 'AI ასისტენტები' : 'AI Companions'}
+              {language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio'}
             </div>
             <div className="text-base font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
-              <span>{personas.length || 8}</span>
+              <span>AI Hub</span>
               <ProtonBadge variant="emerald" size="sm">
                 {language === 'ka' ? 'აქტიური' : 'Active'}
               </ProtonBadge>
