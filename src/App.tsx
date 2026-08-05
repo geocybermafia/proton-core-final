@@ -25,6 +25,7 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
 }
 
 import { useThemeSync } from './hooks/useThemeSync';
+import { AutomationEngine } from './components/AutomationEngine';
 
 const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
 // Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
@@ -5163,6 +5164,9 @@ export default function App() {
       "flex h-[100dvh] overflow-hidden overscroll-none theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
+      {/* HEADLESS BACKGROUND AUTOMATION ENGINE (Active across all application routes) */}
+      <AutomationEngine workflows={workflows} />
+
       {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
       <div 
         className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}

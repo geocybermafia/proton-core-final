@@ -12,7 +12,6 @@ import { handleFirestoreError } from '../lib/firebaseUtils';
 import { analyzeWorkflow } from '../lib/gemini';
 import { useToast } from './Toast';
 import Markdown from 'react-markdown';
-import { useSeller, useSellerStats } from '../contexts/SellerContext';
 
 function lazyWithRetry<T extends React.ComponentType<any>>(
   componentImport: () => Promise<{ default: T } | { [key: string]: any }>
@@ -541,101 +540,6 @@ export default function WorkflowsView({
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   const [confirmation, setConfirmation] = useState<{ action: () => void; message: string } | null>(null);
   const { showToast } = useToast();
-
-  // Subscribe to SellerContext events for automation bridge execution
-  const { sellerOrders } = useSeller();
-  const sellerStats = useSellerStats();
-  const lowStockItems = sellerStats.lowStockItems;
-
-  // Processed event refs to prevent infinite loops
-  const processedNewOrdersRef = useRef<Set<string>>(new Set());
-  const processedCompletedOrdersRef = useRef<Set<string>>(new Set());
-  const processedLowStockRef = useRef<Set<string>>(new Set());
-
-  // Automation Event Execution Bridge Listener
-  useEffect(() => {
-    // 1. Process New Orders Trigger (onOrderReceived)
-    sellerOrders.forEach((order) => {
-      if (!processedNewOrdersRef.current.has(order.id)) {
-        processedNewOrdersRef.current.add(order.id);
-
-        const matchingWfs = workflows.filter(wf => 
-          wf.status !== 'inactive' && (
-            wf.trigger === 'onOrderReceived' ||
-            wf.trigger.toLowerCase().includes('order received') ||
-            wf.trigger.toLowerCase().includes('new order') ||
-            wf.nodes?.some((n: any) => n.subtype === 'onOrderReceived')
-          )
-        );
-
-        matchingWfs.forEach((wf) => {
-          setTimeout(() => {
-            showToast(
-              language === 'ka'
-                ? `⚡ [ავტომატიზაცია]: ${wf.name} გააქტიურდა შეკვეთაზე #${order.id.slice(-6)} ($${order.amount})`
-                : `⚡ [Workflow Triggered]: ${wf.name} for Order #${order.id.slice(-6)} ($${order.amount})`,
-              'info'
-            );
-          }, 150);
-        });
-      }
-
-      // 2. Process Completed Orders Trigger (onOrderCompleted)
-      if (
-        (order.status === 'completed' || order.status === 'delivered' || order.status === 'shipped') && 
-        !processedCompletedOrdersRef.current.has(order.id)
-      ) {
-        processedCompletedOrdersRef.current.add(order.id);
-
-        const matchingWfs = workflows.filter(wf => 
-          wf.status !== 'inactive' && (
-            wf.trigger === 'onOrderCompleted' ||
-            wf.trigger.toLowerCase().includes('order completed') ||
-            wf.trigger.toLowerCase().includes('post-sale') ||
-            wf.nodes?.some((n: any) => n.subtype === 'onOrderCompleted')
-          )
-        );
-
-        matchingWfs.forEach((wf) => {
-          setTimeout(() => {
-            showToast(
-              language === 'ka'
-                ? `⚡ [ავტომატიზაცია]: ${wf.name} გააქტიურდა შეკვეთის დასრულებაზე`
-                : `⚡ [Workflow Triggered]: ${wf.name} for Completed Order #${order.id.slice(-6)}`,
-              'success'
-            );
-          }, 300);
-        });
-      }
-    });
-
-    // 3. Process Low Stock Alerts Trigger (onLowStock)
-    lowStockItems.forEach((item) => {
-      if (!processedLowStockRef.current.has(item.id)) {
-        processedLowStockRef.current.add(item.id);
-
-        const matchingWfs = workflows.filter(wf => 
-          wf.status !== 'inactive' && (
-            wf.trigger === 'onLowStock' ||
-            wf.trigger.toLowerCase().includes('low stock') ||
-            wf.trigger.toLowerCase().includes('inventory warning') ||
-            wf.nodes?.some((n: any) => n.subtype === 'onLowStock')
-          )
-        );
-
-        matchingWfs.forEach((wf) => {
-          setTimeout(() => {
-            showToast(
-              language === 'ka'
-                ? `⚠️ [ავტომატიზაცია]: ${wf.name} - დაბალი მარაგი: ${item.title} (${item.quantity} დარჩა)`
-                : `⚠️ [Workflow Triggered]: ${wf.name} - Low Stock Warning: ${item.title} (${item.quantity} left)`,
-              'warning'
-            );
-          }, 450);
-        });
-      }
-    });
-  }, [sellerOrders, lowStockItems, workflows, showToast, language]);
 
   // Preset Template 1-Click Installer
   const installTemplate = async (templateKey: 'orderReceived' | 'lowStock' | 'orderCompleted') => {
