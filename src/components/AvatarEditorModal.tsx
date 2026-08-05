@@ -231,10 +231,10 @@ export default function AvatarEditorModal({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-          className="relative w-full max-w-lg bg-proton-card border border-proton-border rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,242,255,0.15)] z-10"
+          className="relative w-full max-w-lg max-h-[85dvh] sm:max-h-[90vh] flex flex-col bg-proton-card border border-proton-border rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(0,242,255,0.15)] z-10"
         >
           {/* Header */}
-          <div className="p-6 border-b border-proton-border flex items-center justify-between">
+          <div className="p-4 sm:p-6 border-b border-proton-border flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-proton-accent/10 rounded-xl text-proton-accent">
                 <Sparkles size={18} />
@@ -259,7 +259,7 @@ export default function AvatarEditorModal({
             </button>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1 min-h-0 custom-scrollbar-minimal">
             {/* Main Preview Container */}
             <div className="flex justify-center">
               <div className="relative w-44 h-44 rounded-3xl bg-gradient-to-br from-proton-accent via-blue-500 to-indigo-600 p-[2px] shadow-2xl">
@@ -537,7 +537,7 @@ export default function AvatarEditorModal({
           </div>
 
           {/* Footer Controls */}
-          <div className="p-6 border-t border-proton-border bg-proton-bg/40 flex items-center justify-between gap-4">
+          <div className="p-4 sm:p-6 border-t border-proton-border bg-proton-bg/40 flex items-center justify-between gap-4 shrink-0">
             <button
               onClick={() => {
                 stopCamera();
