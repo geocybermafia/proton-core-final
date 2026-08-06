@@ -58,9 +58,12 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
       );
 
       const pingDocRef = doc(db, 'system', 'config');
-      const pingPromise = getDocFromServer(pingDocRef);
+      const pingPromise = getDocFromServer(pingDocRef).catch(err => err);
 
-      await Promise.race([pingPromise, timeoutPromise]);
+      const res = await Promise.race([pingPromise, timeoutPromise]);
+      if (res instanceof Error) {
+        throw res;
+      }
       
       measuredLatency = Math.round(performance.now() - start);
       setLatency(measuredLatency);

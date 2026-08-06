@@ -11,9 +11,9 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Analytics - DISABLED to avoid "403 Permission Denied" error from Installations API
 export const analytics = null;
 
-// Initialize Firestore with experimentalForceLongPolling to handle proxy/iframe WebSocket limitations reliably
+// Initialize Firestore with experimentalAutoDetectLongPolling to handle proxy/iframe limitations reliably without 10s long-polling timeouts
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
+  experimentalAutoDetectLongPolling: true
 }, firebaseConfig.firestoreDatabaseId);
 
 export const auth = getAuth(app);
