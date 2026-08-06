@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { UserProfile, Theme } from '../types';
 import { User as UserIcon, Camera, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, updateDoc, increment, collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useSeller } from '../contexts/SellerContext';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import AvatarEditorModal from './AvatarEditorModal';
@@ -31,62 +32,9 @@ const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: s
 
 export default function CabinetView({ profile, theme, setTheme, onUpdateProfile }: CabinetViewProps) {
   const { user } = useAuth();
+  const { sellerListings, sellerOrders, loading, updateOrderStatus } = useSeller();
   const [isDesignOpen, setIsDesignOpen] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-  const [sellerOrders, setSellerOrders] = useState<any[]>([]);
-  const [sellerListings, setSellerListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Diagnostic logging outside effect to capture every render cycle
-  console.log('[DIAGNOSTIC RENDER] CabinetView user:', user?.uid);
-
-  useEffect(() => {
-    if (!user) {
-      console.log('[DIAGNOSTIC EFFECT] No authenticated user detected in CabinetView context. Skipping subscribe.');
-      setSellerListings([]);
-      setSellerOrders([]);
-      return;
-    }
-
-    const currentUid = user.uid;
-
-    // Fetch Seller Listings
-    const qListings = query(
-      collection(db, 'listings'),
-      where('sellerId', '==', currentUid)
-    );
-
-    const unsubListings = onSnapshot(qListings, (snapshot) => {
-      const matchedListings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      setSellerListings(matchedListings);
-    }, (err) => {
-      console.error('[DIAGNOSTIC EVENT ERROR] listings subscription failed:', err);
-    });
-
-    // Fetch Seller Orders (Received) - sorted in client-side memory to avoid composite index requirement
-    const qOrders = query(
-      collection(db, 'orders'),
-      where('sellerId', '==', currentUid)
-    );
-
-    const unsubOrders = onSnapshot(qOrders, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      ordersData.sort((a, b) => {
-        const timeA = a.createdAt?.seconds || a.createdAt || 0;
-        const timeB = b.createdAt?.seconds || b.createdAt || 0;
-        return timeB - timeA;
-      });
-      setSellerOrders(ordersData);
-      setLoading(false);
-    }, (err) => {
-      console.error('[DIAGNOSTIC EVENT ERROR] orders subscription failed:', err);
-    });
-
-    return () => {
-      unsubListings();
-      unsubOrders();
-    };
-  }, [user?.uid]);
 
   if (!profile) return null;
   const rawLang = profile.language?.toLowerCase() || 'ka';
@@ -116,13 +64,15 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
       return;
     }
     try {
-      await updateDoc(doc(db, 'orders', orderId), { status: newStatus });
+      if (updateOrderStatus) {
+        await updateOrderStatus(orderId, newStatus);
+      }
     } catch (e) {
       console.error("Order update failed", e);
     }
   };
 
-  const totalRevenue = sellerOrders.reduce((sum, order) => sum + (Number(order.price) || 0), 0);
+  const totalRevenue = sellerOrders.reduce((sum, order) => sum + (Number(order.amount || (order as any).price) || 0), 0);
   
   const isUrl = (str: string) => str.startsWith('http') || str.startsWith('data:image');
 
@@ -362,12 +312,16 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
                       <tr key={order.id} className="group hover:bg-proton-accent/5 transition-colors">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-proton-accent/10 overflow-hidden border border-proton-border">
-                              <img src={order.image} className="w-full h-full object-cover" />
+                            <div className="w-8 h-8 rounded-lg bg-proton-accent/10 overflow-hidden border border-proton-border flex items-center justify-center">
+                              {(order as any).image ? (
+                                <img src={(order as any).image} className="w-full h-full object-cover" />
+                              ) : (
+                                <Package size={14} className="text-proton-muted" />
+                              )}
                             </div>
                             <div>
-                              <p className="font-black text-proton-text truncate max-w-[180px] sm:max-w-xs md:max-w-none">{order.title}</p>
-                              <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">${order.price}</p>
+                              <p className="font-black text-proton-text truncate max-w-[180px] sm:max-w-xs md:max-w-none">{order.itemTitle || (order as any).title || 'Order Item'}</p>
+                              <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">${order.amount ?? (order as any).price ?? 0}</p>
                             </div>
                           </div>
                         </td>
