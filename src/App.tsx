@@ -6268,8 +6268,6 @@ export default function App() {
                     }>
                       <CabinetView 
                         profile={userProfile} 
-                        theme={theme} 
-                        setTheme={setTheme} 
                         onUpdateProfile={handleUpdateUserProfile}
                       />
                     </Suspense>

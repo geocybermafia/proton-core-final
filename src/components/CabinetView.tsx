@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserProfile, Theme } from '../types';
+import { UserProfile } from '../types';
 import { User as UserIcon, Camera, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -13,27 +13,12 @@ import AvatarEditorModal from './AvatarEditorModal';
 
 interface CabinetViewProps {
   profile: UserProfile | null;
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
   onUpdateProfile?: (updates: Partial<UserProfile>) => void;
 }
 
-const THEME_OPTIONS: { id: Theme; label: string; icon: any; color: string; bg: string }[] = [
-  { id: 'enterprise', label: 'Enterprise', icon: Shield, color: 'bg-indigo-500', bg: 'bg-gradient-to-br from-[#0B0F17] to-[#111827] border-indigo-500/30' },
-  { id: 'light', label: 'Light', icon: Sun, color: 'bg-slate-200', bg: 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-800' },
-  { id: 'titanium', label: 'Titanium', icon: Circle, color: 'bg-slate-400', bg: 'bg-gradient-to-br from-slate-400 to-slate-600 border-slate-300' },
-  { id: 'proton', label: 'Proton Dark', icon: Zap, color: 'bg-cyan-400', bg: 'bg-[radial-gradient(circle_at_50%_50%,#0d1117_0%,#010409_100%)] border-cyan-500/20' },
-  { id: 'forest', label: 'Forest', icon: Trees, color: 'bg-emerald-500', bg: 'bg-gradient-to-br from-emerald-900 via-emerald-950 to-black border-emerald-500/20' },
-  { id: 'sunset', label: 'Sunset', icon: Sunrise, color: 'bg-orange-400', bg: 'bg-gradient-to-br from-orange-600 via-red-950 to-black border-orange-500/20' },
-  { id: 'rose', label: 'Rose', icon: Heart, color: 'bg-rose-500', bg: 'bg-gradient-to-br from-rose-600 via-rose-950 to-black border-rose-500/20' },
-  { id: 'vibrant', label: 'Nebula', icon: Sparkles, color: 'bg-purple-500', bg: 'bg-gradient-to-br from-indigo-900 via-purple-950 to-black border-purple-500/20' },
-  { id: 'midnight', label: 'Dark', icon: Moon, color: 'bg-slate-900', bg: 'bg-gradient-to-br from-neutral-900 to-black border-neutral-800' },
-];
-
-export default function CabinetView({ profile, theme, setTheme, onUpdateProfile }: CabinetViewProps) {
+export default function CabinetView({ profile, onUpdateProfile }: CabinetViewProps) {
   const { user } = useAuth();
   const { sellerListings, sellerOrders, loading, updateOrderStatus } = useSeller();
-  const [isDesignOpen, setIsDesignOpen] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   if (!profile) return null;
@@ -365,174 +350,41 @@ export default function CabinetView({ profile, theme, setTheme, onUpdateProfile 
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-         {/* 2. DESIGN / THEME SWITCHER - COLLAPSIBLE */}
-         <section className="bg-proton-card border border-proton-border rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
-            <button 
-               onClick={() => setIsDesignOpen(!isDesignOpen)}
-               className="w-full flex items-center justify-between p-6 px-8 hover:bg-proton-bg/20 transition-colors"
-            >
-               <div className="flex items-center gap-4">
-                  <div className={cn("p-3 rounded-xl bg-gradient-to-br from-proton-accent/20 to-transparent text-proton-accent transition-transform duration-500 shadow-inner", isDesignOpen && "rotate-12 scale-110")}>
-                     <Palette size={20} />
-                  </div>
-                  <div className="text-left">
-                     <h3 className="text-sm font-black uppercase tracking-widest text-proton-text">{(t as any).design_title}</h3>
-                     <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest mt-0.5 opacity-60">
-                        {(t as any).design_desc}
-                     </p>
-                  </div>
-               </div>
-               <motion.div
-                  animate={{ rotate: isDesignOpen ? 180 : 0 }}
-                  transition={{ duration: 0.5, type: "spring" }}
-                  className="text-proton-muted"
-               >
-                  <Settings size={18} />
-               </motion.div>
-            </button>
-            
-            <AnimatePresence>
-               {isDesignOpen && (
-                  <motion.div
-                     initial={{ height: 0, opacity: 0 }}
-                     animate={{ height: 'auto', opacity: 1 }}
-                     exit={{ height: 0, opacity: 0 }}
-                     transition={{ duration: 0.5, ease: "circOut" }}
-                  >
-                     <div className="p-8 pt-0">
-                        <div className="h-px bg-gradient-to-r from-transparent via-proton-border to-transparent mb-8 opacity-40" />
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                           {THEME_OPTIONS.map((opt) => (
-                              <button
-                                 key={opt.id}
-                                 onClick={() => setTheme(opt.id)}
-                                 className={cn(
-                                    "p-4 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border group relative overflow-hidden",
-                                    theme === opt.id 
-                                       ? "border-proton-accent shadow-[0_0_30px_rgba(0,242,255,0.1)] ring-2 ring-proton-accent/20 scale-[1.02]" 
-                                       : "border-proton-border hover:border-proton-accent/40 hover:scale-[1.02]",
-                                    opt.bg
-                                 )}
-                              >
-                                 <div className={cn(
-                                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500", 
-                                    theme === opt.id ? "bg-proton-accent text-proton-bg shadow-xl rotate-6" : "bg-white/10 group-hover:bg-white/20 group-hover:rotate-3"
-                                 )}>
-                                    <opt.icon size={24} />
-                                 </div>
-                                 <span className={cn(
-                                    "text-[10px] font-black uppercase tracking-[0.2em]",
-                                    theme === opt.id ? "text-proton-accent" : "text-white/60 group-hover:text-white"
-                                 )}>
-                                    {(t as any)[`theme_${opt.id}`] || opt.label}
-                                 </span>
-                                 
-                                 {theme === opt.id && (
-                                    <motion.div 
-                                       layoutId="theme-active-indicator"
-                                       className="absolute top-3 right-3"
-                                    >
-                                       <div className="w-2 h-2 bg-proton-accent rounded-full shadow-[0_0_12px_rgba(0,242,255,1)] animate-pulse" />
-                                    </motion.div>
-                                 )}
-                              </button>
-                           ))}
-                        </div>
-                     </div>
-                  </motion.div>
-               )}
-            </AnimatePresence>
-         </section>
-
-         {/* 5. SETTINGS */}
-         <section className="bg-proton-card border border-proton-border rounded-2xl p-8 space-y-6 shadow-xl relative group">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-            <div className="flex items-center gap-4 border-b border-proton-border pb-4">
-               <div className="p-3 bg-amber-500/10 rounded-xl text-amber-500">
-                  <Settings size={20} />
+      {/* NETWORK DIAGNOSTIC */}
+      <section className="bg-proton-card border border-proton-border rounded-2xl p-8 space-y-6 shadow-xl relative group overflow-hidden">
+         <div className="absolute -right-4 -bottom-4 text-emerald-500/5 rotate-12 transition-transform group-hover:scale-110 duration-1000">
+           <Globe size={120} />
+         </div>
+         
+         <div className="flex items-center justify-between border-b border-proton-border pb-4">
+            <div className="flex items-center gap-4">
+               <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 group-hover:animate-pulse">
+                 <Globe size={20} />
                </div>
                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-proton-text">{t.config_title}</h3>
-                  <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest mt-0.5 opacity-60">System Preferences</p>
+                 <h3 className="text-sm font-black uppercase tracking-widest text-proton-text">{t.connection_title}</h3>
+                 <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest mt-0.5 opacity-60">Neural Network Status</p>
                </div>
             </div>
-
-            <div className="grid grid-cols-1 gap-4">
-               <div className="flex items-center justify-between p-5 bg-proton-bg/20 rounded-2xl border border-proton-border hover:bg-proton-bg/30 transition-all cursor-default">
-                  <div className="space-y-1">
-                     <div className="text-xs font-black uppercase text-proton-text tracking-widest">{t.language_label}</div>
-                     <div className="text-[10px] text-proton-muted font-bold uppercase tracking-widest opacity-60">{t.language_desc}</div>
-                  </div>
-                  <select 
-                     value={profile.language}
-                     onChange={(e) => handleUpdate('language', e.target.value)}
-                     className="bg-proton-bg border border-proton-border rounded-xl px-5 py-2 text-[10px] font-black text-proton-text focus:outline-none focus:border-proton-accent cursor-pointer hover:border-proton-accent/50 transition-colors uppercase tracking-widest shadow-inner"
-                  >
-                     <option value="en">English (US)</option>
-                     <option value="ka">ქართული (GE)</option>
-                  </select>
-               </div>
-
-               <div className="flex items-center justify-between p-5 bg-proton-bg/20 rounded-2xl border border-proton-border hover:bg-proton-bg/30 transition-all cursor-default">
-                  <div className="space-y-1">
-                     <div className="text-xs font-black uppercase text-proton-text tracking-widest">{t.notifications_label}</div>
-                     <div className="text-[10px] text-proton-muted font-bold uppercase tracking-widest opacity-60">{t.notifications_desc}</div>
-                  </div>
-                  <button 
-                     onClick={() => handleUpdate('notifications', !profile.notifications)}
-                     className={cn(
-                        "w-12 h-6 rounded-full transition-all relative flex items-center shadow-inner",
-                        profile.notifications ? "bg-proton-accent" : "bg-white/10"
-                     )}
-                  >
-                     <motion.div 
-                        animate={{ x: profile.notifications ? 26 : 4 }}
-                        className={cn("w-4 h-4 rounded-lg bg-white shadow-lg flex items-center justify-center")}
-                     >
-                        <div className={cn("w-1.5 h-1.5 rounded-full", profile.notifications ? "bg-proton-bg" : "bg-proton-muted")} />
-                     </motion.div>
-                  </button>
+            <button className="text-proton-muted hover:text-proton-accent transition-all hover:rotate-180 duration-500 p-2">
+               <RefreshCw size={16} />
+            </button>
+         </div>
+         
+         <div className="grid grid-cols-2 gap-4">
+            <div className="p-5 bg-proton-bg/20 border border-proton-border rounded-2xl hover:bg-proton-bg/30 transition-all">
+               <span className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] block mb-2 opacity-60">{t.region_label}</span>
+               <div className="text-sm font-mono font-black text-white tracking-widest">EU-CENTRAL-1</div>
+            </div>
+            <div className="p-5 bg-proton-bg/20 border border-proton-border rounded-2xl hover:bg-proton-bg/30 transition-all">
+               <span className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] block mb-2 opacity-60">{t.status_label}</span>
+               <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                  <span className="text-xs text-emerald-500 font-black uppercase tracking-widest">{t.optimal}</span>
                </div>
             </div>
-         </section>
-
-         {/* 4. NETWORK diagnostic */}
-         <section className="bg-proton-card border border-proton-border rounded-2xl p-8 space-y-6 shadow-xl relative group overflow-hidden">
-            <div className="absolute -right-4 -bottom-4 text-emerald-500/5 rotate-12 transition-transform group-hover:scale-110 duration-1000">
-              <Globe size={120} />
-            </div>
-            
-            <div className="flex items-center justify-between border-b border-proton-border pb-4">
-               <div className="flex items-center gap-4">
-                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 group-hover:animate-pulse">
-                    <Globe size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black uppercase tracking-widest text-proton-text">{t.connection_title}</h3>
-                    <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest mt-0.5 opacity-60">Neural Network Status</p>
-                  </div>
-               </div>
-               <button className="text-proton-muted hover:text-proton-accent transition-all hover:rotate-180 duration-500 p-2">
-                  <RefreshCw size={16} />
-               </button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-               <div className="p-5 bg-proton-bg/20 border border-proton-border rounded-2xl hover:bg-proton-bg/30 transition-all">
-                  <span className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] block mb-2 opacity-60">{t.region_label}</span>
-                  <div className="text-sm font-mono font-black text-white tracking-widest">EU-CENTRAL-1</div>
-               </div>
-               <div className="p-5 bg-proton-bg/20 border border-proton-border rounded-2xl hover:bg-proton-bg/30 transition-all">
-                  <span className="text-[10px] font-black text-proton-muted uppercase tracking-[0.2em] block mb-2 opacity-60">{t.status_label}</span>
-                  <div className="flex items-center gap-3">
-                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
-                     <span className="text-xs text-emerald-500 font-black uppercase tracking-widest">{t.optimal}</span>
-                  </div>
-               </div>
-            </div>
-         </section>
-      </div>
+         </div>
+      </section>
 
       <AvatarEditorModal
          isOpen={isAvatarModalOpen}
