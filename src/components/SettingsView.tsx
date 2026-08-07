@@ -640,7 +640,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="max-w-xl"
+              className="max-w-3xl lg:max-w-4xl"
             >
               {activeTab === 'ai' && (
                 <div className="space-y-8" id="sec-ai-config">
