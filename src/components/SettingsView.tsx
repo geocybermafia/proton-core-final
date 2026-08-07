@@ -513,12 +513,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const tabs = [
-    { id: 'preferences', label: language === 'ka' ? 'დიზაინი და ენა' : 'Design & Language', icon: Palette },
-    { id: 'ai', label: language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant', icon: Cpu },
-    { id: 'profile', label: language === 'ka' ? 'ჩემი პროფილი' : 'My Profile', icon: User },
-    { id: 'security', label: language === 'ka' ? 'უსაფრთხოება' : 'Security & Keys', icon: Shield },
-    { id: 'seo', label: language === 'ka' ? 'როგორ გამოჩნდება საიტი?' : 'Google & Social Preview', icon: Search },
-    { id: 'cost_control', label: language === 'ka' ? 'გამოყენებული რესურსები' : 'Used Resources', icon: TrendingUp },
+    { 
+      id: 'preferences', 
+      label: language === 'ka' ? 'დიზაინი და ენა' : 'Design & Language', 
+      shortLabel: language === 'ka' ? 'დიზაინი' : 'Design',
+      icon: Palette 
+    },
+    { 
+      id: 'ai', 
+      label: language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant', 
+      shortLabel: 'AI',
+      icon: Cpu 
+    },
+    { 
+      id: 'profile', 
+      label: language === 'ka' ? 'ჩემი პროფილი' : 'My Profile', 
+      shortLabel: language === 'ka' ? 'პროფილი' : 'Profile',
+      icon: User 
+    },
+    { 
+      id: 'security', 
+      label: language === 'ka' ? 'უსაფრთხოება' : 'Security & Keys', 
+      shortLabel: language === 'ka' ? 'უსაფრთხოება' : 'Security',
+      icon: Shield 
+    },
+    { 
+      id: 'seo', 
+      label: language === 'ka' ? 'როგორ გამოჩნდება საიტი?' : 'Google & Social Preview', 
+      shortLabel: 'SEO',
+      icon: Search 
+    },
+    { 
+      id: 'cost_control', 
+      label: language === 'ka' ? 'გამოყენებული რესურსები' : 'Used Resources', 
+      shortLabel: language === 'ka' ? 'რესურსები' : 'Resources',
+      icon: TrendingUp 
+    },
   ];
 
   return (
@@ -573,13 +603,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
-        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-4 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10" id="settings-sidebar">
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10" id="settings-sidebar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 md:flex-none flex items-center justify-center md:justify-start gap-4 p-3 md:p-4 rounded-2xl transition-all group shrink-0 relative",
+                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-4 p-2.5 md:p-4 rounded-2xl transition-all group shrink-0 relative min-w-[72px] md:min-w-0",
                 activeTab === tab.id 
                   ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20" 
                   : "text-proton-muted hover:text-proton-text hover:bg-white/5"
@@ -587,14 +617,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               id={`tab-settings-${tab.id}`}
             >
               <div className={cn(
-                "w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all",
+                "w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all shrink-0",
                 activeTab === tab.id ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" : "bg-proton-secondary/20 text-proton-muted group-hover:bg-proton-secondary/30"
               )}>
                 <tab.icon size={18} />
               </div>
+              <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap">{tab.shortLabel}</span>
               <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left">{tab.label}</span>
               {tab.id === 'profile' && isProfileDirty && (
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" title="Unsaved changes" />
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes" />
               )}
             </button>
           ))}
