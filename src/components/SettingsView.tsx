@@ -656,7 +656,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <div className="space-y-8">
                     {/* Temperature Tuner Slider */}
-                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-[32px] border border-proton-border/30">
+                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
                           <Zap size={14} className="text-proton-accent animate-pulse" />
@@ -715,7 +715,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 );
                               }}
                               className={cn(
-                                "p-3 rounded-2xl border text-left transition-all active:scale-95 flex flex-col justify-between h-20",
+                                "p-3 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between h-20",
                                 Math.abs(aiSettings.temperature - item.val) < 0.05
                                   ? "bg-proton-accent/10 border-proton-accent shadow-md shadow-proton-accent/5"
                                   : "bg-proton-bg/20 border-proton-border/40 hover:border-proton-accent/40 hover:bg-proton-secondary/10"
@@ -735,7 +735,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     {/* Google Web Search & Google Maps Toggle Row */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className={cn(
-                        "p-5 rounded-[24px] border flex items-center justify-between transition-all cursor-pointer group",
+                        "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                         aiSettings.enableSearch ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
                       )} onClick={() => {
                         const next = !aiSettings.enableSearch;
@@ -770,7 +770,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                       
                       <div className={cn(
-                        "p-5 rounded-[24px] border flex items-center justify-between transition-all cursor-pointer group",
+                        "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                         aiSettings.enableMaps ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
                       )} onClick={() => {
                         const next = !aiSettings.enableMaps;
@@ -844,7 +844,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* Creative Visual Mode Mode toggle */}
                     <div className={cn(
-                      "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
+                      "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                       uiMode === 'creative' ? "bg-proton-accent/10 border-proton-accent/40 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
                     )} onClick={() => {
                       const next = uiMode === 'business' ? 'creative' : 'business';
@@ -963,7 +963,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <div className="space-y-8">
                     {/* Identity Header Card with customizable avatar & background gradient */}
-                    <div className="relative overflow-hidden rounded-[32px] border border-proton-border/40 bg-gradient-to-br from-proton-secondary/20 via-proton-bg to-proton-secondary/10 p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 shadow-xl">
+                    <div className="relative overflow-hidden rounded-2xl border border-proton-border/40 bg-gradient-to-br from-proton-secondary/20 via-proton-bg to-proton-secondary/10 p-6 flex flex-col md:flex-row items-center gap-6 shadow-xl">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-full blur-2xl pointer-events-none" />
                       
                       <div className="relative group shrink-0">
@@ -1017,7 +1017,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Technical Profile Fields Form */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-[32px] border border-proton-border/30">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'სახელი და გვარი' : 'Your Name'}</label>
                         <div className="relative group">
@@ -1109,7 +1109,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Active Node System Status Card */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px] space-y-4">
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Activity size={18} className="text-proton-accent animate-pulse" />
@@ -1118,19 +1118,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
                           <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'კავშირი' : 'Connection'}</span>
                           <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'უსაფრთხოა' : 'Protected'}</span>
                         </div>
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
                           <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'მუშაობა' : 'System Status'}</span>
                           <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'გამართული' : 'Excellent'}</span>
                         </div>
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
                           <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'შენახვა' : 'Auto-Save'}</span>
                           <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'აქტიური' : 'Active'}</span>
                         </div>
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-2xl">
+                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
                           <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'რეჟიმი' : 'Current Mode'}</span>
                           <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'მზადყოფნა' : 'Ready'}</span>
                         </div>
@@ -1138,7 +1138,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Interactive Danger Zone Section */}
-                    <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-[32px] space-y-4">
+                    <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl space-y-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
                           <ShieldAlert size={20} />
@@ -1205,7 +1205,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <div className="space-y-8">
                     {/* Instant Systems Toast Demonstration Center */}
-                    <div className="p-6 bg-proton-accent/10 border border-proton-accent/30 rounded-[32px] space-y-4 relative overflow-hidden">
+                    <div className="p-6 bg-proton-accent/10 border border-proton-accent/30 rounded-2xl space-y-4 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                         <Sparkles size={100} className="text-proton-accent" />
                       </div>
@@ -1271,7 +1271,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* 1. Language Sector */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-4">
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-4">
                       <div className="text-left">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
                           {language === 'ka' ? 'საიტის ენა' : 'Website Language'}
@@ -1322,7 +1322,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* 2. Global Site Theme Accent */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-[32px] space-y-5">
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-5">
                       <div className="text-left">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
                           {language === 'ka' ? 'საიტის თემა და ფერები' : 'Theme & Color Accent'}
@@ -1376,7 +1376,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* 4. Zen Mode and system states */}
                     <div className={cn(
-                      "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
+                      "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                       aiSettings.zenMode ? "bg-amber-500/5 border-amber-500/30 shadow-lg shadow-amber-500/5" : "bg-proton-secondary/10 border-proton-border"
                     )} onClick={() => {
                       const next = !aiSettings.zenMode;
@@ -1417,7 +1417,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* 5. Commercial SaaS Exit Hub Toggle */}
                     <div className={cn(
-                      "p-7 rounded-[32px] border flex items-center justify-between transition-all cursor-pointer group",
+                      "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                       userProfile.showCommercialHub ? "bg-proton-accent/5 border-proton-accent/35 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"
                     )} onClick={() => {
                       const next = !userProfile.showCommercialHub;
@@ -1473,7 +1473,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <div className="space-y-6">
                     {/* Status card */}
-                    <div className="p-6 bg-green-500/5 border border-green-500/20 rounded-[32px] flex items-center justify-between group">
+                    <div className="p-6 bg-green-500/5 border border-green-500/20 rounded-2xl flex items-center justify-between group">
                        <div className="flex items-center gap-5">
                           <div className="w-12 h-12 rounded-2xl bg-green-500 text-proton-bg flex items-center justify-center shadow-[0_0_20px_rgba(34,197,94,0.3)] transition-all group-hover:scale-105">
                              <ShieldCheck size={24} />
@@ -1491,7 +1491,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Cryptographic Key Generator */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px] space-y-4">
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
                       <div className="flex items-center gap-3">
                         <Fingerprint size={18} className="text-proton-accent" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">
@@ -1547,7 +1547,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* System Integrity Scanner */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px] space-y-4">
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
                       <div className="flex items-center gap-3">
                         <Terminal size={18} className="text-proton-accent" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">
@@ -1631,7 +1631,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {/* Budget Overview */}
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
+                    <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
                       <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
                         {language === 'ka' ? 'დახარჯული თანხა' : 'Spent This Month'}
                       </p>
@@ -1641,7 +1641,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </span>
                     </div>
 
-                    <div className="p-5 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
+                    <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
                       <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
                         {language === 'ka' ? 'მაქსიმალური ლიმიტი' : 'Monthly Limit'}
                       </p>
@@ -1653,7 +1653,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </div>
 
                   {/* Slider & Preset Controls */}
-                  <div className="space-y-6 p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-[32px]">
+                  <div className="space-y-6 p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl">
                     <div className="space-y-2 text-left">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted">
@@ -1708,7 +1708,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
                       {/* AI Tokens */}
-                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                      <div className="p-6 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-proton-accent/10 text-proton-accent flex items-center justify-center">
                           <Cpu size={18} />
                         </div>
@@ -1723,7 +1723,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
 
                       {/* Compute Hours */}
-                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                      <div className="p-6 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center">
                           <Zap size={18} />
                         </div>
@@ -1738,7 +1738,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
 
                       {/* Storage */}
-                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                      <div className="p-6 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
                           <Save size={18} />
                         </div>
@@ -1753,7 +1753,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
 
                       {/* Daily Generations */}
-                      <div className="p-5 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
+                      <div className="p-6 bg-proton-card/50 border border-proton-border/30 rounded-2xl flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
                           <Sparkles size={18} />
                         </div>
@@ -1799,7 +1799,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {/* Audit Score Circle & Checklist */}
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-5">
                     {/* Score Panel */}
-                    <div className="sm:col-span-4 bg-proton-bg/40 p-5 rounded-[24px] border border-proton-border/50 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                    <div className="sm:col-span-4 bg-proton-bg/40 p-6 rounded-2xl border border-proton-border/50 flex flex-col items-center justify-center text-center relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-16 h-16 bg-proton-accent/5 rounded-full filter blur-xl" />
                       <span className="text-[9px] font-black uppercase text-proton-muted tracking-widest mb-2">
                         {language === 'ka' ? 'გამართულობა' : 'Optimization score'}
@@ -1826,7 +1826,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Quick Audit Checks */}
-                    <div className="sm:col-span-8 space-y-2 bg-proton-card/50 p-5 rounded-[24px] border border-proton-border/50 text-left">
+                    <div className="sm:col-span-8 space-y-2 bg-proton-card/50 p-6 rounded-2xl border border-proton-border/50 text-left">
                       <span className="text-[10px] font-black uppercase text-proton-muted tracking-widest block mb-1">
                         {language === 'ka' ? 'შემოწმების პუნქტები' : 'Checklist'}
                       </span>
@@ -1908,7 +1908,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         className="space-y-6 text-left"
                       >
                         {/* Google SERP Card */}
-                        <div className="bg-[#17171a] p-6 rounded-[28px] border border-proton-border/40 space-y-3">
+                        <div className="bg-[#17171a] p-6 rounded-2xl border border-proton-border/40 space-y-3">
                           <div className="flex items-center justify-between border-b border-proton-border/20 pb-3">
                             <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -1934,7 +1934,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
 
                         {/* Social Link Share Mockup */}
-                        <div className="bg-[#17171a] p-6 rounded-[28px] border border-proton-border/40 space-y-4">
+                        <div className="bg-[#17171a] p-6 rounded-2xl border border-proton-border/40 space-y-4">
                           <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5 border-b border-proton-border/20 pb-3">
                             <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
                             {language === 'ka' ? 'ფეისბუქის / სოციალური ქსელის პოსტი' : 'Facebook / Social Media Post Preview'}
@@ -1973,7 +1973,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         exit={{ opacity: 0, y: -5 }}
                         className="space-y-4 text-left"
                       >
-                        <div className="bg-zinc-950 p-5 rounded-[24px] border border-zinc-800 font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar-minimal shadow-inner relative group break-all whitespace-pre-wrap">
+                        <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 font-mono text-[10px] text-zinc-300 leading-relaxed overflow-x-auto custom-scrollbar-minimal shadow-inner relative group break-all whitespace-pre-wrap">
                           <span className="absolute top-4 right-4 text-[8px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800 select-none">
                             head template
                           </span>
@@ -2002,7 +2002,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
 
                         {/* Direct testing instructions */}
-                        <div className="bg-proton-bg/20 p-5 rounded-[24px] border border-proton-border/30 flex items-start gap-4">
+                        <div className="bg-proton-bg/20 p-6 rounded-2xl border border-proton-border/30 flex items-start gap-4">
                           <Info size={18} className="text-proton-accent mt-0.5 shrink-0" />
                           <div className="space-y-1 text-[11px] leading-relaxed">
                             <span className="font-black text-proton-text uppercase tracking-widest block">
