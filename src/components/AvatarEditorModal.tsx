@@ -3,6 +3,8 @@ import { Camera, Upload, X, Sparkles, RefreshCw, Check, AlertCircle, Image as Im
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateOrEditImage } from '../lib/gemini';
 import { translations } from '../translations';
+import { uploadAvatarImage } from '../lib/storageUtils';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AvatarEditorModalProps {
   isOpen: boolean;
@@ -37,6 +39,7 @@ export default function AvatarEditorModal({
   onSave
 }: AvatarEditorModalProps) {
   const t = translations[lang]?.cabinet || translations.en.cabinet;
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'ai' | 'camera' | 'upload'>('ai');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   
@@ -191,11 +194,22 @@ export default function AvatarEditorModal({
   const handleSave = async () => {
     if (!previewImage) return;
     setSaving(true);
+    setUploadError(null);
     try {
-      await onSave(previewImage);
+      let finalAvatarUrl = previewImage;
+      const userId = user?.uid || 'guest';
+      if (previewImage.startsWith('data:') || (!previewImage.startsWith('http://') && !previewImage.startsWith('https://'))) {
+        finalAvatarUrl = await uploadAvatarImage(userId, previewImage);
+      }
+      await onSave(finalAvatarUrl);
       onClose();
-    } catch (err) {
-      console.error("Save failed:", err);
+    } catch (err: any) {
+      console.error("Save avatar upload failed:", err);
+      setUploadError(
+        lang === 'ka'
+          ? "ავატარის ატვირთვა Storage-ში ვერ მოხერხდა. სცადეთ ხელახლა."
+          : "Failed to upload avatar to Storage. Please try again."
+      );
     } finally {
       setSaving(false);
     }

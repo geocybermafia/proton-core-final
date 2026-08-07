@@ -167,3 +167,77 @@ export async function uploadClipVideo(
 
   return result.downloadUrl;
 }
+
+/**
+ * Helper specifically for uploading user avatar images to Firebase Storage.
+ * Accepts File, Blob, or string (Base64 or existing HTTP/HTTPS URL).
+ * Returns the HTTPS download URL.
+ */
+export async function uploadAvatarImage(
+  userId: string,
+  avatar: File | Blob | string
+): Promise<string> {
+  if (typeof avatar === 'string') {
+    if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      return avatar;
+    }
+    const { blob, contentType } = base64ToBlob(avatar);
+    const timestamp = Date.now();
+    const path = `avatars/${userId}/avatar_${timestamp}.png`;
+    const result = await uploadFileToStorage({
+      path,
+      file: blob,
+      metadata: {
+        contentType,
+        customMetadata: {
+          uploadedBy: userId,
+          type: 'avatar',
+        },
+      },
+    });
+    return result.downloadUrl;
+  } else {
+    const contentType = avatar.type || 'image/png';
+    const timestamp = Date.now();
+    const path = `avatars/${userId}/avatar_${timestamp}.png`;
+    const result = await uploadFileToStorage({
+      path,
+      file: avatar,
+      metadata: {
+        contentType,
+        customMetadata: {
+          uploadedBy: userId,
+          type: 'avatar',
+        },
+      },
+    });
+    return result.downloadUrl;
+  }
+}
+
+function base64ToBlob(base64Data: string): { blob: Blob; contentType: string } {
+  let contentType = 'image/png';
+  let dataPart = base64Data;
+  if (base64Data.startsWith('data:')) {
+    const parts = base64Data.split(',');
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    if (mimeMatch) {
+      contentType = mimeMatch[1];
+    }
+    dataPart = parts[1] || '';
+  }
+  const byteCharacters = atob(dataPart);
+  const byteArrays: Uint8Array[] = [];
+  const sliceSize = 512;
+  for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+    const slice = byteCharacters.slice(offset, offset + sliceSize);
+    const byteNumbers = new Array(slice.length);
+    for (let i = 0; i < slice.length; i++) {
+      byteNumbers[i] = slice.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    byteArrays.push(byteArray);
+  }
+  const blob = new Blob(byteArrays as BlobPart[], { type: contentType });
+  return { blob, contentType };
+}

@@ -53,6 +53,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { uploadAvatarImage } from '../lib/storageUtils';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -292,18 +293,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUserProfile(prev => ({ ...prev, avatar: reader.result as string }));
+      setIsSaving(true);
+      try {
+        const userId = user?.uid || 'guest';
+        const downloadUrl = await uploadAvatarImage(userId, file);
+        setUserProfile(prev => ({ ...prev, avatar: downloadUrl }));
+        if (user) {
+          const userDocRef = doc(db, 'users', user.uid);
+          await setDoc(userDocRef, { avatar: downloadUrl }, { merge: true });
+        }
         showToast(
           language === 'ka' ? 'ავატარი წარმატებით განახლდა!' : 'Avatar changed successfully!',
           'success'
         );
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        console.error("Failed to upload avatar in SettingsView:", err);
+        showToast(
+          language === 'ka' ? 'ავატარის ატვირთვა ვერ მოხერხდა' : 'Failed to upload avatar image',
+          'error'
+        );
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
