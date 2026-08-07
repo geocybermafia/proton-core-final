@@ -98,6 +98,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo' | 'cost_control'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [userStats, setUserStats] = useState<{
     storageGB: number;
@@ -248,11 +249,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { setLanguage } = useLanguage();
 
   const handleSave = async () => {
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
-    
-    if (user) {
-      try {
+    setIsSaving(true);
+    try {
+      if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         // Sync to cloud Firestore safely
         await setDoc(userDocRef, {
@@ -269,17 +268,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
         await setDoc(statsRef, { spendingLimit }, { merge: true });
-      } catch (err) {
-        console.error("Failed to sync user profile directly to Firestore:", err);
       }
+
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2000);
+      
+      showToast(
+        language === 'ka' 
+          ? 'კონფიგურაცია წარმატებით იქნა სინქრონიზებული ღრუბელთან!' 
+          : 'System configuration successfully synchronized with cloud database!',
+        'success'
+      );
+    } catch (err: any) {
+      console.error("Failed to sync user profile directly to Firestore:", err);
+      showToast(
+        language === 'ka' 
+          ? `შეცდომა შენახვისას: ${err?.message || 'Firestore-ის შეცდომა'}` 
+          : `Failed to sync configuration: ${err?.message || 'Firestore error'}`,
+        'error'
+      );
+    } finally {
+      setIsSaving(false);
     }
-    
-    showToast(
-      language === 'ka' 
-        ? 'კონფიგურაცია წარმატებით იქნა სინქრონიზებული ღრუბელთან!' 
-        : 'System configuration successfully synchronized with cloud database!',
-      'success'
-    );
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,14 +456,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         <button 
           onClick={handleSave}
+          disabled={isSaving}
           className={cn(
             "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95",
-            isSaved ? "bg-emerald-500 text-white" : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30"
+            isSaved ? "bg-emerald-500 text-white" : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30",
+            isSaving && "opacity-75 cursor-not-allowed"
           )}
           id="btn-settings-save"
         >
-          {isSaved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-          {isSaved ? (language === 'ka' ? 'შენახულია' : 'Saved') : t.save}
+          {isSaving ? (
+            <RefreshCw size={16} className="animate-spin" />
+          ) : isSaved ? (
+            <CheckCircle2 size={16} />
+          ) : (
+            <Save size={16} />
+          )}
+          {isSaving 
+            ? (language === 'ka' ? 'ინახება...' : 'Saving...') 
+            : isSaved 
+            ? (language === 'ka' ? 'შენახულია' : 'Saved') 
+            : t.save}
         </button>
       </div>
 
