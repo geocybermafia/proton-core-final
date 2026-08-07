@@ -103,6 +103,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const [lastSavedProfile, setLastSavedProfile] = useState<UserProfile>(() => ({ ...userProfile }));
 
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
+
+  const isEmailValid = (email?: string) => {
+    if (!email || !email.trim()) return true;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  };
+
+  const isPhoneValid = (phone?: string) => {
+    if (!phone || !phone.trim()) return true;
+    const digits = phone.replace(/[^0-9]/g, '');
+    const hasValidChars = /^[\+]?[0-9\s\-\(\)\.]+$/.test(phone.trim());
+    return hasValidChars && digits.length >= 7 && digits.length <= 15;
+  };
+
+  const emailError = emailTouched && !isEmailValid(userProfile.email);
+  const phoneError = phoneTouched && !isPhoneValid(userProfile.phoneNumber);
+
   const isProfileDirty = 
     (userProfile.name || '') !== (lastSavedProfile.name || '') ||
     (userProfile.email || '') !== (lastSavedProfile.email || '') ||
@@ -313,6 +331,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { setLanguage } = useLanguage();
 
   const handleSave = async () => {
+    if (!isEmailValid(userProfile.email) || !isPhoneValid(userProfile.phoneNumber)) {
+      setEmailTouched(true);
+      setPhoneTouched(true);
+      showToast(
+        language === 'ka' 
+          ? 'გთხოვთ შეასწოროთ არასწორი ველები პროფილში' 
+          : 'Please correct invalid profile fields before saving.',
+        'error'
+      );
+      return;
+    }
+
     setIsSaving(true);
     try {
       if (user) {
@@ -1034,14 +1064,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'ელფოსტა' : 'Email Address'}</label>
                         <div className="relative group">
-                          <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
+                          <Mail size={18} className={cn(
+                            "absolute left-4 top-1/2 -translate-y-1/2 transition-colors",
+                            emailError ? "text-red-500" : "text-proton-accent/50 group-focus-within:text-proton-accent"
+                          )} />
                           <input 
+                            type="email"
                             value={userProfile.email || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
-                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
+                            onBlur={() => setEmailTouched(true)}
+                            className={cn(
+                              "w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border text-xs font-bold text-proton-text focus:outline-none transition-all placeholder:text-proton-muted/30",
+                              emailError ? "border-red-500/80 focus:border-red-500 text-red-400 bg-red-500/5" : "border-proton-border focus:border-proton-accent"
+                            )}
                             placeholder="e.g. john@example.com"
                           />
                         </div>
+                        {emailError && (
+                          <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-1 animate-fadeIn">
+                            <AlertCircle size={12} className="shrink-0" />
+                            {language === 'ka' 
+                              ? 'არასწორი ელფოსტის ფორმატი (მაგ: name@domain.com)' 
+                              : 'Invalid email format (e.g. name@domain.com)'}
+                          </p>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1060,14 +1106,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'ტელეფონის ნომერი' : 'Phone Number'}</label>
                         <div className="relative group">
-                          <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
+                          <Phone size={18} className={cn(
+                            "absolute left-4 top-1/2 -translate-y-1/2 transition-colors",
+                            phoneError ? "text-red-500" : "text-proton-accent/50 group-focus-within:text-proton-accent"
+                          )} />
                           <input 
+                            type="tel"
                             value={userProfile.phoneNumber || ''}
                             onChange={e => setUserProfile(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
+                            onBlur={() => setPhoneTouched(true)}
+                            className={cn(
+                              "w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border text-xs font-bold text-proton-text focus:outline-none transition-all placeholder:text-proton-muted/30",
+                              phoneError ? "border-red-500/80 focus:border-red-500 text-red-400 bg-red-500/5" : "border-proton-border focus:border-proton-accent"
+                            )}
                             placeholder="+995 ..."
                           />
                         </div>
+                        {phoneError && (
+                          <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-1 animate-fadeIn">
+                            <AlertCircle size={12} className="shrink-0" />
+                            {language === 'ka' 
+                              ? 'არასწორი ნომრის ფორმატი (სულ მცირე 7 ციფრი)' 
+                              : 'Invalid phone format (at least 7 digits, e.g. +995 ...)'}
+                          </p>
+                        )}
                       </div>
 
                       {/* Selectable Business / System Role */}
