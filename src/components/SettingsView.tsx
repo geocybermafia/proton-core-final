@@ -101,6 +101,69 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const [lastSavedProfile, setLastSavedProfile] = useState<UserProfile>(() => ({ ...userProfile }));
+
+  const isProfileDirty = 
+    (userProfile.name || '') !== (lastSavedProfile.name || '') ||
+    (userProfile.email || '') !== (lastSavedProfile.email || '') ||
+    (userProfile.region || '') !== (lastSavedProfile.region || '') ||
+    (userProfile.phoneNumber || '') !== (lastSavedProfile.phoneNumber || '') ||
+    (userProfile.role || '') !== (lastSavedProfile.role || '');
+
+  useEffect(() => {
+    if (!isProfileDirty) {
+      setLastSavedProfile({ ...userProfile });
+    }
+  }, [userProfile.name, userProfile.email, userProfile.region, userProfile.phoneNumber, userProfile.role]);
+
+  useEffect(() => {
+    if (!isProfileDirty) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const saveBtn = document.getElementById('btn-settings-save');
+      if (saveBtn && saveBtn.contains(target)) {
+        return;
+      }
+
+      const settingsRoot = document.getElementById('settings-view-root');
+      const isOutsideSettings = settingsRoot && !settingsRoot.contains(target);
+      const profileTabBtn = document.getElementById('tab-settings-profile');
+      const isProfileTabClick = profileTabBtn && profileTabBtn.contains(target);
+      const isOtherTabClick = settingsRoot && settingsRoot.contains(target) && !isProfileTabClick && target.closest('[id^="tab-settings-"]');
+
+      if (isOutsideSettings || isOtherTabClick) {
+        const confirmMessage = language === 'ka'
+          ? 'პროფილის ველებში გაქვთ უნახავი ცვლილებები. გსურთ გასვლა შენახვის გარეშე?'
+          : 'You have unsaved profile changes. Are you sure you want to leave without saving?';
+
+        const userConfirmed = window.confirm(confirmMessage);
+        if (!userConfirmed) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+        } else {
+          setLastSavedProfile({ ...userProfile });
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleDocumentClick, true);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleDocumentClick, true);
+    };
+  }, [isProfileDirty, userProfile, language]);
+
   const [userStats, setUserStats] = useState<{
     storageGB: number;
     computeTimeHours: number;
@@ -271,6 +334,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         await setDoc(statsRef, { spendingLimit }, { merge: true });
       }
 
+      setLastSavedProfile({ ...userProfile });
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 2000);
       
@@ -468,29 +532,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <p className="text-proton-muted text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">{t.subtitle}</p>
         </div>
         
-        <button 
-          onClick={handleSave}
-          disabled={isSaving}
-          className={cn(
-            "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95",
-            isSaved ? "bg-emerald-500 text-white" : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30",
-            isSaving && "opacity-75 cursor-not-allowed"
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {isProfileDirty && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-[10px] font-black uppercase tracking-wider text-amber-500 animate-pulse shrink-0">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              {language === 'ka' ? 'შენახული არ არის' : 'Unsaved changes'}
+            </span>
           )}
-          id="btn-settings-save"
-        >
-          {isSaving ? (
-            <RefreshCw size={16} className="animate-spin" />
-          ) : isSaved ? (
-            <CheckCircle2 size={16} />
-          ) : (
-            <Save size={16} />
-          )}
-          {isSaving 
-            ? (language === 'ka' ? 'ინახება...' : 'Saving...') 
-            : isSaved 
-            ? (language === 'ka' ? 'შენახულია' : 'Saved') 
-            : t.save}
-        </button>
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className={cn(
+              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95",
+              isSaved 
+                ? "bg-emerald-500 text-white" 
+                : isProfileDirty 
+                ? "bg-amber-500 text-black hover:bg-amber-400 shadow-amber-500/20" 
+                : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30",
+              isSaving && "opacity-75 cursor-not-allowed"
+            )}
+            id="btn-settings-save"
+          >
+            {isSaving ? (
+              <RefreshCw size={16} className="animate-spin" />
+            ) : isSaved ? (
+              <CheckCircle2 size={16} />
+            ) : (
+              <Save size={16} />
+            )}
+            {isSaving 
+              ? (language === 'ka' ? 'ინახება...' : 'Saving...') 
+              : isSaved 
+              ? (language === 'ka' ? 'შენახულია' : 'Saved') 
+              : t.save}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-[40px] overflow-hidden shadow-2xl relative">
@@ -503,7 +579,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 md:flex-none flex items-center justify-center md:justify-start gap-4 p-3 md:p-4 rounded-2xl transition-all group shrink-0",
+                "flex-1 md:flex-none flex items-center justify-center md:justify-start gap-4 p-3 md:p-4 rounded-2xl transition-all group shrink-0 relative",
                 activeTab === tab.id 
                   ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20" 
                   : "text-proton-muted hover:text-proton-text hover:bg-white/5"
@@ -516,7 +592,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )}>
                 <tab.icon size={18} />
               </div>
-              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider">{tab.label}</span>
+              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left">{tab.label}</span>
+              {tab.id === 'profile' && isProfileDirty && (
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" title="Unsaved changes" />
+              )}
             </button>
           ))}
         </div>
