@@ -626,6 +626,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               ? (language === 'ka' ? 'შენახულია' : 'Saved') 
               : t.save}
           </button>
+          <span className="text-[9px] font-bold text-proton-muted uppercase tracking-wider hidden sm:block text-right self-center">
+            {language === 'ka' ? 'ინახავს პროფილსა და AI ინსტრუქციებს' : 'Saves Profile & AI Instructions'}
+          </span>
         </div>
       </div>
 
@@ -915,9 +918,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* Custom AI Instructions & Quick prompt templates */}
                     <div className="space-y-4 pt-6 border-t border-proton-border/50">
-                       <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted block">
-                         {language === 'ka' ? 'AI-ს ხასიათი და ქცევა' : 'AI Behavior & Personality'}
-                       </label>
+                       <div className="flex items-center justify-between gap-2">
+                         <label className="text-[11px] font-black uppercase tracking-wider text-proton-muted block">
+                           {language === 'ka' ? 'AI-ს ხასიათი და ქცევა' : 'AI Behavior & Personality'}
+                         </label>
+                         <span className="text-[8px] font-black uppercase tracking-wider text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 flex items-center gap-1 shrink-0">
+                           <Save size={10} />
+                           {language === 'ka' ? 'საჭიროებს ზედა SAVE ღილაკს' : 'Requires top Save button'}
+                         </span>
+                       </div>
                        
                        <textarea
                          value={aiSettings.systemInstruction || ""}
@@ -981,14 +990,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               {activeTab === 'profile' && (
                 <div className="space-y-8 pb-10" id="sec-profile">
-                  <header className="pb-6 border-b border-proton-border/50">
-                    <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
-                      <User size={20} className="text-proton-accent" />
-                      {language === 'ka' ? 'ჩემი პროფილი' : 'My Profile'}
-                    </h3>
-                    <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
-                      {language === 'ka' ? 'მართეთ თქვენი სახელი, როლი და პირადი პარამეტრები' : 'Manage your name, workspace role, and personal info'}
-                    </p>
+                  <header className="pb-6 border-b border-proton-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-xl font-black text-proton-text mb-1 uppercase tracking-tight flex items-center gap-2">
+                        <User size={20} className="text-proton-accent" />
+                        {language === 'ka' ? 'ჩემი პროფილი' : 'My Profile'}
+                      </h3>
+                      <p className="text-[10px] text-proton-muted font-black uppercase tracking-widest">
+                        {language === 'ka' ? 'მართეთ თქვენი სახელი, როლი და პირადი პარამეტრები' : 'Manage your name, workspace role, and personal info'}
+                      </p>
+                    </div>
+                    <span className="text-[8px] font-black uppercase tracking-wider text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 flex items-center gap-1 shrink-0 self-start sm:self-auto">
+                      <Save size={10} />
+                      {language === 'ka' ? 'ინახება ზედა SAVE ღილაკით' : 'Saves via top Save button'}
+                    </span>
                   </header>
 
                   <div className="space-y-8">
@@ -1334,13 +1349,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* 1. Language Sector */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-4">
-                      <div className="text-left">
-                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
-                          {language === 'ka' ? 'საიტის ენა' : 'Website Language'}
-                        </label>
-                        <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
-                          {language === 'ka' ? 'აირჩიეთ სასურველი ენა ინტერფეისისთვის' : 'Choose your preferred language'}
-                        </p>
+                      <div className="flex items-center justify-between gap-2 text-left">
+                        <div>
+                          <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
+                            {language === 'ka' ? 'საიტის ენა' : 'Website Language'}
+                          </label>
+                          <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
+                            {language === 'ka' ? 'აირჩიეთ სასურველი ენა ინტერფეისისთვის' : 'Choose your preferred language'}
+                          </p>
+                        </div>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
+                          <Zap size={10} />
+                          {language === 'ka' ? 'ინახება მომენტალურად' : 'Saves instantly'}
+                        </span>
                       </div>
 
                       <div className="flex bg-proton-bg border border-proton-border/50 rounded-2xl p-1 max-w-sm">
@@ -1385,13 +1406,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* 2. Global Site Theme Accent */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-5">
-                      <div className="text-left">
-                        <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
-                          {language === 'ka' ? 'საიტის თემა და ფერები' : 'Theme & Color Accent'}
-                        </label>
-                        <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
-                          {language === 'ka' ? 'აირჩიეთ საიტის ფერი და განწყობა' : 'Choose website color and mood'}
-                        </p>
+                      <div className="flex items-center justify-between gap-2 text-left">
+                        <div>
+                          <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
+                            {language === 'ka' ? 'საიტის თემა და ფერები' : 'Theme & Color Accent'}
+                          </label>
+                          <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
+                            {language === 'ka' ? 'აირჩიეთ საიტის ფერი და განწყობა' : 'Choose website color and mood'}
+                          </p>
+                        </div>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
+                          <Zap size={10} />
+                          {language === 'ka' ? 'ინახება მომენტალურად' : 'Saves instantly'}
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -1759,6 +1786,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       >
                         {language === 'ka' ? 'ბიუჯეტის შენახვა' : 'Save Budget Limit'}
                       </button>
+                      <p className="text-[10px] text-proton-accent font-black uppercase tracking-wider text-center mt-2.5 flex items-center justify-center gap-1.5">
+                        <CheckCircle2 size={13} />
+                        {language === 'ka' 
+                          ? 'ინახება დამოუკიდებლად (ზედა SAVE ღილაკის გარეშე)' 
+                          : 'Saves immediately (independent of global Save button)'}
+                      </p>
                     </div>
                   </div>
 
