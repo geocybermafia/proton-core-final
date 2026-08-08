@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -203,6 +203,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [keyProgress, setKeyProgress] = useState(0);
   const [isIntegrityChecking, setIsIntegrityChecking] = useState(false);
   const [integrityLogs, setIntegrityLogs] = useState<string[]>([]);
+
+  const passkeyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const integrityTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (passkeyTimerRef.current) clearInterval(passkeyTimerRef.current);
+      if (integrityTimerRef.current) clearInterval(integrityTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -521,18 +531,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const generateCryptoPasskey = () => {
+    if (passkeyTimerRef.current) {
+      clearInterval(passkeyTimerRef.current);
+      passkeyTimerRef.current = null;
+    }
     setIsGeneratingKey(true);
     setKeyProgress(0);
     setGeneratedKey('');
     
-    const interval = setInterval(() => {
+    passkeyTimerRef.current = setInterval(() => {
       setKeyProgress(prev => {
         if (prev >= 100) {
-          clearInterval(interval);
+          if (passkeyTimerRef.current) {
+            clearInterval(passkeyTimerRef.current);
+            passkeyTimerRef.current = null;
+          }
           const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+          const randomBytes = new Uint8Array(24);
+          if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+            window.crypto.getRandomValues(randomBytes);
+          } else {
+            for (let i = 0; i < 24; i++) {
+              randomBytes[i] = Math.floor(Math.random() * 256);
+            }
+          }
           let result = 'SEC-X3-';
           for (let i = 0; i < 24; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
+            result += chars.charAt(randomBytes[i] % chars.length);
             if ((i + 1) % 6 === 0 && i < 23) result += '-';
           }
           setGeneratedKey(result);
@@ -549,6 +574,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const runIntegrityDiagnostics = () => {
+    if (integrityTimerRef.current) {
+      clearInterval(integrityTimerRef.current);
+      integrityTimerRef.current = null;
+    }
     setIsIntegrityChecking(true);
     setIntegrityLogs([]);
     
@@ -561,12 +590,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     ];
 
     let currentStep = 0;
-    const interval = setInterval(() => {
+    integrityTimerRef.current = setInterval(() => {
       if (currentStep < messages.length) {
         setIntegrityLogs(prev => [...prev, messages[currentStep]]);
         currentStep++;
       } else {
-        clearInterval(interval);
+        if (integrityTimerRef.current) {
+          clearInterval(integrityTimerRef.current);
+          integrityTimerRef.current = null;
+        }
         setIsIntegrityChecking(false);
         showToast(
           language === 'ka' ? 'სისტემის მთლიანობის სკანირება წარმატებულია!' : 'Core system integrity diagnostics completed successfully!',
