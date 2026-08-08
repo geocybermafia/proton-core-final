@@ -702,13 +702,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
-        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10" id="settings-sidebar">
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-4 p-2.5 md:p-4 rounded-2xl transition-all group shrink-0 relative min-w-[72px] md:min-w-0",
+                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-4 p-2.5 md:p-4 rounded-2xl transition-all group shrink-0 relative min-w-[72px] md:min-w-0 cursor-pointer",
                 activeTab === tab.id 
                   ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20" 
                   : "text-proton-muted hover:text-proton-text hover:bg-white/5"
@@ -911,7 +911,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                          <Volume2 size={16} className="text-purple-400" />
                          {language === 'ka' ? 'ასისტენტის ხმა' : 'Assistant Voice Style'}
                        </label>
-                       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                          {[
                            { id: 'Kore', label: 'Kore' },
                            { id: 'Fenrir', label: 'Fenrir' },
@@ -930,7 +930,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 );
                              }}
                              className={cn(
-                               "p-2.5 rounded-xl border text-[9px] font-black uppercase tracking-wider text-center transition-all",
+                               "p-2.5 rounded-xl border text-[9px] font-black uppercase tracking-wider text-center transition-all cursor-pointer",
                                aiSettings.voice === voice.id 
                                 ? "bg-proton-accent border-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
                                 : "bg-proton-secondary/10 border-proton-border/50 text-proton-muted hover:border-proton-accent/50 hover:text-proton-text"
@@ -1002,7 +1002,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            updateAiSettings(prev => ({ ...prev, systemInstruction: val }));
                          }}
                          maxLength={4000}
-                         className="w-full bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
+                         className="w-full max-w-4xl bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
                          placeholder={language === 'ka' ? "მაგალითად: იყავი მეგობრული დიზაინერი, ისაუბრე მოკლედ და გამოიყენე მარტივი სიტყვები..." : "Example: Speak like a friendly designer, be brief, and use simple language..."}
                        />
 
@@ -1224,7 +1224,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <Briefcase size={12} className="text-proton-accent" />
                           {language === 'ka' ? 'თქვენი საქმიანობა (როლი)' : 'Your Profession / Role'}
                         </label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                           {[
                             { id: 'System Architect', label: language === 'ka' ? 'დიზაინერი' : 'Designer' },
                             { id: 'Founder & CEO', label: language === 'ka' ? 'დამფუძნებელი' : 'Founder & CEO' },
@@ -1243,7 +1243,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 );
                               }}
                               className={cn(
-                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all active:scale-95",
+                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all active:scale-95 cursor-pointer",
                                 userProfile.role === role.id 
                                   ? "bg-proton-accent/15 border-proton-accent text-proton-accent shadow-md shadow-proton-accent/5" 
                                   : "bg-proton-bg border-proton-border/60 text-proton-muted hover:border-proton-accent/40 hover:text-proton-text"
@@ -1791,22 +1791,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   {/* Budget Overview */}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
-                        {language === 'ka' ? 'დახარჯული თანხა' : 'Spent This Month'}
-                      </p>
-                      <p className="text-3xl font-black text-proton-text mt-1">${estimatedCost.toFixed(3)}</p>
-                      <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-1">
+                    <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left h-full flex flex-col justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
+                          {language === 'ka' ? 'დახარჯული თანხა' : 'Spent This Month'}
+                        </p>
+                        <p className="text-3xl font-black text-proton-text mt-1">${estimatedCost.toFixed(3)}</p>
+                      </div>
+                      <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-2">
                         {language === 'ka' ? 'მიმდინარე თვის ჯამი' : 'Total spent this month'}
                       </span>
                     </div>
 
-                    <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
-                        {language === 'ka' ? 'მაქსიმალური ლიმიტი' : 'Monthly Limit'}
-                      </p>
-                      <p className="text-3xl font-black text-proton-accent mt-1">${spendingLimit.toFixed(2)}</p>
-                      <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-1">
+                    <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left h-full flex flex-col justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
+                          {language === 'ka' ? 'მაქსიმალური ლიმიტი' : 'Monthly Limit'}
+                        </p>
+                        <p className="text-3xl font-black text-proton-accent mt-1">${spendingLimit.toFixed(2)}</p>
+                      </div>
+                      <span className="text-[9px] text-proton-muted uppercase font-bold tracking-wider block mt-2">
                         {language === 'ka' ? 'თქვენი ბიუჯეტი' : 'Your set threshold'}
                       </span>
                     </div>
