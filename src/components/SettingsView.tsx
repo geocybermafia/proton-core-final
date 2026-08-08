@@ -649,7 +649,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="h-full flex flex-col max-w-6xl mx-auto py-4 md:py-8 px-4 animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
+      <div className="sticky top-2 z-20 bg-proton-bg/95 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-proton-text flex items-center gap-3">
             <Settings className="text-proton-accent font-black animate-[spin_20s_linear_infinite]" size={32} />
@@ -669,7 +669,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             onClick={handleSave}
             disabled={isSaving}
             className={cn(
-              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl active:scale-95",
+              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl cursor-pointer active:scale-95",
               isSaved 
                 ? "bg-emerald-500 text-white" 
                 : isProfileDirty 
@@ -702,16 +702,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
-        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
+        <div className="w-full md:w-72 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-4 p-2.5 md:p-4 rounded-2xl transition-all group shrink-0 relative min-w-[72px] md:min-w-0 cursor-pointer",
+                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-3.5 p-2.5 md:p-3.5 rounded-2xl transition-all group shrink-0 relative min-w-[72px] md:min-w-0 cursor-pointer w-full text-left",
                 activeTab === tab.id 
-                  ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20" 
-                  : "text-proton-muted hover:text-proton-text hover:bg-white/5"
+                  ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20 font-black" 
+                  : "text-proton-muted hover:text-proton-text hover:bg-white/5 font-semibold"
               )}
               id={`tab-settings-${tab.id}`}
             >
@@ -722,7 +722,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <tab.icon size={18} />
               </div>
               <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap">{tab.shortLabel}</span>
-              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left">{tab.label}</span>
+              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left whitespace-normal break-words leading-snug">{tab.label}</span>
               {tab.id === 'profile' && isProfileDirty && (
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes" />
               )}
@@ -755,7 +755,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <div className="space-y-8">
                     {/* Temperature Tuner Slider */}
-                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30">
+                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 max-w-3xl">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
                           <Zap size={14} className="text-proton-accent animate-pulse" />
@@ -796,7 +796,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       {/* Presets Cards for Quick Snapping */}
                       <div className="space-y-2 pt-2">
                         <label className="text-[9px] font-black text-proton-muted uppercase tracking-widest">{language === 'ka' ? 'აირჩიეთ მზა ქცევის სტილი' : 'Choose a Speech Style'}</label>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                           {[
                             { val: 0.1, label: language === 'ka' ? 'ზუსტი და მკაფიო (0.1)' : 'Precise (0.1)', desc: language === 'ka' ? 'კონკრეტული და მხოლოდ რეალური ფაქტები' : 'Factual and highly accurate answers' },
                             { val: 0.5, label: language === 'ka' ? 'სტანდარტული (0.5)' : 'Balanced (0.5)', desc: language === 'ka' ? 'ბუნებრივი საუბრის რეჟიმი' : 'Standard balanced response flow' },
@@ -815,10 +815,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 );
                               }}
                               className={cn(
-                                "p-3 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between h-auto min-h-[5rem]",
+                                "p-3 rounded-xl border text-left transition-all cursor-pointer hover:border-proton-accent/60 active:scale-95 flex flex-col justify-between h-auto min-h-[5rem]",
                                 Math.abs(aiSettings.temperature - item.val) < 0.05
                                   ? "bg-proton-accent/10 border-proton-accent shadow-md shadow-proton-accent/5"
-                                  : "bg-proton-bg/20 border-proton-border/40 hover:border-proton-accent/40 hover:bg-proton-secondary/10"
+                                  : "bg-proton-bg/20 border-proton-border/40 hover:bg-proton-secondary/10"
                               )}
                             >
                               <span className={cn(
@@ -1002,7 +1002,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                            updateAiSettings(prev => ({ ...prev, systemInstruction: val }));
                          }}
                          maxLength={4000}
-                         className="w-full max-w-4xl bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
+                         className="w-full max-w-3xl bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
                          placeholder={language === 'ka' ? "მაგალითად: იყავი მეგობრული დიზაინერი, ისაუბრე მოკლედ და გამოიყენე მარტივი სიტყვები..." : "Example: Speak like a friendly designer, be brief, and use simple language..."}
                        />
 
@@ -1133,7 +1133,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Technical Profile Fields Form */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 max-w-3xl">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'სახელი და გვარი' : 'Your Name'}</label>
                         <div className="relative group">
@@ -1224,7 +1224,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <Briefcase size={12} className="text-proton-accent" />
                           {language === 'ka' ? 'თქვენი საქმიანობა (როლი)' : 'Your Profession / Role'}
                         </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
                           {[
                             { id: 'System Architect', label: language === 'ka' ? 'დიზაინერი' : 'Designer' },
                             { id: 'Founder & CEO', label: language === 'ka' ? 'დამფუძნებელი' : 'Founder & CEO' },
@@ -1243,7 +1243,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 );
                               }}
                               className={cn(
-                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all active:scale-95 cursor-pointer",
+                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all cursor-pointer active:scale-95",
                                 userProfile.role === role.id 
                                   ? "bg-proton-accent/15 border-proton-accent text-proton-accent shadow-md shadow-proton-accent/5" 
                                   : "bg-proton-bg border-proton-border/60 text-proton-muted hover:border-proton-accent/40 hover:text-proton-text"
@@ -1370,14 +1370,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 relative z-10">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10 max-w-3xl">
                         <button
                           type="button"
                           onClick={() => showToast(
                             language === 'ka' ? 'ოპერაცია წარმატებით შესრულდა!' : 'Success Toast: Action completed successfully!',
                             'success'
                           )}
-                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-all text-[9px] font-black uppercase tracking-wider cursor-pointer"
                         >
                           <CheckCircle2 size={12} />
                           {language === 'ka' ? 'წარმატება' : 'Success'}
@@ -1388,7 +1388,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             language === 'ka' ? 'მოქმედება ვერ შესრულდა!' : 'Error occurred: action failed.',
                             'error'
                           )}
-                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-rose-950/20 border border-rose-500/30 text-rose-400 hover:bg-rose-500/20 transition-all text-[9px] font-black uppercase tracking-wider cursor-pointer"
                         >
                           <AlertCircle size={12} />
                           {language === 'ka' ? 'შეცდომა' : 'Error Alert'}
@@ -1399,7 +1399,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             language === 'ka' ? 'ყურადღება: ლიმიტი იწურება.' : 'Warning: storage limit is close to full.',
                             'warning'
                           )}
-                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-amber-950/20 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 transition-all text-[9px] font-black uppercase tracking-wider cursor-pointer"
                         >
                           <AlertTriangle size={12} />
                           {language === 'ka' ? 'ყურადღება' : 'Warning style'}
@@ -1410,7 +1410,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             language === 'ka' ? 'საიტი განახლდა!' : 'System updated!',
                             'info'
                           )}
-                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-sky-950/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/20 transition-all text-[9px] font-black uppercase tracking-wider"
+                          className="flex items-center justify-center gap-2 p-3 rounded-xl bg-sky-950/20 border border-sky-500/30 text-sky-400 hover:bg-sky-500/20 transition-all text-[9px] font-black uppercase tracking-wider cursor-pointer"
                         >
                           <Info size={12} />
                           {language === 'ka' ? 'ინფორმაცია' : 'Informational'}
@@ -1721,11 +1721,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </p>
 
                       {integrityLogs.length > 0 && (
-                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-[9px] text-proton-text/90 space-y-1.5 shadow-inner text-left break-all whitespace-pre-wrap">
+                        <div className="p-4 bg-proton-bg border border-proton-border/50 rounded-2xl font-mono text-xs text-proton-text/90 space-y-1.5 shadow-inner text-left break-all whitespace-pre-wrap">
                           {integrityLogs.map((log, index) => (
                             <div key={index} className="flex items-start gap-1.5 animate-in fade-in slide-in-from-left-1 duration-200">
                               <span className="text-proton-accent font-black shrink-0">&gt;</span>
-                              <span className="break-all font-bold uppercase tracking-tighter leading-normal">{log}</span>
+                              <span className="break-all font-semibold uppercase tracking-tight leading-relaxed text-[11px]">{log}</span>
                             </div>
                           ))}
                         </div>
@@ -1737,7 +1737,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           onClick={runIntegrityDiagnostics}
                           disabled={isIntegrityChecking}
                           className={cn(
-                            "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 border",
+                            "px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer active:scale-95 flex items-center gap-2 border",
                             isIntegrityChecking 
                               ? "bg-proton-secondary/10 border-proton-border/40 text-proton-muted cursor-not-allowed" 
                               : "bg-proton-accent/10 border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg"
@@ -1751,7 +1751,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="pt-4 flex flex-col gap-4 text-left">
+                    <div className="pt-4 flex flex-col items-center gap-4 text-center">
                        <button 
                          type="button" 
                          onClick={() => {
@@ -1760,7 +1760,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                              'success'
                            );
                          }}
-                         className="w-full py-5 bg-proton-text text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-proton-accent hover:text-proton-bg transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
+                         className="w-full sm:w-auto max-w-md mx-auto px-8 py-3.5 bg-proton-text text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-proton-accent hover:text-proton-bg transition-all shadow-xl cursor-pointer active:scale-95 flex items-center justify-center gap-2"
                          id="btn-export-log"
                        >
                           <Save size={14} />
@@ -2078,7 +2078,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         className="space-y-6 text-left"
                       >
                         {/* Google SERP Card */}
-                        <div className="bg-[#17171a] p-6 rounded-2xl border border-proton-border/40 space-y-3">
+                        <div className="bg-[#17171a] p-6 rounded-2xl border border-proton-border/40 space-y-3 max-w-2xl">
                           <div className="flex items-center justify-between border-b border-proton-border/20 pb-3">
                             <span className="text-[9px] font-black uppercase tracking-widest text-[#9ca3af] flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
