@@ -4753,6 +4753,23 @@ export default function App() {
             avatar: data.avatar || prev.avatar
           };
         });
+
+        const rawData = snap.data();
+        if (rawData && rawData.aiSettings) {
+          const remoteAi = rawData.aiSettings as Partial<GlobalAiSettings>;
+          setAiSettings(prev => ({
+            ...prev,
+            ...remoteAi,
+            temperature: typeof remoteAi.temperature === 'number'
+              ? Math.min(1.0, Math.max(0.0, remoteAi.temperature))
+              : prev.temperature,
+            enableSearch: remoteAi.enableSearch !== undefined ? !!remoteAi.enableSearch : prev.enableSearch,
+            enableMaps: remoteAi.enableMaps !== undefined ? !!remoteAi.enableMaps : prev.enableMaps,
+            zenMode: remoteAi.zenMode !== undefined ? !!remoteAi.zenMode : prev.zenMode,
+            systemInstruction: typeof remoteAi.systemInstruction === 'string' ? remoteAi.systemInstruction : prev.systemInstruction,
+            voice: remoteAi.voice || prev.voice
+          }));
+        }
       }
     }, (err) => {
       // Don't log "offline" errors as critical failures

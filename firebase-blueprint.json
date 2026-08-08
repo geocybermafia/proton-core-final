@@ -8,7 +8,19 @@
         "uid": { "type": "string" },
         "email": { "type": "string" },
         "displayName": { "type": "string" },
-        "language": { "type": "string", "enum": ["en", "ka"] }
+        "language": { "type": "string", "enum": ["en", "ka"] },
+        "aiSettings": {
+          "type": "object",
+          "properties": {
+            "temperature": { "type": "number", "minimum": 0, "maximum": 1 },
+            "enableSearch": { "type": "boolean" },
+            "enableMaps": { "type": "boolean" },
+            "zenMode": { "type": "boolean" },
+            "systemInstruction": { "type": "string" },
+            "voice": { "type": "string" },
+            "customApiKey": { "type": "string" }
+          }
+        }
       },
       "required": ["uid", "email"]
     },

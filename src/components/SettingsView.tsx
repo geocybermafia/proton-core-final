@@ -330,6 +330,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { showToast } = useToast();
   const { setLanguage } = useLanguage();
 
+  const updateAiSettings = (updater: (prev: GlobalAiSettings) => GlobalAiSettings) => {
+    setAiSettings(prev => {
+      const next = updater(prev);
+      const sanitizedTemp = Math.min(1.0, Math.max(0.0, typeof next.temperature === 'number' ? next.temperature : 0.7));
+      const sanitizedInstruction = typeof next.systemInstruction === 'string' ? next.systemInstruction.slice(0, 4000) : '';
+
+      const sanitized: GlobalAiSettings = {
+        ...next,
+        temperature: sanitizedTemp,
+        systemInstruction: sanitizedInstruction
+      };
+
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        setDoc(userDocRef, { aiSettings: sanitized }, { merge: true }).catch(err => {
+          console.error("Error persisting aiSettings to Firestore:", err);
+        });
+      }
+
+      return sanitized;
+    });
+  };
+
   const handleSave = async () => {
     if (!isEmailValid(userProfile.email) || !isPhoneValid(userProfile.phoneNumber)) {
       setEmailTouched(true);
@@ -347,6 +370,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     try {
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
+        const sanitizedAiSettings: GlobalAiSettings = {
+          temperature: Math.min(1.0, Math.max(0.0, typeof aiSettings.temperature === 'number' ? aiSettings.temperature : 0.7)),
+          enableSearch: !!aiSettings.enableSearch,
+          enableMaps: !!aiSettings.enableMaps,
+          zenMode: !!aiSettings.zenMode,
+          systemInstruction: (aiSettings.systemInstruction || '').trim().slice(0, 4000),
+          voice: aiSettings.voice || 'GeorgianModern',
+          customApiKey: aiSettings.customApiKey || ''
+        };
+
         // Sync to cloud Firestore safely
         await setDoc(userDocRef, {
           name: userProfile.name || '',
@@ -357,7 +390,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           phoneNumber: userProfile.phoneNumber || '',
           avatar: userProfile.avatar || '',
           role: userProfile.role || 'System Architect',
-          showCommercialHub: !!userProfile.showCommercialHub
+          showCommercialHub: !!userProfile.showCommercialHub,
+          aiSettings: sanitizedAiSettings
         }, { merge: true });
 
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
@@ -704,8 +738,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         type="range" min="0" max="1" step="0.1"
                         value={aiSettings.temperature}
                         onChange={e => {
-                          const val = parseFloat(e.target.value);
-                          setAiSettings(prev => ({ ...prev, temperature: val }));
+                          const val = Math.min(1.0, Math.max(0.0, parseFloat(e.target.value) || 0));
+                          updateAiSettings(prev => ({ ...prev, temperature: val }));
                         }}
                         className="w-full accent-proton-accent appearance-none h-2 bg-proton-secondary/30 rounded-full cursor-pointer transition-all border border-proton-border/30"
                       />
@@ -741,9 +775,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               key={item.val}
                               type="button"
                               onClick={() => {
-                                setAiSettings(prev => ({ ...prev, temperature: item.val }));
+                                const val = Math.min(1.0, Math.max(0.0, item.val));
+                                updateAiSettings(prev => ({ ...prev, temperature: val }));
                                 showToast(
-                                  language === 'ka' ? `კრეატიულობა შეიცვალა: ${item.val}` : `Creativity updated to: ${item.val}`,
+                                  language === 'ka' ? `კრეატიულობა შეიცვალა: ${val}` : `Creativity updated to: ${val}`,
                                   'info'
                                 );
                               }}
@@ -772,7 +807,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         aiSettings.enableSearch ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
                       )} onClick={() => {
                         const next = !aiSettings.enableSearch;
-                        setAiSettings(prev => ({ ...prev, enableSearch: next }));
+                        updateAiSettings(prev => ({ ...prev, enableSearch: next }));
                         showToast(
                           next 
                             ? (language === 'ka' ? 'ინფორმაციის მოძიება აქტიურია!' : 'Google Search integrated successfully!') 
@@ -807,7 +842,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         aiSettings.enableMaps ? "bg-proton-accent/5 border-proton-accent/40" : "bg-proton-secondary/10 border-proton-border"
                       )} onClick={() => {
                         const next = !aiSettings.enableMaps;
-                        setAiSettings(prev => ({ ...prev, enableMaps: next }));
+                        updateAiSettings(prev => ({ ...prev, enableMaps: next }));
                         showToast(
                           next 
                             ? (language === 'ka' ? 'რუკების მოდული გააქტიურდა!' : 'Maps awareness enabled!') 
@@ -856,7 +891,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                              key={voice.id}
                              type="button"
                              onClick={() => {
-                               setAiSettings(prev => ({ ...prev, voice: voice.id }));
+                               updateAiSettings(prev => ({ ...prev, voice: voice.id }));
                                showToast(
                                  language === 'ka' ? `ასისტენტის ხმა: ${voice.label}` : `Assistant voice set to: ${voice.label}`,
                                  'info'
@@ -930,7 +965,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        
                        <textarea
                          value={aiSettings.systemInstruction || ""}
-                         onChange={e => setAiSettings(prev => ({ ...prev, systemInstruction: e.target.value }))}
+                         onChange={e => {
+                           const val = e.target.value.slice(0, 4000);
+                           updateAiSettings(prev => ({ ...prev, systemInstruction: val }));
+                         }}
+                         maxLength={4000}
                          className="w-full bg-proton-secondary/20 p-5 rounded-2xl border border-proton-border text-xs font-medium text-proton-text focus:outline-none focus:border-proton-accent focus:ring-4 focus:ring-proton-accent/5 transition-all min-h-[140px] shadow-inner placeholder:text-proton-muted/30"
                          placeholder={language === 'ka' ? "მაგალითად: იყავი მეგობრული დიზაინერი, ისაუბრე მოკლედ და გამოიყენე მარტივი სიტყვები..." : "Example: Speak like a friendly designer, be brief, and use simple language..."}
                        />
@@ -969,7 +1008,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                key={tmpl.label}
                                type="button"
                                onClick={() => {
-                                 setAiSettings(prev => ({ ...prev, systemInstruction: tmpl.text }));
+                                 updateAiSettings(prev => ({ ...prev, systemInstruction: tmpl.text }));
                                  showToast(
                                    language === 'ka' ? `ქცევის სტილი '${tmpl.label}' ჩაიტვირთა!` : `Preset character '${tmpl.label}' loaded!`,
                                    'success'
@@ -1469,7 +1508,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       aiSettings.zenMode ? "bg-amber-500/5 border-amber-500/30 shadow-lg shadow-amber-500/5" : "bg-proton-secondary/10 border-proton-border"
                     )} onClick={() => {
                       const next = !aiSettings.zenMode;
-                      setAiSettings(prev => ({ ...prev, zenMode: next }));
+                      updateAiSettings(prev => ({ ...prev, zenMode: next }));
                       showToast(
                         next 
                           ? (language === 'ka' ? 'ფოკუსის რეჟიმი ჩაირთო! ეკრანი მაქსიმალურად სუფთაა.' : 'Zen focus mode activated!') 

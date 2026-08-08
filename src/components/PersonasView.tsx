@@ -598,9 +598,9 @@ ${
           finalPrompt,
           formattedHistory,
           'gemini-3.5-flash',
-          false,
-          true,
-          0.9,
+          aiSettings?.enableMaps ?? false,
+          aiSettings?.enableSearch ?? true,
+          Math.min(1.0, Math.max(0.0, aiSettings?.temperature ?? 0.7)),
           dynamicGlobalInstruction,
           language,
           controller.signal
