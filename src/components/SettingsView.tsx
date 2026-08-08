@@ -658,7 +658,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <p className="text-proton-muted text-[10px] md:text-xs font-bold uppercase tracking-wider mt-1">{t.subtitle}</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {isProfileDirty && (
             <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-[10px] font-black uppercase tracking-wider text-amber-500 animate-pulse shrink-0">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
@@ -815,7 +815,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 );
                               }}
                               className={cn(
-                                "p-3 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between h-20",
+                                "p-3 rounded-xl border text-left transition-all active:scale-95 flex flex-col justify-between h-auto min-h-[5rem]",
                                 Math.abs(aiSettings.temperature - item.val) < 0.05
                                   ? "bg-proton-accent/10 border-proton-accent shadow-md shadow-proton-accent/5"
                                   : "bg-proton-bg/20 border-proton-border/40 hover:border-proton-accent/40 hover:bg-proton-secondary/10"
@@ -825,7 +825,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 "text-[10px] font-black uppercase tracking-wider",
                                 Math.abs(aiSettings.temperature - item.val) < 0.05 ? "text-proton-accent" : "text-proton-text"
                               )}>{item.label}</span>
-                              <span className="text-[10px] text-proton-text-light/90 block font-semibold uppercase tracking-tight mt-1 truncate leading-normal">{item.desc}</span>
+                              <span className="text-[10px] text-proton-text-light/90 block font-semibold uppercase tracking-tight mt-1 break-words leading-normal">{item.desc}</span>
                             </button>
                           ))}
                         </div>
@@ -1317,18 +1317,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <span className="text-[10px] font-black text-red-400 uppercase tracking-wider block">
                             ⚠️ {language === 'ka' ? 'დარწმუნებული ხართ, რომ გსურთ ყველაფრის განულება?' : 'Are you absolutely sure you want to reset everything?'}
                           </span>
-                          <div className="flex gap-3 pt-1">
+                          <div className="flex flex-col sm:flex-row gap-3 pt-1">
                             <button
                               type="button"
                               onClick={handleResetWorkspace}
-                              className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                              className="w-full sm:w-auto px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center"
                             >
                               {language === 'ka' ? 'დიახ, განულება' : 'Yes, Reset Now'}
                             </button>
                             <button
                               type="button"
                               onClick={() => setShowResetModal(false)}
-                              className="px-4 py-2 bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95"
+                              className="w-full sm:w-auto px-4 py-2 bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center"
                             >
                               {language === 'ka' ? 'გაუქმება' : 'Cancel'}
                             </button>
@@ -1790,7 +1790,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   {/* Budget Overview */}
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="p-6 bg-proton-secondary/10 border border-proton-border/50 rounded-2xl text-left">
                       <p className="text-[10px] font-black uppercase tracking-wider text-proton-muted">
                         {language === 'ka' ? 'დახარჯული თანხა' : 'Spent This Month'}
@@ -1970,9 +1970,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <span className="text-[9px] font-black uppercase text-proton-muted tracking-widest mb-2">
                         {language === 'ka' ? 'გამართულობა' : 'Optimization score'}
                       </span>
-                      <div className="relative w-24 h-24 flex items-center justify-center rounded-full border-4 border-proton-accent/20 bg-proton-card shadow-inner">
+                      <div className="relative w-24 h-24 flex flex-col items-center justify-center rounded-full border-4 border-proton-accent/20 bg-proton-card shadow-inner p-2">
                         <div className="absolute inset-2 rounded-full border border-dashed border-proton-accent/30 animate-[spin_40s_linear_infinite]" />
-                        <span className="text-3xl font-black text-proton-text">
+                        <span className="text-2xl font-black text-proton-text leading-none z-10">
                           {(() => {
                             let score = 0;
                             if (metaTags.title !== 'N/A') score += 20;
@@ -1984,7 +1984,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             return score;
                           })()}
                         </span>
-                        <span className="text-xs font-bold text-proton-muted absolute bottom-5">/100</span>
+                        <span className="text-[10px] font-bold text-proton-muted mt-1 z-10">/100</span>
                       </div>
                       <span className="text-[9px] font-black uppercase text-proton-accent tracking-widest mt-3">
                         {language === 'ka' ? 'სრულად ოპტიმიზებული' : 'Fully Optimized'}
