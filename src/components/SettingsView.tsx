@@ -649,7 +649,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="h-full flex flex-col max-w-6xl mx-auto py-4 md:py-8 px-4 animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
-      <div className="sticky top-2 z-20 bg-proton-bg/95 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-proton-bg/95 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-proton-text flex items-center gap-3">
             <Settings className="text-proton-accent font-black animate-[spin_20s_linear_infinite]" size={32} />
