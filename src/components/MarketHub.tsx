@@ -664,19 +664,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const sellerRatings = useMemo(() => {
     const map: { [sellerId: string]: { avg: number; count: number; ratings: number[] } } = {};
-    
-    // Seed default rating metadata for our system/featured vendors
-    const defaultSellers: Record<string, { avg: number; count: number; ratings: number[] }> = {
-      'p_labs': { avg: 4.9, count: 48, ratings: [5, 5, 5, 4, 5, 5] },
-      'd_guitars': { avg: 4.8, count: 24, ratings: [5, 5, 5, 4, 5] },
-      'eco_garden': { avg: 4.5, count: 16, ratings: [5, 4, 4, 5, 5] },
-      's_tech': { avg: 4.2, count: 12, ratings: [4, 4, 5, 3, 5] },
-      'g_loft': { avg: 4.0, count: 8, ratings: [4, 4, 4, 4] },
-    };
-    
-    Object.entries(defaultSellers).forEach(([sId, data]) => {
-      map[sId] = { avg: data.avg, count: data.count, ratings: [...data.ratings] };
-    });
 
     reviews.forEach(r => {
       const sId = r.sellerId;
@@ -3730,31 +3717,22 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 </div>
                 <div className="space-y-3">
                   <h3 className="text-lg font-black uppercase tracking-widest text-white">
-                    {language === 'ka' ? 'მონაცემთა ბაზა ცარიელია' : 'Database is Empty'}
+                    {language === 'ka' ? 'განცხადებები არ მოიძებნა' : 'No Listings Available'}
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed font-medium">
                     {language === 'ka' 
-                      ? 'იმის გამო, რომ თქვენი Firestore ბაზა ახალია, განცხადებები არ მოიძებნა. გსურთ ჩატვირთოთ მაღალტექნოლოგიური სატესტო პროდუქტები, საერთაშორისო სერვისები და ვებ3 პროექტები რუკაზე გამოსაჩენად?'
-                      : 'Since you are connected to a fresh Firestore database, no listings were found. Would you like to seed beautiful high-tech demo products, international services, and web3 projects?'}
+                      ? 'მარკეტში ჯერ არ არის განთავსებული პროდუქტები ან მომსახურება. იყავით პირველი და განათავსეთ თქვენი განცხადება.'
+                      : 'There are currently no products or services listed in the marketplace. Be the first to publish a new listing.'}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
                   <button
                     type="button"
-                    onClick={handleSeedListings}
-                    disabled={isSeeding}
+                    onClick={() => setViewMode('create')}
                     className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest bg-[#dfb257] text-[#070708] hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[#dfb257]/10 flex items-center justify-center gap-2"
                   >
-                    {isSeeding ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin text-black" />
-                        {language === 'ka' ? 'მიმდინარეობს...' : 'SEEDING...'}
-                      </>
-                    ) : (
-                      <>
-                        🚀 {language === 'ka' ? 'საწყისი მონაცემების გენერირება' : 'SEED SAMPLE LISTINGS'}
-                      </>
-                    )}
+                    <Plus size={16} />
+                    {language === 'ka' ? 'განცხადების დამატება' : 'CREATE LISTING'}
                   </button>
                 </div>
               </div>

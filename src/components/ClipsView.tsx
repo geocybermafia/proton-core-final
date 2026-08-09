@@ -217,135 +217,6 @@ const PRESET_LOOPS = [
   }
 ];
 
-const SEED_CLIPS = [
-  {
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    caption: 'საქართველოს თიხის ტრადიციული დამუშავება 🏺 საოცარი პროცესია, ჭედვისა და ფორმირების ხელოვნება. #clay #handmade #pottery #craft #georgia',
-    creatorId: 'proton-system-clay',
-    creatorName: 'ლუკა_Potter',
-    creatorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&fit=crop&q=80',
-    likes: [],
-    likesCount: 142,
-    soundName: 'Traditional Potter - Ambient Echoes',
-    productId: ''
-  },
-  {
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    caption: 'ნატურალური მთის მატყლის ძაფები ჩემს ახალ კოლექციაში 🧶 ხელით ნაქსოვი თბილი სვიტერები! #knitting #wool #handmade #fashion #cozy',
-    creatorId: 'proton-system-wool',
-    creatorName: 'ანნა_ნაქსოვი',
-    creatorAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&fit=crop&q=80',
-    likes: [],
-    likesCount: 89,
-    soundName: 'Anna Knit - Cozy Evening Acoustics',
-    productId: ''
-  },
-  {
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    caption: 'ყაზბეგის ულამაზესი ნისლიანი ხედები დილით 🏔️ საქართველო სიყვარულია! #kazbegi #georgia #mountains #travel #nature #aerial',
-    creatorId: 'proton-system-nature',
-    creatorName: 'ირაკლი_Travels',
-    creatorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&fit=crop&q=80',
-    likes: [],
-    likesCount: 312,
-    soundName: 'Caucasus Mountain Breeze',
-    productId: ''
-  },
-  {
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-    caption: 'გაზაფხულის ნაზი ყვავილები ჩემს ეზოში 🌸 სილამაზე დეტალებშია! #spring #flowers #nature #aesthetic #georgia',
-    creatorId: 'proton-system-flowers',
-    creatorName: 'ნინო_Garden',
-    creatorAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&fit=crop&q=80',
-    likes: [],
-    likesCount: 56,
-    soundName: 'Nino - Spring Harmony',
-    productId: ''
-  }
-];
-
-const LOCAL_SEED_CLIPS: Clip[] = SEED_CLIPS.map((item, index) => ({
-  ...item,
-  id: `seed-clip-${index + 1}`,
-  likes: item.likes as string[] || [],
-  duration: [14.5, 12.0, 15.2, 9.8][index % 4],
-  createdAt: { seconds: Date.now() / 1000 - (3600 * index), nanoseconds: 0 } as any
-}));
-
-const INITIAL_MOCK_COMMENTS: { [clipId: string]: ClipComment[] } = {
-  'seed-clip-1': [
-    {
-      id: 'mock-c-1-1',
-      clipId: 'seed-clip-1',
-      userId: 'mock-u-1',
-      userName: 'თამუნა_K',
-      userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&fit=crop&q=80',
-      text: 'საოცარი ხელოვნებაა! ძალიან მინდა შეძენა 🏺✨',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 2)
-    },
-    {
-      id: 'mock-c-1-2',
-      clipId: 'seed-clip-1',
-      userId: 'mock-u-2',
-      userName: 'გიორგი_G',
-      userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&fit=crop&q=80',
-      text: 'რა სინაზით და ფორმით მუშაობს! ბრავო 👏',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 1)
-    }
-  ],
-  'seed-clip-2': [
-    {
-      id: 'mock-c-2-1',
-      clipId: 'seed-clip-2',
-      userId: 'mock-u-3',
-      userName: 'მარი_M',
-      userAvatar: 'https://images.unsplash.com/photo-1554151228-14d9def656e4?w=100&fit=crop&q=80',
-      text: 'ფერი უთბილესია! მატყლი მთისაა? 🧶',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 5)
-    },
-    {
-      id: 'mock-c-2-2',
-      clipId: 'seed-clip-2',
-      userId: 'mock-u-4',
-      userName: 'დათო_D',
-      userAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&fit=crop&q=80',
-      text: 'ძალიან მყუდრო ვიდეოა, ზამთარს მომანატრებს ❄️',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 3)
-    }
-  ],
-  'seed-clip-3': [
-    {
-      id: 'mock-c-3-1',
-      clipId: 'seed-clip-3',
-      userId: 'mock-u-5',
-      userName: 'სალომე_S',
-      userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&fit=crop&q=80',
-      text: 'ყაზბეგი მართლაც უნიკალური ადგილია, სული ისვენებს აქ... დრონით გადაღება საოცრებაა!',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 12)
-    },
-    {
-      id: 'mock-c-3-2',
-      clipId: 'seed-clip-3',
-      userId: 'mock-u-6',
-      userName: 'ნიკა_N',
-      userAvatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&fit=crop&q=80',
-      text: 'ნისლი მთებში ყოველთვის განსაკუთრებულ მისტიკას ქმნის 🏔️👌',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 8)
-    }
-  ],
-  'seed-clip-4': [
-    {
-      id: 'mock-c-4-1',
-      clipId: 'seed-clip-4',
-      userId: 'mock-u-7',
-      userName: 'ელენე_E',
-      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&fit=crop&q=80',
-      text: 'გაზაფხულის განწყობა შემოიტანეთ ჩემს სმარტფონში 🌸 დიდი მადლობა ასეთი მშვიდი ვიდეოსთვის!',
-      createdAt: new Date(Date.now() - 1000 * 3600 * 4)
-    }
-  ]
-};
-
 const FILTER_OPTIONS = [
   { id: 'normal', labelKa: 'ორიგინალი', labelEn: 'Normal' },
   { id: 'noir', labelKa: 'ნუარი 🎬', labelEn: 'Noir 🎬' },
@@ -440,7 +311,7 @@ export default function ClipsView({ language, setActiveView, user, userProfile, 
   const [comments, setComments] = useState<ClipComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>(INITIAL_MOCK_COMMENTS);
+  const [localComments, setLocalComments] = useState<{ [clipId: string]: ClipComment[] }>({});
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
 
   // Dynamic visual viewport listener for comments drawer mobile keyboard support

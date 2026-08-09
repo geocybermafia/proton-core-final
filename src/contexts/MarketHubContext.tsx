@@ -37,68 +37,7 @@ const generateTxId = (): string => {
 };
 
 // Pre-configured default seed data for Swiss Minimalist style
-const defaultLedger: LedgerItem[] = [
-  {
-    id: 'TX-4902',
-    date: '2026-06-01',
-    description: 'Zürich Tech Hub - UI Suprematist Design License',
-    category: 'Design Systems',
-    type: 'inbound',
-    value: 1250,
-    volume: 4,
-    total: 5000,
-    status: 'completed',
-    operator: 'System-Node-Alpha'
-  },
-  {
-    id: 'TX-4903',
-    date: '2026-06-01',
-    description: 'Geneva Node - AWS Server Outpost Hosting',
-    category: 'Infrastructure',
-    type: 'outbound',
-    value: 850,
-    volume: 1,
-    total: 850,
-    status: 'completed',
-    operator: 'Infra-Monitor'
-  },
-  {
-    id: 'TX-4904',
-    date: '2026-06-02',
-    description: 'Saperavi Wine Export - Smart Contract Retainer',
-    category: 'Wine Trade',
-    type: 'inbound',
-    value: 7500,
-    volume: 1,
-    total: 7500,
-    status: 'completed',
-    operator: 'Smart-Contract-VM'
-  },
-  {
-    id: 'TX-4905',
-    date: '2026-06-02',
-    description: 'Cybersecurity Penetration Test - Tbilisi Cafes',
-    category: 'Security',
-    type: 'inbound',
-    value: 1200,
-    volume: 3,
-    total: 3600,
-    status: 'pending',
-    operator: 'Sec-Net-Watcher'
-  },
-  {
-    id: 'TX-4906',
-    date: '2026-06-02',
-    description: 'Vite & React 19 Upgrade Engineering Services',
-    category: 'Development',
-    type: 'outbound',
-    value: 3200,
-    volume: 1,
-    total: 3200,
-    status: 'active',
-    operator: 'Antigravity-C-Dev'
-  }
-];
+const defaultLedger: LedgerItem[] = [];
 
 const MarketHubContext = createContext<MarketHubContextType | undefined>(undefined);
 
@@ -142,12 +81,7 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (!isSubscribed) return;
 
       if (snapshot.empty) {
-        // Hydrate Firestore with default seed ledger so the spreadsheet is NOT blank
-        Promise.all(defaultLedger.map((item) => {
-          const itemDoc = doc(userRef, 'market_ledger', item.id);
-          return setDoc(itemDoc, item);
-        })).catch((e) => console.warn("Market ledger initial seed failed:", e));
-        if (isSubscribed) setLedgerItems(defaultLedger);
+        if (isSubscribed) setLedgerItems([]);
       } else {
         const items: LedgerItem[] = [];
         snapshot.forEach((doc) => {

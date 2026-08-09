@@ -85,7 +85,6 @@ export const DashboardView = React.memo(({
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [copiedOutput, setCopiedOutput] = useState(false);
-  const [chartTimeframe, setChartTimeframe] = useState<'24h' | '7d' | '30d'>('24h');
   const [accentGlow, setAccentGlow] = useState<'cyan' | 'purple' | 'emerald' | 'amber'>('cyan');
 
   // Dynamic state for grid widget visibility
@@ -117,36 +116,6 @@ export const DashboardView = React.memo(({
     setVisibleWidgets(essential);
     safeStorage.set('proton_dashboard_widgets', JSON.stringify(essential));
   };
-
-  // Telemetry Chart Datasets
-  const telemetryDataMap = {
-    '24h': [
-      { time: '00:00', requests: 14, tokens: 2800, latency: 22 },
-      { time: '04:00', requests: 9, tokens: 1900, latency: 20 },
-      { time: '08:00', requests: 42, tokens: 8900, latency: 31 },
-      { time: '12:00', requests: 78, tokens: 16200, latency: 27 },
-      { time: '16:00', requests: 95, tokens: 22100, latency: 34 },
-      { time: '20:00', requests: 61, tokens: 13400, latency: 25 },
-      { time: '23:59', requests: 48, tokens: 10200, latency: 23 },
-    ],
-    '7d': [
-      { time: 'Mon', requests: 280, tokens: 58000, latency: 26 },
-      { time: 'Tue', requests: 340, tokens: 72000, latency: 24 },
-      { time: 'Wed', requests: 410, tokens: 89000, latency: 29 },
-      { time: 'Thu', requests: 390, tokens: 84000, latency: 27 },
-      { time: 'Fri', requests: 480, tokens: 104000, latency: 30 },
-      { time: 'Sat', requests: 220, tokens: 46000, latency: 21 },
-      { time: 'Sun', requests: 190, tokens: 39000, latency: 20 },
-    ],
-    '30d': [
-      { time: 'W1', requests: 1800, tokens: 390000, latency: 25 },
-      { time: 'W2', requests: 2200, tokens: 480000, latency: 28 },
-      { time: 'W3', requests: 2600, tokens: 570000, latency: 26 },
-      { time: 'W4', requests: 2950, tokens: 630000, latency: 24 },
-    ]
-  };
-
-  const currentChartData = telemetryDataMap[chartTimeframe];
 
   const [matchedSuggestedRoute, setMatchedSuggestedRoute] = useState<CommandRoute | null>(null);
 

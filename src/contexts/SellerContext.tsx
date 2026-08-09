@@ -57,73 +57,9 @@ export interface SellerContextType {
   updateOrderStatus?: (orderId: string, status: string) => Promise<void>;
 }
 
-const defaultSampleOrders: Order[] = [
-  {
-    id: 'ord-982145',
-    listingId: 'lst-sample-1',
-    buyerId: 'buyer-zuerich-302',
-    sellerId: 'guest-seller',
-    amount: 250,
-    currency: 'USD',
-    itemTitle: 'Zürich UI Suprematist License & Assets',
-    status: 'pending',
-    orderType: 'product',
-    buyerInstructions: 'Express fulfillment to Zurich Tech Node',
-    createdAt: Date.now() - 3600000
-  },
-  {
-    id: 'ord-982146',
-    listingId: 'lst-sample-2',
-    buyerId: 'buyer-tbilisi-305',
-    sellerId: 'guest-seller',
-    amount: 1250,
-    currency: 'USD',
-    itemTitle: 'Saperavi Smart Contract Retainer',
-    status: 'pending',
-    orderType: 'service',
-    buyerInstructions: 'Priority configuration required',
-    createdAt: Date.now() - 7200000
-  }
-];
+const defaultSampleOrders: Order[] = [];
 
-const defaultLedger: LedgerItem[] = [
-  {
-    id: 'TX-4902',
-    date: '2026-06-01',
-    description: 'Zürich Tech Hub - UI Suprematist Design License',
-    category: 'Design Systems',
-    type: 'inbound',
-    value: 1250,
-    volume: 4,
-    total: 5000,
-    status: 'completed',
-    operator: 'System-Node-Alpha'
-  },
-  {
-    id: 'TX-4903',
-    date: '2026-06-01',
-    description: 'Geneva Node - AWS Server Outpost Hosting',
-    category: 'Infrastructure',
-    type: 'outbound',
-    value: 850,
-    volume: 1,
-    total: 850,
-    status: 'completed',
-    operator: 'Infra-Monitor'
-  },
-  {
-    id: 'TX-4904',
-    date: '2026-06-02',
-    description: 'Saperavi Wine Export - Smart Contract Retainer',
-    category: 'Wine Trade',
-    type: 'inbound',
-    value: 7500,
-    volume: 1,
-    total: 7500,
-    status: 'completed',
-    operator: 'Smart-Contract-VM'
-  }
-];
+const defaultLedger: LedgerItem[] = [];
 
 const generateTxId = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -621,7 +557,7 @@ export const useSellerStats = (): SellerStats => {
     const walletBalance = Math.max(0, totalNetRevenue - outboundLedger);
 
     const activeListings = sellerListings.filter(l => l.status === 'active' || !l.status);
-    const activeListingCount = activeListings.length > 0 ? activeListings.length : sellerListings.length;
+    const activeListingCount = activeListings.length;
 
     const lowStockItems = sellerListings
       .filter(l => (l.stock !== undefined && l.stock <= 3) || (l.quantity !== undefined && l.quantity <= 3) || l.status === 'low_stock')
@@ -630,11 +566,6 @@ export const useSellerStats = (): SellerStats => {
         title: l.title || l.titleGe || 'Listing Item',
         quantity: l.stock ?? l.quantity ?? 1
       }));
-
-    // If no explicit low stock items found in listings, provide sample low-stock items if listings exist
-    const finalLowStockItems = lowStockItems.length > 0 
-      ? lowStockItems 
-      : (sellerListings.length > 0 ? [{ id: sellerListings[0].id, title: sellerListings[0].title || 'Listing', quantity: 2 }] : []);
 
     const clipOrders = sellerOrders.filter(o => o.source === 'clip');
     const clipOrdersCount = clipOrders.length;
@@ -647,8 +578,8 @@ export const useSellerStats = (): SellerStats => {
       taxEstimate,
       todayRevenue,
       walletBalance,
-      activeListingCount: activeListingCount || 3,
-      lowStockItems: finalLowStockItems,
+      activeListingCount,
+      lowStockItems,
       pendingOrderCount: pendingOrders.length,
       completedOrderCount: completedOrders.length,
       pendingOrders,

@@ -188,9 +188,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     aiTokens: number;
     dailyGenerationsCount: number;
   }>({
-    storageGB: 1.2,
-    computeTimeHours: 0.1,
-    aiTokens: 150,
+    storageGB: 0,
+    computeTimeHours: 0,
+    aiTokens: 0,
     dailyGenerationsCount: 0
   });
 
@@ -221,9 +221,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       if (snap.exists()) {
         const data = snap.data();
         setUserStats({
-          storageGB: data.storageGB !== undefined ? data.storageGB : 1.2,
-          computeTimeHours: data.computeTimeHours !== undefined ? data.computeTimeHours : 0.1,
-          aiTokens: data.aiTokens !== undefined ? data.aiTokens : 150,
+          storageGB: data.storageGB !== undefined ? data.storageGB : 0,
+          computeTimeHours: data.computeTimeHours !== undefined ? data.computeTimeHours : 0,
+          aiTokens: data.aiTokens !== undefined ? data.aiTokens : 0,
           dailyGenerationsCount: data.dailyGenerationsCount !== undefined ? data.dailyGenerationsCount : 0
         });
         if (data.spendingLimit !== undefined) {
@@ -462,8 +462,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleResetWorkspace = async () => {
     setShowResetModal(false);
     
-    const defaultName = user && user.email ? user.email.split('@')[0] : 'Developer';
-    const defaultEmail = user && user.email ? user.email : 'devdarianib@gmail.com';
+    const defaultName = user && user.email ? user.email.split('@')[0] : 'User';
+    const defaultEmail = user && user.email ? user.email : '';
     const initialProfile: UserProfile = {
       name: defaultName,
       email: defaultEmail,
@@ -510,9 +510,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
         await setDoc(statsRef, {
-          storageGB: 1.2,
-          computeTimeHours: 0.1,
-          aiTokens: Math.max(150, userStats.aiTokens),
+          storageGB: 0,
+          computeTimeHours: 0,
+          aiTokens: 0,
           dailyGenerationsCount: 0,
           dailyGenerationsDate: '',
           spendingLimit: 5.00
