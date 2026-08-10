@@ -6264,17 +6264,39 @@ export default function App() {
                     </Suspense>
                   )}
                   {activeView === 'compute' && (
-                    <SystemsView 
-                      metadata={lastGeminiMetadata} 
-                      aiSettings={aiSettings} 
-                      setAiSettings={setAiSettings} 
-                      isFirestoreActive={isFirestoreActive} 
-                      language={userProfile.language}
-                      uiMode={uiMode === 'market' ? 'business' : uiMode}
-                    />
+                    isAdmin ? (
+                      <SystemsView 
+                        metadata={lastGeminiMetadata} 
+                        aiSettings={aiSettings} 
+                        setAiSettings={setAiSettings} 
+                        isFirestoreActive={isFirestoreActive} 
+                        language={userProfile.language}
+                        uiMode={uiMode === 'market' ? 'business' : uiMode}
+                      />
+                    ) : (
+                      <div className="p-12 text-center text-proton-muted font-mono space-y-2">
+                        <p className="font-bold uppercase tracking-widest text-sm text-amber-400">
+                          {userProfile.language === 'ka' ? 'წვდომა შეზღუდულია' : 'Access Restricted'}
+                        </p>
+                        <p className="text-xs">
+                          {userProfile.language === 'ka' ? 'ეს გვერდი განკუთვნილია მხოლოდ დეველოპერისთვის.' : 'This view is reserved for system developers only.'}
+                        </p>
+                      </div>
+                    )
                   )}
                   {activeView === 'device' && (
-                    <HardwareView language={userProfile.language} />
+                    isAdmin ? (
+                      <HardwareView language={userProfile.language} />
+                    ) : (
+                      <div className="p-12 text-center text-proton-muted font-mono space-y-2">
+                        <p className="font-bold uppercase tracking-widest text-sm text-amber-400">
+                          {userProfile.language === 'ka' ? 'წვდომა შეზღუდულია' : 'Access Restricted'}
+                        </p>
+                        <p className="text-xs">
+                          {userProfile.language === 'ka' ? 'ეს გვერდი განკუთვნილია მხოლოდ დეველოპერისთვის.' : 'This view is reserved for system developers only.'}
+                        </p>
+                      </div>
+                    )
                   )}
                   {activeView === 'profile' && (
                     <Suspense fallback={
@@ -6308,6 +6330,7 @@ export default function App() {
                         setUiMode={handleModeChange}
                         organizerTheme={organizerTheme}
                         setOrganizerTheme={setOrganizerTheme}
+                        isAdmin={isAdmin}
                       />
                     </Suspense>
                   )}

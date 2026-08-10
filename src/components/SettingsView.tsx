@@ -67,6 +67,7 @@ interface SettingsViewProps {
   setUiMode: (mode: 'business' | 'creative') => void;
   organizerTheme: Theme;
   setOrganizerTheme: (theme: Theme) => void;
+  isAdmin?: boolean;
 }
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
@@ -92,7 +93,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   uiMode,
   setUiMode,
   organizerTheme,
-  setOrganizerTheme
+  setOrganizerTheme,
+  isAdmin
 }) => {
   const t = translations[language].settings;
   const common = translations[language].common;
@@ -608,18 +610,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }, 600);
   };
 
+  const isDevUser = isAdmin ?? (!!user && (userProfile?.role === 'admin' || user.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost')));
+
   const tabs = [
     { 
       id: 'preferences', 
       label: language === 'ka' ? 'დიზაინი და ენა' : 'Design & Language', 
       shortLabel: language === 'ka' ? 'დიზაინი' : 'Design',
       icon: Palette 
-    },
-    { 
-      id: 'ai', 
-      label: language === 'ka' ? 'AI ასისტენტი' : 'AI Assistant', 
-      shortLabel: 'AI',
-      icon: Cpu 
     },
     { 
       id: 'profile', 
@@ -633,18 +631,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       shortLabel: language === 'ka' ? 'უსაფრთხოება' : 'Security',
       icon: Shield 
     },
-    { 
-      id: 'seo', 
-      label: language === 'ka' ? 'როგორ გამოჩნდება საიტი?' : 'Google & Social Preview', 
-      shortLabel: 'SEO',
-      icon: Search 
-    },
-    { 
-      id: 'cost_control', 
-      label: language === 'ka' ? 'გამოყენებული რესურსები' : 'Used Resources', 
-      shortLabel: language === 'ka' ? 'რესურსები' : 'Resources',
-      icon: TrendingUp 
-    },
+    ...(isDevUser ? [
+      { 
+        id: 'ai', 
+        label: language === 'ka' ? 'AI ასისტენტი (Dev)' : 'AI System Config (Dev)', 
+        shortLabel: 'AI (Dev)',
+        icon: Cpu 
+      },
+      { 
+        id: 'seo', 
+        label: language === 'ka' ? 'SEO & Meta (Dev)' : 'Google & Social Preview (Dev)', 
+        shortLabel: 'SEO (Dev)',
+        icon: Search 
+      },
+      { 
+        id: 'cost_control', 
+        label: language === 'ka' ? 'სისტემური რესურსები (Dev)' : 'Used Resources (Dev)', 
+        shortLabel: language === 'ka' ? 'რესურსები' : 'Resources',
+        icon: TrendingUp 
+      },
+    ] : [])
   ];
 
   return (
