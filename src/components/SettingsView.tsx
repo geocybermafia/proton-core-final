@@ -648,8 +648,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   ];
 
   return (
-    <div className="h-full flex flex-col max-w-6xl mx-auto py-4 md:py-8 px-4 animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
-      <div className="sticky top-0 z-20 bg-proton-bg/95 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
+      <div className="sticky top-0 z-20 bg-proton-bg/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-proton-text flex items-center gap-3">
             <Settings className="text-proton-accent font-black animate-[spin_20s_linear_infinite]" size={32} />
@@ -698,11 +698,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-[40px] overflow-hidden shadow-2xl relative">
+      <div className="w-full flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-3xl md:rounded-[32px] overflow-hidden shadow-2xl relative">
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
-        <div className="w-full md:w-72 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
+        <div className="w-full md:w-60 lg:w-72 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-4 lg:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -731,7 +731,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 p-6 md:p-12 overflow-y-auto custom-scrollbar-minimal bg-transparent relative z-10" id="settings-content-wrapper">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto custom-scrollbar-minimal bg-transparent relative z-10" id="settings-content-wrapper">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -739,7 +739,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="max-w-3xl lg:max-w-4xl"
+              className="w-full max-w-5xl"
             >
               {activeTab === 'ai' && (
                 <div className="space-y-8" id="sec-ai-config">
@@ -755,7 +755,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                   <div className="space-y-8">
                     {/* Temperature Tuner Slider */}
-                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 max-w-3xl">
+                    <div className="space-y-5 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 w-full max-w-4xl">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-black uppercase tracking-wider flex items-center gap-2 text-proton-muted">
                           <Zap size={14} className="text-proton-accent animate-pulse" />
@@ -1133,7 +1133,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Technical Profile Fields Form */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 max-w-3xl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 w-full max-w-4xl">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'სახელი და გვარი' : 'Your Name'}</label>
                         <div className="relative group">
@@ -1370,7 +1370,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10 max-w-3xl">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 relative z-10 w-full max-w-4xl">
                         <button
                           type="button"
                           onClick={() => showToast(
