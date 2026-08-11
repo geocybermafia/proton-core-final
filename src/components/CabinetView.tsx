@@ -7,6 +7,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useSeller } from '../contexts/SellerContext';
+import { executeSecureTransaction } from '../services/cloudFunctionsService';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
 import AvatarEditorModal from './AvatarEditorModal';
@@ -21,9 +22,61 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
   const { sellerListings, sellerOrders, loading, updateOrderStatus } = useSeller();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
+  // Secure Cloud Function Transaction States
+  const [transactionAmount, setTransactionAmount] = useState<string>('50');
+  const [transactionType, setTransactionType] = useState<'DEPOSIT' | 'TRANSFER'>('DEPOSIT');
+  const [isSubmittingTx, setIsSubmittingTx] = useState<boolean>(false);
+  const [txSuccessMessage, setTxSuccessMessage] = useState<string | null>(null);
+  const [txErrorMessage, setTxErrorMessage] = useState<string | null>(null);
+
   if (!profile) return null;
   const rawLang = profile.language?.toLowerCase() || 'ka';
   const lang = (rawLang === 'ka' || rawLang === 'georgian') ? 'ka' : 'en';
+
+  const handleExecuteSecureTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      setTxErrorMessage(lang === 'ka' ? 'ავტორიზაცია აუცილებელია ტრანზაქციისთვის' : 'Authentication required to execute transactions');
+      return;
+    }
+
+    const amountNum = Number(transactionAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setTxErrorMessage(lang === 'ka' ? 'გთხოვთ მიუთითოთ ვალიდური დადებითი თანხა' : 'Please specify a valid positive amount');
+      return;
+    }
+
+    setIsSubmittingTx(true);
+    setTxSuccessMessage(null);
+    setTxErrorMessage(null);
+
+    try {
+      const res = await executeSecureTransaction({
+        buyerId: user.uid,
+        sellerId: transactionType === 'DEPOSIT' ? user.uid : 'SYSTEM_ESCROW_NODE',
+        amount: amountNum,
+        itemTitle: transactionType === 'DEPOSIT' ? 'Wallet Node Credit Deposit' : 'Inter-System Escrow Transfer',
+        type: transactionType
+      });
+
+      if (res.success) {
+        setTxSuccessMessage(
+          lang === 'ka' 
+            ? `ტრანზაქცია #${res.transactionId.slice(-6)} წარმატებით დაფიქსირდა Cloud Function-ის მიერ!` 
+            : `Transaction #${res.transactionId.slice(-6)} recorded securely via Cloud Function!`
+        );
+        setTransactionAmount('');
+        setTimeout(() => setTxSuccessMessage(null), 5000);
+      }
+    } catch (err: any) {
+      console.error("[CabinetView] Secure Transaction Error:", err);
+      setTxErrorMessage(
+        err?.message || (lang === 'ka' ? 'სერვერული ტრანზაქცია ვერ შესრულდა' : 'Secure serverless transaction failed')
+      );
+    } finally {
+      setIsSubmittingTx(false);
+    }
+  };
   
   // Safe translation access
   const t = translations[lang as keyof typeof translations]?.cabinet || translations.en.cabinet;
@@ -225,6 +278,106 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* SECURE CLOUD FUNCTION FINANCIAL TRANSACTION WIDGET */}
+          <div className="relative z-10 p-5 bg-gradient-to-r from-proton-bg/80 via-proton-card/50 to-proton-bg/80 border border-proton-accent/30 rounded-2xl shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-proton-border/60 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-proton-accent/10 border border-proton-accent/20 rounded-xl text-proton-accent">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-widest text-proton-text">
+                    {lang === 'ka' ? 'სერვერული ფინანსური ტრანზაქციები (Cloud Functions)' : 'Secure Serverless Financial Node'}
+                  </h4>
+                  <p className="text-[9px] font-bold text-proton-muted uppercase tracking-widest opacity-70">
+                    {lang === 'ka' ? 'ბაზა ჩაკეტილია — ჩაწერა სრულდება Admin SDK-ით' : 'Direct writes locked — Processed via Cloud Functions Admin SDK'}
+                  </p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-widest rounded-md">
+                ZERO-TRUST ACTIVE
+              </span>
+            </div>
+
+            {/* MESSAGES */}
+            {txSuccessMessage && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-bold flex items-center gap-2">
+                <CheckCircle size={16} className="shrink-0" />
+                <span>{txSuccessMessage}</span>
+              </div>
+            )}
+            {txErrorMessage && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs font-bold flex items-center gap-2">
+                <Shield size={16} className="shrink-0" />
+                <span>{txErrorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleExecuteSecureTransaction} className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex items-center bg-proton-bg/60 border border-proton-border rounded-xl p-1 gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setTransactionType('DEPOSIT')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    transactionType === 'DEPOSIT'
+                      ? "bg-proton-accent text-proton-bg shadow-md"
+                      : "text-proton-muted hover:text-proton-text"
+                  )}
+                >
+                  {lang === 'ka' ? 'დეპოზიტი' : 'Deposit'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTransactionType('TRANSFER')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                    transactionType === 'TRANSFER'
+                      ? "bg-proton-accent text-proton-bg shadow-md"
+                      : "text-proton-muted hover:text-proton-text"
+                  )}
+                >
+                  {lang === 'ka' ? 'გადარიცხვა' : 'Escrow Transfer'}
+                </button>
+              </div>
+
+              <div className="relative flex-1 w-full">
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={transactionAmount}
+                  onChange={(e) => setTransactionAmount(e.target.value)}
+                  placeholder={lang === 'ka' ? 'თანხა ($)' : 'Amount ($)'}
+                  disabled={isSubmittingTx}
+                  className="w-full bg-proton-bg/80 border border-proton-border rounded-xl px-4 py-2 text-xs font-mono font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all disabled:opacity-50"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingTx || !user}
+                className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:brightness-110 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0 min-h-[38px] cursor-pointer"
+              >
+                {isSubmittingTx ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>{lang === 'ka' ? 'მუშავდება...' : 'Processing...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Wallet size={14} />
+                    <span>
+                      {transactionType === 'DEPOSIT'
+                        ? (lang === 'ka' ? 'შეავსე ბალანსი' : 'Process Deposit')
+                        : (lang === 'ka' ? 'გადარიცხე' : 'Execute Transfer')}
+                    </span>
+                  </>
+                )}
+              </button>
+            </form>
           </div>
 
           {/* RECENT ORDERS TABLE */}

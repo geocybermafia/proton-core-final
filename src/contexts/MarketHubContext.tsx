@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
 import { doc, setDoc, onSnapshot, collection, deleteDoc } from 'firebase/firestore';
+import { executeSecureTransaction } from '../services/cloudFunctionsService';
 
 export interface LedgerItem {
   id: string;
@@ -132,10 +133,15 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (user) {
       try {
-        const docRef = doc(db, 'users', user.uid, 'market_ledger', id);
-        await setDoc(docRef, newItem);
+        await executeSecureTransaction({
+          buyerId: user.uid,
+          sellerId: user.uid,
+          amount: Math.max(0.01, total || item.value || 1),
+          itemTitle: item.description || 'Market Hub Ledger Entry',
+          type: item.type === 'outbound' ? 'PAYOUT' : 'DEPOSIT'
+        });
       } catch (error) {
-        console.error("Failed to add ledger item to Firestore, rolling back:", error);
+        console.error("Failed to add ledger item via Cloud Function, rolling back:", error);
         setLedgerItems(previousLedger);
         localStorage.setItem('proton_market_hub_ledger', JSON.stringify(previousLedger));
         throw error;

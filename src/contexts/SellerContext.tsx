@@ -15,6 +15,7 @@ import {
 import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { executeSecureTransaction } from '../services/cloudFunctionsService';
 
 export interface CreateListingPayload {
   title: string;
@@ -254,10 +255,15 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (user) {
       try {
-        const docRef = doc(db, 'users', user.uid, 'market_ledger', id);
-        await setDoc(docRef, newItem);
+        await executeSecureTransaction({
+          buyerId: user.uid,
+          sellerId: user.uid,
+          amount: Math.max(0.01, total || item.value || 1),
+          itemTitle: item.description || 'Merchant Ledger Entry',
+          type: item.type === 'outbound' ? 'PAYOUT' : 'DEPOSIT'
+        });
       } catch (err) {
-        console.error("Failed to persist ledger item:", err);
+        console.error("Failed to persist ledger item securely via Cloud Functions:", err);
         setLedgerItems(previous);
         throw err;
       }
