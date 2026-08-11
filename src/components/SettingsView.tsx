@@ -43,7 +43,9 @@ import {
   Briefcase,
   ShieldAlert,
   ShieldCheck,
-  Activity
+  Activity,
+  Smartphone,
+  KeyRound
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -52,8 +54,10 @@ import { useToast } from './Toast';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteField, onSnapshot } from 'firebase/firestore';
 import { uploadAvatarImage } from '../lib/storageUtils';
+import { SecurityVerificationModal } from './SecurityVerificationModal';
+import { createPinMeta, verifyPinWithMeta, registerFailedPinAttempt, resetPinLockoutAttempts, checkPinLockout } from '../lib/securityUtils';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -205,6 +209,164 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [keyProgress, setKeyProgress] = useState(0);
   const [isIntegrityChecking, setIsIntegrityChecking] = useState(false);
   const [integrityLogs, setIntegrityLogs] = useState<string[]>([]);
+
+  // Step-Up Security Modal State
+  const [stepUpState, setStepUpState] = useState<{
+    isOpen: boolean;
+    actionTitle: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    actionTitle: '',
+    onConfirm: () => {},
+  });
+
+  // Security PIN Modal State
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [pinMode, setPinMode] = useState<'enable' | 'change' | 'disable'>('enable');
+  const [pinCurrentInput, setPinCurrentInput] = useState('');
+  const [pinNewInput, setPinNewInput] = useState('');
+  const [pinConfirmInput, setPinConfirmInput] = useState('');
+  const [pinModalError, setPinModalError] = useState('');
+
+  const requestStepUpVerification = (actionTitle: string, onVerifiedAction: () => void) => {
+    setStepUpState({
+      isOpen: true,
+      actionTitle,
+      onConfirm: onVerifiedAction,
+    });
+  };
+
+  const openPinSetupModal = (mode: 'enable' | 'change' | 'disable') => {
+    setPinMode(mode);
+    setPinCurrentInput('');
+    setPinNewInput('');
+    setPinConfirmInput('');
+    setPinModalError('');
+    setIsPinModalOpen(true);
+  };
+
+  const handleSavePin = async () => {
+    setPinModalError('');
+
+    const currentLockout = checkPinLockout();
+    if (currentLockout.isLocked) {
+      setPinModalError(language === 'ka' ? currentLockout.messageKa! : currentLockout.messageEn!);
+      return;
+    }
+
+    if (pinMode === 'enable') {
+      if (pinNewInput.length < 4 || !/^\d{4}$/.test(pinNewInput)) {
+        setPinModalError(language === 'ka' ? 'გთხოვთ შეიყვანოთ 4-ნიშნა PIN კოდი' : 'Please enter a 4-digit numeric PIN');
+        return;
+      }
+      if (pinNewInput !== pinConfirmInput) {
+        setPinModalError(language === 'ka' ? 'PIN კოდები არ ემთხვევა ერთმანეთს' : 'PIN codes do not match');
+        return;
+      }
+
+      try {
+        const pinMeta = await createPinMeta(pinNewInput);
+        const updatedProfile = { ...userProfile, securityPinEnabled: true, securityPinMeta: pinMeta };
+        setUserProfile(updatedProfile);
+
+        if (user) {
+          await setDoc(doc(db, 'users', user.uid), {
+            securityPinEnabled: true,
+            securityPinMeta: pinMeta,
+            securityPin: deleteField() // Ensure legacy raw PIN is removed
+          }, { merge: true });
+        }
+
+        resetPinLockoutAttempts();
+        setPinCurrentInput('');
+        setPinNewInput('');
+        setPinConfirmInput('');
+        setIsPinModalOpen(false);
+        showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
+      } catch (e) {
+        console.error("Error setting up PIN:", e);
+        setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again');
+      }
+    } else if (pinMode === 'change') {
+      const isCurrentValid = await verifyPinWithMeta(pinCurrentInput, userProfile.securityPinMeta);
+      if (!isCurrentValid) {
+        const lockout = registerFailedPinAttempt();
+        if (lockout.isLocked) {
+          setPinModalError(language === 'ka' ? lockout.messageKa! : lockout.messageEn!);
+        } else {
+          setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა — არასწორი მიმდინარე PIN' : 'Operation failed — incorrect current PIN');
+        }
+        return;
+      }
+
+      if (pinNewInput.length < 4 || !/^\d{4}$/.test(pinNewInput)) {
+        setPinModalError(language === 'ka' ? 'გთხოვთ შეიყვანოთ ახალი 4-ნიშნა PIN კოდი' : 'Please enter a new 4-digit numeric PIN');
+        return;
+      }
+      if (pinNewInput !== pinConfirmInput) {
+        setPinModalError(language === 'ka' ? 'ახალი PIN კოდები არ ემთხვევა ერთმანეთს' : 'New PIN codes do not match');
+        return;
+      }
+
+      try {
+        const pinMeta = await createPinMeta(pinNewInput);
+        const updatedProfile = { ...userProfile, securityPinEnabled: true, securityPinMeta: pinMeta };
+        setUserProfile(updatedProfile);
+
+        if (user) {
+          await setDoc(doc(db, 'users', user.uid), {
+            securityPinEnabled: true,
+            securityPinMeta: pinMeta,
+            securityPin: deleteField()
+          }, { merge: true });
+        }
+
+        resetPinLockoutAttempts();
+        setPinCurrentInput('');
+        setPinNewInput('');
+        setPinConfirmInput('');
+        setIsPinModalOpen(false);
+        showToast(language === 'ka' ? 'PIN წარმატებით შეიცვალა' : 'PIN changed successfully', 'success');
+      } catch (e) {
+        console.error("Error changing PIN:", e);
+        setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again');
+      }
+    } else if (pinMode === 'disable') {
+      const isCurrentValid = await verifyPinWithMeta(pinCurrentInput, userProfile.securityPinMeta);
+      if (!isCurrentValid) {
+        const lockout = registerFailedPinAttempt();
+        if (lockout.isLocked) {
+          setPinModalError(language === 'ka' ? lockout.messageKa! : lockout.messageEn!);
+        } else {
+          setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა — არასწორი მიმდინარე PIN' : 'Operation failed — incorrect current PIN');
+        }
+        return;
+      }
+
+      const updatedProfile = { ...userProfile, securityPinEnabled: false, securityPinMeta: undefined };
+      setUserProfile(updatedProfile);
+
+      if (user) {
+        try {
+          await setDoc(doc(db, 'users', user.uid), {
+            securityPinEnabled: false,
+            securityPinMeta: deleteField(),
+            securityPin: deleteField()
+          }, { merge: true });
+        } catch (e) {
+          console.error("Failed to disable PIN in firestore", e);
+        }
+      }
+
+      resetPinLockoutAttempts();
+      setPinCurrentInput('');
+      setPinNewInput('');
+      setPinConfirmInput('');
+      setIsPinModalOpen(false);
+      showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
+    }
+  };
 
   const passkeyTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const integrityTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -365,19 +527,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     });
   };
 
-  const handleSave = async () => {
-    if (!isEmailValid(userProfile.email) || !isPhoneValid(userProfile.phoneNumber)) {
-      setEmailTouched(true);
-      setPhoneTouched(true);
-      showToast(
-        language === 'ka' 
-          ? 'გთხოვთ შეასწოროთ არასწორი ველები პროფილში' 
-          : 'Please correct invalid profile fields before saving.',
-        'error'
-      );
-      return;
-    }
-
+  const executeSave = async () => {
     setIsSaving(true);
     try {
       if (user) {
@@ -403,6 +553,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           avatar: userProfile.avatar || '',
           role: userProfile.role || 'System Architect',
           showCommercialHub: !!userProfile.showCommercialHub,
+          securityPinEnabled: !!userProfile.securityPinEnabled,
+          securityPinMeta: userProfile.securityPinMeta || null,
+          securityPin: deleteField(),
           aiSettings: sanitizedAiSettings
         }, { merge: true });
 
@@ -416,21 +569,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       
       showToast(
         language === 'ka' 
-          ? 'კონფიგურაცია წარმატებით იქნა სინქრონიზებული ღრუბელთან!' 
-          : 'System configuration successfully synchronized with cloud database!',
+          ? 'ცვლილებები შენახულია' 
+          : 'Changes saved successfully',
         'success'
       );
     } catch (err: any) {
       console.error("Failed to sync user profile directly to Firestore:", err);
       showToast(
         language === 'ka' 
-          ? `შეცდომა შენახვისას: ${err?.message || 'Firestore-ის შეცდომა'}` 
-          : `Failed to sync configuration: ${err?.message || 'Firestore error'}`,
+          ? 'ოპერაციის შესრულება ვერ მოხერხდა' 
+          : 'Operation failed — please try again',
         'error'
       );
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    if (!isEmailValid(userProfile.email) || !isPhoneValid(userProfile.phoneNumber)) {
+      setEmailTouched(true);
+      setPhoneTouched(true);
+      showToast(
+        language === 'ka' 
+          ? 'გთხოვთ შეასწოროთ არასწორი ველები პროფილში' 
+          : 'Please correct invalid profile fields before saving.',
+        'error'
+      );
+      return;
+    }
+
+    // Step-Up Security Trigger for sensitive Email changes
+    if (userProfile.email !== lastSavedProfile.email) {
+      requestStepUpVerification(
+        language === 'ka' ? 'ელფოსტის შეცვლა' : 'Change Email Address',
+        () => executeSave()
+      );
+      return;
+    }
+
+    executeSave();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,7 +639,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleResetWorkspace = async () => {
+  const executeResetWorkspace = async () => {
     setShowResetModal(false);
     
     const defaultName = user && user.email ? user.email.split('@')[0] : 'User';
@@ -475,7 +653,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       phoneNumber: '',
       avatar: '',
       role: 'System Architect',
-      showCommercialHub: false
+      showCommercialHub: false,
+      securityPinEnabled: false,
     };
     setUserProfile(initialProfile);
 
@@ -507,7 +686,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           phoneNumber: '',
           avatar: '',
           role: 'System Architect',
-          showCommercialHub: false
+          showCommercialHub: false,
+          securityPinEnabled: false,
+          securityPinMeta: deleteField(),
+          securityPin: deleteField()
         });
 
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
@@ -526,9 +708,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
     showToast(
       language === 'ka' 
-        ? 'სამუშაო სივრცე წარმატებით განულდა საწყის პარამეტრებზე!' 
-        : 'Workspace has been successfully reset to default configurations!',
+        ? 'სამუშაო სივრცე წარმატებით განულდა' 
+        : 'Workspace reset to defaults successfully',
       'success'
+    );
+  };
+
+  const handleResetWorkspace = async () => {
+    requestStepUpVerification(
+      language === 'ka' ? 'მონაცემების გასუფთავება და ანგარიშის განულება' : 'Clear Data & Account Reset',
+      () => executeResetWorkspace()
     );
   };
 
@@ -1656,6 +1845,125 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        <Lock size={20} className="text-green-500" />
                     </div>
 
+                    {/* 1. Security PIN (Optional) Section */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <KeyRound size={18} className="text-proton-accent" />
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-proton-text block">
+                              {language === 'ka' ? 'უსაფრთხოების PIN კოდი (არასავალდებულო)' : 'Security PIN Code (Optional)'}
+                            </span>
+                            <span className="text-[9px] text-proton-muted font-bold uppercase tracking-tight block mt-0.5">
+                              {userProfile.securityPinEnabled 
+                                ? (language === 'ka' ? 'PIN დაცვა: ჩართულია' : 'PIN Protection: Enabled') 
+                                : (language === 'ka' ? 'PIN დაცვა: გამორთულია' : 'PIN Protection: Disabled')}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border flex items-center gap-1 shrink-0",
+                          userProfile.securityPinEnabled 
+                            ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" 
+                            : "text-proton-muted bg-proton-secondary/20 border-proton-border/40"
+                        )}>
+                          {userProfile.securityPinEnabled 
+                            ? (language === 'ka' ? 'აქტიური' : 'Active') 
+                            : (language === 'ka' ? 'არასავალდებულო' : 'Optional')}
+                        </span>
+                      </div>
+
+                      <p className="text-[10px] text-proton-muted leading-relaxed font-bold tracking-tight text-left">
+                        {language === 'ka'
+                          ? 'გამოიყენეთ 4-ნიშნა PIN კოდი სენსიტიური მოქმედებების დამატებითი დადასტურებისთვის (ანგარიშის წაშლა, ელფოსტის შეცვლა, ფინანსური გადარიცხვები). ჩვეულებრივი სარგებლობისას კოდი არ მოგეთხოვებათ.'
+                          : 'Use a 4-digit PIN for extra confirmation on sensitive actions (account deletion, email change, financial transfers). Normal browsing never requires a PIN.'}
+                      </p>
+
+                      <div className="flex flex-wrap gap-2 pt-1 text-left">
+                        {!userProfile.securityPinEnabled ? (
+                          <button
+                            type="button"
+                            onClick={() => openPinSetupModal('enable')}
+                            className="px-4 py-2 bg-proton-accent text-proton-bg text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-white transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-md"
+                          >
+                            <Lock size={12} />
+                            {language === 'ka' ? 'PIN კოდის ჩართვა' : 'Enable PIN Code'}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                requestStepUpVerification(
+                                  language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change PIN Code',
+                                  () => openPinSetupModal('change')
+                                );
+                              }}
+                              className="px-4 py-2 bg-proton-accent/10 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                            >
+                              <RefreshCw size={12} />
+                              {language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change PIN Code'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                requestStepUpVerification(
+                                  language === 'ka' ? 'PIN კოდის გამორთვა' : 'Disable PIN Code',
+                                  () => openPinSetupModal('disable')
+                                );
+                              }}
+                              className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Trash2 size={12} />
+                              {language === 'ka' ? 'PIN კოდის გამორთვა' : 'Disable PIN Code'}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Two-Factor Authentication (2FA) Placeholder */}
+                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Smartphone size={18} className="text-amber-400" />
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-proton-text block">
+                              {language === 'ka' ? 'ორფაქტორიანი ავტორიზაცია (2FA)' : 'Two-Factor Authentication (2FA)'}
+                            </span>
+                            <span className="text-[9px] text-proton-muted font-bold uppercase tracking-tight block mt-0.5">
+                              {language === 'ka' ? 'Authenticator აპლიკაციის დაცვა' : 'Authenticator App Protection'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-[8px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 shrink-0">
+                          {language === 'ka' ? 'მალე დაემატება' : 'Coming Soon'}
+                        </span>
+                      </div>
+
+                      <p className="text-[10px] text-proton-muted leading-relaxed font-bold tracking-tight text-left">
+                        {language === 'ka'
+                          ? 'დამატებითი უსაფრთხოების შრე თქვენი ანგარიშისთვის Authenticator აპლიკაციის (Google Authenticator, Authy) საშუალებით.'
+                          : 'An additional layer of security for your account using an Authenticator app (Google Authenticator, Authy).'}
+                      </p>
+
+                      <div className="text-left pt-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            showToast(
+                              language === 'ka' ? 'ორფაქტორიანი ავტორიზაცია მალე დაემატება' : 'Two-factor authentication will be available soon',
+                              'info'
+                            );
+                          }}
+                          className="px-4 py-2 bg-proton-secondary/20 border border-proton-border text-proton-muted hover:text-proton-text text-[9px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                        >
+                          <Smartphone size={12} />
+                          {language === 'ka' ? 'დაყენება' : 'Setup 2FA'}
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Cryptographic Key Generator */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
                       <div className="flex items-center gap-3">
@@ -2200,6 +2508,126 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Step-Up Security Verification Modal */}
+      <SecurityVerificationModal
+        isOpen={stepUpState.isOpen}
+        onClose={() => setStepUpState(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={() => {
+          setStepUpState(prev => ({ ...prev, isOpen: false }));
+          stepUpState.onConfirm();
+        }}
+        actionTitle={stepUpState.actionTitle}
+        securityPinEnabled={!!userProfile.securityPinEnabled}
+        securityPinMeta={userProfile.securityPinMeta}
+        language={language}
+      />
+
+      {/* PIN Setup / Modification Modal */}
+      <AnimatePresence>
+        {isPinModalOpen && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-proton-bg border border-proton-border/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-left"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-proton-border/40">
+                <div className="flex items-center gap-3">
+                  <KeyRound size={20} className="text-proton-accent" />
+                  <h4 className="text-sm font-black uppercase tracking-wider text-proton-text">
+                    {pinMode === 'enable' && (language === 'ka' ? 'PIN კოდის ჩართვა' : 'Enable PIN Code')}
+                    {pinMode === 'change' && (language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change PIN Code')}
+                    {pinMode === 'disable' && (language === 'ka' ? 'PIN კოდის გამორთვა' : 'Disable PIN Code')}
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPinModalOpen(false)}
+                  className="text-proton-muted hover:text-proton-text text-sm font-bold p-1 cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {pinModalError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold rounded-xl flex items-center gap-2">
+                  <AlertCircle size={16} className="shrink-0" />
+                  <span>{pinModalError}</span>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {(pinMode === 'change' || pinMode === 'disable') && (
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-proton-text block mb-1.5">
+                      {language === 'ka' ? 'მიმდინარე PIN კოდი' : 'Current PIN Code'}
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={4}
+                      value={pinCurrentInput}
+                      onChange={(e) => setPinCurrentInput(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••"
+                      className="w-full bg-proton-secondary/20 border border-proton-border rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.5em] text-proton-text focus:outline-none focus:border-proton-accent"
+                    />
+                  </div>
+                )}
+
+                {(pinMode === 'enable' || pinMode === 'change') && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-wider text-proton-text block mb-1.5">
+                        {language === 'ka' ? 'ახალი 4-ნიშნა PIN კოდი' : 'New 4-digit PIN Code'}
+                      </label>
+                      <input
+                        type="password"
+                        maxLength={4}
+                        value={pinNewInput}
+                        onChange={(e) => setPinNewInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        className="w-full bg-proton-secondary/20 border border-proton-border rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.5em] text-proton-text focus:outline-none focus:border-proton-accent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-wider text-proton-text block mb-1.5">
+                        {language === 'ka' ? 'გაიმეორეთ PIN კოდი' : 'Confirm PIN Code'}
+                      </label>
+                      <input
+                        type="password"
+                        maxLength={4}
+                        value={pinConfirmInput}
+                        onChange={(e) => setPinConfirmInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••"
+                        className="w-full bg-proton-secondary/20 border border-proton-border rounded-xl px-4 py-2.5 text-center text-lg font-mono tracking-[0.5em] text-proton-text focus:outline-none focus:border-proton-accent"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-proton-border/30">
+                <button
+                  type="button"
+                  onClick={() => setIsPinModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-proton-border/50 text-proton-muted hover:text-proton-text text-xs font-bold cursor-pointer"
+                >
+                  {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePin}
+                  className="px-5 py-2 rounded-xl bg-proton-accent text-proton-bg text-xs font-black uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md"
+                >
+                  {language === 'ka' ? 'შენახვა' : 'Save'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

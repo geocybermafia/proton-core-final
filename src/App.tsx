@@ -4739,22 +4739,32 @@ export default function App() {
     const profileRef = doc(db, 'users', user.uid);
     const unsubscribe = onSnapshot(profileRef, { includeMetadataChanges: true }, (snap) => {
       if (snap.exists()) {
-        const data = snap.data() as Partial<UserProfile>;
+        const rawData = snap.data();
+        if (rawData && typeof rawData.securityPin === 'string') {
+          // Trigger asynchronous migration of legacy plaintext PIN to PBKDF2 hash
+          import('./lib/securityUtils').then(({ checkAndMigrateLegacyPin }) => {
+            checkAndMigrateLegacyPin(user.uid, rawData);
+          });
+        }
+
+        const data = rawData as Partial<UserProfile>;
         const dbLanguage = data.language as 'en' | 'ka';
         const isStale = snap.metadata.fromCache;
         setUserProfile(prev => {
           const targetLanguage = (dbLanguage && !isStale) ? dbLanguage : prev.language;
+          const { securityPin, ...cleanData } = data as any; // Strip raw securityPin if present
           return {
             ...prev,
-            ...data,
+            ...cleanData,
             name: data.name || prev.name,
             email: data.email || prev.email,
             language: targetLanguage,
-            avatar: data.avatar || prev.avatar
+            avatar: data.avatar || prev.avatar,
+            securityPinEnabled: data.securityPinEnabled !== undefined ? data.securityPinEnabled : prev.securityPinEnabled,
+            securityPinMeta: data.securityPinMeta || prev.securityPinMeta,
           };
         });
 
-        const rawData = snap.data();
         if (rawData && rawData.aiSettings) {
           const remoteAi = rawData.aiSettings as Partial<GlobalAiSettings>;
           setAiSettings(prev => ({

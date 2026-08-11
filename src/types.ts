@@ -1,4 +1,6 @@
 
+import { SecurityPinMeta } from './lib/securityUtils';
+
 export type UserProfile = {
   id?: string;
   name: string;
@@ -11,6 +13,8 @@ export type UserProfile = {
   avatar?: string;
   role?: string;
   showCommercialHub?: boolean;
+  securityPinEnabled?: boolean;
+  securityPinMeta?: SecurityPinMeta;
 };
 
 export type GlobalAiSettings = {
