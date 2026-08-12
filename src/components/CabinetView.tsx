@@ -474,7 +474,7 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
         </section>
 
         {/* RIGHT/SIDEBAR COLUMN (1 COL): AUTH CREDENTIALS & NETWORK DIAGNOSTIC */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-24 h-fit">
           {/* CONNECTED AUTH PROVIDER CARD */}
           {user && (
             <section className="bg-proton-card border border-proton-border rounded-2xl p-6 shadow-xl relative overflow-hidden group">
