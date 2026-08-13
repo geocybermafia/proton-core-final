@@ -5,14 +5,27 @@ import path from 'path'
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
   resolve: {
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'wagmi', '@tanstack/react-query', 'viem'],
     alias: {
       'react': path.resolve(__dirname, './node_modules/react'),
       'react-dom': path.resolve(__dirname, './node_modules/react-dom')
     }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage']
+    include: [
+      'react', 
+      'react-dom', 
+      'wagmi', 
+      '@tanstack/react-query', 
+      'viem', 
+      'framer-motion', 
+      'react-router-dom', 
+      'lucide-react',
+      'firebase/app', 
+      'firebase/auth', 
+      'firebase/firestore', 
+      'firebase/storage'
+    ]
   },
   define: {
     'process.env.NODE_ENV': JSON.stringify(mode === 'production' ? 'production' : 'development'),

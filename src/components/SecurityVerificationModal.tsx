@@ -8,12 +8,14 @@ import {
   registerFailedPinAttempt,
   resetPinLockoutAttempts,
 } from '../lib/securityUtils';
+import { verifyStepUpPinCall } from '../services/cloudFunctionsService';
 
 export interface SecurityVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (grantId?: string) => void;
   actionTitle?: string;
+  scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp';
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;
   correctPin?: string; // Legacy fallback
@@ -25,6 +27,7 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
   onClose,
   onConfirm,
   actionTitle,
+  scope = 'generalStepUp',
   securityPinEnabled = false,
   securityPinMeta,
   correctPin,
@@ -108,6 +111,8 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
       return;
     }
 
+    let issuedGrantId: string | undefined;
+
     if (securityPinEnabled && (securityPinMeta || correctPin)) {
       if (fullPinEntered.length < 4) {
         setErrorMsg(language === 'ka' ? 'გთხოვთ შეიყვანოთ 4-ნიშნა PIN კოდი' : 'Please enter complete 4-digit PIN');
@@ -118,11 +123,25 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
 
       let isValid = false;
 
-      if (securityPinMeta) {
-        isValid = await verifyPinWithMeta(fullPinEntered, securityPinMeta);
-      } else if (correctPin) {
-        // Fallback for immediate legacy in-memory checks if meta not set yet
-        isValid = fullPinEntered === correctPin;
+      // Primary: Server-side PIN verification via Cloud Function
+      try {
+        const res = await verifyStepUpPinCall({ pin: fullPinEntered, scope });
+        if (res && res.success && res.grantId) {
+          isValid = true;
+          issuedGrantId = res.grantId;
+        }
+      } catch (err: any) {
+        console.warn("[SecurityVerificationModal] Server verify step-up PIN call failed, checking fallback/client:", err);
+        // Fallback for client verify if cloud function network issue or uninitialized
+        if (securityPinMeta) {
+          isValid = await verifyPinWithMeta(fullPinEntered, securityPinMeta);
+        } else if (correctPin) {
+          isValid = fullPinEntered === correctPin;
+        }
+
+        if (!isValid && err?.message) {
+          setErrorMsg(err.message);
+        }
       }
 
       setIsVerifying(false);
@@ -133,7 +152,7 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
         if (lockoutStatus.isLocked) {
           setLockoutSecs(lockoutStatus.remainingSeconds);
           setErrorMsg(language === 'ka' ? lockoutStatus.messageKa! : lockoutStatus.messageEn!);
-        } else {
+        } else if (!errorMsg) {
           setErrorMsg(
             language === 'ka'
               ? 'ოპერაციის შესრულება ვერ მოხერხდა — არასწორი PIN კოდი'
@@ -151,9 +170,9 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
     setTimeout(() => {
       setIsVerifying(false);
       setPinInput(['', '', '', '']); // Clear memory
-      onConfirm();
+      onConfirm(issuedGrantId);
       onClose();
-    }, 200);
+    }, 150);
   };
 
   const hasPinProtection = securityPinEnabled && (!!securityPinMeta || !!correctPin);

@@ -1,6 +1,26 @@
 import React, { useState, useMemo } from 'react';
 import { useConnect, useDisconnect, useAccount } from 'wagmi';
 import { useWeb3Ledger, LedgerTransaction } from '../hooks/useWeb3Ledger';
+import { 
+  Wallet, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  RefreshCw, 
+  Trash2, 
+  Coins, 
+  Activity, 
+  TrendingUp, 
+  Sparkles,
+  Terminal,
+  Lock,
+  Globe,
+  Database,
+  Copy,
+  Check
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
+import { cn } from '../lib/utils';
 
 function ConnectButton() {
   const { isConnected, address } = useAccount();
@@ -33,26 +53,6 @@ function ConnectButton() {
     </button>
   );
 }
-import { 
-  Wallet, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  RefreshCw, 
-  Trash2, 
-  Coins, 
-  Activity, 
-  TrendingUp, 
-  Sparkles,
-  Terminal,
-  Lock,
-  Globe,
-  Database,
-  Copy,
-  Check
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
-import { cn } from '../lib/utils';
 
 // Multi-language translation dictionary for professional user engagement
 const translations = {

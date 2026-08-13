@@ -60,28 +60,19 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
     }
 
-    // PIN Metadata Schema Validation
-    function isValidSecurityPinMeta(meta) {
-      return meta is map
-        && ('enabled' in meta && meta.enabled is bool)
-        && ('version' in meta && (meta.version is int || meta.version is number) && meta.version == 2)
-        && ('salt' in meta && meta.salt is string && meta.salt.size() >= 16 && meta.salt.size() <= 256)
-        && ('verifier' in meta && meta.verifier is string && meta.verifier.size() >= 32 && meta.verifier.size() <= 256);
-    }
-
-    // Protect securityPinMeta against deletion or corrupt client payloads
-    function isProtectedPinMetaUpdate() {
-      return (!('securityPinMeta' in incoming()) || incoming().securityPinMeta == null || isValidSecurityPinMeta(incoming().securityPinMeta))
-          && (!('securityPinMeta' in existing()) || existing().securityPinMeta == null || ('securityPinMeta' in incoming() && incoming().securityPinMeta != null));
+    // Direct Client Write Prevention Guard for PIN Security
+    function isPinProtectedFieldsUnchanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['securityPinMeta', 'securityPinEnabled']);
     }
 
     function isSafeUserCreate() {
       return isNotRoleEscalated()
-        && (!('securityPinMeta' in incoming()) || incoming().securityPinMeta == null || isValidSecurityPinMeta(incoming().securityPinMeta));
+        && !('securityPinMeta' in incoming() && incoming().securityPinMeta != null)
+        && !('securityPinEnabled' in incoming() && incoming().securityPinEnabled == true);
     }
 
     function isSafeUserUpdate() {
-      return isRoleUnchanged() && isProtectedPinMetaUpdate();
+      return isRoleUnchanged() && isPinProtectedFieldsUnchanged();
     }
 
     // ======================================================
@@ -154,6 +145,10 @@ service cloud.firestore {
       }
       match /usage/{id} {
         allow read, write: if isOwner(userId);
+      }
+      // Server-only security state (lockout counter, step-up grants)
+      match /security/{docId} {
+        allow read, write: if false; // Admin SDK only
       }
     }
 

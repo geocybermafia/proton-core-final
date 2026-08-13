@@ -58,6 +58,7 @@ import { doc, setDoc, updateDoc, deleteField, onSnapshot } from 'firebase/firest
 import { uploadAvatarImage } from '../lib/storageUtils';
 import { SecurityVerificationModal } from './SecurityVerificationModal';
 import { createPinMeta, verifyPinWithMeta, registerFailedPinAttempt, resetPinLockoutAttempts, checkPinLockout } from '../lib/securityUtils';
+import { updateSecurityPinCall, resetUserWorkspaceCall } from '../services/cloudFunctionsService';
 
 interface SettingsViewProps {
   userProfile: UserProfile;
@@ -214,10 +215,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [stepUpState, setStepUpState] = useState<{
     isOpen: boolean;
     actionTitle: string;
-    onConfirm: () => void;
+    scope?: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp';
+    onConfirm: (grantId?: string) => void;
   }>({
     isOpen: false,
     actionTitle: '',
+    scope: 'generalStepUp',
     onConfirm: () => {},
   });
 
@@ -229,10 +232,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [pinConfirmInput, setPinConfirmInput] = useState('');
   const [pinModalError, setPinModalError] = useState('');
 
-  const requestStepUpVerification = (actionTitle: string, onVerifiedAction: () => void) => {
+  const requestStepUpVerification = (
+    actionTitle: string,
+    onVerifiedAction: (grantId?: string) => void,
+    scope: 'updateSecurityPin' | 'resetUserWorkspace' | 'generalStepUp' = 'generalStepUp'
+  ) => {
     setStepUpState({
       isOpen: true,
       actionTitle,
+      scope,
       onConfirm: onVerifiedAction,
     });
   };
@@ -266,17 +274,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       }
 
       try {
-        const pinMeta = await createPinMeta(pinNewInput);
-        const updatedProfile = { ...userProfile, securityPinEnabled: true, securityPinMeta: pinMeta };
-        setUserProfile(updatedProfile);
-
-        if (user) {
-          await setDoc(doc(db, 'users', user.uid), {
-            securityPinEnabled: true,
-            securityPinMeta: pinMeta,
-            securityPin: deleteField() // Ensure legacy raw PIN is removed
-          }, { merge: true });
-        }
+        await updateSecurityPinCall({ newPin: pinNewInput });
+        setUserProfile(prev => ({ ...prev, securityPinEnabled: true }));
 
         resetPinLockoutAttempts();
         setPinCurrentInput('');
@@ -284,22 +283,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setPinConfirmInput('');
         setIsPinModalOpen(false);
         showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
-      } catch (e) {
-        console.error("Error setting up PIN:", e);
-        setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again');
+      } catch (e: any) {
+        console.error("Error setting up PIN via Cloud Function:", e);
+        setPinModalError(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'));
       }
     } else if (pinMode === 'change') {
-      const isCurrentValid = await verifyPinWithMeta(pinCurrentInput, userProfile.securityPinMeta);
-      if (!isCurrentValid) {
-        const lockout = registerFailedPinAttempt();
-        if (lockout.isLocked) {
-          setPinModalError(language === 'ka' ? lockout.messageKa! : lockout.messageEn!);
-        } else {
-          setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა — არასწორი მიმდინარე PIN' : 'Operation failed — incorrect current PIN');
-        }
-        return;
-      }
-
       if (pinNewInput.length < 4 || !/^\d{4}$/.test(pinNewInput)) {
         setPinModalError(language === 'ka' ? 'გთხოვთ შეიყვანოთ ახალი 4-ნიშნა PIN კოდი' : 'Please enter a new 4-digit numeric PIN');
         return;
@@ -309,62 +297,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         return;
       }
 
-      try {
-        const pinMeta = await createPinMeta(pinNewInput);
-        const updatedProfile = { ...userProfile, securityPinEnabled: true, securityPinMeta: pinMeta };
-        setUserProfile(updatedProfile);
-
-        if (user) {
-          await setDoc(doc(db, 'users', user.uid), {
-            securityPinEnabled: true,
-            securityPinMeta: pinMeta,
-            securityPin: deleteField()
-          }, { merge: true });
-        }
-
-        resetPinLockoutAttempts();
-        setPinCurrentInput('');
-        setPinNewInput('');
-        setPinConfirmInput('');
-        setIsPinModalOpen(false);
-        showToast(language === 'ka' ? 'PIN წარმატებით შეიცვალა' : 'PIN changed successfully', 'success');
-      } catch (e) {
-        console.error("Error changing PIN:", e);
-        setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again');
-      }
-    } else if (pinMode === 'disable') {
-      const isCurrentValid = await verifyPinWithMeta(pinCurrentInput, userProfile.securityPinMeta);
-      if (!isCurrentValid) {
-        const lockout = registerFailedPinAttempt();
-        if (lockout.isLocked) {
-          setPinModalError(language === 'ka' ? lockout.messageKa! : lockout.messageEn!);
-        } else {
-          setPinModalError(language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა — არასწორი მიმდინარე PIN' : 'Operation failed — incorrect current PIN');
-        }
-        return;
-      }
-
-      const updatedProfile = { ...userProfile, securityPinEnabled: false, securityPinMeta: undefined };
-      setUserProfile(updatedProfile);
-
-      if (user) {
-        try {
-          await setDoc(doc(db, 'users', user.uid), {
-            securityPinEnabled: false,
-            securityPinMeta: deleteField(),
-            securityPin: deleteField()
-          }, { merge: true });
-        } catch (e) {
-          console.error("Failed to disable PIN in firestore", e);
-        }
-      }
-
-      resetPinLockoutAttempts();
-      setPinCurrentInput('');
-      setPinNewInput('');
-      setPinConfirmInput('');
+      // Close Pin Modal & Open StepUp Modal to acquire server step-up grant
       setIsPinModalOpen(false);
-      showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
+      requestStepUpVerification(
+        language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change Security PIN',
+        async (grantId) => {
+          try {
+            await updateSecurityPinCall({ newPin: pinNewInput, grantId });
+            setUserProfile(prev => ({ ...prev, securityPinEnabled: true }));
+            resetPinLockoutAttempts();
+            setPinCurrentInput('');
+            setPinNewInput('');
+            setPinConfirmInput('');
+            showToast(language === 'ka' ? 'PIN წარმატებით შეიცვალა' : 'PIN changed successfully', 'success');
+          } catch (e: any) {
+            console.error("Error changing PIN via Cloud Function:", e);
+            showToast(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'), 'error');
+          }
+        },
+        'updateSecurityPin'
+      );
+    } else if (pinMode === 'disable') {
+      setIsPinModalOpen(false);
+      requestStepUpVerification(
+        language === 'ka' ? 'PIN კოდის გათიშვა' : 'Disable Security PIN',
+        async (grantId) => {
+          try {
+            await updateSecurityPinCall({ disable: true, grantId });
+            setUserProfile(prev => ({ ...prev, securityPinEnabled: false, securityPinMeta: undefined }));
+            resetPinLockoutAttempts();
+            setPinCurrentInput('');
+            setPinNewInput('');
+            setPinConfirmInput('');
+            showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
+          } catch (e: any) {
+            console.error("Failed to disable PIN via Cloud Function:", e);
+            showToast(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'), 'error');
+          }
+        },
+        'updateSecurityPin'
+      );
     }
   };
 
@@ -553,8 +525,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           avatar: userProfile.avatar || '',
           role: userProfile.role || 'System Architect',
           showCommercialHub: !!userProfile.showCommercialHub,
-          securityPinEnabled: !!userProfile.securityPinEnabled,
-          securityPinMeta: userProfile.securityPinMeta || null,
           securityPin: deleteField(),
           aiSettings: sanitizedAiSettings
         }, { merge: true });
@@ -639,9 +609,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const executeResetWorkspace = async () => {
+  const executeResetWorkspace = async (grantId?: string) => {
     setShowResetModal(false);
     
+    if (grantId) {
+      try {
+        await resetUserWorkspaceCall({ grantId });
+      } catch (err) {
+        console.error("Cloud Function resetUserWorkspace failed:", err);
+      }
+    }
+
     const defaultName = user && user.email ? user.email.split('@')[0] : 'User';
     const defaultEmail = user && user.email ? user.email : '';
     const initialProfile: UserProfile = {
@@ -687,10 +665,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           avatar: '',
           role: 'System Architect',
           showCommercialHub: false,
-          securityPinEnabled: false,
-          securityPinMeta: deleteField(),
           securityPin: deleteField()
-        });
+        }, { merge: true });
 
         const statsRef = doc(db, 'users', user.uid, 'stats', 'current');
         await setDoc(statsRef, {
@@ -717,7 +693,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleResetWorkspace = async () => {
     requestStepUpVerification(
       language === 'ka' ? 'მონაცემების გასუფთავება და ანგარიშის განულება' : 'Clear Data & Account Reset',
-      () => executeResetWorkspace()
+      (grantId) => executeResetWorkspace(grantId),
+      'resetUserWorkspace'
     );
   };
 
@@ -2513,11 +2490,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <SecurityVerificationModal
         isOpen={stepUpState.isOpen}
         onClose={() => setStepUpState(prev => ({ ...prev, isOpen: false }))}
-        onConfirm={() => {
+        onConfirm={(grantId) => {
           setStepUpState(prev => ({ ...prev, isOpen: false }));
-          stepUpState.onConfirm();
+          stepUpState.onConfirm(grantId);
         }}
         actionTitle={stepUpState.actionTitle}
+        scope={stepUpState.scope}
         securityPinEnabled={!!userProfile.securityPinEnabled}
         securityPinMeta={userProfile.securityPinMeta}
         language={language}
