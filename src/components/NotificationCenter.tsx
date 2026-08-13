@@ -116,6 +116,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | NotificationCategory>('all');
+  const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     return safeStorage.get('proton_notif_sound') !== 'false';
   });
@@ -137,11 +138,12 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   // Real-time Sync with Firestore if logged in
   useEffect(() => {
     if (!currentUser) {
-      // Save local state changes to localStorage
       safeStorage.set('proton_notifications', JSON.stringify(notifications));
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
     const notifRef = collection(db, 'users', currentUser.uid, 'notifications');
     const q = query(notifRef, orderBy('timestamp', 'desc'), limit(50));
 
@@ -151,6 +153,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         DEFAULT_NOTIFICATIONS.forEach(async (item) => {
           await setDoc(doc(db, 'users', currentUser.uid, 'notifications', item.id), item);
         });
+        setNotifications(DEFAULT_NOTIFICATIONS);
       } else if (!snapshot.empty) {
         const items: NotificationItem[] = snapshot.docs.map(docSnap => {
           const data = docSnap.data();
@@ -171,8 +174,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         setNotifications(items);
         safeStorage.set('proton_notifications', JSON.stringify(items));
       }
+      setLoading(false);
     }, (error) => {
       console.warn("Firestore notification sync fallback:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -193,18 +198,27 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     });
   };
 
-  // Close on outside click
+  // Close on outside click or Escape key press
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('keydown', handleKeyDown);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -380,7 +394,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-8 sm:w-10 h-8 sm:h-10 rounded-xl border flex items-center justify-center transition-all duration-300 relative shrink-0 cursor-pointer shadow-sm group",
+          "w-8 sm:w-10 h-8 sm:h-10 rounded-xl border flex items-center justify-center transition-all duration-300 relative shrink-0 cursor-pointer shadow-sm group focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:ring-offset-2 focus-visible:ring-offset-proton-bg focus-visible:outline-none",
           isOpen 
             ? "bg-proton-accent/20 border-proton-accent text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.2)]" 
             : unreadCount > 0
@@ -388,6 +402,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/30"
         )}
         title={language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub'}
+        aria-expanded={isOpen}
+        aria-label="Notification Center"
       >
         <Bell size={16} className={cn("sm:w-[18px] sm:h-[18px] transition-transform duration-300", isOpen && "scale-110")} />
         
@@ -406,11 +422,11 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.96 }}
-            transition={{ type: "spring", damping: 25, stiffness: 350 }}
-            className="absolute right-0 top-12 w-[340px] sm:w-[420px] max-w-[92vw] bg-[#0c0d0f]/95 border border-proton-border/80 shadow-[0_10px_40px_rgba(0,0,0,0.8)] backdrop-blur-2xl rounded-3xl z-[100] overflow-hidden flex flex-col"
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-12 w-[340px] sm:w-[420px] max-w-[calc(100vw-1.5rem)] bg-[#0c0d0f]/95 border border-proton-border/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-3xl z-[100] overflow-hidden flex flex-col origin-top-right"
           >
             {/* Header */}
             <div className="p-4 border-b border-proton-border/50 flex items-center justify-between bg-proton-bg/40">
@@ -441,7 +457,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   type="button"
                   onClick={toggleSound}
                   className={cn(
-                    "p-1.5 rounded-lg border transition-all",
+                    "p-1.5 rounded-lg border transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
                     soundEnabled 
                       ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" 
                       : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text"
@@ -453,7 +469,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-all"
+                  className="p-1.5 rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
                 >
                   <X size={13} />
                 </button>
@@ -475,7 +491,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   type="button"
                   onClick={() => setActiveTab(tab.id as any)}
                   className={cn(
-                    "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1 shrink-0",
+                    "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1 shrink-0 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
                     activeTab === tab.id
                       ? "bg-proton-accent/20 border border-proton-accent/40 text-proton-accent shadow-sm"
                       : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5 border border-transparent"
@@ -492,9 +508,26 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             </div>
 
             {/* Notification Items List */}
-            <div className="max-h-[320px] sm:max-h-[380px] overflow-y-auto custom-scrollbar-minimal p-2 space-y-1.5">
+            <div className="max-h-[60vh] sm:max-h-[380px] overflow-y-auto custom-scrollbar-minimal p-2 space-y-1.5">
               <AnimatePresence mode="popLayout">
-                {filteredNotifications.length === 0 ? (
+                {loading ? (
+                  // Sleek Skeleton Loading State
+                  <div className="space-y-2 py-1">
+                    {[1, 2, 3].map((key) => (
+                      <div
+                        key={key}
+                        className="p-3 rounded-2xl border border-proton-border/30 bg-proton-bg/40 animate-pulse flex items-start gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-proton-border/40 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-2 py-0.5">
+                          <div className="h-3 bg-proton-border/50 rounded-md w-2/3" />
+                          <div className="h-2.5 bg-proton-border/30 rounded-md w-full" />
+                          <div className="h-2 bg-proton-border/20 rounded-md w-1/3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredNotifications.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -523,11 +556,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       exit={{ opacity: 0, x: 10 }}
                       onClick={() => handleItemClick(item)}
                       className={cn(
-                        "p-3 rounded-2xl border transition-all duration-200 cursor-pointer relative group flex items-start gap-3",
+                        "p-3 rounded-2xl border transition-all duration-200 cursor-pointer relative group flex items-start gap-3 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
                         !item.read
                           ? "bg-proton-accent/[0.06] border-proton-accent/30 hover:border-proton-accent/60 shadow-sm"
                           : "bg-proton-bg/40 border-proton-border/40 hover:bg-proton-accent/[0.02] hover:border-proton-border"
                       )}
+                      tabIndex={0}
+                      role="button"
                     >
                       {/* Category Icon */}
                       <div className={cn(
@@ -575,7 +610,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       <button
                         type="button"
                         onClick={(e) => deleteNotification(item.id, e)}
-                        className="absolute right-2.5 top-2.5 p-1 rounded-lg text-proton-muted hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                        className="absolute right-2.5 top-2.5 p-1 rounded-lg text-proton-muted hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
                         title={language === 'ka' ? 'წაშლა' : 'Delete'}
                       >
                         <Trash2 size={12} />
@@ -593,7 +628,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   <button
                     type="button"
                     onClick={markAllAsRead}
-                    className="px-2.5 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
                   >
                     <CheckCheck size={12} />
                     <span>{language === 'ka' ? 'ყველას წაკითხვა' : 'Mark all read'}</span>
@@ -602,7 +637,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={handleAddTestNotification}
-                  className="px-2 py-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
                   title={language === 'ka' ? 'ტესტური შეტყობინების დამატება' : 'Add Test Alert'}
                 >
                   <Plus size={12} />
@@ -614,7 +649,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 <button
                   type="button"
                   onClick={clearAllNotifications}
-                  className="px-2.5 py-1.5 rounded-xl text-proton-muted hover:text-red-400 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl text-proton-muted hover:text-red-400 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
                 >
                   <Trash2 size={12} />
                   <span>{language === 'ka' ? 'გასუფთავება' : 'Clear all'}</span>
