@@ -57,6 +57,7 @@ const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioH
 const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
 const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
 import { HeaderQuickSearch } from './components/HeaderQuickSearch';
+import { NotificationCenter } from './components/NotificationCenter';
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 import { useSystemHealth } from './hooks/useSystemHealth';
@@ -6035,6 +6036,14 @@ export default function App() {
           {/* Right Section: System Controls */}
           <div className="flex items-center justify-end gap-1.5 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
             <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+              {/* Notification Center Hub */}
+              <NotificationCenter 
+                language={userProfile.language}
+                activeView={activeView}
+                setActiveView={handleViewChange}
+                showToast={showToast}
+              />
+
               {/* Elegant Compact Language Selector for 1-click accessibility */}
               <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
                 <button

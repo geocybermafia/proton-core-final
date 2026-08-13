@@ -146,6 +146,9 @@ service cloud.firestore {
       match /usage/{id} {
         allow read, write: if isOwner(userId);
       }
+      match /notifications/{id} {
+        allow read, write: if isOwner(userId);
+      }
       // Server-only security state (lockout counter, step-up grants)
       match /security/{docId} {
         allow read, write: if false; // Admin SDK only

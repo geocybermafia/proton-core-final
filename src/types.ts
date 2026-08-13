@@ -171,3 +171,19 @@ export interface ClipIssue {
   startSec: number;
   endSec: number;
 }
+
+export type NotificationCategory = 'system' | 'market' | 'ai' | 'tasks';
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  titleKa?: string;
+  message: string;
+  messageKa?: string;
+  timestamp: number;
+  read: boolean;
+  category: NotificationCategory;
+  targetView?: View;
+  actionUrl?: string;
+  metadata?: Record<string, any>;
+}
