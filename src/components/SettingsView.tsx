@@ -1870,12 +1870,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <>
                             <button
                               type="button"
-                              onClick={() => {
-                                requestStepUpVerification(
-                                  language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change PIN Code',
-                                  () => openPinSetupModal('change')
-                                );
-                              }}
+                              onClick={() => openPinSetupModal('change')}
                               className="px-4 py-2 bg-proton-accent/10 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
                             >
                               <RefreshCw size={12} />
@@ -1883,12 +1878,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                requestStepUpVerification(
-                                  language === 'ka' ? 'PIN კოდის გამორთვა' : 'Disable PIN Code',
-                                  () => openPinSetupModal('disable')
-                                );
-                              }}
+                              onClick={() => openPinSetupModal('disable')}
                               className="px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
                             >
                               <Trash2 size={12} />

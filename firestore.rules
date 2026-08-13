@@ -118,7 +118,7 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isSafeUserCreate();
       allow update: if isOwner(userId) && isSafeUserUpdate();
-      allow delete: if isOwner(userId);
+      allow delete: if false;
 
       match /workflows/{id} {
         allow read, write: if isOwner(userId);

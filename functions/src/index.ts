@@ -1,13 +1,14 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import * as admin from "firebase-admin";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import * as crypto from "crypto";
 
 // Initialize Firebase Admin SDK (Only once)
-if (!admin.apps.length) {
-  admin.initializeApp();
+if (!getApps().length) {
+  initializeApp();
 }
 
-const db = admin.firestore();
+const db = getFirestore();
 
 export interface SecureTransactionRequest {
   buyerId: string;
@@ -69,7 +70,7 @@ export const processSecureTransaction = onCall<SecureTransactionRequest>(async (
 
   try {
     const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const timestamp = admin.firestore.FieldValue.serverTimestamp();
+    const timestamp = FieldValue.serverTimestamp();
 
     const ledgerPayload = {
       id: transactionId,
@@ -283,26 +284,28 @@ export const updateSecurityPin = onCall<UpdateSecurityPinRequest, Promise<{ succ
     }
 
     const grantRef = userRef.collection('security').doc(`grant_${grantId}`);
-    const grantSnap = await grantRef.get();
-
-    if (!grantSnap.exists) {
-      throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
-    }
-
-    const grant = grantSnap.data()!;
     const now = Date.now();
 
-    if (
-      grant.consumed ||
-      grant.uid !== uid ||
-      grant.expiresAt <= now ||
-      !['updateSecurityPin', 'generalStepUp'].includes(grant.scope)
-    ) {
-      throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
-    }
+    await db.runTransaction(async (transaction) => {
+      const grantSnap = await transaction.get(grantRef);
 
-    // Mark grant as consumed (one-time use)
-    await grantRef.update({ consumed: true, consumedAt: now });
+      if (!grantSnap.exists) {
+        throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
+      }
+
+      const grant = grantSnap.data()!;
+
+      if (
+        grant.consumed ||
+        grant.uid !== uid ||
+        grant.expiresAt <= now ||
+        grant.scope !== 'updateSecurityPin'
+      ) {
+        throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
+      }
+
+      transaction.update(grantRef, { consumed: true, consumedAt: now });
+    });
   }
 
   if (disable) {
@@ -372,26 +375,28 @@ export const resetUserWorkspace = onCall<ResetUserWorkspaceRequest, Promise<{ su
 
   const userRef = db.collection('users').doc(uid);
   const grantRef = userRef.collection('security').doc(`grant_${grantId}`);
-  const grantSnap = await grantRef.get();
-
-  if (!grantSnap.exists) {
-    throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
-  }
-
-  const grant = grantSnap.data()!;
   const now = Date.now();
 
-  if (
-    grant.consumed ||
-    grant.uid !== uid ||
-    grant.expiresAt <= now ||
-    !['resetUserWorkspace', 'generalStepUp'].includes(grant.scope)
-  ) {
-    throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
-  }
+  await db.runTransaction(async (transaction) => {
+    const grantSnap = await transaction.get(grantRef);
 
-  // Mark grant as consumed immediately
-  await grantRef.update({ consumed: true, consumedAt: now });
+    if (!grantSnap.exists) {
+      throw new HttpsError("permission-denied", "Invalid or expired step-up authorization grant.");
+    }
+
+    const grant = grantSnap.data()!;
+
+    if (
+      grant.consumed ||
+      grant.uid !== uid ||
+      grant.expiresAt <= now ||
+      grant.scope !== 'resetUserWorkspace'
+    ) {
+      throw new HttpsError("permission-denied", "Step-up grant is expired, consumed, or invalid for this scope.");
+    }
+
+    transaction.update(grantRef, { consumed: true, consumedAt: now });
+  });
 
   // Server-side batch deletion of user subcollections
   const subcollections = ['workflows', 'personas', 'chatHistory', 'tasks', 'customAvatars'];
