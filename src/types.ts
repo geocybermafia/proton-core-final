@@ -158,6 +158,48 @@ export interface Order {
   grossAmount?: number;
   platformFee?: number;
   netAmount?: number;
+  buyerName?: string;
+  quantity?: number;
+  deliveryAddress?: string;
+  paymentMethod?: string;
+}
+
+export type MarketplaceItem = Listing;
+
+export interface ClipComment {
+  id: string;
+  clipId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  text: string;
+  createdAt: any;
+}
+
+export interface Clip {
+  id: string;
+  videoUrl: string;
+  caption: string;
+  soundName?: string;
+  creatorId: string;
+  creatorName: string;
+  creatorAvatar?: string;
+  thumbnailUrl?: string;
+  duration?: number;
+  likesCount?: number;
+  likes?: string[];
+  commentsCount?: number;
+  createdAt: any;
+  productId?: string;
+  productInfo?: {
+    id: string;
+    title: string;
+    price: number;
+    image?: string;
+    category?: string;
+  };
+  trimStart?: number;
+  trimEnd?: number;
 }
 
 export interface ClipIssue {
