@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, 
+  BellOff,
+  Settings,
   Check, 
   CheckCheck, 
   Trash2, 
@@ -32,6 +34,7 @@ interface NotificationCenterProps {
   activeView: View;
   setActiveView: (view: View) => void;
   showToast?: (message: string, type?: 'success' | 'info' | 'error' | 'warning') => void;
+  notificationsEnabled?: boolean;
 }
 
 // Initial default seed notifications for fresh users
@@ -112,8 +115,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   language,
   activeView,
   setActiveView,
-  showToast
+  showToast,
+  notificationsEnabled = true
 }) => {
+  const isEnabled = notificationsEnabled !== false;
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | NotificationCategory>('all');
   const [loading, setLoading] = useState(true);
@@ -135,8 +140,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
   const currentUser = auth.currentUser;
 
-  // Real-time Sync with Firestore if logged in
+  // Real-time Sync with Firestore if logged in and notifications are globally enabled
   useEffect(() => {
+    if (!isEnabled) {
+      setLoading(false);
+      return; // Bypass listener: saves Firestore reads completely when muted!
+    }
+
     if (!currentUser) {
       safeStorage.set('proton_notifications', JSON.stringify(notifications));
       setLoading(false);
@@ -181,7 +191,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     });
 
     return () => unsubscribe();
-  }, [currentUser]);
+  }, [currentUser, isEnabled]);
 
   // Save to safeStorage when local state mutates (for guest/offline mode)
   useEffect(() => {
@@ -193,7 +203,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     setSoundEnabled(prev => {
       const next = !prev;
       safeStorage.set('proton_notif_sound', String(next));
-      if (next) playNotificationChime();
+      if (next && isEnabled) playNotificationChime();
       return next;
     });
   };
@@ -223,8 +233,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   }, [isOpen]);
 
   const unreadCount = useMemo(() => {
+    if (!isEnabled) return 0;
     return notifications.filter(n => !n.read).length;
-  }, [notifications]);
+  }, [notifications, isEnabled]);
 
   // Filtered list
   const filteredNotifications = useMemo(() => {
@@ -397,18 +408,24 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
           "w-8 sm:w-10 h-8 sm:h-10 rounded-xl border flex items-center justify-center transition-all duration-300 relative shrink-0 cursor-pointer shadow-sm group focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:ring-offset-2 focus-visible:ring-offset-proton-bg focus-visible:outline-none",
           isOpen 
             ? "bg-proton-accent/20 border-proton-accent text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.2)]" 
-            : unreadCount > 0
-              ? "bg-proton-bg border-proton-accent/40 text-proton-accent hover:border-proton-accent hover:bg-proton-accent/10"
-              : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/30"
+            : !isEnabled
+              ? "bg-proton-bg/60 border-proton-border/60 text-proton-muted/60 hover:text-proton-muted hover:border-proton-border"
+              : unreadCount > 0
+                ? "bg-proton-bg border-proton-accent/40 text-proton-accent hover:border-proton-accent hover:bg-proton-accent/10"
+                : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/30"
         )}
-        title={language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub'}
+        title={!isEnabled ? (language === 'ka' ? 'შეტყობინებები გათიშულია (პარამეტრებიდან)' : 'Notifications Muted (Disabled in Settings)') : (language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub')}
         aria-expanded={isOpen}
         aria-label="Notification Center"
       >
-        <Bell size={16} className={cn("sm:w-[18px] sm:h-[18px] transition-transform duration-300", isOpen && "scale-110")} />
+        {isEnabled ? (
+          <Bell size={16} className={cn("sm:w-[18px] sm:h-[18px] transition-transform duration-300", isOpen && "scale-110")} />
+        ) : (
+          <BellOff size={16} className="sm:w-[18px] sm:h-[18px] text-proton-muted/60" />
+        )}
         
-        {/* Unread Ping Badge */}
-        {unreadCount > 0 && (
+        {/* Unread Ping Badge (Only when active and notifications enabled) */}
+        {isEnabled && unreadCount > 0 && (
           <>
             <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-proton-accent text-proton-bg font-mono font-black text-[9px] shadow-[0_0_10px_#00f2ff]">
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -431,22 +448,29 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             {/* Header */}
             <div className="p-4 border-b border-proton-border/50 flex items-center justify-between bg-proton-bg/40">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-proton-accent/10 border border-proton-accent/30 flex items-center justify-center text-proton-accent">
-                  <Bell size={16} />
+                <div className={cn(
+                  "w-8 h-8 rounded-xl border flex items-center justify-center",
+                  isEnabled ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                )}>
+                  {isEnabled ? <Bell size={16} /> : <BellOff size={16} />}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-xs font-black uppercase tracking-wider text-proton-text">
                       {language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub'}
                     </h3>
-                    {unreadCount > 0 && (
+                    {isEnabled && unreadCount > 0 ? (
                       <span className="px-2 py-0.5 rounded-full bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-[9px] font-mono font-bold">
                         {unreadCount} {language === 'ka' ? 'ახალი' : 'NEW'}
                       </span>
-                    )}
+                    ) : !isEnabled ? (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-mono font-bold">
+                        {language === 'ka' ? 'გათიშულია' : 'MUTED'}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mt-0.5">
-                    PROTON OS // LIVE REALTIME ALERTS
+                    {isEnabled ? 'PROTON OS // LIVE REALTIME ALERTS' : 'ALERTS MUTED // SAVING BANDWIDTH'}
                   </p>
                 </div>
               </div>
@@ -458,13 +482,13 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   onClick={toggleSound}
                   className={cn(
                     "p-1.5 rounded-lg border transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
-                    soundEnabled 
+                    soundEnabled && isEnabled
                       ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" 
                       : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text"
                   )}
                   title={soundEnabled ? (language === 'ka' ? 'ხმის გამორთვა' : 'Disable Sound') : (language === 'ka' ? 'ხმის ჩართვა' : 'Enable Sound')}
                 >
-                  {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
+                  {soundEnabled && isEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
                 </button>
                 <button
                   type="button"
@@ -475,6 +499,34 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Banner when Muted */}
+            {!isEnabled && (
+              <div className="mx-3 mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <BellOff size={15} className="text-amber-400 shrink-0" />
+                  <div className="text-left">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-amber-300">
+                      {language === 'ka' ? 'შეტყობინებები გათიშულია' : 'Global Notifications Muted'}
+                    </p>
+                    <p className="text-[9px] text-proton-muted font-bold">
+                      {language === 'ka' ? 'რეალური დროის მონაცემების კითხვა შეჩერებულია' : 'Polling paused to save bandwidth & reads'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveView('settings');
+                    setIsOpen(false);
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[9px] font-black uppercase tracking-wider shrink-0 transition-all border border-amber-500/40 flex items-center gap-1 cursor-pointer"
+                >
+                  <Settings size={10} />
+                  <span>{language === 'ka' ? 'ჩართვა' : 'Settings'}</span>
+                </button>
+              </div>
+            )}
 
             {/* Filter Tabs */}
             <div className="p-2 border-b border-proton-border/30 bg-proton-bg/20 flex items-center gap-1 overflow-x-auto custom-scrollbar-minimal">

@@ -8,6 +8,7 @@ export type UserProfile = {
   language: 'en' | 'ka';
   region: string;
   notifications: boolean;
+  notificationsEnabled?: boolean;
   phoneNumber?: string;
   bio?: string;
   avatar?: string;

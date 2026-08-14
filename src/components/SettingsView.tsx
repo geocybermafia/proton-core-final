@@ -8,6 +8,7 @@ import {
   Shield, 
   Globe, 
   Bell, 
+  BellOff,
   Zap, 
   Search, 
   MapPin, 
@@ -520,7 +521,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           email: userProfile.email || '',
           language: userProfile.language || 'en',
           region: userProfile.region || '',
-          notifications: !!userProfile.notifications,
+          notifications: userProfile.notifications !== false,
+          notificationsEnabled: userProfile.notificationsEnabled !== false,
           phoneNumber: userProfile.phoneNumber || '',
           avatar: userProfile.avatar || '',
           role: userProfile.role || 'System Architect',
@@ -628,6 +630,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       language: 'en',
       region: 'Tbilisi, GE',
       notifications: true,
+      notificationsEnabled: true,
       phoneNumber: '',
       avatar: '',
       role: 'System Architect',
@@ -1747,7 +1750,102 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       </div>
                     </div>
 
-                    {/* 5. Commercial SaaS Exit Hub Toggle */}
+                    {/* 5. Global Notifications Toggle */}
+                    {(() => {
+                      const isNotifActive = userProfile.notifications !== false && userProfile.notificationsEnabled !== false;
+                      return (
+                        <div 
+                          id="toggle-global-notifications"
+                          className={cn(
+                            "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
+                            isNotifActive 
+                              ? "bg-proton-accent/5 border-proton-accent/35 shadow-lg shadow-proton-accent/5" 
+                              : "bg-proton-secondary/10 border-proton-border opacity-90 hover:opacity-100"
+                          )} 
+                          onClick={() => {
+                            const next = !isNotifActive;
+                            setUserProfile(prev => ({ ...prev, notifications: next, notificationsEnabled: next }));
+                            if (user) {
+                              const userDocRef = doc(db, 'users', user.uid);
+                              setDoc(userDocRef, { notifications: next, notificationsEnabled: next }, { merge: true }).catch(err => {
+                                console.warn("Failed to sync notifications setting to Firestore:", err);
+                              });
+                            }
+                            showToast(
+                              next 
+                                ? (language === 'ka' ? 'შეტყობინებები ჩაირთო! რეალური დროის სინქრონიზაცია აქტიურია.' : 'Global notifications enabled! Real-time alerts are active.') 
+                                : (language === 'ka' ? 'შეტყობინებები გაითიშა. მონაცემების კითხვა შეჩერებულია.' : 'Global notifications muted. Firestore polling paused.'),
+                              next ? 'success' : 'info'
+                            );
+                          }}
+                          tabIndex={0}
+                          role="switch"
+                          aria-checked={isNotifActive}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              const next = !isNotifActive;
+                              setUserProfile(prev => ({ ...prev, notifications: next, notificationsEnabled: next }));
+                              if (user) {
+                                const userDocRef = doc(db, 'users', user.uid);
+                                setDoc(userDocRef, { notifications: next, notificationsEnabled: next }, { merge: true }).catch(console.warn);
+                              }
+                              showToast(
+                                next 
+                                  ? (language === 'ka' ? 'შეტყობინებები ჩაირთო!' : 'Global notifications enabled!') 
+                                  : (language === 'ka' ? 'შეტყობინებები გაითიშა.' : 'Global notifications muted.'),
+                                next ? 'success' : 'info'
+                              );
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-5">
+                            <div className={cn(
+                              "w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0",
+                              isNotifActive 
+                                ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" 
+                                : "bg-proton-secondary/20 text-proton-muted"
+                            )}>
+                              {isNotifActive ? <Bell size={28} /> : <BellOff size={28} />}
+                            </div>
+                            <div className="text-left">
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs font-black uppercase tracking-widest cursor-pointer block text-proton-text">
+                                  {language === 'ka' ? 'შეტყობინებების ჩართვა' : 'Global Notifications'}
+                                </label>
+                                <span className={cn(
+                                  "text-[8px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border",
+                                  isNotifActive 
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                                    : "bg-proton-secondary/30 border-proton-border text-proton-muted"
+                                )}>
+                                  {isNotifActive 
+                                    ? (language === 'ka' ? 'აქტიურია' : 'Enabled') 
+                                    : (language === 'ka' ? 'გამორთულია' : 'Muted')}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-proton-muted font-bold uppercase tracking-tighter mt-1">
+                                {language === 'ka' 
+                                  ? 'სისტემური, AI და მარკეტის შეტყობინებების რეალურ დროში მიღება და სინქრონიზაცია' 
+                                  : 'Receive real-time alerts, system messages, and AI notifications'}
+                              </p>
+                            </div>
+                          </div>
+                          {/* Apple-style Pill Toggle */}
+                          <div className={cn(
+                            "w-12 h-6 rounded-full relative transition-all border border-proton-border shrink-0",
+                            isNotifActive ? "bg-proton-accent border-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.3)]" : "bg-proton-secondary/30"
+                          )}>
+                            <div className={cn(
+                              "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-md",
+                              isNotifActive ? "right-0.5" : "left-0.5"
+                            )} />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 6. Commercial SaaS Exit Hub Toggle */}
                     <div className={cn(
                       "p-6 rounded-2xl border flex items-center justify-between transition-all cursor-pointer group",
                       userProfile.showCommercialHub ? "bg-proton-accent/5 border-proton-accent/35 shadow-lg shadow-proton-accent/5" : "bg-proton-secondary/10 border-proton-border"

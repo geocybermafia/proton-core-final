@@ -6042,6 +6042,7 @@ export default function App() {
                 activeView={activeView}
                 setActiveView={handleViewChange}
                 showToast={showToast}
+                notificationsEnabled={userProfile.notifications !== false && userProfile.notificationsEnabled !== false}
               />
 
               {/* Elegant Compact Language Selector for 1-click accessibility */}
