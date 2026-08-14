@@ -58,6 +58,13 @@ import { db } from '../firebase';
 import { doc, setDoc, updateDoc, deleteField, onSnapshot } from 'firebase/firestore';
 import { uploadAvatarImage } from '../lib/storageUtils';
 import { SecurityVerificationModal } from './SecurityVerificationModal';
+import { 
+  ProtonCard, 
+  ProtonInput, 
+  ProtonButton, 
+  ProtonBadge, 
+  ProtonAvatar 
+} from '../ui';
 import { createPinMeta, verifyPinWithMeta, registerFailedPinAttempt, resetPinLockoutAttempts, checkPinLockout } from '../lib/securityUtils';
 import { updateSecurityPinCall, resetUserWorkspaceCall } from '../services/cloudFunctionsService';
 
@@ -823,8 +830,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   ];
 
   return (
-    <div className="w-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
-      <div className="sticky top-0 z-20 bg-proton-bg/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="w-full max-w-7xl mx-auto flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-500" id="settings-view-root">
+      <div className="sticky top-0 z-20 bg-proton-bg/95 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-proton-border/40 mb-6 shadow-xl transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-proton-text flex items-center gap-3">
             <Settings className="text-proton-accent font-black animate-[spin_20s_linear_infinite]" size={32} />
@@ -835,16 +842,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {isProfileDirty && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-[10px] font-black uppercase tracking-wider text-amber-500 animate-pulse shrink-0">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+            <ProtonBadge variant="amber" size="md" pulse className="shrink-0">
               {language === 'ka' ? 'შენახული არ არის' : 'Unsaved changes'}
-            </span>
+            </ProtonBadge>
           )}
           <button 
             onClick={handleSave}
             disabled={isSaving}
             className={cn(
-              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl cursor-pointer active:scale-95",
+              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl cursor-pointer active:scale-95",
               isSaved 
                 ? "bg-emerald-500 text-white" 
                 : isProfileDirty 
@@ -873,7 +879,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      <div className="w-full flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-3xl md:rounded-[32px] overflow-hidden shadow-2xl relative">
+      <div className="w-full flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-3xl md:rounded-[32px] overflow-hidden shadow-2xl relative min-h-[600px]">
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
@@ -883,7 +889,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-1.5 md:gap-3.5 p-2.5 md:p-3.5 rounded-2xl transition-all group shrink-0 relative min-w-[72px] md:min-w-0 cursor-pointer w-full text-left",
+                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3.5 p-2.5 md:p-3 rounded-xl transition-all group shrink-0 relative min-w-[76px] md:min-w-0 md:min-h-[52px] cursor-pointer w-full text-left",
                 activeTab === tab.id 
                   ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20 font-black" 
                   : "text-proton-muted hover:text-proton-text hover:bg-white/5 font-semibold"
@@ -891,13 +897,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               id={`tab-settings-${tab.id}`}
             >
               <div className={cn(
-                "w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center transition-all shrink-0",
+                "w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition-all shrink-0",
                 activeTab === tab.id ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" : "bg-proton-secondary/20 text-proton-muted group-hover:bg-proton-secondary/30"
               )}>
                 <tab.icon size={18} />
               </div>
-              <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap">{tab.shortLabel}</span>
-              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left whitespace-normal break-words leading-snug">{tab.label}</span>
+              <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap leading-tight">{tab.shortLabel}</span>
+              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left whitespace-normal break-words leading-tight">{tab.label}</span>
               {tab.id === 'profile' && isProfileDirty && (
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes" />
               )}
@@ -906,7 +912,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         {/* Settings Content */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto custom-scrollbar-minimal bg-transparent relative z-10" id="settings-content-wrapper">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto custom-scrollbar-minimal bg-transparent relative z-10 w-full" id="settings-content-wrapper">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -914,7 +920,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-5xl"
+              className="w-full max-w-4xl xl:max-w-5xl mx-auto md:mx-0"
             >
               {activeTab === 'ai' && (
                 <div className="space-y-8" id="sec-ai-config">
@@ -1258,17 +1264,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 rounded-full blur-2xl pointer-events-none" />
                       
                       <div className="relative group shrink-0">
-                        <div className="w-24 h-24 rounded-full bg-proton-bg border-4 border-proton-border flex items-center justify-center overflow-hidden shadow-2xl transition-all duration-300 group-hover:border-proton-accent/80 group-hover:scale-105">
-                          {userProfile.avatar ? (
-                            <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          ) : (
-                            <User size={44} className="text-proton-muted" />
-                          )}
-                        </div>
+                        <ProtonAvatar 
+                          src={userProfile.avatar}
+                          name={userProfile.name}
+                          alt="Profile"
+                          size="xl"
+                          className="w-24 h-24 text-xl border-4 border-proton-border shadow-2xl transition-all duration-300 group-hover:border-proton-accent/80 group-hover:scale-105"
+                        />
                         <button 
                           onClick={() => fileInputRef.current?.click()}
                           type="button"
-                          className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-proton-accent text-proton-bg flex items-center justify-center border-4 border-proton-card shadow-lg hover:bg-white hover:scale-110 transition-all duration-200"
+                          className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-proton-accent text-proton-bg flex items-center justify-center border-4 border-proton-card shadow-lg hover:bg-white hover:scale-110 transition-all duration-200 cursor-pointer"
                         >
                           <Camera size={16} />
                         </button>
@@ -1286,10 +1292,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <h4 className="text-base font-black text-proton-text uppercase tracking-wider">
                             {userProfile.name || (language === 'ka' ? 'მომხმარებელი' : 'User')}
                           </h4>
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-proton-accent/15 border border-proton-accent/30 rounded-full text-[8px] font-black uppercase tracking-widest text-proton-accent w-fit mx-auto md:mx-0">
-                            <ShieldCheck size={10} className="animate-pulse" />
+                          <ProtonBadge variant="accent" size="sm" pulse className="w-fit mx-auto md:mx-0">
+                            <ShieldCheck size={10} className="mr-1" />
                             {language === 'ka' ? 'დადასტურებული პროფილი' : 'Verified Profile'}
-                          </span>
+                          </ProtonBadge>
                         </div>
                         <p className="text-[10px] text-proton-muted font-bold uppercase tracking-widest">
                           {userProfile.role === 'System Architect' ? (language === 'ka' ? 'დიზაინერი' : 'Designer') :
@@ -1309,89 +1315,47 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                     {/* Technical Profile Fields Form */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-proton-secondary/5 p-6 rounded-2xl border border-proton-border/30 w-full max-w-4xl">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'სახელი და გვარი' : 'Your Name'}</label>
-                        <div className="relative group">
-                          <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
-                          <input 
-                            value={userProfile.name || ''}
-                            onChange={e => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
-                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
-                            placeholder="e.g. John Doe"
-                          />
-                        </div>
-                      </div>
+                      <ProtonInput
+                        id="profile-name-input"
+                        label={language === 'ka' ? 'სახელი და გვარი' : 'Your Name'}
+                        leftIcon={<User size={18} className="text-proton-accent/70" />}
+                        value={userProfile.name || ''}
+                        onChange={e => setUserProfile(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="e.g. John Doe"
+                      />
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'ელფოსტა' : 'Email Address'}</label>
-                        <div className="relative group">
-                          <Mail size={18} className={cn(
-                            "absolute left-4 top-1/2 -translate-y-1/2 transition-colors",
-                            emailError ? "text-red-500" : "text-proton-accent/50 group-focus-within:text-proton-accent"
-                          )} />
-                          <input 
-                            type="email"
-                            value={userProfile.email || ''}
-                            onChange={e => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
-                            onBlur={() => setEmailTouched(true)}
-                            className={cn(
-                              "w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border text-xs font-bold text-proton-text focus:outline-none transition-all placeholder:text-proton-muted/30",
-                              emailError ? "border-red-500/80 focus:border-red-500 text-red-400 bg-red-500/5" : "border-proton-border focus:border-proton-accent"
-                            )}
-                            placeholder="e.g. john@example.com"
-                          />
-                        </div>
-                        {emailError && (
-                          <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-1 animate-fadeIn">
-                            <AlertCircle size={12} className="shrink-0" />
-                            {language === 'ka' 
-                              ? 'არასწორი ელფოსტის ფორმატი (მაგ: name@domain.com)' 
-                              : 'Invalid email format (e.g. name@domain.com)'}
-                          </p>
-                        )}
-                      </div>
+                      <ProtonInput
+                        id="profile-email-input"
+                        type="email"
+                        label={language === 'ka' ? 'ელფოსტა' : 'Email Address'}
+                        leftIcon={<Mail size={18} className={emailError ? "text-rose-500" : "text-proton-accent/70"} />}
+                        value={userProfile.email || ''}
+                        onChange={e => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
+                        onBlur={() => setEmailTouched(true)}
+                        error={emailError ? (language === 'ka' ? 'არასწორი ელფოსტის ფორმატი (მაგ: name@domain.com)' : 'Invalid email format (e.g. name@domain.com)') : undefined}
+                        placeholder="e.g. john@example.com"
+                      />
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'მდებარეობა' : 'Location'}</label>
-                        <div className="relative group">
-                          <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent/50 transition-colors group-focus-within:text-proton-accent" />
-                          <input 
-                            value={userProfile.region || ''}
-                            onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
-                            className="w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border border-proton-border text-xs font-bold text-proton-text focus:outline-none focus:border-proton-accent transition-all placeholder:text-proton-muted/30"
-                            placeholder="e.g. Tbilisi, GE"
-                          />
-                        </div>
-                      </div>
+                      <ProtonInput
+                        id="profile-location-input"
+                        label={language === 'ka' ? 'მდებარეობა' : 'Location'}
+                        leftIcon={<Globe size={18} className="text-proton-accent/70" />}
+                        value={userProfile.region || ''}
+                        onChange={e => setUserProfile(prev => ({ ...prev, region: e.target.value }))}
+                        placeholder="e.g. Tbilisi, GE"
+                      />
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted">{language === 'ka' ? 'ტელეფონის ნომერი' : 'Phone Number'}</label>
-                        <div className="relative group">
-                          <Phone size={18} className={cn(
-                            "absolute left-4 top-1/2 -translate-y-1/2 transition-colors",
-                            phoneError ? "text-red-500" : "text-proton-accent/50 group-focus-within:text-proton-accent"
-                          )} />
-                          <input 
-                            type="tel"
-                            value={userProfile.phoneNumber || ''}
-                            onChange={e => setUserProfile(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                            onBlur={() => setPhoneTouched(true)}
-                            className={cn(
-                              "w-full bg-proton-bg pl-12 pr-4 py-4 rounded-2xl border text-xs font-bold text-proton-text focus:outline-none transition-all placeholder:text-proton-muted/30",
-                              phoneError ? "border-red-500/80 focus:border-red-500 text-red-400 bg-red-500/5" : "border-proton-border focus:border-proton-accent"
-                            )}
-                            placeholder="+995 ..."
-                          />
-                        </div>
-                        {phoneError && (
-                          <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-1 animate-fadeIn">
-                            <AlertCircle size={12} className="shrink-0" />
-                            {language === 'ka' 
-                              ? 'არასწორი ნომრის ფორმატი (სულ მცირე 7 ციფრი)' 
-                              : 'Invalid phone format (at least 7 digits, e.g. +995 ...)'}
-                          </p>
-                        )}
-                      </div>
+                      <ProtonInput
+                        id="profile-phone-input"
+                        type="tel"
+                        label={language === 'ka' ? 'ტელეფონის ნომერი' : 'Phone Number'}
+                        leftIcon={<Phone size={18} className={phoneError ? "text-rose-500" : "text-proton-accent/70"} />}
+                        value={userProfile.phoneNumber || ''}
+                        onChange={e => setUserProfile(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                        onBlur={() => setPhoneTouched(true)}
+                        error={phoneError ? (language === 'ka' ? 'არასწორი ნომრის ფორმატი (სულ მცირე 7 ციფრი)' : 'Invalid phone format (at least 7 digits, e.g. +995 ...)') : undefined}
+                        placeholder="+995 ..."
+                      />
 
                       {/* Selectable Business / System Role */}
                       <div className="space-y-2 sm:col-span-2">
@@ -1461,18 +1425,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     {/* Interactive Danger Zone Section */}
-                    <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl space-y-4">
+                    <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl space-y-4 max-w-4xl">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shrink-0">
                           <ShieldAlert size={20} />
                         </div>
-                        <div className="text-left">
-                          <h4 className="text-xs font-black text-red-400 uppercase tracking-widest">{language === 'ka' ? 'მონაცემების გასუფთავება' : 'Clear Data & Reset'}</h4>
-                          <p className="text-[9px] text-proton-muted font-bold uppercase tracking-tight mt-0.5">{language === 'ka' ? 'საწყისი პარამეტრების დაბრუნება' : 'Reset workspace to defaults'}</p>
+                        <div className="text-left min-w-0 flex-1">
+                          <h4 className="text-xs font-black text-red-400 uppercase tracking-widest leading-tight">{language === 'ka' ? 'მონაცემების გასუფთავება' : 'Clear Data & Reset'}</h4>
+                          <p className="text-[9px] text-proton-muted font-bold uppercase tracking-tight mt-0.5 leading-normal">{language === 'ka' ? 'საწყისი პარამეტრების დაბრუნება' : 'Reset workspace to defaults'}</p>
                         </div>
                       </div>
                       
-                      <p className="text-[10px] text-proton-muted leading-relaxed">
+                      <p className="text-[10px] text-proton-muted leading-relaxed break-words font-medium">
                         {language === 'ka' 
                           ? 'ყველა სახელი, ფოტო და პარამეტრი დაბრუნდება საწყის მდგომარეობაში. ეს მოქმედება წაშლის თქვენს მიერ შეტანილ ცვლილებებს.' 
                           : 'Reset all names, photos, and options to their original values. This will clear your custom changes.'}
@@ -1482,28 +1446,28 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setShowResetModal(true)}
-                          className="w-full sm:w-auto px-5 py-3 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 hover:border-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all active:scale-95 flex items-center justify-center gap-2"
+                          className="w-full sm:w-auto px-5 py-3 bg-red-500/10 hover:bg-red-500 hover:text-white border border-red-500/20 hover:border-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-400 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                         >
                           <Trash2 size={14} />
                           {language === 'ka' ? 'ყველაფრის წაშლა' : 'Reset All Settings'}
                         </button>
                       ) : (
-                        <div className="p-5 bg-proton-bg border border-red-500/30 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                          <span className="text-[10px] font-black text-red-400 uppercase tracking-wider block">
+                        <div className="p-5 bg-proton-bg border border-red-500/30 rounded-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 max-w-2xl">
+                          <span className="text-xs font-black text-red-400 uppercase tracking-wider block leading-relaxed break-words">
                             ⚠️ {language === 'ka' ? 'დარწმუნებული ხართ, რომ გსურთ ყველაფრის განულება?' : 'Are you absolutely sure you want to reset everything?'}
                           </span>
                           <div className="flex flex-col sm:flex-row gap-3 pt-1">
                             <button
                               type="button"
                               onClick={handleResetWorkspace}
-                              className="w-full sm:w-auto px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center"
+                              className="w-full sm:w-auto px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center cursor-pointer shadow-md"
                             >
                               {language === 'ka' ? 'დიახ, განულება' : 'Yes, Reset Now'}
                             </button>
                             <button
                               type="button"
                               onClick={() => setShowResetModal(false)}
-                              className="w-full sm:w-auto px-4 py-2 bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text rounded-lg text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center"
+                              className="w-full sm:w-auto px-5 py-2.5 bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text border border-proton-border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                             >
                               {language === 'ka' ? 'გაუქმება' : 'Cancel'}
                             </button>
