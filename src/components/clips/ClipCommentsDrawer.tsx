@@ -31,11 +31,15 @@ export function ClipCommentsDrawer({
   return (
     <AnimatePresence>
       {isOpen && activeClip && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm"
+        >
+          {/* Backdrop click interceptor */}
+          <div
             onClick={onClose}
             className="absolute inset-0"
           />
@@ -81,9 +85,15 @@ export function ClipCommentsDrawer({
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-zinc-800 border border-white/10 overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-purple-300">
+                    <div className="w-8 h-8 rounded-full bg-zinc-800/80 border border-white/10 overflow-hidden shrink-0 aspect-square flex items-center justify-center text-xs font-bold text-purple-300">
                       {comment.userAvatar ? (
-                        <img referrerPolicy="no-referrer" src={comment.userAvatar} alt={comment.userName} className="w-full h-full object-cover" />
+                        <img 
+                          referrerPolicy="no-referrer" 
+                          src={comment.userAvatar} 
+                          alt={comment.userName} 
+                          className="w-full h-full object-cover aspect-square" 
+                          loading="lazy" 
+                        />
                       ) : (
                         <UserIcon size={14} />
                       )}
@@ -124,7 +134,7 @@ export function ClipCommentsDrawer({
               </button>
             </form>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
