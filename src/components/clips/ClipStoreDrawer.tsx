@@ -9,7 +9,9 @@ import {
   CheckCircle2, 
   Zap, 
   CreditCard, 
-  Coins 
+  Coins,
+  Minus,
+  Plus
 } from 'lucide-react';
 import { Clip, MarketplaceItem, Order } from '../../types';
 import { cn } from '../../lib/utils';
@@ -22,6 +24,7 @@ export interface ClipStoreDrawerProps {
   sellerListings: MarketplaceItem[];
   allListings: MarketplaceItem[];
   listings: MarketplaceItem[];
+  isLoadingListings?: boolean;
   getClipVideoUrl: (clip: Clip) => string;
   onCloseTagging: () => void;
   onSelectTagProductId: (id: string) => void;
@@ -50,6 +53,7 @@ export function ClipStoreDrawer({
   sellerListings,
   allListings,
   listings,
+  isLoadingListings = false,
   getClipVideoUrl,
   onCloseTagging,
   onSelectTagProductId,
@@ -185,36 +189,55 @@ export function ClipStoreDrawer({
                   <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest block">
                     {language === 'ka' ? 'მარკეტფლეისის ყველა პროდუქტი' : 'All Marketplace Products'}
                   </span>
-                  <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto">
-                    {(allListings.length > 0 ? allListings : listings).map((item) => {
-                      const isSelected = taggingProductId === item.id;
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => onSelectTagProductId(item.id)}
-                          className={cn(
-                            "p-2.5 rounded-xl border transition-all flex items-center gap-3 cursor-pointer",
-                            isSelected
-                              ? "bg-purple-600/20 border-purple-500"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                          )}
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-black overflow-hidden flex-shrink-0">
-                            {item.images?.[0] || item.image ? (
-                              <img referrerPolicy="no-referrer" src={item.images?.[0] || item.image} className="w-full h-full object-cover" alt="" />
-                            ) : (
-                              <ShoppingBag className="m-auto text-purple-400 mt-2" size={14} />
-                            )}
+                  
+                  {isLoadingListings ? (
+                    <div className="space-y-2 py-1">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="p-2.5 rounded-xl bg-white/[0.04] border border-white/5 flex items-center gap-3 animate-pulse">
+                          <div className="w-8 h-8 rounded-lg bg-white/10 shrink-0" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="h-3 bg-white/10 rounded-md w-3/4" />
+                            <div className="h-2.5 bg-white/10 rounded-md w-1/4" />
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
-                            <span className="text-[10px] text-emerald-400 font-mono font-bold">${item.price}</span>
-                          </div>
-                          {isSelected && <Check size={12} className="text-purple-400" />}
                         </div>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (allListings.length > 0 ? allListings : listings).length === 0 ? (
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center text-proton-muted text-xs font-medium">
+                      {language === 'ka' ? 'პროდუქტები ვერ მოიძებნა' : 'No marketplace products available'}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+                      {(allListings.length > 0 ? allListings : listings).map((item) => {
+                        const isSelected = taggingProductId === item.id;
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => onSelectTagProductId(item.id)}
+                            className={cn(
+                              "p-2.5 rounded-xl border transition-all flex items-center gap-3 cursor-pointer",
+                              isSelected
+                                ? "bg-purple-600/20 border-purple-500"
+                                : "bg-white/5 border-white/10 hover:bg-white/10"
+                            )}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-black overflow-hidden flex-shrink-0">
+                              {item.images?.[0] || item.image ? (
+                                <img referrerPolicy="no-referrer" src={item.images?.[0] || item.image} className="w-full h-full object-cover" alt="" />
+                              ) : (
+                                <ShoppingBag className="m-auto text-purple-400 mt-2" size={14} />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                              <span className="text-[10px] text-emerald-400 font-mono font-bold">${item.price}</span>
+                            </div>
+                            {isSelected && <Check size={12} className="text-purple-400" />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -348,28 +371,41 @@ export function ClipStoreDrawer({
                   )}
 
                   {/* Quantity Selector */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10">
-                    <span className="text-xs font-bold text-gray-300">
-                      {language === 'ka' ? 'რაოდენობა:' : 'Quantity:'}
-                    </span>
-                    <div className="flex items-center gap-3 bg-black/60 px-3 py-1 rounded-xl border border-white/10">
-                      <button
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-gray-200 block">
+                        {language === 'ka' ? 'რაოდენობა:' : 'Quantity:'}
+                      </span>
+                      <span className="text-[10px] text-proton-muted font-mono block">
+                        {language === 'ka' ? 'მაქსიმუმ 10 ერთეული' : 'Max 10 per order'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-black/70 p-1 rounded-xl border border-white/10 shadow-inner">
+                      <motion.button
                         type="button"
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
                         onClick={() => onChangeQuantity(q => Math.max(1, q - 1))}
-                        className="text-gray-400 hover:text-white font-bold text-sm px-1"
+                        disabled={checkoutQuantity <= 1 || isCheckingOut}
+                        aria-label="Decrease quantity"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/15 active:bg-white/20 text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                       >
-                        -
-                      </button>
-                      <span className="text-xs font-mono font-bold text-white w-4 text-center">
+                        <Minus size={14} />
+                      </motion.button>
+                      <span className="text-xs font-mono font-black text-white w-7 text-center select-none">
                         {checkoutQuantity}
                       </span>
-                      <button
+                      <motion.button
                         type="button"
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
                         onClick={() => onChangeQuantity(q => Math.min(10, q + 1))}
-                        className="text-gray-400 hover:text-white font-bold text-sm px-1"
+                        disabled={checkoutQuantity >= 10 || isCheckingOut}
+                        aria-label="Increase quantity"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/15 active:bg-white/20 text-white disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
                       >
-                        +
-                      </button>
+                        <Plus size={14} />
+                      </motion.button>
                     </div>
                   </div>
 

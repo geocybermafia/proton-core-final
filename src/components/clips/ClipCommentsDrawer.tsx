@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, User as UserIcon } from 'lucide-react';
+import { MessageSquare, X, Send, User as UserIcon, Sparkles } from 'lucide-react';
 import { Clip, ClipComment } from '../../types';
 
 export interface ClipCommentsDrawerProps {
@@ -73,15 +73,32 @@ export function ClipCommentsDrawer({
             {/* Comments List */}
             <div className="flex-1 overflow-y-auto space-y-3.5 my-4 pr-1 custom-scrollbar">
               {comments.length === 0 ? (
-                <div className="py-12 text-center text-proton-muted space-y-2">
-                  <MessageSquare className="mx-auto opacity-20" size={32} />
-                  <p className="text-xs font-bold">
-                    {language === 'ka' ? 'კომენტარები ჯერ არ არის' : 'No comments yet'}
-                  </p>
-                  <p className="text-[11px] text-gray-500">
-                    {language === 'ka' ? 'იყავით პირველი, ვინც დააკომენტარებს!' : 'Be the first to share your thoughts!'}
-                  </p>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="py-10 px-4 text-center flex flex-col items-center justify-center space-y-3 my-auto"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shadow-lg shadow-purple-500/10">
+                    <MessageSquare size={22} className="opacity-90" />
+                  </div>
+                  <div className="space-y-1 max-w-xs">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                      {language === 'ka' ? 'კომენტარები ჯერ არ არის' : 'No comments yet'}
+                    </h4>
+                    <p className="text-[11px] text-gray-400 leading-relaxed font-sans">
+                      {language === 'ka' 
+                        ? 'იყავით პირველი, ვინც საკუთარ აზრს გაუზიარებს ავტორსა და საზოგადოებას.' 
+                        : 'Be the first to share your thoughts with the creator and community.'}
+                    </p>
+                  </div>
+                  <div className="pt-1">
+                    <span className="text-[9px] font-mono font-bold text-purple-300 bg-purple-500/10 px-3 py-1 rounded-full border border-purple-500/20 uppercase tracking-widest inline-flex items-center gap-1.5">
+                      <Sparkles size={10} className="text-purple-400" />
+                      {language === 'ka' ? 'დაწერეთ პირველი კომენტარი' : 'Write the first comment'}
+                    </span>
+                  </div>
+                </motion.div>
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="flex items-start gap-3">

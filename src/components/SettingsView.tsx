@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { 
   Settings, 
   User, 
@@ -112,6 +112,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const t = translations[language].settings;
   const common = translations[language].common;
   const { user } = useAuth();
+  const shouldReduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo' | 'cost_control'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -842,21 +843,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {isProfileDirty && (
-            <ProtonBadge variant="amber" size="md" pulse className="shrink-0">
-              {language === 'ka' ? 'შენახული არ არის' : 'Unsaved changes'}
-            </ProtonBadge>
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 shadow-sm shadow-amber-500/10"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              {language === 'ka' ? 'შეუნახავი ცვლილებები' : 'Unsaved changes'}
+            </motion.div>
           )}
-          <button 
+          <motion.button 
+            type="button"
             onClick={handleSave}
             disabled={isSaving}
+            whileHover={shouldReduceMotion ? undefined : { scale: 1.015, y: -0.5 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+            transition={{ type: "spring", stiffness: 450, damping: 25 }}
             className={cn(
-              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl cursor-pointer active:scale-95",
+              "w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-xl cursor-pointer select-none",
               isSaved 
-                ? "bg-emerald-500 text-white" 
+                ? "bg-emerald-500 text-white shadow-emerald-500/20" 
                 : isProfileDirty 
-                ? "bg-amber-500 text-black hover:bg-amber-400 shadow-amber-500/20" 
+                ? "bg-amber-500 text-black hover:bg-amber-400 shadow-amber-500/30 ring-2 ring-amber-400/40" 
                 : "bg-proton-accent text-proton-bg hover:shadow-proton-accent/30",
-              isSaving && "opacity-75 cursor-not-allowed"
+              isSaving && "opacity-75 cursor-not-allowed pointer-events-none"
             )}
             id="btn-settings-save"
           >
@@ -872,7 +882,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               : isSaved 
               ? (language === 'ka' ? 'შენახულია' : 'Saved') 
               : t.save}
-          </button>
+          </motion.button>
           <span className="text-[9px] font-bold text-proton-muted uppercase tracking-wider hidden sm:block text-right self-center">
             {language === 'ka' ? 'ინახავს პროფილსა და AI ინსტრუქციებს' : 'Saves Profile & AI Instructions'}
           </span>
@@ -885,11 +895,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {/* Settings Sidebar */}
         <div className="w-full md:w-60 lg:w-72 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-4 lg:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
           {tabs.map((tab) => (
-            <button
+            <motion.button
               key={tab.id}
+              type="button"
+              whileHover={shouldReduceMotion ? undefined : { scale: 1.01, x: 2 }}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 450, damping: 30 }}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3.5 p-2.5 md:p-3 rounded-xl transition-all group shrink-0 relative min-w-[76px] md:min-w-0 md:min-h-[52px] cursor-pointer w-full text-left",
+                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3.5 p-2.5 md:p-3 rounded-xl transition-all group shrink-0 relative min-w-[76px] md:min-w-0 md:min-h-[52px] cursor-pointer w-full text-left select-none",
                 activeTab === tab.id 
                   ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20 font-black" 
                   : "text-proton-muted hover:text-proton-text hover:bg-white/5 font-semibold"
@@ -905,9 +919,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap leading-tight">{tab.shortLabel}</span>
               <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left whitespace-normal break-words leading-tight">{tab.label}</span>
               {tab.id === 'profile' && isProfileDirty && (
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes" />
+                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-mono font-bold animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                </span>
               )}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -2197,13 +2213,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     <div className="pt-2 text-left">
-                      <button
+                      <motion.button
                         type="button"
+                        whileHover={shouldReduceMotion ? undefined : { scale: 1.01, y: -0.5 }}
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 25 }}
                         onClick={() => handleSaveSpendingLimit(spendingLimit)}
-                        className="w-full py-4 bg-proton-accent text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-proton-bg transition-all shadow-xl active:scale-95"
+                        className="w-full py-4 bg-proton-accent text-proton-bg rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white hover:text-proton-bg transition-all shadow-xl select-none cursor-pointer"
                       >
                         {language === 'ka' ? 'ბიუჯეტის შენახვა' : 'Save Budget Limit'}
-                      </button>
+                      </motion.button>
                       <p className="text-[10px] text-proton-accent font-black uppercase tracking-wider text-center mt-2.5 flex items-center justify-center gap-1.5">
                         <CheckCircle2 size={13} />
                         {language === 'ka' 

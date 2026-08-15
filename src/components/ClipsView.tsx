@@ -233,6 +233,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   const [taggingProductId, setTaggingProductId] = useState<string>('');
   const [isSavingTag, setIsSavingTag] = useState(false);
   const [allListings, setAllListings] = useState<MarketplaceItem[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(true);
   const [checkoutClip, setCheckoutClip] = useState<Clip | null>(null);
   const [checkoutQuantity, setCheckoutQuantity] = useState<number>(1);
   const [checkoutDeliveryNotes, setCheckoutDeliveryNotes] = useState<string>('');
@@ -269,6 +270,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   useEffect(() => {
     const fetchAllListings = async () => {
       try {
+        setIsLoadingListings(true);
         const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
         const snap = await getDocs(q);
         const items: MarketplaceItem[] = [];
@@ -278,6 +280,8 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         setAllListings(items);
       } catch (e) {
         console.warn("Could not fetch listings for clips:", e);
+      } finally {
+        setIsLoadingListings(false);
       }
     };
     fetchAllListings();
@@ -1082,6 +1086,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         sellerListings={sellerListings}
         allListings={allListings}
         listings={listings}
+        isLoadingListings={isLoadingListings}
         getClipVideoUrl={(c) => getClipVideoUrl(c)}
         onCloseTagging={() => setTaggingClip(null)}
         onSelectTagProductId={(id) => setTaggingProductId(id)}
