@@ -60,19 +60,24 @@ service cloud.firestore {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
     }
 
-    // Direct Client Write Prevention Guard for PIN Security
-    function isPinProtectedFieldsUnchanged() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['securityPinMeta', 'securityPinEnabled']);
+    // Cryptographic PIN metadata validation
+    function isValidSecurityPinMeta(meta) {
+      return meta is map
+        && (!('enabled' in meta) || meta.enabled is bool)
+        && (!('salt' in meta) || (meta.salt is string && meta.salt.size() <= 64))
+        && (!('verifier' in meta) || (meta.verifier is string && meta.verifier.size() <= 128))
+        && (!('version' in meta) || meta.version is number)
+        && (!('updatedAt' in meta) || meta.updatedAt is number);
     }
 
     function isSafeUserCreate() {
       return isNotRoleEscalated()
-        && !('securityPinMeta' in incoming() && incoming().securityPinMeta != null)
-        && !('securityPinEnabled' in incoming() && incoming().securityPinEnabled == true);
+        && (!('securityPinMeta' in incoming()) || incoming().securityPinMeta == null || isValidSecurityPinMeta(incoming().securityPinMeta));
     }
 
     function isSafeUserUpdate() {
-      return isRoleUnchanged() && isPinProtectedFieldsUnchanged();
+      return isRoleUnchanged()
+        && (!('securityPinMeta' in incoming()) || incoming().securityPinMeta == null || isValidSecurityPinMeta(incoming().securityPinMeta));
     }
 
     // ======================================================

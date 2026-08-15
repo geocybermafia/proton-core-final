@@ -80,13 +80,22 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. Real-time Marketplace Listings Listener
+  // 1. Real-time Scoped Seller Listings Listener
   useEffect(() => {
+    if (!user) {
+      setAllListings([]);
+      return;
+    }
+
     let active = true;
 
     try {
-      const qListings = query(collection(db, 'listings'), limit(100));
-      const unsubListings = onSnapshot(qListings, (snapshot) => {
+      const qSellerListings = query(
+        collection(db, 'listings'),
+        where('sellerId', '==', user.uid),
+        limit(50)
+      );
+      const unsubListings = onSnapshot(qSellerListings, (snapshot) => {
         if (!active) return;
         const data = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -104,7 +113,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (e: any) {
       console.warn("[SellerContext] Listings query error:", e);
     }
-  }, []);
+  }, [user?.uid]);
 
   // 2. Real-time Orders Listener (Seller & Buyer)
   useEffect(() => {

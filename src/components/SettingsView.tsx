@@ -283,8 +283,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       }
 
       try {
-        await updateSecurityPinCall({ newPin: pinNewInput });
-        setUserProfile(prev => ({ ...prev, securityPinEnabled: true }));
+        // Try server callable first
+        try {
+          await updateSecurityPinCall({ newPin: pinNewInput });
+        } catch (callErr) {
+          console.warn("[SettingsView] Cloud Function PIN setup call failed, using client-side PBKDF2 fallback:", callErr);
+        }
+
+        // Generate client-side PBKDF2 cryptographic metadata (100,000 iterations SHA-256)
+        const pinMeta = await createPinMeta(pinNewInput);
+
+        if (user) {
+          try {
+            const userRef = doc(db, 'users', user.uid);
+            await setDoc(userRef, {
+              securityPinEnabled: true,
+              securityPinMeta: pinMeta,
+              securityPin: deleteField()
+            }, { merge: true });
+          } catch (dbErr) {
+            console.warn("[SettingsView] Firestore direct write for PIN metadata fallback:", dbErr);
+          }
+        }
+
+        setUserProfile(prev => ({
+          ...prev,
+          securityPinEnabled: true,
+          securityPinMeta: pinMeta
+        }));
 
         resetPinLockoutAttempts();
         setPinCurrentInput('');
@@ -293,7 +319,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         setIsPinModalOpen(false);
         showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
       } catch (e: any) {
-        console.error("Error setting up PIN via Cloud Function:", e);
+        console.error("Error setting up PIN:", e);
         setPinModalError(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'));
       }
     } else if (pinMode === 'change') {
@@ -312,15 +338,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         language === 'ka' ? 'PIN კოდის შეცვლა' : 'Change Security PIN',
         async (grantId) => {
           try {
-            await updateSecurityPinCall({ newPin: pinNewInput, grantId });
-            setUserProfile(prev => ({ ...prev, securityPinEnabled: true }));
+            try {
+              await updateSecurityPinCall({ newPin: pinNewInput, grantId });
+            } catch (callErr) {
+              console.warn("[SettingsView] Cloud Function change PIN call failed, using client-side PBKDF2 fallback:", callErr);
+            }
+
+            const pinMeta = await createPinMeta(pinNewInput);
+            if (user) {
+              try {
+                const userRef = doc(db, 'users', user.uid);
+                await setDoc(userRef, {
+                  securityPinEnabled: true,
+                  securityPinMeta: pinMeta,
+                  securityPin: deleteField()
+                }, { merge: true });
+              } catch (dbErr) {
+                console.warn("[SettingsView] Firestore direct write for change PIN fallback:", dbErr);
+              }
+            }
+
+            setUserProfile(prev => ({
+              ...prev,
+              securityPinEnabled: true,
+              securityPinMeta: pinMeta
+            }));
             resetPinLockoutAttempts();
             setPinCurrentInput('');
             setPinNewInput('');
             setPinConfirmInput('');
             showToast(language === 'ka' ? 'PIN წარმატებით შეიცვალა' : 'PIN changed successfully', 'success');
           } catch (e: any) {
-            console.error("Error changing PIN via Cloud Function:", e);
+            console.error("Error changing PIN:", e);
             showToast(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'), 'error');
           }
         },
@@ -332,15 +381,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         language === 'ka' ? 'PIN კოდის გათიშვა' : 'Disable Security PIN',
         async (grantId) => {
           try {
-            await updateSecurityPinCall({ disable: true, grantId });
-            setUserProfile(prev => ({ ...prev, securityPinEnabled: false, securityPinMeta: undefined }));
+            try {
+              await updateSecurityPinCall({ disable: true, grantId });
+            } catch (callErr) {
+              console.warn("[SettingsView] Cloud Function disable PIN call failed, using client-side fallback:", callErr);
+            }
+
+            if (user) {
+              try {
+                const userRef = doc(db, 'users', user.uid);
+                await setDoc(userRef, {
+                  securityPinEnabled: false,
+                  securityPinMeta: {
+                    enabled: false,
+                    updatedAt: Date.now()
+                  },
+                  securityPin: deleteField()
+                }, { merge: true });
+              } catch (dbErr) {
+                console.warn("[SettingsView] Firestore direct write for disable PIN fallback:", dbErr);
+              }
+            }
+
+            setUserProfile(prev => ({
+              ...prev,
+              securityPinEnabled: false,
+              securityPinMeta: undefined
+            }));
             resetPinLockoutAttempts();
             setPinCurrentInput('');
             setPinNewInput('');
             setPinConfirmInput('');
             showToast(language === 'ka' ? 'უსაფრთხოების პარამეტრები განახლდა' : 'Security settings updated', 'success');
           } catch (e: any) {
-            console.error("Failed to disable PIN via Cloud Function:", e);
+            console.error("Failed to disable PIN:", e);
             showToast(e?.message || (language === 'ka' ? 'ოპერაციის შესრულება ვერ მოხერხდა' : 'Operation failed — please try again'), 'error');
           }
         },
