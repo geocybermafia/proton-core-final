@@ -539,17 +539,17 @@ export function ClipPlayer({
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4 sm:p-5 pr-16 md:pr-20 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
           
           {/* Creator Row */}
-          <div className="flex items-center gap-2.5 pointer-events-auto">
+          <div className="flex items-center gap-2 pointer-events-auto min-w-0 max-w-[calc(100%-4rem)]">
             <button
               onClick={() => onOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
-              className="font-black text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline flex items-center gap-1.5 cursor-pointer truncate"
+              className="font-black text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline flex items-center gap-1.5 cursor-pointer truncate shrink min-w-0"
             >
-              <span>@{clip.creatorName}</span>
+              <span className="truncate">@{clip.creatorName}</span>
               {clip.creatorId.startsWith('proton-system') && (
-                <CheckCircle2 size={14} className="text-purple-400 fill-white stroke-[2.5]" />
+                <CheckCircle2 size={14} className="text-purple-400 fill-white stroke-[2.5] shrink-0" />
               )}
             </button>
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold uppercase tracking-wider">
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold uppercase tracking-wider shrink-0">
               {clip.creatorId.startsWith('proton-system') ? 'Official' : 'Creator'}
             </span>
           </div>

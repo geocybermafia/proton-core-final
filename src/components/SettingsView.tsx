@@ -1034,7 +1034,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">
                               {language === 'ka' ? 'ინტერნეტში მოძიება' : 'Search on Google'}
                             </label>
-                            <p className="text-[8px] text-proton-muted uppercase font-bold mt-0.5 leading-normal">
+                            <p className="text-[10px] text-proton-muted/90 uppercase font-semibold mt-1 leading-normal tracking-wide">
                               {language === 'ka' ? 'უახლესი ამბების მოსაძებნად' : 'Find recent info online'}
                             </p>
                           </div>
@@ -1069,7 +1069,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             <label className="text-[10px] font-black uppercase tracking-widest cursor-pointer text-proton-text">
                               {language === 'ka' ? 'ადგილები და რუკები' : 'Places & Maps'}
                             </label>
-                            <p className="text-[8px] text-proton-muted uppercase font-bold mt-0.5 leading-normal">
+                            <p className="text-[10px] text-proton-muted/90 uppercase font-semibold mt-1 leading-normal tracking-wide">
                               {language === 'ka' ? 'მდებარეობების საჩვენებლად' : 'Display map locations'}
                             </p>
                           </div>
@@ -1289,7 +1289,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
                       <div className="text-center md:text-left space-y-2">
                         <div className="flex flex-col md:flex-row md:items-center gap-2">
-                          <h4 className="text-base font-black text-proton-text uppercase tracking-wider">
+                          <h4 className="text-base font-black text-proton-text uppercase tracking-wider truncate max-w-[260px] sm:max-w-[340px]">
                             {userProfile.name || (language === 'ka' ? 'მომხმარებელი' : 'User')}
                           </h4>
                           <ProtonBadge variant="accent" size="sm" pulse className="w-fit mx-auto md:mx-0">
@@ -1568,7 +1568,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             {language === 'ka' ? 'აირჩიეთ სასურველი ენა ინტერფეისისთვის' : 'Choose your preferred language'}
                           </p>
                         </div>
-                        <span className="text-[8px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
                           <Zap size={10} />
                           {language === 'ka' ? 'ინახება მომენტალურად' : 'Saves instantly'}
                         </span>
@@ -1625,7 +1625,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             {language === 'ka' ? 'აირჩიეთ საიტის ფერი და განწყობა' : 'Choose website color and mood'}
                           </p>
                         </div>
-                        <span className="text-[8px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
                           <Zap size={10} />
                           {language === 'ka' ? 'ინახება მომენტალურად' : 'Saves instantly'}
                         </span>
