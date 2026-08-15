@@ -6151,22 +6151,9 @@ export default function App() {
                 <>
                   {activeView === 'dashboard' && (
                     <DashboardView 
-                      personas={personas} 
-                      activeView={activeView} 
                       setActiveView={setActiveView}
-                      chatHistory={chatHistory}
                       language={userProfile.language}
-                      user={user}
-                      uiMode={uiMode === 'market' ? 'business' : uiMode}
                       setUiMode={handleModeChange}
-                      aiSettings={aiSettings}
-                      setLastGeminiMetadata={setLastGeminiMetadata}
-                      trackFirestore={trackFirestore}
-                      isCreativeMode={isCreativeMode || isAdmin}
-                      theme={theme}
-                      setTheme={setTheme}
-                      isSystemActive={isSystemActive}
-                      setAiSettings={setAiSettings}
                       systemHealth={systemHealth}
                     />
                   )}

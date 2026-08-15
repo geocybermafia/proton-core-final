@@ -39,7 +39,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { Persona, View, GlobalAiSettings, Theme, GeminiMetadata } from '../types';
+import { View } from '../types';
 import { SystemStatusBadge } from './SystemStatusBadge';
 import { SystemHealthState } from '../hooks/useSystemHealth';
 import { 
@@ -51,33 +51,19 @@ import {
 } from '../ui';
 import { useSellerStats } from '../hooks/useSellerStats';
 
+export interface DashboardViewProps {
+  setActiveView: (v: View) => void;
+  language: 'en' | 'ka';
+  setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void;
+  systemHealth?: SystemHealthState;
+}
+
 export const DashboardView = React.memo(({ 
   setActiveView, 
   language = 'en',
   setUiMode,
-  aiSettings,
-  setAiSettings,
-  personas = [],
   systemHealth
-}: { 
-  personas?: Persona[], 
-  activeView: View, 
-  setActiveView: (v: View) => void,
-  chatHistory?: any,
-  language: 'en' | 'ka',
-  user?: any,
-  uiMode: 'business' | 'creative' | 'market',
-  setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void,
-  aiSettings: GlobalAiSettings,
-  setLastGeminiMetadata?: (m: GeminiMetadata | null) => void,
-  trackFirestore?: <T>(promise: Promise<T>) => Promise<T>,
-  isCreativeMode?: boolean,
-  theme?: Theme,
-  setTheme?: (t: Theme) => void,
-  isSystemActive?: boolean,
-  setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>,
-  systemHealth?: SystemHealthState
-}) => {
+}: DashboardViewProps) => {
   const t = translations[language];
 
   // Quick Command Search State
