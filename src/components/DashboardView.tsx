@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { safeStorage } from '../lib/safeStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { matchCommandRoute, CommandRoute } from '../lib/commandRoutes';
@@ -184,7 +184,7 @@ Query: "${query}"
   } = useSellerStats();
 
   // Beautiful curated titles & metrics for the Gateways
-  const gateways = [
+  const gateways = useMemo(() => [
     {
       id: 'business',
       title: language === 'ka' ? 'ხელოვნური ინტელექტი & ავტომატიზაცია' : 'AI & Automation',
@@ -310,7 +310,19 @@ Query: "${query}"
       ],
       action: () => setActiveView('clips')
     }
-  ];
+  ], [
+    language,
+    activeListings.length,
+    pendingOrders.length,
+    completedOrders.length,
+    lowStockItemsCount,
+    walletBalance,
+    grossRevenue,
+    monthlyRevenue,
+    todayRevenue,
+    setUiMode,
+    setActiveView
+  ]);
 
   return (
     <motion.div 
