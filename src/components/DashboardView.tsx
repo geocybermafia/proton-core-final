@@ -339,52 +339,19 @@ Query: "${query}"
         >
           <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
           
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-6 relative z-10">
-            <div className="space-y-3 text-left flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <ProtonBadge variant="surface-accent" size="md" ping>
-                  {language === 'ka' ? 'ციფრული სამუშაო სივრცე' : 'DIGITAL WORKSPACE'}
-                </ProtonBadge>
-                {activeListings.length > 0 && (
-                  <ProtonBadge variant="emerald" size="sm">
-                    {activeListings.length} {language === 'ka' ? 'აქტიური განცხადება' : 'Active Listings'}
-                  </ProtonBadge>
-                )}
-                {pendingOrders.length > 0 && (
-                  <ProtonBadge variant="amber" size="sm" ping>
-                    {pendingOrders.length} {language === 'ka' ? 'მომლოდინე შეკვეთა' : 'Pending Orders'}
-                  </ProtonBadge>
-                )}
-                {systemHealth && (
-                  <SystemStatusBadge 
-                    status={systemHealth.status} 
-                    latency={systemHealth.latency} 
-                    language={language}
-                    size="sm"
-                    onClick={() => systemHealth.checkHealth()}
-                  />
-                )}
-              </div>
-              
-              <h1 className="font-extrabold tracking-tight uppercase leading-none text-3xl sm:text-4xl md:text-5xl text-proton-text">
-                {language === 'ka' ? 'კეთილი იყოს შენი მობრძანება' : 'WELCOME TO PROTON'}
+          <div className="flex flex-row items-center justify-between w-full gap-4 relative z-10">
+            <div className="text-left">
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
+                {language === 'ka' ? 'სამუშაო სივრცე' : 'Workspace'}
               </h1>
-              
-              <p className="text-proton-muted font-normal max-w-2xl text-sm sm:text-base leading-relaxed">
-                {language === 'ka' 
-                  ? 'ეს არის შენი პერსონალური ციფრული სივრცე. აქ შეგიძლია გაესაუბრო ჭკვიან AI ასისტენტებს, შექმნა კრეატიული ხელოვნება, გაყიდო ან შეიძინო ნივთები ადგილობრივ მარკეტზე და მართო ყოველდღიური საქმეები მარტივად.'
-                  : 'This is your personal digital workspace. Chat with smart AI companions, design visual graphics, trade items in the marketplace, and track your daily tasks or workflows effortlessly.'}
+              <p className="text-sm font-medium text-zinc-500">
+                {language === 'ka' ? 'პროტონ დაშბორდი' : 'Proton Dashboard'}
               </p>
             </div>
             
-            <div className="hidden md:flex items-center shrink-0">
-              <motion.div 
-                whileHover={{ scale: 1.08, rotate: 45 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-proton-accent/10 flex items-center justify-center border border-proton-accent/20 backdrop-blur-sm shadow-inner cursor-pointer"
-              >
-                <Grid className="text-proton-accent" size={30} />
-              </motion.div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium shrink-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{language === 'ka' ? 'სისტემა მუშაობს' : 'System Operational'}</span>
             </div>
           </div>
 
