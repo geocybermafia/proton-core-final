@@ -39,7 +39,7 @@ import {
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { View } from '../types';
+import { View, Task } from '../types';
 import { SystemStatusBadge } from './SystemStatusBadge';
 import { SystemHealthState } from '../hooks/useSystemHealth';
 import { 
@@ -168,6 +168,16 @@ Query: "${query}"
     lowStockItemsCount,
     recentOrders
   } = useSellerStats();
+
+  // Active tasks from local storage
+  const activeTasksCount = useMemo(() => {
+    try {
+      const savedTasks: Task[] = safeStorage.getJSON('proton_tasks', []);
+      return savedTasks.filter(t => !t.completed).length;
+    } catch {
+      return 0;
+    }
+  }, []);
 
   // Beautiful curated titles & metrics for the Gateways
   const gateways = useMemo(() => [
@@ -325,21 +335,20 @@ Query: "${query}"
       }}
       className="space-y-8 pb-20 max-w-6xl mx-auto px-4"
     >
-      {/* Elegantly Crafted Hub Hero Section */}
+      {/* Unified Bento Command Deck */}
       <motion.div 
         variants={{
-          hidden: { opacity: 0, y: 30 },
+          hidden: { opacity: 0, y: 20 },
           visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
         }}
       >
         <ProtonCard
           variant="default"
           padding="none"
-          className="p-6 md:p-8 sm:rounded-3xl bg-gradient-to-br from-proton-card via-proton-card/90 to-proton-accent/5 shadow-2xl space-y-6 duration-300"
+          className="p-5 sm:p-6 sm:rounded-2xl bg-zinc-950/80 border border-zinc-800/80 shadow-xl space-y-5"
         >
-          <div className="absolute top-0 right-0 w-80 h-80 bg-proton-accent/10 rounded-full blur-[100px] pointer-events-none -mr-20 -mt-20" />
-          
-          <div className="flex flex-row items-center justify-between w-full gap-4 relative z-10">
+          {/* Row 1: Header + System Telemetry */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="text-left">
               <h1 className="text-2xl font-bold tracking-tight text-zinc-100">
                 {language === 'ka' ? 'სამუშაო სივრცე' : 'Workspace'}
@@ -349,82 +358,202 @@ Query: "${query}"
               </p>
             </div>
             
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{language === 'ka' ? 'სისტემა მუშაობს' : 'System Operational'}</span>
+            <div className="flex items-center gap-2 shrink-0">
+              {systemHealth ? (
+                <button 
+                  type="button"
+                  onClick={() => systemHealth.checkHealth()}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/80 hover:bg-zinc-800/80 border border-zinc-800 transition-colors text-xs font-medium cursor-pointer"
+                  title={language === 'ka' ? 'დააჭირეთ სისტემის გადამოწმებისთვის' : 'Click to probe system health'}
+                >
+                  <span className={cn(
+                    "w-2 h-2 rounded-full",
+                    systemHealth.status === 'optimal' ? "bg-emerald-400 animate-pulse" :
+                    systemHealth.status === 'degraded' ? "bg-amber-400 animate-pulse" : "bg-rose-400 animate-pulse"
+                  )} />
+                  <span className={cn(
+                    systemHealth.status === 'optimal' ? "text-emerald-400" :
+                    systemHealth.status === 'degraded' ? "text-amber-400" : "text-rose-400"
+                  )}>
+                    {systemHealth.status === 'optimal'
+                      ? (language === 'ka' ? 'სისტემა მუშაობს' : 'System Operational')
+                      : systemHealth.status === 'degraded'
+                      ? (language === 'ka' ? 'დაყოვნება' : 'Degraded')
+                      : (language === 'ka' ? 'შეცდომა' : 'System Error')}
+                  </span>
+                  {typeof systemHealth.latency === 'number' && systemHealth.latency > 0 && (
+                    <span className="text-[11px] font-mono text-zinc-500 pl-1 border-l border-zinc-800">
+                      {systemHealth.latency}ms
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{language === 'ka' ? 'სისტემა მუშაობს' : 'System Operational'}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Quick AI Command / Search Input Box */}
-          <form onSubmit={handleQuickSubmit} className="relative z-10 pt-2">
-            <ProtonInput 
-              type="text"
-              value={quickQuery}
-              onChange={(e) => setQuickQuery(e.target.value)}
-              placeholder={language === 'ka' 
-                ? 'ჩაწერეთ შეკითხვა AI-სთვის ან მოძებნეთ ფუნქცია...' 
-                : 'Ask AI anything or launch a workflow...'}
-              leftIcon={<Sparkles className="text-proton-accent animate-pulse" size={18} />}
-              className="pr-28 py-3.5 bg-proton-bg/80 border-proton-accent/30 shadow-inner"
-              rightElement={
+          {/* Row 2: Live Operational Signals */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            {/* Signal 1: Pending Orders */}
+            <button
+              type="button"
+              onClick={() => setUiMode('market', 'market-hub')}
+              className={cn(
+                "flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer group",
+                pendingOrders.length > 0
+                  ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500/60 text-amber-300"
+                  : "bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 text-zinc-300"
+              )}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105",
+                  pendingOrders.length > 0 ? "bg-amber-500/20 text-amber-400" : "bg-zinc-800 text-zinc-400"
+                )}>
+                  <ShoppingBag size={16} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-zinc-400 truncate">
+                    {language === 'ka' ? 'მომლოდინე შეკვეთები' : 'Pending Orders'}
+                  </div>
+                  <div className="text-sm font-bold text-zinc-100 flex items-center gap-1.5 mt-0.5">
+                    <span>{pendingOrders.length}</span>
+                    {pendingOrders.length > 0 ? (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-semibold uppercase tracking-wider">
+                        {language === 'ka' ? 'მოქმედება საჭიროა' : 'Action Required'}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-zinc-500 font-normal">
+                        {language === 'ka' ? 'რიგში არაა' : 'All clear'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-zinc-500 group-hover:text-zinc-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+            </button>
+
+            {/* Signal 2: Active Listings */}
+            <button
+              type="button"
+              onClick={() => setUiMode('market', 'market-hub')}
+              className="flex items-center justify-between p-3 rounded-xl border bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 text-zinc-300 text-left transition-all duration-150 cursor-pointer group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                  <TrendingUp size={16} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-zinc-400 truncate">
+                    {language === 'ka' ? 'აქტიური განცხადებები' : 'Active Listings'}
+                  </div>
+                  <div className="text-sm font-bold text-zinc-100 mt-0.5">
+                    {activeListings.length} {language === 'ka' ? 'პროდუქტი' : 'Items'}
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-zinc-500 group-hover:text-zinc-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+            </button>
+
+            {/* Signal 3: Active Tasks */}
+            <button
+              type="button"
+              onClick={() => setActiveView('organizer')}
+              className="flex items-center justify-between p-3 rounded-xl border bg-zinc-900/60 border-zinc-800/80 hover:border-zinc-700/80 text-zinc-300 text-left transition-all duration-150 cursor-pointer group"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105">
+                  <CalendarIcon size={16} />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-medium text-zinc-400 truncate">
+                    {language === 'ka' ? 'აქტიური დავალებები' : 'Active Tasks'}
+                  </div>
+                  <div className="text-sm font-bold text-zinc-100 mt-0.5">
+                    {activeTasksCount} {language === 'ka' ? 'დავალება' : 'Tasks'}
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={14} className="text-zinc-500 group-hover:text-zinc-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+            </button>
+          </div>
+
+          {/* Row 3: Command / Search Input Bar */}
+          <form onSubmit={handleQuickSubmit} className="pt-2">
+            <div className="relative flex items-center">
+              <div className="absolute left-3.5 flex items-center pointer-events-none text-zinc-500">
+                <Sparkles size={16} className="text-proton-accent" />
+              </div>
+              <input
+                type="text"
+                value={quickQuery}
+                onChange={(e) => setQuickQuery(e.target.value)}
+                placeholder={language === 'ka' 
+                  ? 'ჩაწერეთ ბრძანება ან მოძებნეთ ფუნქცია...' 
+                  : 'Type a command or launch a workflow...'}
+                className="w-full bg-zinc-900/80 border border-zinc-800 focus:border-proton-accent/60 rounded-xl pl-10 pr-28 py-3 text-sm text-zinc-100 placeholder-zinc-500 transition-colors focus:outline-none focus:ring-1 focus:ring-proton-accent/40"
+              />
+              <div className="absolute right-2 flex items-center gap-1.5">
+                <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-mono text-zinc-500 bg-zinc-800/80 border border-zinc-700/50 rounded">
+                  ↵ Enter
+                </kbd>
                 <ProtonButton 
                   type="submit"
                   size="sm"
-                  leftIcon={<Zap size={14} />}
+                  leftIcon={<Zap size={13} />}
+                  className="py-1.5 px-3 text-xs"
                 >
-                  {language === 'ka' ? 'გაგზავნა' : 'Ask'}
+                  {language === 'ka' ? 'გაშვება' : 'Run'}
                 </ProtonButton>
-              }
-            />
+              </div>
+            </div>
 
             {/* Quick Action Chips */}
             <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span className="text-[10px] font-mono uppercase text-proton-muted font-bold mr-1">
-                {language === 'ka' ? 'სწრაფი ბრძანებები:' : 'Quick Shortcuts:'}
+              <span className="text-[11px] font-mono text-zinc-500 font-semibold mr-1">
+                {language === 'ka' ? 'სწრაფი ბრძანებები:' : 'Shortcuts:'}
               </span>
-              <ProtonButton 
+              <button
                 type="button"
-                variant="subtle"
-                size="sm"
                 onClick={() => setUiMode('creative', 'image')}
-                leftIcon={<Image size={11} />}
-                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20"
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-colors cursor-pointer"
               >
-                {language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}
-              </ProtonButton>
-              <ProtonButton 
+                <Image size={12} />
+                <span>{language === 'ka' ? 'სურათის შექმნა' : 'Generate Visual'}</span>
+              </button>
+              <button
                 type="button"
-                variant="subtle"
-                size="sm"
                 onClick={() => setActiveView('organizer')}
-                leftIcon={<CalendarIcon size={11} />}
-                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20"
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer"
               >
-                {language === 'ka' ? 'დავალებები' : 'Tasks'}
-              </ProtonButton>
-              <ProtonButton 
+                <CalendarIcon size={12} />
+                <span>{language === 'ka' ? 'ორგანიზატორი' : 'Organizer'}</span>
+              </button>
+              <button
                 type="button"
-                variant="subtle"
-                size="sm"
                 onClick={() => setActiveView('clips')}
-                leftIcon={<Video size={11} />}
-                className="py-2 px-3 text-[10px] min-h-[44px] min-w-[44px] flex items-center justify-center bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
+                className="inline-flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors cursor-pointer"
               >
-                {language === 'ka' ? 'კლიპები' : 'Clips'}
-              </ProtonButton>
+                <Video size={12} />
+                <span>{language === 'ka' ? 'კლიპები' : 'Clips'}</span>
+              </button>
             </div>
           </form>
 
-          {/* Live Instant AI Response Box */}
+          {/* Row 4: Live Instant AI Response Box */}
           <AnimatePresence>
             {(isAiThinking || aiResponse) && (
               <motion.div
                 initial={{ opacity: 0, height: 0, y: -10 }}
                 animate={{ opacity: 1, height: 'auto', y: 0 }}
                 exit={{ opacity: 0, height: 0, y: -10 }}
-                className="pt-4 border-t border-proton-border/30"
+                className="pt-4 border-t border-zinc-800/80"
               >
-                <ProtonCard variant="glass" padding="default" className="relative space-y-3 border-proton-accent/40 bg-proton-card/90 backdrop-blur-xl">
+                <ProtonCard variant="glass" padding="default" className="relative space-y-3 border-proton-accent/40 bg-zinc-900/90 backdrop-blur-xl">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ProtonIconBox variant="accent" size="sm">
@@ -459,13 +588,13 @@ Query: "${query}"
                   </div>
 
                   {isAiThinking ? (
-                    <div className="flex items-center gap-3 py-4 text-xs font-mono text-proton-muted">
+                    <div className="flex items-center gap-3 py-4 text-xs font-mono text-zinc-400">
                       <span className="w-2 h-2 rounded-full bg-proton-accent animate-ping" />
                       <span>Analyzing system telemetry, neural memory nodes, and context...</span>
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <div className="text-xs font-mono text-proton-text whitespace-pre-line leading-relaxed p-3 bg-proton-bg/60 rounded-xl border border-proton-border/40">
+                      <div className="text-xs font-mono text-zinc-200 whitespace-pre-line leading-relaxed p-3 bg-zinc-950/60 rounded-xl border border-zinc-800">
                         {aiResponse}
                       </div>
                       
@@ -485,104 +614,6 @@ Query: "${query}"
               </motion.div>
             )}
           </AnimatePresence>
-        </ProtonCard>
-      </motion.div>
-
-      {/* Live Workspace Overview Metrics Bar */}
-      <motion.div 
-        variants={{
-          hidden: { opacity: 0, y: 20 },
-          visible: { opacity: 1, y: 0 }
-        }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-4"
-      >
-        <ProtonCard 
-          variant="interactive"
-          padding="compact"
-          onClick={() => setUiMode('creative', 'creative-studio')}
-          className="flex items-center gap-3.5"
-        >
-          <ProtonIconBox variant="accent" size="md" className="group-hover:scale-110">
-            <Sparkles size={20} />
-          </ProtonIconBox>
-          <div>
-            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
-              {language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio'}
-            </div>
-            <div className="text-base font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
-              <span>AI Hub</span>
-              <ProtonBadge variant="emerald" size="sm">
-                {language === 'ka' ? 'აქტიური' : 'Active'}
-              </ProtonBadge>
-            </div>
-          </div>
-        </ProtonCard>
-
-        <ProtonCard 
-          variant="subtle" 
-          padding="compact" 
-          className="flex items-center gap-3.5 cursor-pointer hover:border-proton-accent/40 transition-all"
-          onClick={() => systemHealth?.checkHealth()}
-        >
-          <ProtonIconBox 
-            variant={systemHealth?.status === 'optimal' ? 'emerald' : systemHealth?.status === 'degraded' ? 'amber' : 'rose'} 
-            size="md"
-          >
-            <Activity size={20} />
-          </ProtonIconBox>
-          <div>
-            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
-              {language === 'ka' ? 'სისტემის სტატუსი' : 'System Health'}
-            </div>
-            <div className="text-sm font-extrabold text-proton-text flex items-center gap-1.5 mt-0.5">
-              <SystemStatusBadge 
-                status={systemHealth?.status || 'optimal'} 
-                latency={systemHealth?.latency} 
-                language={language}
-                size="sm"
-              />
-            </div>
-          </div>
-        </ProtonCard>
-
-        <ProtonCard 
-          variant="interactive"
-          padding="compact"
-          onClick={() => setActiveView('organizer')}
-          className="flex items-center gap-3.5"
-        >
-          <ProtonIconBox variant="purple" size="md" className="group-hover:scale-110">
-            <CalendarIcon size={20} />
-          </ProtonIconBox>
-          <div>
-            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
-              {language === 'ka' ? 'დავალებები' : 'Task Manager'}
-            </div>
-            <div className="text-sm font-extrabold text-proton-text flex items-center gap-1 mt-0.5">
-              <span>{language === 'ka' ? 'ორგანიზატორი' : 'Organizer'}</span>
-              <ArrowRight size={12} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
-        </ProtonCard>
-
-        <ProtonCard 
-          variant="interactive"
-          padding="compact"
-          onClick={() => setActiveView('clips')}
-          className="flex items-center gap-3.5"
-        >
-          <ProtonIconBox variant="rose" size="md" className="group-hover:scale-110">
-            <Video size={20} />
-          </ProtonIconBox>
-          <div>
-            <div className="text-[10px] font-mono uppercase font-bold text-proton-muted">
-              {language === 'ka' ? 'ვიდეო ჰაბი' : 'Clips Hub'}
-            </div>
-            <div className="text-sm font-extrabold text-proton-text flex items-center gap-1 mt-0.5">
-              <span>{language === 'ka' ? 'კლიპების ლენტა' : 'Video Feed'}</span>
-              <ArrowRight size={12} className="text-proton-muted group-hover:translate-x-1 transition-transform" />
-            </div>
-          </div>
         </ProtonCard>
       </motion.div>
 
