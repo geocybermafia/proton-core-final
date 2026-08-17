@@ -4090,26 +4090,19 @@ export default function App() {
     };
   }, [activeView]);
 
-  // Lock html and body overflow when user is logged in to prevent whole-screen browser scroll leaks
+  // Clean up any lingering body overflow styles
   useEffect(() => {
-    if (user) {
-      document.documentElement.style.overflow = 'hidden';
-      document.documentElement.style.height = '100%';
-      document.body.style.overflow = 'hidden';
-      document.body.style.height = '100%';
-    } else {
-      document.documentElement.style.overflow = '';
-      document.documentElement.style.height = '';
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-    }
+    document.documentElement.style.overflow = '';
+    document.documentElement.style.height = '';
+    document.body.style.overflow = '';
+    document.body.style.height = '';
     return () => {
       document.documentElement.style.overflow = '';
       document.documentElement.style.height = '';
       document.body.style.overflow = '';
       document.body.style.height = '';
     };
-  }, [user]);
+  }, []);
   
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
@@ -5183,7 +5176,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden overscroll-none theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      "flex h-[100dvh] overflow-hidden overscroll-y-contain theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
       {/* HEADLESS BACKGROUND AUTOMATION ENGINE (Active across all application routes) */}
