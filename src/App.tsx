@@ -5176,7 +5176,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden overscroll-y-contain theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
       {/* HEADLESS BACKGROUND AUTOMATION ENGINE (Active across all application routes) */}
@@ -6110,7 +6110,7 @@ export default function App() {
           id="main-scroll-container"
           className={cn(
             "flex-1 min-h-0 w-full relative z-10 flex flex-col",
-            activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto custom-scrollbar-minimal"
+            activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto overscroll-y-contain custom-scrollbar-minimal"
           )}
         >
           {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
