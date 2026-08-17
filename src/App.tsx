@@ -58,6 +58,7 @@ const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(modu
 const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
 import { HeaderQuickSearch } from './components/HeaderQuickSearch';
 import { NotificationCenter } from './components/NotificationCenter';
+import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 import { useSystemHealth } from './hooks/useSystemHealth';
@@ -4065,6 +4066,108 @@ export default function App() {
   // Mobile Navigation IntersectionObserver for performant visibility toggling
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
   const mobileNavSentinelRef = useRef<HTMLDivElement | null>(null);
+  const mainScrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Custom touch-driven pull-to-refresh for #main-scroll-container
+  const [pullDistance, setPullDistance] = useState<number>(0);
+  const [isPullRefreshing, setIsPullRefreshing] = useState<boolean>(false);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const isPullTrackingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    // Skip pull-to-refresh if active view is clips or personas (they manage their own gestures / scroll modes)
+    if (activeView === 'clips' || activeView === 'personas') {
+      setPullDistance(0);
+      return;
+    }
+
+    const container = mainScrollContainerRef.current || document.getElementById('main-scroll-container');
+    if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (isPullRefreshing) return;
+      // Only initiate gesture tracking if container is at the very top (scrollTop <= 2)
+      if (container.scrollTop <= 2) {
+        touchStartYRef.current = e.touches[0].clientY;
+        touchStartXRef.current = e.touches[0].clientX;
+        isPullTrackingRef.current = true;
+      } else {
+        touchStartYRef.current = null;
+        touchStartXRef.current = null;
+        isPullTrackingRef.current = false;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPullTrackingRef.current || touchStartYRef.current === null || isPullRefreshing) return;
+      
+      // If user has scrolled down into the page, immediately abort pull tracking
+      if (container.scrollTop > 2) {
+        touchStartYRef.current = null;
+        touchStartXRef.current = null;
+        isPullTrackingRef.current = false;
+        setPullDistance(0);
+        return;
+      }
+
+      const currentY = e.touches[0].clientY;
+      const currentX = e.touches[0].clientX;
+      const deltaY = currentY - touchStartYRef.current;
+      const deltaX = currentX - (touchStartXRef.current ?? currentX);
+
+      // Only engage if downward pull and vertical movement dominates horizontal
+      if (deltaY > 0 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Damped pull physics curve capped at 100px
+        const damped = Math.min(100, Math.pow(deltaY, 0.82));
+        setPullDistance(damped);
+      } else {
+        setPullDistance(0);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (!isPullTrackingRef.current || touchStartYRef.current === null) {
+        setPullDistance(0);
+        return;
+      }
+
+      touchStartYRef.current = null;
+      touchStartXRef.current = null;
+      isPullTrackingRef.current = false;
+
+      // Threshold is 70px
+      setPullDistance((currentPull) => {
+        if (currentPull >= 70 && !isPullRefreshing) {
+          setIsPullRefreshing(true);
+          setTimeout(() => {
+            window.location.reload();
+          }, 350);
+          return 75; // Hold at active threshold while reload executes
+        }
+        return 0;
+      });
+    };
+
+    const handleTouchCancel = () => {
+      touchStartYRef.current = null;
+      touchStartXRef.current = null;
+      isPullTrackingRef.current = false;
+      setPullDistance(0);
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchCancel);
+    };
+  }, [activeView, isPullRefreshing]);
 
   useEffect(() => {
     const sentinel = mobileNavSentinelRef.current;
@@ -6107,12 +6210,21 @@ export default function App() {
         </header>
 
         <div 
+          ref={mainScrollContainerRef}
           id="main-scroll-container"
           className={cn(
             "flex-1 min-h-0 w-full relative z-10 flex flex-col",
             activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto overscroll-y-contain custom-scrollbar-minimal"
           )}
         >
+          {/* Custom Mobile Pull-to-Refresh Indicator */}
+          <PullToRefreshIndicator 
+            pullDistance={pullDistance} 
+            threshold={70} 
+            isRefreshing={isPullRefreshing} 
+            language={userProfile.language} 
+          />
+
           {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
           <div ref={mobileNavSentinelRef} id="mobile-nav-sentinel" className="h-px w-full shrink-0 pointer-events-none opacity-0" />
           <div 
