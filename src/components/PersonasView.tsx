@@ -1099,10 +1099,17 @@ ${
                   onClick={() => {
                     const storeMgr = personas.find(p => p.id === 'proton-store-manager') || selectedPersona;
                     if (storeMgr) setSelectedPersona(storeMgr);
-                    const pendingId = sellerStats.pendingOrders[0]?.id || 'ord-982145';
-                    setInput(language === 'ka' 
-                      ? `✉️ მოამზადე საპასუხო შეტყობინება მყიდველისთვის შეკვეთაზე #${pendingId.slice(-6)}.` 
-                      : `✉️ Draft customer message for pending order #${pendingId.slice(-6)}.`);
+                    const pendingOrder = sellerStats.pendingOrders[0];
+                    if (pendingOrder) {
+                      const shortId = pendingOrder.id.slice(-6);
+                      setInput(language === 'ka' 
+                        ? `✉️ მოამზადე საპასუხო შეტყობინება მყიდველისთვის შეკვეთაზე #${shortId}.` 
+                        : `✉️ Draft customer message for pending order #${shortId}.`);
+                    } else {
+                      setInput(language === 'ka' 
+                        ? "✉️ მოამზადე შეტყობინების შაბლონი მყიდველებისთვის შეკვეთის დადასტურების შესახებ." 
+                        : "✉️ Draft customer order confirmation and fulfillment message template.");
+                    }
                   }}
                   className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-500/20 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.1)] shrink-0"
                 >

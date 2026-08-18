@@ -58,6 +58,35 @@ export interface SellerContextType {
   updateOrderStatus?: (orderId: string, status: string) => Promise<void>;
 }
 
+export const isRealLedgerItem = (item: LedgerItem | null | undefined): boolean => {
+  if (!item || !item.id) return false;
+  const id = String(item.id).toLowerCase();
+  if (
+    id.startsWith('demo') ||
+    id.startsWith('seed') ||
+    id.startsWith('mock') ||
+    id.startsWith('sample') ||
+    id.startsWith('test') ||
+    /^(tx_)?0*([1-9]|[1-9][0-9])$/i.test(id) ||
+    id === 'tx-1' || id === 'tx-2' || id === 'tx-3' || id === 'tx-4' || id === 'tx-5' ||
+    id === 'tx_001' || id === 'tx_002' || id === 'tx_003' || id === 'tx_004' ||
+    (item as any).isDemo === true ||
+    (item as any).isSeed === true ||
+    (item as any).isMock === true
+  ) {
+    return false;
+  }
+  const desc = (item.description || '').toLowerCase();
+  const cat = (item.category || '').toLowerCase();
+  if (
+    desc.includes('sample') || desc.includes('demo') || desc.includes('seed data') ||
+    cat.includes('sample') || cat.includes('demo')
+  ) {
+    return false;
+  }
+  return true;
+};
+
 const defaultSampleOrders: Order[] = [];
 
 const defaultLedger: LedgerItem[] = [];
@@ -201,10 +230,20 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!user) {
       try {
         const localData = localStorage.getItem('proton_market_hub_ledger');
-        if (localData && active) setLedgerItems(JSON.parse(localData));
-        else if (active) setLedgerItems(defaultLedger);
+        if (localData && active) {
+          const parsed = JSON.parse(localData) as LedgerItem[];
+          const clean = Array.isArray(parsed) ? parsed.filter(isRealLedgerItem) : [];
+          setLedgerItems(clean);
+          if (clean.length === 0) {
+            localStorage.removeItem('proton_market_hub_ledger');
+          } else {
+            localStorage.setItem('proton_market_hub_ledger', JSON.stringify(clean));
+          }
+        } else if (active) {
+          setLedgerItems([]);
+        }
       } catch {
-        if (active) setLedgerItems(defaultLedger);
+        if (active) setLedgerItems([]);
       }
       if (active) setLoading(false);
       return;
@@ -218,14 +257,21 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!active) return;
 
       if (snapshot.empty) {
-        Promise.all(defaultLedger.map((item) => {
-          const itemDoc = doc(userRef, 'market_ledger', item.id);
-          return setDoc(itemDoc, item);
-        })).catch((e) => console.warn("[SellerContext] Ledger seed warning:", e));
-        if (active) setLedgerItems(defaultLedger);
+        if (active) setLedgerItems([]);
       } else {
         const items: LedgerItem[] = [];
-        snapshot.forEach((d) => items.push(d.data() as LedgerItem));
+        snapshot.forEach((d) => {
+          const data = d.data() as LedgerItem;
+          if (isRealLedgerItem(data)) {
+            items.push(data);
+          } else {
+            // Clean up legacy fake/demo record from user's Firestore permanently
+            try {
+              const deadDoc = doc(db, 'users', user.uid, 'market_ledger', d.id);
+              deleteDoc(deadDoc).catch(() => {});
+            } catch {}
+          }
+        });
         items.sort((a, b) => b.id.localeCompare(a.id));
         if (active) setLedgerItems(items);
       }
@@ -235,9 +281,15 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.warn("[SellerContext] Ledger sync warning:", err);
       try {
         const localData = localStorage.getItem('proton_market_hub_ledger');
-        setLedgerItems(localData ? JSON.parse(localData) : defaultLedger);
+        if (localData) {
+          const parsed = JSON.parse(localData) as LedgerItem[];
+          const clean = Array.isArray(parsed) ? parsed.filter(isRealLedgerItem) : [];
+          setLedgerItems(clean);
+        } else {
+          setLedgerItems([]);
+        }
       } catch {
-        setLedgerItems(defaultLedger);
+        setLedgerItems([]);
       }
       setLoading(false);
     });

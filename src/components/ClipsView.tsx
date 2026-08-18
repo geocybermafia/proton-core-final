@@ -763,25 +763,15 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         language === 'ka' ? 'შეკვეთა წარმატებით გაფორმდა!' : 'Order placed successfully!',
         'success'
       );
-    } catch (e) {
-      console.warn("Instant checkout error:", e);
+    } catch (e: any) {
+      console.error("Instant checkout error:", e);
       setIsCheckingOut(false);
-      const mockOrder: Order = {
-        id: `ord-${Date.now()}`,
-        listingId: checkoutClip.productInfo.id,
-        buyerId: currentUser.uid,
-        buyerName: currentUser.displayName || 'Buyer',
-        sellerId: checkoutClip.creatorId,
-        currency: 'USD',
-        itemTitle: checkoutClip.productInfo.title,
-        amount: checkoutClip.productInfo.price * checkoutQuantity,
-        quantity: checkoutQuantity,
-        status: 'completed',
-        createdAt: new Date().toISOString(),
-        deliveryAddress: checkoutDeliveryNotes || 'Direct from Shoppable Clip',
-        paymentMethod: checkoutPaymentMethod
-      };
-      setCheckoutSuccessOrder(mockOrder);
+      showToast(
+        language === 'ka' 
+          ? `შეკვეთის გაფორმება ვერ მოხერხდა: ${e?.message || 'სისტემური შეცდომა'}` 
+          : `Failed to place order: ${e?.message || 'Network or authorization error'}`,
+        'error'
+      );
     }
   };
 

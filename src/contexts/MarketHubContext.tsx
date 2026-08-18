@@ -37,6 +37,36 @@ const generateTxId = (): string => {
   return `TX-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 9)}`;
 };
 
+// Helper to validate and reject any legacy fake/demo/seed entries
+export const isRealLedgerItem = (item: LedgerItem | null | undefined): boolean => {
+  if (!item || !item.id) return false;
+  const id = String(item.id).toLowerCase();
+  if (
+    id.startsWith('demo') ||
+    id.startsWith('seed') ||
+    id.startsWith('mock') ||
+    id.startsWith('sample') ||
+    id.startsWith('test') ||
+    /^(tx_)?0*([1-9]|[1-9][0-9])$/i.test(id) ||
+    id === 'tx-1' || id === 'tx-2' || id === 'tx-3' || id === 'tx-4' || id === 'tx-5' ||
+    id === 'tx_001' || id === 'tx_002' || id === 'tx_003' || id === 'tx_004' ||
+    (item as any).isDemo === true ||
+    (item as any).isSeed === true ||
+    (item as any).isMock === true
+  ) {
+    return false;
+  }
+  const desc = (item.description || '').toLowerCase();
+  const cat = (item.category || '').toLowerCase();
+  if (
+    desc.includes('sample') || desc.includes('demo') || desc.includes('seed data') ||
+    cat.includes('sample') || cat.includes('demo')
+  ) {
+    return false;
+  }
+  return true;
+};
+
 // Pre-configured default seed data for Swiss Minimalist style
 const defaultLedger: LedgerItem[] = [];
 
@@ -55,15 +85,22 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       try {
         const localData = localStorage.getItem('proton_market_hub_ledger');
         if (localData) {
-          if (isSubscribed) setLedgerItems(JSON.parse(localData));
+          const parsed = JSON.parse(localData) as LedgerItem[];
+          const clean = Array.isArray(parsed) ? parsed.filter(isRealLedgerItem) : [];
+          if (isSubscribed) setLedgerItems(clean);
+          if (clean.length === 0) {
+            localStorage.removeItem('proton_market_hub_ledger');
+          } else {
+            localStorage.setItem('proton_market_hub_ledger', JSON.stringify(clean));
+          }
         } else {
           if (isSubscribed) {
-            setLedgerItems(defaultLedger);
-            localStorage.setItem('proton_market_hub_ledger', JSON.stringify(defaultLedger));
+            setLedgerItems([]);
+            localStorage.removeItem('proton_market_hub_ledger');
           }
         }
       } catch (e) {
-        if (isSubscribed) setLedgerItems(defaultLedger);
+        if (isSubscribed) setLedgerItems([]);
       }
       if (isSubscribed) setLoading(false);
       return () => {
@@ -85,8 +122,17 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (isSubscribed) setLedgerItems([]);
       } else {
         const items: LedgerItem[] = [];
-        snapshot.forEach((doc) => {
-          items.push(doc.data() as LedgerItem);
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as LedgerItem;
+          if (isRealLedgerItem(data)) {
+            items.push(data);
+          } else {
+            // Delete legacy seed entry permanently from user's Firestore
+            try {
+              const deadDoc = doc(db, 'users', user.uid, 'market_ledger', docSnap.id);
+              deleteDoc(deadDoc).catch(() => {});
+            } catch {}
+          }
         });
         // Sort by date or ID
         items.sort((a, b) => b.id.localeCompare(a.id));
@@ -99,9 +145,15 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Fallback to local
       try {
         const localData = localStorage.getItem('proton_market_hub_ledger');
-        if (isSubscribed) setLedgerItems(localData ? JSON.parse(localData) : defaultLedger);
+        if (localData) {
+          const parsed = JSON.parse(localData) as LedgerItem[];
+          const clean = Array.isArray(parsed) ? parsed.filter(isRealLedgerItem) : [];
+          if (isSubscribed) setLedgerItems(clean);
+        } else {
+          if (isSubscribed) setLedgerItems([]);
+        }
       } catch {
-        if (isSubscribed) setLedgerItems(defaultLedger);
+        if (isSubscribed) setLedgerItems([]);
       }
       if (isSubscribed) setLoading(false);
     });
