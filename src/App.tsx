@@ -189,6 +189,7 @@ const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ 
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { safeStorage } from './lib/safeStorage';
+import { taskSyncService } from './lib/taskSyncService';
 import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan } from './lib/gemini';
 
@@ -5167,25 +5168,19 @@ export default function App() {
       timestamp: Date.now()
     };
     setTasks(prev => [...prev, newTask]);
-    if (user) {
-      const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
-      trackFirestore(setDoc(docRef, sanitizeForFirestore(newTask)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
-    }
+    taskSyncService.queueTaskUpsert(user?.uid, newTask, 0);
   };
 
   const handleEditTask = useCallback((id: string, updates: Partial<Task>) => {
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
         const updated = { ...t, ...updates };
-        if (user) {
-          const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          trackFirestore(setDoc(docRef, sanitizeForFirestore(updated)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
-        }
+        taskSyncService.queueTaskUpsert(user?.uid, updated, 500);
         return updated;
       }
       return t;
     }));
-  }, [user, trackFirestore]);
+  }, [user]);
 
   const handleToggleTask = useCallback((id: string) => {
     setTasks(prev => prev.map(t => {
@@ -5198,23 +5193,17 @@ export default function App() {
           updateOrderStatus(targetOrderId, nextCompleted ? 'completed' : 'pending');
         }
 
-        if (user) {
-          const docRef = doc(db, 'users', user.uid, 'tasks', id);
-          trackFirestore(setDoc(docRef, sanitizeForFirestore(updated)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
-        }
+        taskSyncService.queueTaskUpsert(user?.uid, updated, 300);
         return updated;
       }
       return t;
     }));
-  }, [user, trackFirestore, updateOrderStatus]);
+  }, [user, updateOrderStatus]);
 
   const handleDeleteTask = useCallback((id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
-    if (user) {
-      const docRef = doc(db, 'users', user.uid, 'tasks', id);
-      trackFirestore(deleteDoc(docRef), 'delete', docRef.path).catch((e: any) => handleFirestoreError(e, 'delete', docRef.path));
-    }
-  }, [user, trackFirestore]);
+    taskSyncService.queueTaskDelete(user?.uid, id);
+  }, [user]);
 
   const handleAiSuggestTasks = async () => {
     if (!isCreativeMode) return;
@@ -5252,8 +5241,7 @@ export default function App() {
         }
 
         for (const task of newTasks) {
-          const docRef = doc(db, 'users', user.uid, 'tasks', task.id);
-          setDoc(docRef, task).catch(e => handleFirestoreError(e, 'write', docRef.path));
+          taskSyncService.queueTaskUpsert(user?.uid, task, 0);
         }
       }
     } catch (error: any) {

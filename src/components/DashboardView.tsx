@@ -40,6 +40,8 @@ import { SystemHealthState } from '../hooks/useSystemHealth';
 import { useSeller } from '../contexts/SellerContext';
 import { useAuth } from '../contexts/AuthContext';
 import { PERSONAS, chatWithPersona } from '../lib/gemini';
+import { taskSyncService } from '../lib/taskSyncService';
+import { useTaskSyncStatus } from '../hooks/useTaskSyncStatus';
 
 export interface DashboardViewProps {
   setActiveView: (v: View) => void;
@@ -294,22 +296,26 @@ export const DashboardView = React.memo(({
   const handleToggleTask = useCallback((id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setTasks(prev => {
-      const updated = prev.map(task => {
+      let toggledTask: Task | undefined;
+      const updated: Task[] = prev.map(task => {
         if (task.id === id) {
           const completed = !task.completed;
-          return { 
+          toggledTask = { 
             ...task, 
-            completed, 
-            completedAt: completed ? Date.now() : undefined 
+            completed
           };
+          return toggledTask;
         }
         return task;
       });
       safeStorage.set('proton_tasks', JSON.stringify(updated));
       window.dispatchEvent(new Event('storage'));
+      if (toggledTask) {
+        taskSyncService.queueTaskUpsert(user?.uid, toggledTask, 300);
+      }
       return updated;
     });
-  }, []);
+  }, [user]);
 
   const handleDeleteTask = useCallback((id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -317,9 +323,10 @@ export const DashboardView = React.memo(({
       const updated = prev.filter(t => t.id !== id);
       safeStorage.set('proton_tasks', JSON.stringify(updated));
       window.dispatchEvent(new Event('storage'));
+      taskSyncService.queueTaskDelete(user?.uid, id);
       return updated;
     });
-  }, []);
+  }, [user]);
 
   const handleCreateTask = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -337,8 +344,9 @@ export const DashboardView = React.memo(({
 
     const updated = [newTask, ...tasks];
     syncTasks(updated);
+    taskSyncService.queueTaskUpsert(user?.uid, newTask, 0);
     setTaskInputValue('');
-  }, [taskInputValue, taskPriority, taskCategory, tasks, syncTasks]);
+  }, [taskInputValue, taskPriority, taskCategory, tasks, syncTasks, user]);
 
   const handleAddCopilotAsTask = () => {
     if (!copilotResponse) return;
@@ -352,6 +360,7 @@ export const DashboardView = React.memo(({
       category: 'AI Advisory'
     };
     syncTasks([newTask, ...tasks]);
+    taskSyncService.queueTaskUpsert(user?.uid, newTask, 0);
   };
 
   // ---------------------------------------------------------------------------

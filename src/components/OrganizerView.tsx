@@ -33,12 +33,15 @@ import {
   Sparkles,
   Loader2,
   Package,
-  ShoppingBag
+  ShoppingBag,
+  Cloud,
+  CloudOff
 } from 'lucide-react';
 import { Task, Workflow, Theme } from '../types';
 import { translations } from '../translations';
 import { cn } from '../lib/utils';
 import { breakdownTask } from '../lib/gemini';
+import { useTaskSyncStatus } from '../hooks/useTaskSyncStatus';
 
 type OrganizerTheme = Theme;
 
@@ -82,6 +85,7 @@ export const OrganizerView = ({
 }: OrganizerViewProps) => {
   const t = translations[language].organizer;
   const commonT = translations[language].common || { add: language === 'ka' ? 'დამატება' : 'Add' };
+  const syncState = useTaskSyncStatus();
 
   // Task form states
   const [newTaskInput, setNewTaskInput] = useState('');
@@ -809,9 +813,54 @@ export const OrganizerView = ({
           <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">
             {language === 'ka' ? 'საქმეების ორგანიზატორი' : 'Workspace Organizer'}
           </h2>
-          <p className={cn("mt-1 font-medium text-xs md:text-sm uppercase tracking-wider", currentTheme.muted)}>
-            {language === 'ka' ? 'დაგეგმეთ, აკონტროლეთ დრო და განახორციელეთ იდეები ოფლაინ' : 'Organize, track elapsed time and run offline templates'}
-          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-1.5">
+            <p className={cn("font-medium text-xs md:text-sm uppercase tracking-wider", currentTheme.muted)}>
+              {language === 'ka' ? 'დაგეგმეთ, აკონტროლეთ დრო და განახორციელეთ იდეები ოფლაინ' : 'Organize, track elapsed time and run offline templates'}
+            </p>
+            
+            {/* Live Cloud Debounce Sync Indicator */}
+            <div className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border transition-all duration-300",
+              syncState.status === 'syncing' ? "bg-amber-500/10 text-amber-400 border-amber-500/30 animate-pulse" :
+              syncState.status === 'pending' ? "bg-blue-500/10 text-blue-400 border-blue-500/30" :
+              syncState.status === 'synced' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" :
+              syncState.status === 'offline' ? "bg-zinc-500/10 text-zinc-400 border-zinc-500/30" :
+              syncState.status === 'error' ? "bg-red-500/10 text-red-400 border-red-500/30" :
+              "bg-white/5 text-proton-muted/60 border-white/5"
+            )}>
+              {syncState.status === 'syncing' ? (
+                <>
+                  <Loader2 size={10} className="animate-spin text-amber-400" />
+                  <span>{language === 'ka' ? 'სინქრონიზაცია...' : 'Syncing...'}</span>
+                </>
+              ) : syncState.status === 'pending' ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+                  <span>{language === 'ka' ? 'მზადდება...' : 'Buffering...'}</span>
+                </>
+              ) : syncState.status === 'synced' ? (
+                <>
+                  <Cloud size={11} className="text-emerald-400" />
+                  <span>{language === 'ka' ? 'შენახულია ღრუბელში' : 'Synced'}</span>
+                </>
+              ) : syncState.status === 'offline' ? (
+                <>
+                  <CloudOff size={11} className="text-zinc-400" />
+                  <span>{language === 'ka' ? 'ოფლაინ ბუფერი' : 'Offline'}</span>
+                </>
+              ) : syncState.status === 'error' ? (
+                <>
+                  <AlertTriangle size={11} className="text-red-400" />
+                  <span>{language === 'ka' ? 'შეცდომა (ლოკალური)' : 'Sync Warning'}</span>
+                </>
+              ) : (
+                <>
+                  <Cloud size={11} className="opacity-50" />
+                  <span>{language === 'ka' ? 'ღრუბელი მზადაა' : 'Cloud Ready'}</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Visual theme customizer for organizer workspace */}
