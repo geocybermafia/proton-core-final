@@ -9,9 +9,14 @@ export function useThemeSync(
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'proton_theme' && e.newValue) {
         setTheme(e.newValue as Theme);
-      }
-      if (e.key === 'proton_organizer_theme' && e.newValue && setOrganizerTheme) {
-        setOrganizerTheme(e.newValue as Theme);
+        if (setOrganizerTheme) {
+          setOrganizerTheme(e.newValue as Theme);
+        }
+      } else if (e.key === 'proton_organizer_theme' && e.newValue) {
+        if (setOrganizerTheme) {
+          setOrganizerTheme(e.newValue as Theme);
+        }
+        setTheme(e.newValue as Theme);
       }
     };
 
@@ -21,3 +26,4 @@ export function useThemeSync(
     };
   }, [setTheme, setOrganizerTheme]);
 }
+

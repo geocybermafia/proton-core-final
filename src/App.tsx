@@ -4429,9 +4429,18 @@ export default function App() {
 
   const [organizerTheme, setOrganizerTheme] = useState<Theme>(() => {
     try {
-      return (safeStorage.get('proton_organizer_theme') as Theme) || 'midnight';
-    } catch { return 'midnight'; }
+      return (safeStorage.get('proton_theme') as Theme) || (safeStorage.get('proton_organizer_theme') as Theme) || 'enterprise';
+    } catch { return 'enterprise'; }
   });
+
+  const handleGlobalThemeChange = useCallback((newTheme: Theme) => {
+    setTheme(newTheme);
+    setOrganizerTheme(newTheme);
+    safeStorage.set('proton_theme', newTheme);
+    safeStorage.set('proton_organizer_theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    window.dispatchEvent(new Event('storage'));
+  }, []);
 
   useThemeSync(setTheme, setOrganizerTheme);
 
@@ -6357,8 +6366,8 @@ export default function App() {
                         onEditTask={handleEditTask}
                         onAiSuggest={handleAiSuggestTasks}
                         uiMode={uiMode === 'market' ? 'business' : uiMode}
-                        theme={organizerTheme}
-                        setTheme={setOrganizerTheme}
+                        theme={theme}
+                        setTheme={handleGlobalThemeChange}
                         onNavigateView={handleViewChange}
                       />
                     </Suspense>
@@ -6424,12 +6433,12 @@ export default function App() {
                         aiSettings={aiSettings}
                         setAiSettings={setAiSettings}
                         theme={theme}
-                        setTheme={setTheme}
+                        setTheme={handleGlobalThemeChange}
                         language={userProfile.language}
                         uiMode={uiMode === 'market' ? 'business' : uiMode}
                         setUiMode={handleModeChange}
                         organizerTheme={organizerTheme}
-                        setOrganizerTheme={setOrganizerTheme}
+                        setOrganizerTheme={handleGlobalThemeChange}
                         isAdmin={isAdmin}
                       />
                     </Suspense>
