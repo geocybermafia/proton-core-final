@@ -4461,7 +4461,19 @@ export default function App() {
     return theme;
   }, [theme, isSystemDark]);
 
+  const isInitialThemeMount = useRef(true);
+
+  const triggerSmoothTransition = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.add('theme-transitioning');
+    window.clearTimeout((window as any).__themeTransitionTimeout);
+    (window as any).__themeTransitionTimeout = window.setTimeout(() => {
+      document.documentElement.classList.remove('theme-transitioning');
+    }, 400);
+  }, []);
+
   const handleGlobalThemeChange = useCallback((newTheme: Theme) => {
+    triggerSmoothTransition();
     setTheme(newTheme);
     setOrganizerTheme(newTheme);
     safeStorage.set('proton_theme', newTheme);
@@ -4481,7 +4493,7 @@ export default function App() {
         }
       });
     }
-  }, [user, isSystemDark]);
+  }, [user, isSystemDark, triggerSmoothTransition]);
 
   useThemeSync(setTheme, setOrganizerTheme);
 
@@ -4490,13 +4502,18 @@ export default function App() {
   }, [organizerTheme]);
 
   useLayoutEffect(() => {
+    if (isInitialThemeMount.current) {
+      isInitialThemeMount.current = false;
+    } else {
+      triggerSmoothTransition();
+    }
     document.documentElement.setAttribute('data-theme', resolvedTheme);
     document.documentElement.setAttribute('data-theme-setting', theme);
     document.documentElement.setAttribute('data-color-scheme', isSystemDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-ui-mode', uiMode);
     safeStorage.set('proton_theme', theme);
     safeStorage.set('proton_ui_mode', uiMode);
-  }, [resolvedTheme, theme, uiMode, isSystemDark]);
+  }, [resolvedTheme, theme, uiMode, isSystemDark, triggerSmoothTransition]);
   
   const [chatHistory, setChatHistory] = useState<PersonaHistory>(() => {
     try {

@@ -190,13 +190,28 @@ html, body, #root {
 
 @layer base {
   body {
-    @apply text-proton-text antialiased transition-colors duration-500;
+    @apply text-proton-text antialiased;
     background-color: var(--proton-bg);
     background-image: var(--proton-bg-image);
     background-attachment: fixed;
     margin: 0;
     padding: 0;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+}
+
+/* Smooth Global Theme Transition */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              fill 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition-delay: 0s !important;
 }
 
 .custom-scrollbar-minimal::-webkit-scrollbar {
