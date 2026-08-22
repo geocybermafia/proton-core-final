@@ -1665,6 +1665,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </span>
                       </div>
 
+                      {themeSchedule?.enabled && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2 text-xs">
+                          <span className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+                            <Clock size={14} className="text-amber-400 shrink-0" />
+                            {language === 'ka' 
+                              ? 'აქტიურია დღე/ღამის გრაფიკი. ხელით არჩევა გადართავს მუდმივ თემაზე.' 
+                              : 'Day/Night Schedule is active. Selecting a theme will apply it in manual mode.'}
+                          </span>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
                         {THEMES.map((tInfo) => {
                           const displayLabel = (t as any)[tInfo.labelKey] || tInfo.fallbackLabel;
@@ -1673,6 +1684,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                               key={tInfo.id}
                               type="button"
                               onClick={() => {
+                                if (themeSchedule?.enabled && onUpdateThemeSchedule) {
+                                  onUpdateThemeSchedule({ ...themeSchedule, enabled: false });
+                                }
                                 setTheme(tInfo.id);
                                 showToast(
                                   language === 'ka' 

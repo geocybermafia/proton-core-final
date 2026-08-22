@@ -29,6 +29,8 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
 
   const prevStatusRef = useRef<SystemHealthStatus>(status);
   const isCheckingRef = useRef<boolean>(false);
+  const initialBootRef = useRef<boolean>(true);
+  const consecutiveDegradedRef = useRef<number>(0);
 
   const checkHealth = useCallback(async (): Promise<SystemHealthStatus> => {
     if (isCheckingRef.current) return status;
@@ -54,7 +56,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
     try {
       // Light ping to Firestore server to verify actual connection and measure latency
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('timeout')), 4000)
+        setTimeout(() => reject(new Error('timeout')), 5000)
       );
 
       const pingDocRef = doc(db, 'system', 'config');
@@ -69,9 +71,12 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
       setLatency(measuredLatency);
       firestoreConnected = true;
 
-      if (measuredLatency > 1500) {
-        newStatus = 'degraded';
+      // Realistic cloud roundtrip threshold (> 3200ms for degraded)
+      if (measuredLatency > 3200) {
+        consecutiveDegradedRef.current += 1;
+        newStatus = consecutiveDegradedRef.current >= 2 ? 'degraded' : 'optimal';
       } else {
+        consecutiveDegradedRef.current = 0;
         newStatus = 'optimal';
       }
     } catch (err: any) {
@@ -86,7 +91,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
       } else {
         // Permission errors or document missing still mean server responded
         firestoreConnected = true;
-        newStatus = measuredLatency > 1500 ? 'degraded' : 'optimal';
+        newStatus = measuredLatency > 3200 ? 'degraded' : 'optimal';
       }
     } finally {
       setIsFirestoreConnected(firestoreConnected);
@@ -98,8 +103,15 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
     return newStatus;
   }, [status]);
 
-  // Handle status transition toasts
+  // Handle status transition toasts (strictly ignore initial mount/boot)
   useEffect(() => {
+    // Skip toast notifications on initial app boot/refresh
+    if (initialBootRef.current) {
+      initialBootRef.current = false;
+      prevStatusRef.current = status;
+      return;
+    }
+
     const prev = prevStatusRef.current;
     if (prev !== status) {
       prevStatusRef.current = status;
@@ -112,7 +124,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
           'error',
           5000
         );
-      } else if (status === 'degraded') {
+      } else if (status === 'degraded' && prev === 'optimal') {
         showToast(
           language === 'ka'
             ? '⚡ ინტერნეტი შენელებულია: რეაგირების დრო გაზრდილია'
@@ -120,7 +132,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
           'warning',
           4000
         );
-      } else if (status === 'optimal' && (prev === 'offline' || prev === 'degraded')) {
+      } else if (status === 'optimal' && prev === 'offline') {
         showToast(
           language === 'ka'
             ? '✅ ინტერნეტთან კავშირი აღდგენილია'

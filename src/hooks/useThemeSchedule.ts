@@ -58,9 +58,22 @@ export function useThemeSchedule(user: User | null, userProfile?: UserProfile) {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'proton_theme_schedule' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setScheduleState((prev) => ({ ...prev, ...parsed }));
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 

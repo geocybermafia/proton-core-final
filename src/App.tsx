@@ -4946,13 +4946,12 @@ export default function App() {
 
         if (rawData && rawData.theme && typeof rawData.theme === 'string') {
           const remoteTheme = rawData.theme as Theme;
-          const validThemes: Theme[] = ['enterprise', 'proton', 'light', 'vibrant', 'midnight', 'titanium', 'forest', 'sunset', 'rose'];
+          const validThemes: Theme[] = ['auto', 'enterprise', 'proton', 'light', 'vibrant', 'midnight', 'titanium', 'forest', 'sunset', 'rose'];
           if (validThemes.includes(remoteTheme)) {
             setTheme(remoteTheme);
             setOrganizerTheme(remoteTheme);
             safeStorage.set('proton_theme', remoteTheme);
             safeStorage.set('proton_organizer_theme', remoteTheme);
-            document.documentElement.setAttribute('data-theme', remoteTheme);
           }
         }
 
