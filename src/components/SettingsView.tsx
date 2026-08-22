@@ -46,6 +46,7 @@ import {
   ShieldCheck,
   Activity,
   Smartphone,
+  Laptop,
   KeyRound
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -83,16 +84,17 @@ interface SettingsViewProps {
   isAdmin?: boolean;
 }
 
-const THEMES: { id: Theme; label: string; icon: React.ReactNode; color: string }[] = [
-  { id: 'enterprise', label: 'Enterprise', icon: <Shield size={18} />, color: 'bg-indigo-500' },
-  { id: 'light', label: 'Light', icon: <Sun size={18} />, color: 'bg-slate-200' },
-  { id: 'titanium', label: 'Titanium', icon: <Circle size={18} />, color: 'bg-slate-400' },
-  { id: 'proton', label: 'Proton Dark', icon: <Zap size={18} />, color: 'bg-cyan-400' },
-  { id: 'forest', label: 'Forest', icon: <Trees size={18} />, color: 'bg-emerald-500' },
-  { id: 'sunset', label: 'Sunset', icon: <Sunrise size={18} />, color: 'bg-orange-500' },
-  { id: 'rose', label: 'Rose', icon: <Heart size={18} />, color: 'bg-rose-500' },
-  { id: 'vibrant', label: 'Nebula', icon: <Sparkles size={18} />, color: 'bg-purple-500' },
-  { id: 'midnight', label: 'Dark', icon: <Moon size={18} />, color: 'bg-slate-900' },
+const THEMES: { id: Theme; labelKey: string; fallbackLabel: string; icon: React.ReactNode; color: string }[] = [
+  { id: 'auto', labelKey: 'theme_auto', fallbackLabel: 'System (Auto)', icon: <Laptop size={18} />, color: 'bg-blue-600' },
+  { id: 'enterprise', labelKey: 'theme_enterprise', fallbackLabel: 'Enterprise', icon: <Shield size={18} />, color: 'bg-indigo-500' },
+  { id: 'light', labelKey: 'theme_light', fallbackLabel: 'Light', icon: <Sun size={18} />, color: 'bg-slate-200' },
+  { id: 'titanium', labelKey: 'theme_titanium', fallbackLabel: 'Titanium', icon: <Circle size={18} />, color: 'bg-slate-400' },
+  { id: 'proton', labelKey: 'theme_proton', fallbackLabel: 'Proton Dark', icon: <Zap size={18} />, color: 'bg-cyan-400' },
+  { id: 'forest', labelKey: 'theme_forest', fallbackLabel: 'Forest', icon: <Trees size={18} />, color: 'bg-emerald-500' },
+  { id: 'sunset', labelKey: 'theme_sunset', fallbackLabel: 'Sunset', icon: <Sunrise size={18} />, color: 'bg-orange-500' },
+  { id: 'rose', labelKey: 'theme_rose', fallbackLabel: 'Rose', icon: <Heart size={18} />, color: 'bg-rose-500' },
+  { id: 'vibrant', labelKey: 'theme_vibrant', fallbackLabel: 'Nebula', icon: <Sparkles size={18} />, color: 'bg-purple-500' },
+  { id: 'midnight', labelKey: 'theme_midnight', fallbackLabel: 'Dark', icon: <Moon size={18} />, color: 'bg-slate-900' },
 ];
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -1447,72 +1449,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         error={phoneError ? (language === 'ka' ? 'არასწორი ნომრის ფორმატი (სულ მცირე 7 ციფრი)' : 'Invalid phone format (at least 7 digits, e.g. +995 ...)') : undefined}
                         placeholder="+995 ..."
                       />
-
-                      {/* Selectable Business / System Role */}
-                      <div className="space-y-2 sm:col-span-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-proton-muted flex items-center gap-1.5">
-                          <Briefcase size={12} className="text-proton-accent" />
-                          {language === 'ka' ? 'თქვენი საქმიანობა (როლი)' : 'Your Profession / Role'}
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
-                          {[
-                            { id: 'System Architect', label: language === 'ka' ? 'დიზაინერი' : 'Designer' },
-                            { id: 'Founder & CEO', label: language === 'ka' ? 'დამფუძნებელი' : 'Founder & CEO' },
-                            { id: 'Security Auditor', label: language === 'ka' ? 'კრეატიული დირექტორი' : 'Creative Director' },
-                            { id: 'AI Specialist', label: language === 'ka' ? 'მარკეტოლოგი' : 'Marketer' },
-                            { id: 'Lead Developer', label: language === 'ka' ? 'დეველოპერი' : 'Developer' },
-                          ].map((role) => (
-                            <button
-                              key={role.id}
-                              type="button"
-                              onClick={() => {
-                                setUserProfile(prev => ({ ...prev, role: role.id }));
-                                showToast(
-                                  language === 'ka' ? `საქმიანობა განახლდა: ${role.label}` : `Profession set to: ${role.label}`,
-                                  'info'
-                                );
-                              }}
-                              className={cn(
-                                "p-3 rounded-xl border text-[10px] font-bold uppercase tracking-widest text-center transition-all cursor-pointer active:scale-95",
-                                userProfile.role === role.id 
-                                  ? "bg-proton-accent/15 border-proton-accent text-proton-accent shadow-md shadow-proton-accent/5" 
-                                  : "bg-proton-bg border-proton-border/60 text-proton-muted hover:border-proton-accent/40 hover:text-proton-text"
-                              )}
-                            >
-                              {role.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Active Node System Status Card */}
-                    <div className="p-6 bg-proton-secondary/5 border border-proton-border/30 rounded-2xl space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Activity size={18} className="text-proton-accent animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-proton-text">{language === 'ka' ? 'სისტემის სტატუსი' : 'Workspace Status'}</span>
-                        </div>
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'კავშირი' : 'Connection'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'უსაფრთხოა' : 'Protected'}</span>
-                        </div>
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'მუშაობა' : 'System Status'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'გამართული' : 'Excellent'}</span>
-                        </div>
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'შენახვა' : 'Auto-Save'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'აქტიური' : 'Active'}</span>
-                        </div>
-                        <div className="p-3 bg-proton-bg border border-proton-border/40 rounded-xl">
-                          <span className="text-[8px] font-black text-proton-muted block uppercase tracking-wider">{language === 'ka' ? 'რეჟიმი' : 'Current Mode'}</span>
-                          <span className="text-xs font-mono font-bold text-proton-accent mt-1 block">{language === 'ka' ? 'მზადყოფნა' : 'Ready'}</span>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Interactive Danger Zone Section */}
@@ -1722,45 +1658,48 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        {THEMES.map((tInfo) => (
-                          <button
-                            key={tInfo.id}
-                            type="button"
-                            onClick={() => {
-                              setTheme(tInfo.id);
-                              showToast(
-                                language === 'ka' 
-                                  ? `აქტიური გახდა გლობალური თემა: ${tInfo.label}` 
-                                  : `Global theme updated to: ${tInfo.label}`,
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+                        {THEMES.map((tInfo) => {
+                          const displayLabel = (t as any)[tInfo.labelKey] || tInfo.fallbackLabel;
+                          return (
+                            <button
+                              key={tInfo.id}
+                              type="button"
+                              onClick={() => {
+                                setTheme(tInfo.id);
+                                showToast(
+                                  language === 'ka' 
+                                    ? `აქტიური გახდა გლობალური თემა: ${displayLabel}` 
+                                    : `Global theme updated to: ${displayLabel}`,
                                   'success'
-                              );
-                            }}
-                            className={cn(
-                              "flex flex-col items-center gap-3 p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
-                              theme === tInfo.id 
-                                ? "bg-proton-card border-proton-accent shadow-xl ring-4 ring-proton-accent/5 scale-[1.02]" 
-                                : "border-proton-border bg-proton-secondary/5 hover:bg-proton-secondary/10 hover:border-proton-accent/30"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-md",
-                              theme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/10 text-proton-muted"
-                            )}>
-                              {tInfo.icon}
-                            </div>
-                            <span className={cn(
-                              "text-[9px] font-black uppercase tracking-widest",
-                              theme === tInfo.id ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
-                            )}>{tInfo.label}</span>
-                            {theme === tInfo.id && (
-                              <motion.div 
-                                layoutId="active-theme-dot"
-                                className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
-                              />
-                            )}
-                          </button>
-                        ))}
+                                );
+                              }}
+                              className={cn(
+                                "flex flex-col items-center gap-2.5 p-3 sm:p-4 rounded-2xl transition-all border-2 group relative overflow-hidden",
+                                theme === tInfo.id 
+                                  ? "bg-proton-card border-proton-accent shadow-xl ring-4 ring-proton-accent/5 scale-[1.02]" 
+                                  : "border-proton-border bg-proton-secondary/5 hover:bg-proton-secondary/10 hover:border-proton-accent/30"
+                              )}
+                            >
+                              <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all shadow-md",
+                                theme === tInfo.id ? "bg-proton-accent text-proton-bg" : "bg-proton-secondary/10 text-proton-muted"
+                              )}>
+                                {tInfo.icon}
+                              </div>
+                              <span className={cn(
+                                "text-[9px] font-black uppercase tracking-widest text-center truncate w-full px-1",
+                                theme === tInfo.id ? "text-proton-text" : "text-proton-muted group-hover:text-proton-text"
+                              )}>{displayLabel}</span>
+                              {theme === tInfo.id && (
+                                <motion.div 
+                                  layoutId="active-theme-dot"
+                                  className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-proton-accent shadow-[0_0_10px_rgba(0,242,255,0.8)]" 
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 

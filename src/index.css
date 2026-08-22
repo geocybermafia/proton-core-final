@@ -29,7 +29,8 @@
   --proton-bg-size: cover;
 }
 
-[data-theme='enterprise'] {
+[data-theme='enterprise'],
+[data-theme='auto']:not([data-color-scheme='light']) {
   --proton-accent: #6366f1;
   --proton-accent-hover: #4f46e5;
   --proton-secondary: #818cf8;
@@ -57,7 +58,8 @@
   --proton-bg-size: auto, 50px 50px;
 }
 
-[data-theme='light'] {
+[data-theme='light'],
+[data-theme='auto'][data-color-scheme='light'] {
   --proton-accent: #2563eb;
   --proton-accent-hover: #1d4ed8;
   --proton-secondary: #3b82f6;

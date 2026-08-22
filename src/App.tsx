@@ -798,7 +798,7 @@ const LegacyOrganizerView = ({
     }
   };
 
-  const currentTheme = themes[theme] || themes.enterprise;
+  const currentTheme = (themes as Record<string, any>)[theme] || themes.enterprise;
 
   // Dynamic workload summary for the selected calendar month
   const monthStats = useMemo(() => {
@@ -4423,22 +4423,54 @@ export default function App() {
 
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      return (safeStorage.get('proton_theme') as Theme) || 'enterprise';
-    } catch { return 'enterprise'; }
+      return (safeStorage.get('proton_theme') as Theme) || 'auto';
+    } catch { return 'auto'; }
   });
 
   const [organizerTheme, setOrganizerTheme] = useState<Theme>(() => {
     try {
-      return (safeStorage.get('proton_theme') as Theme) || (safeStorage.get('proton_organizer_theme') as Theme) || 'enterprise';
-    } catch { return 'enterprise'; }
+      return (safeStorage.get('proton_theme') as Theme) || (safeStorage.get('proton_organizer_theme') as Theme) || 'auto';
+    } catch { return 'auto'; }
   });
+
+  const [isSystemDark, setIsSystemDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return true;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateScheme = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsSystemDark(e.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updateScheme);
+      return () => mediaQuery.removeEventListener('change', updateScheme);
+    } else if ((mediaQuery as any).addListener) {
+      (mediaQuery as any).addListener(updateScheme);
+      return () => (mediaQuery as any).removeListener(updateScheme);
+    }
+  }, []);
+
+  const resolvedTheme = useMemo<Theme>(() => {
+    if (theme === 'auto') {
+      return isSystemDark ? 'enterprise' : 'light';
+    }
+    return theme;
+  }, [theme, isSystemDark]);
 
   const handleGlobalThemeChange = useCallback((newTheme: Theme) => {
     setTheme(newTheme);
     setOrganizerTheme(newTheme);
     safeStorage.set('proton_theme', newTheme);
     safeStorage.set('proton_organizer_theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
+    
+    const effective = newTheme === 'auto' ? (isSystemDark ? 'enterprise' : 'light') : newTheme;
+    document.documentElement.setAttribute('data-theme', effective);
+    document.documentElement.setAttribute('data-theme-setting', newTheme);
+    document.documentElement.setAttribute('data-color-scheme', isSystemDark ? 'dark' : 'light');
     window.dispatchEvent(new Event('storage'));
 
     if (user?.uid) {
@@ -4449,7 +4481,7 @@ export default function App() {
         }
       });
     }
-  }, [user]);
+  }, [user, isSystemDark]);
 
   useThemeSync(setTheme, setOrganizerTheme);
 
@@ -4458,11 +4490,13 @@ export default function App() {
   }, [organizerTheme]);
 
   useLayoutEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+    document.documentElement.setAttribute('data-theme-setting', theme);
+    document.documentElement.setAttribute('data-color-scheme', isSystemDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-ui-mode', uiMode);
     safeStorage.set('proton_theme', theme);
     safeStorage.set('proton_ui_mode', uiMode);
-  }, [theme, uiMode]);
+  }, [resolvedTheme, theme, uiMode, isSystemDark]);
   
   const [chatHistory, setChatHistory] = useState<PersonaHistory>(() => {
     try {
