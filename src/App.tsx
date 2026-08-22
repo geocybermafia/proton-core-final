@@ -4440,7 +4440,16 @@ export default function App() {
     safeStorage.set('proton_organizer_theme', newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
     window.dispatchEvent(new Event('storage'));
-  }, []);
+
+    if (user?.uid) {
+      const userRef = doc(db, 'users', user.uid);
+      setDoc(userRef, { theme: newTheme }, { merge: true }).catch((err) => {
+        if (err.code !== 'unavailable') {
+          console.warn("Could not sync theme to Firestore profile:", err);
+        }
+      });
+    }
+  }, [user]);
 
   useThemeSync(setTheme, setOrganizerTheme);
 
@@ -4872,6 +4881,18 @@ export default function App() {
           };
         });
 
+        if (rawData && rawData.theme && typeof rawData.theme === 'string') {
+          const remoteTheme = rawData.theme as Theme;
+          const validThemes: Theme[] = ['enterprise', 'proton', 'light', 'vibrant', 'midnight', 'titanium', 'forest', 'sunset', 'rose'];
+          if (validThemes.includes(remoteTheme)) {
+            setTheme(remoteTheme);
+            setOrganizerTheme(remoteTheme);
+            safeStorage.set('proton_theme', remoteTheme);
+            safeStorage.set('proton_organizer_theme', remoteTheme);
+            document.documentElement.setAttribute('data-theme', remoteTheme);
+          }
+        }
+
         if (rawData && rawData.aiSettings) {
           const remoteAi = rawData.aiSettings as Partial<GlobalAiSettings>;
           setAiSettings(prev => ({
@@ -4926,7 +4947,8 @@ export default function App() {
             compute_cycles: 100,
             storage_gb: 0.5,
             node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`,
-            language: userProfile.language
+            language: userProfile.language,
+            theme: (safeStorage.get('proton_theme') as Theme) || 'enterprise'
           };
           await setDoc(docRef, sanitizeForFirestore(defaultProfile)).catch(e => {
             if (e.code !== 'unavailable') {

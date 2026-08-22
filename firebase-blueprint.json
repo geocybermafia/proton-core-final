@@ -9,6 +9,7 @@
         "email": { "type": "string" },
         "displayName": { "type": "string" },
         "language": { "type": "string", "enum": ["en", "ka"] },
+        "theme": { "type": "string", "enum": ["enterprise", "proton", "light", "vibrant", "midnight", "titanium", "forest", "sunset", "rose"] },
         "aiSettings": {
           "type": "object",
           "properties": {

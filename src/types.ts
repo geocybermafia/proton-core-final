@@ -13,6 +13,7 @@ export type UserProfile = {
   bio?: string;
   avatar?: string;
   role?: string;
+  theme?: Theme;
   showCommercialHub?: boolean;
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;

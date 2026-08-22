@@ -749,6 +749,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           phoneNumber: '',
           avatar: '',
           role: 'System Architect',
+          theme: 'proton',
           showCommercialHub: false,
           securityPin: deleteField()
         }, { merge: true });
