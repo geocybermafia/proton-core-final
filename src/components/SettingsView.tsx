@@ -47,11 +47,14 @@ import {
   Activity,
   Smartphone,
   Laptop,
-  KeyRound
+  KeyRound,
+  Clock,
+  Sunset
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { UserProfile, GlobalAiSettings, Theme } from '../types';
+import { UserProfile, GlobalAiSettings, Theme, ThemeSchedule } from '../types';
+import { DEFAULT_THEME_SCHEDULE, isDaytime } from '../hooks/useThemeSchedule';
 import { useToast } from './Toast';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,6 +79,8 @@ interface SettingsViewProps {
   setAiSettings: React.Dispatch<React.SetStateAction<GlobalAiSettings>>;
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  themeSchedule?: ThemeSchedule;
+  onUpdateThemeSchedule?: (schedule: ThemeSchedule | ((prev: ThemeSchedule) => ThemeSchedule)) => void;
   language: 'en' | 'ka';
   uiMode: 'business' | 'creative';
   setUiMode: (mode: 'business' | 'creative') => void;
@@ -104,6 +109,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setAiSettings,
   theme,
   setTheme,
+  themeSchedule,
+  onUpdateThemeSchedule,
   language,
   uiMode,
   setUiMode,
@@ -1702,6 +1709,231 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         })}
                       </div>
                     </div>
+
+                    {/* 3. Day & Night Auto Schedule */}
+                    {(() => {
+                      const currentSchedule = themeSchedule || DEFAULT_THEME_SCHEDULE;
+                      const isDayNow = isDaytime(currentSchedule.dayStart, currentSchedule.dayEnd);
+
+                      return (
+                        <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-6">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5">
+                              <div className={cn(
+                                "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-md",
+                                currentSchedule.enabled ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-proton-secondary/20 text-proton-muted"
+                              )}>
+                                <Clock size={24} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <label className="text-xs font-black uppercase tracking-wider text-proton-text block">
+                                    {(t as any).theme_schedule_title || (language === 'ka' ? 'დღე/ღამის ავტომატური გრაფიკი' : 'Day & Night Auto Schedule')}
+                                  </label>
+                                  {currentSchedule.enabled && (
+                                    <span className={cn(
+                                      "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border flex items-center gap-1",
+                                      isDayNow ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-indigo-500/10 text-indigo-400 border-indigo-500/30"
+                                    )}>
+                                      {isDayNow ? <Sun size={10} /> : <Moon size={10} />}
+                                      {isDayNow 
+                                        ? ((t as any).theme_schedule_active_day || (language === 'ka' ? 'აქტიურია დღის რეჟიმი' : 'Day Mode Active'))
+                                        : ((t as any).theme_schedule_active_night || (language === 'ka' ? 'აქტიურია ღამის რეჟიმი' : 'Night Mode Active'))}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-proton-muted font-bold tracking-tight mt-0.5">
+                                  {(t as any).theme_schedule_desc || (language === 'ka' ? 'თემის ავტომატური გადართვა დღის დროის მიხედვით თვალის დასაცავად' : 'Automatically switch themes based on time of day')}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Toggle Switch */}
+                            <div 
+                              className={cn(
+                                "w-14 h-7 rounded-full relative transition-all border shrink-0 cursor-pointer p-0.5",
+                                currentSchedule.enabled ? "bg-amber-500 border-amber-400 shadow-md shadow-amber-500/20" : "bg-proton-secondary/30 border-proton-border"
+                              )}
+                              onClick={() => {
+                                const nextEnabled = !currentSchedule.enabled;
+                                const updated = { ...currentSchedule, enabled: nextEnabled };
+                                if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                showToast(
+                                  nextEnabled 
+                                    ? (language === 'ka' ? 'დღე/ღამის ავტო გრაფიკი გააქტიურდა!' : 'Day & Night Schedule activated!')
+                                    : (language === 'ka' ? 'დღე/ღამის ავტო გრაფიკი გამორთულია.' : 'Day & Night Schedule deactivated.'),
+                                  nextEnabled ? 'success' : 'info'
+                                );
+                              }}
+                              role="switch"
+                              aria-checked={currentSchedule.enabled}
+                            >
+                              <motion.div 
+                                layout
+                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                className={cn(
+                                  "w-5 h-5 rounded-full shadow-md flex items-center justify-center",
+                                  currentSchedule.enabled ? "ml-auto bg-white text-amber-600" : "ml-0 bg-proton-muted/60 text-proton-bg"
+                                )}
+                              >
+                                {currentSchedule.enabled ? <Sun size={12} /> : <Moon size={12} />}
+                              </motion.div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Controls when Enabled */}
+                          {currentSchedule.enabled && (
+                            <motion.div 
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="space-y-5 pt-3 border-t border-proton-border/40"
+                            >
+                              {/* Quick Presets */}
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-proton-muted mr-1">
+                                  {language === 'ka' ? 'პრესეტები:' : 'Presets:'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = { ...currentSchedule, dayStart: '09:00', dayEnd: '19:00' };
+                                    if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    showToast(language === 'ka' ? 'მორგებულია: სტანდარტული (09:00 - 19:00)' : 'Applied: Standard (09:00 - 19:00)', 'info');
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-bold px-3 py-1 rounded-lg border transition-all",
+                                    currentSchedule.dayStart === '09:00' && currentSchedule.dayEnd === '19:00'
+                                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm"
+                                      : "bg-proton-secondary/10 border-proton-border text-proton-muted hover:text-proton-text"
+                                  )}
+                                >
+                                  {(t as any).theme_schedule_preset_standard || '09:00 - 19:00'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = { ...currentSchedule, dayStart: '08:00', dayEnd: '18:00' };
+                                    if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    showToast(language === 'ka' ? 'მორგებულია: სამუშაო (08:00 - 18:00)' : 'Applied: Workday (08:00 - 18:00)', 'info');
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-bold px-3 py-1 rounded-lg border transition-all",
+                                    currentSchedule.dayStart === '08:00' && currentSchedule.dayEnd === '18:00'
+                                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm"
+                                      : "bg-proton-secondary/10 border-proton-border text-proton-muted hover:text-proton-text"
+                                  )}
+                                >
+                                  {(t as any).theme_schedule_preset_work || '08:00 - 18:00'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = { ...currentSchedule, dayStart: '07:00', dayEnd: '21:00' };
+                                    if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    showToast(language === 'ka' ? 'მორგებულია: გახანგრძლივებული (07:00 - 21:00)' : 'Applied: Extended (07:00 - 21:00)', 'info');
+                                  }}
+                                  className={cn(
+                                    "text-[10px] font-bold px-3 py-1 rounded-lg border transition-all",
+                                    currentSchedule.dayStart === '07:00' && currentSchedule.dayEnd === '21:00'
+                                      ? "bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm"
+                                      : "bg-proton-secondary/10 border-proton-border text-proton-muted hover:text-proton-text"
+                                  )}
+                                >
+                                  {(t as any).theme_schedule_preset_extended || '07:00 - 21:00'}
+                                </button>
+                              </div>
+
+                              {/* Time Range Pickers */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl bg-proton-secondary/10 border border-proton-border/60 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                      <Sun size={14} />
+                                      {(t as any).theme_schedule_day_start || (language === 'ka' ? 'დღის რეჟიმის დასაწყისი' : 'Daytime Start')}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="time"
+                                    value={currentSchedule.dayStart || '09:00'}
+                                    onChange={(e) => {
+                                      const updated = { ...currentSchedule, dayStart: e.target.value };
+                                      if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    }}
+                                    className="w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-sm font-mono text-proton-text focus:border-amber-400 focus:outline-none"
+                                  />
+                                </div>
+
+                                <div className="p-4 rounded-xl bg-proton-secondary/10 border border-proton-border/60 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-black uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                                      <Moon size={14} />
+                                      {(t as any).theme_schedule_day_end || (language === 'ka' ? 'ღამის რეჟიმის დასაწყისი' : 'Nighttime Start')}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="time"
+                                    value={currentSchedule.dayEnd || '19:00'}
+                                    onChange={(e) => {
+                                      const updated = { ...currentSchedule, dayEnd: e.target.value };
+                                      if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    }}
+                                    className="w-full bg-proton-bg border border-proton-border rounded-lg px-3 py-2 text-sm font-mono text-proton-text focus:border-indigo-400 focus:outline-none"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Theme Selectors for Day & Night */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* Day Theme */}
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-wider text-proton-muted flex items-center gap-1">
+                                    <Sun size={12} className="text-amber-400" />
+                                    {(t as any).theme_schedule_day_theme || (language === 'ka' ? 'დღის თემა' : 'Daytime Theme')}
+                                  </label>
+                                  <select
+                                    value={currentSchedule.dayTheme || 'light'}
+                                    onChange={(e) => {
+                                      const updated = { ...currentSchedule, dayTheme: e.target.value as Theme };
+                                      if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    }}
+                                    className="w-full bg-proton-bg border border-proton-border rounded-xl px-3 py-2.5 text-xs font-bold text-proton-text focus:border-proton-accent focus:outline-none"
+                                  >
+                                    {THEMES.filter(th => th.id !== 'auto').map(th => (
+                                      <option key={th.id} value={th.id}>
+                                        {(t as any)[th.labelKey] || th.fallbackLabel}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                {/* Night Theme */}
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase tracking-wider text-proton-muted flex items-center gap-1">
+                                    <Moon size={12} className="text-indigo-400" />
+                                    {(t as any).theme_schedule_night_theme || (language === 'ka' ? 'ღამის თემა' : 'Nighttime Theme')}
+                                  </label>
+                                  <select
+                                    value={currentSchedule.nightTheme || 'enterprise'}
+                                    onChange={(e) => {
+                                      const updated = { ...currentSchedule, nightTheme: e.target.value as Theme };
+                                      if (onUpdateThemeSchedule) onUpdateThemeSchedule(updated);
+                                    }}
+                                    className="w-full bg-proton-bg border border-proton-border rounded-xl px-3 py-2.5 text-xs font-bold text-proton-text focus:border-proton-accent focus:outline-none"
+                                  >
+                                    {THEMES.filter(th => th.id !== 'auto').map(th => (
+                                      <option key={th.id} value={th.id}>
+                                        {(t as any)[th.labelKey] || th.fallbackLabel}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* 4. Zen Mode and system states */}
                     <div className={cn(

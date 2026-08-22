@@ -14,6 +14,7 @@ export type UserProfile = {
   avatar?: string;
   role?: string;
   theme?: Theme;
+  themeSchedule?: ThemeSchedule;
   showCommercialHub?: boolean;
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;
@@ -67,6 +68,14 @@ export type Workflow = {
 };
 
 export type Theme = 'auto' | 'enterprise' | 'proton' | 'light' | 'vibrant' | 'midnight' | 'titanium' | 'forest' | 'sunset' | 'rose';
+
+export interface ThemeSchedule {
+  enabled: boolean;
+  dayStart: string; // e.g. "09:00"
+  dayEnd: string;   // e.g. "19:00"
+  dayTheme: Theme;  // e.g. "light" or "enterprise"
+  nightTheme: Theme; // e.g. "proton" or "midnight"
+}
 
 export type LogEntry = {
   id: string;

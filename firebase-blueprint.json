@@ -10,6 +10,16 @@
         "displayName": { "type": "string" },
         "language": { "type": "string", "enum": ["en", "ka"] },
         "theme": { "type": "string", "enum": ["auto", "enterprise", "proton", "light", "vibrant", "midnight", "titanium", "forest", "sunset", "rose"] },
+        "themeSchedule": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "dayStart": { "type": "string" },
+            "dayEnd": { "type": "string" },
+            "dayTheme": { "type": "string" },
+            "nightTheme": { "type": "string" }
+          }
+        },
         "aiSettings": {
           "type": "object",
           "properties": {

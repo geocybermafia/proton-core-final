@@ -422,7 +422,19 @@ export const translations = {
       region: "Operating Region",
       phone: "Phone Number",
       appearance_desc: "Customize management interface visualization.",
-      zen: "Zen Mode (Focus)"
+      zen: "Zen Mode (Focus)",
+      theme_schedule_title: "Day & Night Auto Schedule",
+      theme_schedule_desc: "Automatically adjust interface themes based on time of day",
+      theme_schedule_enabled: "Enable Day/Night Schedule",
+      theme_schedule_day_start: "Daytime Start",
+      theme_schedule_day_end: "Nighttime Start",
+      theme_schedule_day_theme: "Day Theme",
+      theme_schedule_night_theme: "Night Theme",
+      theme_schedule_active_day: "Daytime Mode Active",
+      theme_schedule_active_night: "Nighttime Mode Active",
+      theme_schedule_preset_standard: "Standard (09:00 - 19:00)",
+      theme_schedule_preset_work: "Workday (08:00 - 18:00)",
+      theme_schedule_preset_extended: "Extended (07:00 - 21:00)"
     },
     editor: {
       title: "Workflow Architect",
@@ -882,7 +894,19 @@ export const translations = {
       region: "რეგიონი",
       phone: "ტელეფონი",
       appearance_desc: "ინტერფეისის ვიზუალიზაციის კონფიგურაცია.",
-      zen: "Zen რეჟიმი"
+      zen: "Zen რეჟიმი",
+      theme_schedule_title: "დღე/ღამის ავტომატური გრაფიკი",
+      theme_schedule_desc: "თემის ავტომატური გადართვა დღის დროის მიხედვით თვალის დასაცავად",
+      theme_schedule_enabled: "დღე/ღამის გრაფიკის ჩართვა",
+      theme_schedule_day_start: "დღის რეჟიმის დასაწყისი",
+      theme_schedule_day_end: "ღამის რეჟიმის დასაწყისი",
+      theme_schedule_day_theme: "დღის თემა",
+      theme_schedule_night_theme: "ღამის თემა",
+      theme_schedule_active_day: "აქტიურია დღის რეჟიმი",
+      theme_schedule_active_night: "აქტიურია ღამის რეჟიმი",
+      theme_schedule_preset_standard: "სტანდარტული (09:00 - 19:00)",
+      theme_schedule_preset_work: "სამუშაო (08:00 - 18:00)",
+      theme_schedule_preset_extended: "გახანგრძლივებული (07:00 - 21:00)"
     },
     editor: {
       title: "ლოგიკური არქიტექტორი",

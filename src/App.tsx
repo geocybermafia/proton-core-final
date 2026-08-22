@@ -25,6 +25,7 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
 }
 
 import { useThemeSync } from './hooks/useThemeSync';
+import { useThemeSchedule } from './hooks/useThemeSchedule';
 import { AutomationEngine } from './components/AutomationEngine';
 
 const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
@@ -4421,6 +4422,42 @@ export default function App() {
     }
   }, [addLog]);
 
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    const defaultProfile: UserProfile = {
+      name: 'Proton Member',
+      email: '',
+      language: 'en',
+      region: 'Tbilisi',
+      notifications: true,
+      role: 'Proton Member',
+      phoneNumber: '',
+      id: 'default-user',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Proton',
+      showCommercialHub: false
+    };
+    try {
+      const saved = safeStorage.get('user-profile');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Ensure language is valid
+        if (parsed.language !== 'en' && parsed.language !== 'ka') {
+          parsed.language = 'en';
+        }
+        return { ...defaultProfile, ...parsed };
+      }
+    } catch {
+      // Return default on error
+    }
+    return defaultProfile;
+  });
+
+  const handleUpdateUserProfile = useCallback((updates: Partial<UserProfile>) => {
+    setUserProfile(prev => ({
+      ...prev,
+      ...updates
+    }));
+  }, []);
+
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       return (safeStorage.get('proton_theme') as Theme) || 'auto';
@@ -4454,12 +4491,21 @@ export default function App() {
     }
   }, []);
 
-  const resolvedTheme = useMemo<Theme>(() => {
-    if (theme === 'auto') {
-      return isSystemDark ? 'enterprise' : 'light';
+  const { schedule: themeSchedule, updateSchedule: handleUpdateThemeSchedule, scheduledTargetTheme } = useThemeSchedule(user, userProfile);
+
+  const activeEffectiveTheme = useMemo<Theme>(() => {
+    if (themeSchedule.enabled) {
+      return scheduledTargetTheme;
     }
     return theme;
-  }, [theme, isSystemDark]);
+  }, [themeSchedule.enabled, scheduledTargetTheme, theme]);
+
+  const resolvedTheme = useMemo<Theme>(() => {
+    if (activeEffectiveTheme === 'auto') {
+      return isSystemDark ? 'enterprise' : 'light';
+    }
+    return activeEffectiveTheme;
+  }, [activeEffectiveTheme, isSystemDark]);
 
   const isInitialThemeMount = useRef(true);
 
@@ -4556,41 +4602,7 @@ export default function App() {
   useEffect(() => {
     safeStorage.set('proton_workflows', JSON.stringify(workflows));
   }, [workflows]);
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
-    const defaultProfile: UserProfile = {
-      name: 'Proton Member',
-      email: '',
-      language: 'en',
-      region: 'Tbilisi',
-      notifications: true,
-      role: 'Proton Member',
-      phoneNumber: '',
-      id: 'default-user',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Proton',
-      showCommercialHub: false
-    };
-    try {
-      const saved = safeStorage.get('user-profile');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure language is valid
-        if (parsed.language !== 'en' && parsed.language !== 'ka') {
-          parsed.language = 'en';
-        }
-        return { ...defaultProfile, ...parsed };
-      }
-    } catch {
-      // Return default on error
-    }
-    return defaultProfile;
-  });
 
-  const handleUpdateUserProfile = useCallback((updates: Partial<UserProfile>) => {
-    setUserProfile(prev => ({
-      ...prev,
-      ...updates
-    }));
-  }, []);
   const [favoritePersonaIds, setFavoritePersonaIds] = useState<string[]>(() => {
     try {
       const saved = safeStorage.get('proton_favorite_personas');
@@ -6507,6 +6519,8 @@ export default function App() {
                         setAiSettings={setAiSettings}
                         theme={theme}
                         setTheme={handleGlobalThemeChange}
+                        themeSchedule={themeSchedule}
+                        onUpdateThemeSchedule={handleUpdateThemeSchedule}
                         language={userProfile.language}
                         uiMode={uiMode === 'market' ? 'business' : uiMode}
                         setUiMode={handleModeChange}
