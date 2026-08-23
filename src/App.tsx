@@ -67,7 +67,7 @@ import { SystemStatusBadge } from './components/SystemStatusBadge';
 import { DebugPanel } from './components/debug/DebugPanel';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
 const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
-import BusinessHubView from './components/BusinessHubView';
+const BusinessHubView = lazyWithRetry(() => import('./components/BusinessHubView').then(module => ({ default: module.default })));
 const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView').then(module => ({ default: module.default })));
 const PersonasView = lazyWithRetry(() => import('./components/PersonasView').then(module => ({ default: module.default })));
 import { 
@@ -6344,37 +6344,51 @@ export default function App() {
                     />
                   )}
                   {activeView === 'business-hub' && (
-                    <BusinessHubView 
-                      language={userProfile.language}
-                      setActiveView={setActiveView}
-                      personasCount={personas.length}
-                      workflowsCount={workflows.length}
-                      tasksCount={tasks.filter(t => !t.completed).length}
-                      userEmail={user?.email || ''}
-                    />
+                    <Suspense fallback={
+                      <div className="h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest">Loading Business Hub...</span>
+                      </div>
+                    }>
+                      <BusinessHubView 
+                        language={userProfile.language}
+                        setActiveView={setActiveView}
+                        personasCount={personas.length}
+                        workflowsCount={workflows.length}
+                        tasksCount={tasks.filter(t => !t.completed).length}
+                        userEmail={user?.email || ''}
+                      />
+                    </Suspense>
                   )}
                   {activeView === 'personas' && (
-                    <PersonasView 
-                      history={chatHistory} 
-                      onNewMessage={handleNewMessage} 
-                      customAvatars={personaAvatars}
-                      onUpdateAvatar={handleUpdateAvatar}
-                      personas={personas}
-                      onUpdatePersonas={handleUpdatePersonas}
-                      aiSettings={aiSettings}
-                      setLastGeminiMetadata={setLastGeminiMetadata}
-                      workflows={workflows}
-                      tasks={tasks}
-                      uiMode={uiMode === 'market' ? 'business' : uiMode}
-                      isCreativeMode={isCreativeMode || isAdmin}
-                      initialPersonaId={selectedPersonaId}
-                      favoritePersonaIds={favoritePersonaIds}
-                      onToggleFavorite={handleToggleFavoritePersona}
-                      language={userProfile.language}
-                      user={user}
-                      isAdmin={isAdmin}
-                      checkAndIncrementAiQuota={checkAndIncrementAiQuota}
-                    />
+                    <Suspense fallback={
+                      <div className="h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
+                        <Loader2 className="animate-spin text-proton-accent" size={24} />
+                        <span className="uppercase tracking-widest">Loading Personas...</span>
+                      </div>
+                    }>
+                      <PersonasView 
+                        history={chatHistory} 
+                        onNewMessage={handleNewMessage} 
+                        customAvatars={personaAvatars}
+                        onUpdateAvatar={handleUpdateAvatar}
+                        personas={personas}
+                        onUpdatePersonas={handleUpdatePersonas}
+                        aiSettings={aiSettings}
+                        setLastGeminiMetadata={setLastGeminiMetadata}
+                        workflows={workflows}
+                        tasks={tasks}
+                        uiMode={uiMode === 'market' ? 'business' : uiMode}
+                        isCreativeMode={isCreativeMode || isAdmin}
+                        initialPersonaId={selectedPersonaId}
+                        favoritePersonaIds={favoritePersonaIds}
+                        onToggleFavorite={handleToggleFavoritePersona}
+                        language={userProfile.language}
+                        user={user}
+                        isAdmin={isAdmin}
+                        checkAndIncrementAiQuota={checkAndIncrementAiQuota}
+                      />
+                    </Suspense>
                   )}
                   {activeView === 'image' && <ImageView uiMode={uiMode === 'market' ? 'business' : uiMode} isCreativeMode={isCreativeMode || isAdmin} language={userProfile.language} isAdmin={isAdmin} checkAndIncrementAiQuota={checkAndIncrementAiQuota} onBack={() => handleViewChange('creative-studio')} />}
                   {activeView === 'creative-studio' && (
