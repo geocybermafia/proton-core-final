@@ -86,14 +86,14 @@ const translations = {
       diagnostics: "ინფორმაცია",
       auditNodes: "ტრანზაქციების ისტორია",
       compileMem: "სტატუსი: აქტიური",
-      sandboxTitle: "ტრანზაქციების სიმულატორი",
+      sandboxTitle: "ტრანზაქციების მართვა",
       resetLedger: "ისტორიის გასუფთავება",
-      demoAmount: "სიმულაციური რაოდენობა (ETH)",
+      demoAmount: "რაოდენობა (ETH)",
       recipientAddr: "მიმღების მისამართი",
-      simulateDeposit: "შემოსულის სიმულაცია",
-      simulateTransfer: "გადარიცხვის სიმულაცია",
+      simulateDeposit: "შეტანა (Deposit)",
+      simulateTransfer: "გადარიცხვა (Transfer)",
       ledgerState: "სტატუსი: აქტიური მონიტორინგი",
-      noRecords: "ტრანზაქციების ისტორია ცარიელია. განახორციელეთ სიმულაცია ან დაუკავშირეთ საფულე.",
+      noRecords: "ტრანზაქციების ისტორია ცარიელია.",
       receiveTx: "შემოსული ტრანზაქცია",
       transferTx: "გადარიცხვის ტრანზაქცია"
     }
@@ -156,8 +156,8 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
   } = useWeb3Ledger();
 
   const [activeTab, setActiveTab] = useState<'all' | 'deposits' | 'transfers' | 'contracts'>('all');
-  const [demoAmount, setDemoAmount] = useState('0.1');
-  const [demoRecipient, setDemoRecipient] = useState('0x71C7656EC7ab88b098defB751B7401B5f6d1476B');
+  const [demoAmount, setDemoAmount] = useState('');
+  const [demoRecipient, setDemoRecipient] = useState('');
   const [copied, setCopied] = useState(false);
 
   const handleCopyAddress = () => {

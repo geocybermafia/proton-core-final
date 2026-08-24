@@ -37,11 +37,32 @@ import {
 } from 'lucide-react';
 import { View, Task, Listing, Order } from '../types';
 import { SystemHealthState } from '../hooks/useSystemHealth';
-import { useSeller } from '../contexts/SellerContext';
+import { useSeller, isRealListing } from '../contexts/SellerContext';
 import { useAuth } from '../contexts/AuthContext';
 import { PERSONAS, chatWithPersona } from '../lib/gemini';
 import { taskSyncService } from '../lib/taskSyncService';
 import { useTaskSyncStatus } from '../hooks/useTaskSyncStatus';
+
+const isRealTask = (t: any): boolean => {
+  if (!t || !t.id) return false;
+  const id = String(t.id).toLowerCase();
+  const content = (t.content || '').toLowerCase();
+  if (
+    id.includes('982145') ||
+    id.includes('982146') ||
+    id.startsWith('demo') ||
+    id.startsWith('mock') ||
+    id.startsWith('sample') ||
+    content.includes('fulfill order #') ||
+    content.includes('982145') ||
+    content.includes('982146') ||
+    t.isDemo === true ||
+    t.isMock === true
+  ) {
+    return false;
+  }
+  return true;
+};
 
 export interface DashboardViewProps {
   setActiveView: (v: View) => void;
@@ -276,7 +297,7 @@ export const DashboardView = React.memo(({
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
       const stored = safeStorage.getJSON('proton_tasks', []);
-      return Array.isArray(stored) ? stored : [];
+      return Array.isArray(stored) ? stored.filter(isRealTask) : [];
     } catch {
       return [];
     }
@@ -444,7 +465,7 @@ export const DashboardView = React.memo(({
   const [marketCategory, setMarketCategory] = useState('all');
 
   const filteredMarketListings = useMemo(() => {
-    let list = Array.isArray(allListings) ? allListings : [];
+    let list = (Array.isArray(allListings) ? allListings : []).filter(isRealListing);
     if (marketCategory !== 'all') {
       list = list.filter(l => (l.category || '').toLowerCase() === marketCategory.toLowerCase());
     }

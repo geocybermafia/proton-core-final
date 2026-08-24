@@ -53,7 +53,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { useMarketHub } from '../contexts/MarketHubContext';
+import { useMarketHub, isRealListing } from '../contexts/MarketHubContext';
 import { useToast } from './Toast';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
@@ -881,8 +881,16 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             });
           }
 
-          setListings(data);
+          const realListings = data.filter(isRealListing);
+          setListings(realListings);
           setLoading(false);
+
+          // Clean up legacy mock/seed documents from Firestore if present
+          data.forEach(l => {
+            if (!isRealListing(l) && l.id) {
+              deleteDoc(doc(db, 'listings', l.id)).catch(() => {});
+            }
+          });
         }, (error) => {
           console.warn(`[MarketHub] Listings listener failed (useOrderBy=${useOrderBy}):`, error);
           if (useOrderBy) {

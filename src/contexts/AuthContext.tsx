@@ -25,9 +25,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     try {
-      // Programmatically wipe cart, ledger, and listing form/draft states from localStorage for cross-session safety
+      // Programmatically wipe cart, ledger, tasks, scratchpad, drafts, notifications from localStorage
       localStorage.removeItem('proton_market_cart');
       localStorage.removeItem('proton_market_hub_ledger');
+      localStorage.removeItem('proton_tasks');
+      localStorage.removeItem('organizer_scratchpad');
+      localStorage.removeItem('organizer_habits');
+      localStorage.removeItem('organizer_daily_mood');
+      localStorage.removeItem('organizer_daily_focus');
+      localStorage.removeItem('organizer_water_glasses');
+      localStorage.removeItem('proton_notifications');
+      localStorage.removeItem('proton_markethub_draft_form_data');
+      localStorage.removeItem('proton_image_history');
       
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i);
@@ -36,7 +45,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           key.includes('draft') || 
           key.includes('listing') || 
           key.includes('market') || 
-          key.includes('cart')
+          key.includes('cart') ||
+          key.includes('task') ||
+          key.includes('scratchpad')
         )) {
           localStorage.removeItem(key);
         }

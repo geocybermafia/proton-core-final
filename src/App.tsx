@@ -4887,7 +4887,27 @@ export default function App() {
         const tasksRef = collection(db, 'users', user.uid, 'tasks');
         const tasksSnap = await getDocs(tasksRef).catch(() => null);
         if (tasksSnap) {
-          const loadedTasks = tasksSnap.docs.map((doc: any) => doc.data() as Task);
+          const loadedTasks = tasksSnap.docs
+            .map((d: any) => d.data() as Task)
+            .filter((t: Task) => {
+              if (!t || !t.id) return false;
+              const id = String(t.id).toLowerCase();
+              const content = (t.content || '').toLowerCase();
+              if (
+                id.includes('982145') || 
+                id.includes('982146') || 
+                id.startsWith('demo') || 
+                id.startsWith('mock') || 
+                id.startsWith('sample') || 
+                content.includes('fulfill order #') || 
+                content.includes('982145') || 
+                content.includes('982146')
+              ) {
+                deleteDoc(doc(db, 'users', user.uid, 'tasks', t.id)).catch(() => {});
+                return false;
+              }
+              return true;
+            });
           setTasks(loadedTasks);
         }
 

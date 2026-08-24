@@ -37,53 +37,8 @@ interface NotificationCenterProps {
   notificationsEnabled?: boolean;
 }
 
-// Initial default seed notifications for fresh users
-const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: 'welcome-notif-1',
-    title: 'Welcome to Proton OS v2.5',
-    titleKa: 'მოგესალმებით Proton OS v2.5-ში',
-    message: 'Security hardened, multi-agent AI system initialized successfully.',
-    messageKa: 'უსაფრთხოება გაძლიერებულია, მულტი-აგენტური AI სისტემა წარმატებით ჩაიტვირთა.',
-    timestamp: Date.now() - 1000 * 60 * 5, // 5 min ago
-    read: false,
-    category: 'system',
-    targetView: 'dashboard'
-  },
-  {
-    id: 'security-notif-2',
-    title: 'Step-Up Security Active',
-    titleKa: 'ორფაქტორიანი უსაფრთხოება აქტიურია',
-    message: 'Server-authoritative PIN protection and cryptographic step-up grants are active.',
-    messageKa: 'სერვერული PIN დაცვა და კრიპტოგრაფიული ავტორიზაციის გრანტები ჩართულია.',
-    timestamp: Date.now() - 1000 * 60 * 30, // 30 min ago
-    read: false,
-    category: 'system',
-    targetView: 'settings'
-  },
-  {
-    id: 'ai-notif-3',
-    title: 'AI Persona Ready',
-    titleKa: 'AI პერსონა მზადაა',
-    message: 'Custom AI Personas & Automation Engines are standby for tasks.',
-    messageKa: 'პერსონალური AI ასისტენტები და ავტომატიზაციის ძრავა მზადაა სამუშაოდ.',
-    timestamp: Date.now() - 1000 * 60 * 120, // 2 hours ago
-    read: true,
-    category: 'ai',
-    targetView: 'personas'
-  },
-  {
-    id: 'market-notif-4',
-    title: 'Commerce Hub Online',
-    titleKa: 'კომერციის ჰაბი ჩართულია',
-    message: 'Market listings and secure escrow transaction ledger are connected.',
-    messageKa: 'მარკეტის განცხადებები და დაცული ტრანზაქციების რეესტრი დაკავშირებულია.',
-    timestamp: Date.now() - 1000 * 60 * 360, // 6 hours ago
-    read: true,
-    category: 'market',
-    targetView: 'market-hub'
-  }
-];
+// Initial default notifications (empty for clean user state)
+const DEFAULT_NOTIFICATIONS: NotificationItem[] = [];
 
 // Helper to play subtle soft chime sound
 const playNotificationChime = () => {
@@ -158,13 +113,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     const q = query(notifRef, orderBy('timestamp', 'desc'), limit(50));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (snapshot.empty && notifications.length === 0) {
-        // Seed initial notifications in Firestore if collection empty
-        DEFAULT_NOTIFICATIONS.forEach(async (item) => {
-          await setDoc(doc(db, 'users', currentUser.uid, 'notifications', item.id), item);
-        });
-        setNotifications(DEFAULT_NOTIFICATIONS);
-      } else if (!snapshot.empty) {
+      if (snapshot.empty) {
+        setNotifications([]);
+      } else {
         const items: NotificationItem[] = snapshot.docs.map(docSnap => {
           const data = docSnap.data();
           return {
