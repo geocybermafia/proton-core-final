@@ -2142,8 +2142,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   return (
     <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
-      {/* Premium Standalone E-Commerce Navigation Bar */}
-      <div className="w-full bg-proton-bg/95 border-b border-proton-border/40 py-3 sm:py-4 px-4 sm:px-8 flex flex-col gap-3 sticky top-0 z-50 backdrop-blur-md">
+      {/* Main Black Proton Header (PROTON // მარკეტი) */}
+      <div className="w-full bg-[#080c14]/95 border-b border-zinc-800/80 py-3 sm:py-4 px-4 sm:px-8 flex flex-col gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
         <div className="w-full flex items-center justify-between gap-4">
           
@@ -2157,10 +2157,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             className="flex items-center gap-2 cursor-pointer select-none grow-0 shrink-0"
           >
             <div className="flex items-center">
-              <div className="bg-proton-accent text-proton-on-accent font-black px-3 py-1.5 rounded-l-xl text-xs sm:text-sm tracking-tighter uppercase whitespace-nowrap">
-                proton
+              <div className="bg-zinc-900 border border-zinc-800 text-white font-black px-3 py-1.5 rounded-l-xl text-xs sm:text-sm tracking-tighter uppercase whitespace-nowrap flex items-center gap-1.5">
+                <span className="text-[#dfb257]">PROTON</span>
+                <span className="text-zinc-600 font-mono text-[11px]">//</span>
               </div>
-              <div className="bg-proton-card text-proton-accent border border-proton-border border-l-0 font-bold px-3 py-1.5 rounded-r-xl text-xs sm:text-sm tracking-tighter uppercase whitespace-nowrap">
+              <div className="bg-[#12161f] text-[#dfb257] border border-zinc-800 border-l-0 font-bold px-3 py-1.5 rounded-r-xl text-xs sm:text-sm tracking-tighter uppercase whitespace-nowrap">
                 {language === 'ka' ? 'მარკეტი' : 'market'}
               </div>
             </div>
@@ -2170,18 +2171,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <div className="hidden md:flex flex-1 max-w-xl items-center gap-3">
             {/* Input search */}
             <div className="flex-1 relative">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-proton-accent" />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
               <input 
                 type="text"
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
-                className="w-full bg-proton-card/70 border border-proton-border/80 text-proton-text placeholder-proton-muted/50 font-bold tracking-wide focus:outline-none focus:border-proton-accent/60 pl-10 pr-4 py-2 rounded-xl text-xs transition-all shadow-inner focus:bg-proton-card"
+                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-xs transition-all shadow-inner"
               />
               {searchRaw && (
                 <button 
                   onClick={() => { setSearch(''); setSearchRaw(''); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
                 >
                   ✕
                 </button>
@@ -2194,7 +2195,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Create Listing Button */}
             <button
               onClick={() => setViewMode('create')}
-              className="hidden md:flex bg-proton-accent hover:bg-proton-accent/90 text-proton-on-accent font-black px-3.5 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="hidden md:flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-3.5 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus size={13} className="stroke-[3]" />
               <span>{language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}</span>
@@ -2207,12 +2208,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 setProfileSubMode('buying');
                 setActiveBottomTab('messages');
               }}
-              className="p-2 sm:p-2.5 text-proton-muted hover:text-proton-accent hover:bg-proton-card rounded-xl transition-all relative"
+              className="p-2 sm:p-2.5 text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 rounded-xl transition-all relative"
               title={language === 'ka' ? 'შეტყობინებები' : 'Messages'}
             >
               <Mail size={16} />
               {allUserMessages.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] font-black flex items-center justify-center text-white scale-90 border border-proton-bg">
+                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] font-black flex items-center justify-center text-white scale-90 border border-[#080c14]">
                   {allUserMessages.length}
                 </span>
               )}
@@ -2228,13 +2229,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 "p-2 sm:p-2.5 rounded-xl transition-all relative",
                 showOnlyFavorites 
                   ? "text-red-500 bg-red-500/10 border border-red-500/20" 
-                  : "text-proton-muted hover:text-proton-accent hover:bg-proton-card"
+                  : "text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900"
               )}
               title={language === 'ka' ? 'რჩეულები' : 'Favorites'}
             >
               <Heart size={16} fill={showOnlyFavorites ? "currentColor" : "none"} />
               {favorites.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-proton-accent rounded-full text-[8px] font-black text-proton-on-accent flex items-center justify-center scale-90 border border-proton-bg">
+                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#dfb257] rounded-full text-[8px] font-black text-zinc-950 flex items-center justify-center scale-90 border border-[#080c14]">
                   {favorites.length}
                 </span>
               )}
@@ -2243,12 +2244,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Shopping Cart button */}
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="p-2 sm:p-2.5 text-proton-muted hover:text-proton-accent hover:bg-proton-card rounded-xl transition-all relative"
+              className="p-2 sm:p-2.5 text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 rounded-xl transition-all relative"
               title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
             >
               <ShoppingBag size={16} />
               {cart.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-proton-accent text-proton-on-accent rounded-full text-[8px] font-black flex items-center justify-center scale-90 border border-proton-bg">
+                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#dfb257] text-zinc-950 rounded-full text-[8px] font-black flex items-center justify-center scale-90 border border-[#080c14]">
                   {cart.length}
                 </span>
               )}
@@ -2258,17 +2259,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {onBack && (
               <button 
                 onClick={onBack}
-                className="px-3.5 py-2 bg-proton-card hover:bg-proton-card/80 border border-proton-border text-proton-text hover:text-proton-accent font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 hover:text-[#dfb257] font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-[1.02] active:scale-[0.98]"
                 title={language === 'ka' ? 'მთავარზე დაბრუნება' : 'Return to Dashboard'}
               >
-                <LayoutDashboard size={13} className="text-proton-accent" />
+                <LayoutDashboard size={13} className="text-[#dfb257]" />
                 <span className="hidden sm:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Mobile Search/Filter-free Full-width Search Row (Shown only on mobile) */}
+        {/* Mobile Search Row (Shown only on mobile) */}
         <div className="w-full flex md:hidden items-center">
           <div className="flex-1 relative">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
@@ -2277,12 +2278,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               value={searchRaw}
               onChange={(e) => setSearchRaw(e.target.value)}
               placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search...'}
-              className="w-full bg-proton-card border border-proton-border text-proton-text placeholder-proton-muted/60 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-xs transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-xs transition-colors"
             />
             {searchRaw && (
               <button 
                 onClick={() => { setSearch(''); setSearchRaw(''); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
               >
                 ✕
               </button>
@@ -2290,8 +2291,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           </div>
         </div>
 
-        {/* Market Hub Quick Section Navigation Sub-bar */}
-        <div className="w-full flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 pt-2 border-t border-proton-border/20">
+        {/* Mobile Navigation Sub-bar (Explicitly visible only on mobile screens: md:hidden) */}
+        <div className="w-full flex md:hidden items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 pt-2 border-t border-zinc-800/60">
           <button
             type="button"
             onClick={() => {
@@ -2301,8 +2302,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
               activeBottomTab === 'home' && viewMode === 'browse'
-                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
-                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
           >
             <LayoutGrid size={13} />
@@ -2317,8 +2318,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
               activeBottomTab === 'categories'
-                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
-                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
           >
             <Tag size={13} />
@@ -2354,8 +2355,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
               viewMode === 'create'
-                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
-                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
           >
             <Plus size={13} className="stroke-[2.5]" />
@@ -2370,14 +2371,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 relative cursor-pointer",
               activeBottomTab === 'messages'
-                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
-                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
           >
             <MessageCircle size={13} />
             <span>{language === 'ka' ? 'ჩატი' : 'Chat'}</span>
             {groupedChats.length > 0 && (
-              <span className="inline-flex items-center justify-center h-3.5 px-1 text-[8px] font-black leading-none text-proton-on-accent bg-proton-accent rounded-full border border-proton-bg">
+              <span className="inline-flex items-center justify-center h-3.5 px-1 text-[8px] font-black leading-none text-zinc-950 bg-[#dfb257] rounded-full border border-zinc-900">
                 {groupedChats.length}
               </span>
             )}
@@ -2392,8 +2393,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
               viewMode === 'my-listings'
-                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
-                : "bg-proton-card/70 text-proton-muted hover:text-proton-text border-proton-border/60 hover:bg-proton-card"
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
           >
             <User size={13} />
