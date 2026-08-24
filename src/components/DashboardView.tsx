@@ -1050,10 +1050,10 @@ export const DashboardView = React.memo(({
                   onChange={(e) => setTaskCategory(e.target.value)}
                   className="bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] text-zinc-300 focus:outline-none"
                 >
-                  <option value="Workspace">{language === 'ka' ? 'სამუშაო (Workspace)' : 'Workspace'}</option>
-                  <option value="Market">{language === 'ka' ? 'მარკეტი (Market)' : 'Market'}</option>
-                  <option value="Creative">{language === 'ka' ? 'კრეატივი (Creative)' : 'Creative'}</option>
-                  <option value="Dev">{language === 'ka' ? 'დეველოპმენტი (Dev)' : 'Dev'}</option>
+                  <option value="Workspace">{language === 'ka' ? 'სამუშაო' : 'Workspace'}</option>
+                  <option value="Market">{language === 'ka' ? 'მარკეტი' : 'Market'}</option>
+                  <option value="Creative">{language === 'ka' ? 'კრეატივი' : 'Creative'}</option>
+                  <option value="Dev">{language === 'ka' ? 'დეველოპმენტი' : 'Dev'}</option>
                 </select>
               </div>
             </div>
@@ -1150,7 +1150,7 @@ export const DashboardView = React.memo(({
             ) : (
               <div className="py-6 text-center text-xs text-zinc-500 font-sans space-y-2">
                 <Clock size={20} className="mx-auto text-zinc-600" />
-                <p>{language === 'ka' ? 'აქტივობები ავტომატურად ჩაიწერება ამოცანების შესრულებისას.' : 'Activity stream will populate as tasks and orders are completed.'}</p>
+                <p>{language === 'ka' ? 'აქტივობები ჯერ არ არის' : 'No recent activity'}</p>
               </div>
             )}
           </div>
