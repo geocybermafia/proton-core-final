@@ -1533,12 +1533,12 @@ export const OrganizerView = ({
               </div>
 
               {/* Minimalist Scratchpad */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex justify-between items-center select-none">
                   <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
                     {language === 'ka' ? 'სწრაფი ჩანაწერები' : 'Offline Daily Scratchpad'}
                   </label>
-                  <PenTool size={10} className={currentTheme.muted} />
+                  <PenTool size={11} className={currentTheme.muted} />
                 </div>
                 <textarea
                   placeholder={language === 'ka' 
@@ -1546,7 +1546,7 @@ export const OrganizerView = ({
                     : 'Draft instant thoughts, reminders, or scratch notes here... (auto-saves)'}
                   value={scratchpad}
                   onChange={(e) => setScratchpad(e.target.value)}
-                  className={cn("w-full h-24 rounded-2xl px-4 py-3 text-xs font-mono focus:outline-none transition-all resize-none bg-black/40", currentTheme.input)}
+                  className={cn("w-full h-32 rounded-2xl px-5 py-4 text-xs font-mono focus:outline-none transition-all resize-none bg-black/40 leading-relaxed", currentTheme.input)}
                 />
               </div>
             </div>

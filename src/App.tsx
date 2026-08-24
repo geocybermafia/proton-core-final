@@ -5454,8 +5454,8 @@ export default function App() {
                       exit={{ opacity: 0, x: -20 }}
                       className="flex flex-col transition-all duration-200 ease-in-out hover:opacity-80 cursor-default select-none"
                     >
-                      <span className="text-sm font-black tracking-tight text-proton-text uppercase">System</span>
-                      <span className="text-[8px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90 mt-0.5">Workspace</span>
+                      <span className="text-sm font-black tracking-tight text-proton-text uppercase">{language === 'ka' ? 'სისტემა' : 'System'}</span>
+                      <span className="text-[8px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90 mt-0.5">{language === 'ka' ? 'სამუშაო სივრცე' : 'Workspace'}</span>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -5776,7 +5776,7 @@ export default function App() {
                       {user ? (user.displayName || 'User') : (language === 'ka' ? 'ავტორიზაცია' : 'Sign In')}
                     </span>
                     <span className="text-[10px] font-medium text-proton-accent/70 truncate tracking-widest uppercase">
-                      {user ? 'Verified Account' : (language === 'ka' ? 'კავშირგარეშე' : 'Offline Access')}
+                      {user ? (language === 'ka' ? 'ვერიფიცირებული პროფილი' : 'Verified Account') : (language === 'ka' ? 'კავშირგარეშე' : 'Offline Access')}
                     </span>
                   </motion.div>
                 )}

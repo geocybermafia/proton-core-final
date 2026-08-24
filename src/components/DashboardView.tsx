@@ -854,30 +854,30 @@ export const DashboardView = React.memo(({
         {/* --------------------------------------------------------------------- */}
         {/* LEFT: Task Execution Board (7 cols)                                   */}
         {/* --------------------------------------------------------------------- */}
-        <div className="lg:col-span-7 rounded-2xl bg-zinc-900/80 border border-zinc-800 p-5 sm:p-6 space-y-5 backdrop-blur-md shadow-xl">
+        <div className="lg:col-span-7 rounded-3xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-8 space-y-6 backdrop-blur-md shadow-xl">
           
           {/* Header & Filter Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-                <CheckCircle2 size={16} />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
+            <div className="flex items-center gap-3.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                <CheckCircle2 size={18} />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-white font-sans">
+                <h2 className="text-base font-bold text-white font-sans">
                   {language === 'ka' ? 'ამოცანების ორგანიზატორი' : 'Task Organizer'}
                 </h2>
-                <div className="text-xs text-zinc-400">
+                <div className="text-xs text-zinc-400 mt-0.5">
                   {completedCount} / {totalTaskCount} {language === 'ka' ? 'შესრულებული' : 'completed'} ({progressPercent}%)
                 </div>
               </div>
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 text-xs">
+            <div className="flex items-center gap-1 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveTaskFilter('pending')}
-                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTaskFilter === 'pending' 
                     ? 'bg-zinc-800 text-white font-medium shadow-sm' 
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -888,7 +888,7 @@ export const DashboardView = React.memo(({
               <button
                 type="button"
                 onClick={() => setActiveTaskFilter('all')}
-                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTaskFilter === 'all' 
                     ? 'bg-zinc-800 text-white font-medium shadow-sm' 
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -899,7 +899,7 @@ export const DashboardView = React.memo(({
               <button
                 type="button"
                 onClick={() => setActiveTaskFilter('completed')}
-                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTaskFilter === 'completed' 
                     ? 'bg-zinc-800 text-white font-medium shadow-sm' 
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -912,7 +912,7 @@ export const DashboardView = React.memo(({
 
           {/* Visual Progress Bar */}
           {totalTaskCount > 0 && (
-            <div className="w-full bg-zinc-950 rounded-full h-1.5 overflow-hidden border border-zinc-800/60">
+            <div className="w-full bg-zinc-950 rounded-full h-2 overflow-hidden border border-zinc-800/60">
               <div 
                 className="bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 h-full transition-all duration-300 ease-out" 
                 style={{ width: `${progressPercent}%` }}
@@ -921,7 +921,7 @@ export const DashboardView = React.memo(({
           )}
 
           {/* Interactive Task List */}
-          <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1.5">
             {filteredTasks.length > 0 ? (
               <AnimatePresence initial={false}>
                 {filteredTasks.map((task) => (
@@ -932,17 +932,17 @@ export const DashboardView = React.memo(({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.15 }}
-                    className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all group ${
+                    className={`flex items-center justify-between gap-3.5 p-4 rounded-2xl border transition-all group ${
                       task.completed 
                         ? 'bg-zinc-950/40 border-zinc-800/40 text-zinc-500' 
-                        : 'bg-zinc-950/70 border-zinc-800/80 hover:border-zinc-700 text-zinc-200'
+                        : 'bg-zinc-950/70 border-zinc-800/80 hover:border-zinc-700 text-zinc-200 shadow-sm'
                     }`}
                   >
                     <div 
                       onClick={(e) => handleToggleTask(task.id, e)}
-                      className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                      className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
                     >
-                      <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-colors shrink-0 ${
+                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-colors shrink-0 ${
                         task.completed 
                           ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
                           : 'border-zinc-700 group-hover:border-zinc-500 text-transparent'
@@ -951,7 +951,7 @@ export const DashboardView = React.memo(({
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <span className={`text-xs sm:text-sm font-medium transition-all ${
+                        <span className={`text-xs sm:text-sm font-medium leading-relaxed transition-all ${
                           task.completed ? 'line-through text-zinc-500' : 'text-zinc-200'
                         }`}>
                           {task.content}
@@ -959,14 +959,18 @@ export const DashboardView = React.memo(({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2.5 shrink-0">
                       {task.category && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-zinc-400 border border-zinc-800 hidden sm:inline-block">
-                          {task.category}
+                        <span className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800 hidden sm:inline-block">
+                          {task.category === 'Workspace' ? (language === 'ka' ? 'სამუშაო' : 'Workspace') :
+                           task.category === 'Market' ? (language === 'ka' ? 'მარკეტი' : 'Market') :
+                           task.category === 'Creative' ? (language === 'ka' ? 'კრეატივი' : 'Creative') :
+                           task.category === 'Dev' ? (language === 'ka' ? 'დეველოპმენტი' : 'Dev') :
+                           task.category}
                         </span>
                       )}
                       
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                         task.priority === 'high' 
                           ? 'bg-rose-500' 
                           : task.priority === 'medium' 
@@ -977,18 +981,18 @@ export const DashboardView = React.memo(({
                       <button
                         type="button"
                         onClick={(e) => handleDeleteTask(task.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-zinc-500 hover:text-rose-400 transition-all cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-500 hover:text-rose-400 transition-all cursor-pointer rounded-lg hover:bg-rose-500/10"
                         title="Delete Task"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             ) : (
-              <div className="py-8 text-center text-xs text-zinc-500 font-sans space-y-2">
-                <CheckCircle2 size={24} className="mx-auto text-zinc-600" />
+              <div className="py-12 text-center text-xs text-zinc-500 font-sans space-y-2.5">
+                <CheckCircle2 size={28} className="mx-auto text-zinc-600" />
                 <p>{language === 'ka' ? 'ამოცანები არ არის. ჩაწერეთ ქვემოთ ახლის დასამატებლად.' : 'No tasks here. Type below to create one.'}</p>
               </div>
             )}
@@ -997,59 +1001,59 @@ export const DashboardView = React.memo(({
           {/* Unified Fast Task Creator Bar */}
           <form 
             onSubmit={handleCreateTask}
-            className="space-y-2 pt-2 border-t border-zinc-800"
+            className="space-y-3 pt-3 border-t border-zinc-800"
           >
-            <div className="relative flex items-center w-full rounded-xl bg-zinc-950 border border-zinc-800 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
+            <div className="relative flex items-center w-full rounded-2xl bg-zinc-950 border border-zinc-800 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
               <input
                 type="text"
                 value={taskInputValue}
                 onChange={(e) => setTaskInputValue(e.target.value)}
                 placeholder={language === 'ka' ? '+ ჩაწერეთ ამოცანა ან იდეა...' : '+ Add a task or idea...'}
-                className="w-full bg-transparent px-4 py-3 pr-24 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none font-sans"
+                className="w-full bg-transparent px-4 py-3.5 pr-28 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none font-sans"
               />
-              <div className="absolute right-2 flex items-center gap-1">
+              <div className="absolute right-2.5 flex items-center gap-1.5">
                 <button
                   type="submit"
                   disabled={!taskInputValue.trim()}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shadow-sm"
                 >
                   <span>{language === 'ka' ? 'დამატება' : 'Add'}</span>
-                  <CornerDownLeft size={11} />
+                  <CornerDownLeft size={12} />
                 </button>
               </div>
             </div>
 
             {/* Quick Priority & Category selectors */}
-            <div className="flex items-center justify-between text-xs text-zinc-400 px-1">
+            <div className="flex items-center justify-between text-xs text-zinc-400 px-1 pt-1">
               <div className="flex items-center gap-2">
-                <span>{language === 'ka' ? 'პრიორიტეტი:' : 'Priority:'}</span>
+                <span className="font-medium">{language === 'ka' ? 'პრიორიტეტი:' : 'Priority:'}</span>
                 <button
                   type="button"
                   onClick={() => setTaskPriority('high')}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer ${taskPriority === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-colors ${taskPriority === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   {language === 'ka' ? 'მაღალი' : 'High'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setTaskPriority('medium')}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer ${taskPriority === 'medium' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-zinc-500 hover:text-zinc-300'}`}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-colors ${taskPriority === 'medium' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
                 >
                   {language === 'ka' ? 'საშუალო' : 'Med'}
                 </button>
               </div>
 
               <div className="flex items-center gap-2">
-                <span>{language === 'ka' ? 'კატეგორია:' : 'Tag:'}</span>
+                <span className="font-medium">{language === 'ka' ? 'კატეგორია:' : 'Tag:'}</span>
                 <select
                   value={taskCategory}
                   onChange={(e) => setTaskCategory(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 rounded px-2 py-0.5 text-[11px] text-zinc-300 focus:outline-none"
+                  className="bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] text-zinc-300 focus:outline-none"
                 >
-                  <option value="Workspace">Workspace</option>
-                  <option value="Market">Market</option>
-                  <option value="Creative">Creative</option>
-                  <option value="Dev">Dev</option>
+                  <option value="Workspace">{language === 'ka' ? 'სამუშაო (Workspace)' : 'Workspace'}</option>
+                  <option value="Market">{language === 'ka' ? 'მარკეტი (Market)' : 'Market'}</option>
+                  <option value="Creative">{language === 'ka' ? 'კრეატივი (Creative)' : 'Creative'}</option>
+                  <option value="Dev">{language === 'ka' ? 'დეველოპმენტი (Dev)' : 'Dev'}</option>
                 </select>
               </div>
             </div>
@@ -1063,10 +1067,10 @@ export const DashboardView = React.memo(({
         <div className="lg:col-span-5 space-y-6">
 
           {/* Interactive Live Autosaving Scratchpad */}
-          <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-5 space-y-3 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-2.5">
-              <div className="flex items-center gap-2">
-                <FileText size={15} className="text-amber-400" />
+          <div className="rounded-3xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-7 space-y-4 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <FileText size={17} className="text-amber-400" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-200">
                   {language === 'ka' ? 'სწრაფი ჩანიშვნები' : 'Live Scratchpad'}
                 </h3>
@@ -1084,18 +1088,18 @@ export const DashboardView = React.memo(({
                   ? 'ჩაინიშნეთ იდეები, კოდი ან ტექსტი... შემდეგ 1 კლიკით გადააქციეთ ამოცანებად.' 
                   : 'Write thoughts, quick notes, or clipboard snippets... 1-click convert into tasks.'
               }
-              rows={4}
-              className="w-full bg-zinc-950/80 border border-zinc-800 rounded-xl p-3 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 resize-none font-sans"
+              rows={5}
+              className="w-full bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 resize-none font-sans leading-relaxed"
             />
 
-            <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="flex items-center justify-between gap-3 pt-1.5">
               <button
                 type="button"
                 onClick={handleConvertNotesToTasks}
                 disabled={!scratchpad.trim()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shadow-sm"
               >
-                <Plus size={12} />
+                <Plus size={13} />
                 <span>{language === 'ka' ? 'გადაიტანე ამოცანებში' : 'Convert to Tasks'}</span>
               </button>
 
@@ -1108,19 +1112,19 @@ export const DashboardView = React.memo(({
                   }
                 }}
                 disabled={!scratchpad.trim()}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
               >
-                <Sparkles size={12} className="text-indigo-400" />
+                <Sparkles size={13} className="text-indigo-400" />
                 <span>{language === 'ka' ? 'AI ანალიზი' : 'AI Summary'}</span>
               </button>
             </div>
           </div>
 
           {/* Recent Chronological Activity Feed (Only Real Events) */}
-          <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-5 space-y-4 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-zinc-400" />
+          <div className="rounded-3xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-7 space-y-4 backdrop-blur-md shadow-xl">
+            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <Clock size={15} className="text-zinc-400" />
                 <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-400">
                   {language === 'ka' ? 'ბოლო აქტივობა' : 'Recent Activity'}
                 </h3>
