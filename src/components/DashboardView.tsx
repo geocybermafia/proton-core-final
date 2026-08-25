@@ -35,6 +35,7 @@ import {
   ChevronRight,
   AlertCircle
 } from 'lucide-react';
+import { FocusTimerWidget } from './FocusTimerWidget';
 import { View, Task, Listing, Order } from '../types';
 import { SystemHealthState } from '../hooks/useSystemHealth';
 import { useSeller, isRealListing } from '../contexts/SellerContext';
@@ -176,49 +177,7 @@ export const DashboardView = React.memo(({
   }, [currentTime, language]);
 
   // ---------------------------------------------------------------------------
-  // 2. LIVE FOCUS TIMER (POMODORO / WORK SESSION)
-  // ---------------------------------------------------------------------------
-  const [focusSeconds, setFocusSeconds] = useState(25 * 60);
-  const [isFocusRunning, setIsFocusRunning] = useState(false);
-  const [focusMode, setFocusMode] = useState<'work' | 'break'>('work');
-
-  useEffect(() => {
-    let interval: any = null;
-    if (isFocusRunning && focusSeconds > 0) {
-      interval = setInterval(() => setFocusSeconds(prev => prev - 1), 1000);
-    } else if (focusSeconds === 0 && isFocusRunning) {
-      setIsFocusRunning(false);
-      // Auto-switch mode
-      if (focusMode === 'work') {
-        setFocusMode('break');
-        setFocusSeconds(5 * 60);
-      } else {
-        setFocusMode('work');
-        setFocusSeconds(25 * 60);
-      }
-    }
-    return () => clearInterval(interval);
-  }, [isFocusRunning, focusSeconds, focusMode]);
-
-  const toggleFocusTimer = () => setIsFocusRunning(prev => !prev);
-  const resetFocusTimer = () => {
-    setIsFocusRunning(false);
-    setFocusSeconds(focusMode === 'work' ? 25 * 60 : 5 * 60);
-  };
-  const switchFocusMode = (mode: 'work' | 'break') => {
-    setIsFocusRunning(false);
-    setFocusMode(mode);
-    setFocusSeconds(mode === 'work' ? 25 * 60 : 5 * 60);
-  };
-
-  const formattedTimer = useMemo(() => {
-    const m = Math.floor(focusSeconds / 60);
-    const s = focusSeconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  }, [focusSeconds]);
-
-  // ---------------------------------------------------------------------------
-  // 3. LIVE AI COPILOT INTERACTION
+  // 2. LIVE AI COPILOT INTERACTION
   // ---------------------------------------------------------------------------
   const [selectedPersonaId, setSelectedPersonaId] = useState('creative-guide');
   const [copilotInput, setCopilotInput] = useState('');
@@ -599,43 +558,8 @@ export const DashboardView = React.memo(({
             </p>
           </div>
 
-          {/* Interactive Focus Mode / Pomodoro Widget */}
-          <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-zinc-950/90 border border-zinc-800/90 shadow-inner shrink-0">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isFocusRunning ? 'bg-amber-400 animate-pulse' : 'bg-zinc-600'}`} />
-                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400">
-                  {focusMode === 'work' ? (language === 'ka' ? 'ფოკუს რეჟიმი' : 'Focus Mode') : (language === 'ka' ? 'შესვენება' : 'Break')}
-                </span>
-              </div>
-              <div className="text-2xl font-black font-mono tracking-tight text-white mt-0.5">
-                {formattedTimer}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 border-l border-zinc-800 pl-3">
-              <button
-                type="button"
-                onClick={toggleFocusTimer}
-                className={`p-2.5 rounded-xl transition-all cursor-pointer ${
-                  isFocusRunning 
-                    ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold' 
-                    : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                }`}
-                title={isFocusRunning ? 'Pause' : 'Start'}
-              >
-                {isFocusRunning ? <Pause size={15} /> : <Play size={15} />}
-              </button>
-              <button
-                type="button"
-                onClick={resetFocusTimer}
-                className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                title="Reset Timer"
-              >
-                <RotateCcw size={14} />
-              </button>
-            </div>
-          </div>
+          {/* Interactive Multifunctional Focus Mode / Pomodoro Widget */}
+          <FocusTimerWidget language={language} className="shrink-0" />
 
         </div>
       </div>

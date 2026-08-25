@@ -42,6 +42,7 @@ import { translations } from '../translations';
 import { cn } from '../lib/utils';
 import { breakdownTask } from '../lib/gemini';
 import { useTaskSyncStatus } from '../hooks/useTaskSyncStatus';
+import { FocusTimerWidget } from './FocusTimerWidget';
 
 type OrganizerTheme = Theme;
 
@@ -1399,6 +1400,14 @@ export const OrganizerView = ({
                   onChange={(e) => setDailyFocus(e.target.value)}
                   className={cn("w-full rounded-2xl px-5 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                 />
+              </div>
+
+              {/* Interactive Focus Timer with Custom Duration & Audio */}
+              <div className="space-y-2">
+                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                  {language === 'ka' ? 'ფოკუსის ტაიმერი & ხმოვანი ასისტენტი' : 'Focus Timer & Voice Alert'}
+                </label>
+                <FocusTimerWidget language={language} className="w-full" />
               </div>
 
               {/* Mood Meter */}

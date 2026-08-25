@@ -58,6 +58,7 @@ const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioH
 const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
 const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
 import { HeaderQuickSearch } from './components/HeaderQuickSearch';
+import { FocusTimerWidget } from './components/FocusTimerWidget';
 import { NotificationCenter } from './components/NotificationCenter';
 import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
 import { AuthFlow } from './components/AuthFlow';
@@ -950,7 +951,10 @@ const LegacyOrganizerView = ({
       </div>
 
       {zenMode && tasks.filter(t => !t.completed).length > 0 ? (
-        <div className="min-h-[60vh] flex items-center justify-center py-20">
+        <div className="min-h-[60vh] flex flex-col items-center justify-center py-12 gap-8">
+          {/* Multifunctional Focus Timer with Custom Duration & Audio Announcements */}
+          <FocusTimerWidget language={language} className="max-w-md w-full shadow-2xl" />
+
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
