@@ -1,48 +1,51 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { safeStorage } from '../lib/safeStorage';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  ShoppingBag, 
   Sparkles, 
-  Plus, 
-  Check, 
-  ArrowRight,
-  Package,
+  ArrowUpRight,
   Image as ImageIcon,
   MessageSquare,
-  CornerDownLeft,
   Clock,
-  Layout,
-  CheckCircle2,
-  Calendar,
-  Layers,
-  ArrowUpRight,
   Store,
   Palette,
+  Video,
+  Cpu,
+  Workflow as WorkflowIcon,
+  ShoppingBag,
+  Compass,
   CheckSquare,
-  Play,
-  Pause,
-  RotateCcw,
-  Copy,
-  Send,
-  Trash2,
-  FileText,
-  Tag,
-  ExternalLink,
-  Flame,
-  Search,
-  SlidersHorizontal,
   ChevronRight,
-  AlertCircle
+  Sun,
+  Moon,
+  Sunset
 } from 'lucide-react';
-import { FocusTimerWidget } from './FocusTimerWidget';
-import { View, Task, Listing, Order } from '../types';
+import { safeStorage } from '../lib/safeStorage';
+import { View, Task } from '../types';
 import { SystemHealthState } from '../hooks/useSystemHealth';
-import { useSeller, isRealListing } from '../contexts/SellerContext';
+import { useSeller } from '../contexts/SellerContext';
 import { useAuth } from '../contexts/AuthContext';
-import { PERSONAS, chatWithPersona } from '../lib/gemini';
-import { taskSyncService } from '../lib/taskSyncService';
-import { useTaskSyncStatus } from '../hooks/useTaskSyncStatus';
+import { PERSONAS } from '../lib/gemini';
+import { cn } from '../lib/utils';
+
+export interface DashboardViewProps {
+  setActiveView: (v: View) => void;
+  language: 'en' | 'ka';
+  setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void;
+  systemHealth?: SystemHealthState;
+}
+
+interface RealArtifact {
+  id: string;
+  world: string;
+  worldGe: string;
+  title: string;
+  subtitle: string;
+  subtitleGe: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  accentColor: string;
+  onClick: () => void;
+  timestamp?: number;
+}
 
 const isRealTask = (t: any): boolean => {
   if (!t || !t.id) return false;
@@ -65,427 +68,195 @@ const isRealTask = (t: any): boolean => {
   return true;
 };
 
-export interface DashboardViewProps {
-  setActiveView: (v: View) => void;
-  language: 'en' | 'ka';
-  setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void;
-  systemHealth?: SystemHealthState;
-}
-
-interface RecentActivityItem {
-  id: string;
-  title: string;
-  category?: string;
-  timestamp: number;
-  type: 'task' | 'order' | 'listing' | 'image' | 'ai';
-}
-
-const isErrorMessage = (text: string): boolean => {
-  if (!text) return true;
-  const lower = text.toLowerCase();
-  return (
-    text.startsWith('⚠️') ||
-    lower.includes('gemini api') ||
-    lower.includes('api_key') ||
-    lower.includes('api key') ||
-    lower.includes('error') ||
-    lower.includes('quota') ||
-    lower.includes('პრობლემა შეიქმნა') ||
-    lower.includes('შეცდომა') ||
-    lower.includes('status: 400') ||
-    lower.includes('status: 403') ||
-    lower.includes('status: 500')
-  );
+const formatRelativeTime = (timestamp: number, language: 'en' | 'ka'): string => {
+  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+  if (diffSec < 60) return language === 'ka' ? 'ახლახან' : 'just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return language === 'ka' ? `${diffMin} წუთის წინ` : `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return language === 'ka' ? `${diffHours} საათის წინ` : `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return language === 'ka' ? `${diffDays} დღის წინ` : `${diffDays}d ago`;
 };
 
-export const DashboardView = React.memo(({ 
+export const DashboardView: React.FC<DashboardViewProps> = React.memo(({ 
   setActiveView, 
   language = 'en',
   setUiMode
-}: DashboardViewProps) => {
+}) => {
+  const isKa = language === 'ka';
   const { user } = useAuth();
-  const { allListings, sellerOrders } = useSeller();
+  const { sellerOrders } = useSeller();
 
   // ---------------------------------------------------------------------------
-  // 1. AUTHENTICATED USER IDENTITY & LIVE CLOCK
+  // 1. LIVING CONTEXTUAL ENVIRONMENT (REAL LOCAL TIME & ATMOSPHERE)
   // ---------------------------------------------------------------------------
-  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentDate(new Date()), 10000);
     return () => clearInterval(timer);
   }, []);
 
+  const timeEnvironment = useMemo(() => {
+    try {
+      const hours = currentDate.getHours();
+      const timeStr = currentDate.toLocaleTimeString(isKa ? 'ka-GE' : 'en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const dayStr = currentDate.toLocaleDateString(isKa ? 'ka-GE' : 'en-US', {
+        weekday: 'long'
+      });
+      const dateStr = currentDate.toLocaleDateString(isKa ? 'ka-GE' : 'en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      let periodLabel = isKa ? 'დღე' : 'Day';
+      let PeriodIcon = Sun;
+      if (hours >= 5 && hours < 12) {
+        periodLabel = isKa ? 'დილა' : 'Morning';
+        PeriodIcon = Sun;
+      } else if (hours >= 12 && hours < 18) {
+        periodLabel = isKa ? 'შუადღე' : 'Afternoon';
+        PeriodIcon = Sun;
+      } else if (hours >= 18 && hours < 22) {
+        periodLabel = isKa ? 'საღამო' : 'Evening';
+        PeriodIcon = Sunset;
+      } else {
+        periodLabel = isKa ? 'ღამე' : 'Night';
+        PeriodIcon = Moon;
+      }
+
+      // Safe timezone detection
+      let timeZoneName = 'Local';
+      try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        timeZoneName = tz ? tz.split('/').pop()?.replace(/_/g, ' ') || 'Local' : 'Local';
+      } catch {
+        timeZoneName = 'Local';
+      }
+
+      return {
+        timeStr,
+        dayStr,
+        dateStr,
+        periodLabel,
+        PeriodIcon,
+        timeZoneName
+      };
+    } catch {
+      return {
+        timeStr: '',
+        dayStr: '',
+        dateStr: '',
+        periodLabel: '',
+        PeriodIcon: Sun,
+        timeZoneName: ''
+      };
+    }
+  }, [currentDate, isKa]);
+
+  // ---------------------------------------------------------------------------
+  // 2. DYNAMIC AUTHENTICATED USER IDENTITY
+  // ---------------------------------------------------------------------------
   const userName = useMemo(() => {
     if (user?.displayName && user.displayName.trim()) {
-      return user.displayName;
-    }
-    try {
-      const profileRaw = localStorage.getItem('user-profile');
-      if (profileRaw) {
-        const parsed = JSON.parse(profileRaw);
-        if (parsed?.displayName && parsed.displayName.trim()) {
-          return parsed.displayName.trim();
-        }
-      }
-    } catch {
-      // ignore
+      return user.displayName.trim();
     }
     if (user?.email) {
       const prefix = user.email.split('@')[0];
       return prefix.charAt(0).toUpperCase() + prefix.slice(1);
     }
-    return language === 'ka' ? 'მომხმარებელი' : 'Friend';
-  }, [user, language]);
-
-  const greetingHeadline = useMemo(() => {
-    const hour = currentTime.getHours();
-    if (language === 'ka') {
-      if (hour < 12) return `დილა მშვიდობისა`;
-      if (hour < 18) return `გამარჯობა`;
-      return `საღამო მშვიდობისა`;
-    } else {
-      if (hour < 12) return `Good morning`;
-      if (hour < 18) return `Good afternoon`;
-      return `Good evening`;
-    }
-  }, [currentTime, language]);
-
-  const formattedDate = useMemo(() => {
     try {
-      return currentTime.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric'
-      });
-    } catch {
-      return '';
-    }
-  }, [currentTime, language]);
-
-  const formattedClock = useMemo(() => {
-    try {
-      return currentTime.toLocaleTimeString(language === 'ka' ? 'ka-GE' : 'en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
-    } catch {
-      return '';
-    }
-  }, [currentTime, language]);
-
-  // ---------------------------------------------------------------------------
-  // 2. LIVE AI COPILOT INTERACTION
-  // ---------------------------------------------------------------------------
-  const [selectedPersonaId, setSelectedPersonaId] = useState('creative-guide');
-  const [copilotInput, setCopilotInput] = useState('');
-  const [copilotResponse, setCopilotResponse] = useState<string | null>(null);
-  const [isCopilotLoading, setIsCopilotLoading] = useState(false);
-  const [copilotCopied, setCopilotCopied] = useState(false);
-
-  const selectedPersona = useMemo(() => {
-    return PERSONAS.find(p => p.id === selectedPersonaId) || PERSONAS[0];
-  }, [selectedPersonaId]);
-
-  const quickPromptChips = useMemo(() => {
-    if (language === 'ka') {
-      return [
-        { label: '💡 ბიზნეს იდეა', text: 'მომეცი 3 ინოვაციური ბიზნეს იდეა ქართულ ბაზარზე ციფრული პროდუქტებისთვის.' },
-        { label: '✍️ მარკეტინგული პოსტი', text: 'დამიწერე მიმზიდველი სოციალური მედია პოსტი ახალი ონლაინ მაღაზიის გასაშვებად.' },
-        { label: '🛍️ პროდუქტის აღწერა', text: 'შექმენი პროდუქტის პროფესიონალური აღწერა ელექტრონული კომერციისთვის.' },
-        { label: '⚡ დღის გეგმა', text: 'დამეხმარე დღევანდელი სამუშაო გეგმის პრიორიტეტიზაციაში მაქსიმალური პროდუქტიულობისთვის.' }
-      ];
-    }
-    return [
-      { label: '💡 Product Idea', text: 'Give me 3 innovative digital product ideas for modern creators and makers.' },
-      { label: '✍️ Marketing Copy', text: 'Write an engaging social media announcement for launching a new digital store.' },
-      { label: '🛍️ Listing Description', text: 'Draft a high-converting product description for an online marketplace.' },
-      { label: '⚡ Daily Priorities', text: 'Help me prioritize my daily tasks for maximum creator velocity.' }
-    ];
-  }, [language]);
-
-  const handleRunCopilot = async (promptOverride?: string) => {
-    const textToSend = promptOverride || copilotInput;
-    if (!textToSend.trim() || isCopilotLoading) return;
-
-    setIsCopilotLoading(true);
-    setCopilotResponse(null);
-
-    try {
-      const res = await chatWithPersona(
-        selectedPersona,
-        textToSend,
-        [],
-        'gemini-2.5-flash',
-        false,
-        true,
-        0.8,
-        undefined,
-        language
-      );
-      if (res && res.text) {
-        setCopilotResponse(res.text);
-      } else {
-        setCopilotResponse(language === 'ka' ? 'პასუხის მიღება ვერ მოხერხდა.' : 'Could not generate a response.');
+      const profileRaw = localStorage.getItem('user-profile');
+      if (profileRaw) {
+        const parsed = JSON.parse(profileRaw);
+        if (parsed?.name && parsed.name.trim()) return parsed.name.trim();
+        if (parsed?.displayName && parsed.displayName.trim()) return parsed.displayName.trim();
       }
-    } catch (err: any) {
-      console.error("Copilot error:", err);
-      setCopilotResponse(
-        language === 'ka' 
-          ? `შეცდომა: ${err?.message || 'AI კავშირი შეფერხდა'}` 
-          : `Error: ${err?.message || 'Failed to reach AI'}`
-      );
-    } finally {
-      setIsCopilotLoading(false);
-    }
-  };
-
-  const handleCopyCopilot = () => {
-    if (copilotResponse) {
-      navigator.clipboard.writeText(copilotResponse);
-      setCopilotCopied(true);
-      setTimeout(() => setCopilotCopied(false), 2000);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // 4. REAL TASK MANAGEMENT & PERSISTENCE
-  // ---------------------------------------------------------------------------
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    try {
-      const stored = safeStorage.getJSON('proton_tasks', []);
-      return Array.isArray(stored) ? stored.filter(isRealTask) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [taskInputValue, setTaskInputValue] = useState('');
-  const [taskCategory, setTaskCategory] = useState<string>('Workspace');
-  const [taskPriority, setTaskPriority] = useState<'high' | 'medium' | 'low'>('medium');
-  const [activeTaskFilter, setActiveTaskFilter] = useState<'all' | 'pending' | 'completed'>('pending');
-
-  const syncTasks = useCallback((updated: Task[]) => {
-    setTasks(updated);
-    safeStorage.set('proton_tasks', JSON.stringify(updated));
-    window.dispatchEvent(new Event('storage'));
-  }, []);
-
-  const handleToggleTask = useCallback((id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setTasks(prev => {
-      let toggledTask: Task | undefined;
-      const updated: Task[] = prev.map(task => {
-        if (task.id === id) {
-          const completed = !task.completed;
-          toggledTask = { 
-            ...task, 
-            completed
-          };
-          return toggledTask;
-        }
-        return task;
-      });
-      safeStorage.set('proton_tasks', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      if (toggledTask) {
-        taskSyncService.queueTaskUpsert(user?.uid, toggledTask, 300);
-      }
-      return updated;
-    });
-  }, [user]);
-
-  const handleDeleteTask = useCallback((id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setTasks(prev => {
-      const updated = prev.filter(t => t.id !== id);
-      safeStorage.set('proton_tasks', JSON.stringify(updated));
-      window.dispatchEvent(new Event('storage'));
-      taskSyncService.queueTaskDelete(user?.uid, id);
-      return updated;
-    });
-  }, [user]);
-
-  const handleCreateTask = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = taskInputValue.trim();
-    if (!trimmed) return;
-
-    const newTask: Task = {
-      id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      content: trimmed,
-      completed: false,
-      priority: taskPriority,
-      timestamp: Date.now(),
-      category: taskCategory
-    };
-
-    const updated = [newTask, ...tasks];
-    syncTasks(updated);
-    taskSyncService.queueTaskUpsert(user?.uid, newTask, 0);
-    setTaskInputValue('');
-  }, [taskInputValue, taskPriority, taskCategory, tasks, syncTasks, user]);
-
-  const handleAddCopilotAsTask = () => {
-    if (!copilotResponse) return;
-    const firstLine = copilotResponse.split('\n')[0].replace(/^[#*-\s]+/, '').slice(0, 80);
-    const newTask: Task = {
-      id: `task_${Date.now()}_ai`,
-      content: firstLine || (language === 'ka' ? 'AI რჩევის იმპლემენტაცია' : 'Implement AI output'),
-      completed: false,
-      priority: 'high',
-      timestamp: Date.now(),
-      category: 'AI Advisory'
-    };
-    syncTasks([newTask, ...tasks]);
-    taskSyncService.queueTaskUpsert(user?.uid, newTask, 0);
-  };
-
-  // ---------------------------------------------------------------------------
-  // 5. LIVE SCRATCHPAD (QUICK NOTES) WITH AUTOSAVE
-  // ---------------------------------------------------------------------------
-  const [scratchpad, setScratchpad] = useState<string>(() => {
-    try {
-      return localStorage.getItem('proton_quick_notes') || '';
-    } catch {
-      return '';
-    }
-  });
-
-  const handleScratchpadChange = (val: string) => {
-    setScratchpad(val);
-    try {
-      localStorage.setItem('proton_quick_notes', val);
     } catch {
       // ignore
     }
-  };
-
-  const handleConvertNotesToTasks = () => {
-    if (!scratchpad.trim()) return;
-    const lines = scratchpad.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-    if (lines.length === 0) return;
-
-    const newTasks: Task[] = lines.map((line, idx) => ({
-      id: `task_${Date.now()}_${idx}`,
-      content: line.replace(/^[•*-]\s*/, ''),
-      completed: false,
-      priority: 'medium',
-      timestamp: Date.now() + idx,
-      category: 'Notes'
-    }));
-
-    syncTasks([...newTasks, ...tasks]);
-    handleScratchpadChange('');
-  };
+    return isKa ? 'მეგობარო' : 'Friend';
+  }, [user, isKa]);
 
   // ---------------------------------------------------------------------------
-  // 6. REAL RESUMABLE DRAFTS & ACTIVE ORDERS
+  // 3. RETRIEVE REAL MEANINGFUL ARTIFACTS (MAX 3 - NO FAKE DATA)
   // ---------------------------------------------------------------------------
-  const [productDraft, setProductDraft] = useState<{
-    title: string;
-    category?: string;
-    price?: number;
-    description?: string;
-  } | null>(null);
+  const realArtifacts = useMemo<RealArtifact[]>(() => {
+    const items: RealArtifact[] = [];
 
-  useEffect(() => {
+    // 1. Real AI Conversation
     try {
-      const savedDraftRaw = localStorage.getItem('proton_markethub_draft_form_data');
-      if (savedDraftRaw) {
-        const parsed = JSON.parse(savedDraftRaw);
-        if (parsed?.data) {
-          const title = parsed.data.title || parsed.data.titleGe;
-          if (title && title.trim()) {
-            setProductDraft({
-              title: title.trim(),
-              category: parsed.data.category || parsed.data.categoryGe,
-              price: parsed.data.price ? Number(parsed.data.price) : undefined,
-              description: parsed.data.description || parsed.data.descriptionGe
-            });
+      const chatHistory = safeStorage.getJSON<Record<string, Array<{ id: string; role: string; content: string; timestamp: number }>>>('proton_chat_history', {});
+      let latestMessage: { personaId: string; content: string; timestamp: number } | null = null;
+
+      for (const [personaId, messages] of Object.entries(chatHistory)) {
+        if (Array.isArray(messages) && messages.length > 0) {
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg && lastMsg.content && !lastMsg.content.startsWith('⚠️')) {
+            const currentTs = lastMsg.timestamp || Date.now();
+            if (!latestMessage || currentTs > latestMessage.timestamp) {
+              latestMessage = {
+                personaId,
+                content: lastMsg.content,
+                timestamp: currentTs
+              };
+            }
           }
         }
       }
-    } catch {
-      setProductDraft(null);
-    }
-  }, []);
 
-  const pendingOrders = useMemo(() => {
-    return sellerOrders.filter(o => o.status === 'pending' || o.status === 'booked');
-  }, [sellerOrders]);
+      if (latestMessage) {
+        const persona = PERSONAS.find(p => p.id === latestMessage!.personaId);
+        const pName = isKa ? (persona?.nameGe || persona?.name || 'AI მეგზური') : (persona?.name || 'AI Copilot');
+        const snippet = latestMessage.content.replace(/\n+/g, ' ').slice(0, 55);
 
-  // ---------------------------------------------------------------------------
-  // 7. REAL MARKETPLACE LISTINGS EXPLORER
-  // ---------------------------------------------------------------------------
-  const [marketSearch, setMarketSearch] = useState('');
-  const [marketCategory, setMarketCategory] = useState('all');
-
-  const filteredMarketListings = useMemo(() => {
-    let list = (Array.isArray(allListings) ? allListings : []).filter(isRealListing);
-    if (marketCategory !== 'all') {
-      list = list.filter(l => (l.category || '').toLowerCase() === marketCategory.toLowerCase());
-    }
-    if (marketSearch.trim()) {
-      const q = marketSearch.toLowerCase();
-      list = list.filter(l => 
-        (l.title || '').toLowerCase().includes(q) || 
-        (l.description || '').toLowerCase().includes(q)
-      );
-    }
-    return list.slice(0, 6);
-  }, [allListings, marketCategory, marketSearch]);
-
-  // ---------------------------------------------------------------------------
-  // 8. RECENT ACTIVITY LIST (ONLY REAL EVENTS)
-  // ---------------------------------------------------------------------------
-  const recentActivities = useMemo<RecentActivityItem[]>(() => {
-    const list: RecentActivityItem[] = [];
-
-    // Real completed tasks
-    tasks
-      .filter(t => t.completed)
-      .forEach(t => {
-        const time = (t as any).completedAt || t.timestamp || Date.now();
-        list.push({
-          id: `act_task_${t.id}`,
-          title: language === 'ka' ? `ამოცანა შესრულდა: ${t.content}` : `Task completed: ${t.content}`,
-          category: t.category,
-          timestamp: time,
-          type: 'task'
+        items.push({
+          id: `chat_${latestMessage.personaId}`,
+          world: 'THINK',
+          worldGe: 'აზროვნება',
+          title: pName,
+          subtitle: `${formatRelativeTime(latestMessage.timestamp, language)} · ${snippet}...`,
+          subtitleGe: `${formatRelativeTime(latestMessage.timestamp, language)} · ${snippet}...`,
+          icon: MessageSquare,
+          accentColor: 'text-indigo-400 border-indigo-500/20 bg-indigo-500/10',
+          onClick: () => {
+            setUiMode('business', 'personas');
+            setActiveView('personas');
+          },
+          timestamp: latestMessage.timestamp
         });
-      });
+      }
+    } catch {
+      // ignore
+    }
 
-    // Real fulfilled orders
-    sellerOrders.filter(o => o.status === 'completed').forEach(o => {
-      const time = typeof o.createdAt === 'number' ? o.createdAt : (o.createdAt?.seconds ? o.createdAt.seconds * 1000 : Date.now());
-      list.push({
-        id: `act_order_${o.id}`,
-        title: language === 'ka' ? `შეკვეთა დასრულდა: ${o.itemTitle || o.id}` : `Order fulfilled: ${o.itemTitle || o.id}`,
-        timestamp: time,
-        type: 'order'
-      });
-    });
-
-    // Real studio image generations
+    // 2. Real Created Visual Artwork
     try {
-      const savedImagesRaw = localStorage.getItem('proton_image_history');
-      if (savedImagesRaw) {
-        const imagesList = JSON.parse(savedImagesRaw);
-        if (Array.isArray(imagesList)) {
-          imagesList.slice(0, 3).forEach((img: any) => {
-            if (img.timestamp) {
-              list.push({
-                id: `act_img_${img.id || img.timestamp}`,
-                title: language === 'ka' 
-                  ? `ვიზუალი შეიქმნა: ${img.prompt ? img.prompt.slice(0, 32) + '...' : 'სტუდია'}` 
-                  : `Visual generated: ${img.prompt ? img.prompt.slice(0, 32) + '...' : 'Studio'}`,
-                timestamp: img.timestamp,
-                type: 'image'
-              });
-            }
+      const imageHistory = safeStorage.getJSON<Array<{ id: string; prompt: string; url?: string; timestamp?: number }>>('proton_image_history', []);
+      if (Array.isArray(imageHistory) && imageHistory.length > 0) {
+        const latestImg = imageHistory[imageHistory.length - 1];
+        if (latestImg && (latestImg.prompt || latestImg.url)) {
+          const promptText = (latestImg.prompt || 'Generated Artwork').slice(0, 48);
+          items.push({
+            id: `image_${latestImg.id || 'last'}`,
+            world: 'CREATE',
+            worldGe: 'შექმნა',
+            title: promptText,
+            subtitle: latestImg.timestamp ? formatRelativeTime(latestImg.timestamp, language) : 'Visual Art',
+            subtitleGe: latestImg.timestamp ? formatRelativeTime(latestImg.timestamp, language) : 'ვიზუალური ნამუშევარი',
+            icon: ImageIcon,
+            accentColor: 'text-cyan-400 border-cyan-500/20 bg-cyan-500/10',
+            onClick: () => {
+              setUiMode('creative', 'image');
+              setActiveView('image');
+            },
+            timestamp: latestImg.timestamp || Date.now()
           });
         }
       }
@@ -493,711 +264,452 @@ export const DashboardView = React.memo(({
       // ignore
     }
 
-    return list.sort((a, b) => b.timestamp - a.timestamp).slice(0, 6);
-  }, [tasks, sellerOrders, language]);
-
-  const filteredTasks = useMemo(() => {
-    if (activeTaskFilter === 'pending') return tasks.filter(t => !t.completed);
-    if (activeTaskFilter === 'completed') return tasks.filter(t => t.completed);
-    return tasks;
-  }, [tasks, activeTaskFilter]);
-
-  const completedCount = useMemo(() => tasks.filter(t => t.completed).length, [tasks]);
-  const totalTaskCount = tasks.length;
-  const progressPercent = totalTaskCount > 0 ? Math.round((completedCount / totalTaskCount) * 100) : 0;
-
-  const formatTimeAgo = (ts: number): string => {
+    // 3. Real Market Unfinished Draft
     try {
-      const diffMs = Date.now() - ts;
-      const mins = Math.floor(diffMs / 60000);
-      if (mins < 1) return language === 'ka' ? 'ახლახან' : 'just now';
-      if (mins < 60) return language === 'ka' ? `${mins} წთ წინ` : `${mins}m ago`;
-      const hours = Math.floor(mins / 60);
-      if (hours < 24) return language === 'ka' ? `${hours} სთ წინ` : `${hours}h ago`;
-      const days = Math.floor(hours / 24);
-      return language === 'ka' ? `${days} დღის წინ` : `${days}d ago`;
+      const draftRaw = localStorage.getItem('proton_markethub_draft_form_data');
+      if (draftRaw) {
+        const parsed = JSON.parse(draftRaw);
+        if (parsed?.data) {
+          const title = parsed.data.title || parsed.data.titleGe;
+          if (title && title.trim()) {
+            items.push({
+              id: 'market_draft',
+              world: 'SELL',
+              worldGe: 'გაყიდვა',
+              title: title.trim(),
+              subtitle: parsed.data.price ? `$${parsed.data.price} · Unsaved Draft` : 'Draft ready to publish',
+              subtitleGe: parsed.data.price ? `$${parsed.data.price} · შენახული მონახაზი` : 'მზადაა გამოსაქვეყნებლად',
+              icon: Store,
+              accentColor: 'text-amber-400 border-amber-500/20 bg-amber-500/10',
+              onClick: () => {
+                setUiMode('market', 'market-hub');
+                setActiveView('market-hub');
+              },
+              timestamp: parsed.updatedAt || Date.now()
+            });
+          }
+        }
+      }
     } catch {
-      return '';
+      // ignore
     }
-  };
 
-  const formatCurrency = (val: number | undefined | null): string => {
-    const num = typeof val === 'number' && !isNaN(val) ? val : 0;
-    return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+    // 4. Real Active Task
+    try {
+      const rawTasks = safeStorage.getJSON<Task[]>('proton_tasks', []);
+      const pendingTasks = Array.isArray(rawTasks) ? rawTasks.filter(t => isRealTask(t) && !t.completed) : [];
+      if (pendingTasks.length > 0) {
+        const firstTask = pendingTasks[0];
+        items.push({
+          id: `task_${firstTask.id}`,
+          world: 'BUILD',
+          worldGe: 'მშენებლობა',
+          title: (isKa && firstTask.contentGe) ? firstTask.contentGe : firstTask.content,
+          subtitle: firstTask.category ? `${firstTask.category} · Active` : 'In Progress',
+          subtitleGe: firstTask.category ? `${firstTask.category} · მიმდინარე` : 'აქტიური',
+          icon: CheckSquare,
+          accentColor: 'text-purple-400 border-purple-500/20 bg-purple-500/10',
+          onClick: () => {
+            setUiMode('business', 'organizer');
+            setActiveView('organizer');
+          },
+          timestamp: firstTask.timestamp || Date.now()
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    // 5. Real Store Order
+    try {
+      if (Array.isArray(sellerOrders) && sellerOrders.length > 0) {
+        const pendingOrder = sellerOrders.find(o => o.status === 'pending' || o.status === 'booked');
+        if (pendingOrder) {
+          items.push({
+            id: `order_${pendingOrder.id}`,
+            world: 'SELL',
+            worldGe: 'გაყიდვა',
+            title: pendingOrder.itemTitle || `Order #${pendingOrder.id.slice(0, 6)}`,
+            subtitle: `$${pendingOrder.amount} · Pending`,
+            subtitleGe: `$${pendingOrder.amount} · დასამუშავებელი`,
+            icon: ShoppingBag,
+            accentColor: 'text-rose-400 border-rose-500/20 bg-rose-500/10',
+            onClick: () => {
+              setUiMode('market', 'market-hub');
+              setActiveView('market-hub');
+            },
+            timestamp: pendingOrder.createdAt || Date.now()
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    return items.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 3);
+  }, [language, isKa, sellerOrders, setActiveView, setUiMode]);
+
+  // ---------------------------------------------------------------------------
+  // 4. PROTON WORLDS (6 PILLARS OF THE DIGITAL ECOSYSTEM)
+  // ---------------------------------------------------------------------------
+  const worlds = useMemo(() => [
+    {
+      id: 'create',
+      tag: 'CREATE',
+      tagGe: 'შექმნა',
+      title: isKa ? 'კრეატიული სტუდია' : 'Creative Studio',
+      lead: isKa ? 'ვიზუალური ხელოვნება & გენერაცია' : 'Visual Artwork & Generation',
+      desc: isKa 
+        ? 'უმაღლესი რეზოლუციის AI ილუსტრაციები, ციფრული ფერწერის გენერაცია და შემოქმედებითი დიზაინი.'
+        : 'High-resolution AI art generation, digital painting, and spatial creative composition.',
+      icon: Palette,
+      accentStyle: 'from-cyan-500/20 to-transparent border-cyan-500/30 text-cyan-400 group-hover:border-cyan-400/60',
+      tagBadge: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
+      action: () => {
+        setUiMode('creative', 'creative-studio');
+        setActiveView('creative-studio');
+      }
+    },
+    {
+      id: 'think',
+      tag: 'THINK',
+      tagGe: 'აზროვნება',
+      title: isKa ? 'AI პერსონები' : 'AI Personas',
+      lead: isKa ? 'ინტელექტუალური მრჩევლები' : 'Cognitive Intelligence & Copilots',
+      desc: isKa 
+        ? 'სპეციალიზებული ქართული და საერთაშორისო AI პერსონები, ბიზნეს სტრატეგია და ლინგვისტიკა.'
+        : 'Specialized Georgian & international AI copilots for deep strategy, reasoning, and linguistics.',
+      icon: Sparkles,
+      accentStyle: 'from-indigo-500/20 to-transparent border-indigo-500/30 text-indigo-400 group-hover:border-indigo-400/60',
+      tagBadge: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
+      action: () => {
+        setUiMode('business', 'personas');
+        setActiveView('personas');
+      }
+    },
+    {
+      id: 'build',
+      tag: 'BUILD',
+      tagGe: 'მშენებლობა',
+      title: isKa ? 'პროცესები & არქიტექტურა' : 'Workflows & Architecture',
+      lead: isKa ? 'ვიზუალური სამუშაო ნაკადები' : 'Visual Logic & Project Nodes',
+      desc: isKa 
+        ? 'ავტომატიზაციის მოდულური არქიტექტურა, ამოცანების ორგანიზება და სტრუქტურირებული სისტემები.'
+        : 'Visual automation nodes, modular execution blueprints, and project orchestration.',
+      icon: WorkflowIcon,
+      accentStyle: 'from-purple-500/20 to-transparent border-purple-500/30 text-purple-400 group-hover:border-purple-400/60',
+      tagBadge: 'bg-purple-500/10 text-purple-300 border-purple-500/30',
+      action: () => {
+        setUiMode('business', 'blueprints');
+        setActiveView('blueprints');
+      }
+    },
+    {
+      id: 'sell',
+      tag: 'SELL',
+      tagGe: 'გაყიდვა',
+      title: isKa ? 'მარკეტი & კომერცია' : 'Market & Store',
+      lead: isKa ? 'ციფრული პროდუქტების ეკოსისტემა' : 'Digital Storefront & Commerce',
+      desc: isKa 
+        ? 'უნიკალური ციფრული აქტივების ვიტრინა, ავტონომიური გაყიდვები და შეკვეთების მიღება.'
+        : 'Digital products showcase, merchant storefronts, and seamless commercial transactions.',
+      icon: Store,
+      accentStyle: 'from-amber-500/20 to-transparent border-amber-500/30 text-amber-400 group-hover:border-amber-400/60',
+      tagBadge: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+      action: () => {
+        setUiMode('market', 'market-hub');
+        setActiveView('market-hub');
+      }
+    },
+    {
+      id: 'clips',
+      tag: 'CLIPS',
+      tagGe: 'კლიპები',
+      title: isKa ? 'ვიდეო & მოძრაობა' : 'Clips & Motion',
+      lead: isKa ? 'მოკლე ვიდეო შემოქმედება' : 'Short-form Social Creation',
+      desc: isKa 
+        ? 'დინამიკური ვიდეო კონტენტის აღმოჩენა, ვიზუალური რიტმი და მულტიმედია პრეზენტაცია.'
+        : 'Discover dynamic short clips, motion storytelling, and immersive visual creations.',
+      icon: Video,
+      accentStyle: 'from-rose-500/20 to-transparent border-rose-500/30 text-rose-400 group-hover:border-rose-400/60',
+      tagBadge: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
+      action: () => {
+        setUiMode('market', 'clips');
+        setActiveView('clips');
+      }
+    },
+    {
+      id: 'own',
+      tag: 'OWN',
+      tagGe: 'მფლობელობა',
+      title: isKa ? 'Web3 & სუვერენიტეტი' : 'Web3 & Sovereign Assets',
+      lead: isKa ? 'დეცენტრალიზებული ფინანსები' : 'Decentralized Digital Custody',
+      desc: isKa 
+        ? 'დეცენტრალიზებული საფულეები, სმარტ-კონტრაქტები და სრული კონტროლი პირად აქტივებზე.'
+        : 'Decentralized wallet connectivity, smart contract interactions, and self-custody assets.',
+      icon: Cpu,
+      accentStyle: 'from-emerald-500/20 to-transparent border-emerald-500/30 text-emerald-400 group-hover:border-emerald-400/60',
+      tagBadge: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+      action: () => {
+        setActiveView('finance');
+      }
+    }
+  ], [isKa, setActiveView, setUiMode]);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
-      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 text-zinc-100"
-    >
-      {/* ========================================================================= */}
-      {/* 1. DYNAMIC HEADER WITH LIVE CLOCK & FOCUS TIMER                          */}
-      {/* ========================================================================= */}
-      <div className="relative overflow-hidden rounded-2xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-8 backdrop-blur-xl shadow-2xl">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          
-          {/* User Greeting & Real Clock */}
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-full bg-zinc-950/80 border border-zinc-800 text-xs font-mono text-zinc-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-zinc-200 font-bold">{formattedClock}</span>
-              <span className="text-zinc-600">|</span>
-              <span className="text-zinc-400 capitalize">{formattedDate}</span>
+    <div className="w-full min-h-screen pb-24 text-proton-text select-none animate-in fade-in duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12 sm:space-y-16">
+
+        {/* ========================================================================= */}
+        {/* 1. CINEMATIC EDITORIAL HERO: WELCOME TO YOUR DIGITAL HOME                 */}
+        {/* ========================================================================= */}
+        <header className="relative pt-8 sm:pt-14 pb-4">
+          {/* Subtle Ambient Radial Lighting */}
+          <div className="absolute -top-10 left-1/3 -translate-x-1/2 w-[32rem] h-[32rem] bg-gradient-to-br from-proton-accent/15 via-indigo-600/10 to-transparent rounded-full blur-3xl pointer-events-none -z-10 opacity-70" />
+          <div className="absolute top-10 right-0 w-96 h-96 bg-gradient-to-bl from-cyan-500/10 via-purple-600/5 to-transparent rounded-full blur-3xl pointer-events-none -z-10 opacity-40" />
+
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            {/* Left: Atmospheric Personal Identity Statement */}
+            <div className="space-y-4 max-w-3xl">
+              {/* Refined Brand Symbol */}
+              <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/10 text-zinc-300 text-xs font-mono font-medium tracking-widest uppercase backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+                <span className="text-white font-bold">PROTON</span>
+                <span className="text-zinc-400">·</span>
+                <span className="text-zinc-300">{isKa ? 'ციფრული სახლი' : 'Digital Home'}</span>
+              </div>
+
+              {/* Dynamic Emotional Welcome Typography */}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-white leading-[1.08]">
+                {isKa ? (
+                  <>
+                    კეთილი იყოს შენი მობრძანება,{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
+                      {userName}
+                    </span>.
+                  </>
+                ) : (
+                  <>
+                    Welcome home,{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400">
+                      {userName}
+                    </span>.
+                  </>
+                )}
+              </h1>
+
+              {/* Essence Tagline */}
+              <p className="text-lg sm:text-xl md:text-2xl font-light text-zinc-300 tracking-tight leading-relaxed max-w-2xl">
+                {isKa ? (
+                  <>
+                    „შენი სივრცე. შენი იდეები.{' '}
+                    <span className="text-white font-medium">შენი Proton.“</span>
+                  </>
+                ) : (
+                  <>
+                    "Your space. Your ideas.{' '}
+                    <span className="text-white font-medium">Your Proton."</span>
+                  </>
+                )}
+              </p>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-sans">
-              {greetingHeadline}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400">{userName}</span>
-            </h1>
-            <p className="text-sm text-zinc-400">
-              {language === 'ka' 
-                ? 'ინტელექტუალური სამუშაო სივრცე: შეასრულეთ ამოცანები, გაუშვით AI კოპილოტი და მართეთ პროდუქტები.' 
-                : 'Intelligent workspace: execute tasks, prompt your AI copilot, and manage real commerce.'}
-            </p>
-          </div>
-
-          {/* Interactive Multifunctional Focus Mode / Pomodoro Widget */}
-          <FocusTimerWidget language={language} className="shrink-0" />
-
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. LIVE AI COPILOT COMMAND BAR (DIRECT GEMINI GENERATOR)                 */}
-      {/* ========================================================================= */}
-      <div className="relative rounded-2xl bg-gradient-to-b from-indigo-950/40 via-zinc-900/90 to-zinc-950 border border-indigo-500/30 p-5 sm:p-6 shadow-xl space-y-4 backdrop-blur-md">
-        
-        {/* Header: Persona Selector & Title */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-500/20 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-              <Sparkles size={16} />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white font-sans flex items-center gap-2">
-                <span>{language === 'ka' ? 'პროტონ AI კოპილოტი' : 'Proton AI Copilot'}</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Gemini Live
+            {/* Right: Environmental Atmosphere (Real Browser Time, Date & Ambience) */}
+            <div className="shrink-0 p-5 rounded-3xl bg-zinc-900/60 border border-white/10 backdrop-blur-xl shadow-2xl flex flex-col justify-between space-y-3 min-w-[240px]">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-zinc-400">
+                  {isKa ? 'დრო & გარემო' : 'Environment'}
                 </span>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-zinc-300 text-[10px] font-mono">
+                  {React.createElement(timeEnvironment.PeriodIcon, { size: 12, className: 'text-proton-accent' })}
+                  <span>{timeEnvironment.periodLabel}</span>
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <div className="text-2xl sm:text-3xl font-black font-mono text-white tracking-wider">
+                  {timeEnvironment.timeStr}
+                </div>
+                <div className="text-xs font-mono text-zinc-300 capitalize">
+                  {timeEnvironment.dayStr} · {timeEnvironment.dateStr}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-zinc-400">
+                <span>{timeEnvironment.timeZoneName}</span>
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  {isKa ? 'სინქრონიზებული' : 'Live Sync'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* ========================================================================= */}
+        {/* 2. PROTON WORLDS — THE SPATIAL ECOSYSTEM COMPOSITION                     */}
+        {/* ========================================================================= */}
+        <section className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-white/5 pb-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-proton-accent font-mono">
+                {isKa ? 'შესაძლებლობების ჰორიზონტი' : 'Proton Worlds'}
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-1">
+                {isKa ? 'აირჩიე შენი მიმართულება' : 'Explore the Ecosystem'}
               </h2>
             </div>
+            <div className="text-xs font-mono text-zinc-400">
+              {isKa ? '6 ციფრული განზომილება' : '6 Digital Dimensions'}
+            </div>
           </div>
 
-          {/* Persona selector pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {PERSONAS.map(p => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setSelectedPersonaId(p.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                  selectedPersonaId === p.id 
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30' 
-                    : 'bg-zinc-950/70 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
-                }`}
-              >
-                <span>{p.avatar}</span>
-                <span>{language === 'ka' ? p.nameGe || p.name : p.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+          {/* Spatial World Architecture */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {worlds.map((w) => {
+              const Icon = w.icon;
 
-        {/* Quick Prompt Suggestions */}
-        <div className="flex flex-wrap gap-2 pt-1">
-          {quickPromptChips.map((chip, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => {
-                setCopilotInput(chip.text);
-                handleRunCopilot(chip.text);
-              }}
-              className="px-3 py-1 rounded-full bg-zinc-950/80 hover:bg-indigo-950/60 border border-zinc-800 hover:border-indigo-500/40 text-zinc-300 hover:text-white text-xs font-sans transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <span>{chip.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Real Live Prompt Input Form */}
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleRunCopilot();
-          }}
-          className="relative flex items-center w-full rounded-xl bg-zinc-950 border border-indigo-500/40 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400 transition-all"
-        >
-          <input
-            type="text"
-            value={copilotInput}
-            onChange={(e) => setCopilotInput(e.target.value)}
-            placeholder={
-              language === 'ka' 
-                ? `დაუსვი კითხვა ${selectedPersona.nameGe || selectedPersona.name}-ს...` 
-                : `Ask ${selectedPersona.name} anything...`
-            }
-            className="w-full bg-transparent px-4 py-3 pr-28 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none font-sans"
-          />
-          <div className="absolute right-2 flex items-center gap-2">
-            <button
-              type="submit"
-              disabled={!copilotInput.trim() || isCopilotLoading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold disabled:opacity-40 disabled:pointer-events-none transition-all shadow-md cursor-pointer"
-            >
-              {isCopilotLoading ? (
-                <span className="animate-spin text-xs">⚡</span>
-              ) : (
-                <>
-                  <span>{language === 'ka' ? 'გაშვება' : 'Run'}</span>
-                  <Send size={11} />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-
-        {/* Live Copilot Response Output Box */}
-        <AnimatePresence>
-          {copilotResponse && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-3 p-4 rounded-xl bg-zinc-950/90 border border-indigo-500/30 space-y-3"
-            >
-              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
-                <div className="flex items-center gap-2 text-xs text-indigo-300 font-mono">
-                  <span>{selectedPersona.avatar}</span>
-                  <span className="font-bold">{language === 'ka' ? selectedPersona.nameGe || selectedPersona.name : selectedPersona.name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCopyCopilot}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs transition-colors cursor-pointer border border-zinc-700"
-                  >
-                    <Copy size={11} />
-                    <span>{copilotCopied ? (language === 'ka' ? 'დაკოპირდა!' : 'Copied!') : (language === 'ka' ? 'კოპირება' : 'Copy')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddCopilotAsTask}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 text-xs transition-colors cursor-pointer border border-indigo-700/60"
-                  >
-                    <Plus size={11} />
-                    <span>{language === 'ka' ? '+ ამოცანად შენახვა' : '+ Add as Task'}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="text-xs sm:text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap font-sans max-h-60 overflow-y-auto pr-1">
-                {copilotResponse}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 3. RESUMABLE PRODUCT DRAFTS & PENDING ORDERS                             */}
-      {/* ========================================================================= */}
-      {productDraft && (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-950/40 via-zinc-900/90 to-zinc-950 border border-emerald-500/40 p-5 sm:p-6 shadow-xl group hover:border-emerald-500/60 transition-all">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3.5 min-w-0 flex-1">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                <ShoppingBag size={22} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 uppercase font-semibold">
-                    {language === 'ka' ? 'დაუსრულებელი მონახაზი' : 'Draft in Progress'}
-                  </span>
-                  {productDraft.category && (
-                    <span className="text-xs text-zinc-400 font-medium truncate">
-                      {productDraft.category}
-                    </span>
+              return (
+                <div
+                  key={w.id}
+                  onClick={w.action}
+                  tabIndex={0}
+                  role="button"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      w.action();
+                    }
+                  }}
+                  className={cn(
+                    "group relative rounded-3xl p-6 sm:p-7 bg-[#0b0f19]/80 hover:bg-[#101524] border backdrop-blur-xl transition-all duration-300 cursor-pointer flex flex-col justify-between space-y-6 overflow-hidden focus:outline-none focus:ring-2 focus:ring-proton-accent shadow-lg",
+                    w.accentStyle
                   )}
-                </div>
-                
-                <h3 className="text-lg font-bold text-white mt-1 truncate group-hover:text-emerald-300 transition-colors">
-                  {productDraft.title}
-                </h3>
-                
-                <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                  {productDraft.description || (language === 'ka' ? 'დაასრულეთ პროდუქტის რედაქტირება და გამოაქვეყნეთ მარკეტზე' : 'Resume editing details and publish to marketplace')}
-                </p>
-
-                {productDraft.price !== undefined && productDraft.price > 0 && (
-                  <div className="mt-1 text-sm font-mono font-bold text-emerald-400">
-                    {formatCurrency(productDraft.price)}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setUiMode('market', 'market-hub')}
-              className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
-            >
-              <span>{language === 'ka' ? 'მონახაზის გაგრძელება' : 'Continue Editing'}</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Pending Orders Alerts */}
-      {pendingOrders.length > 0 && (
-        <div className="rounded-2xl bg-amber-950/30 border border-amber-500/30 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-amber-300 flex items-center gap-2">
-              <ShoppingBag size={14} />
-              <span>{language === 'ka' ? 'მომლოდინე შეკვეთები' : 'Pending Customer Orders'}</span>
-            </h3>
-            <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
-              {pendingOrders.length}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {pendingOrders.map(order => (
-              <div 
-                key={order.id}
-                className="flex items-center justify-between p-3 rounded-xl bg-zinc-950/80 border border-zinc-800 text-xs"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-zinc-100 truncate">
-                    {order.itemTitle || (language === 'ka' ? `შეკვეთა #${order.id?.slice(0, 6)}` : `Order #${order.id?.slice(0, 6)}`)}
-                  </div>
-                  <div className="text-[11px] text-zinc-400 mt-0.5">
-                    {order.buyerName || 'Customer'} • {formatCurrency(order.amount)}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setUiMode('market', 'market-hub')}
-                  className="shrink-0 ml-3 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs transition-colors cursor-pointer"
                 >
-                  {language === 'ka' ? 'დამუშავება' : 'Fulfill'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                  {/* Subtle top ambient glow inside the card */}
+                  <div className="absolute top-0 right-0 w-36 h-36 bg-gradient-to-bl from-white/[0.04] to-transparent rounded-full blur-2xl pointer-events-none group-hover:from-white/[0.08] transition-colors" />
 
-      {/* ========================================================================= */}
-      {/* 4. MAIN INTERACTIVE WORKSPACE: TASKS + LIVE SCRATCHPAD                    */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
-        {/* --------------------------------------------------------------------- */}
-        {/* LEFT: Task Execution Board (7 cols)                                   */}
-        {/* --------------------------------------------------------------------- */}
-        <div className="lg:col-span-7 rounded-3xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-8 space-y-6 backdrop-blur-md shadow-xl">
-          
-          {/* Header & Filter Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-5">
-            <div className="flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-                <CheckCircle2 size={18} />
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-white font-sans">
-                  {language === 'ka' ? 'ამოცანების ორგანიზატორი' : 'Task Organizer'}
-                </h2>
-                <div className="text-xs text-zinc-400 mt-0.5">
-                  {completedCount} / {totalTaskCount} {language === 'ka' ? 'შესრულებული' : 'completed'} ({progressPercent}%)
-                </div>
-              </div>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800 text-xs">
-              <button
-                type="button"
-                onClick={() => setActiveTaskFilter('pending')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  activeTaskFilter === 'pending' 
-                    ? 'bg-zinc-800 text-white font-medium shadow-sm' 
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {language === 'ka' ? 'აქტიური' : 'Pending'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTaskFilter('all')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  activeTaskFilter === 'all' 
-                    ? 'bg-zinc-800 text-white font-medium shadow-sm' 
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {language === 'ka' ? 'ყველა' : 'All'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTaskFilter('completed')}
-                className={`px-3.5 py-1.5 rounded-lg transition-colors cursor-pointer ${
-                  activeTaskFilter === 'completed' 
-                    ? 'bg-zinc-800 text-white font-medium shadow-sm' 
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {language === 'ka' ? 'დასრულებული' : 'Done'}
-              </button>
-            </div>
-          </div>
-
-          {/* Visual Progress Bar */}
-          {totalTaskCount > 0 && (
-            <div className="w-full bg-zinc-950 rounded-full h-2 overflow-hidden border border-zinc-800/60">
-              <div 
-                className="bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 h-full transition-all duration-300 ease-out" 
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          )}
-
-          {/* Interactive Task List */}
-          <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1.5">
-            {filteredTasks.length > 0 ? (
-              <AnimatePresence initial={false}>
-                {filteredTasks.map((task) => (
-                  <motion.div
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0, y: 3 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className={`flex items-center justify-between gap-3.5 p-4 rounded-2xl border transition-all group ${
-                      task.completed 
-                        ? 'bg-zinc-950/40 border-zinc-800/40 text-zinc-500' 
-                        : 'bg-zinc-950/70 border-zinc-800/80 hover:border-zinc-700 text-zinc-200 shadow-sm'
-                    }`}
-                  >
-                    <div 
-                      onClick={(e) => handleToggleTask(task.id, e)}
-                      className="flex items-center gap-3.5 min-w-0 flex-1 cursor-pointer"
-                    >
-                      <div className={`w-5 h-5 rounded-lg flex items-center justify-center border transition-colors shrink-0 ${
-                        task.completed 
-                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
-                          : 'border-zinc-700 group-hover:border-zinc-500 text-transparent'
-                      }`}>
-                        <Check size={12} className={task.completed ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'} />
+                  <div className="space-y-5">
+                    {/* Top Identity Bar */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-black font-mono tracking-widest uppercase border", w.tagBadge)}>
+                          {isKa ? w.tagGe : w.tag}
+                        </span>
+                        <span className="text-[11px] font-mono text-zinc-400 line-clamp-1">
+                          {w.lead}
+                        </span>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <span className={`text-xs sm:text-sm font-medium leading-relaxed transition-all ${
-                          task.completed ? 'line-through text-zinc-500' : 'text-zinc-200'
-                        }`}>
-                          {task.content}
-                        </span>
+                      <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-white/10 transition-all shrink-0">
+                        <ArrowUpRight size={16} className="transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      {task.category && (
-                        <span className="text-[10px] font-mono px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-300 border border-zinc-800 hidden sm:inline-block">
-                          {task.category === 'Workspace' ? (language === 'ka' ? 'სამუშაო' : 'Workspace') :
-                           task.category === 'Market' ? (language === 'ka' ? 'მარკეტი' : 'Market') :
-                           task.category === 'Creative' ? (language === 'ka' ? 'კრეატივი' : 'Creative') :
-                           task.category === 'Dev' ? (language === 'ka' ? 'დეველოპმენტი' : 'Dev') :
-                           task.category}
-                        </span>
-                      )}
-                      
-                      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                        task.priority === 'high' 
-                          ? 'bg-rose-500' 
-                          : task.priority === 'medium' 
-                          ? 'bg-amber-400' 
-                          : 'bg-zinc-600'
-                      }`} />
+                    {/* World Title & Graphic Pillar */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-white group-hover:scale-110 transition-transform">
+                          <Icon size={22} className="text-white" />
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight group-hover:text-proton-accent transition-colors">
+                          {w.title}
+                        </h3>
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteTask(task.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-500 hover:text-rose-400 transition-all cursor-pointer rounded-lg hover:bg-rose-500/10"
-                        title="Delete Task"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <p className="text-sm text-zinc-300 font-normal leading-relaxed">
+                        {w.desc}
+                      </p>
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            ) : (
-              <div className="py-12 text-center text-xs text-zinc-500 font-sans space-y-2.5">
-                <CheckCircle2 size={28} className="mx-auto text-zinc-600" />
-                <p>{language === 'ka' ? 'ამოცანები არ არის. ჩაწერეთ ქვემოთ ახლის დასამატებლად.' : 'No tasks here. Type below to create one.'}</p>
-              </div>
-            )}
+                  </div>
+
+                  {/* Refined Access Button Strip */}
+                  <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs font-bold text-zinc-400 group-hover:text-white transition-colors">
+                    <span className="font-mono text-[11px]">
+                      {isKa ? 'შესვლა სივრცეში' : 'Enter Dimension'}
+                    </span>
+                    <span className="flex items-center gap-1 text-proton-accent">
+                      <ChevronRight size={14} className="transform group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        </section>
 
-          {/* Unified Fast Task Creator Bar */}
-          <form 
-            onSubmit={handleCreateTask}
-            className="space-y-3 pt-3 border-t border-zinc-800"
-          >
-            <div className="relative flex items-center w-full rounded-2xl bg-zinc-950 border border-zinc-800 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all">
-              <input
-                type="text"
-                value={taskInputValue}
-                onChange={(e) => setTaskInputValue(e.target.value)}
-                placeholder={language === 'ka' ? '+ ჩაწერეთ ამოცანა ან იდეა...' : '+ Add a task or idea...'}
-                className="w-full bg-transparent px-4 py-3.5 pr-28 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none font-sans"
-              />
-              <div className="absolute right-2.5 flex items-center gap-1.5">
-                <button
-                  type="submit"
-                  disabled={!taskInputValue.trim()}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shadow-sm"
-                >
-                  <span>{language === 'ka' ? 'დამატება' : 'Add'}</span>
-                  <CornerDownLeft size={12} />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Priority & Category selectors */}
-            <div className="flex items-center justify-between text-xs text-zinc-400 px-1 pt-1">
+        {/* ========================================================================= */}
+        {/* 3. CONTEXTUAL PRESENCE / RECENT ARTIFACTS (SHOWN ONLY IF REAL DATA)       */}
+        {/* ========================================================================= */}
+        {realArtifacts.length > 0 && (
+          <section className="space-y-4 pt-2">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <div className="flex items-center gap-2">
-                <span className="font-medium">{language === 'ka' ? 'პრიორიტეტი:' : 'Priority:'}</span>
-                <button
-                  type="button"
-                  onClick={() => setTaskPriority('high')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-colors ${taskPriority === 'high' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  {language === 'ka' ? 'მაღალი' : 'High'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTaskPriority('medium')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono cursor-pointer transition-colors ${taskPriority === 'medium' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  {language === 'ka' ? 'საშუალო' : 'Med'}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{language === 'ka' ? 'კატეგორია:' : 'Tag:'}</span>
-                <select
-                  value={taskCategory}
-                  onChange={(e) => setTaskCategory(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] text-zinc-300 focus:outline-none"
-                >
-                  <option value="Workspace">{language === 'ka' ? 'სამუშაო' : 'Workspace'}</option>
-                  <option value="Market">{language === 'ka' ? 'მარკეტი' : 'Market'}</option>
-                  <option value="Creative">{language === 'ka' ? 'კრეატივი' : 'Creative'}</option>
-                  <option value="Dev">{language === 'ka' ? 'დეველოპმენტი' : 'Dev'}</option>
-                </select>
-              </div>
-            </div>
-          </form>
-
-        </div>
-
-        {/* --------------------------------------------------------------------- */}
-        {/* RIGHT: Live Autosaving Scratchpad & Activity Feed (5 cols)           */}
-        {/* --------------------------------------------------------------------- */}
-        <div className="lg:col-span-5 space-y-6">
-
-          {/* Interactive Live Autosaving Scratchpad */}
-          <div className="rounded-3xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-7 space-y-4 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <FileText size={17} className="text-amber-400" />
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-200">
-                  {language === 'ka' ? 'სწრაფი ჩანიშვნები' : 'Live Scratchpad'}
+                <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />
+                <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-zinc-400">
+                  {isKa ? 'შენი ბოლო შემოქმედება' : 'Recent Real Artifacts'}
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-zinc-500">
-                {language === 'ka' ? 'ავტომატური შენახვა' : 'Autosaved'}
+              <span className="text-[11px] font-mono text-zinc-400">
+                {isKa ? `${realArtifacts.length} ჩანაწერი` : `${realArtifacts.length} active`}
               </span>
             </div>
 
-            <textarea
-              value={scratchpad}
-              onChange={(e) => handleScratchpadChange(e.target.value)}
-              placeholder={
-                language === 'ka' 
-                  ? 'ჩაინიშნეთ იდეები, კოდი ან ტექსტი... შემდეგ 1 კლიკით გადააქციეთ ამოცანებად.' 
-                  : 'Write thoughts, quick notes, or clipboard snippets... 1-click convert into tasks.'
-              }
-              rows={5}
-              className="w-full bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 text-xs sm:text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 resize-none font-sans leading-relaxed"
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {realArtifacts.map((art) => {
+                const ArtIcon = art.icon;
 
-            <div className="flex items-center justify-between gap-3 pt-1.5">
-              <button
-                type="button"
-                onClick={handleConvertNotesToTasks}
-                disabled={!scratchpad.trim()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer shadow-sm"
-              >
-                <Plus size={13} />
-                <span>{language === 'ka' ? 'გადაიტანე ამოცანებში' : 'Convert to Tasks'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (scratchpad.trim()) {
-                    setCopilotInput(`Analyze and improve these notes:\n${scratchpad}`);
-                    handleRunCopilot(`Analyze and improve these notes:\n${scratchpad}`);
-                  }
-                }}
-                disabled={!scratchpad.trim()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
-              >
-                <Sparkles size={13} className="text-indigo-400" />
-                <span>{language === 'ka' ? 'AI ანალიზი' : 'AI Summary'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Recent Chronological Activity Feed (Only Real Events) */}
-          <div className="rounded-3xl bg-zinc-900/80 border border-zinc-800 p-6 sm:p-7 space-y-4 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3.5">
-              <div className="flex items-center gap-2.5">
-                <Clock size={15} className="text-zinc-400" />
-                <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-zinc-400">
-                  {language === 'ka' ? 'ბოლო აქტივობა' : 'Recent Activity'}
-                </h3>
-              </div>
-            </div>
-
-            {recentActivities.length > 0 ? (
-              <div className="divide-y divide-zinc-800/60 max-h-64 overflow-y-auto pr-1">
-                {recentActivities.map((act) => (
-                  <div 
-                    key={act.id}
-                    className="flex items-start justify-between gap-3 py-2.5 text-xs"
+                return (
+                  <div
+                    key={art.id}
+                    onClick={art.onClick}
+                    className="p-4 rounded-2xl bg-[#0c101c]/80 hover:bg-[#111728] border border-white/10 hover:border-proton-accent/40 transition-all cursor-pointer flex items-center justify-between gap-3 shadow-md"
                   >
-                    <span className="text-zinc-300 font-medium leading-snug line-clamp-2">
-                      {act.title}
-                    </span>
-                    <span className="text-[11px] font-mono text-zinc-500 shrink-0 mt-0.5">
-                      {formatTimeAgo(act.timestamp)}
-                    </span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn("p-2 rounded-xl border shrink-0", art.accentColor)}>
+                        <ArtIcon size={16} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                          {isKa ? art.worldGe : art.world}
+                        </div>
+                        <div className="text-xs font-bold text-white truncate">
+                          {art.title}
+                        </div>
+                        <div className="text-[11px] text-zinc-400 font-mono truncate">
+                          {isKa ? art.subtitleGe : art.subtitle}
+                        </div>
+                      </div>
+                    </div>
+
+                    <ArrowUpRight size={14} className="text-zinc-400 shrink-0" />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-6 text-center text-xs text-zinc-500 font-sans space-y-2">
-                <Clock size={20} className="mx-auto text-zinc-600" />
-                <p>{language === 'ka' ? 'აქტივობები ჯერ არ არის' : 'No recent activity'}</p>
-              </div>
-            )}
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ========================================================================= */}
+        {/* 4. UNDERSTATED FOOTER SIGNATURE                                           */}
+        {/* ========================================================================= */}
+        <footer className="pt-8 pb-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-zinc-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-proton-accent/80" />
+            <span>PROTON SOVEREIGN OS</span>
+            <span>·</span>
+            <span>{isKa ? 'პერსონალური ციფრული გარემო' : 'Personal Digital Realm'}</span>
           </div>
 
-        </div>
+          <div className="flex items-center gap-4 text-[11px]">
+            <span>v2.8</span>
+            <span>·</span>
+            <span>{isKa ? 'ყველა უფლება დაცულია' : 'All Rights Reserved'}</span>
+          </div>
+        </footer>
 
       </div>
-
-      {/* ========================================================================= */}
-      {/* 5. LIVE MARKETPLACE EXPLORER (REAL PRODUCTS FROM MARKET HUB)             */}
-      {/* ========================================================================= */}
-      <div className="rounded-2xl bg-zinc-900/80 border border-zinc-800 p-6 space-y-5 backdrop-blur-md shadow-xl">
-        
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <Store size={16} />
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-white font-sans">
-                {language === 'ka' ? 'მარკეტის რეალური პროდუქტები' : 'Live Marketplace Explorer'}
-              </h2>
-              <p className="text-xs text-zinc-400">
-                {language === 'ka' ? 'გამოიკვლიეთ და მართეთ ციფრული და ფიზიკური პროდუქტები' : 'Browse and manage verified marketplace products'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Search Input */}
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-              <input
-                type="text"
-                value={marketSearch}
-                onChange={(e) => setMarketSearch(e.target.value)}
-                placeholder={language === 'ka' ? 'ძიება მარკეტზე...' : 'Search listings...'}
-                className="bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setUiMode('market', 'market-hub')}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-colors cursor-pointer shrink-0"
-            >
-              <span>{language === 'ka' ? 'მარკეტჰაბი' : 'Open Market'}</span>
-              <ExternalLink size={12} />
-            </button>
-          </div>
-        </div>
-
-        {/* Real Product Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredMarketListings.length > 0 ? (
-            filteredMarketListings.map((listing) => (
-              <div
-                key={listing.id}
-                onClick={() => setUiMode('market', 'market-hub')}
-                className="group p-4 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-950 transition-all cursor-pointer flex flex-col justify-between space-y-3"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-emerald-400 border border-emerald-500/20 uppercase font-semibold">
-                      {listing.category || 'Product'}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-white">
-                      {formatCurrency(listing.price)}
-                    </span>
-                  </div>
-
-                  <h4 className="text-sm font-bold text-zinc-100 group-hover:text-emerald-300 transition-colors line-clamp-1">
-                    {listing.title}
-                  </h4>
-
-                  <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
-                    {listing.description || 'Verified product listing in Proton Ecosystem.'}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2 border-t border-zinc-900 text-xs">
-                  <span className="text-zinc-500 text-[11px]">
-                    {listing.sellerName || 'Merchant'}
-                  </span>
-                  <span className="text-emerald-400 font-semibold inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                    <span>{language === 'ka' ? 'ნახვა' : 'View'}</span>
-                    <ChevronRight size={12} />
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full py-8 text-center text-xs text-zinc-500">
-              {language === 'ka' ? 'პროდუქტები ვერ მოიძებნა.' : 'No matching products found.'}
-            </div>
-          )}
-        </div>
-
-      </div>
-
-    </motion.div>
+    </div>
   );
 });
-
 DashboardView.displayName = 'DashboardView';
