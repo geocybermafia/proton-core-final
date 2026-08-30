@@ -56,7 +56,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
     try {
       // Light ping to Firestore server to verify actual connection and measure latency
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('timeout')), 5000)
+        setTimeout(() => reject(new Error('timeout')), 8000)
       );
 
       const pingDocRef = doc(db, 'system', 'config');
@@ -160,15 +160,18 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial health check
-    checkHealth();
+    // Initial health check deferred to allow initial Firebase handshake to complete
+    const initialTimer = setTimeout(() => {
+      checkHealth();
+    }, 1500);
 
-    // Check periodically every 25 seconds
+    // Check periodically every 30 seconds
     const interval = setInterval(() => {
       checkHealth();
-    }, 25000);
+    }, 30000);
 
     return () => {
+      clearTimeout(initialTimer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);

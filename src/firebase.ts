@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -11,10 +11,8 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Analytics - DISABLED to avoid "403 Permission Denied" error from Installations API
 export const analytics = null;
 
-// Initialize Firestore with experimentalForceLongPolling to reliably eliminate 10-second WebSocket handshake timeouts in proxy and iframe environments
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-}, firebaseConfig.firestoreDatabaseId);
+// Initialize Firestore with explicit database ID
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
 export const auth = getAuth(app);
 
