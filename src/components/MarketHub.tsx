@@ -456,21 +456,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             const orderData = {
               listingId: item.id,
               buyerId: user.uid,
-              sellerId: item.sellerId,
+              sellerId: freshData.sellerId || item.sellerId,
               amount: freshPrice,
               currency: freshCurrency,
               itemTitle: freshTitle,
               status: isService ? 'booked' : 'completed',
               orderType: isService ? 'service' : 'product',
               buyerInstructions: '',
-              createdAt: Date.now()
+              createdAt: serverTimestamp()
             };
 
             const newOrderRef = doc(collection(db, 'orders'));
-            transaction.set(newOrderRef, {
-              ...orderData,
-              createdAt: serverTimestamp()
-            });
+            transaction.set(newOrderRef, orderData);
 
             if (!isService) {
               transaction.update(docRef, {

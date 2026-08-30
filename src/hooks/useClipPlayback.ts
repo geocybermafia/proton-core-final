@@ -8,6 +8,8 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
 
   // Keep a mapping of index -> HTMLVideoElement
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
+  // Keep track of active play promises to avoid AbortError interruptions
+  const playPromises = useRef<{ [key: number]: Promise<void> | null }>({});
 
   const serializedUrls = clips.map(c => c ? `${c.id || ''}:${c.videoUrl || ''}` : '').join(',');
 
@@ -17,6 +19,54 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
       videoRefs.current[index] = el;
     } else {
       delete videoRefs.current[index];
+      delete playPromises.current[index];
+    }
+  }, []);
+
+  const safePlay = useCallback(async (video: HTMLVideoElement, idx: number) => {
+    try {
+      const promise = video.play();
+      playPromises.current[idx] = promise;
+      await promise;
+      playPromises.current[idx] = null;
+      if (idx === currentIndex) {
+        setIsPlaying(true);
+      }
+    } catch (error: any) {
+      playPromises.current[idx] = null;
+      if (error?.name === 'AbortError') {
+        // Interrupted by pause or fast scrolling; expected browser behavior
+        return;
+      }
+      console.warn("Playback play request failed/blocked by browser autoplay rules:", error);
+      if (!video.muted) {
+        video.muted = true;
+        setIsMuted(true);
+        try {
+          await video.play();
+          if (idx === currentIndex) setIsPlaying(true);
+        } catch {
+          if (idx === currentIndex) setIsPlaying(false);
+        }
+      } else {
+        if (idx === currentIndex) setIsPlaying(false);
+      }
+    }
+  }, [currentIndex]);
+
+  const safePause = useCallback(async (video: HTMLVideoElement, idx: number) => {
+    const pending = playPromises.current[idx];
+    if (pending) {
+      try {
+        await pending;
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      video.pause();
+    } catch (e) {
+      console.warn("Failed to pause video:", e);
     }
   }, []);
 
@@ -25,7 +75,7 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
     const video = videoRefs.current[index];
     if (video) {
       if (!video.paused && index === currentIndex) {
-        video.pause();
+        safePause(video, index);
         setIsPlaying(false);
       } else {
         if (index !== currentIndex) {
@@ -38,18 +88,11 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
             });
           }
         } else {
-          video.play()
-            .then(() => {
-              setIsPlaying(true);
-            })
-            .catch(err => {
-              console.warn("Playback play request failed/blocked:", err);
-              setIsPlaying(false);
-            });
+          safePlay(video, index);
         }
       }
     }
-  }, [currentIndex, containerRef]);
+  }, [currentIndex, containerRef, safePause, safePlay]);
 
   const toggleMute = useCallback(() => {
     setIsMuted(prev => !prev);
@@ -73,11 +116,11 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
       const idx = parseInt(key, 10);
       const video = videoRefs.current[idx];
       if (video && idx !== currentIndex) {
+        safePause(video, idx);
         try {
-          video.pause();
           video.currentTime = 0;
         } catch (e) {
-          console.warn("Failed to pause or reset inactive video:", e);
+          // ignore
         }
       }
     });
@@ -85,25 +128,15 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
     if (activeVideo) {
       if (isPlaying) {
         if (activeVideo.paused) {
-          activeVideo.play().catch(error => {
-            console.warn("Playback play request failed/blocked by browser autoplay rules:", error);
-            // If autoplay with audio fails, try muting to recover playback smoothly
-            if (!activeVideo.muted) {
-              activeVideo.muted = true;
-              setIsMuted(true);
-              activeVideo.play().catch(() => setIsPlaying(false));
-            } else {
-              setIsPlaying(false);
-            }
-          });
+          safePlay(activeVideo, currentIndex);
         }
       } else {
         if (!activeVideo.paused) {
-          activeVideo.pause();
+          safePause(activeVideo, currentIndex);
         }
       }
     }
-  }, [currentIndex, isPlaying, clipsLength, serializedUrls]);
+  }, [currentIndex, isPlaying, clipsLength, serializedUrls, safePause, safePlay]);
 
   // Handle active slide tracking via native element scrolls
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -126,26 +159,29 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
     if (containerRef.current) {
       containerRef.current.scrollTop = 0;
     }
-    Object.values(videoRefs.current).forEach(video => {
+    Object.keys(videoRefs.current).forEach(key => {
+      const idx = parseInt(key, 10);
+      const video = videoRefs.current[idx];
       if (video) {
+        safePause(video, idx);
         try {
-          video.pause();
           video.currentTime = 0;
         } catch (e) {
           console.warn(e);
         }
       }
     });
-  }, [containerRef]);
+  }, [containerRef, safePause]);
 
   // Clean up and release decoding memory resources completely on unmount (extremely crucial for SPAs with heavy video streams)
   useEffect(() => {
     return () => {
-      Object.values(videoRefs.current).forEach(video => {
+      Object.keys(videoRefs.current).forEach(key => {
+        const idx = parseInt(key, 10);
+        const video = videoRefs.current[idx];
         if (video) {
           try {
             video.pause();
-            // Clear source and load to release browser media decoder allocations
             video.removeAttribute('src');
             video.load();
           } catch (err) {
@@ -154,6 +190,7 @@ export function useClipPlayback(clips: any[], containerRef: React.RefObject<HTML
         }
       });
       videoRefs.current = {};
+      playPromises.current = {};
     };
   }, []);
 

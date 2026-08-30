@@ -105,7 +105,7 @@ service cloud.firestore {
 
     function isValidOrder(data) {
       return data.keys().hasAll(['listingId', 'buyerId', 'sellerId', 'amount', 'currency', 'itemTitle', 'status', 'createdAt'])
-        && data.keys().size() >= 8 && data.keys().size() <= 10
+        && data.keys().size() >= 8 && data.keys().size() <= 14
         && data.buyerId == request.auth.uid
         && data.listingId is string && data.listingId.size() <= 128
         && data.sellerId is string && data.sellerId.size() <= 128
@@ -190,7 +190,17 @@ service cloud.firestore {
       allow update: if isVerified() && isValidId(listingId) && (
         (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
         (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
-        (existing().sellerId == "rCWg6xJA2rfnnEWMbOFQdMJljxD3" && incoming().sellerId == request.auth.uid && isValidListingShape(incoming()))
+        (existing().sellerId == "rCWg6xJA2rfnnEWMbOFQdMJljxD3" && incoming().sellerId == request.auth.uid && isValidListingShape(incoming())) ||
+        // Legitimate buyer purchase transition:
+        // Must be transitioning from active to sold, only modifying status and optionally isSold, preserving seller, price, currency, createdAt
+        (
+          existing().status == 'active' &&
+          incoming().status == 'sold' &&
+          incoming().sellerId == existing().sellerId &&
+          incoming().price == existing().price &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isSold'])
+        )
       );
       allow delete: if isVerified() && isValidId(listingId) && isOwner(existing().sellerId);
     }
@@ -295,11 +305,13 @@ service cloud.firestore {
         (incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likesCount']) 
           && incoming().likes is list && incoming().likes.size() <= 100000
           && (incoming().likesCount is number || incoming().likesCount is int)) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount'])
+          && (incoming().commentsCount is number || incoming().commentsCount is int)) ||
         (existing().creatorId == request.auth.uid 
           && incoming().creatorId == request.auth.uid 
           && incoming().videoUrl == existing().videoUrl
           && incoming().createdAt == existing().createdAt
-          && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'soundName', 'productId']))
+          && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'soundName', 'productId', 'trimStart', 'trimEnd']))
       );
       allow delete: if isVerified() && isValidId(clipId) && existing().creatorId == request.auth.uid;
 
@@ -309,7 +321,7 @@ service cloud.firestore {
           && incoming().userId == request.auth.uid
           && incoming().clipId == clipId
           && incoming().text is string && incoming().text.size() <= 1000
-          && incoming().createdAt == request.time;
+          && (incoming().createdAt == request.time || incoming().createdAt is string || incoming().createdAt is timestamp);
         allow delete: if isVerified() && isValidId(commentId) 
           && (existing().userId == request.auth.uid || get(/databases/$(database)/documents/clips/$(clipId)).data.creatorId == request.auth.uid);
       }

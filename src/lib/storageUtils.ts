@@ -169,6 +169,53 @@ export async function uploadClipVideo(
 }
 
 /**
+ * Helper specifically for uploading product images to Firebase Storage.
+ * Accepts File, Blob, or Base64 string and returns the HTTPS download URL.
+ */
+export async function uploadProductImage(
+  userId: string,
+  image: File | Blob | string,
+  productId?: string
+): Promise<string> {
+  if (typeof image === 'string') {
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return image;
+    }
+    const { blob, contentType } = base64ToBlob(image);
+    const timestamp = Date.now();
+    const path = `listings/${userId}/${productId || 'prod'}_${timestamp}.png`;
+    const result = await uploadFileToStorage({
+      path,
+      file: blob,
+      metadata: {
+        contentType,
+        customMetadata: {
+          uploadedBy: userId,
+          type: 'listing-image',
+        },
+      },
+    });
+    return result.downloadUrl;
+  } else {
+    const contentType = image.type || 'image/png';
+    const timestamp = Date.now();
+    const path = `listings/${userId}/${productId || 'prod'}_${timestamp}.png`;
+    const result = await uploadFileToStorage({
+      path,
+      file: image,
+      metadata: {
+        contentType,
+        customMetadata: {
+          uploadedBy: userId,
+          type: 'listing-image',
+        },
+      },
+    });
+    return result.downloadUrl;
+  }
+}
+
+/**
  * Helper specifically for uploading user avatar images to Firebase Storage.
  * Accepts File, Blob, or string (Base64 or existing HTTP/HTTPS URL).
  * Returns the HTTPS download URL.

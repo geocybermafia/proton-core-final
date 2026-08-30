@@ -16,6 +16,7 @@ import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { executeSecureTransaction } from '../services/cloudFunctionsService';
+import { uploadProductImage } from '../lib/storageUtils';
 
 export interface CreateListingPayload {
   title: string;
@@ -406,6 +407,23 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ? `lst-${crypto.randomUUID()}`
       : `lst-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
+    let processedImages: string[] = [];
+    if (payload.images && payload.images.length > 0) {
+      processedImages = await Promise.all(
+        payload.images.map(async (img) => {
+          if (typeof img === 'string' && img.startsWith('data:')) {
+            try {
+              return await uploadProductImage(user?.uid || 'guest-seller', img, newId);
+            } catch (err) {
+              console.warn("[SellerContext] Product image upload to Storage failed, falling back:", err);
+              return img;
+            }
+          }
+          return img;
+        })
+      );
+    }
+
     const newListing: Listing = {
       id: newId,
       title: payload.title || 'Untitled Listing Draft',
@@ -414,8 +432,8 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       currency: 'USD',
       sellerId: user?.uid || 'guest-seller',
       sellerName: user?.displayName || user?.email || 'Proton Merchant',
-      images: payload.images || [],
-      image: payload.images?.[0] || '',
+      images: processedImages,
+      image: processedImages[0] || '',
       category: payload.category || 'Digital Assets',
       location: 'Zürich / Global',
       country: 'Switzerland',

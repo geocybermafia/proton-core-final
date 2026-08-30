@@ -541,7 +541,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       return;
     }
 
-    let finalVideoUrl = newClipVideoUrl;
+    let finalVideoUrl = '';
 
     if (localVideoFile) {
       setIsUploading(true);
@@ -554,13 +554,33 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
             setUploadProgress(p);
           }
         );
-      } catch (err) {
-        console.warn("Storage upload error, using local object URL:", err);
-        finalVideoUrl = URL.createObjectURL(localVideoFile);
+      } catch (err: any) {
+        console.error("Storage upload error:", err);
+        setIsUploading(false);
+        showToast(
+          language === 'ka' 
+            ? 'ვიდეოს ატვირთვა ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან.' 
+            : `Failed to upload video to cloud storage: ${err?.message || 'Network error'}. Please retry.`,
+          'error'
+        );
+        return;
       }
-    } else if (!finalVideoUrl) {
+    } else if (newClipVideoUrl && !newClipVideoUrl.startsWith('blob:')) {
+      finalVideoUrl = newClipVideoUrl;
+    } else {
       const preset = PRESET_LOOPS.find(p => p.id === selectedPresetId);
       finalVideoUrl = preset ? preset.url : PRESET_LOOPS[0].url;
+    }
+
+    if (!finalVideoUrl || finalVideoUrl.startsWith('blob:')) {
+      setIsUploading(false);
+      showToast(
+        language === 'ka' 
+          ? 'გთხოვთ აირჩიოთ ვალიდური ვიდეო ან პრესეტი' 
+          : 'Please select a valid video file or preset loop before publishing.',
+        'error'
+      );
+      return;
     }
 
     const taggedProduct = listings.find((l: MarketplaceItem) => l.id === newClipProductId) || allListings.find((l: MarketplaceItem) => l.id === newClipProductId);
@@ -598,6 +618,15 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         await saveVideoToLocalCache(docRef.id, localVideoFile).catch(() => {});
       }
 
+      // Cleanup local preview object URL if any
+      if (newClipVideoUrl && newClipVideoUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(newClipVideoUrl);
+        } catch {
+          // ignore
+        }
+      }
+
       setIsUploading(false);
       setIsCreateOpen(false);
       setLocalVideoFile(null);
@@ -609,77 +638,45 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         language === 'ka' ? 'კლიპი წარმატებით გამოქვეყნდა!' : 'Clip published to feed!',
         'success'
       );
-    } catch (err) {
-      console.warn("Firestore clip creation error:", err);
+    } catch (err: any) {
+      console.error("Firestore clip creation error:", err);
       setIsUploading(false);
       showToast(
-        language === 'ka' ? 'კლიპის გამოქვეყნება ვერ მოხერხდა' : 'Failed to publish clip',
+        language === 'ka' ? 'ვიდეოს გამოქვეყნება ვერ მოხერხდა' : `Failed to publish clip: ${err?.message || 'Error'}`,
         'error'
       );
     }
   };
 
-  // AI Auto-Fix Dialog Triggers
+  // Video Trimmer & Boundary Controls Handlers
   const handleRunAutoFix = (clip: Clip) => {
     setSelectedClipForFix(clip);
     setShowAutoFixDialog(true);
-    setIsAnalyzing(true);
-
-    setTimeout(() => {
-      setIsAnalyzing(false);
-      const generatedIssues: ClipIssue[] = [
-        {
-          id: 'fix-1',
-          type: 'black_frame',
-          startSec: 0,
-          endSec: 1.2,
-          titleEn: 'Black intro frame trimmed',
-          titleKa: 'შავი საწყისი კადრის მოჭრა',
-          descriptionEn: 'Intro contained 1.2s of unlit black padding before motion began.',
-          descriptionKa: 'ვიდეოს დასაწყისში დაფიქსირდა 1.2 წამიანი გაუნათებელი შავი კადრი.',
-          suggestedActionEn: 'Trim first 1.2 seconds automatically',
-          suggestedActionKa: 'პირველი 1.2 წამის ავტომატური მოჭრა'
-        },
-        {
-          id: 'fix-2',
-          type: 'silence',
-          startSec: (clip.duration || 10) - 1.5,
-          endSec: clip.duration || 10,
-          titleEn: 'Dead audio tail truncated',
-          titleKa: 'ბოლოში ხმის გაწყვეტის მოშორება',
-          descriptionEn: 'Trailing 1.5s audio abruptly muted before video ended.',
-          descriptionKa: 'ვიდეოს დასასრულს ხმა უეცრად წყდებოდა 1.5 წამით ადრე.',
-          suggestedActionEn: 'Smooth audio loop crossfade',
-          suggestedActionKa: 'ხმის გლუვი გადაბმა ციკლში'
-        }
-      ];
-      setDetectedIssues(generatedIssues);
-    }, 1500);
   };
 
-  const handleApplyFix = (clip: Clip, issue: ClipIssue) => {
-    const updated = [...(appliedFixes[clip.id] || []), issue.id];
-    setAppliedFixes(prev => ({ ...prev, [clip.id]: updated }));
-    if (issue.startSec === 0) {
-      clip.trimStart = issue.endSec;
-    } else {
-      clip.trimEnd = issue.startSec;
+  const handleSaveTrim = async (clip: Clip, trimStart: number, trimEnd: number) => {
+    try {
+      clip.trimStart = trimStart;
+      clip.trimEnd = trimEnd;
+      // Persist to Firestore if valid clip
+      if (clip.id && !clip.id.startsWith('preset-')) {
+        const clipRef = doc(db, 'clips', clip.id);
+        await updateDoc(clipRef, {
+          trimStart,
+          trimEnd
+        });
+      }
+      showToast(
+        language === 'ka' ? 'ვიდეოს პარამეტრები წარმატებით შეინახა!' : 'Video trim settings saved!',
+        'success'
+      );
+    } catch (err: any) {
+      console.warn("Could not persist trim settings to Firestore:", err);
+      showToast(
+        language === 'ka' ? 'ვიდეოს პარამეტრები ლოკალურად მორგებულია' : 'Trim settings applied to active player',
+        'info'
+      );
     }
-    showToast(
-      language === 'ka' ? "გასწორება წარმატებით შესრულდა." : "Auto-Fix Applied Successfully.",
-      "success"
-    );
-  };
-
-  const handleUndoFix = (clip: Clip, issue: ClipIssue) => {
-    const updated = (appliedFixes[clip.id] || []).filter(id => id !== issue.id);
-    setAppliedFixes(prev => ({ ...prev, [clip.id]: updated }));
-    clip.trimStart = 0;
-    clip.trimEnd = clip.duration;
-    showToast(
-      language === 'ka' ? "გასწორება გაუქმდა." : "Fix Reverted.",
-      "info"
-    );
   };
 
   // Product Tagging Handlers
@@ -901,6 +898,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               isPlaying={isPlaying}
               isMuted={isMuted}
               isBuffering={false}
+              isMounted={Math.abs(idx - currentIndex) <= 1}
               activeFilter={activeFilter}
               showFiltersPanel={showFiltersPanel}
               soundOverlay={soundOverlay}
@@ -1104,20 +1102,13 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         }}
       />
 
-      {/* 4. Magic AI Auto-Fix Modal */}
+      {/* 4. Video Precision Trimmer Modal */}
       <ClipAutoFixModal
         isOpen={showAutoFixDialog}
         clip={selectedClipForFix}
-        isAnalyzing={isAnalyzing}
-        detectedIssues={detectedIssues}
-        appliedFixes={appliedFixes}
-        previewingIssueId={previewingIssueId}
-        dynamicPlaceholderThumbnails={dynamicPlaceholderThumbnails}
         language={language}
         onClose={() => setShowAutoFixDialog(false)}
-        onApplyFix={handleApplyFix}
-        onUndoFix={handleUndoFix}
-        onTogglePreviewIssue={(id) => setPreviewingIssueId(prev => prev === id ? null : id)}
+        onSaveTrim={handleSaveTrim}
       />
 
       {/* 5. Filters Drawer Modal */}

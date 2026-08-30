@@ -18,7 +18,8 @@ import {
   VolumeX, 
   Play, 
   AlertCircle, 
-  Plus 
+  Plus,
+  Scissors
 } from 'lucide-react';
 import { Clip } from '../../types';
 import { cn } from '../../lib/utils';
@@ -86,6 +87,7 @@ export interface ClipPlayerProps {
   isPlaying: boolean;
   isMuted: boolean;
   isBuffering: boolean;
+  isMounted?: boolean;
   activeFilter: 'none' | 'noir' | 'vintage' | 'warm' | 'glitch';
   showFiltersPanel: boolean;
   soundOverlay: { visible: boolean; muted: boolean };
@@ -131,6 +133,7 @@ export function ClipPlayer({
   isPlaying,
   isMuted,
   isBuffering,
+  isMounted,
   activeFilter,
   showFiltersPanel,
   soundOverlay,
@@ -169,6 +172,8 @@ export function ClipPlayer({
 }: ClipPlayerProps) {
   const isLikedByMe = clip.likes?.includes(currentUser?.uid || '');
   const hasProduct = !!clip.productId;
+  const isVirtualMounted = isMounted ?? (Math.abs(idx - currentIndex) <= 1);
+  const isCurrentActive = idx === currentIndex;
 
   return (
     <div 
@@ -187,52 +192,71 @@ export function ClipPlayer({
 
         {/* VIDEO PLAYER ELEMENT */}
         <div 
-          className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden cursor-pointer"
+          className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden cursor-pointer bg-zinc-950"
           onDoubleClick={() => onDoubleTap(clip)}
           onClick={() => onTogglePlay(idx)}
         >
-          <video
-            ref={el => videoRefCallback(idx, el)}
-            src={getClipVideoUrl(clip, idx)}
-            loop
-            playsInline
-            muted={isMuted}
-            preload="auto"
-            autoPlay={idx === currentIndex && isPlaying}
-            className={cn(
-              "w-full h-full object-cover transition-all duration-300",
-              activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
-              activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
-              activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
-              activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
-            )}
-            onPlay={() => { if (idx === currentIndex) onVideoPlayStateChange(true); }}
-            onPause={() => { if (idx === currentIndex) onVideoPlayStateChange(false); }}
-            onWaiting={() => { if (idx === currentIndex) onVideoBufferingStateChange(true); }}
-            onStalled={() => { if (idx === currentIndex) onVideoBufferingStateChange(true); }}
-            onPlaying={() => { if (idx === currentIndex) onVideoBufferingStateChange(false); }}
-            onCanPlay={() => { if (idx === currentIndex) onVideoBufferingStateChange(false); }}
-            onLoadedData={() => { onVideoLoadSuccess(clip.id); }}
-            onError={() => {
-              console.warn("Video play/decode error for ID", clip.id);
-              const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
-              onVideoFallback(clip.id, fallbackUrl);
-            }}
-            onLoadedMetadata={(e) => onVideoMetadataLoad(clip.id, e)}
-            onTimeUpdate={(e) => {
-              const video = e.currentTarget;
-              const tStart = clip.trimStart || 0;
-              const tEnd = clip.trimEnd || video.duration || Infinity;
-              
-              if (video.currentTime < tStart) {
-                video.currentTime = tStart;
-              }
-              if (video.currentTime > tEnd) {
-                video.currentTime = tStart;
-                video.play().catch(() => {});
-              }
-            }}
-          />
+          {isVirtualMounted ? (
+            <video
+              ref={el => videoRefCallback(idx, el)}
+              src={getClipVideoUrl(clip, idx)}
+              loop
+              playsInline
+              muted={isMuted}
+              preload={isCurrentActive ? "auto" : "none"}
+              autoPlay={isCurrentActive && isPlaying}
+              className={cn(
+                "w-full h-full object-cover transition-all duration-300",
+                activeFilter === 'noir' && "grayscale contrast-[1.25] brightness-95",
+                activeFilter === 'vintage' && "sepia brightness-[0.88] contrast-[1.05] saturate-[1.3]",
+                activeFilter === 'warm' && "saturate-[1.55] contrast-[1.05] brightness-[0.95] sepia-[0.12]",
+                activeFilter === 'glitch' && "animate-proton-glitch brightness-[1.05] contrast-[1.2] saturate-[1.5]"
+              )}
+              onPlay={() => { if (isCurrentActive) onVideoPlayStateChange(true); }}
+              onPause={() => { if (isCurrentActive) onVideoPlayStateChange(false); }}
+              onWaiting={() => { if (isCurrentActive) onVideoBufferingStateChange(true); }}
+              onStalled={() => { if (isCurrentActive) onVideoBufferingStateChange(true); }}
+              onPlaying={() => { if (isCurrentActive) onVideoBufferingStateChange(false); }}
+              onCanPlay={() => { if (isCurrentActive) onVideoBufferingStateChange(false); }}
+              onLoadedData={() => { onVideoLoadSuccess(clip.id); }}
+              onError={() => {
+                console.warn("Video play/decode error for ID", clip.id);
+                const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
+                onVideoFallback(clip.id, fallbackUrl);
+              }}
+              onLoadedMetadata={(e) => onVideoMetadataLoad(clip.id, e)}
+              onTimeUpdate={(e) => {
+                const video = e.currentTarget;
+                const tStart = clip.trimStart || 0;
+                const tEnd = clip.trimEnd || video.duration || Infinity;
+                
+                if (video.currentTime < tStart) {
+                  video.currentTime = tStart;
+                }
+                if (video.currentTime > tEnd) {
+                  video.currentTime = tStart;
+                  video.play().catch(() => {});
+                }
+              }}
+            />
+          ) : (
+            <div className="w-full h-full relative flex items-center justify-center bg-zinc-950">
+              {(clip.thumbnailUrl || dynamicPlaceholderThumbnails[clip.id]) ? (
+                <img
+                  src={clip.thumbnailUrl || dynamicPlaceholderThumbnails[clip.id]}
+                  alt={clip.caption || 'Clip preview'}
+                  className="w-full h-full object-cover opacity-60 filter blur-[1px]"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-950/40 via-zinc-900 to-black flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/40">
+                    <Play size={20} className="ml-0.5" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Double Tap Heart Overlay */}
           {doubleTapHearts[clip.id] && (
@@ -468,20 +492,24 @@ export function ClipPlayer({
             </button>
           </div>
 
-          {/* Magic AI Auto-Fix button */}
+          {/* Video Trim & Precision Controls button */}
           <div className="flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={() => onRunAutoFix(clip)}
               className={cn(
                 "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
-                (appliedFixes[clip.id]?.length > 0)
-                  ? "bg-emerald-600/40 border-emerald-400 text-emerald-200 shadow-emerald-500/30"
+                ((clip.trimStart && clip.trimStart > 0) || (clip.trimEnd && clip.trimEnd < (clip.duration || 100)))
+                  ? "bg-purple-600/50 border-purple-400 text-purple-200 shadow-purple-500/30"
                   : "bg-black/50 border-white/15 text-white hover:bg-black/75"
               )}
-              title="Magic AI Auto-Fix"
+              title={language === 'ka' ? 'ვიდეოს მოჭრა და მორგება' : 'Trim & Adjust Video'}
+              aria-label="Trim and adjust video"
             >
-              <Wand2 className="h-5 w-5 animate-pulse text-purple-300" />
+              <Scissors className="h-5 w-5 text-purple-300" />
             </button>
+            <span className="text-[9px] font-bold text-white/90 drop-shadow">
+              {language === 'ka' ? 'მოჭრა' : 'Trim'}
+            </span>
           </div>
 
           {/* Tag Product Button (Creator / Merchant) */}
