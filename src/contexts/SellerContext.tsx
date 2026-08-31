@@ -10,7 +10,8 @@ import {
   setDoc, 
   deleteDoc, 
   orderBy, 
-  limit 
+  limit,
+  serverTimestamp 
 } from 'firebase/firestore';
 import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
@@ -467,7 +468,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const newOrder: Order = {
       id: newId,
       listingId: payload.listingId,
-      buyerId: payload.buyerId || user?.uid || 'guest-buyer',
+      buyerId: user?.uid || payload.buyerId || 'guest-buyer',
       sellerId: payload.sellerId,
       amount: payload.amount,
       currency: payload.currency || 'USD',
@@ -482,9 +483,21 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     try {
       const docRef = doc(db, 'orders', newId);
-      await setDoc(docRef, newOrder);
+      const firestoreOrderData = {
+        listingId: payload.listingId,
+        buyerId: user?.uid || payload.buyerId || 'guest-buyer',
+        sellerId: payload.sellerId,
+        amount: payload.amount,
+        currency: payload.currency || 'USD',
+        itemTitle: payload.itemTitle,
+        status: 'pending',
+        orderType: payload.orderType || 'product',
+        buyerInstructions: payload.buyerInstructions || '',
+        createdAt: serverTimestamp()
+      };
+      await setDoc(docRef, firestoreOrderData);
     } catch (err) {
-      console.warn("[SellerContext] Firestore create order warning (using local state fallback):", err);
+      console.warn("[SellerContext] Firestore create order warning:", err);
     }
 
     setSellerOrders(prev => [newOrder, ...prev]);

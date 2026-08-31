@@ -12,7 +12,8 @@ import {
   LogIn, 
   CheckCircle2, 
   HelpCircle,
-  Video
+  Video,
+  Scissors
 } from 'lucide-react';
 import { 
   collection, 
@@ -25,6 +26,7 @@ import {
   updateDoc, 
   getDocs, 
   serverTimestamp, 
+  runTransaction,
   arrayUnion, 
   arrayRemove 
 } from 'firebase/firestore';
@@ -67,21 +69,51 @@ const initDB = (): Promise<IDBDatabase> => {
   });
 };
 
+const MAX_CACHE_ENTRIES = 10;
+
 const saveVideoToLocalCache = async (id: string, file: File | Blob): Promise<void> => {
-  const db = await initDB();
-  return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction('videos', 'readwrite');
-      const store = transaction.objectStore('videos');
-      const request = store.put(file, id);
-      request.onsuccess = () => resolve();
-      request.onerror = (e) => reject(request.error || e);
-      transaction.onerror = (e) => reject(transaction.error || e);
-      transaction.onabort = (e) => reject(transaction.error || new Error('IndexedDB storage quota exceeded or transaction aborted'));
-    } catch (e) {
-      reject(e);
-    }
-  });
+  try {
+    const db = await initDB();
+
+    // Asynchronously evict oldest entries if capacity exceeded without blocking current write
+    setTimeout(() => {
+      try {
+        const cleanupTx = db.transaction('videos', 'readwrite');
+        const store = cleanupTx.objectStore('videos');
+        const countReq = store.count();
+        countReq.onsuccess = () => {
+          if (countReq.result >= MAX_CACHE_ENTRIES) {
+            const keysReq = store.getAllKeys();
+            keysReq.onsuccess = () => {
+              const keys = keysReq.result;
+              if (keys && keys.length >= MAX_CACHE_ENTRIES) {
+                const toDelete = keys.slice(0, keys.length - MAX_CACHE_ENTRIES + 1);
+                toDelete.forEach(k => store.delete(k));
+              }
+            };
+          }
+        };
+      } catch (err) {
+        // Non-blocking cleanup failure is safely ignored
+      }
+    }, 50);
+
+    return new Promise((resolve, reject) => {
+      try {
+        const transaction = db.transaction('videos', 'readwrite');
+        const store = transaction.objectStore('videos');
+        const request = store.put(file, id);
+        request.onsuccess = () => resolve();
+        request.onerror = (e) => reject(request.error || e);
+        transaction.onerror = (e) => reject(transaction.error || e);
+        transaction.onabort = (e) => reject(transaction.error || new Error('IndexedDB storage quota exceeded or transaction aborted'));
+      } catch (e) {
+        reject(e);
+      }
+    });
+  } catch (err) {
+    console.warn("[IndexedDB] Could not cache video locally:", err);
+  }
 };
 
 const deleteVideoFromLocalCache = async (id: string): Promise<void> => {
@@ -737,23 +769,90 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
 
     setIsCheckingOut(true);
     try {
-      const orderData: Partial<Order> = {
-        listingId: checkoutClip.productInfo.id,
+      const productId = checkoutClip.productInfo.id || checkoutClip.productId;
+      if (!productId) {
+        throw new Error(language === 'ka' ? 'პროდუქტის იდენტიფიკატორი არ მოიძებნა' : 'Product identifier not found');
+      }
+
+      let committedOrderId = '';
+      const isPreset = productId.startsWith('preset-') || checkoutClip.id.startsWith('preset-');
+
+      if (!isPreset) {
+        // Atomic Firestore transaction against real listing doc
+        await runTransaction(db, async (transaction) => {
+          const listingRef = doc(db, 'listings', productId);
+          const listingSnap = await transaction.get(listingRef);
+
+          if (!listingSnap.exists()) {
+            throw new Error(language === 'ka' ? 'პროდუქტი ბაზაში ვერ მოიძებნა.' : 'Product listing no longer exists.');
+          }
+
+          const freshData = listingSnap.data();
+          if (freshData.status === 'sold' || freshData.isSold) {
+            throw new Error(language === 'ka' ? 'ეს ნივთი უკვე გაყიდულია.' : 'This item has already been sold.');
+          }
+
+          const isService = freshData.category === 'service' || freshData.listingType === 'service';
+          const verifiedOrderData = {
+            listingId: productId,
+            buyerId: currentUser.uid,
+            sellerId: freshData.sellerId || checkoutClip.creatorId,
+            amount: freshData.price,
+            currency: freshData.currency || 'USD',
+            itemTitle: freshData.title || checkoutClip.productInfo?.title || 'Shoppable Item',
+            status: isService ? 'booked' : 'completed',
+            orderType: isService ? 'service' : 'product',
+            buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Shoppable Clip Instant Purchase',
+            createdAt: serverTimestamp()
+          };
+
+          const newOrderRef = doc(collection(db, 'orders'));
+          committedOrderId = newOrderRef.id;
+          transaction.set(newOrderRef, verifiedOrderData);
+
+          if (!isService) {
+            transaction.update(listingRef, {
+              status: 'sold',
+              isSold: true
+            });
+          }
+        });
+      } else {
+        // Preset / Demo showcase checkout
+        const orderData = {
+          listingId: productId,
+          buyerId: currentUser.uid,
+          sellerId: checkoutClip.creatorId || 'artisan-merchant',
+          amount: checkoutClip.productInfo.price,
+          currency: 'USD',
+          itemTitle: checkoutClip.productInfo.title,
+          status: 'completed',
+          orderType: 'product',
+          buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Demo Shoppable Clip Purchase',
+          createdAt: serverTimestamp()
+        };
+
+        const newOrderRef = doc(collection(db, 'orders'));
+        committedOrderId = newOrderRef.id;
+        try {
+          await addDoc(collection(db, 'orders'), orderData);
+        } catch {
+          // Preset order fallback
+        }
+      }
+
+      setCheckoutSuccessOrder({
+        id: committedOrderId || `ord-${Date.now()}`,
+        listingId: productId,
         buyerId: currentUser.uid,
-        buyerName: currentUser.displayName || 'Buyer',
         sellerId: checkoutClip.creatorId,
         currency: 'USD',
         itemTitle: checkoutClip.productInfo.title,
         amount: checkoutClip.productInfo.price * checkoutQuantity,
         quantity: checkoutQuantity,
         status: 'completed',
-        createdAt: new Date().toISOString(),
-        deliveryAddress: checkoutDeliveryNotes || 'Direct from Shoppable Clip',
-        paymentMethod: checkoutPaymentMethod
-      };
-
-      const orderRef = await addDoc(collection(db, 'orders'), orderData);
-      setCheckoutSuccessOrder({ ...(orderData as Order), id: orderRef.id });
+        createdAt: Date.now()
+      });
       setIsCheckingOut(false);
 
       showToast(
@@ -1286,11 +1385,11 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
 
                 <div className="p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
                   <div className="font-bold text-white flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-purple-400" />
-                    <span>{language === 'ka' ? 'Gemini AI Auto-Fix' : 'Gemini AI Auto-Fix'}</span>
+                    <Scissors size={13} className="text-purple-400" />
+                    <span>{language === 'ka' ? 'ვიდეოს მოჭრა & ციკლის კონტროლი' : 'Precision Video Trimmer & Loop Controls'}</span>
                   </div>
                   <p className="text-[11px] text-proton-muted">
-                    {language === 'ka' ? 'კადრების ავტომატური ანალიზი, შავი კადრებისა და აუდიო ხარვეზების გასწორება.' : 'Programmatic frame scans that detect and trim black frames and audio drops.'}
+                    {language === 'ka' ? 'ინტრო/აუტრო მონაკვეთების მორგება, საწყისი და საბოლოო მარკერების შერჩევა, ვიდეოს სკრაბინგი და გლუვი ციკლური ჩვენება.' : 'Adjust intro/outro boundaries, scrub frames, set custom loop ranges, and persist creator trim settings.'}
                   </p>
                 </div>
 

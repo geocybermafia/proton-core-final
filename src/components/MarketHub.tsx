@@ -297,6 +297,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [buyerInstructions, setBuyerInstructions] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
+  const [pageSize, setPageSize] = useState<number>(24);
 
   // Shopping Cart state
   const [cart, setCart] = useState<Listing[]>(() => {
@@ -354,13 +355,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     if (!user || cart.length === 0) return;
     setIsPlacingCartOrders(true);
     try {
-      for (const item of cart) {
-        let freshPrice = item.price;
-        let freshCurrency = item.currency || 'USD';
-        let freshTitle = item.title;
-        let isSold = false;
-
-        if (isSupabaseConfigured()) {
+      if (isSupabaseConfigured()) {
+        for (const item of cart) {
           const { data: freshList, error } = await supabase
             .from('listings')
             .select('*')
@@ -375,22 +371,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             return;
           }
           if (freshList.status === 'sold' || freshList.isSold) {
-            isSold = true;
-          }
-          freshPrice = freshList.price;
-          freshCurrency = freshList.currency || 'USD';
-          freshTitle = freshList.title || item.title;
-
-          if (isSold) {
             alert(language === 'ka'
-              ? `შეცდომა: პროდუქტი "${freshTitle}" უკვე გაყიდულია და მისი შეძენა შეუძლებელია.`
-              : `Error: Product "${freshTitle}" has already been sold and cannot be purchased.`);
+              ? `შეცდომა: პროდუქტი "${freshList.title || item.title}" უკვე გაყიდულია და მისი შეძენა შეუძლებელია.`
+              : `Error: Product "${freshList.title || item.title}" has already been sold and cannot be purchased.`);
             setIsPlacingCartOrders(false);
             return;
           }
 
           const isService = item.listingType === 'service' || item.category === 'service';
-
           if (!isService) {
             const { data: updatedListings, error: updateErr } = await supabase
               .from('listings')
@@ -401,8 +389,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
             if (updateErr || !updatedListings || updatedListings.length === 0) {
               alert(language === 'ka'
-                ? `შეცდომა: პროდუქტი "${freshTitle}" ახლახანს შეიძინა სხვა მომხმარებელმა.`
-                : `Error: Product "${freshTitle}" was just purchased by another user.`);
+                ? `შეცდომა: პროდუქტი "${freshList.title || item.title}" ახლახანს შეიძინა სხვა მომხმარებელმა.`
+                : `Error: Product "${freshList.title || item.title}" was just purchased by another user.`);
               setIsPlacingCartOrders(false);
               return;
             }
@@ -412,9 +400,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             listingId: item.id,
             buyerId: user.uid,
             sellerId: freshList.sellerId || item.sellerId,
-            amount: freshPrice,
-            currency: freshCurrency,
-            itemTitle: freshTitle,
+            amount: freshList.price,
+            currency: freshList.currency || 'USD',
+            itemTitle: freshList.title || item.title,
             status: isService ? 'booked' : 'completed',
             orderType: isService ? 'service' : 'product',
             buyerInstructions: '',
@@ -431,16 +419,25 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 .eq('id', item.id);
             }
             alert(language === 'ka'
-              ? `შეცდომა შეკვეთის შექმნისას: "${freshTitle}". ოპერაცია გაუქმდა.`
-              : `Order creation failed for "${freshTitle}". Transaction rolled back.`);
+              ? `შეცდომა შეკვეთის შექმნისას: "${freshList.title || item.title}". ოპერაცია გაუქმდა.`
+              : `Order creation failed for "${freshList.title || item.title}". Transaction rolled back.`);
             setIsPlacingCartOrders(false);
             return;
           }
-        } else {
-          const isService = item.listingType === 'service' || item.category === 'service';
-          await runTransaction(db, async (transaction) => {
-            const docRef = doc(db, 'listings', item.id);
-            const docSnap = await transaction.get(docRef);
+        }
+      } else {
+        // Atomic Firestore transaction covering all cart items in a single commit
+        await runTransaction(db, async (transaction) => {
+          // 1. First read all listing docs concurrently
+          const listingSnapshots = await Promise.all(
+            cart.map(item => transaction.get(doc(db, 'listings', item.id)))
+          );
+
+          // 2. Validate all items before making any modifications
+          const verifiedOrders: { listingRef: any; orderData: any; isService: boolean }[] = [];
+          for (let i = 0; i < cart.length; i++) {
+            const item = cart[i];
+            const docSnap = listingSnapshots[i];
             if (!docSnap.exists()) {
               throw new Error(`Product "${item.title}" no longer exists in our database.`);
             }
@@ -449,34 +446,38 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               throw new Error(`Product "${freshData.title || item.title}" has already been sold.`);
             }
 
-            freshPrice = freshData.price;
-            freshCurrency = freshData.currency || 'USD';
-            freshTitle = freshData.title || item.title;
+            const isService = item.listingType === 'service' || item.category === 'service';
+            verifiedOrders.push({
+              listingRef: doc(db, 'listings', item.id),
+              orderData: {
+                listingId: item.id,
+                buyerId: user.uid,
+                sellerId: freshData.sellerId || item.sellerId,
+                amount: freshData.price,
+                currency: freshData.currency || 'USD',
+                itemTitle: freshData.title || item.title,
+                status: isService ? 'booked' : 'completed',
+                orderType: isService ? 'service' : 'product',
+                buyerInstructions: '',
+                createdAt: serverTimestamp()
+              },
+              isService
+            });
+          }
 
-            const orderData = {
-              listingId: item.id,
-              buyerId: user.uid,
-              sellerId: freshData.sellerId || item.sellerId,
-              amount: freshPrice,
-              currency: freshCurrency,
-              itemTitle: freshTitle,
-              status: isService ? 'booked' : 'completed',
-              orderType: isService ? 'service' : 'product',
-              buyerInstructions: '',
-              createdAt: serverTimestamp()
-            };
-
+          // 3. Commit all writes atomically
+          for (const { listingRef, orderData, isService } of verifiedOrders) {
             const newOrderRef = doc(collection(db, 'orders'));
             transaction.set(newOrderRef, orderData);
 
             if (!isService) {
-              transaction.update(docRef, {
+              transaction.update(listingRef, {
                 status: 'sold',
                 isSold: true
               });
             }
-          });
-        }
+          }
+        });
       }
       setCart([]);
       setIsCartOpen(false);
@@ -836,8 +837,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     const tryFetchListings = (useOrderBy: boolean) => {
       try {
         const qListings = useOrderBy 
-          ? query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(24))
-          : query(collection(db, 'listings'), limit(24));
+          ? query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(pageSize))
+          : query(collection(db, 'listings'), limit(pageSize));
 
         unsub = onSnapshot(qListings, (snapshot) => {
           const data = snapshot.docs.map(doc => ({
@@ -907,7 +908,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return () => {
       if (unsub) unsub();
     };
-  }, [user, authLoading]);
+  }, [user, authLoading, pageSize]);
 
   useEffect(() => {
     if (!user) {
@@ -3712,6 +3713,21 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               })
                )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* Catalog Pagination Load More */}
+        {!loading && viewMode === 'browse' && listings.length >= pageSize && (
+          <div className="mt-8 flex justify-center items-center pb-8">
+            <button
+              type="button"
+              onClick={() => setPageSize(prev => prev + 24)}
+              className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-[#dfb257]/40 text-zinc-300 hover:text-white transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer"
+            >
+              <ChevronDown size={14} className="text-[#dfb257]" />
+              <span>{language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings'}</span>
+              <span className="text-[10px] text-zinc-500 font-mono">({listings.length})</span>
+            </button>
           </div>
         )}
       </div>
