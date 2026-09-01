@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Clip, MarketplaceItem, Order } from '../../types';
 import { cn } from '../../lib/utils';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export interface ClipStoreDrawerProps {
   // Tagging State
@@ -72,13 +73,24 @@ export function ClipStoreDrawer({
   onSubmitCheckout,
   onContinueWatchingAfterCheckout,
 }: ClipStoreDrawerProps) {
+  const taggingModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!taggingClip,
+    onClose: onCloseTagging,
+  });
+
+  const checkoutModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!checkoutClip,
+    onClose: onCloseCheckout,
+  });
+
   return (
     <>
       {/* MERCHANT PRODUCT TAGGING MODAL */}
       <AnimatePresence>
         {taggingClip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={language === 'ka' ? 'პროდუქტის მიბმა' : 'Tag Product'}>
             <motion.div
+              ref={taggingModalRef}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -274,8 +286,9 @@ export function ClipStoreDrawer({
       {/* SHOPPABLE INSTANT CHECKOUT MODAL OVER VIDEO */}
       <AnimatePresence>
         {checkoutClip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={language === 'ka' ? 'შეკვეთის გაფორმება' : 'Instant Checkout'}>
             <motion.div
+              ref={checkoutModalRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -411,11 +424,17 @@ export function ClipStoreDrawer({
 
                   {/* Delivery / Order notes */}
                   <div className="space-y-1.5">
-                    <label className="block text-[11px] font-bold text-proton-muted">
-                      {language === 'ka' ? 'მიწოდების მისამართი ან შენიშვნა:' : 'Delivery Address / Special Notes:'}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-bold text-proton-muted">
+                        {language === 'ka' ? 'მიწოდების მისამართი ან შენიშვნა:' : 'Delivery Address / Special Notes:'}
+                      </label>
+                      <span className={cn("text-[10px] font-mono", checkoutDeliveryNotes.length >= 280 ? "text-amber-400 font-bold" : "text-proton-muted")}>
+                        {checkoutDeliveryNotes.length}/300
+                      </span>
+                    </div>
                     <textarea
                       rows={2}
+                      maxLength={300}
                       value={checkoutDeliveryNotes}
                       onChange={(e) => onChangeDeliveryNotes(e.target.value)}
                       placeholder={language === 'ka' ? 'მაგ: თბილისი, რუსთაველის #12, ბინა 4' : 'e.g. Tbilisi, Rustaveli Ave #12, Apt 4'}

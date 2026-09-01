@@ -59,7 +59,9 @@ import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
+import { uploadProductImage } from '../lib/storageUtils';
 import { translations } from '../translations';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import 'leaflet/dist/leaflet.css';
 
 interface MarketHubProps {
@@ -312,9 +314,68 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPlacingCartOrders, setIsPlacingCartOrders] = useState(false);
 
+  // Focus traps for accessible modal & drawer management
+  const cartDrawerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isCartOpen,
+    onClose: () => !isPlacingCartOrders && setIsCartOpen(false),
+  });
+
+  const singleCheckoutModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!checkoutItem,
+    onClose: () => !isCheckingOut && setCheckoutItem(null),
+  });
+
+  const filtersDrawerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isFiltersOpen,
+    onClose: () => setIsFiltersOpen(false),
+  });
+
+  // Cross-tab synchronization for Cart State
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('proton_market_cart_channel');
+        channel.onmessage = (event) => {
+          if (event.data && Array.isArray(event.data.cart)) {
+            setCart(event.data.cart);
+          }
+        };
+      }
+    } catch (err) {
+      console.warn("BroadcastChannel not supported in environment:", err);
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'proton_market_cart') {
+        try {
+          const updated = e.newValue ? JSON.parse(e.newValue) : [];
+          if (Array.isArray(updated)) {
+            setCart(updated);
+          }
+        } catch (parseErr) {
+          console.error("Failed to parse synced cart:", parseErr);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (channel) {
+        channel.close();
+      }
+    };
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem('proton_market_cart', JSON.stringify(cart));
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('proton_market_cart_channel');
+        channel.postMessage({ cart });
+        channel.close();
+      }
     } catch (e) {
       console.error(e);
     }
@@ -645,6 +706,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [reviewText, setReviewText] = useState<string>('');
   const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
 
+  const vendorModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!selectedVendor,
+    onClose: () => setSelectedVendor(null),
+  });
+
   useEffect(() => {
     if (!user || authLoading) return;
     const qReviews = query(collection(db, 'seller_reviews'), limit(20));
@@ -741,6 +807,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [activeChatListing, setActiveChatListing] = useState<Listing | null>(null);
   const [chatMessageText, setChatMessageText] = useState('');
   const [messagesList, setMessagesList] = useState<any[]>([]);
+
+  const chatModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!activeChatListing,
+    onClose: () => setActiveChatListing(null),
+  });
 
   useEffect(() => {
     if (!activeChatListing || !user) return;
@@ -1726,6 +1797,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       const sanitizedLat = (typeof formData.lat === 'number' && !isNaN(formData.lat)) ? formData.lat : null;
       const sanitizedLng = (typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null;
 
+      // Upload any local base64 images to Firebase Storage first to ensure HTTPS URLs in Firestore
+      let finalImages = formData.images || [];
+      if (finalImages.length > 0) {
+        try {
+          const uploadPromises = finalImages.map(async (img, idx) => {
+            if (typeof img === 'string' && img.startsWith('data:image/')) {
+              const uploadedUrl = await uploadProductImage(user.uid, img, `prod_${Date.now()}_${idx}`);
+              return uploadedUrl;
+            }
+            return img;
+          });
+          finalImages = await Promise.all(uploadPromises);
+        } catch (uploadErr) {
+          console.warn("[MarketHub] Storage upload warning:", uploadErr);
+        }
+      }
+
       const listingData = {
         title: formData.title.trim(),
         titleGe: (formData.titleGe || formData.title).trim(),
@@ -1739,8 +1827,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
         country: countryStr,
         city: cityStr,
-        image: (formData.images && formData.images[0]) || '',
-        images: formData.images || [],
+        image: (finalImages && finalImages[0]) || '',
+        images: finalImages,
         createdAt: serverTimestamp(),
         status: 'active',
         lat: sanitizedLat,
@@ -2729,33 +2817,38 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           {/* SPACE-SAVING MOBILE TOOLBAR - Only for Browse View */}
           {viewMode === 'browse' && (
             <div className="block md:hidden bg-zinc-950/45 border border-zinc-900 rounded-3xl p-4 mb-3.5 space-y-3.5 transition-all">
-              {/* Listing Type Select tabs (scrollable) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-                {(['all', 'service', 'product', 'project'] as const).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setActiveListingType(type)}
-                    className={cn(
-                      "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shrink-0 flex items-center gap-1.5 min-h-[40px] cursor-pointer",
-                      activeListingType === type
-                        ? "bg-gradient-to-b from-zinc-800 to-zinc-900 text-[#dfb257] border-[#dfb257]/30 shadow-md"
-                        : "text-zinc-400 border-transparent hover:text-zinc-200"
-                    )}
-                  >
-                    <span>
-                      {type === 'all' ? '🌍' :
-                       type === 'service' ? '⚡' :
-                       type === 'product' ? '📦' : '🚀'}
-                    </span>
-                    <span>
-                      {type === 'all' ? (language === 'ka' ? 'ყველა' : 'All') :
-                       type === 'service' ? (language === 'ka' ? 'სერვისები' : 'Services') :
-                       type === 'product' ? (language === 'ka' ? 'პროდუქტები' : 'Products') :
-                       (language === 'ka' ? 'პროექტები' : 'Projects')}
-                    </span>
-                  </button>
-                ))}
+              {/* Listing Type Select tabs (scrollable with horizontal scroll indicator) */}
+              <div className="relative group/typescroll">
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 pr-6">
+                  {(['all', 'service', 'product', 'project'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setActiveListingType(type)}
+                      className={cn(
+                        "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shrink-0 flex items-center gap-1.5 min-h-[40px] cursor-pointer whitespace-nowrap",
+                        activeListingType === type
+                          ? "bg-gradient-to-b from-zinc-800 to-zinc-900 text-[#dfb257] border-[#dfb257]/30 shadow-md"
+                          : "text-zinc-400 border-transparent hover:text-zinc-200"
+                      )}
+                    >
+                      <span>
+                        {type === 'all' ? '🌍' :
+                         type === 'service' ? '⚡' :
+                         type === 'product' ? '📦' : '🚀'}
+                      </span>
+                      <span>
+                        {type === 'all' ? (language === 'ka' ? 'ყველა' : 'All') :
+                         type === 'service' ? (language === 'ka' ? 'სერვისები' : 'Services') :
+                         type === 'product' ? (language === 'ka' ? 'პროდუქტები' : 'Products') :
+                         (language === 'ka' ? 'პროექტები' : 'Projects')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950/90 via-zinc-950/40 to-transparent flex items-center justify-end pr-1 text-zinc-500">
+                  <ChevronRight size={12} className="opacity-60" />
+                </div>
               </div>
 
               {/* Space-saving Compact Action Controls */}
@@ -3562,7 +3655,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <div className="flex flex-col">
                           <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block">{t.market.price}</span>
-                          <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#dfb257] flex items-baseline gap-0.5">
+                          <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#dfb257] flex items-baseline gap-0.5 whitespace-nowrap">
                             {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             <span className="text-xs font-bold text-zinc-400 font-sans ml-1">{displayCurrency}</span>
                           </span>
@@ -3570,15 +3663,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
                         {/* Product / Service / Project Badge */}
                         {listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-sm shrink-0">
+                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-sm shrink-0 whitespace-nowrap">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
                         ) : listing.listingType === 'project' || listing.category === 'project' ? (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm shrink-0">
+                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm shrink-0 whitespace-nowrap">
                             {language === 'ka' ? 'პროექტი' : 'Project'}
                           </span>
                         ) : (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/20 text-zinc-200 shadow-sm shrink-0">
+                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/20 text-zinc-200 shadow-sm shrink-0 whitespace-nowrap">
                             {language === 'ka' ? 'პროდუქტი' : 'Product'}
                           </span>
                         )}
@@ -3716,18 +3809,38 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           </div>
         )}
 
-        {/* Catalog Pagination Load More */}
-        {!loading && viewMode === 'browse' && listings.length >= pageSize && (
-          <div className="mt-8 flex justify-center items-center pb-8">
-            <button
-              type="button"
-              onClick={() => setPageSize(prev => prev + 24)}
-              className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-[#dfb257]/40 text-zinc-300 hover:text-white transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer"
-            >
-              <ChevronDown size={14} className="text-[#dfb257]" />
-              <span>{language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings'}</span>
-              <span className="text-[10px] text-zinc-500 font-mono">({listings.length})</span>
-            </button>
+        {/* Catalog Pagination Load More & Discovery Status */}
+        {!loading && viewMode === 'browse' && listings.length > 0 && (
+          <div className="mt-8 flex flex-col justify-center items-center gap-3 pb-8">
+            {/* Filter Scope Notice */}
+            {(search.trim() || activeCategory !== 'all' || activeListingType !== 'all' || minPrice || maxPrice) && (
+              <p className="text-[10px] font-bold text-zinc-500 bg-zinc-900/50 px-4 py-1.5 rounded-full border border-zinc-800/80">
+                {language === 'ka' 
+                  ? `შედეგები გაფილტრულია ჩატვირთული ${listings.length} განცხადებიდან` 
+                  : `Filtered from ${listings.length} currently loaded listings`}
+              </p>
+            )}
+
+            {listings.length >= pageSize ? (
+              <button
+                type="button"
+                onClick={() => setPageSize(prev => prev + 24)}
+                className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-[#dfb257]/40 text-zinc-300 hover:text-white transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer"
+              >
+                <ChevronDown size={14} className="text-[#dfb257]" />
+                <span>{language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings'}</span>
+                <span className="text-[10px] text-zinc-500 font-mono">({listings.length} loaded)</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-zinc-500 bg-zinc-950/60 px-4 py-2 rounded-xl border border-zinc-900">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>
+                  {language === 'ka' 
+                    ? `ყველა ${listings.length} ხელმისაწვდომი განცხადება ჩატვირთულია` 
+                    : `All ${listings.length} available listings loaded • End of catalog`}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -3793,21 +3906,27 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           {/* Mobile Filters Drawer */}
           <AnimatePresence>
             {isFiltersOpen && (
-              <>
+              <div 
+                className="fixed inset-0 z-[140] lg:hidden"
+                role="dialog"
+                aria-modal="true"
+                aria-label={language === 'ka' ? 'ფილტრები' : 'Filters'}
+              >
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsFiltersOpen(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] lg:hidden"
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm"
                 />
                 <motion.div 
+                  ref={filtersDrawerRef}
                   initial={{ x: '100%' }}
                   animate={{ x: 0 }}
                   exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                   className={cn(
-                    "fixed right-0 top-16 bottom-0 w-[85%] max-w-sm z-[140] p-8 lg:hidden border-l border-white/5 flex flex-col backdrop-blur-[20px] max-h-[calc(100vh-theme(spacing.16))] overflow-y-auto",
+                    "fixed right-0 top-16 bottom-0 w-[85%] max-w-sm p-8 border-l border-white/5 flex flex-col backdrop-blur-[20px] max-h-[calc(100vh-theme(spacing.16))] overflow-y-auto z-10",
                     currentTheme.card
                   )}
                 >
@@ -3823,7 +3942,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     </button>
                   </div>
                 </motion.div>
-              </>
+              </div>
             )}
           </AnimatePresence>
         </div>
@@ -4590,7 +4709,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
       <AnimatePresence>
         {isCartOpen && (
-          <div className="fixed inset-0 z-[140] flex items-stretch sm:items-center justify-end p-0 sm:p-4">
+          <div 
+            className="fixed inset-0 z-[140] flex items-stretch sm:items-center justify-end p-0 sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
+          >
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4600,6 +4724,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             />
             
             <motion.div 
+              ref={cartDrawerRef}
               initial={{ opacity: 0, x: 100 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 100 }}
@@ -4735,7 +4860,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {checkoutItem && (
-          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div 
+            className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
+          >
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4745,11 +4875,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             />
             
             <motion.div 
+              ref={singleCheckoutModalRef}
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className={cn(
-                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden",
+                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden z-10",
                 currentTheme.card
               )}
             >
@@ -4820,9 +4951,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-wider text-white/50 block ml-1">{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Instructions for the Seller'}</label>
+                      <div className="flex items-center justify-between ml-1">
+                        <label className="text-[9px] font-black uppercase tracking-wider text-white/50 block">{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Instructions for the Seller'}</label>
+                        <span className={cn("text-[9px] font-mono", buyerInstructions.length >= 480 ? "text-amber-400 font-bold" : "text-white/40")}>
+                          {buyerInstructions.length}/500
+                        </span>
+                      </div>
                       <textarea
                         value={buyerInstructions}
+                        maxLength={500}
                         onChange={e => setBuyerInstructions(e.target.value)}
                         placeholder={language === 'ka' ? "ჩაწერეთ სამუშაოს სპეციფიკაცია..." : "Enter your specific task instructions..."}
                         className={cn("w-full h-24 px-4 py-3 rounded-2xl border text-xs font-bold text-white focus:outline-none transition-all placeholder:text-white/20 bg-black/20", currentTheme.input)}
@@ -4865,7 +5002,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {activeChatListing && (
-          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div 
+            className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={language === 'ka' ? 'კავშირი გამყიდველთან' : 'Chat with Seller'}
+          >
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4875,11 +5017,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             />
             
             <motion.div 
+              ref={chatModalRef}
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className={cn(
-                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden",
+                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden z-10",
                 currentTheme.card
               )}
             >
@@ -4975,7 +5118,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {selectedVendor && (
-          <div className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div 
+            className="fixed inset-0 z-[140] flex items-end sm:items-center justify-center p-0 sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={language === 'ka' ? 'გამყიდველის შეფასებები' : 'Vendor Reviews'}
+          >
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -4985,11 +5133,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             />
             
             <motion.div 
+              ref={vendorModalRef}
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className={cn(
-                "relative w-full max-w-2xl sm:rounded-[32px] border border-white/10 overflow-hidden",
+                "relative w-full max-w-2xl sm:rounded-[32px] border border-white/10 overflow-hidden z-10",
                 currentTheme.card
               )}
             >
@@ -5142,20 +5291,21 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <label className="text-xs font-black uppercase tracking-widest text-[#2e5bff]">
                         {language === 'ka' ? 'შეაფასეთ გამყიდველი' : 'Write a Review'}
                       </label>
-                      <div className="flex items-center gap-1 bg-white/5 p-1.5 rounded-xl border border-white/10">
+                      <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             type="button"
                             key={star}
                             onClick={() => setReviewRating(star)}
-                            className="p-0.5 transition-transform hover:scale-125"
+                            className="p-2 rounded-lg transition-transform hover:scale-110 active:scale-95 focus:outline-none focus:ring-1 focus:ring-[#dfb257]"
+                            aria-label={`${star} ${star === 1 ? 'star' : 'stars'}`}
                           >
                             <Star 
-                              size={16} 
+                              size={18} 
                               className={cn(
                                 star <= reviewRating 
                                   ? "fill-amber-400 text-amber-400" 
-                                  : "text-zinc-650 hover:text-amber-400/65"
+                                  : "text-zinc-600 hover:text-amber-400/65"
                               )} 
                             />
                           </button>

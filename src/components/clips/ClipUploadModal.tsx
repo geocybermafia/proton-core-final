@@ -9,11 +9,23 @@ import {
   Music, 
   ShoppingBag, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { MarketplaceItem } from '../../types';
 import { cn } from '../../lib/utils';
 import { PRESET_LOOPS, formatDuration } from './types';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+
+export interface VideoQualityWarning {
+  sizeMB: number;
+  width: number;
+  height: number;
+  isHighRes: boolean;
+  isLargeFile: boolean;
+  acknowledged: boolean;
+}
 
 export interface ClipUploadModalProps {
   isOpen: boolean;
@@ -32,6 +44,8 @@ export interface ClipUploadModalProps {
   uploadProgress: number;
   listings: MarketplaceItem[];
   language: 'en' | 'ka';
+  videoQualityWarning?: VideoQualityWarning | null;
+  onAcknowledgeQualityWarning?: () => void;
   onClose: () => void;
   setUploadStep: React.Dispatch<React.SetStateAction<number>>;
   setNewClipVideoUrl: (url: string) => void;
@@ -66,6 +80,8 @@ export function ClipUploadModal({
   uploadProgress,
   listings,
   language,
+  videoQualityWarning,
+  onAcknowledgeQualityWarning,
   onClose,
   setUploadStep,
   setNewClipVideoUrl,
@@ -82,13 +98,24 @@ export function ClipUploadModal({
   onStepNext,
   onSubmitCreate,
 }: ClipUploadModalProps) {
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose: () => !isUploading && onClose(),
+  });
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto">
-          <div className="absolute inset-0" onClick={onClose} />
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label={language === 'ka' ? 'კლიპის ატვირთვა' : 'Upload Clip'}
+        >
+          <div className="absolute inset-0" onClick={() => !isUploading && onClose()} />
           
           <motion.div
+            ref={modalRef}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
@@ -212,6 +239,45 @@ export function ClipUploadModal({
                         )}
                       </div>
                     </div>
+
+                    {/* High-Resolution / Large Media Advisory Card */}
+                    {localVideoFile && videoQualityWarning && !videoQualityWarning.acknowledged && (
+                      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-start gap-2.5">
+                          <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={16} />
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-black text-amber-300">
+                              {language === 'ka' 
+                                ? 'მაღალი გარჩევადობის / დიდი ზომის ვიდეო' 
+                                : 'High-Resolution / Heavy Media Advisory'}
+                            </h4>
+                            <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                              {language === 'ka'
+                                ? `ვიდეოს გარჩევადობაა ${videoQualityWarning.width}×${videoQualityWarning.height} (${videoQualityWarning.sizeMB} MB). ატვირთვა და მობილურზე ჩვენება შეიძლება მეტ ტრაფიკსა და დროს მოითხოვდეს.`
+                                : `Detected resolution of ${videoQualityWarning.width}×${videoQualityWarning.height} (${videoQualityWarning.sizeMB} MB). This file will upload in original quality, which may take longer on slower connections.`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={onRemoveLocalFile}
+                            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold border border-white/10 transition-all cursor-pointer"
+                          >
+                            {language === 'ka' ? 'სხვა ფაილის არჩევა' : 'Change File'}
+                          </button>
+                          {onAcknowledgeQualityWarning && (
+                            <button
+                              type="button"
+                              onClick={onAcknowledgeQualityWarning}
+                              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-[11px] font-black transition-all shadow-md cursor-pointer"
+                            >
+                              {language === 'ka' ? 'გაგზავნა მაინც' : 'Continue with Original'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* CINEMATOGRAPHIC TEMPLATES */}
                     <div>

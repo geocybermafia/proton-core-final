@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sliders, X, Play, Pause, RotateCcw, Check, Scissors } from 'lucide-react';
 import { Clip } from '../../types';
 import { cn } from '../../lib/utils';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export interface ClipAutoFixModalProps {
   isOpen: boolean;
@@ -19,6 +20,10 @@ export function ClipAutoFixModal({
   onClose,
   onSaveTrim,
 }: ClipAutoFixModalProps) {
+  const modalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isOpen && !!clip,
+    onClose,
+  });
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState<number>(clip?.duration || 15);
@@ -112,10 +117,16 @@ export function ClipAutoFixModal({
   return (
     <AnimatePresence>
       {isOpen && clip && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto">
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4 pb-16 lg:pb-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-label={language === 'ka' ? 'ვიდეოს მოჭრა და მორგება' : 'Video Trim & Loop Controls'}
+        >
           <div className="absolute inset-0" onClick={onClose} />
           
           <motion.div
+            ref={modalRef}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}

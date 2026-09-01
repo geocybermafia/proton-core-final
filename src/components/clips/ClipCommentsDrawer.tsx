@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, User as UserIcon, Sparkles } from 'lucide-react';
 import { Clip, ClipComment } from '../../types';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export interface ClipCommentsDrawerProps {
   isOpen: boolean;
@@ -28,6 +29,11 @@ export function ClipCommentsDrawer({
   onChangeCommentText,
   onSubmitComment,
 }: ClipCommentsDrawerProps) {
+  const drawerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isOpen && !!activeClip,
+    onClose,
+  });
+
   return (
     <AnimatePresence>
       {isOpen && activeClip && (
@@ -37,6 +43,9 @@ export function ClipCommentsDrawer({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: "easeInOut" }}
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={language === 'ka' ? 'კომენტარები' : 'Comments'}
         >
           {/* Backdrop click interceptor */}
           <div
@@ -45,6 +54,7 @@ export function ClipCommentsDrawer({
           />
 
           <motion.div
+            ref={drawerRef}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

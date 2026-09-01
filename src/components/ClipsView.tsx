@@ -241,6 +241,14 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   const [newClipThumbnail, setNewClipThumbnail] = useState<string>('');
   const [newClipDuration, setNewClipDuration] = useState<number>(0);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  const [videoQualityWarning, setVideoQualityWarning] = useState<{
+    sizeMB: number;
+    width: number;
+    height: number;
+    isHighRes: boolean;
+    isLargeFile: boolean;
+    acknowledged: boolean;
+  } | null>(null);
 
   // Playback & Filters State
   const [activeFilter, setActiveFilter] = useState<'none' | 'noir' | 'vintage' | 'warm' | 'glitch'>('none');
@@ -565,6 +573,31 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     const objectUrl = URL.createObjectURL(file);
     setNewClipVideoUrl(objectUrl);
     setSelectedPresetId('');
+
+    // Inspect file size & resolution
+    const sizeMB = +(file.size / (1024 * 1024)).toFixed(1);
+    const isLargeFile = file.size > 50 * 1024 * 1024; // > 50MB
+
+    const tempVideo = document.createElement('video');
+    tempVideo.preload = 'metadata';
+    tempVideo.src = objectUrl;
+    tempVideo.onloadedmetadata = () => {
+      const width = tempVideo.videoWidth || 0;
+      const height = tempVideo.videoHeight || 0;
+      const isHighRes = width >= 2160 || height >= 2160 || (width >= 1440 && height >= 2560);
+      if (isLargeFile || isHighRes) {
+        setVideoQualityWarning({
+          sizeMB,
+          width,
+          height,
+          isHighRes,
+          isLargeFile,
+          acknowledged: false,
+        });
+      } else {
+        setVideoQualityWarning(null);
+      }
+    };
   };
 
   const handleCreateReel = async () => {
@@ -1115,10 +1148,17 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         uploadProgress={uploadProgress}
         listings={sellerListings.length > 0 ? sellerListings : (allListings.length > 0 ? allListings : listings)}
         language={language}
+        videoQualityWarning={videoQualityWarning}
+        onAcknowledgeQualityWarning={() => {
+          if (videoQualityWarning) {
+            setVideoQualityWarning({ ...videoQualityWarning, acknowledged: true });
+          }
+        }}
         onClose={() => {
           setIsCreateOpen(false);
           setLocalVideoFile(null);
           setNewClipVideoUrl('');
+          setVideoQualityWarning(null);
           setUploadStep(1);
         }}
         setUploadStep={setUploadStep}
@@ -1131,6 +1171,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         onRemoveLocalFile={() => {
           setLocalVideoFile(null);
           setNewClipVideoUrl('');
+          setVideoQualityWarning(null);
           setSelectedPresetId('potter-clay');
         }}
         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
