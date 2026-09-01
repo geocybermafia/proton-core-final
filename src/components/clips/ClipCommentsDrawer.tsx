@@ -17,6 +17,18 @@ export interface ClipCommentsDrawerProps {
   onSubmitComment: (e: React.FormEvent) => void;
 }
 
+const formatCommentDate = (dateVal: any): string => {
+  if (!dateVal) return '';
+  if (typeof dateVal?.toDate === 'function') {
+    return dateVal.toDate().toLocaleDateString();
+  }
+  if (typeof dateVal === 'object' && typeof dateVal?.seconds === 'number') {
+    return new Date(dateVal.seconds * 1000).toLocaleDateString();
+  }
+  const parsed = new Date(dateVal);
+  return isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString();
+};
+
 export function ClipCommentsDrawer({
   isOpen,
   activeClip,
@@ -131,7 +143,7 @@ export function ClipCommentsDrawer({
                           @{comment.userName}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono">
-                          {new Date(comment.createdAt).toLocaleDateString()}
+                          {formatCommentDate(comment.createdAt)}
                         </span>
                       </div>
                       <p className="text-xs text-gray-300 leading-relaxed break-words font-sans">

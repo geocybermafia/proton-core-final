@@ -250,6 +250,27 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     acknowledged: boolean;
   } | null>(null);
 
+  // Deterministic Object URL Lifecycle Ref
+  const activeObjectUrlRef = useRef<string | null>(null);
+
+  const revokeActiveObjectUrl = () => {
+    if (activeObjectUrlRef.current) {
+      try {
+        URL.revokeObjectURL(activeObjectUrlRef.current);
+      } catch {
+        // ignore
+      }
+      activeObjectUrlRef.current = null;
+    }
+  };
+
+  // Revoke on component unmount
+  useEffect(() => {
+    return () => {
+      revokeActiveObjectUrl();
+    };
+  }, []);
+
   // Playback & Filters State
   const [activeFilter, setActiveFilter] = useState<'none' | 'noir' | 'vintage' | 'warm' | 'glitch'>('none');
   const [showFiltersPanel, setShowFiltersPanel] = useState(false);
@@ -525,7 +546,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         userName: currentUser.displayName || 'Proton User',
         userAvatar: currentUser.photoURL || '',
         text: commentText.trim(),
-        createdAt: new Date().toISOString()
+        createdAt: serverTimestamp()
       };
 
       await addDoc(collection(db, 'clips', activeClipForComments.id, 'comments'), newComment);
@@ -569,8 +590,12 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       );
       return;
     }
+    // Revoke previous object URL if one was already active
+    revokeActiveObjectUrl();
+
     setLocalVideoFile(file);
     const objectUrl = URL.createObjectURL(file);
+    activeObjectUrlRef.current = objectUrl;
     setNewClipVideoUrl(objectUrl);
     setSelectedPresetId('');
 
@@ -684,13 +709,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       }
 
       // Cleanup local preview object URL if any
-      if (newClipVideoUrl && newClipVideoUrl.startsWith('blob:')) {
-        try {
-          URL.revokeObjectURL(newClipVideoUrl);
-        } catch {
-          // ignore
-        }
-      }
+      revokeActiveObjectUrl();
 
       setIsUploading(false);
       setIsCreateOpen(false);
@@ -1157,6 +1176,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         onClose={() => {
           setIsCreateOpen(false);
           setLocalVideoFile(null);
+          revokeActiveObjectUrl();
           setNewClipVideoUrl('');
           setVideoQualityWarning(null);
           setUploadStep(1);
@@ -1170,6 +1190,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         onLocalFileSelect={handleLocalFileSelect}
         onRemoveLocalFile={() => {
           setLocalVideoFile(null);
+          revokeActiveObjectUrl();
           setNewClipVideoUrl('');
           setVideoQualityWarning(null);
           setSelectedPresetId('potter-clay');
