@@ -425,16 +425,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             .maybeSingle();
 
           if (error || !freshList) {
+            setCart(prev => prev.filter(c => c.id !== item.id));
             alert(language === 'ka' 
-              ? `პროდუქტი "${item.title}" აღარ არის ხელმისაწვდომი.` 
-              : `Product "${item.title}" is no longer available.`);
+              ? `პროდუქტი "${item.title}" აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან.` 
+              : `Product "${item.title}" is no longer available and was removed from your cart.`);
             setIsPlacingCartOrders(false);
             return;
           }
           if (freshList.status === 'sold' || freshList.isSold) {
+            setCart(prev => prev.filter(c => c.id !== item.id));
             alert(language === 'ka'
-              ? `შეცდომა: პროდუქტი "${freshList.title || item.title}" უკვე გაყიდულია და მისი შეძენა შეუძლებელია.`
-              : `Error: Product "${freshList.title || item.title}" has already been sold and cannot be purchased.`);
+              ? `შეცდომა: პროდუქტი "${freshList.title || item.title}" უკვე გაყიდულია და ამოიშალა კალათიდან.`
+              : `Error: Product "${freshList.title || item.title}" has already been sold and was removed from your cart.`);
             setIsPlacingCartOrders(false);
             return;
           }
@@ -495,16 +497,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           );
 
           // 2. Validate all items before making any modifications
+          const invalidItems: { id: string; title: string; reason: 'missing' | 'sold' }[] = [];
           const verifiedOrders: { listingRef: any; orderData: any; isService: boolean }[] = [];
+
           for (let i = 0; i < cart.length; i++) {
             const item = cart[i];
             const docSnap = listingSnapshots[i];
             if (!docSnap.exists()) {
-              throw new Error(`Product "${item.title}" no longer exists in our database.`);
+              invalidItems.push({ id: item.id, title: item.title, reason: 'missing' });
+              continue;
             }
             const freshData = docSnap.data();
             if (freshData.status === 'sold' || freshData.isSold) {
-              throw new Error(`Product "${freshData.title || item.title}" has already been sold.`);
+              invalidItems.push({ id: item.id, title: freshData.title || item.title, reason: 'sold' });
+              continue;
             }
 
             const isService = item.listingType === 'service' || item.category === 'service';
@@ -524,6 +530,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               },
               isService
             });
+          }
+
+          if (invalidItems.length > 0) {
+            const err: any = new Error(
+              invalidItems.length === 1
+                ? (invalidItems[0].reason === 'sold'
+                    ? `Product "${invalidItems[0].title}" has already been sold.`
+                    : `Product "${invalidItems[0].title}" no longer exists in our database.`)
+                : `${invalidItems.length} items in your cart are no longer available.`
+            );
+            err.invalidItems = invalidItems;
+            throw err;
           }
 
           // 3. Commit all writes atomically
@@ -546,7 +564,28 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       setProfileSubMode('buying');
     } catch (err: any) {
       console.error("Cart checkout error:", err);
-      if (err && err.message && (err.message.includes('sold') || err.message.includes('no longer exists'))) {
+      if (err && Array.isArray(err.invalidItems) && err.invalidItems.length > 0) {
+        const invalidIds = new Set(err.invalidItems.map((inv: any) => inv.id));
+        setCart(prev => prev.filter(item => !invalidIds.has(item.id)));
+
+        const invalidTitles = err.invalidItems.map((inv: any) => `"${inv.title}"`).join(', ');
+        if (err.invalidItems.length === 1) {
+          const single = err.invalidItems[0];
+          alert(language === 'ka'
+            ? (single.reason === 'sold'
+                ? `პროდუქტი "${single.title}" უკვე გაყიდულია და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
+                : `პროდუქტი "${single.title}" აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან.`)
+            : (single.reason === 'sold'
+                ? `Product "${single.title}" has already been sold and was removed from your cart. You can proceed with your remaining items.`
+                : `Product "${single.title}" is no longer available and was removed from your cart.`)
+          );
+        } else {
+          alert(language === 'ka'
+            ? `პროდუქტები (${invalidTitles}) აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
+            : `Products (${invalidTitles}) are no longer available and were removed from your cart. You can proceed with your remaining items.`
+          );
+        }
+      } else if (err && err.message && (err.message.includes('sold') || err.message.includes('no longer exists'))) {
         alert(language === 'ka' ? `შეცდომა: ${err.message}` : `Error: ${err.message}`);
       } else {
         alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.");
@@ -605,6 +644,31 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState<number>(1);
+
+  const resetListingForm = useCallback(() => {
+    setEditingListing(null);
+    setFormStep(1);
+    setFormData({
+      title: '',
+      titleGe: '',
+      description: '',
+      descriptionGe: '',
+      price: '',
+      currency: language === 'ka' ? 'GEL' : 'USD',
+      category: 'technics',
+      country: language === 'ka' ? 'GEO' : 'USA',
+      city: '',
+      location: '',
+      images: [],
+      lat: undefined,
+      lng: undefined,
+      condition: 'new',
+      isNegotiable: false,
+      listingType: 'product',
+      serviceDuration: '',
+      serviceTerms: ''
+    });
+  }, [language]);
 
   useEffect(() => {
     if (viewMode === 'create' || viewMode === 'edit') {
@@ -1850,13 +1914,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
       localStorage.removeItem('proton_markethub_draft_form_data');
       setViewMode('browse');
-      setFormData({
-        title: '', titleGe: '', description: '', descriptionGe: '',
-        price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-        country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
-        lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
-        listingType: 'product', serviceDuration: '', serviceTerms: ''
-      });
+      resetListingForm();
     } catch (error: any) {
       console.error(error);
       alert("Firebase Error: " + error.message);
@@ -2280,7 +2338,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Create Listing Button */}
             <button
-              onClick={() => setViewMode('create')}
+              onClick={() => {
+                resetListingForm();
+                setViewMode('create');
+              }}
               className="hidden md:flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-3.5 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus size={13} className="stroke-[3]" />
@@ -2415,26 +2476,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <button
             type="button"
             onClick={() => {
-              setFormData({
-                title: '',
-                titleGe: '',
-                description: '',
-                descriptionGe: '',
-                price: '',
-                currency: language === 'ka' ? 'GEL' : 'USD',
-                category: 'technics',
-                country: language === 'ka' ? 'GEO' : 'USA',
-                city: '',
-                location: '',
-                images: [],
-                lat: undefined,
-                lng: undefined,
-                condition: 'new',
-                isNegotiable: false,
-                listingType: 'product',
-                serviceDuration: '',
-                serviceTerms: ''
-              });
+              resetListingForm();
               setViewMode('create');
               setActiveBottomTab('home');
             }}
@@ -3074,13 +3116,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <button
                         type="button"
                         onClick={() => {
-                          setFormData({
-                            title: '', titleGe: '', description: '', descriptionGe: '',
-                            price: '', currency: language === 'ka' ? 'GEL' : 'USD', category: 'technics', 
-                            country: language === 'ka' ? 'GEO' : 'USA', city: '', location: '', images: [],
-                            lat: undefined, lng: undefined, condition: 'new', isNegotiable: false,
-                            listingType: 'product', serviceDuration: '', serviceTerms: ''
-                          });
+                          resetListingForm();
                           setViewMode('create');
                         }}
                         className="hidden md:flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
@@ -3863,7 +3899,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
                   <button
                     type="button"
-                    onClick={() => setViewMode('create')}
+                    onClick={() => {
+                      resetListingForm();
+                      setViewMode('create');
+                    }}
                     className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest bg-[#dfb257] text-[#070708] hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[#dfb257]/10 flex items-center justify-center gap-2"
                   >
                     <Plus size={16} />
@@ -4623,7 +4662,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                  <div className="flex gap-2.5">
                     <button 
                        type="button"
-                       onClick={() => setViewMode('browse')}
+                       onClick={() => {
+                          localStorage.removeItem('proton_markethub_draft_form_data');
+                          resetListingForm();
+                          setViewMode('browse');
+                       }}
                        className="h-11 px-5 bg-zinc-950/80 hover:bg-zinc-90 w/80 hover:text-white border border-zinc-900 hover:border-zinc-800 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all text-zinc-400 flex items-center gap-2 shadow-inner"
                     >
                        <ArrowLeft size={13} />
