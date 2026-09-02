@@ -1822,18 +1822,28 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }
       }
 
-      // Strong validation and sanitization over inputs (such as replacing comma with dot for Georgian users)
-      const priceStr = String(formData.price || '').trim().replace(',', '.');
-      const parsedPrice = parseFloat(priceStr);
-      if (isNaN(parsedPrice) || parsedPrice < 0) {
-        alert(language === 'ka' 
-          ? "გთხოვთ შეიყვანოთ სწორი ფასი (მხოლოდ დადებითი რიცხვები)." 
-          : "Please enter a valid price (positive numbers only)."
-        );
+      // Step 1 validation: Title
+      if (!formData.title.trim()) {
+        alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის სათაური." : "Please fill in the product title.");
+        setFormStep(1);
         setIsSubmitting(false);
         return;
       }
 
+      // Step 2 validation: Price & Currency
+      const priceStr = String(formData.price || '').trim().replace(',', '.');
+      const parsedPrice = parseFloat(priceStr);
+      if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
+        alert(language === 'ka' 
+          ? "გთხოვთ შეიყვანოთ სწორი ფასი (მხოლოდ დადებითი რიცხვები)." 
+          : "Please enter a valid price (positive numbers only)."
+        );
+        setFormStep(2);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 3 validation: Country and City
       const countryStr = (formData.country || '').trim();
       const cityStr = (formData.city || '').trim();
       if (!countryStr || !cityStr) {
@@ -1841,18 +1851,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი." 
           : "Please select a country and enter a city."
         );
+        setFormStep(3);
         setIsSubmitting(false);
         return;
       }
 
-      if (!formData.title.trim()) {
-        alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის სათაური." : "Please fill in the product title.");
-        setIsSubmitting(false);
-        return;
-      }
-
+      // Step 3 validation: Description
       if (!formData.description.trim()) {
         alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა." : "Please fill in the product description.");
+        setFormStep(3);
         setIsSubmitting(false);
         return;
       }
@@ -4056,6 +4063,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                       alert(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a listing title on Step 1 first.");
                                       return;
                                    }
+                                   if (step > 2) {
+                                      const priceStr = String(formData.price || '').trim().replace(',', '.');
+                                      const parsedPrice = parseFloat(priceStr);
+                                      if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
+                                         alert(language === 'ka' 
+                                            ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
+                                            : "Please enter a valid price to continue (positive numbers only)."
+                                         );
+                                         return;
+                                      }
+                                   }
                                    setFormStep(step);
                                 }}
                                 className="group flex flex-col items-center focus:outline-none transition-all duration-300"
@@ -4690,11 +4708,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                        <button 
                           type="button"
                           onClick={() => {
-                             if (!formData.title.trim()) {
-                                alert(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a title on Step 1 to continue.");
-                                return;
-                              }
-                              setFormStep(prev => prev + 1);
+                             if (formStep === 1) {
+                                if (!formData.title.trim()) {
+                                   alert(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a title on Step 1 to continue.");
+                                   return;
+                                }
+                             } else if (formStep === 2) {
+                                const priceStr = String(formData.price || '').trim().replace(',', '.');
+                                const parsedPrice = parseFloat(priceStr);
+                                if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
+                                   alert(language === 'ka' 
+                                      ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
+                                      : "Please enter a valid price to continue (positive numbers only)."
+                                   );
+                                   return;
+                                }
+                             }
+                             setFormStep(prev => prev + 1);
                           }}
                           className="h-11 px-6 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 text-zinc-950 bg-[#dfb257] border border-[#dfb257] font-sans shadow-[0_4px_15px_rgba(223,178,87,0.25)]"
                        >
@@ -5411,7 +5441,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-16 top-[60px] bg-[#0a0a0c]/98 backdrop-blur-lg z-40 overflow-y-auto px-6 py-8 border-t border-zinc-805/70"
+        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c]/98 backdrop-blur-lg z-40 overflow-y-auto px-6 py-8 border-t border-zinc-805/70"
       >
         <div className="max-w-md mx-auto space-y-8">
           <div className="flex items-center justify-between border-b border-zinc-900/40 pb-4">
@@ -5480,7 +5510,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-16 top-[60px] bg-[#0a0a0c] z-40 overflow-y-auto px-4 py-6 md:hidden"
+        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c] z-40 overflow-y-auto px-4 py-6 md:hidden"
       >
         <div className="max-w-md mx-auto space-y-6">
           {/* Top Selector Panel: Chats vs. Orders */}
