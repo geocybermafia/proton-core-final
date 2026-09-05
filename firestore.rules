@@ -107,6 +107,7 @@ service cloud.firestore {
       return data.keys().hasAll(['listingId', 'buyerId', 'sellerId', 'amount', 'currency', 'itemTitle', 'status', 'createdAt'])
         && data.keys().size() >= 8 && data.keys().size() <= 14
         && data.buyerId == request.auth.uid
+        && data.buyerId != data.sellerId
         && data.listingId is string && data.listingId.size() <= 128
         && data.sellerId is string && data.sellerId.size() <= 128
         && data.amount is number && data.amount >= 0
