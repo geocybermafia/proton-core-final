@@ -87,6 +87,8 @@ import {
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
 
+const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
+
 
 export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
   const t = propT || translations[language];
@@ -253,36 +255,37 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const groupedChats = useMemo(() => {
     if (!user) return [];
-    // Every message in allUserMessages already matches participants query, so no need to filter by listings.find,
-    // which incorrectly excludes active discussions when a listing is sold or not in the locally fetched array.
-    const relevantMsgs = allUserMessages.filter(msg => {
-      if (!msg.participants) return true;
-      return msg.participants.includes(user.uid);
-    });
+    const uid = user.uid;
+    const groups: Record<string, { listingId: string; listingTitle: string; lastMessage: string; lastTime: any; lastTimeMillis: number; messages: any[] }> = {};
 
-    const groups: Record<string, { listingId: string; listingTitle: string; lastMessage: string; lastTime: any; messages: any[] }> = {};
-    relevantMsgs.forEach(msg => {
+    for (let i = 0; i < allUserMessages.length; i++) {
+      const msg = allUserMessages[i];
+      if (msg.participants && !msg.participants.includes(uid)) continue;
       const lid = msg.listingId;
+      if (!lid) continue;
       if (!groups[lid]) {
         groups[lid] = {
           listingId: lid,
           listingTitle: msg.listingTitle || 'Unknown Listing',
           lastMessage: '',
           lastTime: null,
+          lastTimeMillis: 0,
           messages: []
         };
       }
-      groups[lid].messages.push(msg);
-    });
+      const msgTime = safeParseDate(msg.createdAt);
+      groups[lid].messages.push({ ...msg, _time: msgTime });
+    }
 
     return Object.values(groups).map(g => {
-      g.messages.sort((a, b) => safeParseDate(a.createdAt) - safeParseDate(b.createdAt));
+      g.messages.sort((a, b) => a._time - b._time);
       const last = g.messages[g.messages.length - 1];
       g.lastMessage = last ? last.text : '';
       g.lastTime = last ? last.createdAt : null;
+      g.lastTimeMillis = last ? last._time : 0;
       return g;
-    }).sort((a, b) => safeParseDate(b.lastTime) - safeParseDate(a.lastTime));
-  }, [allUserMessages, user]);
+    }).sort((a, b) => b.lastTimeMillis - a.lastTimeMillis);
+  }, [allUserMessages, user?.uid]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
 
@@ -628,17 +631,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
   
   const orders = useMemo(() => {
+    const buyerIdSet = new Set(buyerOrders.map(b => b.id));
     const merged = [...buyerOrders];
-    sellerOrders.forEach(so => {
-      if (!merged.some(bo => bo.id === so.id)) {
+    for (let i = 0; i < sellerOrders.length; i++) {
+      const so = sellerOrders[i];
+      if (!buyerIdSet.has(so.id)) {
         merged.push(so);
       }
-    });
-    return merged.sort((a, b) => {
-      const at = safeParseDate(a.createdAt);
-      const bt = safeParseDate(b.createdAt);
-      return bt - at;
-    });
+    }
+    const withTimes = merged.map(o => ({
+      order: o,
+      time: safeParseDate(o.createdAt)
+    }));
+    withTimes.sort((a, b) => b.time - a.time);
+    return withTimes.map(w => w.order);
   }, [buyerOrders, sellerOrders]);
 
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
@@ -791,26 +797,48 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, [user, authLoading]);
 
   const sellerRatings = useMemo(() => {
-    const map: { [sellerId: string]: { avg: number; count: number; ratings: number[] } } = {};
+    const map: { [sellerId: string]: { avg: number; count: number } } = {};
+    const sums: { [sellerId: string]: number } = {};
 
-    reviews.forEach(r => {
+    for (let i = 0; i < reviews.length; i++) {
+      const r = reviews[i];
       const sId = r.sellerId;
-      if (!sId) return;
+      if (!sId) continue;
+      const rating = typeof r.rating === 'number' ? r.rating : 5;
       if (!map[sId]) {
-        map[sId] = { avg: 0, count: 0, ratings: [] };
+        map[sId] = { avg: rating, count: 1 };
+        sums[sId] = rating;
+      } else {
+        map[sId].count += 1;
+        sums[sId] += rating;
+        map[sId].avg = sums[sId] / map[sId].count;
       }
-      map[sId].ratings.push(r.rating || 5);
-    });
-
-    Object.keys(map).forEach(sId => {
-      const sum = map[sId].ratings.reduce((a, b) => a + b, 0);
-      const count = map[sId].ratings.length;
-      map[sId].count = count;
-      map[sId].avg = count > 0 ? sum / count : 0;
-    });
+    }
 
     return map;
   }, [reviews]);
+
+  const selectedVendorReviews = useMemo(() => {
+    if (!selectedVendor) return [];
+    return reviews.filter(r => r.sellerId === selectedVendor.id);
+  }, [selectedVendor, reviews]);
+
+  const selectedVendorRatingBreakdown = useMemo(() => {
+    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    if (!selectedVendor || selectedVendorReviews.length === 0) {
+      return { counts, total: 0 };
+    }
+    for (let i = 0; i < selectedVendorReviews.length; i++) {
+      const rating = Math.min(5, Math.max(1, Math.round(selectedVendorReviews[i].rating || 5)));
+      counts[rating] = (counts[rating] || 0) + 1;
+    }
+    return { counts, total: selectedVendorReviews.length };
+  }, [selectedVendor, selectedVendorReviews]);
+
+  const vendorBuyerOrderKeys = useMemo(() => {
+    if (!selectedVendor) return new Set<string>();
+    return new Set(orders.filter(o => o.sellerId === selectedVendor.id).map(o => o.buyerId));
+  }, [orders, selectedVendor]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1125,15 +1153,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     }
   }, [user?.uid]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearch('');
+    setSearchRaw('');
     setActiveCategory('all');
     setActiveCountry('GLOBAL');
     setActiveCity('');
     setMinPrice('');
     setMaxPrice('');
     setActiveListingType('all');
-  };
+    setShowOnlyFavorites(false);
+    setSortBy('rating');
+  }, []);
 
   const handleSeedListings = async () => {
     if (!user) return;
@@ -1288,9 +1319,30 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     }
   };
 
-  const allListings = useMemo(() => {
-    return listings;
-  }, [listings]);
+  const favoritesSet = useMemo(() => new Set(favorites), [favorites]);
+
+  const priceMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < listings.length; i++) {
+      const l = listings[i];
+      try {
+        map.set(l.id, convertPrice(l.price || 0, l.currency || 'USD', displayCurrency));
+      } catch {
+        map.set(l.id, 0);
+      }
+    }
+    return map;
+  }, [listings, displayCurrency]);
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce((acc, item) => {
+      try {
+        return acc + (priceMap.get(item.id) ?? convertPrice(item.price || 0, item.currency || 'USD', displayCurrency));
+      } catch {
+        return acc;
+      }
+    }, 0);
+  }, [cart, displayCurrency, priceMap]);
 
   const filteredListings = useMemo(() => {
     const isMyListings = viewMode === 'my-listings';
@@ -1303,13 +1355,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     const searchLower = search ? search.toLowerCase() : null;
     const activeCityLower = activeCity ? activeCity.toLowerCase() : null;
 
-    // Single pass map to attach converted price and avoid redundant currency calculations
-    const itemsWithConvertedPrice = allListings.map(l => ({
+    // Single pass map with cached converted price and created timestamp
+    const itemsWithMeta = listings.map(l => ({
       item: l,
-      convertedPrice: convertPrice(l.price, l.currency || 'USD', displayCurrency)
+      convertedPrice: priceMap.get(l.id) ?? convertPrice(l.price || 0, l.currency || 'USD', displayCurrency),
+      createdTime: safeParseDate(l.createdAt)
     }));
 
-    const filtered = itemsWithConvertedPrice.filter(({ item: l, convertedPrice }) => {
+    const filtered = itemsWithMeta.filter(({ item: l, convertedPrice }) => {
       if (isMyListings) {
         return l.sellerId === user?.uid;
       }
@@ -1355,12 +1408,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       }
 
       // Filter by Favorites
-      if (showOnlyFavorites && !favorites.includes(l.id)) return false;
+      if (showOnlyFavorites && !favoritesSet.has(l.id)) return false;
 
       return true;
     });
 
-    // Sorting Engine
+    // Sorting Engine with pre-calculated numbers
     if (sortBy === 'rating') {
       filtered.sort((aObj, bObj) => {
         const a = aObj.item;
@@ -1372,10 +1425,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         
         if (ratingB !== ratingA) return ratingB - ratingA;
         if (countB !== countA) return countB - countA;
-        return safeParseDate(b.createdAt) - safeParseDate(a.createdAt);
+        return bObj.createdTime - aObj.createdTime;
       });
     } else if (sortBy === 'newest') {
-      filtered.sort((aObj, bObj) => safeParseDate(bObj.item.createdAt) - safeParseDate(aObj.item.createdAt));
+      filtered.sort((aObj, bObj) => bObj.createdTime - aObj.createdTime);
     } else if (sortBy === 'priceAsc') {
       filtered.sort((aObj, bObj) => aObj.convertedPrice - bObj.convertedPrice);
     } else if (sortBy === 'priceDesc') {
@@ -1383,40 +1436,49 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     }
 
     return filtered.map(r => r.item);
-  }, [allListings, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, profileSubMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency, showOnlyFavorites, favorites]);
+  }, [listings, priceMap, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, profileSubMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency, showOnlyFavorites, favoritesSet]);
 
   const marketMetrics = useMemo(() => {
     const total = listings.length;
-    const active = listings.filter(l => l.status !== 'sold').length;
-    const sold = listings.filter(l => l.status === 'sold' || (l as any).isSold).length + orders.length;
-    const currencySymbol = CURRENCIES.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
-    
-    // Average price calculation (coerced with safe guards)
-    const validPrices = listings.map(l => {
-      try {
-        return convertPrice(l.price || 0, l.currency || 'USD', displayCurrency);
-      } catch {
-        return 0;
-      }
-    });
-    const avgPrice = validPrices.length ? Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length) : 0;
-    
-    // Most popular category
+    let active = 0;
+    let soldInListings = 0;
+    let priceSum = 0;
+    let priceCount = 0;
     const catCounts: Record<string, number> = {};
-    listings.forEach(l => {
+
+    for (let i = 0; i < total; i++) {
+      const l = listings[i];
+      const isSold = l.status === 'sold' || (l as any).isSold;
+      if (isSold) {
+        soldInListings++;
+      } else {
+        active++;
+      }
+
+      if (typeof l.price === 'number' && !isNaN(l.price) && l.price > 0) {
+        const conv = priceMap.get(l.id) ?? convertPrice(l.price, l.currency || 'USD', displayCurrency);
+        priceSum += conv;
+        priceCount++;
+      }
+
       if (l.category) {
         catCounts[l.category] = (catCounts[l.category] || 0) + 1;
       }
-    });
+    }
+
+    const sold = soldInListings + orders.length;
+    const currencySymbol = CURRENCIES.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
+    const avgPrice = priceCount > 0 ? Math.round(priceSum / priceCount) : 0;
+
     let topCat = 'technics';
-    let maxVal = 0;
-    Object.entries(catCounts).forEach(([cat, val]) => {
-      if (val > maxVal) {
-        maxVal = val;
+    let maxCatCount = 0;
+    for (const cat in catCounts) {
+      if (catCounts[cat] > maxCatCount) {
+        maxCatCount = catCounts[cat];
         topCat = cat;
       }
-    });
-    
+    }
+
     return {
       total,
       active,
@@ -1424,7 +1486,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       avgPrice: `${currencySymbol}${avgPrice}`,
       topCat: topCat.toUpperCase()
     };
-  }, [listings, orders, displayCurrency]);
+  }, [listings, orders.length, displayCurrency, priceMap]);
 
   const handleBuyNow = async (listing: Listing) => {
     if (!user) return;
@@ -1976,7 +2038,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return count;
   }, [activeCategory, activeCountry, activeCity, minPrice, maxPrice, activeListingType]);
 
-  const FilterContent = (
+  const FilterContent = useMemo(() => (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
@@ -2272,7 +2334,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
       </div>
     </div>
-  );
+  ), [activeFiltersCount, language, activeListingType, activeCategory, activeCountry, activeCity, minPrice, maxPrice, t, currentTheme, clearFilters]);
 
 
 
@@ -3028,7 +3090,41 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             <div className="flex-1 min-w-0 space-y-8">
               {viewMode === 'browse' && displayMode === 'grid' && (
                 <div className="space-y-12 animate-in fade-in duration-500">
-
+                  {/* Section 1: Market Pulse Metrics */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-zinc-950/60 border border-zinc-900/80 backdrop-blur-md">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === 'ka' ? 'აქტიური ლოტები' : 'Active Listings'}
+                      </span>
+                      <span className="text-base sm:text-lg font-black text-white font-mono">
+                        {marketMetrics.active.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === 'ka' ? 'საშუალო ფასი' : 'Average Price'}
+                      </span>
+                      <span className="text-base sm:text-lg font-black text-[#dfb257] font-mono">
+                        {marketMetrics.avgPrice}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === 'ka' ? 'ვაჭრობის მოცულობა' : 'Total Traded'}
+                      </span>
+                      <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
+                        {marketMetrics.sold.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+                        {language === 'ka' ? 'ტოპ კატეგორია' : 'Top Category'}
+                      </span>
+                      <span className="text-base sm:text-lg font-black text-blue-400 truncate">
+                        {marketMetrics.topCat}
+                      </span>
+                    </div>
+                  </div>
 
                   {/* Section 2: Quick Highlights Navigation */}
                   <div className="space-y-4">
@@ -3644,13 +3740,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         onClick={(e) => toggleFavorite(listing.id, e)}
                         className={cn(
                           "w-9 h-9 flex items-center justify-center backdrop-blur-md rounded-lg border transition-all active:scale-90",
-                          favorites.includes(listing.id)
+                          favoritesSet.has(listing.id)
                             ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-md"
                             : "bg-black/80 border-white/10 text-zinc-400 hover:text-red-500"
                         )}
                         title={language === 'ka' ? 'რჩეულებში დამატება' : 'Add to Favorites'}
                       >
-                        <Heart size={14} fill={favorites.includes(listing.id) ? "currentColor" : "none"} className="stroke-[2.5]" />
+                        <Heart size={14} fill={favoritesSet.has(listing.id) ? "currentColor" : "none"} className="stroke-[2.5]" />
                       </button>
                       {canManageListing && (
                         <>
@@ -3699,7 +3795,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         <div className="flex flex-col">
                           <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block">{t.market.price}</span>
                           <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#dfb257] flex items-baseline gap-0.5 whitespace-nowrap">
-                            {convertPrice(listing.price, listing.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            {(priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                             <span className="text-xs font-bold text-zinc-400 font-sans ml-1">{displayCurrency}</span>
                           </span>
                         </div>
@@ -4461,7 +4557,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                    currentTheme.input
                                 )}
                              >
-                                {WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL').map(country => (
+                                {AVAILABLE_COUNTRY_OPTIONS.map(country => (
                                    <option key={country.code} value={country.code} className="bg-zinc-950 text-white font-bold text-xs py-1">
                                       {country.flag} {country.name}
                                    </option>
@@ -4878,7 +4974,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         </span>
                         <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">{language === 'ka' ? (item.titleGe || item.title) : item.title}</h4>
                         <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
-                          {convertPrice(item.price, item.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                          {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
                         </p>
                       </div>
 
@@ -4902,7 +4998,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       {language === 'ka' ? 'ჯამური ღირებულება' : 'Total Price'}
                     </span>
                     <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-                      {cart.reduce((acc, item) => acc + convertPrice(item.price, item.currency || 'USD', displayCurrency), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      {cartTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
                     </span>
                   </div>
@@ -4987,7 +5083,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     </p>
                     <h4 className="text-base font-bold text-white uppercase tracking-tight line-clamp-1">{checkoutItem.title}</h4>
                     <p className="text-xl font-black text-white mt-1">
-                      {convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                      {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
                     </p>
                   </div>
                 </div>
@@ -5271,9 +5367,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
                   <div className="md:col-span-2 space-y-2 flex flex-col justify-center">
                     {[5, 4, 3, 2, 1].map((stars) => {
-                      const list = reviews.filter(r => r.sellerId === selectedVendor.id);
-                      const count = list.filter(r => r.rating === stars).length;
-                      const pct = list.length > 0 ? (count / list.length) * 100 : 0;
+                      const count = selectedVendorRatingBreakdown.counts[stars] || 0;
+                      const total = selectedVendorRatingBreakdown.total;
+                      const pct = total > 0 ? (count / total) * 100 : 0;
                       return (
                         <div key={stars} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-wider text-white">
                           <span className="w-16 text-right text-[9px] opacity-70">{stars} {language === 'ka' ? 'ვარსკვლ.' : 'stars'}</span>
@@ -5294,18 +5390,16 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   </h4>
 
                   <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 scrollbar-none">
-                    {reviews.filter(r => r.sellerId === selectedVendor.id).length === 0 ? (
+                    {selectedVendorReviews.length === 0 ? (
                       <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5 text-xs text-white/40">
                         {language === 'ka' ? 'ჯერ არ არის შეფასებები ამ გამყიდველისთვის.' : 'No reviews left for this seller yet.'}
                       </div>
                     ) : (
-                      reviews
-                        .filter(r => r.sellerId === selectedVendor.id)
-                        .map((rev) => {
-                          const isOwnReview = user?.uid === rev.buyerId;
-                          const hasOrder = orders.some(o => o.sellerId === selectedVendor.id && o.buyerId === rev.buyerId);
-                          
-                          return (
+                      selectedVendorReviews.map((rev) => {
+                        const isOwnReview = user?.uid === rev.buyerId;
+                        const hasOrder = vendorBuyerOrderKeys.has(rev.buyerId);
+                        
+                        return (
                             <div key={rev.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2">
                               <div className="flex items-start justify-between">
                                 <div className="space-y-0.5">

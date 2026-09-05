@@ -190,7 +190,6 @@ service cloud.firestore {
       allow update: if isVerified() && isValidId(listingId) && (
         (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
         (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
-        (existing().sellerId == "rCWg6xJA2rfnnEWMbOFQdMJljxD3" && incoming().sellerId == request.auth.uid && isValidListingShape(incoming())) ||
         // Legitimate buyer purchase transition:
         // Must be transitioning from active to sold, only modifying status and optionally isSold, preserving seller, price, currency, createdAt
         (
