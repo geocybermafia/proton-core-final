@@ -49,7 +49,6 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { cn } from '../lib/utils';
 import { Listing } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -419,79 +418,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     if (!user || cart.length === 0) return;
     setIsPlacingCartOrders(true);
     try {
-      if (isSupabaseConfigured()) {
-        for (const item of cart) {
-          const { data: freshList, error } = await supabase
-            .from('listings')
-            .select('*')
-            .eq('id', item.id)
-            .maybeSingle();
 
-          if (error || !freshList) {
-            setCart(prev => prev.filter(c => c.id !== item.id));
-            alert(language === 'ka' 
-              ? `პროდუქტი "${item.title}" აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან.` 
-              : `Product "${item.title}" is no longer available and was removed from your cart.`);
-            setIsPlacingCartOrders(false);
-            return;
-          }
-          if (freshList.status === 'sold' || freshList.isSold) {
-            setCart(prev => prev.filter(c => c.id !== item.id));
-            alert(language === 'ka'
-              ? `შეცდომა: პროდუქტი "${freshList.title || item.title}" უკვე გაყიდულია და ამოიშალა კალათიდან.`
-              : `Error: Product "${freshList.title || item.title}" has already been sold and was removed from your cart.`);
-            setIsPlacingCartOrders(false);
-            return;
-          }
-
-          const isService = item.listingType === 'service' || item.category === 'service';
-          if (!isService) {
-            const { data: updatedListings, error: updateErr } = await supabase
-              .from('listings')
-              .update({ status: 'sold', isSold: true })
-              .eq('id', item.id)
-              .neq('status', 'sold')
-              .select();
-
-            if (updateErr || !updatedListings || updatedListings.length === 0) {
-              alert(language === 'ka'
-                ? `შეცდომა: პროდუქტი "${freshList.title || item.title}" ახლახანს შეიძინა სხვა მომხმარებელმა.`
-                : `Error: Product "${freshList.title || item.title}" was just purchased by another user.`);
-              setIsPlacingCartOrders(false);
-              return;
-            }
-          }
-
-          const orderData = {
-            listingId: item.id,
-            buyerId: user.uid,
-            sellerId: freshList.sellerId || item.sellerId,
-            amount: freshList.price,
-            currency: freshList.currency || 'USD',
-            itemTitle: freshList.title || item.title,
-            status: isService ? 'booked' : 'completed',
-            orderType: isService ? 'service' : 'product',
-            buyerInstructions: '',
-            createdAt: Date.now()
-          };
-
-          const { error: insertErr } = await supabase.from('orders').insert([orderData]);
-          if (insertErr) {
-            console.error("[SUPABASE ERROR] Cart Checkout transaction failed:", insertErr);
-            if (!isService) {
-              await supabase
-                .from('listings')
-                .update({ status: freshList.status || 'active', isSold: false })
-                .eq('id', item.id);
-            }
-            alert(language === 'ka'
-              ? `შეცდომა შეკვეთის შექმნისას: "${freshList.title || item.title}". ოპერაცია გაუქმდა.`
-              : `Order creation failed for "${freshList.title || item.title}". Transaction rolled back.`);
-            setIsPlacingCartOrders(false);
-            return;
-          }
-        }
-      } else {
         // Atomic Firestore transaction covering all cart items in a single commit
         await runTransaction(db, async (transaction) => {
           // 1. First read all listing docs concurrently
@@ -560,7 +487,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             }
           }
         });
-      }
       setCart([]);
       setIsCartOpen(false);
       setViewMode('my-listings');
@@ -1082,75 +1008,41 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
     let active = true;
 
-    if (isSupabaseConfigured()) {
-      const fetchSupabaseOrders = async () => {
-        const { data: bData, error: bErr } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('buyerId', user.uid);
-        if (active && !bErr && bData) setBuyerOrders(bData);
+    const qBuyerOrders = query(
+      collection(db, 'orders'), 
+      where('buyerId', '==', user.uid)
+    );
+    const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
+      if (!active) return;
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setBuyerOrders(data);
+    }, (error) => {
+      console.warn("Buyer orders listen failed:", error);
+    });
 
-        const { data: sData, error: sErr } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('sellerId', user.uid);
-        if (active && !sErr && sData) setSellerOrders(sData);
-      };
+    const qSellerOrders = query(
+      collection(db, 'orders'), 
+      where('sellerId', '==', user.uid)
+    );
+    const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
+      if (!active) return;
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSellerOrders(data);
+    }, (error) => {
+      console.warn("Seller orders listen failed:", error);
+    });
 
-      fetchSupabaseOrders();
-
-      const channel = supabase
-        .channel('schema-db-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'orders' },
-          () => {
-            if (active) fetchSupabaseOrders();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        active = false;
-        supabase.removeChannel(channel);
-      };
-    } else {
-      const qBuyerOrders = query(
-        collection(db, 'orders'), 
-        where('buyerId', '==', user.uid)
-      );
-      const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
-        if (!active) return;
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setBuyerOrders(data);
-      }, (error) => {
-        console.warn("Buyer orders listen failed:", error);
-      });
-
-      const qSellerOrders = query(
-        collection(db, 'orders'), 
-        where('sellerId', '==', user.uid)
-      );
-      const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
-        if (!active) return;
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setSellerOrders(data);
-      }, (error) => {
-        console.warn("Seller orders listen failed:", error);
-      });
-
-      return () => {
-        active = false;
-        unsubscribeBuyer();
-        unsubscribeSeller();
-      };
-    }
+    return () => {
+      active = false;
+      unsubscribeBuyer();
+      unsubscribeSeller();
+    };
   }, [user?.uid]);
 
   const clearFilters = useCallback(() => {
@@ -1506,107 +1398,41 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setIsCheckingOut(true);
     try {
       const isService = checkoutItem.listingType === 'service' || checkoutItem.category === 'service';
-      const orderData = {
-        listingId: checkoutItem.id,
-        buyerId: user.uid,
-        sellerId: checkoutItem.sellerId,
-        amount: checkoutItem.price,
-        currency: checkoutItem.currency || 'USD',
-        itemTitle: checkoutItem.title,
-        status: isService ? 'booked' : 'completed',
-        orderType: isService ? 'service' : 'product',
-        buyerInstructions: isService ? buyerInstructions.trim() : '',
-        createdAt: Date.now()
-      };
 
-      if (isSupabaseConfigured()) {
-        const { data: freshList, error: fetchErr } = await supabase
-          .from('listings')
-          .select('*')
-          .eq('id', checkoutItem.id)
-          .maybeSingle();
-
-        if (fetchErr || !freshList) {
-          throw new Error(language === 'ka' ? 'პროდუქტი აღარ არსებობს.' : 'Listing no longer exists.');
+      await runTransaction(db, async (transaction) => {
+        const listingRef = doc(db, 'listings', checkoutItem.id);
+        const listingSnap = await transaction.get(listingRef);
+        if (!listingSnap.exists()) {
+          throw new Error('Listing does not exist.');
         }
-
-        if (freshList.status === 'sold' || freshList.isSold) {
-          throw new Error(language === 'ka' ? 'ეს პროდუქტი უკვე გაყიდულია.' : 'This item has already been sold.');
-        }
-
-        if (!isService) {
-          const { data: updatedListings, error: updateErr } = await supabase
-            .from('listings')
-            .update({ status: 'sold', isSold: true })
-            .eq('id', checkoutItem.id)
-            .neq('status', 'sold')
-            .select();
-
-          if (updateErr || !updatedListings || updatedListings.length === 0) {
-            throw new Error(language === 'ka' ? 'ეს პროდუქტი ახლახანს შეიძინა სხვა მომხმარებელმა.' : 'This item was just purchased by another user.');
-          }
+        const freshData = listingSnap.data();
+        if (freshData.status === 'sold' || freshData.isSold) {
+          throw new Error('This item has already been sold.');
         }
 
         const verifiedOrderData = {
           listingId: checkoutItem.id,
           buyerId: user.uid,
-          sellerId: freshList.sellerId || checkoutItem.sellerId,
-          amount: freshList.price,
-          currency: freshList.currency || checkoutItem.currency || 'USD',
-          itemTitle: freshList.title || checkoutItem.title,
+          sellerId: freshData.sellerId || checkoutItem.sellerId,
+          amount: freshData.price,
+          currency: freshData.currency || checkoutItem.currency || 'USD',
+          itemTitle: freshData.title || checkoutItem.title,
           status: isService ? 'booked' : 'completed',
           orderType: isService ? 'service' : 'product',
           buyerInstructions: isService ? buyerInstructions.trim() : '',
-          createdAt: Date.now()
+          createdAt: serverTimestamp()
         };
 
-        const { error: insertErr } = await supabase.from('orders').insert([verifiedOrderData]);
-        if (insertErr) {
-          console.error("[SUPABASE ERROR] Order insert failed, rolling back listing status:", insertErr);
-          if (!isService) {
-            await supabase
-              .from('listings')
-              .update({ status: freshList.status || 'active', isSold: false })
-              .eq('id', checkoutItem.id);
-          }
-          throw insertErr;
+        const newOrderRef = doc(collection(db, 'orders'));
+        transaction.set(newOrderRef, verifiedOrderData);
+
+        if (!isService) {
+          transaction.update(listingRef, {
+            status: 'sold',
+            isSold: true
+          });
         }
-      } else {
-        await runTransaction(db, async (transaction) => {
-          const listingRef = doc(db, 'listings', checkoutItem.id);
-          const listingSnap = await transaction.get(listingRef);
-          if (!listingSnap.exists()) {
-            throw new Error('Listing does not exist.');
-          }
-          const freshData = listingSnap.data();
-          if (freshData.status === 'sold' || freshData.isSold) {
-            throw new Error('This item has already been sold.');
-          }
-
-          const verifiedOrderData = {
-            listingId: checkoutItem.id,
-            buyerId: user.uid,
-            sellerId: freshData.sellerId || checkoutItem.sellerId,
-            amount: freshData.price,
-            currency: freshData.currency || checkoutItem.currency || 'USD',
-            itemTitle: freshData.title || checkoutItem.title,
-            status: isService ? 'booked' : 'completed',
-            orderType: isService ? 'service' : 'product',
-            buyerInstructions: isService ? buyerInstructions.trim() : '',
-            createdAt: serverTimestamp()
-          };
-
-          const newOrderRef = doc(collection(db, 'orders'));
-          transaction.set(newOrderRef, verifiedOrderData);
-
-          if (!isService) {
-            transaction.update(listingRef, {
-              status: 'sold',
-              isSold: true
-            });
-          }
-        });
-      }
+      });
       
       setCheckoutItem(null);
       setBuyerInstructions('');
@@ -1646,18 +1472,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         return;
       }
 
-      if (isSupabaseConfigured()) {
-        const { error } = await supabase
-          .from('orders')
-          .update({ status: newStatus })
-          .eq('id', orderId)
-          .eq('sellerId', user.uid);
-        if (error) throw error;
-      } else {
-        await updateDoc(doc(db, 'orders', orderId), {
-          status: newStatus
-        });
-      }
+      await updateDoc(doc(db, 'orders', orderId), {
+        status: newStatus
+      });
     } catch (error) {
       console.error("Error updating order status:", error);
       alert(language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status.");
