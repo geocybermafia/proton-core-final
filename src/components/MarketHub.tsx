@@ -3475,7 +3475,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 )}
 
                 {activeBottomTab !== 'messages' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5 sm:gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                     <AnimatePresence mode="popLayout">
                     {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
                     (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
@@ -3629,10 +3629,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 >
                   <div 
                     onClick={(e) => {
-                      if ((e.target as HTMLElement).closest('button')) return;
+                      if ((e.target as HTMLElement).closest('button, [role="button"], a, input')) return;
                       setCheckoutItem(listing);
                     }}
-                    className="w-full h-44 sm:h-48 bg-zinc-900/80 overflow-hidden relative cursor-pointer"
+                    className="w-full aspect-[4/3] bg-zinc-900/80 overflow-hidden relative cursor-pointer"
                   >
                     {(listing.images && listing.images.length > 0) || listing.image ? (
                       <motion.img 
@@ -3648,60 +3648,69 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       </div>
                     )}
                     
-                    {/* Badge Overlay */}
-                    <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
-                      <div className="px-2 py-0.5 bg-black/80 backdrop-blur-md rounded-lg border border-white/5 flex items-center gap-1 shadow-sm">
-                        <span className="text-[10px] sm:text-[9px] leading-none">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
-                        <span className="text-[9px] font-black text-proton-accent uppercase tracking-wider">
-                          {t.market.categories[listing.category as keyof typeof t.market.categories]}
+                    {/* Badge Overlay: Max 2 clean badges with explicit max width and text truncation */}
+                    <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 max-w-[calc(100%-105px)] overflow-hidden pointer-events-none">
+                      <div className="px-2 py-1 bg-black/85 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[130px]">
+                        <span className="text-[10px] leading-none shrink-0">{CATEGORY_EMOJIS[listing.category as keyof typeof CATEGORY_EMOJIS] || '🏷️'}</span>
+                        <span className="text-[9px] font-black text-proton-accent uppercase tracking-wider truncate block">
+                          {t.market.categories[listing.category as keyof typeof t.market.categories] || listing.category}
                         </span>
                       </div>
-                      <div className="px-2 py-0.5 bg-black/80 backdrop-blur-md rounded-lg border border-white/5 flex items-center gap-1 shadow-sm">
-                        <span className="text-[10px] sm:text-[9px]">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-                        <span className="text-[9px] font-black text-white/90 uppercase tracking-widest">{listing.city}</span>
-                      </div>
-                      {sellerRatings[listing.sellerId]?.avg >= 4.5 && (
-                        <div className="px-2 py-0.5 bg-proton-accent text-proton-on-accent rounded-lg flex items-center gap-1 shadow-sm border border-proton-accent/20">
-                          <Star size={8} className="fill-current text-proton-on-accent" />
-                          <span className="text-[8px] font-black uppercase tracking-wider">
-                            {language === 'ka' ? '✓ ტოპ გამყიდველი' : '✓ TOP VENDOR'}
+                      {(listing.city || listing.country) && (
+                        <div className="px-2 py-1 bg-black/85 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[100px]">
+                          <span className="text-[10px] leading-none shrink-0">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
+                          <span className="text-[9px] font-black text-white/90 uppercase tracking-widest truncate block">
+                            {listing.city || listing.country}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+                    {/* Top-Right Control Buttons: Min 44x44px touch targets with full event propagation guard */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
                       <button
-                        onClick={(e) => toggleFavorite(listing.id, e)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          toggleFavorite(listing.id, e);
+                        }}
                         className={cn(
-                          "w-9 h-9 flex items-center justify-center backdrop-blur-md rounded-lg border transition-all active:scale-90",
+                          "min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center backdrop-blur-md rounded-xl border transition-all active:scale-90 shadow-md",
                           favoritesSet.has(listing.id)
-                            ? "bg-red-500/10 border-red-500/20 text-red-500 shadow-md"
-                            : "bg-black/80 border-white/10 text-zinc-400 hover:text-red-500"
+                            ? "bg-red-500/20 border-red-500/30 text-red-500"
+                            : "bg-black/80 border-white/10 text-zinc-400 hover:text-red-500 hover:border-white/20"
                         )}
                         title={language === 'ka' ? 'რჩეულებში დამატება' : 'Add to Favorites'}
+                        aria-label={language === 'ka' ? 'რჩეულებში დამატება' : 'Add to Favorites'}
                       >
-                        <Heart size={14} fill={favoritesSet.has(listing.id) ? "currentColor" : "none"} className="stroke-[2.5]" />
+                        <Heart size={16} fill={favoritesSet.has(listing.id) ? "currentColor" : "none"} className="stroke-[2.5]" />
                       </button>
                       {canManageListing && (
                         <>
                           <button 
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              e.preventDefault();
                               startEdit(listing);
                             }}
-                            className={cn("w-9 h-9 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white transition-all hover:bg-white hover:text-black")}
+                            className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-xl border border-white/10 text-white transition-all hover:bg-white hover:text-black active:scale-90 shadow-md"
                             title={language === 'ka' ? 'რედაქტირება' : 'Edit'}
+                            aria-label={language === 'ka' ? 'რედაქტირება' : 'Edit'}
                           >
                             <Edit3 className="size-4" />
                           </button>
                           <button 
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              e.preventDefault();
                               handleDeleteListing(listing.id);
                             }}
-                            className="w-9 h-9 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-lg border border-white/10 text-white transition-all hover:bg-rose-500 hover:border-rose-500/30"
+                            className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-xl border border-white/10 text-white transition-all hover:bg-rose-500 hover:border-rose-500/30 active:scale-90 shadow-md"
                             title={language === 'ka' ? 'წაშლა' : 'Delete'}
+                            aria-label={language === 'ka' ? 'წაშლა' : 'Delete'}
                           >
                             <Trash2 className="size-4" />
                           </button>
@@ -3712,132 +3721,130 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
                     <div>
                       <h2 
-                        onClick={() => setCheckoutItem(listing)}
-                        className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 leading-snug mb-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCheckoutItem(listing);
+                        }}
+                        className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] leading-snug mb-1"
                       >
                         {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
                       </h2>
-                      <p className="text-xs font-sans text-zinc-400 font-medium leading-relaxed line-clamp-2">
+                      <p className="text-xs font-sans text-zinc-400 font-normal leading-relaxed line-clamp-2 min-h-[2.25rem]">
                         {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
                       </p>
                     </div>
 
                     <div className={cn("pt-3 border-t", currentTheme.border)}>
-                      <div className="flex items-center justify-between gap-2 mb-3">
+                      {/* Price Section: Scannable, prominent without redundant type badge squish */}
+                      <div className="flex items-baseline justify-between gap-2 mb-3">
                         <div className="flex flex-col">
-                          <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block">{t.market.price}</span>
-                          <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#dfb257] flex items-baseline gap-0.5 whitespace-nowrap">
-                            {(priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-xs font-bold text-zinc-400 font-sans ml-1">{displayCurrency}</span>
+                          <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block font-mono">
+                            {t.market.price}
                           </span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-xl sm:text-2xl font-black tracking-tight text-[#dfb257] font-mono leading-none">
+                              {(priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </span>
+                            <span className="text-xs font-bold text-zinc-400 font-mono ml-0.5">{displayCurrency}</span>
+                          </div>
                         </div>
 
-                        {/* Product / Service / Project Badge */}
-                        {listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-sm shrink-0 whitespace-nowrap">
+                        {listing.isNegotiable ? (
+                          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+                            {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
+                          </span>
+                        ) : listing.listingType === 'service' || listing.category === 'service' ? (
+                          <span className="text-[9px] font-bold text-amber-400/80 uppercase tracking-wider font-mono">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
-                        ) : listing.listingType === 'project' || listing.category === 'project' ? (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shadow-sm shrink-0 whitespace-nowrap">
-                            {language === 'ka' ? 'პროექტი' : 'Project'}
-                          </span>
-                        ) : (
-                          <span className="inline-flex px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-[#dfb257]/10 border border-[#dfb257]/20 text-zinc-200 shadow-sm shrink-0 whitespace-nowrap">
-                            {language === 'ka' ? 'პროდუქტი' : 'Product'}
-                          </span>
-                        )}
+                        ) : null}
                       </div>
 
-                      <div className="flex items-center justify-between gap-3 pt-1">
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
-                            }}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative cursor-pointer hover:border-[#dfb257]/50 transition-all border shrink-0 bg-zinc-900 text-white border-zinc-800"
-                            title={language === 'ka' ? 'გამყიდველის პროფილი' : 'Vendor Profile'}
-                          >
+                      {/* Vendor Row: Spacious vendor name & rating + Direct Chat with 44px touch target */}
+                      <div className="flex items-center justify-between gap-2 pt-1 min-w-0">
+                        <div 
+                          role="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
+                          }}
+                          className="flex items-center gap-2 flex-1 min-w-0 group/vendor cursor-pointer"
+                          title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative shrink-0 bg-zinc-900 text-white border border-zinc-800 group-hover/vendor:border-[#dfb257]/50 transition-all">
                             {(listing.sellerName || 'Seller').substring(0, 2).toUpperCase()}
-                            <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-zinc-950" />
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border-2 border-zinc-950" />
                           </div>
-                          <div 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedVendor({ id: listing.sellerId, name: listing.sellerName });
-                            }}
-                            className="min-w-0 cursor-pointer group/vendor flex-1"
-                            title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
-                          >
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1 min-w-0">
-                              <span className="text-xs font-bold tracking-wide truncate block text-zinc-200 group-hover/vendor:text-[#dfb257] transition-colors">{listing.sellerName}</span>
-                              <ShieldCheck size={11} className="shrink-0 text-[#dfb257]" />
+                              <span className="text-xs font-bold tracking-wide truncate block text-zinc-200 group-hover/vendor:text-[#dfb257] transition-colors">
+                                {listing.sellerName}
+                              </span>
+                              <ShieldCheck size={12} className="shrink-0 text-[#dfb257]" />
                             </div>
                             <div className="flex items-center mt-0.5 min-w-0">
                               {sellerRatings[listing.sellerId] && sellerRatings[listing.sellerId].count > 0 ? (
                                 <div className="flex items-center gap-0.5">
-                                  <Star size={9} className="fill-[#dfb257] text-[#dfb257]" />
-                                  <span className="text-[10px] font-black text-[#dfb257]">{sellerRatings[listing.sellerId].avg.toFixed(1)}</span>
+                                  <Star size={10} className="fill-[#dfb257] text-[#dfb257]" />
+                                  <span className="text-[10px] font-black text-[#dfb257]">
+                                    {sellerRatings[listing.sellerId].avg.toFixed(1)}
+                                  </span>
                                 </div>
                               ) : (
-                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{language === 'ka' ? 'ახალი' : 'New'}</span>
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">
+                                  {language === 'ka' ? 'ახალი' : 'New'}
+                                </span>
                               )}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0 select-none">
-                          {/* Chat Button */}
-                          {!isOwnListing && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveChatListing(listing);
-                              }}
-                              className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center"
-                              title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
-                            >
-                              <MessageCircle size={14} />
-                            </button>
-                          )}
+                        {/* Direct Vendor Chat button */}
+                        {!isOwnListing && (
+                          <button 
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              setActiveChatListing(listing);
+                            }}
+                            className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center shrink-0 active:scale-95"
+                            title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
+                            aria-label={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
+                          >
+                            <MessageCircle size={16} />
+                          </button>
+                        )}
+                      </div>
 
-                          {/* Quick Add to Cart button */}
-                          {!isOwnListing && !(listing.status === 'sold' || listing.isSold) && (
-                            <button
+                      {/* Primary Actions with Full 44px Touch Targets */}
+                      <div className="mt-3">
+                        {isOwnListing ? (
+                          <div className="flex items-center gap-2">
+                            <button 
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAddToCart(listing);
+                                e.preventDefault();
+                                startEdit(listing);
                               }}
-                              className="w-8 h-8 rounded-lg transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30"
-                              title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
-                            >
-                              <ShoppingCart size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-3">
-                        {isOwnListing ? (
-                          <div className="flex gap-1.5">
-                            <button 
-                              onClick={() => startEdit(listing)}
                               className={cn(
-                                "flex-1 h-9 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 border border-white/5 hover:bg-white/10 text-white",
+                                "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-white/10 hover:bg-white/10 text-white active:scale-[0.98]",
                                 currentTheme.accentBg
                               )}
                             >
-                              <Edit3 size={12} />
-                              {t.market.edit_listing}
+                              <Edit3 size={14} />
+                              <span>{t.market.edit_listing}</span>
                             </button>
                             <button 
                               type="button"
                               onClick={async (e) => {
                                 e.stopPropagation();
+                                e.preventDefault();
                                 if (window.confirm(t.market.delete_confirm)) {
                                   try {
                                     await deleteDoc(doc(db, 'listings', listing.id));
@@ -3847,30 +3854,52 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                   }
                                 }
                               }}
-                              className="w-9 h-9 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-lg text-[9px] font-black transition-all flex items-center justify-center shrink-0"
+                              className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
                               title={language === 'ka' ? 'წაშლა' : 'Delete'}
+                              aria-label={language === 'ka' ? 'წაშლა' : 'Delete'}
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         ) : listing.status === 'sold' || listing.isSold ? (
                           <button 
+                            type="button"
                             disabled
-                            className="w-full h-9 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider bg-zinc-800 text-zinc-500 border border-zinc-700/50 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                            className="w-full min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-800 text-zinc-500 border border-zinc-700/50 flex items-center justify-center gap-2 cursor-not-allowed"
                           >
                             {language === 'ka' ? 'გაყიდულია' : 'SOLD'}
                           </button>
                         ) : (
-                          <button 
-                            onClick={() => handleBuyNow(listing)}
-                            className={cn(
-                              "w-full h-9 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-md hover:shadow-proton-accent/20 active:scale-[0.98]",
-                              currentTheme.accentBg, "text-white"
-                            )}
-                          >
-                            <ShoppingBag size={12} />
-                            {t.market.buy_now}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleBuyNow(listing);
+                              }}
+                              className={cn(
+                                "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-proton-accent/20 active:scale-[0.98]",
+                                currentTheme.accentBg, "text-white"
+                              )}
+                            >
+                              <ShoppingBag size={15} />
+                              <span>{t.market.buy_now}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleAddToCart(listing);
+                              }}
+                              className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30 shrink-0"
+                              title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
+                              aria-label={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
+                            >
+                              <ShoppingCart size={16} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
