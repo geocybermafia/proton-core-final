@@ -89,6 +89,220 @@ import { FastInput, FastTextarea } from './market-hub/FastInputs';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
+// Memoized Sub-components for Rendering Optimization
+interface ListingTypeTabsProps {
+  activeType: 'all' | 'product' | 'service' | 'project';
+  onSelectType: (type: 'all' | 'product' | 'service' | 'project') => void;
+  language: string;
+  theme: any;
+}
+
+const ListingTypeTabs = React.memo(function ListingTypeTabs({
+  activeType,
+  onSelectType,
+  language,
+  theme
+}: ListingTypeTabsProps) {
+  const types = [
+    { id: 'all' as const, emoji: '🌍', ka: 'ყველა', en: 'All' },
+    { id: 'service' as const, emoji: '⚡', ka: 'სერვისები', en: 'Services' },
+    { id: 'product' as const, emoji: '📦', ka: 'პროდუქტები', en: 'Products' },
+    { id: 'project' as const, emoji: '🚀', ka: 'პროექტები', en: 'Projects' }
+  ];
+
+  return (
+    <div className={cn("flex p-0.5 rounded-xl border shadow-inner w-fit select-none shrink-0", theme.cardAlt)}>
+      {types.map(({ id, emoji, ka, en }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onSelectType(id)}
+          className={cn(
+            "px-3.5 sm:px-4 py-2 rounded-lg transition-all text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 active:scale-95 cursor-pointer whitespace-nowrap",
+            activeType === id
+              ? cn(theme.badgeBg, "shadow-sm border border-white/5 text-[#dfb257]")
+              : cn(theme.muted, "hover:opacity-90 hover:bg-white/5 text-zinc-400 hover:text-white")
+          )}
+        >
+          <span>{emoji}</span>
+          <span>{language === 'ka' ? ka : en}</span>
+        </button>
+      ))}
+    </div>
+  );
+});
+
+interface MarketPulseMetricsProps {
+  metrics: {
+    active: number;
+    avgPrice: string;
+    sold: number;
+    topCat: string;
+  };
+  language: string;
+}
+
+const MarketPulseMetrics = React.memo(function MarketPulseMetrics({
+  metrics,
+  language
+}: MarketPulseMetricsProps) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-zinc-950/60 border border-zinc-900/80 backdrop-blur-md">
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+          {language === 'ka' ? 'აქტიური ლოტები' : 'Active Listings'}
+        </span>
+        <span className="text-base sm:text-lg font-black text-white font-mono">
+          {metrics.active.toLocaleString()}
+        </span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+          {language === 'ka' ? 'საშუალო ფასი' : 'Average Price'}
+        </span>
+        <span className="text-base sm:text-lg font-black text-[#dfb257] font-mono">
+          {metrics.avgPrice}
+        </span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+          {language === 'ka' ? 'ვაჭრობის მოცულობა' : 'Total Traded'}
+        </span>
+        <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
+          {metrics.sold.toLocaleString()}
+        </span>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+          {language === 'ka' ? 'ტოპ კატეგორია' : 'Top Category'}
+        </span>
+        <span className="text-base sm:text-lg font-black text-blue-400 truncate">
+          {metrics.topCat}
+        </span>
+      </div>
+    </div>
+  );
+});
+
+interface MobileFilterBottomSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  language: string;
+  activeFiltersCount: number;
+  onClearFilters: () => void;
+  matchCount: number;
+  filterContent: React.ReactNode;
+  sheetRef?: React.Ref<HTMLDivElement>;
+}
+
+const MobileFilterBottomSheet = React.memo(function MobileFilterBottomSheet({
+  isOpen,
+  onClose,
+  language,
+  activeFiltersCount,
+  onClearFilters,
+  matchCount,
+  filterContent,
+  sheetRef
+}: MobileFilterBottomSheetProps) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[140] md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label={language === 'ka' ? 'ფილტრები' : 'Filters'}
+        >
+          {/* Backdrop with blur */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm"
+          />
+
+          {/* Bottom Sheet Modal Container */}
+          <motion.div 
+            ref={sheetRef}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            onDragEnd={(_e, info) => {
+              if (info.offset.y > 100 || info.velocity.y > 400) {
+                onClose();
+              }
+            }}
+            className="fixed inset-x-0 bottom-0 max-h-[85vh] flex flex-col rounded-t-[32px] border-t border-x border-zinc-800/80 bg-zinc-950/98 backdrop-blur-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.8)] z-10 overflow-hidden"
+          >
+            {/* Grab Handle */}
+            <div className="w-full flex flex-col items-center pt-3 pb-1 select-none cursor-grab active:cursor-grabbing touch-none shrink-0">
+              <div className="w-12 h-1.5 rounded-full bg-zinc-700/80 hover:bg-zinc-600 transition-colors" />
+            </div>
+
+            {/* Bottom Sheet Header */}
+            <div className="px-6 py-3 border-b border-zinc-900 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <LayoutGrid size={16} className="text-[#dfb257]" />
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">
+                  {language === 'ka' ? 'ფილტრები' : 'Filters'}
+                </h3>
+                {activeFiltersCount > 0 && (
+                  <span className="flex items-center justify-center bg-[#dfb257] text-[#070708] font-black text-[10px] w-5 h-5 rounded-full">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {activeFiltersCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={onClearFilters}
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider px-2 py-1 transition-colors cursor-pointer"
+                  >
+                    {language === 'ka' ? 'გასუფთავება' : 'Reset'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close filters"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable Filter Body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 custom-scrollbar">
+              {filterContent}
+            </div>
+
+            {/* Sticky Bottom Action Bar with Apply CTA */}
+            <div className="p-4 border-t border-zinc-900 bg-zinc-950/95 backdrop-blur-md shrink-0">
+              <button 
+                type="button"
+                onClick={onClose}
+                className="w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all cursor-pointer bg-[#dfb257] text-[#070708] hover:brightness-110 shadow-[#dfb257]/10"
+              >
+                <span>{language === 'ka' ? 'შედეგების ნახვა' : 'Apply Filters'}</span>
+                <span className="text-[11px] font-mono font-black opacity-80">
+                  ({matchCount})
+                </span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+});
 
 export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
   const t = propT || translations[language];
@@ -177,20 +391,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     }, 300);
     return () => clearTimeout(timer);
   }, [searchRaw]);
-
-  // Sync from URL search input if URL changes externally (e.g. back button / direct link)
-  useEffect(() => {
-    const handlePopState = () => {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        setSearch(params.get('search') || '');
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
 
   // Sync to URL search params when search state changes (debounced for input performance)
   useEffect(() => {
@@ -877,6 +1077,83 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     isOpen: !!activeChatListing,
     onClose: () => setActiveChatListing(null),
   });
+
+  // Browser History & Hardware Back-Button Integration (Modals & Drawers)
+  const modalHistoryRef = useRef<string | null>(null);
+  const isBackNavigationRef = useRef<boolean>(false);
+
+  // Compute currently active modal in priority order
+  const activeModalKey = useMemo(() => {
+    if (checkoutItem) return 'checkout';
+    if (isCartOpen) return 'cart';
+    if (isFiltersOpen) return 'filters';
+    if (activeChatListing) return 'chat';
+    return null;
+  }, [checkoutItem, isCartOpen, isFiltersOpen, activeChatListing]);
+
+  // Synchronize modal state with browser history (Push on Open, Back on Close)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (activeModalKey) {
+      if (modalHistoryRef.current !== activeModalKey) {
+        if (!isBackNavigationRef.current) {
+          try {
+            window.history.pushState({ protonModal: activeModalKey }, '');
+          } catch (e) {
+            console.warn('[History] Push modal error:', e);
+          }
+        }
+        modalHistoryRef.current = activeModalKey;
+        isBackNavigationRef.current = false;
+      }
+    } else {
+      if (modalHistoryRef.current !== null) {
+        if (!isBackNavigationRef.current) {
+          try {
+            if (window.history.state?.protonModal) {
+              window.history.back();
+            }
+          } catch (e) {
+            console.warn('[History] Pop modal error:', e);
+          }
+        }
+        modalHistoryRef.current = null;
+        isBackNavigationRef.current = false;
+      }
+    }
+  }, [activeModalKey]);
+
+  // Listen to popstate (Mobile hardware Back button / Browser back navigation)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleUnifiedPopState = () => {
+      // Sync URL search params if present
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlSearch = params.get('search') || '';
+        setSearch(prev => (prev !== urlSearch ? urlSearch : prev));
+      } catch (e) {
+        console.error(e);
+      }
+
+      // If any modal is active when popstate occurs, dismiss it without exiting the app
+      if (modalHistoryRef.current) {
+        isBackNavigationRef.current = true;
+        setCheckoutItem(null);
+        setIsCartOpen(false);
+        setIsFiltersOpen(false);
+        setActiveChatListing(null);
+        modalHistoryRef.current = null;
+      }
+    };
+
+    window.addEventListener('popstate', handleUnifiedPopState);
+    return () => {
+      window.removeEventListener('popstate', handleUnifiedPopState);
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeChatListing || !user) return;
@@ -2908,60 +3185,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Listing Type & Categories Wrap */}
             <div className="flex items-center gap-3 relative">
               {/* Listing Type Selection Tabs */}
-              <div className={cn("flex p-0.5 rounded-xl border shadow-inner w-fit select-none", currentTheme.cardAlt)}>
-                <button
-                  type="button"
-                  onClick={() => setActiveListingType('all')}
-                  className={cn(
-                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                    activeListingType === 'all' 
-                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                  )}
-                >
-                  <span>🌍</span>
-                  <span>{language === 'ka' ? 'ყველა' : 'All'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveListingType('service')}
-                  className={cn(
-                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                    activeListingType === 'service' 
-                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                  )}
-                >
-                  <span>⚡</span>
-                  <span>{language === 'ka' ? 'სერვისები' : 'Services'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveListingType('product')}
-                  className={cn(
-                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                    activeListingType === 'product' 
-                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                  )}
-                >
-                  <span>📦</span>
-                  <span>{language === 'ka' ? 'პროდუქტები' : 'Products'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveListingType('project')}
-                  className={cn(
-                    "px-4 py-2 rounded-lg transition-all text-[10px] font-black uppercase tracking-wider flex items-center gap-2 active:scale-95",
-                    activeListingType === 'project' 
-                      ? cn(currentTheme.badgeBg, "shadow-sm border border-white/5") 
-                      : cn(currentTheme.muted, "hover:opacity-90 hover:bg-white/5")
-                  )}
-                >
-                  <span>🚀</span>
-                  <span>{language === 'ka' ? 'პროექტები' : 'Projects'}</span>
-                </button>
-              </div>
+              <ListingTypeTabs
+                activeType={activeListingType}
+                onSelectType={setActiveListingType}
+                language={language}
+                theme={currentTheme}
+              />
 
               {/* SPACE SAVING: Beautiful Category Dropdown integrated right here! */}
               <div className="relative">
@@ -3094,32 +3323,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             <div className="block md:hidden bg-zinc-950/45 border border-zinc-900 rounded-3xl p-4 mb-3.5 space-y-3.5 transition-all">
               {/* Listing Type Select tabs (scrollable with horizontal scroll indicator) */}
               <div className="relative group/typescroll">
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5 pr-6">
-                  {(['all', 'service', 'product', 'project'] as const).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setActiveListingType(type)}
-                      className={cn(
-                        "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all border shrink-0 flex items-center gap-1.5 min-h-[40px] cursor-pointer whitespace-nowrap",
-                        activeListingType === type
-                          ? "bg-gradient-to-b from-zinc-800 to-zinc-900 text-[#dfb257] border-[#dfb257]/30 shadow-md"
-                          : "text-zinc-400 border-transparent hover:text-zinc-200"
-                      )}
-                    >
-                      <span>
-                        {type === 'all' ? '🌍' :
-                         type === 'service' ? '⚡' :
-                         type === 'product' ? '📦' : '🚀'}
-                      </span>
-                      <span>
-                        {type === 'all' ? (language === 'ka' ? 'ყველა' : 'All') :
-                         type === 'service' ? (language === 'ka' ? 'სერვისები' : 'Services') :
-                         type === 'product' ? (language === 'ka' ? 'პროდუქტები' : 'Products') :
-                         (language === 'ka' ? 'პროექტები' : 'Projects')}
-                      </span>
-                    </button>
-                  ))}
+                <div className="flex items-center overflow-x-auto scrollbar-none py-0.5 pr-6">
+                  <ListingTypeTabs
+                    activeType={activeListingType}
+                    onSelectType={setActiveListingType}
+                    language={language}
+                    theme={currentTheme}
+                  />
                 </div>
                 <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950/90 via-zinc-950/40 to-transparent flex items-center justify-end pr-1 text-zinc-500">
                   <ChevronRight size={12} className="opacity-60" />
@@ -3255,40 +3465,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               {viewMode === 'browse' && displayMode === 'grid' && (
                 <div className="space-y-12 animate-in fade-in duration-500">
                   {/* Section 1: Market Pulse Metrics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-zinc-950/60 border border-zinc-900/80 backdrop-blur-md">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                        {language === 'ka' ? 'აქტიური ლოტები' : 'Active Listings'}
-                      </span>
-                      <span className="text-base sm:text-lg font-black text-white font-mono">
-                        {marketMetrics.active.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                        {language === 'ka' ? 'საშუალო ფასი' : 'Average Price'}
-                      </span>
-                      <span className="text-base sm:text-lg font-black text-[#dfb257] font-mono">
-                        {marketMetrics.avgPrice}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                        {language === 'ka' ? 'ვაჭრობის მოცულობა' : 'Total Traded'}
-                      </span>
-                      <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
-                        {marketMetrics.sold.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
-                        {language === 'ka' ? 'ტოპ კატეგორია' : 'Top Category'}
-                      </span>
-                      <span className="text-base sm:text-lg font-black text-blue-400 truncate">
-                        {marketMetrics.topCat}
-                      </span>
-                    </div>
-                  </div>
+                  <MarketPulseMetrics metrics={marketMetrics} language={language} />
 
                   {/* Section 2: Quick Highlights Navigation */}
                   <div className="space-y-4">
@@ -4257,48 +4434,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
 
 
-          {/* Mobile Filters Drawer */}
-          <AnimatePresence>
-            {isFiltersOpen && (
-              <div 
-                className="fixed inset-0 z-[140] lg:hidden"
-                role="dialog"
-                aria-modal="true"
-                aria-label={language === 'ka' ? 'ფილტრები' : 'Filters'}
-              >
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setIsFiltersOpen(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-                />
-                <motion.div 
-                  ref={filtersDrawerRef}
-                  initial={{ x: '100%' }}
-                  animate={{ x: 0 }}
-                  exit={{ x: '100%' }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                  className={cn(
-                    "fixed right-0 top-16 bottom-0 w-[85%] max-w-sm p-8 border-l border-white/5 flex flex-col backdrop-blur-[20px] max-h-[calc(100vh-theme(spacing.16))] overflow-y-auto z-10",
-                    currentTheme.card
-                  )}
-                >
-                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pt-4">
-                    {FilterContent}
-                  </div>
-                  <div className="mt-8">
-                    <button 
-                      onClick={() => setIsFiltersOpen(false)}
-                      className={cn("w-full py-4 text-[#070708] rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/80", currentTheme.accentBg)}
-                    >
-                      {language === 'ka' ? 'შედეგების ჩვენება' : 'Apply Filters'}
-                    </button>
-                  </div>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
+          {/* Mobile Filters Bottom Sheet */}
+          <MobileFilterBottomSheet
+            isOpen={isFiltersOpen}
+            onClose={() => setIsFiltersOpen(false)}
+            language={language}
+            activeFiltersCount={activeFiltersCount}
+            onClearFilters={clearFilters}
+            matchCount={filteredListings.length}
+            filterContent={FilterContent}
+            sheetRef={filtersDrawerRef}
+          />
         </div>
         </div>
       ) : (
