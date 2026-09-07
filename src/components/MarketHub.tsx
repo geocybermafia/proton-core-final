@@ -307,10 +307,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const PAGE_SIZE = 24;
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isSearchingBackend, setIsSearchingBackend] = useState(false);
+  const [searchVisibleLimit, setSearchVisibleLimit] = useState(PAGE_SIZE);
   const lastVisibleDocRef = useRef<any>(null);
   const appendedListingsRef = useRef<Listing[]>([]);
   const page1DocsRef = useRef<Listing[]>([]);
   const currentUseOrderByRef = useRef<boolean>(true);
+
+  // Search & Filter state detection
+  const isSearchActive = search.trim().length > 0;
+  const hasActiveFilters = activeCategory !== 'all' || activeCountry !== 'GLOBAL' || activeCity.trim().length > 0 || activeListingType !== 'all' || minPrice !== '' || maxPrice !== '' || showOnlyFavorites;
+  const isFilteredMode = isSearchActive || hasActiveFilters;
 
   // Shopping Cart state
   const [cart, setCart] = useState<Listing[]>(() => {
@@ -324,6 +331,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isPlacingCartOrders, setIsPlacingCartOrders] = useState(false);
+  const [cartServiceInstructions, setCartServiceInstructions] = useState<Record<string, string>>({});
 
   // Focus traps for accessible modal & drawer management
   const cartDrawerRef = useFocusTrap<HTMLDivElement>({
@@ -394,33 +402,44 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const handleAddToCart = (listing: Listing) => {
     if (!user) {
-      alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.");
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.", 'warning');
       return;
     }
 
     const isOwnListing = listing.sellerId === user.uid;
 
     if (isOwnListing) {
-      alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
+      showToast(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.", 'warning');
       return;
     }
 
     if (listing.status === 'sold' || listing.isSold) {
-      alert(language === 'ka' ? "ეს ნივთი უკვე გაყიდულია." : "This item is already sold.");
+      showToast(language === 'ka' ? "ეს ნივთი უკვე გაყიდულია." : "This item is already sold.", 'error');
       return;
     }
     setCart((prev) => {
       const exists = prev.some((item) => item.id === listing.id);
       if (exists) {
-        alert(language === 'ka' ? "ეს ნივთი უკვე დამატებულია კალათაში!" : "This item is already in your cart!");
+        showToast(language === 'ka' ? "ეს ნივთი უკვე დამატებულია კალათაში!" : "This item is already in your cart!", 'info');
         return prev;
       }
+      showToast(
+        language === 'ka' 
+          ? `"${listing.title}" დაემატა კალათაში.` 
+          : `"${listing.title}" added to cart.`, 
+        'success'
+      );
       return [...prev, listing];
     });
   };
 
   const handleRemoveFromCart = (listingId: string) => {
     setCart((prev) => prev.filter((item) => item.id !== listingId));
+    setCartServiceInstructions((prev) => {
+      const next = { ...prev };
+      delete next[listingId];
+      return next;
+    });
   };
 
   const handleCartCheckout = async () => {
@@ -453,6 +472,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             }
 
             const isService = item.listingType === 'service' || item.category === 'service';
+            const itemInstructions = isService ? (cartServiceInstructions[item.id]?.trim() || '') : '';
             verifiedOrders.push({
               listingRef: doc(db, 'listings', item.id),
               orderData: {
@@ -464,7 +484,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 itemTitle: freshData.title || item.title,
                 status: isService ? 'booked' : 'completed',
                 orderType: isService ? 'service' : 'product',
-                buyerInstructions: '',
+                buyerInstructions: itemInstructions,
                 createdAt: serverTimestamp()
               },
               isService
@@ -497,7 +517,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           }
         });
       setCart([]);
+      setCartServiceInstructions({});
       setIsCartOpen(false);
+      showToast(
+        language === 'ka' 
+          ? "შეკვეთა წარმატებით გაფორმდა!" 
+          : "Cart checkout completed successfully!", 
+        'success'
+      );
       setViewMode('my-listings');
       setProfileSubMode('buying');
     } catch (err: any) {
@@ -505,28 +532,39 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       if (err && Array.isArray(err.invalidItems) && err.invalidItems.length > 0) {
         const invalidIds = new Set(err.invalidItems.map((inv: any) => inv.id));
         setCart(prev => prev.filter(item => !invalidIds.has(item.id)));
+        setCartServiceInstructions(prev => {
+          const next = { ...prev };
+          invalidIds.forEach(id => { delete next[id as string]; });
+          return next;
+        });
 
         const invalidTitles = err.invalidItems.map((inv: any) => `"${inv.title}"`).join(', ');
         if (err.invalidItems.length === 1) {
           const single = err.invalidItems[0];
-          alert(language === 'ka'
-            ? (single.reason === 'sold'
-                ? `პროდუქტი "${single.title}" უკვე გაყიდულია და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
-                : `პროდუქტი "${single.title}" აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან.`)
-            : (single.reason === 'sold'
-                ? `Product "${single.title}" has already been sold and was removed from your cart. You can proceed with your remaining items.`
-                : `Product "${single.title}" is no longer available and was removed from your cart.`)
+          showToast(
+            language === 'ka'
+              ? (single.reason === 'sold'
+                  ? `პროდუქტი "${single.title}" უკვე გაყიდულია და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
+                  : `პროდუქტი "${single.title}" აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან.`)
+              : (single.reason === 'sold'
+                  ? `Item "${single.title}" has already been sold and was removed from your cart. You can proceed with your remaining items.`
+                  : `Item "${single.title}" is no longer available and was removed from your cart.`),
+            'error',
+            7000
           );
         } else {
-          alert(language === 'ka'
-            ? `პროდუქტები (${invalidTitles}) აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
-            : `Products (${invalidTitles}) are no longer available and were removed from your cart. You can proceed with your remaining items.`
+          showToast(
+            language === 'ka'
+              ? `პროდუქტები (${invalidTitles}) აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
+              : `Items (${invalidTitles}) are no longer available and were removed from your cart. You can proceed with your remaining items.`,
+            'error',
+            7000
           );
         }
       } else if (err && err.message && (err.message.includes('sold') || err.message.includes('no longer exists'))) {
-        alert(language === 'ka' ? `შეცდომა: ${err.message}` : `Error: ${err.message}`);
+        showToast(language === 'ka' ? `შეცდომა: ${err.message}` : `Error: ${err.message}`, 'error', 6000);
       } else {
-        alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.");
+        showToast(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.", 'error');
       }
     } finally {
       setIsPlacingCartOrders(false);
@@ -939,7 +977,21 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, []);
 
   const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore || !lastVisibleDocRef.current) return;
+    if (isLoadingMore) return;
+
+    if (isFilteredMode) {
+      // In filtered / search mode: reveal next page of matching results smoothly
+      if (searchVisibleLimit < listings.length) {
+        setIsLoadingMore(true);
+        setTimeout(() => {
+          setSearchVisibleLimit(prev => prev + PAGE_SIZE);
+          setIsLoadingMore(false);
+        }, 120);
+      }
+      return;
+    }
+
+    if (!hasMore || !lastVisibleDocRef.current) return;
     setIsLoadingMore(true);
 
     try {
@@ -993,7 +1045,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMore, activeCategory, viewMode, user?.uid, getBaseQuery]);
+  }, [isLoadingMore, isFilteredMode, searchVisibleLimit, listings.length, hasMore, activeCategory, viewMode, user?.uid, getBaseQuery]);
 
   useEffect(() => {
     if (!user || authLoading) return;
@@ -1006,6 +1058,163 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     page1DocsRef.current = [];
     lastVisibleDocRef.current = null;
     setHasMore(true);
+    setSearchVisibleLimit(PAGE_SIZE);
+
+    if (isSearchActive) {
+      // GLOBAL FIRESTORE SEARCH EXECUTION
+      setIsSearchingBackend(true);
+      setLoading(true);
+
+      const runSearch = async () => {
+        try {
+          const coll = collection(db, 'listings');
+          const cleanTerm = search.trim();
+          const lowerTerm = cleanTerm.toLowerCase();
+          const capTerm = cleanTerm.charAt(0).toUpperCase() + cleanTerm.slice(1);
+          const upperTerm = cleanTerm.toUpperCase();
+          const uniqueVariants = Array.from(new Set([cleanTerm, lowerTerm, capTerm, upperTerm])).filter(Boolean);
+
+          const prefixPromises: Promise<any>[] = [];
+          uniqueVariants.forEach(variant => {
+            prefixPromises.push(
+              getDocs(query(
+                coll,
+                where('title', '>=', variant),
+                where('title', '<=', variant + '\uf8ff'),
+                limit(50)
+              )).catch(e => {
+                console.warn("[MarketHub Search] Title prefix query error:", e);
+                return null;
+              })
+            );
+            prefixPromises.push(
+              getDocs(query(
+                coll,
+                where('titleGe', '>=', variant),
+                where('titleGe', '<=', variant + '\uf8ff'),
+                limit(50)
+              )).catch(e => {
+                console.warn("[MarketHub Search] TitleGe prefix query error:", e);
+                return null;
+              })
+            );
+          });
+
+          // Scoped window query to capture keyword matches across descriptions, cities, sellerNames, categories, etc.
+          const scopedPromise = (async () => {
+            try {
+              let qScoped;
+              if (viewMode === 'my-listings') {
+                qScoped = query(coll, where('sellerId', '==', user.uid), limit(200));
+              } else if (activeCategory !== 'all') {
+                qScoped = query(coll, where('category', '==', activeCategory), limit(200));
+              } else {
+                try {
+                  qScoped = query(coll, orderBy('createdAt', 'desc'), limit(200));
+                  return await getDocs(qScoped);
+                } catch {
+                  qScoped = query(coll, limit(200));
+                  return await getDocs(qScoped);
+                }
+              }
+              return await getDocs(qScoped);
+            } catch (err) {
+              console.warn("[MarketHub Search] Scoped window query error:", err);
+              return null;
+            }
+          })();
+
+          const [prefixSnaps, scopedSnap] = await Promise.all([
+            Promise.all(prefixPromises),
+            scopedPromise
+          ]);
+
+          if (!isActive) return;
+
+          const docMap = new Map<string, Listing>();
+
+          if (scopedSnap && scopedSnap.docs) {
+            scopedSnap.docs.forEach((d: any) => {
+              docMap.set(d.id, { id: d.id, ...d.data() } as Listing);
+            });
+          }
+
+          prefixSnaps.forEach(snap => {
+            if (snap && snap.docs) {
+              snap.docs.forEach((d: any) => {
+                docMap.set(d.id, { id: d.id, ...d.data() } as Listing);
+              });
+            }
+          });
+
+          const candidates = Array.from(docMap.values()).filter(isRealListing);
+          candidates.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
+
+          setListings(candidates);
+        } catch (err) {
+          console.error("[MarketHub Search] Search execution exception:", err);
+        } finally {
+          if (isActive) {
+            setIsSearchingBackend(false);
+            setLoading(false);
+          }
+        }
+      };
+
+      runSearch();
+
+      return () => {
+        isActive = false;
+      };
+    }
+
+    // If text search is not active, but secondary filters are active:
+    // Execute scoped query window directly against Firestore to prevent false zero-results
+    if (hasActiveFilters && (activeCountry !== 'GLOBAL' || activeListingType !== 'all' || minPrice !== '' || maxPrice !== '' || activeCity.trim().length > 0)) {
+      setLoading(true);
+
+      const runScopedFilterFetch = async () => {
+        try {
+          const coll = collection(db, 'listings');
+          let qFiltered;
+          if (viewMode === 'my-listings') {
+            qFiltered = query(coll, where('sellerId', '==', user.uid), limit(200));
+          } else if (activeCategory !== 'all') {
+            qFiltered = query(coll, where('category', '==', activeCategory), limit(200));
+          } else {
+            try {
+              qFiltered = query(coll, orderBy('createdAt', 'desc'), limit(200));
+              return await getDocs(qFiltered);
+            } catch {
+              qFiltered = query(coll, limit(200));
+              return await getDocs(qFiltered);
+            }
+          }
+          const snap = await getDocs(qFiltered);
+          if (!isActive) return;
+
+          const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[];
+          data.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
+          const realDocs = data.filter(isRealListing);
+          setListings(realDocs);
+        } catch (e) {
+          console.warn("[MarketHub] Scoped filter fetch error:", e);
+        } finally {
+          if (isActive) {
+            setLoading(false);
+          }
+        }
+      };
+
+      runScopedFilterFetch();
+
+      return () => {
+        isActive = false;
+      };
+    }
+
+    // STANDARD BROWSE / PAGINATED WINDOW MODE:
+    // Fetches page 1 with real-time onSnapshot and sets up cursor pagination
     setLoading(true);
 
     const tryFetchListings = (useOrderBy: boolean) => {
@@ -1037,22 +1246,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
               const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
 
-              // If the logged-in user is NOT the admin 'devdarianib@gmail.com', AND the listing's sellerName matches their name,
-              // but the listing's sellerId is NOT their UID, then it was corrupted! Let's claim it back.
               if (loggedUser.email !== 'devdarianib@gmail.com') {
                 const isMatch = sellerNameLower && (
                   sellerNameLower === userEmailPrefix ||
                   sellerNameLower === userDisplayName
                 );
                 if (isMatch && l.sellerId !== loggedUser.uid) {
-                  console.log(`[DATA RECOVERY] Reclaiming listing '${l.title}' (${l.id}) for true owner ${loggedUser.email}. Restoring sellerId to:`, loggedUser.uid);
-                  updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid })
-                    .then(() => {
-                      console.log(`[DATA RECOVERY] Successfully claimed back listing '${l.id}' for user.`);
-                    })
-                    .catch((e) => {
-                      console.error(`[DATA RECOVERY ERROR] Failed to reclaim listing '${l.id}':`, e);
-                    });
+                  updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid }).catch(() => {});
                 }
               }
             });
@@ -1115,7 +1315,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       isActive = false;
       if (unsub) unsub();
     };
-  }, [user, authLoading, activeCategory, viewMode, getBaseQuery]);
+  }, [user, authLoading, activeCategory, viewMode, search, activeCountry, activeCity, activeListingType, minPrice, maxPrice, showOnlyFavorites, isSearchActive, hasActiveFilters, getBaseQuery]);
 
   useEffect(() => {
     if (!user) {
@@ -1174,7 +1374,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setActiveListingType('all');
     setShowOnlyFavorites(false);
     setSortBy('rating');
-  }, []);
+    setSearchVisibleLimit(PAGE_SIZE);
+  }, [PAGE_SIZE]);
 
   const handleSeedListings = async () => {
     if (!user) return;
@@ -1448,6 +1649,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return filtered.map(r => r.item);
   }, [listings, priceMap, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, profileSubMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency, showOnlyFavorites, favoritesSet]);
 
+  const displayedListings = useMemo(() => {
+    if (isFilteredMode) {
+      return filteredListings.slice(0, searchVisibleLimit);
+    }
+    return filteredListings;
+  }, [filteredListings, isFilteredMode, searchVisibleLimit]);
+
+  const hasMoreToDisplay = useMemo(() => {
+    if (isFilteredMode) {
+      return searchVisibleLimit < filteredListings.length;
+    }
+    return hasMore;
+  }, [isFilteredMode, searchVisibleLimit, filteredListings.length, hasMore]);
+
   const marketMetrics = useMemo(() => {
     const total = listings.length;
     let active = 0;
@@ -1499,12 +1714,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, [listings, orders.length, displayCurrency, priceMap]);
 
   const handleBuyNow = async (listing: Listing) => {
-    if (!user) return;
+    if (!user) {
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შესყიდვისთვის." : "Please sign in to make a purchase.", 'warning');
+      return;
+    }
 
     const isOwnListing = listing.sellerId === user.uid;
 
     if (isOwnListing) {
-      alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.");
+      showToast(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.", 'warning');
       return;
     }
     setCheckoutItem(listing);
@@ -1552,18 +1770,29 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }
       });
       
+      const purchasedTitle = checkoutItem.title;
       setCheckoutItem(null);
       setBuyerInstructions('');
+      showToast(
+        language === 'ka' 
+          ? `შეკვეთა "${purchasedTitle}" წარმატებით გაფორმდა!` 
+          : `Order for "${purchasedTitle}" completed successfully!`, 
+        'success'
+      );
       setViewMode('my-listings');
       setProfileSubMode('buying');
     } catch (error: any) {
       console.error("Error creating order:", error);
       if (error && (error.message === 'This item has already been sold.' || error.message?.includes('sold'))) {
-        alert(language === 'ka' 
-          ? "ეს პროდუქტი უკვე გაყიდულია სხვა მომხმარებლის მიერ." 
-          : "This item has already been sold to another user.");
+        showToast(
+          language === 'ka' 
+            ? `პროდუქტი "${checkoutItem.title}" უკვე გაყიდულია სხვა მომხმარებლის მიერ.` 
+            : `Item "${checkoutItem.title}" has already been sold to another user.`,
+          'error',
+          6000
+        );
       } else {
-        alert(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.");
+        showToast(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.", 'error');
       }
     } finally {
       setIsCheckingOut(false);
@@ -3609,7 +3838,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       );
                     })
                   ) : (
-                    filteredListings.map((listing, idx) => {
+                    displayedListings.map((listing, idx) => {
                       const isOwnListing = !!user && listing.sellerId === user.uid;
                       const isAdminUser = !!user && user.email === 'devdarianib@gmail.com';
                       const canManageListing = isOwnListing || isAdminUser;
@@ -3913,18 +4142,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
 
         {/* Catalog Pagination Load More & Discovery Status */}
-        {!loading && viewMode === 'browse' && listings.length > 0 && (
+        {!loading && !isSearchingBackend && viewMode === 'browse' && displayedListings.length > 0 && (
           <div className="mt-8 flex flex-col justify-center items-center gap-3 pb-8">
-            {/* Filter Scope Notice */}
-            {(search.trim() || activeCategory !== 'all' || activeListingType !== 'all' || minPrice || maxPrice) && (
-              <p className="text-[10px] font-bold text-zinc-500 bg-zinc-900/50 px-4 py-1.5 rounded-full border border-zinc-800/80">
+            {/* Filter / Search Match Count Notice */}
+            {isFilteredMode && (
+              <p className="text-[10px] font-bold text-zinc-400 bg-zinc-900/70 px-4 py-1.5 rounded-full border border-zinc-800/80">
                 {language === 'ka' 
-                  ? `შედეგები გაფილტრულია ჩატვირთული ${listings.length} განცხადებიდან` 
-                  : `Filtered from ${listings.length} currently loaded listings`}
+                  ? `ნაპოვნია ${filteredListings.length} განცხადება` 
+                  : `Found ${filteredListings.length} matching listings`}
               </p>
             )}
 
-            {hasMore ? (
+            {hasMoreToDisplay ? (
               <button
                 type="button"
                 onClick={handleLoadMore}
@@ -3941,15 +4170,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     ? (language === 'ka' ? 'იტვირთება...' : 'Loading More...')
                     : (language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings')}
                 </span>
-                <span className="text-[10px] text-zinc-500 font-mono">({listings.length} loaded)</span>
+                <span className="text-[10px] text-zinc-500 font-mono">
+                  {isFilteredMode 
+                    ? `(${displayedListings.length} / ${filteredListings.length})` 
+                    : `(${listings.length} loaded)`}
+                </span>
               </button>
             ) : (
               <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-zinc-500 bg-zinc-950/60 px-4 py-2 rounded-xl border border-zinc-900">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>
-                  {language === 'ka' 
-                    ? `ყველა ${listings.length} ხელმისაწვდომი განცხადება ჩატვირთულია` 
-                    : `All ${listings.length} available listings loaded • End of catalog`}
+                  {isFilteredMode
+                    ? (language === 'ka' 
+                        ? `ყველა ${filteredListings.length} განცხადება ჩატვირთულია` 
+                        : `All ${filteredListings.length} matching listings loaded • End of catalog`)
+                    : (language === 'ka' 
+                        ? `ყველა ${listings.length} ხელმისაწვდომი განცხადება ჩატვირთულია` 
+                        : `All ${listings.length} available listings loaded • End of catalog`)}
                 </span>
               </div>
             )}
@@ -3957,7 +4194,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         )}
       </div>
 
-            {!loading && listings.length === 0 && (
+            {!loading && !isSearchingBackend && listings.length === 0 && !isFilteredMode && (
               <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-zinc-950/40 border border-zinc-900 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
                 <div className="w-16 h-16 bg-[#dfb257]/10 rounded-2xl flex items-center justify-center mx-auto border border-[#dfb257]/20">
                   <LayoutGrid size={28} className="text-[#dfb257]" />
@@ -3988,7 +4225,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               </div>
             )}
 
-            {!loading && listings.length > 0 && filteredListings.length === 0 && (
+            {!loading && !isSearchingBackend && isFilteredMode && filteredListings.length === 0 && (
               <div className="py-24 text-center space-y-6 max-w-sm mx-auto bg-zinc-950/20 border border-zinc-900/60 p-8 rounded-2xl">
                 <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10">
                   <Search size={24} className="text-zinc-600" />
@@ -4000,25 +4237,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   </p>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {hasMore && (
-                    <button
-                      type="button"
-                      onClick={handleLoadMore}
-                      disabled={isLoadingMore}
-                      className="px-5 py-2.5 rounded-xl bg-zinc-900/90 border border-[#dfb257]/40 text-[10px] uppercase font-black tracking-widest text-[#dfb257] hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                    >
-                      {isLoadingMore ? (
-                        <Loader2 size={12} className="animate-spin text-[#dfb257]" />
-                      ) : (
-                        <ChevronDown size={12} className="text-[#dfb257]" />
-                      )}
-                      <span>
-                        {language === 'ka' 
-                          ? `შემდეგი გვერდის შემოწმება (${listings.length} ჩატვირთულია)` 
-                          : `Search Next Page (${listings.length} loaded so far)`}
-                      </span>
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={clearFilters}
@@ -4030,7 +4248,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               </div>
             )}
 
-            {loading && (
+            {(loading || isSearchingBackend) && (
               <div className="flex justify-center py-20">
                 <Loader2 className={cn("w-10 h-10 animate-spin", currentTheme.accent)} />
               </div>
@@ -4941,46 +5159,92 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     </div>
                   </div>
                 ) : (
-                  cart.map((item) => (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      key={item.id}
-                      className="p-4 rounded-3xl bg-white/5 border border-white/5 flex items-center gap-4 relative"
-                    >
-                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0">
-                        {item.image ? (
-                          <img src={item.image} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white/20">
-                            <ShoppingBag size={20} />
+                  cart.map((item) => {
+                    const isService = item.listingType === 'service' || item.category === 'service';
+                    return (
+                      <motion.div 
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        key={item.id}
+                        className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3"
+                      >
+                        <div className="flex items-center gap-4 relative">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5">
+                            {item.image ? (
+                              <img src={item.image} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/20">
+                                <ShoppingBag size={20} />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0 pr-8">
+                            <span className={cn(
+                              "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1",
+                              isService 
+                                ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                                : "bg-emerald-500/10 border border-emerald-500/20 text-[#10b981]"
+                            )}>
+                              {isService
+                                ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
+                                : (language === 'ka' ? 'ნივთი' : 'Product')}
+                            </span>
+                            <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">{language === 'ka' ? (item.titleGe || item.title) : item.title}</h4>
+                            <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
+                              {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                            </p>
+                          </div>
+
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveFromCart(item.id)}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                            title={language === 'ka' ? 'წაშლა' : 'Remove'}
+                            aria-label={language === 'ka' ? 'კალათიდან წაშლა' : 'Remove from cart'}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+
+                        {/* Service Task Instructions Field */}
+                        {isService && (
+                          <div className="pt-2 border-t border-white/5 space-y-1.5">
+                            <div className="flex items-center justify-between text-[9px] font-bold">
+                              <label htmlFor={`cart-instructions-${item.id}`} className="text-amber-400/90 flex items-center gap-1 uppercase tracking-wider">
+                                <span>⚡</span>
+                                <span>{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Service Instructions'}</span>
+                              </label>
+                              <span className={cn(
+                                "font-mono text-[9px]",
+                                (cartServiceInstructions[item.id] || '').length >= 480 ? "text-amber-400 font-bold" : "text-white/40"
+                              )}>
+                                {(cartServiceInstructions[item.id] || '').length}/500
+                              </span>
+                            </div>
+                            <textarea
+                              id={`cart-instructions-${item.id}`}
+                              value={cartServiceInstructions[item.id] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCartServiceInstructions(prev => ({ ...prev, [item.id]: val }));
+                              }}
+                              maxLength={500}
+                              placeholder={language === 'ka' 
+                                ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." 
+                                : "Enter requirements, project brief, links or specifics..."}
+                              className={cn(
+                                "w-full h-18 p-2.5 rounded-xl border text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/25 bg-black/40 resize-none",
+                                currentTheme.input
+                              )}
+                            />
                           </div>
                         )}
-                      </div>
-
-                      <div className="flex-1 min-w-0 pr-6">
-                        <span className="inline-block px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-[#10b981] mb-1">
-                          {item.listingType === 'service' || item.category === 'service'
-                            ? (language === 'ka' ? 'სერვისი' : 'Service')
-                            : (language === 'ka' ? 'ნივთი' : 'Product')}
-                        </span>
-                        <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">{language === 'ka' ? (item.titleGe || item.title) : item.title}</h4>
-                        <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
-                          {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
-                        </p>
-                      </div>
-
-                      <button 
-                        onClick={() => handleRemoveFromCart(item.id)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                        title={language === 'ka' ? 'წაშლა' : 'Remove'}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </motion.div>
-                  ))
+                      </motion.div>
+                    );
+                  })
                 )}
               </div>
 
@@ -5043,122 +5307,189 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               className={cn(
-                "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden z-10",
+                "relative w-full max-w-lg rounded-t-[32px] sm:rounded-[36px] border border-white/10 flex flex-col overflow-hidden z-10 max-h-[92dvh] sm:max-h-[88vh] shadow-2xl",
                 currentTheme.card
               )}
             >
-              <div className="p-6 sm:p-10 pb-24 sm:pb-10 space-y-8 max-h-[85vh] md:max-h-[600px] overflow-y-auto custom-scrollbar-minimal">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-black uppercase tracking-tight text-white">
+              {/* Fixed Header */}
+              <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between shrink-0 bg-zinc-950/60 backdrop-blur-md">
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
                     {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
                   </h3>
-                  <button 
-                    onClick={() => setCheckoutItem(null)}
-                    disabled={isCheckingOut}
-                    className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors disabled:opacity-50"
-                  >
-                    <X size={20} />
-                  </button>
+                  <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-none mt-1", currentTheme.muted)}>
+                    {checkoutItem.listingType === 'service' || checkoutItem.category === 'service'
+                      ? (language === 'ka' ? 'პირდაპირი ჯავშანი' : 'Direct Service Booking')
+                      : (language === 'ka' ? 'პირდაპირი შესყიდვა' : 'Direct Item Purchase')}
+                  </p>
                 </div>
+                <button 
+                  onClick={() => setCheckoutItem(null)}
+                  disabled={isCheckingOut}
+                  className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors disabled:opacity-50 text-white"
+                  aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-                <div className="bg-white/5 rounded-[32px] p-6 border border-white/5 flex items-center gap-6">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+              {/* Scrollable Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 custom-scrollbar-minimal overscroll-contain">
+                {/* Cart Sync Warning Banner */}
+                {cart.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                      <ShoppingCart size={15} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-amber-200/90 leading-snug">
+                        {language === 'ka'
+                          ? `თქვენს კალათაში უკვე გაქვთ ${cart.length} ნივთი. ეს მოქმედება გააფორმებს მხოლოდ ამ კონკრეტულ ნივთს.`
+                          : `You currently have ${cart.length} item(s) in your cart. This action purchases only this listing directly.`}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCheckoutItem(null);
+                          setIsCartOpen(true);
+                        }}
+                        className="mt-2 text-[10px] font-black uppercase tracking-wider text-amber-400 hover:text-amber-300 underline underline-offset-2 transition-colors flex items-center gap-1"
+                      >
+                        {language === 'ka' ? 'კალათის ნახვა & ერთობლივი შეძენა' : 'View Cart & Checkout All Items'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Item Details Card */}
+                <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex items-center gap-4 sm:gap-5">
+                  <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
                     {checkoutItem.image ? (
-                      <img src={checkoutItem.image} alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} className="w-full h-full object-cover" />
+                      <img 
+                        src={checkoutItem.image} 
+                        alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} 
+                        className="w-full h-full object-cover" 
+                        referrerPolicy="no-referrer"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <ShoppingBag size={24} className={currentTheme.accent} />
                       </div>
                     )}
                   </div>
-                  <div>
-                    <p className={cn("text-[9px] font-black uppercase tracking-widest opacity-50 mb-1", currentTheme.muted)}>
-                      {t.market.categories[checkoutItem.category as keyof typeof t.market.categories]}
-                    </p>
-                    <h4 className="text-base font-bold text-white uppercase tracking-tight line-clamp-1">{checkoutItem.title}</h4>
-                    <p className="text-xl font-black text-white mt-1">
+                  <div className="flex-1 min-w-0">
+                    <span className={cn(
+                      "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1.5",
+                      (checkoutItem.listingType === 'service' || checkoutItem.category === 'service')
+                        ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                        : "bg-emerald-500/10 border border-emerald-500/20 text-[#10b981]"
+                    )}>
+                      {t.market.categories[checkoutItem.category as keyof typeof t.market.categories] || checkoutItem.category}
+                    </span>
+                    <h4 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight line-clamp-1">
+                      {language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title}
+                    </h4>
+                    <p className="text-lg sm:text-xl font-black text-[#10b981] font-mono mt-1">
                       {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 mb-2", currentTheme.muted)}>Seller</p>
-                    <div className="flex items-center gap-2">
-                       <ShieldCheck size={14} className={currentTheme.accent} />
-                       <span className="text-[11px] font-black text-white uppercase">{checkoutItem.sellerName}</span>
+                {/* Seller & Location Metas */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/5 rounded-2xl p-3.5 border border-white/5">
+                    <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 mb-1.5", currentTheme.muted)}>Seller</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                       <ShieldCheck size={13} className={currentTheme.accent} />
+                       <span className="text-[11px] font-black text-white uppercase truncate">{checkoutItem.sellerName}</span>
                     </div>
                   </div>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                    <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 mb-2", currentTheme.muted)}>Location</p>
-                    <div className="flex items-center gap-2">
+                  <div className="bg-white/5 rounded-2xl p-3.5 border border-white/5">
+                    <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-50 mb-1.5", currentTheme.muted)}>Location</p>
+                    <div className="flex items-center gap-2 min-w-0">
                        <MapPin size={12} className={currentTheme.accent} />
-                       <span className="text-[11px] font-black text-white uppercase">{checkoutItem.city}</span>
+                       <span className="text-[11px] font-black text-white uppercase truncate">{checkoutItem.city || 'Tbilisi'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Conditional Service Booking Panel */}
                 {(checkoutItem.listingType === 'service' || checkoutItem.category === 'service') && (
-                  <div className="space-y-4 bg-white/5 rounded-[32px] p-6 border border-white/5 text-left">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-white">⚡ {language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Rules'}</h4>
-                    <div className="grid grid-cols-2 gap-4 text-xs font-medium">
-                      <div className="bg-white/5 rounded-lg p-3">
+                  <div className="space-y-4 bg-white/5 rounded-3xl p-5 border border-white/5 text-left">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
+                      <span className="text-amber-400">⚡</span>
+                      <span>{language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Details'}</span>
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-xs font-medium">
+                      <div className="bg-white/5 rounded-xl p-3">
                         <span className="block text-[8px] uppercase tracking-wider opacity-40 mb-1">{language === 'ka' ? 'შესრულების ვადა' : 'Duration'}</span>
                         <span className="text-white font-bold">{checkoutItem.serviceDuration || (language === 'ka' ? 'შეთანხმებით' : 'Flexible')}</span>
                       </div>
-                      <div className="bg-white/5 rounded-lg p-3">
+                      <div className="bg-white/5 rounded-xl p-3">
                         <span className="block text-[8px] uppercase tracking-wider opacity-40 mb-1">{language === 'ka' ? 'პირობა' : 'Requirements'}</span>
                         <span className="text-white font-bold truncate block">{checkoutItem.serviceTerms || (language === 'ka' ? 'სტანდარტული' : 'Standard')}</span>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between ml-1">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-white/50 block">{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Instructions for the Seller'}</label>
+                      <div className="flex items-center justify-between ml-0.5">
+                        <label htmlFor="direct-buyer-instructions" className="text-[9px] font-black uppercase tracking-wider text-white/60 block">
+                          {language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Instructions for the Seller'}
+                        </label>
                         <span className={cn("text-[9px] font-mono", buyerInstructions.length >= 480 ? "text-amber-400 font-bold" : "text-white/40")}>
                           {buyerInstructions.length}/500
                         </span>
                       </div>
                       <textarea
+                        id="direct-buyer-instructions"
                         value={buyerInstructions}
                         maxLength={500}
                         onChange={e => setBuyerInstructions(e.target.value)}
-                        placeholder={language === 'ka' ? "ჩაწერეთ სამუშაოს სპეციფიკაცია..." : "Enter your specific task instructions..."}
-                        className={cn("w-full h-24 px-4 py-3 rounded-2xl border text-xs font-bold text-white focus:outline-none transition-all placeholder:text-white/20 bg-black/20", currentTheme.input)}
+                        placeholder={language === 'ka' ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." : "Enter your specific task instructions, links, or requirements..."}
+                        className={cn("w-full h-24 p-3 rounded-2xl border text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
                       />
                     </div>
                   </div>
                 )}
+              </div>
 
-                <div className="pt-4 space-y-4">
-                  <p className={cn("text-[10px] font-bold text-center px-8 leading-relaxed", currentTheme.muted)}>
-                    {language === 'ka' 
-                      ? 'ღილაკზე დაჭერით თქვენ ეთანხმებით მომსახურების პირობებს და კონფიდენციალურობის პოლიტიკას.'
-                      : 'By clicking complete, you agree to the Terms of Service and data processing policies.'}
-                  </p>
-                  
-                  <button 
-                    onClick={processPurchase}
-                    disabled={isCheckingOut}
-                    className={cn(
-                      "w-full py-6 rounded-3xl text-[12px] font-black uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center justify-center gap-3 relative overflow-hidden group",
-                      currentTheme.accentBg, "text-white hover:brightness-110 active:scale-95 disabled:opacity-70 disabled:active:scale-100"
-                    )}
-                  >
-                    {isCheckingOut ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" />
-                        {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck size={20} />
-                        {language === 'ka' ? 'დადასტურება' : 'Confirm & Buy'}
-                      </>
-                    )}
-                  </button>
+              {/* Sticky Bottom Action Footer */}
+              <div className="p-5 sm:p-6 border-t border-white/10 shrink-0 bg-zinc-950/95 backdrop-blur-md space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
+                    {language === 'ka' ? 'საბოლოო თანხა' : 'Total Amount'}
+                  </span>
+                  <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                    {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
+                  </span>
                 </div>
+
+                <p className={cn("text-[9px] font-bold text-center leading-relaxed opacity-60", currentTheme.muted)}>
+                  {language === 'ka' 
+                    ? 'ღილაკზე დაჭერით თქვენ ეთანხმებით მომსახურების პირობებს და კონფიდენციალურობის პოლიტიკას.'
+                    : 'By confirming, you agree to the marketplace terms and conditions.'}
+                </p>
+                
+                <button 
+                  onClick={processPurchase}
+                  disabled={isCheckingOut}
+                  className={cn(
+                    "w-full py-4 sm:py-4.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-2.5 relative overflow-hidden group",
+                    currentTheme.accentBg, "text-white hover:brightness-110 active:scale-98 disabled:opacity-60 disabled:active:scale-100"
+                  )}
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={16} />
+                      {language === 'ka' ? 'შესყიდვის დადასტურება' : 'Confirm & Purchase'}
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </div>
