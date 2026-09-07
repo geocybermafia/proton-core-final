@@ -46,6 +46,7 @@ import {
   Timestamp,
   serverTimestamp,
   limit,
+  startAfter,
   runTransaction
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -301,7 +302,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [buyerInstructions, setBuyerInstructions] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
-  const [pageSize, setPageSize] = useState<number>(24);
+  
+  // Catalog Pagination & Scalable Discovery State
+  const PAGE_SIZE = 24;
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const lastVisibleDocRef = useRef<any>(null);
+  const appendedListingsRef = useRef<Listing[]>([]);
+  const page1DocsRef = useRef<Listing[]>([]);
+  const currentUseOrderByRef = useRef<boolean>(true);
 
   // Shopping Cart state
   const [cart, setCart] = useState<Listing[]>(() => {
@@ -918,18 +927,99 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     overlay: "bg-proton-bg/95 backdrop-blur-xl border border-proton-border/50"
   };
 
+  const getBaseQuery = useCallback((category: string, mode: string, uid?: string) => {
+    const coll = collection(db, 'listings');
+    if (mode === 'my-listings' && uid) {
+      return query(coll, where('sellerId', '==', uid));
+    }
+    if (category !== 'all') {
+      return query(coll, where('category', '==', category));
+    }
+    return coll;
+  }, []);
+
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore || !lastVisibleDocRef.current) return;
+    setIsLoadingMore(true);
+
+    try {
+      const baseQ = getBaseQuery(activeCategory, viewMode, user?.uid);
+      const useOrderBy = currentUseOrderByRef.current;
+
+      let nextSnap;
+      try {
+        const qNext = useOrderBy
+          ? query(baseQ, orderBy('createdAt', 'desc'), startAfter(lastVisibleDocRef.current), limit(PAGE_SIZE))
+          : query(baseQ, startAfter(lastVisibleDocRef.current), limit(PAGE_SIZE));
+        nextSnap = await getDocs(qNext);
+      } catch (orderErr) {
+        console.warn("[MarketHub] Paginated cursor query with orderBy failed, falling back without orderBy:", orderErr);
+        currentUseOrderByRef.current = false;
+        const qFallback = query(baseQ, startAfter(lastVisibleDocRef.current), limit(PAGE_SIZE));
+        nextSnap = await getDocs(qFallback);
+      }
+
+      if (!nextSnap || nextSnap.empty) {
+        setHasMore(false);
+        setIsLoadingMore(false);
+        return;
+      }
+
+      const newRawDocs = nextSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Listing[];
+
+      lastVisibleDocRef.current = nextSnap.docs[nextSnap.docs.length - 1];
+
+      if (nextSnap.docs.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+
+      const realNew = newRawDocs.filter(isRealListing);
+
+      setListings(prev => {
+        const existingIds = new Set(prev.map(l => l.id));
+        const deduplicated = realNew.filter(l => !existingIds.has(l.id));
+        appendedListingsRef.current = [...appendedListingsRef.current, ...deduplicated];
+        const combined = [...prev, ...deduplicated];
+        if (!currentUseOrderByRef.current) {
+          combined.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
+        }
+        return combined;
+      });
+    } catch (e) {
+      console.error("[MarketHub] Error loading next page of listings:", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, activeCategory, viewMode, user?.uid, getBaseQuery]);
+
   useEffect(() => {
     if (!user || authLoading) return;
 
     let unsub: (() => void) | null = null;
+    let isActive = true;
+
+    // Reset pagination state when filters or viewMode change
+    appendedListingsRef.current = [];
+    page1DocsRef.current = [];
+    lastVisibleDocRef.current = null;
+    setHasMore(true);
+    setLoading(true);
 
     const tryFetchListings = (useOrderBy: boolean) => {
       try {
+        const baseQ = getBaseQuery(activeCategory, viewMode, user?.uid);
         const qListings = useOrderBy 
-          ? query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(pageSize))
-          : query(collection(db, 'listings'), limit(pageSize));
+          ? query(baseQ, orderBy('createdAt', 'desc'), limit(PAGE_SIZE))
+          : query(baseQ, limit(PAGE_SIZE));
+
+        currentUseOrderByRef.current = useOrderBy;
 
         unsub = onSnapshot(qListings, (snapshot) => {
+          if (!isActive) return;
+
           const data = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -968,8 +1058,29 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             });
           }
 
-          const realListings = data.filter(isRealListing);
-          setListings(realListings);
+          const realPage1 = data.filter(isRealListing);
+          page1DocsRef.current = realPage1;
+
+          // Track cursor for next page if no appended pages exist yet
+          if (snapshot.docs.length > 0 && appendedListingsRef.current.length === 0) {
+            lastVisibleDocRef.current = snapshot.docs[snapshot.docs.length - 1];
+          }
+          if (snapshot.docs.length < PAGE_SIZE && appendedListingsRef.current.length === 0) {
+            setHasMore(false);
+          } else if (snapshot.docs.length >= PAGE_SIZE && appendedListingsRef.current.length === 0) {
+            setHasMore(true);
+          }
+
+          // Merge with appended listings, keeping unique ids
+          const page1Ids = new Set(realPage1.map(l => l.id));
+          const survivingAppended = appendedListingsRef.current.filter(l => !page1Ids.has(l.id));
+          appendedListingsRef.current = survivingAppended;
+
+          const combined = [...realPage1, ...survivingAppended];
+          if (!useOrderBy) {
+            combined.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
+          }
+          setListings(combined);
           setLoading(false);
 
           // Clean up legacy mock/seed documents from Firestore if present
@@ -981,6 +1092,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }, (error) => {
           console.warn(`[MarketHub] Listings listener failed (useOrderBy=${useOrderBy}):`, error);
           if (useOrderBy) {
+            currentUseOrderByRef.current = false;
             tryFetchListings(false);
           } else {
             setLoading(false);
@@ -988,16 +1100,22 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         });
       } catch (e) {
         console.warn("[MarketHub] Query execution exception:", e);
-        setLoading(false);
+        if (useOrderBy) {
+          currentUseOrderByRef.current = false;
+          tryFetchListings(false);
+        } else {
+          setLoading(false);
+        }
       }
     };
 
     tryFetchListings(true);
 
     return () => {
+      isActive = false;
       if (unsub) unsub();
     };
-  }, [user, authLoading, pageSize]);
+  }, [user, authLoading, activeCategory, viewMode, getBaseQuery]);
 
   useEffect(() => {
     if (!user) {
@@ -3777,14 +3895,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               </p>
             )}
 
-            {listings.length >= pageSize ? (
+            {hasMore ? (
               <button
                 type="button"
-                onClick={() => setPageSize(prev => prev + 24)}
-                className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-[#dfb257]/40 text-zinc-300 hover:text-white transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-[#dfb257]/40 text-zinc-300 hover:text-white transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
               >
-                <ChevronDown size={14} className="text-[#dfb257]" />
-                <span>{language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings'}</span>
+                {isLoadingMore ? (
+                  <Loader2 size={14} className="text-[#dfb257] animate-spin" />
+                ) : (
+                  <ChevronDown size={14} className="text-[#dfb257]" />
+                )}
+                <span>
+                  {isLoadingMore
+                    ? (language === 'ka' ? 'იტვირთება...' : 'Loading More...')
+                    : (language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings')}
+                </span>
                 <span className="text-[10px] text-zinc-500 font-mono">({listings.length} loaded)</span>
               </button>
             ) : (
@@ -3843,13 +3970,34 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     {language === 'ka' ? 'სცადეთ საძიებო სიტყვის შეცვლა ან სხვა ფილტრების მონიშვნა.' : 'Try adjusting your search keywords, category tags, or location filters.'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] uppercase font-black tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-all active:scale-95"
-                >
-                  {language === 'ka' ? 'ფილტრების გასუფთავება' : 'Reset Filters'}
-                </button>
+                <div className="flex flex-col gap-2">
+                  {hasMore && (
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      className="px-5 py-2.5 rounded-xl bg-zinc-900/90 border border-[#dfb257]/40 text-[10px] uppercase font-black tracking-widest text-[#dfb257] hover:bg-zinc-800 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {isLoadingMore ? (
+                        <Loader2 size={12} className="animate-spin text-[#dfb257]" />
+                      ) : (
+                        <ChevronDown size={12} className="text-[#dfb257]" />
+                      )}
+                      <span>
+                        {language === 'ka' 
+                          ? `შემდეგი გვერდის შემოწმება (${listings.length} ჩატვირთულია)` 
+                          : `Search Next Page (${listings.length} loaded so far)`}
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] uppercase font-black tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-all active:scale-95 cursor-pointer"
+                  >
+                    {language === 'ka' ? 'ფილტრების გასუფთავება' : 'Reset Filters'}
+                  </button>
+                </div>
               </div>
             )}
 
