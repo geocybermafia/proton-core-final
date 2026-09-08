@@ -304,6 +304,118 @@ const MobileFilterBottomSheet = React.memo(function MobileFilterBottomSheet({
   );
 });
 
+interface ListingCardImageProps {
+  src?: string;
+  alt: string;
+  isSold?: boolean;
+  language: string;
+  themeAccent?: string;
+}
+
+const ListingCardImage = React.memo(function ListingCardImage({
+  src,
+  alt,
+  isSold,
+  language,
+  themeAccent
+}: ListingCardImageProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setIsLoaded(false);
+    setHasError(false);
+  }, [src]);
+
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-zinc-950">
+      {/* Skeleton placeholder while loading image */}
+      {!isLoaded && !hasError && src && (
+        <div className="absolute inset-0 z-0 animate-pulse bg-zinc-800/60 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full border-2 border-white/10 border-t-[#dfb257]/40 animate-spin opacity-40" />
+        </div>
+      )}
+
+      {src && !hasError ? (
+        <motion.img 
+          src={src} 
+          alt={alt} 
+          onLoad={() => setIsLoaded(true)}
+          onError={() => {
+            setHasError(true);
+            setIsLoaded(true);
+          }}
+          className={cn(
+            "w-full h-full object-cover transition-all duration-500 ease-out",
+            isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
+          )}
+          whileHover={{ scale: isSold ? 1.0 : 1.05 }}
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-zinc-900/90">
+          <ShoppingBag size={24} className={cn("opacity-15", themeAccent)} />
+        </div>
+      )}
+
+      {/* Sold Item Visual Overlay: Dark blur treatment with clear status pill */}
+      {isSold && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-[2px] bg-black/60 pointer-events-none select-none">
+          <div className="px-3.5 py-1.5 rounded-xl bg-zinc-950/95 border border-red-500/30 shadow-[0_8px_30px_rgba(0,0,0,0.8)] flex items-center gap-2 transform -rotate-3">
+            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 animate-pulse" />
+            <span className="text-[11px] font-black tracking-widest text-zinc-100 uppercase font-mono">
+              {language === 'ka' ? 'გაყიდულია' : 'SOLD OUT'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+interface CartItemThumbnailProps {
+  src?: string;
+  alt: string;
+}
+
+const CartItemThumbnail = React.memo(function CartItemThumbnail({ src, alt }: CartItemThumbnailProps) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setIsLoaded(false);
+    setHasError(false);
+  }, [src]);
+
+  return (
+    <div className="w-full h-full relative overflow-hidden bg-black/40">
+      {!isLoaded && !hasError && src && (
+        <div className="absolute inset-0 z-0 animate-pulse bg-zinc-800/60" />
+      )}
+      {src && !hasError ? (
+        <img 
+          src={src} 
+          alt={alt} 
+          onLoad={() => setIsLoaded(true)}
+          onError={() => {
+            setHasError(true);
+            setIsLoaded(true);
+          }}
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-300",
+            isLoaded ? "opacity-100" : "opacity-0"
+          )}
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-white/20">
+          <ShoppingBag size={20} />
+        </div>
+      )}
+    </div>
+  );
+});
+
 export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
@@ -4019,6 +4131,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       const isOwnListing = !!user && listing.sellerId === user.uid;
                       const isAdminUser = !!user && user.email === 'devdarianib@gmail.com';
                       const canManageListing = isOwnListing || isAdminUser;
+                      const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
+                      const displayTitle = language === 'ka' ? (listing.titleGe || listing.title) : listing.title;
+                      const imageUrl = (listing.images && listing.images.length > 0) ? listing.images[0] : listing.image;
+                      const rawPrice = priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency);
+                      const formattedPrice = rawPrice.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                      const isLargePrice = formattedPrice.length >= 6;
 
                       return (
                 <motion.article 
@@ -4029,7 +4147,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   key={listing.id}
                   transition={{ delay: idx * 0.03 }}
                   className={cn(
-                    "group rounded-2xl overflow-hidden transition-all duration-300 flex flex-col relative border border-zinc-900/40 bg-zinc-950/40 hover:border-[#dfb257]/30 hover:shadow-[0_8px_30px_rgba(223,178,87,0.05)] hover:-translate-y-1 hover:bg-zinc-950/60",
+                    "group rounded-2xl overflow-hidden transition-all duration-300 flex flex-col relative border bg-zinc-950/40 hover:shadow-[0_8px_30px_rgba(223,178,87,0.05)] hover:-translate-y-1 hover:bg-zinc-950/60",
+                    isItemSold 
+                      ? "border-zinc-800/50 opacity-85" 
+                      : "border-zinc-900/40 hover:border-[#dfb257]/30",
                     currentTheme.card
                   )}
                 >
@@ -4040,19 +4161,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     }}
                     className="w-full aspect-[4/3] bg-zinc-900/80 overflow-hidden relative cursor-pointer"
                   >
-                    {(listing.images && listing.images.length > 0) || listing.image ? (
-                      <motion.img 
-                        src={listing.images && listing.images.length > 0 ? listing.images[0] : (listing.image || '/placeholder-image.jpg')} 
-                        alt={language === 'ka' ? (listing.titleGe || listing.title) : listing.title} 
-                        className="w-full h-full object-cover transition-transform duration-500 ease-out bg-zinc-950"
-                        whileHover={{ scale: 1.05 }}
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className={cn("w-full h-full flex items-center justify-center bg-zinc-900/90")}>
-                        <ShoppingBag size={24} className={cn("opacity-10", currentTheme.accent)} />
-                      </div>
-                    )}
+                    <ListingCardImage
+                      src={imageUrl}
+                      alt={displayTitle}
+                      isSold={isItemSold}
+                      language={language}
+                      themeAccent={currentTheme.accent}
+                    />
                     
                     {/* Badge Overlay: Max 2 clean badges with explicit max width and text truncation */}
                     <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 max-w-[calc(100%-105px)] overflow-hidden pointer-events-none">
@@ -4136,7 +4251,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         }}
                         className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] leading-snug mb-1"
                       >
-                        {language === 'ka' ? (listing.titleGe || listing.title) : listing.title}
+                        {displayTitle}
                       </h2>
                       <p className="text-xs font-sans text-zinc-400 font-normal leading-relaxed line-clamp-2 min-h-[2.25rem]">
                         {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
@@ -4144,26 +4259,31 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     </div>
 
                     <div className={cn("pt-3 border-t", currentTheme.border)}>
-                      {/* Price Section: Scannable, prominent without redundant type badge squish */}
-                      <div className="flex items-baseline justify-between gap-2 mb-3">
-                        <div className="flex flex-col">
+                      {/* Price Section: Scannable, prominent, flex-shrink controlled with no line wraps */}
+                      <div className="flex items-end justify-between gap-2 mb-3 min-w-0">
+                        <div className="flex flex-col min-w-0 flex-1">
                           <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block font-mono">
                             {t.market.price}
                           </span>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-xl sm:text-2xl font-black tracking-tight text-[#dfb257] font-mono leading-none">
-                              {(priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
+                            <span className={cn(
+                              "font-black tracking-tight text-[#dfb257] font-mono leading-none truncate",
+                              isLargePrice ? "text-base sm:text-lg" : "text-lg sm:text-xl md:text-2xl"
+                            )}>
+                              {formattedPrice}
                             </span>
-                            <span className="text-xs font-bold text-zinc-400 font-mono ml-0.5">{displayCurrency}</span>
+                            <span className="text-xs font-bold text-zinc-400 font-mono ml-0.5 shrink-0 whitespace-nowrap">
+                              {displayCurrency}
+                            </span>
                           </div>
                         </div>
 
                         {listing.isNegotiable ? (
-                          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider font-mono">
+                          <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                             {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
                           </span>
                         ) : listing.listingType === 'service' || listing.category === 'service' ? (
-                          <span className="text-[9px] font-bold text-amber-400/80 uppercase tracking-wider font-mono">
+                          <span className="text-[9px] font-bold text-amber-400/80 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                             {language === 'ka' ? 'სერვისი' : 'Service'}
                           </span>
                         ) : null}
@@ -4267,12 +4387,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                               <Trash2 size={16} />
                             </button>
                           </div>
-                        ) : listing.status === 'sold' || listing.isSold ? (
+                        ) : isItemSold ? (
                           <button 
                             type="button"
                             disabled
-                            className="w-full min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-800 text-zinc-500 border border-zinc-700/50 flex items-center justify-center gap-2 cursor-not-allowed"
+                            className="w-full min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-zinc-900/80 text-zinc-500 border border-zinc-800 flex items-center justify-center gap-2 cursor-not-allowed select-none"
                           >
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
                             {language === 'ka' ? 'გაყიდულია' : 'SOLD'}
                           </button>
                         ) : (
@@ -5317,9 +5438,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3"
                       >
                         <div className="flex items-center gap-4 relative">
-                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5 relative">
                             {item.image ? (
-                              <img src={item.image} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <CartItemThumbnail src={item.image} alt={item.title} />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-white/20">
                                 <ShoppingBag size={20} />
@@ -5396,12 +5517,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
               {/* Action buttons at bottom */}
               {cart.length > 0 && (
-                <div className="p-6 pb-24 sm:pb-6 border-t border-white/5 space-y-4 shrink-0 bg-black/40">
+                <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 space-y-4 shrink-0 bg-zinc-950/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
                   <div className="flex items-center justify-between">
                     <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                       {language === 'ka' ? 'ჯამური ღირებულება' : 'Total Price'}
                     </span>
-                    <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                    <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap">
                       {cartTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
                     </span>
@@ -5411,18 +5532,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     onClick={handleCartCheckout}
                     disabled={isPlacingCartOrders}
                     className={cn(
-                      "w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] text-black bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50"
+                      "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] text-black bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                     )}
                   >
                     {isPlacingCartOrders ? (
                       <>
-                        <Loader2 size={14} className="animate-spin" />
-                        {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                        <Loader2 size={15} className="animate-spin" />
+                        <span>{language === 'ka' ? 'მუშავდება...' : 'Processing...'}</span>
                       </>
                     ) : (
                       <>
-                        <ShieldCheck size={14} />
-                        {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Checkout & Purchase'}
+                        <ShieldCheck size={16} />
+                        <span>{language === 'ka' ? 'შეკვეთის გაფორმება' : 'Proceed to Checkout'}</span>
                       </>
                     )}
                   </button>
@@ -5509,13 +5630,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
                 {/* Item Details Card */}
                 <div className="bg-white/5 rounded-3xl p-5 border border-white/5 flex items-center gap-4 sm:gap-5">
-                  <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
+                  <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0 relative">
                     {checkoutItem.image ? (
-                      <img 
+                      <CartItemThumbnail 
                         src={checkoutItem.image} 
                         alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} 
-                        className="w-full h-full object-cover" 
-                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -5598,13 +5717,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 )}
               </div>
 
-              {/* Sticky Bottom Action Footer */}
-              <div className="p-5 sm:p-6 border-t border-white/10 shrink-0 bg-zinc-950/95 backdrop-blur-md space-y-4">
+              {/* Sticky Bottom Action Footer with safe-area spacing */}
+              <div className="p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 shrink-0 bg-zinc-950/95 backdrop-blur-md space-y-4">
                 <div className="flex items-center justify-between">
                   <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                     {language === 'ka' ? 'საბოლოო თანხა' : 'Total Amount'}
                   </span>
-                  <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]">
+                  <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap">
                     {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
                   </span>
@@ -5620,7 +5739,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   onClick={processPurchase}
                   disabled={isCheckingOut}
                   className={cn(
-                    "w-full py-4 sm:py-4.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-2.5 relative overflow-hidden group",
+                    "w-full min-h-[48px] py-4 sm:py-4.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-2.5 relative overflow-hidden group cursor-pointer",
                     currentTheme.accentBg, "text-white hover:brightness-110 active:scale-98 disabled:opacity-60 disabled:active:scale-100"
                   )}
                 >
