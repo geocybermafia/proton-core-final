@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -11,8 +11,21 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 // Initialize Analytics - DISABLED to avoid "403 Permission Denied" error from Installations API
 export const analytics = null;
 
-// Initialize Firestore with explicit database ID
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+// Initialize Firestore with explicit database ID and forced long-polling transport.
+// In iframe/sandboxed environments, default WebChannel streaming often fails the initial handshake,
+// throwing: "@firebase/firestore: Could not reach Cloud Firestore backend. [code=unavailable]".
+// experimentalForceLongPolling forces reliable HTTPS long-polling and prevents transport disconnects.
+let firestoreDb;
+try {
+  firestoreDb = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  }, firebaseConfig.firestoreDatabaseId);
+} catch {
+  // If already initialized in hot-reload or existing instance
+  firestoreDb = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+
+export const db = firestoreDb;
 
 export const auth = getAuth(app);
 

@@ -31,6 +31,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
   const isCheckingRef = useRef<boolean>(false);
   const initialBootRef = useRef<boolean>(true);
   const consecutiveDegradedRef = useRef<number>(0);
+  const consecutiveUnavailableRef = useRef<number>(0);
 
   const checkHealth = useCallback(async (): Promise<SystemHealthStatus> => {
     if (isCheckingRef.current) return status;
@@ -70,6 +71,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
       measuredLatency = Math.round(performance.now() - start);
       setLatency(measuredLatency);
       firestoreConnected = true;
+      consecutiveUnavailableRef.current = 0;
 
       // Realistic cloud roundtrip threshold (> 3200ms for degraded)
       if (measuredLatency > 3200) {
@@ -85,12 +87,19 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
       setLatency(measuredLatency);
       
       if (err?.message === 'timeout' || err?.code === 'unavailable') {
-        firestoreConnected = false;
-        // If network is online but firestore timed out or unavailable -> degraded or offline
-        newStatus = online ? 'degraded' : 'offline';
+        consecutiveUnavailableRef.current += 1;
+        // Require at least 2 consecutive failures before declaring firestore disconnected/degraded
+        if (consecutiveUnavailableRef.current >= 2) {
+          firestoreConnected = false;
+          newStatus = online ? 'degraded' : 'offline';
+        } else {
+          firestoreConnected = true;
+          newStatus = status; // preserve current status on single transient blip
+        }
       } else {
         // Permission errors or document missing still mean server responded
         firestoreConnected = true;
+        consecutiveUnavailableRef.current = 0;
         newStatus = measuredLatency > 3200 ? 'degraded' : 'optimal';
       }
     } finally {
@@ -163,7 +172,7 @@ export function useSystemHealth(language: 'en' | 'ka' = 'en'): SystemHealthState
     // Initial health check deferred to allow initial Firebase handshake to complete
     const initialTimer = setTimeout(() => {
       checkHealth();
-    }, 1500);
+    }, 3000);
 
     // Check periodically every 30 seconds
     const interval = setInterval(() => {
