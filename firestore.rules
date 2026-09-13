@@ -105,7 +105,7 @@ service cloud.firestore {
 
     function isValidOrder(data) {
       return data.keys().hasAll(['listingId', 'buyerId', 'sellerId', 'amount', 'currency', 'itemTitle', 'status', 'createdAt'])
-        && data.keys().size() >= 8 && data.keys().size() <= 14
+        && data.keys().size() >= 8 && data.keys().size() <= 16
         && data.buyerId == request.auth.uid
         && data.buyerId != data.sellerId
         && data.listingId is string && data.listingId.size() <= 128
@@ -113,8 +113,15 @@ service cloud.firestore {
         && data.amount is number && data.amount >= 0
         && data.currency is string && data.currency.size() <= 10
         && data.itemTitle is string && data.itemTitle.size() <= 200
-        && data.status is string && data.status.size() <= 50
-        && data.createdAt == request.time;
+        && data.status is string && data.status in ['pending', 'booked', 'completed']
+        && data.createdAt == request.time
+        && (!('shippingDetails' in data) || (
+          data.shippingDetails is map
+          && data.shippingDetails.keys().hasAll(['phone', 'city', 'address'])
+          && data.shippingDetails.phone is string && data.shippingDetails.phone.size() <= 50
+          && data.shippingDetails.city is string && data.shippingDetails.city.size() <= 100
+          && data.shippingDetails.address is string && data.shippingDetails.address.size() <= 500
+        ));
     }
 
     // ======================================================
@@ -226,9 +233,47 @@ service cloud.firestore {
         && incoming().itemTitle == existing().itemTitle
         && incoming().createdAt == existing().createdAt
         && (
-          (isOwner(existing().sellerId) && incoming().status in ['pending', 'booked', 'in_progress', 'shipped', 'completed', 'delivered', 'cancelled', 'refunded'])
+          (!('shippingDetails' in existing()) && !('shippingDetails' in incoming()))
+          || (incoming().shippingDetails == existing().shippingDetails)
+        )
+        && (
+          (
+            isOwner(existing().sellerId)
+            && (
+              (existing().status == 'pending' && incoming().status == 'processing' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              ||
+              (
+                existing().status == 'processing' 
+                && incoming().status == 'shipped' 
+                && (
+                  (incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+                  ||
+                  (
+                    incoming().diff(existing()).affectedKeys().hasOnly(['status', 'trackingInfo'])
+                    && incoming().trackingInfo is map
+                    && incoming().trackingInfo.keys().hasAll(['carrier', 'trackingNumber'])
+                    && incoming().trackingInfo.carrier is string && incoming().trackingInfo.carrier.size() <= 100
+                    && incoming().trackingInfo.trackingNumber is string && incoming().trackingInfo.trackingNumber.size() <= 100
+                  )
+                )
+              )
+              ||
+              (existing().status == 'booked' && incoming().status == 'in_progress' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              ||
+              (existing().status == 'in_progress' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              ||
+              (incoming().status in ['cancelled', 'refunded'] && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+            )
+          )
           ||
-          (isOwner(existing().buyerId) && incoming().status == existing().status)
+          (
+            isOwner(existing().buyerId)
+            && (
+              (existing().status == 'shipped' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              ||
+              (existing().status == 'pending' && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+            )
+          )
         );
       allow delete: if false;
     }

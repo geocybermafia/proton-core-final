@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, X, Trash2, ShoppingBag, Loader2, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, X, Trash2, ShoppingBag, Loader2, ShieldCheck, Truck } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Listing } from '../../types';
-import { MarketTheme } from './MarketConstants';
+import { Listing, ShippingDetails } from '../../types';
+import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing } from './MarketConstants';
 
 export interface CartItemThumbnailProps {
   src?: string;
@@ -62,6 +62,8 @@ export interface CartDrawerProps {
   isPlacingCartOrders: boolean;
   cartServiceInstructions: Record<string, string>;
   onUpdateServiceInstruction: (itemId: string, instruction: string) => void;
+  shippingDetails?: ShippingDetails;
+  onChangeShippingDetails?: (details: ShippingDetails) => void;
   onRemoveFromCart: (itemId: string) => void;
   onCheckout: () => void;
 }
@@ -80,9 +82,20 @@ export const CartDrawer = React.memo(function CartDrawer({
   isPlacingCartOrders,
   cartServiceInstructions,
   onUpdateServiceInstruction,
+  shippingDetails,
+  onChangeShippingDetails,
   onRemoveFromCart,
   onCheckout
 }: CartDrawerProps) {
+  const hasPhysicalItems = cart.some(item => isPhysicalListing(item));
+  const isCartShippingValid = !hasPhysicalItems || Boolean(
+    shippingDetails &&
+    shippingDetails.phone.trim().length >= 4 &&
+    shippingDetails.city.trim().length >= 2 &&
+    shippingDetails.address.trim().length >= 3
+  );
+  const canCheckout = !isPlacingCartOrders && isCartShippingValid;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -155,91 +168,148 @@ export const CartDrawer = React.memo(function CartDrawer({
                   </div>
                 </div>
               ) : (
-                cart.map((item) => {
-                  const isService = item.listingType === 'service' || item.category === 'service';
-                  return (
-                    <motion.div 
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      key={item.id}
-                      className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3"
-                    >
-                      <div className="flex items-center gap-4 relative">
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5 relative">
-                          {item.image ? (
-                            <CartItemThumbnail src={item.image} alt={item.title} />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white/20">
-                              <ShoppingBag size={20} />
+                <>
+                  {cart.map((item) => {
+                    const isService = isServiceListing(item) || isProjectListing(item);
+                    return (
+                      <motion.div 
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        key={item.id}
+                        className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3"
+                      >
+                        <div className="flex items-center gap-4 relative">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5 relative">
+                            {item.image ? (
+                              <CartItemThumbnail src={item.image} alt={item.title} />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/20">
+                                <ShoppingBag size={20} />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0 pr-8">
+                            <span className={cn(
+                              "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1",
+                              isService 
+                                ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
+                                : "bg-emerald-500/10 border border-emerald-500/20 text-[#10b981]"
+                            )}>
+                              {isService
+                                ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
+                                : (language === 'ka' ? 'ნივთი' : 'Product')}
+                            </span>
+                            <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">
+                              {language === 'ka' ? (item.titleGe || item.title) : item.title}
+                            </h4>
+                            <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
+                              {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                            </p>
+                          </div>
+
+                          <button 
+                            type="button"
+                            onClick={() => onRemoveFromCart(item.id)}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                            title={language === 'ka' ? 'წაშლა' : 'Remove'}
+                            aria-label={language === 'ka' ? 'კალათიდან წაშლა' : 'Remove from cart'}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+
+                        {/* Service Task Instructions Field */}
+                        {isService && (
+                          <div className="pt-2 border-t border-white/5 space-y-1.5">
+                            <div className="flex items-center justify-between text-[9px] font-bold">
+                              <label htmlFor={`cart-instructions-${item.id}`} className="text-amber-400/90 flex items-center gap-1 uppercase tracking-wider">
+                                <span>⚡</span>
+                                <span>{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Service Instructions'}</span>
+                              </label>
+                              <span className={cn(
+                                "font-mono text-[9px]",
+                                (cartServiceInstructions[item.id] || '').length >= 480 ? "text-amber-400 font-bold" : "text-white/40"
+                              )}>
+                                {(cartServiceInstructions[item.id] || '').length}/500
+                              </span>
                             </div>
-                          )}
-                        </div>
+                            <textarea
+                              id={`cart-instructions-${item.id}`}
+                              value={cartServiceInstructions[item.id] || ''}
+                              onChange={(e) => onUpdateServiceInstruction(item.id, e.target.value)}
+                              maxLength={500}
+                              placeholder={language === 'ka' 
+                                ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." 
+                                : "Enter requirements, project brief, links or specifics..."}
+                              className={cn(
+                                "w-full h-18 p-2.5 rounded-xl border text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/25 bg-black/40 resize-none",
+                                currentTheme.input
+                              )}
+                            />
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
 
-                        <div className="flex-1 min-w-0 pr-8">
-                          <span className={cn(
-                            "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1",
-                            isService 
-                              ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                              : "bg-emerald-500/10 border border-emerald-500/20 text-[#10b981]"
-                          )}>
-                            {isService
-                              ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
-                              : (language === 'ka' ? 'ნივთი' : 'Product')}
-                          </span>
-                          <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">
-                            {language === 'ka' ? (item.titleGe || item.title) : item.title}
-                          </h4>
-                          <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
-                            {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
-                          </p>
-                        </div>
-
-                        <button 
-                          type="button"
-                          onClick={() => onRemoveFromCart(item.id)}
-                          className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                          title={language === 'ka' ? 'წაშლა' : 'Remove'}
-                          aria-label={language === 'ka' ? 'კალათიდან წაშლა' : 'Remove from cart'}
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                  {/* Physical Items Shipping Form in Cart */}
+                  {hasPhysicalItems && shippingDetails && onChangeShippingDetails && (
+                    <div className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3 mt-4 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white flex items-center gap-1.5">
+                          <Truck size={13} className="text-[#2e5bff]" />
+                          <span>{language === 'ka' ? 'მიწოდების მისამართი' : 'Shipping Destination'}</span>
+                        </span>
+                        <span className="text-[8px] font-bold text-amber-400/80 uppercase tracking-widest">
+                          {language === 'ka' ? '* აუცილებელია' : '* Required for delivery'}
+                        </span>
                       </div>
 
-                      {/* Service Task Instructions Field */}
-                      {isService && (
-                        <div className="pt-2 border-t border-white/5 space-y-1.5">
-                          <div className="flex items-center justify-between text-[9px] font-bold">
-                            <label htmlFor={`cart-instructions-${item.id}`} className="text-amber-400/90 flex items-center gap-1 uppercase tracking-wider">
-                              <span>⚡</span>
-                              <span>{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Service Instructions'}</span>
-                            </label>
-                            <span className={cn(
-                              "font-mono text-[9px]",
-                              (cartServiceInstructions[item.id] || '').length >= 480 ? "text-amber-400 font-bold" : "text-white/40"
-                            )}>
-                              {(cartServiceInstructions[item.id] || '').length}/500
-                            </span>
-                          </div>
-                          <textarea
-                            id={`cart-instructions-${item.id}`}
-                            value={cartServiceInstructions[item.id] || ''}
-                            onChange={(e) => onUpdateServiceInstruction(item.id, e.target.value)}
-                            maxLength={500}
-                            placeholder={language === 'ka' 
-                              ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." 
-                              : "Enter requirements, project brief, links or specifics..."}
-                            className={cn(
-                              "w-full h-18 p-2.5 rounded-xl border text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/25 bg-black/40 resize-none",
-                              currentTheme.input
-                            )}
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={shippingDetails.recipientName}
+                          onChange={e => onChangeShippingDetails({ ...shippingDetails, recipientName: e.target.value })}
+                          placeholder={language === 'ka' ? 'მიმღების სახელი, გვარი' : 'Recipient Name'}
+                          className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="tel"
+                            value={shippingDetails.phone}
+                            onChange={e => onChangeShippingDetails({ ...shippingDetails, phone: e.target.value })}
+                            placeholder={language === 'ka' ? 'ტელეფონი *' : 'Phone *'}
+                            className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 font-mono", currentTheme.input)}
+                          />
+                          <input
+                            type="text"
+                            value={shippingDetails.city}
+                            onChange={e => onChangeShippingDetails({ ...shippingDetails, city: e.target.value })}
+                            placeholder={language === 'ka' ? 'ქალაქი *' : 'City *'}
+                            className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
                           />
                         </div>
-                      )}
-                    </motion.div>
-                  );
-                })
+                        <input
+                          type="text"
+                          value={shippingDetails.address}
+                          onChange={e => onChangeShippingDetails({ ...shippingDetails, address: e.target.value })}
+                          placeholder={language === 'ka' ? 'ზუსტი მისამართი (ქუჩა, ბინა) *' : 'Full Address (Street, Apt / Suite) *'}
+                          className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                        />
+                        <textarea
+                          value={shippingDetails.notes || ''}
+                          maxLength={200}
+                          onChange={e => onChangeShippingDetails({ ...shippingDetails, notes: e.target.value })}
+                          placeholder={language === 'ka' ? 'კურიერის შენიშვნა (სურვილისამებრ)' : 'Delivery notes (optional)'}
+                          className={cn("w-full h-14 px-3 py-1.5 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -256,11 +326,19 @@ export const CartDrawer = React.memo(function CartDrawer({
                   </span>
                 </div>
 
+                {hasPhysicalItems && !isCartShippingValid && (
+                  <p className="text-[10px] font-bold text-amber-400 text-center bg-amber-500/10 py-1.5 px-3 rounded-xl border border-amber-500/20">
+                    {language === 'ka' 
+                      ? '⚠️ შეავსეთ მიწოდების ტელეფონი, ქალაქი და მისამართი' 
+                      : '⚠️ Provide phone number, city, and delivery address'}
+                  </p>
+                )}
+
                 <button 
                   onClick={onCheckout}
-                  disabled={isPlacingCartOrders}
+                  disabled={!canCheckout}
                   className={cn(
-                    "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] text-black bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] text-black bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   )}
                 >
                   {isPlacingCartOrders ? (

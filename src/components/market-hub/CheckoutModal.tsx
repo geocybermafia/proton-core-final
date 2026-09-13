@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, ShoppingBag, ShieldCheck, MapPin, Loader2 } from 'lucide-react';
+import { X, ShoppingCart, ShoppingBag, ShieldCheck, MapPin, Loader2, Truck } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { Listing } from '../../types';
-import { MarketTheme } from './MarketConstants';
+import { Listing, ShippingDetails } from '../../types';
+import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing } from './MarketConstants';
 import { CartItemThumbnail } from './CartDrawer';
 
 export interface CheckoutModalProps {
@@ -20,6 +20,8 @@ export interface CheckoutModalProps {
   convertPrice: (price: number, from: string, to: string) => number;
   buyerInstructions: string;
   onChangeBuyerInstructions: (instructions: string) => void;
+  shippingDetails: ShippingDetails;
+  onChangeShippingDetails: (details: ShippingDetails) => void;
   isCheckingOut: boolean;
   onConfirmPurchase: () => void;
 }
@@ -38,9 +40,21 @@ export const CheckoutModal = React.memo(function CheckoutModal({
   convertPrice,
   buyerInstructions,
   onChangeBuyerInstructions,
+  shippingDetails,
+  onChangeShippingDetails,
   isCheckingOut,
   onConfirmPurchase
 }: CheckoutModalProps) {
+  const isPhysical = checkoutItem ? isPhysicalListing(checkoutItem) : false;
+  const isServiceOrProject = checkoutItem ? (isServiceListing(checkoutItem) || isProjectListing(checkoutItem)) : false;
+  const isShippingComplete = !isPhysical || Boolean(
+    shippingDetails && 
+    shippingDetails.phone.trim().length >= 4 && 
+    shippingDetails.city.trim().length >= 2 && 
+    shippingDetails.address.trim().length >= 3
+  );
+  const canConfirm = !isCheckingOut && isShippingComplete;
+
   return (
     <AnimatePresence>
       {checkoutItem && (
@@ -75,9 +89,9 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                   {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
                 </h3>
                 <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-none mt-1", currentTheme.muted)}>
-                  {checkoutItem.listingType === 'service' || checkoutItem.category === 'service'
+                  {isServiceOrProject
                     ? (language === 'ka' ? 'პირდაპირი ჯავშანი' : 'Direct Service Booking')
-                    : (language === 'ka' ? 'პირდაპირი შესყიდვა' : 'Direct Item Purchase')}
+                    : (language === 'ka' ? 'პირდაპირი შესყიდვა & მიწოდება' : 'Direct Item Purchase & Shipping')}
                 </p>
               </div>
               <button 
@@ -132,7 +146,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                 <div className="flex-1 min-w-0">
                   <span className={cn(
                     "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1.5",
-                    (checkoutItem.listingType === 'service' || checkoutItem.category === 'service')
+                    isServiceOrProject
                       ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
                       : "bg-emerald-500/10 border border-emerald-500/20 text-[#10b981]"
                   )}>
@@ -165,8 +179,97 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                 </div>
               </div>
 
+              {/* Physical Product Shipping Form */}
+              {isPhysical && (
+                <div className="space-y-4 bg-white/5 rounded-3xl p-5 border border-white/5 text-left">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
+                      <Truck size={14} className="text-[#2e5bff]" />
+                      <span>{language === 'ka' ? 'მიწოდების მონაცემები' : 'Delivery & Shipping Details'}</span>
+                    </h4>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400/80">
+                      {language === 'ka' ? '* აუცილებელი ველები' : '* Required fields'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label htmlFor="shipping-recipient" className="text-[9px] font-black uppercase tracking-wider text-white/60 block mb-1.5 ml-0.5">
+                        {language === 'ka' ? 'მიმღების სახელი, გვარი' : 'Recipient Name'}
+                      </label>
+                      <input
+                        id="shipping-recipient"
+                        type="text"
+                        value={shippingDetails.recipientName}
+                        onChange={e => onChangeShippingDetails({ ...shippingDetails, recipientName: e.target.value })}
+                        placeholder={language === 'ka' ? 'მიმღების სახელი და გვარი' : 'Full name / Contact Person'}
+                        className={cn("w-full px-3.5 py-2.5 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label htmlFor="shipping-phone" className="text-[9px] font-black uppercase tracking-wider text-white/60 block mb-1.5 ml-0.5">
+                          {language === 'ka' ? 'საკონტაქტო ტელეფონი *' : 'Contact Phone *'}
+                        </label>
+                        <input
+                          id="shipping-phone"
+                          type="tel"
+                          value={shippingDetails.phone}
+                          onChange={e => onChangeShippingDetails({ ...shippingDetails, phone: e.target.value })}
+                          placeholder={language === 'ka' ? 'მაგ: 599 123 456' : 'e.g. +995 599 123 456'}
+                          className={cn("w-full px-3.5 py-2.5 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 font-mono", currentTheme.input)}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="shipping-city" className="text-[9px] font-black uppercase tracking-wider text-white/60 block mb-1.5 ml-0.5">
+                          {language === 'ka' ? 'ქალაქი / რეგიონი *' : 'City / Region *'}
+                        </label>
+                        <input
+                          id="shipping-city"
+                          type="text"
+                          value={shippingDetails.city}
+                          onChange={e => onChangeShippingDetails({ ...shippingDetails, city: e.target.value })}
+                          placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi, Batumi...'}
+                          className={cn("w-full px-3.5 py-2.5 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="shipping-address" className="text-[9px] font-black uppercase tracking-wider text-white/60 block mb-1.5 ml-0.5">
+                        {language === 'ka' ? 'ზუსტი მისამართი (ქუჩა, ბინა) *' : 'Street Address & Apartment / Suite *'}
+                      </label>
+                      <input
+                        id="shipping-address"
+                        type="text"
+                        value={shippingDetails.address}
+                        onChange={e => onChangeShippingDetails({ ...shippingDetails, address: e.target.value })}
+                        placeholder={language === 'ka' ? 'მაგ: ჭავჭავაძის გამზ. 25, სადარბაზო 1, ბინა 14' : 'e.g. 25 Chavchavadze Ave, Entrance 1, Apt 14'}
+                        className={cn("w-full px-3.5 py-2.5 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="shipping-notes" className="text-[9px] font-black uppercase tracking-wider text-white/60 block mb-1.5 ml-0.5">
+                        {language === 'ka' ? 'კურიერის შენიშვნა (სურვილისამებრ)' : 'Courier Notes (Optional)'}
+                      </label>
+                      <textarea
+                        id="shipping-notes"
+                        maxLength={300}
+                        value={shippingDetails.notes || ''}
+                        onChange={e => onChangeShippingDetails({ ...shippingDetails, notes: e.target.value })}
+                        placeholder={language === 'ka' ? 'მაგ: სადარბაზოს კოდი, სასურველი საათი...' : 'e.g. Entry code, preferred drop-off time...'}
+                        className={cn("w-full h-16 p-3 rounded-xl border text-xs font-normal text-white focus:outline-none placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Conditional Service Booking Panel */}
-              {(checkoutItem.listingType === 'service' || checkoutItem.category === 'service') && (
+              {isServiceOrProject && (
                 <div className="space-y-4 bg-white/5 rounded-3xl p-5 border border-white/5 text-left">
                   <h4 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
                     <span className="text-amber-400">⚡</span>
@@ -216,6 +319,14 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                 </span>
               </div>
 
+              {isPhysical && !isShippingComplete && (
+                <p className="text-[10px] font-bold text-amber-400/90 text-center bg-amber-500/10 py-1.5 px-3 rounded-xl border border-amber-500/20">
+                  {language === 'ka' 
+                    ? '⚠️ გთხოვთ შეავსოთ ტელეფონი, ქალაქი და მისამართი' 
+                    : '⚠️ Please provide contact phone, city, and delivery address'}
+                </p>
+              )}
+
               <p className={cn("text-[9px] font-bold text-center leading-relaxed opacity-60", currentTheme.muted)}>
                 {language === 'ka' 
                   ? 'ღილაკზე დაჭერით თქვენ ეთანხმებით მომსახურების პირობებს და კონფიდენციალურობის პოლიტიკას.'
@@ -224,10 +335,10 @@ export const CheckoutModal = React.memo(function CheckoutModal({
               
               <button 
                 onClick={onConfirmPurchase}
-                disabled={isCheckingOut}
+                disabled={!canConfirm}
                 className={cn(
                   "w-full min-h-[48px] py-4 sm:py-4.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-2.5 relative overflow-hidden group cursor-pointer",
-                  currentTheme.accentBg, "text-white hover:brightness-110 active:scale-98 disabled:opacity-60 disabled:active:scale-100"
+                  currentTheme.accentBg, "text-white hover:brightness-110 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                 )}
               >
                 {isCheckingOut ? (

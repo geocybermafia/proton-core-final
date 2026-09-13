@@ -151,6 +151,22 @@ export type Listing = {
   quantity?: number;
 };
 
+export interface ShippingDetails {
+  recipientName: string;
+  phone: string;
+  city: string;
+  address: string;
+  notes?: string;
+}
+
+export interface TrackingInfo {
+  carrier?: string;
+  trackingNumber?: string;
+  shippedAt?: number;
+}
+
+export type SellerOrderFilter = 'all' | 'action-required' | 'processing' | 'shipped' | 'completed';
+
 export interface Order {
   id: string;
   listingId: string;
@@ -159,9 +175,11 @@ export interface Order {
   amount: number;
   currency: string;
   itemTitle: string;
-  status: 'booked' | 'completed' | 'pending' | 'cancelled' | 'shipped' | 'delivered' | string;
-  orderType?: 'service' | 'product' | string;
+  status: 'booked' | 'completed' | 'pending' | 'processing' | 'shipped' | 'cancelled' | 'delivered' | string;
+  orderType?: 'service' | 'product' | 'project' | string;
   buyerInstructions?: string;
+  shippingDetails?: ShippingDetails;
+  trackingInfo?: TrackingInfo;
   createdAt: any;
   source?: string;
   clipId?: string;

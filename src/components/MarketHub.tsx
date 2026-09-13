@@ -28,7 +28,11 @@ import {
   Globe,
   Coins,
   Sparkles,
-  Zap
+  Zap,
+  Truck,
+  CheckCircle2,
+  Package,
+  Inbox
 } from 'lucide-react';
 import { 
   collection, 
@@ -51,7 +55,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
-import { Listing } from '../types';
+import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useMarketHub, isRealListing } from '../contexts/MarketHubContext';
 import { useToast } from './Toast';
@@ -82,7 +86,13 @@ import {
   handleFirestoreError,
   CATEGORY_EMOJIS,
   convertPrice,
-  safeParseDate
+  safeParseDate,
+  isPhysicalListing,
+  isServiceListing,
+  isProjectListing,
+  isPhysicalOrder,
+  isServiceOrder,
+  isSellerActionRequired
 } from './market-hub/MarketConstants';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
@@ -292,8 +302,25 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
   const [buyerInstructions, setBuyerInstructions] = useState('');
+  const [shippingDetails, setShippingDetails] = useState<ShippingDetails>({
+    recipientName: '',
+    phone: '',
+    city: '',
+    address: '',
+    notes: ''
+  });
+  const [shipmentTrackingInput, setShipmentTrackingInput] = useState<{ orderId: string; carrier: string; trackingNumber: string } | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
+
+  useEffect(() => {
+    if (user?.displayName && !shippingDetails.recipientName) {
+      setShippingDetails(prev => ({
+        ...prev,
+        recipientName: user.displayName || ''
+      }));
+    }
+  }, [user?.displayName, shippingDetails.recipientName]);
   
   // Catalog Pagination & Scalable Discovery State
   const PAGE_SIZE = 24;
@@ -463,22 +490,36 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               continue;
             }
 
-            const isService = item.listingType === 'service' || item.category === 'service';
+            const isService = isServiceListing(item) || isProjectListing(item);
+            const isPhysical = isPhysicalListing(item);
             const itemInstructions = isService ? (cartServiceInstructions[item.id]?.trim() || '') : '';
+
+            const baseOrderData: any = {
+              listingId: item.id,
+              buyerId: user.uid,
+              sellerId: freshData.sellerId || item.sellerId,
+              amount: freshData.price,
+              currency: freshData.currency || 'USD',
+              itemTitle: freshData.title || item.title,
+              status: isService ? 'booked' : (isPhysical ? 'pending' : 'completed'),
+              orderType: isService ? 'service' : 'product',
+              buyerInstructions: itemInstructions,
+              createdAt: serverTimestamp()
+            };
+
+            if (isPhysical) {
+              baseOrderData.shippingDetails = {
+                recipientName: (shippingDetails.recipientName || user.displayName || 'Customer').trim(),
+                phone: shippingDetails.phone.trim(),
+                city: shippingDetails.city.trim(),
+                address: shippingDetails.address.trim(),
+                notes: shippingDetails.notes?.trim() || ''
+              };
+            }
+
             verifiedOrders.push({
               listingRef: doc(db, 'listings', item.id),
-              orderData: {
-                listingId: item.id,
-                buyerId: user.uid,
-                sellerId: freshData.sellerId || item.sellerId,
-                amount: freshData.price,
-                currency: freshData.currency || 'USD',
-                itemTitle: freshData.title || item.title,
-                status: isService ? 'booked' : 'completed',
-                orderType: isService ? 'service' : 'product',
-                buyerInstructions: itemInstructions,
-                createdAt: serverTimestamp()
-              },
+              orderData: baseOrderData,
               isService
             });
           }
@@ -594,6 +635,59 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
   const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>('all');
+
+  const sellerOrderCounts = useMemo(() => {
+    let actionRequired = 0;
+    let processing = 0;
+    let shipped = 0;
+    let completed = 0;
+
+    for (let i = 0; i < sellerOrders.length; i++) {
+      const o = sellerOrders[i];
+      if (isSellerActionRequired(o)) {
+        actionRequired++;
+      }
+      const isPhysical = isPhysicalOrder(o);
+      if ((isPhysical || o.orderType === 'product') && o.status === 'processing') {
+        processing++;
+      }
+      if ((isPhysical || o.orderType === 'product') && o.status === 'shipped') {
+        shipped++;
+      }
+      if (o.status === 'completed') {
+        completed++;
+      }
+    }
+
+    return {
+      all: sellerOrders.length,
+      actionRequired,
+      processing,
+      shipped,
+      completed
+    };
+  }, [sellerOrders]);
+
+  const filteredSellerOrders = useMemo(() => {
+    if (sellerOrderFilter === 'all') {
+      return sellerOrders;
+    }
+    return sellerOrders.filter(order => {
+      switch (sellerOrderFilter) {
+        case 'action-required':
+          return isSellerActionRequired(order);
+        case 'processing':
+          return (isPhysicalOrder(order) || order.orderType === 'product') && order.status === 'processing';
+        case 'shipped':
+          return (isPhysicalOrder(order) || order.orderType === 'product') && order.status === 'shipped';
+        case 'completed':
+          return order.status === 'completed';
+        default:
+          return true;
+      }
+    });
+  }, [sellerOrders, sellerOrderFilter]);
   
   const orders = useMemo(() => {
     const buyerIdSet = new Set(buyerOrders.map(b => b.id));
@@ -1802,7 +1896,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
     setIsCheckingOut(true);
     try {
-      const isService = checkoutItem.listingType === 'service' || checkoutItem.category === 'service';
+      const isService = isServiceListing(checkoutItem) || isProjectListing(checkoutItem);
+      const isPhysical = isPhysicalListing(checkoutItem);
 
       await runTransaction(db, async (transaction) => {
         const listingRef = doc(db, 'listings', checkoutItem.id);
@@ -1815,18 +1910,28 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           throw new Error('This item has already been sold.');
         }
 
-        const verifiedOrderData = {
+        const verifiedOrderData: any = {
           listingId: checkoutItem.id,
           buyerId: user.uid,
           sellerId: freshData.sellerId || checkoutItem.sellerId,
           amount: freshData.price,
           currency: freshData.currency || checkoutItem.currency || 'USD',
           itemTitle: freshData.title || checkoutItem.title,
-          status: isService ? 'booked' : 'completed',
+          status: isService ? 'booked' : (isPhysical ? 'pending' : 'completed'),
           orderType: isService ? 'service' : 'product',
           buyerInstructions: isService ? buyerInstructions.trim() : '',
           createdAt: serverTimestamp()
         };
+
+        if (isPhysical) {
+          verifiedOrderData.shippingDetails = {
+            recipientName: (shippingDetails.recipientName || user.displayName || 'Customer').trim(),
+            phone: shippingDetails.phone.trim(),
+            city: shippingDetails.city.trim(),
+            address: shippingDetails.address.trim(),
+            notes: shippingDetails.notes?.trim() || ''
+          };
+        }
 
         const newOrderRef = doc(collection(db, 'orders'));
         transaction.set(newOrderRef, verifiedOrderData);
@@ -1868,32 +1973,74 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string, tracking?: TrackingInfo) => {
     try {
       if (!user) {
-        alert(language === 'ka' ? "ავტორიზაცია აუცილებელია." : "Authentication is required.");
+        showToast(language === 'ka' ? "ავტორიზაცია აუცილებელია." : "Authentication is required.", 'warning');
         return;
       }
 
       const targetOrder = orders.find(o => o.id === orderId);
       if (!targetOrder) {
-        alert(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.");
+        showToast(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.", 'error');
         return;
       }
 
-      if (targetOrder.sellerId !== user.uid) {
-        alert(language === 'ka' 
-          ? "მხოლოდ გამყიდველს/შემსრულებელს შეუძლია შეკვეთის სტატუსის შეცვლა." 
-          : "Only the seller or service provider is authorized to update order status.");
-        return;
+      const isPhysical = targetOrder.orderType === 'product' && Boolean(targetOrder.shippingDetails);
+      const isSeller = targetOrder.sellerId === user.uid;
+      const isBuyer = targetOrder.buyerId === user.uid;
+
+      if (isPhysical) {
+        if (newStatus === 'processing' || newStatus === 'shipped') {
+          if (!isSeller) {
+            showToast(language === 'ka' 
+              ? "მხოლოდ გამყიდველს შეუძლია შეკვეთის გაგზავნა ან დამუშავება." 
+              : "Only the seller can process or ship the order.", 'warning');
+            return;
+          }
+        } else if (newStatus === 'completed') {
+          if (!isBuyer) {
+            showToast(language === 'ka' 
+              ? "მხოლოდ მყიდველს შეუძლია ჩაბარების დადასტურება." 
+              : "Only the buyer can confirm order receipt.", 'warning');
+            return;
+          }
+        } else if (newStatus === 'cancelled') {
+          if (!isBuyer && !isSeller) {
+            showToast(language === 'ka' ? "არაავტორიზებული ოპერაცია." : "Unauthorized operation.", 'warning');
+            return;
+          }
+        }
+      } else {
+        if (!isSeller && newStatus !== 'cancelled') {
+          showToast(language === 'ka' 
+            ? "მხოლოდ გამყიდველს/შემსრულებელს შეუძლია შეკვეთის სტატუსის შეცვლა." 
+            : "Only the seller or service provider is authorized to update order status.", 'warning');
+          return;
+        }
       }
 
-      await updateDoc(doc(db, 'orders', orderId), {
+      const updates: any = {
         status: newStatus
-      });
+      };
+
+      if (tracking && (tracking.carrier?.trim() || tracking.trackingNumber?.trim())) {
+        updates.trackingInfo = {
+          carrier: tracking.carrier?.trim() || '',
+          trackingNumber: tracking.trackingNumber?.trim() || '',
+          shippedAt: new Date().toISOString()
+        };
+      }
+
+      await updateDoc(doc(db, 'orders', orderId), updates);
+      showToast(
+        language === 'ka' ? "შეკვეთის სტატუსი განახლდა!" : "Order status updated successfully!",
+        'success'
+      );
+      setShipmentTrackingInput(null);
     } catch (error) {
       console.error("Error updating order status:", error);
-      alert(language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status.");
+      showToast(language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status.", 'error');
     }
   };
 
@@ -3356,38 +3503,162 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 )}
 
                 {viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages' && (
-                  <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner self-start max-w-md animate-in fade-in duration-300">
-                    <button
-                      type="button"
-                      onClick={() => setActiveSellingTab('listings')}
-                      className={cn(
-                        "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center",
-                        activeSellingTab === 'listings' 
-                          ? "bg-white/10 text-white shadow-md border border-white/10" 
-                          : "text-white/40 hover:text-white/60"
-                      )}
-                    >
-                      <span>📦</span>
-                      <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Postings'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveSellingTab('incoming-orders')}
-                      className={cn(
-                        "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative",
-                        activeSellingTab === 'incoming-orders' 
-                          ? "bg-white/10 text-white shadow-md border border-white/10" 
-                          : "text-white/40 hover:text-white/60"
-                      )}
-                    >
-                      <span>⚡</span>
-                      <span>{language === 'ka' ? 'შემოსული შეკვეთები' : 'Incoming Books'}</span>
-                      {sellerOrders.length > 0 && (
-                        <span className="px-2 py-0.5 bg-red-500 rounded-full text-[8px] font-black text-white ml-1">
-                          {sellerOrders.length}
-                        </span>
-                      )}
-                    </button>
+                  <div className="space-y-3 w-full">
+                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner self-start max-w-md animate-in fade-in duration-300">
+                      <button
+                        type="button"
+                        id="seller-tab-postings-btn"
+                        onClick={() => setActiveSellingTab('listings')}
+                        className={cn(
+                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center cursor-pointer",
+                          activeSellingTab === 'listings' 
+                            ? "bg-white/10 text-white shadow-md border border-white/10" 
+                            : "text-white/40 hover:text-white/60"
+                        )}
+                      >
+                        <span>📦</span>
+                        <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Postings'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        id="seller-tab-incoming-orders-btn"
+                        onClick={() => setActiveSellingTab('incoming-orders')}
+                        className={cn(
+                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative cursor-pointer",
+                          activeSellingTab === 'incoming-orders' 
+                            ? "bg-white/10 text-white shadow-md border border-white/10" 
+                            : "text-white/40 hover:text-white/60"
+                        )}
+                      >
+                        <span>⚡</span>
+                        <span>{language === 'ka' ? 'შემოსული შეკვეთები' : 'Incoming Orders'}</span>
+                        {sellerOrders.length > 0 && (
+                          <span className={cn(
+                            "px-2 py-0.5 rounded-full text-[8px] font-black ml-1 transition-colors",
+                            sellerOrderCounts.actionRequired > 0 
+                              ? "bg-amber-500 text-black font-black animate-pulse" 
+                              : "bg-white/20 text-white"
+                          )}>
+                            {sellerOrderCounts.actionRequired > 0 ? sellerOrderCounts.actionRequired : sellerOrders.length}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Filter Tabs for Seller Incoming Orders */}
+                    {activeSellingTab === 'incoming-orders' && (
+                      <div className="w-full overflow-x-auto scrollbar-none no-scrollbar py-0.5">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-max pb-1">
+                          {/* Tab 1: All */}
+                          <button
+                            type="button"
+                            id="seller-order-filter-all"
+                            onClick={() => setSellerOrderFilter('all')}
+                            className={cn(
+                              "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
+                              sellerOrderFilter === 'all'
+                                ? "bg-white/15 text-white border-white/20 shadow-sm"
+                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                            )}
+                          >
+                            <span>{language === 'ka' ? 'ყველა' : 'All'}</span>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
+                              sellerOrderFilter === 'all' ? "bg-white/20 text-white font-bold" : "bg-white/5 text-white/40"
+                            )}>
+                              {sellerOrderCounts.all}
+                            </span>
+                          </button>
+
+                          {/* Tab 2: Action Required */}
+                          <button
+                            type="button"
+                            id="seller-order-filter-action-required"
+                            onClick={() => setSellerOrderFilter('action-required')}
+                            className={cn(
+                              "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
+                              sellerOrderFilter === 'action-required'
+                                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm font-black"
+                                : "bg-white/5 text-white/40 border-white/5 hover:text-amber-300/80 hover:bg-white/10"
+                            )}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                            <span>{language === 'ka' ? 'მოქმედებაა საჭირო' : 'Action Required'}</span>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-md text-[8px] font-mono font-black",
+                              sellerOrderCounts.actionRequired > 0 
+                                ? "bg-amber-500 text-black font-black" 
+                                : (sellerOrderFilter === 'action-required' ? "bg-amber-500/30 text-amber-200" : "bg-white/5 text-white/40")
+                            )}>
+                              {sellerOrderCounts.actionRequired}
+                            </span>
+                          </button>
+
+                          {/* Tab 3: Processing */}
+                          <button
+                            type="button"
+                            id="seller-order-filter-processing"
+                            onClick={() => setSellerOrderFilter('processing')}
+                            className={cn(
+                              "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
+                              sellerOrderFilter === 'processing'
+                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40 shadow-sm font-black"
+                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                            )}
+                          >
+                            <span>{language === 'ka' ? 'მუშავდება' : 'Processing'}</span>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
+                              sellerOrderFilter === 'processing' ? "bg-indigo-500/30 text-indigo-200 font-bold" : "bg-white/5 text-white/40"
+                            )}>
+                              {sellerOrderCounts.processing}
+                            </span>
+                          </button>
+
+                          {/* Tab 4: Shipped */}
+                          <button
+                            type="button"
+                            id="seller-order-filter-shipped"
+                            onClick={() => setSellerOrderFilter('shipped')}
+                            className={cn(
+                              "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
+                              sellerOrderFilter === 'shipped'
+                                ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm font-black"
+                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                            )}
+                          >
+                            <span>{language === 'ka' ? 'გაგზავნილი' : 'Shipped'}</span>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
+                              sellerOrderFilter === 'shipped' ? "bg-cyan-500/30 text-cyan-200 font-bold" : "bg-white/5 text-white/40"
+                            )}>
+                              {sellerOrderCounts.shipped}
+                            </span>
+                          </button>
+
+                          {/* Tab 5: Completed */}
+                          <button
+                            type="button"
+                            id="seller-order-filter-completed"
+                            onClick={() => setSellerOrderFilter('completed')}
+                            className={cn(
+                              "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
+                              sellerOrderFilter === 'completed'
+                                ? "bg-green-500/20 text-green-300 border-green-500/40 shadow-sm font-black"
+                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                            )}
+                          >
+                            <span>{language === 'ka' ? 'დასრულებული' : 'Completed'}</span>
+                            <span className={cn(
+                              "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
+                              sellerOrderFilter === 'completed' ? "bg-green-500/30 text-green-200 font-bold" : "bg-white/5 text-white/40"
+                            )}>
+                              {sellerOrderCounts.completed}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -3395,9 +3666,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                     <AnimatePresence mode="popLayout">
                     {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
-                    (profileSubMode === 'buying' ? buyerOrders : sellerOrders).map((order, idx) => {
+                      (profileSubMode === 'buying' ? buyerOrders : filteredSellerOrders).length > 0 ? (
+                        (profileSubMode === 'buying' ? buyerOrders : filteredSellerOrders).map((order, idx) => {
                       const isExpanded = expandedOrderId === order.id;
                       const isService = order.orderType === 'service';
+                      const isPhysical = order.orderType === 'product' && Boolean(order.shippingDetails);
                       const isSeller = profileSubMode === 'selling';
 
                       return (
@@ -3413,9 +3686,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                             <div className="flex items-center justify-between mb-6 relative">
                               <div className={cn(
                                 "p-4 rounded-2xl border border-white/5",
-                                isService ? "bg-amber-500/10 text-amber-300" : "bg-white/5 text-white"
+                                isService 
+                                  ? "bg-amber-500/10 text-amber-300" 
+                                  : isPhysical 
+                                  ? "bg-cyan-500/10 text-cyan-300" 
+                                  : "bg-white/5 text-white"
                               )}>
-                                {isService ? <Zap size={20} /> : <ShoppingBag size={20} />}
+                                {isService ? <Zap size={20} /> : isPhysical ? <Truck size={20} /> : <ShoppingBag size={20} />}
                               </div>
                               <div className="text-right flex flex-col items-end gap-1.5">
                                 <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 block", currentTheme.muted)}>
@@ -3430,16 +3707,30 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                   "inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-[0.1em] rounded-lg border",
                                   order.status === 'completed' 
                                     ? "bg-green-500/10 border-green-500/20 text-green-400"
+                                    : order.status === 'shipped'
+                                    ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
+                                    : order.status === 'processing'
+                                    ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
                                     : order.status === 'in_progress'
                                     ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                                    : order.status === 'cancelled'
+                                    ? "bg-red-500/10 border-red-500/20 text-red-400"
                                     : "bg-amber-500/10 border-amber-500/20 text-amber-400"
                                 )}>
                                   {order.status === 'booked' 
                                     ? (language === 'ka' ? '🚀 შეკვეთილია' : '🚀 Booked')
-                                    : order.status === 'in_progress'
-                                    ? (language === 'ka' ? '🛠️ მიმდინარე' : '🛠️ In Progress')
+                                    : order.status === 'pending'
+                                    ? (language === 'ka' ? '⏳ მიღებულია' : '⏳ Pending')
+                                    : order.status === 'processing'
+                                    ? (language === 'ka' ? '📦 მუშავდება' : '📦 Processing')
+                                    : order.status === 'shipped'
+                                    ? (language === 'ka' ? '🚚 გაგზავნილია' : '🚚 Shipped')
                                     : order.status === 'completed'
                                     ? (language === 'ka' ? '🎯 დასრულებული' : '🎯 Completed')
+                                    : order.status === 'cancelled'
+                                    ? (language === 'ka' ? '❌ გაუქმებული' : '❌ Cancelled')
+                                    : order.status === 'in_progress'
+                                    ? (language === 'ka' ? '🛠️ მიმდინარე' : '🛠️ In Progress')
                                     : order.status}
                                 </span>
                               </div>
@@ -3461,6 +3752,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                               </div>
                             )}
 
+                            {isPhysical && (
+                              <div className="mt-4 bg-white/5 rounded-2xl p-4 border border-white/5 text-xs text-left">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-white/40 block mb-1">
+                                  {language === 'ka' ? 'მიწოდების ტიპი' : 'Fulfillment Type'}
+                                </span>
+                                <p className="text-white/80 font-bold flex items-center gap-1.5">
+                                  <Truck size={14} className="text-cyan-400" />
+                                  {language === 'ka' ? 'ფიზიკური მიწოდება / ამანათი' : 'Physical Shipping / Courier'}
+                                </p>
+                              </div>
+                            )}
+
                             {isExpanded && (
                               <motion.div 
                                 initial={{ opacity: 0, height: 0 }}
@@ -3478,9 +3781,54 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                   </div>
                                 )}
 
+                                {isPhysical && order.shippingDetails && (
+                                  <div className="space-y-2 bg-black/45 p-4 rounded-2xl border border-white/5 text-left">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-cyan-400/80 block">
+                                      {language === 'ka' ? '📦 მიწოდების მონაცემები' : '📦 Shipping Information'}
+                                    </span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                                      <div>
+                                        <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'მიმღები' : 'Recipient'}:</span>
+                                        <span className="text-white font-bold">{order.shippingDetails.recipientName}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'ტელეფონი' : 'Phone'}:</span>
+                                        <span className="text-white font-mono">{order.shippingDetails.phone}</span>
+                                      </div>
+                                      <div className="sm:col-span-2">
+                                        <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'ქალაქი და მისამართი' : 'City & Address'}:</span>
+                                        <span className="text-white">{order.shippingDetails.city}, {order.shippingDetails.address}</span>
+                                      </div>
+                                      {order.shippingDetails.notes && (
+                                        <div className="sm:col-span-2 pt-1 border-t border-white/5">
+                                          <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'კომენტარი კურიერისთვის' : 'Courier Notes'}:</span>
+                                          <span className="text-white/70 italic">{order.shippingDetails.notes}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {isPhysical && order.trackingInfo && (
+                                  <div className="bg-cyan-500/10 border border-cyan-500/20 p-4 rounded-2xl text-left space-y-1">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-cyan-400 block">
+                                      {language === 'ka' ? '🚚 გზავნილის თრექინგი' : '🚚 Tracking Information'}
+                                    </span>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="text-white/60">{order.trackingInfo.carrier || (language === 'ka' ? 'საკურიერო' : 'Courier')}</span>
+                                      <span className="text-white font-mono font-bold bg-black/40 px-2 py-0.5 rounded border border-white/10">{order.trackingInfo.trackingNumber}</span>
+                                    </div>
+                                    {order.trackingInfo.shippedAt && (
+                                      <span className="text-[9px] text-white/40 block font-mono">
+                                        {language === 'ka' ? 'გაგზავნის დრო' : 'Shipped'}: {new Date(order.trackingInfo.shippedAt).toLocaleString()}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
                                 <div className="space-y-1 font-mono text-[9px] text-white/45">
                                   <p>ID: #{order.id}</p>
-                                  <p>Role: {isSeller ? 'Service Provider' : 'Client'}</p>
+                                  <p>Role: {isSeller ? (isService ? 'Service Provider' : 'Merchant / Seller') : 'Customer'}</p>
                                 </div>
 
                                 {isService && isSeller && order.status !== 'completed' && (
@@ -3501,6 +3849,96 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                         className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-green-400 hover:bg-green-500 transition-all shadow-md active:scale-95")}
                                       >
                                         🎯 {language === 'ka' ? 'მზადაა / დასრულება' : 'Mark Completed'}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+
+                                {isPhysical && isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
+                                  <div className="pt-2 flex flex-col gap-2">
+                                    {order.status === 'pending' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
+                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95 text-left")}
+                                      >
+                                        📦 {language === 'ka' ? 'შეკვეთის დამუშავების დაწყება' : 'Start Processing Order'}
+                                      </button>
+                                    )}
+
+                                    {order.status === 'processing' && (
+                                      shipmentTrackingInput?.orderId === order.id ? (
+                                        <div className="bg-black/50 p-3.5 rounded-2xl border border-white/10 space-y-2">
+                                          <span className="text-[8px] font-black uppercase tracking-wider text-white/50 block">
+                                            {language === 'ka' ? 'გზავნილის დეტალები' : 'Shipment Tracking'}
+                                          </span>
+                                           <input
+                                            type="text"
+                                            value={shipmentTrackingInput?.carrier || ''}
+                                            onChange={(e) => setShipmentTrackingInput(prev => prev ? ({ ...prev, carrier: e.target.value }) : null)}
+                                            placeholder={language === 'ka' ? 'გადამზიდი (მაგ. Georgian Post, DHL)' : 'Carrier (e.g. Courier, Post)'}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400"
+                                          />
+                                          <input
+                                            type="text"
+                                            value={shipmentTrackingInput?.trackingNumber || ''}
+                                            onChange={(e) => setShipmentTrackingInput(prev => prev ? ({ ...prev, trackingNumber: e.target.value }) : null)}
+                                            placeholder={language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Code / Number'}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400 font-mono"
+                                          />
+                                          <div className="flex gap-2 pt-1">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                handleUpdateOrderStatus(order.id, 'shipped', {
+                                                  carrier: shipmentTrackingInput?.carrier || '',
+                                                  trackingNumber: shipmentTrackingInput?.trackingNumber || ''
+                                                });
+                                              }}
+                                              className="px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-cyan-400 hover:bg-cyan-300 text-black transition-all"
+                                            >
+                                              🚚 {language === 'ka' ? 'გაგზავნის დადასტურება' : 'Confirm Shipped'}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setShipmentTrackingInput(null)}
+                                              className="px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-white/10 text-white/70 hover:text-white transition-all"
+                                            >
+                                              {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => setShipmentTrackingInput({ orderId: order.id, carrier: '', trackingNumber: '' })}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-cyan-400 hover:bg-cyan-300 transition-all shadow-md active:scale-95 text-left")}
+                                        >
+                                          🚚 {language === 'ka' ? 'ამანათის გაგზავნა' : 'Mark as Shipped'}
+                                        </button>
+                                      )
+                                    )}
+                                  </div>
+                                )}
+
+                                {isPhysical && !isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
+                                  <div className="pt-2 flex flex-wrap gap-2">
+                                    {order.status === 'shipped' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-green-400 hover:bg-green-500 transition-all shadow-md active:scale-95")}
+                                      >
+                                        🎯 {language === 'ka' ? 'ჩაბარების დადასტურება' : 'Confirm Delivery Received'}
+                                      </button>
+                                    )}
+                                    {order.status === 'pending' && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}
+                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-white bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
+                                      >
+                                        ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
                                       </button>
                                     )}
                                   </div>
@@ -3526,7 +3964,74 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       );
                     })
                   ) : (
-                    displayedListings.map((listing, idx) => (
+                    <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-zinc-950/40 border border-zinc-900/80 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+                      <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10 text-white">
+                        {profileSubMode === 'buying' ? (
+                          <ShoppingBag size={24} className="text-zinc-500" />
+                        ) : sellerOrderFilter === 'action-required' ? (
+                          <CheckCircle2 size={24} className="text-emerald-400" />
+                        ) : sellerOrderFilter === 'processing' ? (
+                          <Package size={24} className="text-indigo-400" />
+                        ) : sellerOrderFilter === 'shipped' ? (
+                          <Truck size={24} className="text-cyan-400" />
+                        ) : sellerOrderFilter === 'completed' ? (
+                          <CheckCircle2 size={24} className="text-green-400" />
+                        ) : (
+                          <Inbox size={24} className="text-white/50" />
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                          {profileSubMode === 'buying'
+                            ? (language === 'ka' ? 'შეკვეთები არ გაქვთ' : 'No purchases yet')
+                            : sellerOrderFilter === 'action-required'
+                            ? (language === 'ka' ? 'მოქმედება არცერთ შეკვეთაზე არ არის საჭირო' : 'No orders need your attention right now')
+                            : sellerOrderFilter === 'processing'
+                            ? (language === 'ka' ? 'დამუშავებაში შეკვეთები არ არის' : 'No orders in processing')
+                            : sellerOrderFilter === 'shipped'
+                            ? (language === 'ka' ? 'გაგზავნილი შეკვეთები არ არის' : 'No shipped orders')
+                            : sellerOrderFilter === 'completed'
+                            ? (language === 'ka' ? 'დასრულებული შეკვეთები ჯერ არ არის' : 'No completed orders yet')
+                            : (language === 'ka' ? 'შემოსული შეკვეთები არ არის' : 'No incoming orders yet')}
+                        </h3>
+                        <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                          {profileSubMode === 'buying'
+                            ? (language === 'ka' ? 'თქვენს მიერ შეძენილი პროდუქტები და სერვისები გამოჩნდება აქ.' : 'Items you purchase or services you book will appear here.')
+                            : sellerOrderFilter === 'action-required'
+                            ? (language === 'ka' ? 'ყველა შემოსული შეკვეთა დამუშავებულია ან გაგზავნილია.' : 'All incoming orders have been handled or are already in transit.')
+                            : sellerOrderFilter === 'processing'
+                            ? (language === 'ka' ? 'ამჟამად არცერთი ფიზიკური შეკვეთა არ იმყოფება დამუშავების ეტაპზე.' : 'There are no physical orders currently being processed.')
+                            : sellerOrderFilter === 'shipped'
+                            ? (language === 'ka' ? 'გაგზავნილი ამანათები, რომლებიც ჩაბარებას ელოდება, აქ გამოჩნდება.' : 'Orders dispatched and awaiting delivery will appear here.')
+                            : sellerOrderFilter === 'completed'
+                            ? (language === 'ka' ? 'წარმატებით მიწოდებული და დასრულებული შეკვეთები გამოჩნდება აქ.' : 'Orders confirmed as delivered or completed will appear here.')
+                            : (language === 'ka' ? 'როდესაც კლიენტები განათავსებენ შეკვეთას, ისინი გამოჩნდება აქ.' : 'When clients place orders, they will appear here.')}
+                        </p>
+                      </div>
+                      {profileSubMode === 'selling' && sellerOrderFilter !== 'all' && sellerOrders.length > 0 && (
+                        <button
+                          type="button"
+                          id="seller-order-reset-filter-btn"
+                          onClick={() => setSellerOrderFilter('all')}
+                          className="mt-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase tracking-wider text-white/80 hover:text-white transition-all active:scale-95 cursor-pointer"
+                        >
+                          {language === 'ka' ? 'ყველა შეკვეთის ნახვა' : 'View All Orders'} ({sellerOrders.length})
+                        </button>
+                      )}
+                      {profileSubMode === 'buying' && (
+                        <button
+                          type="button"
+                          id="buyer-order-explore-market-btn"
+                          onClick={() => setViewMode('browse')}
+                          className="mt-2 px-5 py-2.5 rounded-xl bg-[#dfb257] hover:brightness-110 text-zinc-950 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-[#dfb257]/10 cursor-pointer"
+                        >
+                          {language === 'ka' ? 'მარკეტის დათვალიერება' : 'Browse Marketplace'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                ) : (
+                  displayedListings.map((listing, idx) => (
                       <MarketListingCard
                         key={listing.id}
                         listing={listing}
@@ -3774,6 +4279,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         onUpdateServiceInstruction={(itemId, instruction) => {
           setCartServiceInstructions(prev => ({ ...prev, [itemId]: instruction }));
         }}
+        shippingDetails={shippingDetails}
+        onChangeShippingDetails={setShippingDetails}
         onRemoveFromCart={handleRemoveFromCart}
         onCheckout={handleCartCheckout}
       />
@@ -3796,6 +4303,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         convertPrice={convertPrice}
         buyerInstructions={buyerInstructions}
         onChangeBuyerInstructions={setBuyerInstructions}
+        shippingDetails={shippingDetails}
+        onChangeShippingDetails={setShippingDetails}
         isCheckingOut={isCheckingOut}
         onConfirmPurchase={processPurchase}
       />

@@ -292,3 +292,49 @@ export const safeParseDate = (dateVal: any): number => {
     return Date.now();
   }
 };
+
+export const isServiceListing = (item?: { listingType?: string; category?: string } | null): boolean => {
+  if (!item) return false;
+  return item.listingType === 'service' || item.category === 'service';
+};
+
+export const isProjectListing = (item?: { listingType?: string; category?: string } | null): boolean => {
+  if (!item) return false;
+  return item.listingType === 'project' || item.category === 'project';
+};
+
+export const isPhysicalListing = (item?: { listingType?: string; category?: string } | null): boolean => {
+  if (!item) return false;
+  if (item.listingType === 'service' || item.category === 'service') return false;
+  if (item.listingType === 'project' || item.category === 'project') return false;
+  return item.listingType === 'product' || (!item.listingType && item.category !== 'service' && item.category !== 'project');
+};
+
+export const isPhysicalOrder = (order: any): boolean => {
+  if (!order) return false;
+  return order.orderType === 'product' && Boolean(order.shippingDetails);
+};
+
+export const isServiceOrder = (order: any): boolean => {
+  if (!order) return false;
+  return order.orderType === 'service' || order.orderType === 'project';
+};
+
+export const isSellerActionRequired = (order: any): boolean => {
+  if (!order) return false;
+  if (order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded') {
+    return false;
+  }
+  const isPhysical = isPhysicalOrder(order);
+  const isService = isServiceOrder(order);
+
+  if (isPhysical) {
+    return order.status === 'pending' || order.status === 'processing';
+  }
+  if (isService) {
+    return order.status === 'booked' || order.status === 'in_progress';
+  }
+
+  return order.status === 'pending' || order.status === 'processing' || order.status === 'booked' || order.status === 'in_progress';
+};
+
