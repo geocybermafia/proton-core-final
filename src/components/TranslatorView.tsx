@@ -1156,3 +1156,5 @@ Guidelines:
     </div>
   );
 };
+
+export default TranslatorView;

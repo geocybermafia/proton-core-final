@@ -669,6 +669,73 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     };
   }, [sellerOrders]);
 
+  const sellerSalesSummary = useMemo(() => {
+    let completedCount = 0;
+    const revenueByCurrency: Record<string, number> = {};
+    let totalRevenueConverted = 0;
+
+    for (let i = 0; i < sellerOrders.length; i++) {
+      const o = sellerOrders[i];
+      // Only completed orders contribute to revenue.
+      // Cancelled, refunded, pending, processing, shipped, booked, and in_progress orders do NOT contribute.
+      if (o.status === 'completed') {
+        completedCount++;
+        const rawAmt = typeof o.amount === 'number' ? o.amount : parseFloat(String(o.amount || 0));
+        const amt = !isNaN(rawAmt) && rawAmt > 0 ? rawAmt : 0;
+        const cur = (o.currency || displayCurrency || 'USD').toUpperCase();
+
+        if (amt > 0) {
+          revenueByCurrency[cur] = (revenueByCurrency[cur] || 0) + amt;
+          try {
+            totalRevenueConverted += convertPrice(amt, cur, displayCurrency);
+          } catch {
+            totalRevenueConverted += amt;
+          }
+        }
+      }
+    }
+
+    const currencyCodes = Object.keys(revenueByCurrency);
+    const activeSymbol = CURRENCIES.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
+
+    let formattedRevenue = `${activeSymbol}0`;
+    let revenueBreakdown: string | null = null;
+
+    if (currencyCodes.length === 0) {
+      formattedRevenue = `${activeSymbol}0`;
+    } else if (currencyCodes.length === 1) {
+      const cur = currencyCodes[0];
+      const symbol = CURRENCIES.find(c => c.code === cur)?.symbol || cur;
+      const amt = revenueByCurrency[cur];
+      const formattedAmt = amt % 1 === 0 
+        ? amt.toLocaleString() 
+        : amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      formattedRevenue = `${symbol}${formattedAmt}`;
+    } else {
+      // Multi-currency: Converted total in active displayCurrency (Approach B) + Grouped Breakdown (Approach A)
+      const formattedAmt = totalRevenueConverted % 1 === 0 
+        ? Math.round(totalRevenueConverted).toLocaleString() 
+        : totalRevenueConverted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      formattedRevenue = `~${activeSymbol}${formattedAmt}`;
+      revenueBreakdown = currencyCodes
+        .map(c => {
+          const sym = CURRENCIES.find(curr => curr.code === c)?.symbol || c;
+          const a = revenueByCurrency[c];
+          return `${sym}${a % 1 === 0 ? a.toLocaleString() : a.toFixed(2)}`;
+        })
+        .join(' + ');
+    }
+
+    return {
+      totalOrders: sellerOrders.length,
+      completedOrders: completedCount,
+      actionRequired: sellerOrderCounts.actionRequired,
+      formattedRevenue,
+      revenueBreakdown,
+      currencyCodes,
+    };
+  }, [sellerOrders, displayCurrency, sellerOrderCounts.actionRequired]);
+
   const filteredSellerOrders = useMemo(() => {
     if (sellerOrderFilter === 'all') {
       return sellerOrders;
@@ -3545,9 +3612,89 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       </button>
                     </div>
 
-                    {/* Filter Tabs for Seller Incoming Orders */}
+                    {/* Filter Tabs & Summary for Seller Incoming Orders */}
                     {activeSellingTab === 'incoming-orders' && (
-                      <div className="w-full overflow-x-auto scrollbar-none no-scrollbar py-0.5">
+                      <>
+                        {/* Compact Seller Sales & Revenue Summary */}
+                        <div 
+                          id="seller-sales-revenue-summary"
+                          className={cn(
+                            "grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-2xl border backdrop-blur-md",
+                            currentTheme.cardAlt
+                          )}
+                        >
+                          {/* Metric 1: Total Revenue */}
+                          <div id="seller-metric-revenue" className="flex flex-col justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                            <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider", currentTheme.muted)}>
+                              {language === 'ka' ? 'შემოსავალი' : 'Revenue'}
+                            </span>
+                            <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
+                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-white">
+                                {sellerSalesSummary.formattedRevenue}
+                              </span>
+                              {sellerSalesSummary.revenueBreakdown && (
+                                <span className={cn("text-[8px] font-mono", currentTheme.tagMuted)}>
+                                  ({sellerSalesSummary.revenueBreakdown})
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Metric 2: Completed Orders */}
+                          <div id="seller-metric-completed" className="flex flex-col justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                            <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider", currentTheme.muted)}>
+                              {language === 'ka' ? 'დასრულებული' : 'Completed'}
+                            </span>
+                            <div className="mt-1 flex items-baseline gap-1.5">
+                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-green-400">
+                                {sellerSalesSummary.completedOrders}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Metric 3: Total Orders */}
+                          <div id="seller-metric-total-orders" className="flex flex-col justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                            <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider", currentTheme.muted)}>
+                              {language === 'ka' ? 'სულ შეკვეთები' : 'Total Orders'}
+                            </span>
+                            <div className="mt-1 flex items-baseline gap-1.5">
+                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-white">
+                                {sellerSalesSummary.totalOrders}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Metric 4: Action Required */}
+                          <div id="seller-metric-action-required" className={cn(
+                            "flex flex-col justify-between p-3 rounded-xl border transition-colors",
+                            sellerSalesSummary.actionRequired > 0 
+                              ? "bg-amber-500/10 border-amber-500/30 text-amber-300" 
+                              : "bg-white/[0.03] border-white/5"
+                          )}>
+                            <div className="flex items-center justify-between gap-1">
+                              <span className={cn(
+                                "text-[9px] sm:text-[10px] font-black uppercase tracking-wider",
+                                sellerSalesSummary.actionRequired > 0 ? "text-amber-300" : currentTheme.muted
+                              )}>
+                                {language === 'ka' ? 'მოქმედებაა საჭირო' : 'Action Required'}
+                              </span>
+                              {sellerSalesSummary.actionRequired > 0 && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-baseline gap-1.5">
+                              <span className={cn(
+                                "text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight",
+                                sellerSalesSummary.actionRequired > 0 ? "text-amber-400 font-black" : "text-white"
+                              )}>
+                                {sellerSalesSummary.actionRequired}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Filter Tabs for Seller Incoming Orders */}
+                        <div className="w-full overflow-x-auto scrollbar-none no-scrollbar py-0.5">
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-max pb-1">
                           {/* Tab 1: All */}
                           <button
@@ -3658,7 +3805,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           </button>
                         </div>
                       </div>
-                    )}
+                    </>
+                  )}
                   </div>
                 )}
 
@@ -4623,4 +4771,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 </div>
   );
 });
+
+export default MarketHub;
 

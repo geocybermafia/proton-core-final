@@ -1,26 +1,29 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
 
 function lazyWithRetry<T extends React.ComponentType<any>>(
-  componentImport: () => Promise<{ default: T } | { [key: string]: any }>
+  componentImport: () => Promise<{ default: T } | { [key: string]: any }>,
+  retries = 3,
+  baseDelay = 800
 ): React.LazyExoticComponent<T> {
   return lazy(async () => {
-    const hasRetried = window.sessionStorage.getItem('chunk-retry-flag');
-    try {
-      const module = await componentImport();
-      window.sessionStorage.removeItem('chunk-retry-flag');
-      if (module && typeof module === 'object' && 'default' in module) {
-        return module as { default: T };
+    let lastError: any;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const module = await componentImport();
+        if (module && typeof module === 'object' && 'default' in module && module.default) {
+          return module as { default: T };
+        }
+        return { default: module } as { default: T };
+      } catch (error) {
+        lastError = error;
+        console.warn(`Dynamic module import attempt ${attempt + 1}/${retries + 1} failed, retrying...`, error);
+        if (attempt < retries) {
+          await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(1.5, attempt)));
+        }
       }
-      return { default: module } as { default: T };
-    } catch (error) {
-       console.error("Chunk load failed, retrying page reload...", error);
-       if (!hasRetried) {
-         window.sessionStorage.setItem('chunk-retry-flag', 'true');
-         window.location.reload();
-         return new Promise<never>(() => {});
-       }
-       throw error;
     }
+    console.error("Dynamic module load failed after retries:", lastError);
+    throw lastError;
   });
 }
 
@@ -52,10 +55,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })));
 const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
-const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView })));
+const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView || module.default })));
 const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })));
 const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })));
-const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub })));
+const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub || module.default })));
 const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
 import { HeaderQuickSearch } from './components/HeaderQuickSearch';
 import { FocusTimerWidget } from './components/FocusTimerWidget';
@@ -3924,6 +3927,7 @@ export default function App() {
   const handleModeChange = (newMode: 'business' | 'creative' | 'market', targetView?: View) => {
     const getViewPath = (v: View): string => {
       switch (v) {
+        case 'landing': return '/';
         case 'clips': return '/clips';
         case 'translator': return '/translator';
         case 'creative-studio': return '/creative-studio';
@@ -3982,6 +3986,7 @@ export default function App() {
 
   // Helper mapping pathnames to specific Views
   const getActiveViewFromPathname = React.useCallback((pathname: string): View => {
+    if (pathname === '/') return 'landing';
     if (pathname.startsWith('/clips')) return 'clips';
     if (pathname.startsWith('/reels')) return 'clips';
     if (pathname.startsWith('/creative-studio')) return 'creative-studio';
@@ -4010,6 +4015,7 @@ export default function App() {
   // Helper mapping view to router pathnames
   const getPathnameFromView = React.useCallback((view: View): string => {
     switch (view) {
+      case 'landing': return '/';
       case 'clips': return '/clips';
       case 'creative-studio': return '/creative-studio';
       case 'copywriting': return '/copywriting';
@@ -4348,6 +4354,29 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [showLogs, setShowLogs] = useState(false);
+
+  const [hasVisitedMarketHub, setHasVisitedMarketHub] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname;
+      return p === '/market-hub' || p.startsWith('/market') || p.startsWith('/commercial');
+    }
+    return false;
+  });
+  const [hasVisitedTranslator, setHasVisitedTranslator] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname.startsWith('/translator');
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (activeView === 'market-hub' || activeView === 'market' || activeView === 'commercial') {
+      setHasVisitedMarketHub(true);
+    }
+    if (activeView === 'translator') {
+      setHasVisitedTranslator(true);
+    }
+  }, [activeView]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -5364,6 +5393,22 @@ export default function App() {
     );
   }
 
+  if (activeView === 'landing') {
+    return (
+      <LandingPage
+        onGetStarted={() => {
+          navigate('/dashboard');
+        }}
+        onLogin={() => {
+          navigate('/dashboard');
+          setShowAuth(true);
+        }}
+        language={language}
+        onLanguageChange={setLanguage}
+      />
+    );
+  }
+
   return (
     <div className={cn(
       "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
@@ -5373,42 +5418,46 @@ export default function App() {
       <AutomationEngine workflows={workflows} />
 
       {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
-      <div 
-        className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
-      >
-        <Suspense fallback={
-          <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
-            <Loader2 className="animate-spin text-proton-accent" size={24} />
-            <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
-          </div>
-        }>
-          <MarketHub 
-            language={userProfile.language} 
-            t={t}
-            themeId={theme}
-            onBack={() => {
-              setUiMode('business');
-              setActiveView('dashboard');
-            }}
-          />
-        </Suspense>
-      </div>
+      {((activeView as string) === 'market-hub' || hasVisitedMarketHub) && (
+        <div 
+          className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
+        >
+          <Suspense fallback={
+            <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+              <Loader2 className="animate-spin text-proton-accent" size={24} />
+              <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
+            </div>
+          }>
+            <MarketHub 
+              language={userProfile.language} 
+              t={t}
+              themeId={theme}
+              onBack={() => {
+                setUiMode('business');
+                setActiveView('dashboard');
+              }}
+            />
+          </Suspense>
+        </div>
+      )}
 
-      <div 
-        style={{ contain: 'strict', transform: 'translateZ(0)', willChange: 'transform' }}
-        className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}
-      >
-        <Suspense fallback={
-          <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
-            <Loader2 className="animate-spin text-proton-accent" size={24} />
-            <span className="uppercase tracking-widest">Loading Live Translator...</span>
-          </div>
-        }>
-          <TranslatorView onBack={() => {
-            handleViewChange('creative-studio');
-          }} />
-        </Suspense>
-      </div>
+      {((activeView as string) === 'translator' || hasVisitedTranslator) && (
+        <div 
+          style={{ contain: 'strict', transform: 'translateZ(0)', willChange: 'transform' }}
+          className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}
+        >
+          <Suspense fallback={
+            <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+              <Loader2 className="animate-spin text-proton-accent" size={24} />
+              <span className="uppercase tracking-widest">Loading Live Translator...</span>
+            </div>
+          }>
+            <TranslatorView onBack={() => {
+              handleViewChange('creative-studio');
+            }} />
+          </Suspense>
+        </div>
+      )}
             <AnimatePresence>
               {isTransitioning && (
                 <FlashOverlay mode={uiMode === 'market' ? 'business' : uiMode} />
