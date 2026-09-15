@@ -166,6 +166,7 @@ export interface TrackingInfo {
 }
 
 export type SellerOrderFilter = 'all' | 'action-required' | 'processing' | 'shipped' | 'completed';
+export type BuyerOrderFilter = 'all' | 'action-required' | 'processing' | 'shipped' | 'completed' | 'cancelled';
 
 export interface Order {
   id: string;

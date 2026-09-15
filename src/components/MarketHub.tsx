@@ -92,18 +92,21 @@ import {
   isProjectListing,
   isPhysicalOrder,
   isServiceOrder,
-  isSellerActionRequired
+  isSellerActionRequired,
+  canCancelOrder
 } from './market-hub/MarketConstants';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
 import { CartDrawer } from './market-hub/CartDrawer';
 import { CheckoutModal } from './market-hub/CheckoutModal';
+import { CancelOrderModal } from './market-hub/CancelOrderModal';
 import { MarketChatDrawer } from './market-hub/MarketChatDrawer';
 import { VendorReviewsModal } from './market-hub/VendorReviewsModal';
 import { CreateListingWizard } from './market-hub/CreateListingWizard';
 import { MarketFilterPanel, MobileFilterBottomSheet } from './market-hub/MarketFilters';
 import { ListingTypeTabs, MarketPulseMetrics } from './market-hub/MarketPulseMetrics';
 import { MarketListingCard } from './market-hub/MarketListingCard';
+import { BuyerOrders } from './market-hub/BuyerOrders';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
@@ -311,6 +314,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   });
   const [shipmentTrackingInput, setShipmentTrackingInput] = useState<{ orderId: string; carrier: string; trackingNumber: string } | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
 
   useEffect(() => {
@@ -2040,6 +2045,81 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     }
   };
 
+  const executeOrderCancellation = async (order: Order) => {
+    if (!user) {
+      showToast(language === 'ka' ? "ავტორიზაცია აუცილებელია." : "Authentication is required.", 'warning');
+      return;
+    }
+
+    setIsCancellingOrder(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const orderRef = doc(db, 'orders', order.id);
+        const orderSnap = await transaction.get(orderRef);
+        if (!orderSnap.exists()) {
+          throw new Error(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.");
+        }
+
+        const freshOrder = orderSnap.data();
+        const currentStatus = freshOrder.status;
+
+        // Authorization validation: only buyer or seller of the order can cancel
+        const isSeller = freshOrder.sellerId === user.uid;
+        const isBuyer = freshOrder.buyerId === user.uid;
+        if (!isBuyer && !isSeller) {
+          throw new Error(language === 'ka' ? "არაავტორიზებული ოპერაცია." : "Unauthorized to cancel this order.");
+        }
+
+        // Integrity check: buyer and seller cannot be the same user
+        if (freshOrder.buyerId === freshOrder.sellerId) {
+          throw new Error("Self-purchase integrity error: buyer and seller cannot be identical.");
+        }
+
+        // Terminal & progress checks
+        if (currentStatus === 'cancelled') {
+          throw new Error(language === 'ka' ? "შეკვეთა უკვე გაუქმებულია." : "This order has already been cancelled.");
+        }
+        if (currentStatus === 'completed') {
+          throw new Error(language === 'ka' ? "დასრულებული შეკვეთის გაუქმება შეუძლებელია." : "Completed orders cannot be cancelled.");
+        }
+        if (currentStatus === 'shipped') {
+          throw new Error(language === 'ka' ? "გაგზავნილი შეკვეთის გაუქმება შეუძლებელია." : "Shipped orders cannot be cancelled.");
+        }
+        if (currentStatus === 'processing') {
+          throw new Error(language === 'ka' ? "დამუშავების პროცესში მყოფი შეკვეთის გაუქმება შეუძლებელია." : "Orders currently being processed cannot be cancelled.");
+        }
+        if (currentStatus === 'in_progress') {
+          throw new Error(language === 'ka' ? "მიმდინარე სამუშაოს შეკვეთის გაუქმება შეუძლებელია." : "Orders with work in progress cannot be cancelled.");
+        }
+
+        // Only 'pending' (physical) or 'booked' (service/project) orders can be cancelled
+        if (currentStatus !== 'pending' && currentStatus !== 'booked') {
+          throw new Error(
+            language === 'ka'
+              ? `შეკვეთის გაუქმება შეუძლებელია ამჟამინდელი სტატუსით (${currentStatus}).`
+              : `Order cannot be cancelled in status: ${currentStatus}.`
+          );
+        }
+
+        // Atomically update only the status to 'cancelled'
+        transaction.update(orderRef, {
+          status: 'cancelled'
+        });
+      });
+
+      showToast(
+        language === 'ka' ? "შეკვეთა წარმატებით გაუქმდა!" : "Order cancelled successfully!",
+        'success'
+      );
+      setOrderToCancel(null);
+    } catch (error: any) {
+      console.error("Order cancellation transaction error:", error);
+      showToast(error.message || (language === 'ka' ? "შეკვეთის გაუქმება ვერ მოხერხდა." : "Failed to cancel order."), 'error');
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  };
+
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string, tracking?: TrackingInfo) => {
     try {
       if (!user) {
@@ -2051,6 +2131,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       if (!targetOrder) {
         showToast(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.", 'error');
         return;
+      }
+
+      // Delegate cancellation to atomic transactional method
+      if (newStatus === 'cancelled') {
+        return await executeOrderCancellation(targetOrder);
       }
 
       const isPhysical = targetOrder.orderType === 'product' && Boolean(targetOrder.shippingDetails);
@@ -2072,14 +2157,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               : "Only the buyer can confirm order receipt.", 'warning');
             return;
           }
-        } else if (newStatus === 'cancelled') {
-          if (!isBuyer && !isSeller) {
-            showToast(language === 'ka' ? "არაავტორიზებული ოპერაცია." : "Unauthorized operation.", 'warning');
-            return;
-          }
         }
       } else {
-        if (!isSeller && newStatus !== 'cancelled') {
+        if (!isSeller) {
           showToast(language === 'ka' 
             ? "მხოლოდ გამყიდველს/შემსრულებელს შეუძლია შეკვეთის სტატუსის შეცვლა." 
             : "Only the seller or service provider is authorized to update order status.", 'warning');
@@ -3811,15 +3891,26 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 )}
 
                 {activeBottomTab !== 'messages' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
-                    <AnimatePresence mode="popLayout">
-                    {viewMode === 'my-listings' && (profileSubMode === 'buying' || activeSellingTab === 'incoming-orders') ? (
-                      (profileSubMode === 'buying' ? buyerOrders : filteredSellerOrders).length > 0 ? (
-                        (profileSubMode === 'buying' ? buyerOrders : filteredSellerOrders).map((order, idx) => {
-                      const isExpanded = expandedOrderId === order.id;
-                      const isService = order.orderType === 'service';
-                      const isPhysical = order.orderType === 'product' && Boolean(order.shippingDetails);
-                      const isSeller = profileSubMode === 'selling';
+                  viewMode === 'my-listings' && profileSubMode === 'buying' ? (
+                    <BuyerOrders
+                      buyerOrders={buyerOrders}
+                      listings={listings}
+                      language={language}
+                      currentTheme={currentTheme}
+                      onUpdateOrderStatus={handleUpdateOrderStatus}
+                      onCancelOrder={(order) => setOrderToCancel(order)}
+                      onExploreMarket={() => setViewMode('browse')}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+                      <AnimatePresence mode="popLayout">
+                      {viewMode === 'my-listings' && activeSellingTab === 'incoming-orders' ? (
+                        filteredSellerOrders.length > 0 ? (
+                          filteredSellerOrders.map((order, idx) => {
+                        const isExpanded = expandedOrderId === order.id;
+                        const isService = order.orderType === 'service';
+                        const isPhysical = order.orderType === 'product' && Boolean(order.shippingDetails);
+                        const isSeller = true;
 
                       return (
                         <motion.div 
@@ -3979,16 +4070,25 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                   <p>Role: {isSeller ? (isService ? 'Service Provider' : 'Merchant / Seller') : 'Customer'}</p>
                                 </div>
 
-                                {isService && isSeller && order.status !== 'completed' && (
+                                {isService && isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
                                   <div className="pt-2 flex flex-wrap gap-2">
                                     {order.status === 'booked' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
-                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95")}
-                                      >
-                                        🛠️ {language === 'ka' ? 'მუშაობის დაწყება' : 'Begin Work'}
-                                      </button>
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95")}
+                                        >
+                                          🛠️ {language === 'ka' ? 'მუშაობის დაწყება' : 'Begin Work'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setOrderToCancel(order)}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
+                                        >
+                                          ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
+                                        </button>
+                                      </>
                                     )}
                                     {order.status === 'in_progress' && (
                                       <button
@@ -4005,13 +4105,22 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                 {isPhysical && isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
                                   <div className="pt-2 flex flex-col gap-2">
                                     {order.status === 'pending' && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
-                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95 text-left")}
-                                      >
-                                        📦 {language === 'ka' ? 'შეკვეთის დამუშავების დაწყება' : 'Start Processing Order'}
-                                      </button>
+                                      <div className="flex flex-wrap gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95 text-left")}
+                                        >
+                                          📦 {language === 'ka' ? 'შეკვეთის დამუშავების დაწყება' : 'Start Processing Order'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setOrderToCancel(order)}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
+                                        >
+                                          ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
+                                        </button>
+                                      </div>
                                     )}
 
                                     {order.status === 'processing' && (
@@ -4069,9 +4178,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                   </div>
                                 )}
 
-                                {isPhysical && !isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
+                                {!isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
                                   <div className="pt-2 flex flex-wrap gap-2">
-                                    {order.status === 'shipped' && (
+                                    {isPhysical && order.status === 'shipped' && (
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
@@ -4080,10 +4189,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                         🎯 {language === 'ka' ? 'ჩაბარების დადასტურება' : 'Confirm Delivery Received'}
                                       </button>
                                     )}
-                                    {order.status === 'pending' && (
+                                    {canCancelOrder(order) && (
                                       <button
                                         type="button"
-                                        onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}
+                                        onClick={() => setOrderToCancel(order)}
                                         className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-white bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
                                       >
                                         ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
@@ -4114,9 +4223,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   ) : (
                     <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-zinc-950/40 border border-zinc-900/80 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
                       <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10 text-white">
-                        {profileSubMode === 'buying' ? (
-                          <ShoppingBag size={24} className="text-zinc-500" />
-                        ) : sellerOrderFilter === 'action-required' ? (
+                        {sellerOrderFilter === 'action-required' ? (
                           <CheckCircle2 size={24} className="text-emerald-400" />
                         ) : sellerOrderFilter === 'processing' ? (
                           <Package size={24} className="text-indigo-400" />
@@ -4130,9 +4237,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       </div>
                       <div className="space-y-1.5">
                         <h3 className="text-xs font-black uppercase tracking-widest text-white">
-                          {profileSubMode === 'buying'
-                            ? (language === 'ka' ? 'შეკვეთები არ გაქვთ' : 'No purchases yet')
-                            : sellerOrderFilter === 'action-required'
+                          {sellerOrderFilter === 'action-required'
                             ? (language === 'ka' ? 'მოქმედება არცერთ შეკვეთაზე არ არის საჭირო' : 'No orders need your attention right now')
                             : sellerOrderFilter === 'processing'
                             ? (language === 'ka' ? 'დამუშავებაში შეკვეთები არ არის' : 'No orders in processing')
@@ -4143,9 +4248,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                             : (language === 'ka' ? 'შემოსული შეკვეთები არ არის' : 'No incoming orders yet')}
                         </h3>
                         <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
-                          {profileSubMode === 'buying'
-                            ? (language === 'ka' ? 'თქვენს მიერ შეძენილი პროდუქტები და სერვისები გამოჩნდება აქ.' : 'Items you purchase or services you book will appear here.')
-                            : sellerOrderFilter === 'action-required'
+                          {sellerOrderFilter === 'action-required'
                             ? (language === 'ka' ? 'ყველა შემოსული შეკვეთა დამუშავებულია ან გაგზავნილია.' : 'All incoming orders have been handled or are already in transit.')
                             : sellerOrderFilter === 'processing'
                             ? (language === 'ka' ? 'ამჟამად არცერთი ფიზიკური შეკვეთა არ იმყოფება დამუშავების ეტაპზე.' : 'There are no physical orders currently being processed.')
@@ -4164,16 +4267,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           className="mt-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase tracking-wider text-white/80 hover:text-white transition-all active:scale-95 cursor-pointer"
                         >
                           {language === 'ka' ? 'ყველა შეკვეთის ნახვა' : 'View All Orders'} ({sellerOrders.length})
-                        </button>
-                      )}
-                      {profileSubMode === 'buying' && (
-                        <button
-                          type="button"
-                          id="buyer-order-explore-market-btn"
-                          onClick={() => setViewMode('browse')}
-                          className="mt-2 px-5 py-2.5 rounded-xl bg-[#dfb257] hover:brightness-110 text-zinc-950 text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-[#dfb257]/10 cursor-pointer"
-                        >
-                          {language === 'ka' ? 'მარკეტის დათვალიერება' : 'Browse Marketplace'}
                         </button>
                       )}
                     </div>
@@ -4206,7 +4299,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   )}
             </AnimatePresence>
           </div>
-        )}
+        )
+      )}
 
         {/* Catalog Pagination Load More & Discovery Status */}
         {!loading && !isSearchingBackend && viewMode === 'browse' && displayedListings.length > 0 && (
@@ -4490,6 +4584,22 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         onChangeReviewText={setReviewText}
         onSubmitReview={handleSubmitReview}
         isSubmittingReview={isSubmittingReview}
+      />
+
+      {/* Safe Order Cancellation Confirmation Modal */}
+      <CancelOrderModal
+        order={orderToCancel}
+        isOpen={Boolean(orderToCancel)}
+        isCancelling={isCancellingOrder}
+        onClose={() => !isCancellingOrder && setOrderToCancel(null)}
+        onConfirmCancel={() => {
+          if (orderToCancel) {
+            executeOrderCancellation(orderToCancel);
+          }
+        }}
+        isSeller={profileSubMode === 'selling'}
+        language={language}
+        currentTheme={currentTheme}
       />
     </motion.div>
   </div>

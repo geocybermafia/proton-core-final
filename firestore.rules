@@ -262,7 +262,7 @@ service cloud.firestore {
               ||
               (existing().status == 'in_progress' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
               ||
-              (incoming().status in ['cancelled', 'refunded'] && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              (existing().status in ['pending', 'booked'] && incoming().status in ['cancelled', 'refunded'] && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
             )
           )
           ||
@@ -271,7 +271,7 @@ service cloud.firestore {
             && (
               (existing().status == 'shipped' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
               ||
-              (existing().status == 'pending' && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              (existing().status in ['pending', 'booked'] && incoming().status == 'cancelled' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
             )
           )
         );

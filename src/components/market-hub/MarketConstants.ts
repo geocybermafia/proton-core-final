@@ -338,3 +338,13 @@ export const isSellerActionRequired = (order: any): boolean => {
   return order.status === 'pending' || order.status === 'processing' || order.status === 'booked' || order.status === 'in_progress';
 };
 
+export const canCancelOrder = (order: any): boolean => {
+  if (!order || !order.status) return false;
+  // Non-cancellable once progressed or in terminal states
+  if (['cancelled', 'completed', 'shipped', 'processing', 'in_progress', 'refunded'].includes(order.status)) {
+    return false;
+  }
+  // Only physical/product orders in 'pending' or service/project orders in 'booked' (before work begins)
+  return order.status === 'pending' || order.status === 'booked';
+};
+
