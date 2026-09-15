@@ -32,7 +32,8 @@ import {
   Truck,
   CheckCircle2,
   Package,
-  Inbox
+  Inbox,
+  Clock
 } from 'lucide-react';
 import { 
   collection, 
@@ -107,6 +108,7 @@ import { MarketFilterPanel, MobileFilterBottomSheet } from './market-hub/MarketF
 import { ListingTypeTabs, MarketPulseMetrics } from './market-hub/MarketPulseMetrics';
 import { MarketListingCard } from './market-hub/MarketListingCard';
 import { BuyerOrders } from './market-hub/BuyerOrders';
+import { OrderDetailsModal } from './market-hub/OrderDetailsModal';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
@@ -316,6 +318,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+  const [sellerSelectedOrder, setSellerSelectedOrder] = useState<Order | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
 
   useEffect(() => {
@@ -641,6 +644,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
   const [sellerOrders, setSellerOrders] = useState<any[]>([]);
   const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>('all');
+
+  // Keep sellerSelectedOrder synced with real-time updates in sellerOrders
+  const activeSellerSelectedOrder = useMemo(() => {
+    if (!sellerSelectedOrder) return null;
+    return sellerOrders.find(o => o.id === sellerSelectedOrder.id) || sellerSelectedOrder;
+  }, [sellerSelectedOrder, sellerOrders]);
 
   const sellerOrderCounts = useMemo(() => {
     let actionRequired = 0;
@@ -3975,7 +3984,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                               </div>
                             </div>
                             
-                            <h4 className="text-lg font-black text-white mb-2 uppercase tracking-tight leading-tight">{order.itemTitle}</h4>
+                            <h4 
+                              onClick={() => setSellerSelectedOrder(order)}
+                              className="text-lg font-black text-white mb-2 uppercase tracking-tight leading-tight hover:text-[#dfb257] cursor-pointer transition-colors"
+                              title={language === 'ka' ? 'დეტალებისა და თაიმლაინის ნახვა' : 'Click to view details & timeline'}
+                            >
+                              {order.itemTitle}
+                            </h4>
                             <p className={cn("text-xs font-bold font-mono mb-4", currentTheme.muted)}>
                               {order.amount} {order.currency}
                             </p>
@@ -4204,12 +4219,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                             )}
                           </div>
 
-                          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between relative">
-                             <span className={cn("text-[9px] font-bold opacity-30 font-mono", currentTheme.muted)}>#{order.id.substring(0, 12).toUpperCase()}</span>
+                          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between relative flex-wrap gap-2">
+                             <div className="flex items-center gap-2">
+                               <span className={cn("text-[9px] font-bold opacity-30 font-mono", currentTheme.muted)}>#{order.id.substring(0, 8).toUpperCase()}</span>
+                               <button
+                                 type="button"
+                                 id={`seller-view-timeline-btn-${order.id}`}
+                                 onClick={() => setSellerSelectedOrder(order)}
+                                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                               >
+                                 <Clock size={11} className="text-[#dfb257]" />
+                                 <span>{language === 'ka' ? 'თაიმლაინი' : 'Timeline'}</span>
+                               </button>
+                             </div>
                              <button 
                                type="button"
                                onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                               className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:opacity-80 transition-opacity"
+                               className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:opacity-80 transition-opacity cursor-pointer"
                              >
                                {isExpanded 
                                  ? (language === 'ka' ? 'დახურვა' : 'Close Details') 
@@ -4600,6 +4626,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         isSeller={profileSubMode === 'selling'}
         language={language}
         currentTheme={currentTheme}
+      />
+
+      {/* Seller Order Details & Fulfillment Timeline Modal */}
+      <OrderDetailsModal
+        order={activeSellerSelectedOrder}
+        isOpen={Boolean(activeSellerSelectedOrder)}
+        onClose={() => setSellerSelectedOrder(null)}
+        listings={listings}
+        language={language}
+        currentTheme={currentTheme}
+        isSeller={true}
+        onCancelOrder={(order) => setOrderToCancel(order)}
+        onUpdateOrderStatus={handleUpdateOrderStatus}
+        onOpenShipmentModal={(order) => setShipmentTrackingInput({ orderId: order.id, carrier: '', trackingNumber: '' })}
       />
     </motion.div>
   </div>

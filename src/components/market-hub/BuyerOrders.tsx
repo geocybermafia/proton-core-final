@@ -32,6 +32,7 @@ import {
   isServiceOrder, 
   canCancelOrder 
 } from './MarketConstants';
+import { OrderDetailsModal } from './OrderDetailsModal';
 
 export interface BuyerOrdersProps {
   buyerOrders: Order[];
@@ -56,6 +57,13 @@ export const BuyerOrders = React.memo(function BuyerOrders({
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // Keep selected order synced with real-time updates in buyerOrders
+  const activeSelectedOrder = useMemo(() => {
+    if (!selectedOrder) return null;
+    return buyerOrders.find(o => o.id === selectedOrder.id) || selectedOrder;
+  }, [selectedOrder, buyerOrders]);
 
   // Toggle card expanded state
   const toggleExpand = (orderId: string) => {
@@ -501,7 +509,11 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                   {/* Title & Price & Quantity */}
                   <div className="py-3.5 space-y-2">
-                    <h3 className="text-sm sm:text-base font-black text-white leading-snug tracking-tight">
+                    <h3 
+                      onClick={() => setSelectedOrder(order)}
+                      className="text-sm sm:text-base font-black text-white leading-snug tracking-tight hover:text-[#dfb257] cursor-pointer transition-colors"
+                      title={language === 'ka' ? 'დეტალებისა და თაიმლაინის ნახვა' : 'Click to view details & timeline'}
+                    >
                       {order.itemTitle}
                     </h3>
 
@@ -688,14 +700,26 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                 {/* Card Footer: Toggle Details Button & Action Handlers */}
                 <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(order.id)}
-                    className="text-[10px] font-bold text-white/60 hover:text-white flex items-center gap-1 transition-colors py-1 cursor-pointer"
-                  >
-                    <span>{isExpanded ? (language === 'ka' ? 'დახურვა' : 'Hide Details') : (language === 'ka' ? 'დეტალები' : 'View Details')}</span>
-                    {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id={`view-timeline-btn-${order.id}`}
+                      onClick={() => setSelectedOrder(order)}
+                      className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                    >
+                      <Clock size={12} className="text-[#dfb257]" />
+                      <span>{language === 'ka' ? 'თაიმლაინი & დეტალები' : 'Timeline & Details'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(order.id)}
+                      className="text-[10px] font-bold text-white/60 hover:text-white flex items-center gap-1 transition-colors py-1 cursor-pointer"
+                    >
+                      <span>{isExpanded ? (language === 'ka' ? 'დახურვა' : 'Hide Details') : (language === 'ka' ? 'სწრაფი ხედი' : 'Quick Details')}</span>
+                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  </div>
 
                   <div className="flex items-center gap-2">
                     {/* Delivery Confirmation Button (Physical orders in 'shipped' status) */}
@@ -740,6 +764,19 @@ export const BuyerOrders = React.memo(function BuyerOrders({
           })}
         </div>
       )}
+
+      {/* Order Details & Fulfillment Timeline Modal */}
+      <OrderDetailsModal
+        order={activeSelectedOrder}
+        isOpen={Boolean(activeSelectedOrder)}
+        onClose={() => setSelectedOrder(null)}
+        listings={listings}
+        language={language}
+        currentTheme={currentTheme}
+        isSeller={false}
+        onConfirmDelivery={handleConfirmDelivery}
+        onCancelOrder={onCancelOrder}
+      />
     </div>
   );
 });
