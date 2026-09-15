@@ -21,7 +21,8 @@ import {
   Wrench,
   Zap,
   Loader2,
-  Store
+  Store,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Order, Listing, BuyerOrderFilter } from '../../types';
@@ -42,6 +43,9 @@ export interface BuyerOrdersProps {
   onUpdateOrderStatus: (orderId: string, newStatus: string, tracking?: any) => Promise<void>;
   onCancelOrder: (order: Order) => void;
   onExploreMarket: () => void;
+  onMessageSeller?: (order: Order) => void;
+  selectedOrder?: Order | null;
+  onSelectOrder?: (order: Order | null) => void;
 }
 
 export const BuyerOrders = React.memo(function BuyerOrders({
@@ -51,13 +55,19 @@ export const BuyerOrders = React.memo(function BuyerOrders({
   currentTheme,
   onUpdateOrderStatus,
   onCancelOrder,
-  onExploreMarket
+  onExploreMarket,
+  onMessageSeller,
+  selectedOrder: controlledSelectedOrder,
+  onSelectOrder: setControlledSelectedOrder
 }: BuyerOrdersProps) {
   const [activeFilter, setActiveFilter] = useState<BuyerOrderFilter>('all');
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [internalSelectedOrder, setInternalSelectedOrder] = useState<Order | null>(null);
+
+  const selectedOrder = controlledSelectedOrder !== undefined ? controlledSelectedOrder : internalSelectedOrder;
+  const setSelectedOrder = setControlledSelectedOrder || setInternalSelectedOrder;
 
   // Keep selected order synced with real-time updates in buyerOrders
   const activeSelectedOrder = useMemo(() => {
@@ -700,7 +710,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                 {/* Card Footer: Toggle Details Button & Action Handlers */}
                 <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <button
                       type="button"
                       id={`view-timeline-btn-${order.id}`}
@@ -710,6 +720,19 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                       <Clock size={12} className="text-[#dfb257]" />
                       <span>{language === 'ka' ? 'თაიმლაინი & დეტალები' : 'Timeline & Details'}</span>
                     </button>
+
+                    {onMessageSeller && (
+                      <button
+                        type="button"
+                        id={`card-message-seller-btn-${order.id}`}
+                        onClick={() => onMessageSeller(order)}
+                        className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                        title={language === 'ka' ? 'მიწერეთ გამყიდველს' : 'Message Seller'}
+                      >
+                        <MessageSquare size={12} className="text-[#dfb257]" />
+                        <span>{language === 'ka' ? 'მიწერეთ' : 'Message Seller'}</span>
+                      </button>
+                    )}
 
                     <button
                       type="button"
@@ -776,6 +799,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         isSeller={false}
         onConfirmDelivery={handleConfirmDelivery}
         onCancelOrder={onCancelOrder}
+        onMessageSeller={onMessageSeller}
       />
     </div>
   );

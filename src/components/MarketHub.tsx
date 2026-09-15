@@ -33,7 +33,9 @@ import {
   CheckCircle2,
   Package,
   Inbox,
-  Clock
+  Clock,
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
 import { 
   collection, 
@@ -263,7 +265,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const groupedChats = useMemo(() => {
     if (!user) return [];
     const uid = user.uid;
-    const groups: Record<string, { listingId: string; listingTitle: string; lastMessage: string; lastTime: any; lastTimeMillis: number; messages: any[] }> = {};
+    const groups: Record<string, { listingId: string; listingTitle: string; orderId?: string | null; lastMessage: string; lastTime: any; lastTimeMillis: number; messages: any[] }> = {};
 
     for (let i = 0; i < allUserMessages.length; i++) {
       const msg = allUserMessages[i];
@@ -274,11 +276,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         groups[lid] = {
           listingId: lid,
           listingTitle: msg.listingTitle || 'Unknown Listing',
+          orderId: msg.orderId || null,
           lastMessage: '',
           lastTime: null,
           lastTimeMillis: 0,
           messages: []
         };
+      }
+      if (msg.orderId && !groups[lid].orderId) {
+        groups[lid].orderId = msg.orderId;
       }
       const msgTime = safeParseDate(msg.createdAt);
       groups[lid].messages.push({ ...msg, _time: msgTime });
@@ -290,6 +296,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       g.lastMessage = last ? last.text : '';
       g.lastTime = last ? last.createdAt : null;
       g.lastTimeMillis = last ? last._time : 0;
+      const latestOrderMsg = g.messages.slice().reverse().find(m => m.orderId);
+      if (latestOrderMsg?.orderId) {
+        g.orderId = latestOrderMsg.orderId;
+      }
       return g;
     }).sort((a, b) => b.lastTimeMillis - a.lastTimeMillis);
   }, [allUserMessages, user?.uid]);
@@ -319,6 +329,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
   const [sellerSelectedOrder, setSellerSelectedOrder] = useState<Order | null>(null);
+  const [buyerSelectedOrder, setBuyerSelectedOrder] = useState<Order | null>(null);
+  const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
 
   useEffect(() => {
@@ -650,6 +662,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     if (!sellerSelectedOrder) return null;
     return sellerOrders.find(o => o.id === sellerSelectedOrder.id) || sellerSelectedOrder;
   }, [sellerSelectedOrder, sellerOrders]);
+
+  // Keep buyerSelectedOrder synced with real-time updates in buyerOrders
+  const activeBuyerSelectedOrder = useMemo(() => {
+    if (!buyerSelectedOrder) return null;
+    return buyerOrders.find(o => o.id === buyerSelectedOrder.id) || buyerSelectedOrder;
+  }, [buyerSelectedOrder, buyerOrders]);
 
   const sellerOrderCounts = useMemo(() => {
     let actionRequired = 0;
@@ -1141,11 +1159,22 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         return timeA - timeB;
       });
       setMessagesList(msgs);
+
+      // If activeChatOrder is not yet set, check if messages reference an orderId
+      if (!activeChatOrder) {
+        const orderMsg = msgs.slice().reverse().find(m => m.orderId);
+        if (orderMsg?.orderId) {
+          const matched = sellerOrders.find(o => o.id === orderMsg.orderId) || buyerOrders.find(o => o.id === orderMsg.orderId);
+          if (matched) {
+            setActiveChatOrder(matched);
+          }
+        }
+      }
     }, (err) => {
       console.error("Error loading messages: ", err);
     });
     return () => unsubscribe();
-  }, [activeChatListing, user]);
+  }, [activeChatListing, user, activeChatOrder, sellerOrders, buyerOrders]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1159,6 +1188,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         const buyerMsg = messagesList.find(m => m.senderId !== user.uid);
         if (buyerMsg) {
           buyerId = buyerMsg.senderId;
+        } else if (activeChatOrder?.buyerId) {
+          buyerId = activeChatOrder.buyerId;
         }
       } else {
         buyerId = user.uid;
@@ -1172,7 +1203,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         participants.push(buyerId);
       }
 
-      await addDoc(collection(db, 'market_messages'), {
+      const messageDoc: any = {
         listingId: activeChatListing.id,
         listingTitle: activeChatListing.title,
         senderId: user.uid,
@@ -1184,12 +1215,74 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         buyerId: buyerId || '',
         receiverId: isSeller ? (buyerId || '') : (sellerId || ''),
         participants
-      });
+      };
+
+      if (activeChatOrder?.id) {
+        messageDoc.orderId = activeChatOrder.id;
+      }
+
+      await addDoc(collection(db, 'market_messages'), messageDoc);
       setChatMessageText('');
     } catch (err) {
       console.error("Error sending message:", err);
     }
   };
+
+  // Order-Linked Marketplace Chat Handlers
+  const handleStartOrderChat = useCallback((order: Order) => {
+    if (!user) {
+      showToast(language === 'ka' ? 'გთხოვთ გაიაროთ ავტორიზაცია' : 'Please sign in to chat', 'error');
+      return;
+    }
+
+    // Security check: Only the buyer or seller of the order can initiate or participate in order chat
+    const isBuyer = user.uid === order.buyerId;
+    const isSeller = user.uid === order.sellerId;
+    if (!isBuyer && !isSeller) {
+      showToast(language === 'ka' ? 'წვდომა შეზღუდულია' : 'Unauthorized access to order chat', 'error');
+      return;
+    }
+
+    // Resolve or create safe minimal listing metadata
+    const matchedListing = listings.find(l => l.id === order.listingId);
+    const resolvedListing: Listing = matchedListing || {
+      id: order.listingId,
+      title: order.itemTitle || 'Marketplace Item',
+      description: '',
+      price: order.amount || 0,
+      currency: order.currency || 'USD',
+      sellerId: order.sellerId,
+      sellerName: (order as any).sellerName || (isBuyer ? 'Seller' : 'Buyer'),
+      category: 'General',
+      country: '',
+      city: '',
+      location: '',
+      createdAt: Date.now(),
+      status: 'active'
+    };
+
+    // Close order details modal if open, to avoid overlay stacking traps
+    setSellerSelectedOrder(null);
+    setBuyerSelectedOrder(null);
+
+    // Set order context and open existing chat drawer
+    setActiveChatOrder(order);
+    setActiveChatListing(resolvedListing);
+  }, [user, listings, language, showToast]);
+
+  const handleViewOrderFromChat = useCallback((orderId: string) => {
+    const foundOrder = sellerOrders.find(o => o.id === orderId) || buyerOrders.find(o => o.id === orderId) || activeChatOrder;
+    if (!foundOrder) return;
+
+    // Close chat drawer to return cleanly to Order Details without overlay trap
+    setActiveChatListing(null);
+
+    if (foundOrder.sellerId === user?.uid) {
+      setSellerSelectedOrder(foundOrder);
+    } else {
+      setBuyerSelectedOrder(foundOrder);
+    }
+  }, [sellerOrders, buyerOrders, activeChatOrder, user?.uid]);
 
   // Dynamically resolve theme from design system.
   // Strips hardcoded hex values to support full color-variable harmony of Light, Forest, Titanium, Rose, Sunset, etc.
@@ -3526,6 +3619,24 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                               <button
                                 key={chat.listingId}
                                 onClick={() => {
+                                  const orderId = chat.orderId || chat.messages.find((m: any) => m.orderId)?.orderId;
+                                  if (orderId) {
+                                    const matched = sellerOrders.find(o => o.id === orderId) || buyerOrders.find(o => o.id === orderId);
+                                    setActiveChatOrder(matched || {
+                                      id: orderId,
+                                      listingId: chat.listingId,
+                                      itemTitle: chat.listingTitle,
+                                      buyerId: '',
+                                      sellerId: '',
+                                      amount: 0,
+                                      currency: 'USD',
+                                      status: 'pending',
+                                      createdAt: Date.now()
+                                    } as any);
+                                  } else {
+                                    setActiveChatOrder(null);
+                                  }
+
                                   if (relatedListing) {
                                     setActiveChatListing(relatedListing);
                                   } else {
@@ -3553,9 +3664,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                 )}
                               >
                                 <div className="truncate flex-1 pr-3">
-                                  <span className={cn("text-[10px] font-black block truncate mb-1", isActive ? "text-[#dfb257]" : "text-zinc-300")}>
-                                    {chat.listingTitle}
-                                  </span>
+                                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                    <span className={cn("text-[10px] font-black truncate", isActive ? "text-[#dfb257]" : "text-zinc-300")}>
+                                      {chat.listingTitle}
+                                    </span>
+                                    {chat.orderId && (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#dfb257]/15 text-[#dfb257] border border-[#dfb257]/30 text-[8px] font-mono font-bold shrink-0">
+                                        <Package size={9} />
+                                        <span>#{chat.orderId.slice(-6).toUpperCase()}</span>
+                                      </span>
+                                    )}
+                                  </div>
                                   <p className="text-[11px] text-zinc-500 truncate font-medium">
                                     {chat.lastMessage}
                                   </p>
@@ -3575,7 +3694,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       {activeChatListing ? (
                         <div className="flex flex-col h-full justify-between">
                           {/* Chat header */}
-                          <div className="pb-4 border-b border-zinc-900/60 flex items-center justify-between">
+                          <div className="pb-4 border-b border-zinc-900/60 flex items-center justify-between gap-3 flex-wrap">
                             <div>
                               <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block font-mono">
                                 {language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Inquiry thread:'}
@@ -3587,8 +3706,29 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                 {language === 'ka' ? 'გამყიდველი:' : 'Vendor:'} {activeChatListing.sellerName || 'Seller'}
                               </p>
                             </div>
-                            <div className="px-3 py-1 bg-[#dfb257]/10 border border-[#dfb257]/20 rounded-xl text-[9px] font-bold text-[#dfb257] uppercase tracking-wider">
-                              {activeChatListing.condition === 'new' ? (language === 'ka' ? 'ახალი' : 'New') : (language === 'ka' ? 'მეორადი' : 'Used')}
+                            <div className="flex items-center gap-2">
+                              {activeChatOrder && (
+                                <div className="flex items-center gap-2">
+                                  <div className="px-2.5 py-1 bg-[#dfb257]/15 border border-[#dfb257]/30 rounded-xl flex items-center gap-1.5">
+                                    <Package size={11} className="text-[#dfb257]" />
+                                    <span className="text-[9px] font-black text-[#dfb257] uppercase font-mono">
+                                      #{activeChatOrder.id.slice(-6).toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleViewOrderFromChat(activeChatOrder.id)}
+                                    className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold uppercase tracking-wider transition-all border border-white/15 flex items-center gap-1 cursor-pointer active:scale-95"
+                                    title={language === 'ka' ? 'შეკვეთის დეტალები' : 'View Order Details'}
+                                  >
+                                    <ExternalLink size={10} className="text-[#dfb257]" />
+                                    <span>{language === 'ka' ? 'შეკვეთა' : 'View Order'}</span>
+                                  </button>
+                                </div>
+                              )}
+                              <div className="px-3 py-1 bg-[#dfb257]/10 border border-[#dfb257]/20 rounded-xl text-[9px] font-bold text-[#dfb257] uppercase tracking-wider">
+                                {activeChatListing.condition === 'new' ? (language === 'ka' ? 'ახალი' : 'New') : (language === 'ka' ? 'მეორადი' : 'Used')}
+                              </div>
                             </div>
                           </div>
 
@@ -3909,6 +4049,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       onUpdateOrderStatus={handleUpdateOrderStatus}
                       onCancelOrder={(order) => setOrderToCancel(order)}
                       onExploreMarket={() => setViewMode('browse')}
+                      onMessageSeller={handleStartOrderChat}
+                      selectedOrder={buyerSelectedOrder}
+                      onSelectOrder={setBuyerSelectedOrder}
                     />
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
@@ -4230,6 +4373,16 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                >
                                  <Clock size={11} className="text-[#dfb257]" />
                                  <span>{language === 'ka' ? 'თაიმლაინი' : 'Timeline'}</span>
+                               </button>
+                               <button
+                                 type="button"
+                                 id={`seller-message-buyer-btn-${order.id}`}
+                                 onClick={() => handleStartOrderChat(order)}
+                                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                                 title={language === 'ka' ? 'მიწერეთ მყიდველს' : 'Message Buyer'}
+                               >
+                                 <MessageSquare size={11} className="text-[#dfb257]" />
+                                 <span>{language === 'ka' ? 'მიწერა' : 'Message'}</span>
                                </button>
                              </div>
                              <button 
@@ -4580,7 +4733,21 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       {/* Direct Buyer-Seller Chat Drawer */}
       <MarketChatDrawer
         activeChatListing={activeChatListing}
-        onClose={() => setActiveChatListing(null)}
+        activeChatOrder={activeChatOrder ? {
+          orderId: activeChatOrder.id,
+          buyerId: activeChatOrder.buyerId,
+          sellerId: activeChatOrder.sellerId,
+          listingId: activeChatOrder.listingId,
+          itemTitle: activeChatOrder.itemTitle || activeChatListing?.title,
+          amount: activeChatOrder.amount,
+          currency: activeChatOrder.currency,
+          status: activeChatOrder.status
+        } : null}
+        onClose={() => {
+          setActiveChatListing(null);
+          setActiveChatOrder(null);
+        }}
+        onViewOrder={handleViewOrderFromChat}
         chatModalRef={chatModalRef}
         language={language}
         currentTheme={currentTheme}
@@ -4640,6 +4807,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         onCancelOrder={(order) => setOrderToCancel(order)}
         onUpdateOrderStatus={handleUpdateOrderStatus}
         onOpenShipmentModal={(order) => setShipmentTrackingInput({ orderId: order.id, carrier: '', trackingNumber: '' })}
+        onMessageBuyer={handleStartOrderChat}
+      />
+
+      {/* Buyer Order Details & Fulfillment Timeline Modal (Opened from Chat or Hub) */}
+      <OrderDetailsModal
+        order={activeBuyerSelectedOrder}
+        isOpen={Boolean(activeBuyerSelectedOrder)}
+        onClose={() => setBuyerSelectedOrder(null)}
+        listings={listings}
+        language={language}
+        currentTheme={currentTheme}
+        isSeller={false}
+        onCancelOrder={(order) => setOrderToCancel(order)}
+        onConfirmDelivery={async (order) => {
+          await handleUpdateOrderStatus(order.id, 'completed');
+        }}
+        onMessageSeller={handleStartOrderChat}
       />
     </motion.div>
   </div>
@@ -4744,18 +4928,46 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               <div className="space-y-4">
                 <div className="flex items-center gap-3 bg-zinc-950/40 p-3 rounded-xl border border-zinc-900">
                   <button 
-                    onClick={() => setActiveChatListing(null)}
-                    className="p-1 px-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[10px] font-black uppercase text-zinc-300 hover:text-white"
+                    onClick={() => {
+                      setActiveChatListing(null);
+                      setActiveChatOrder(null);
+                    }}
+                    className="p-1 px-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[10px] font-black uppercase text-zinc-300 hover:text-white cursor-pointer"
                   >
                     ← {language === 'ka' ? 'უკან' : 'Back'}
                   </button>
-                  <div className="truncate">
+                  <div className="truncate flex-1">
                     <span className="text-[9px] font-bold text-zinc-500 block uppercase font-mono tracking-wider">
                       {language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Chatting about:'}
                     </span>
                     <h4 className="text-xs font-black text-white truncate">{activeChatListing.title}</h4>
                   </div>
                 </div>
+
+                {/* Order Context Banner if activeChatOrder exists */}
+                {activeChatOrder && (
+                  <div className="bg-[#dfb257]/10 border border-[#dfb257]/25 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Package size={14} className="text-[#dfb257] shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-[#dfb257] block truncate">
+                          {language === 'ka' ? 'შეკვეთის შესახებ' : 'Regarding Order'} #{activeChatOrder.id.slice(-6).toUpperCase()}
+                        </span>
+                        <p className="text-[9px] text-white/60 truncate">
+                          {activeChatOrder.itemTitle || activeChatListing.title}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleViewOrderFromChat(activeChatOrder.id)}
+                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-wider transition-all border border-white/15 shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                    >
+                      <ExternalLink size={10} className="text-[#dfb257]" />
+                      <span>{language === 'ka' ? 'ნახვა' : 'View Order'}</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Chat Messages Log */}
                 <div className="bg-zinc-950/20 rounded-2xl p-4 border border-zinc-900/60 h-[280px] overflow-y-auto space-y-3 flex flex-col">
@@ -4833,16 +5045,57 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           <button
                             key={chat.listingId}
                             onClick={() => {
+                              const orderId = chat.orderId || chat.messages.find((m: any) => m.orderId)?.orderId;
+                              if (orderId) {
+                                const matched = sellerOrders.find(o => o.id === orderId) || buyerOrders.find(o => o.id === orderId);
+                                setActiveChatOrder(matched || {
+                                  id: orderId,
+                                  listingId: chat.listingId,
+                                  itemTitle: chat.listingTitle,
+                                  buyerId: '',
+                                  sellerId: '',
+                                  amount: 0,
+                                  currency: 'USD',
+                                  status: 'pending',
+                                  createdAt: Date.now()
+                                } as any);
+                              } else {
+                                setActiveChatOrder(null);
+                              }
+
                               if (relatedListing) {
                                 setActiveChatListing(relatedListing);
+                              } else {
+                                const otherMsg = chat.messages.find(m => m.senderId !== user?.uid);
+                                const sellerId = otherMsg ? otherMsg.senderId : '';
+                                const sellerName = otherMsg ? otherMsg.senderName : 'Seller';
+                                setActiveChatListing({
+                                  id: chat.listingId,
+                                  title: chat.listingTitle,
+                                  sellerId: sellerId,
+                                  sellerName: sellerName,
+                                  price: 0,
+                                  currency: 'USD',
+                                  condition: 'new',
+                                  isNegotiable: false,
+                                  status: 'active'
+                                } as any);
                               }
                             }}
                             className="w-full text-left bg-zinc-950/40 hover:bg-zinc-900 border border-zinc-800/70 p-3 rounded-xl flex items-center justify-between transition-all"
                           >
                             <div className="truncate flex-1 pr-3">
-                              <span className="text-[10px] font-black text-[#dfb257] block truncate">
-                                {chat.listingTitle}
-                              </span>
+                              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                                <span className="text-[10px] font-black text-[#dfb257] truncate">
+                                  {chat.listingTitle}
+                                </span>
+                                {chat.orderId && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#dfb257]/15 text-[#dfb257] border border-[#dfb257]/30 text-[8px] font-mono font-bold shrink-0">
+                                    <Package size={9} />
+                                    <span>#{chat.orderId.slice(-6).toUpperCase()}</span>
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-zinc-300 truncate font-semibold mt-0.5">
                                 {chat.lastMessage}
                               </p>

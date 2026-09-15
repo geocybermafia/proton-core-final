@@ -22,7 +22,8 @@ import {
   ChevronUp,
   ExternalLink,
   ShieldCheck,
-  Tag
+  Tag,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Order, Listing } from '../../types';
@@ -47,6 +48,8 @@ export interface OrderDetailsModalProps {
   onCancelOrder?: (order: Order) => void;
   onUpdateOrderStatus?: (orderId: string, newStatus: string, tracking?: any) => Promise<void>;
   onOpenShipmentModal?: (order: Order) => void;
+  onMessageSeller?: (order: Order) => void;
+  onMessageBuyer?: (order: Order) => void;
 }
 
 interface TimelineStep {
@@ -70,7 +73,9 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
   onConfirmDelivery,
   onCancelOrder,
   onUpdateOrderStatus,
-  onOpenShipmentModal
+  onOpenShipmentModal,
+  onMessageSeller,
+  onMessageBuyer
 }: OrderDetailsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
@@ -531,9 +536,23 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       {sellerDisplayName || (language === 'ka' ? 'ავტორიზებული გამყიდველი' : 'Marketplace Seller')}
                     </span>
                   </div>
-                  <span className="font-mono text-[9px] text-white/30 shrink-0">
-                    #{order.sellerId.substring(0, 6)}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!isSeller && onMessageSeller && (
+                      <button
+                        type="button"
+                        id={`card-seller-message-btn-${order.id}`}
+                        onClick={() => onMessageSeller(order)}
+                        className="px-2.5 py-1 rounded-lg bg-[#dfb257]/15 hover:bg-[#dfb257]/25 text-[#dfb257] border border-[#dfb257]/30 text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                        title={language === 'ka' ? 'მიწერეთ გამყიდველს' : 'Message Seller'}
+                      >
+                        <MessageSquare size={11} />
+                        <span>{language === 'ka' ? 'მიწერა' : 'Message'}</span>
+                      </button>
+                    )}
+                    <span className="font-mono text-[9px] text-white/30">
+                      #{order.sellerId.substring(0, 6)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Order Date */}
@@ -799,6 +818,21 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
               {/* Buyer Actions */}
               {!isSeller && (
                 <>
+                  {/* Message Seller Action */}
+                  {onMessageSeller && (
+                    <button
+                      type="button"
+                      id={`modal-message-seller-${order.id}`}
+                      onClick={() => {
+                        onMessageSeller(order);
+                      }}
+                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <MessageSquare size={14} className="text-[#dfb257]" />
+                      <span>{language === 'ka' ? 'მიწერეთ გამყიდველს' : 'Message Seller'}</span>
+                    </button>
+                  )}
+
                   {/* Cancel Action (Only when allowed by security rules) */}
                   {canCancel && onCancelOrder && (
                     <button
@@ -843,6 +877,21 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
               {/* Seller Actions (If opened from seller view) */}
               {isSeller && (
                 <>
+                  {/* Message Buyer Action */}
+                  {onMessageBuyer && (
+                    <button
+                      type="button"
+                      id={`modal-message-buyer-${order.id}`}
+                      onClick={() => {
+                        onMessageBuyer(order);
+                      }}
+                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm"
+                    >
+                      <MessageSquare size={14} className="text-[#dfb257]" />
+                      <span>{language === 'ka' ? 'მიწერეთ მყიდველს' : 'Message Buyer'}</span>
+                    </button>
+                  )}
+
                   {canCancel && onCancelOrder && (
                     <button
                       type="button"
