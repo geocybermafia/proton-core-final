@@ -86,7 +86,7 @@ service cloud.firestore {
     
     function isValidListingShape(data) {
       return getStr(data, 'title', '').size() <= 200
-        && getNum(data, 'price', 0) >= 0
+        && getNum(data, 'price', 0) > 0
         && getStr(data, 'category', '').size() <= 50
         && getStr(data, 'country', '').size() <= 50
         && getStr(data, 'city', '').size() <= 50
@@ -195,20 +195,23 @@ service cloud.firestore {
     match /listings/{listingId} {
       allow read: if isSignedIn();
       allow create: if isVerified() && isValidId(listingId) && isValidListingCreate(incoming());
-      allow update: if isVerified() && isValidId(listingId) && (
-        (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
-        (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
-        // Legitimate buyer purchase transition:
-        // Must be transitioning from active to sold, only modifying status and optionally isSold, preserving seller, price, currency, createdAt
-        (
-          existing().status == 'active' &&
-          incoming().status == 'sold' &&
-          incoming().sellerId == existing().sellerId &&
-          incoming().price == existing().price &&
-          incoming().createdAt == existing().createdAt &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isSold'])
-        )
-      );
+      allow update: if isVerified() && isValidId(listingId)
+        && incoming().createdAt == existing().createdAt
+        && !(existing().status == 'sold' && incoming().status == 'active')
+        && (
+          (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
+          (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+          // Legitimate buyer purchase transition:
+          // Must be transitioning from active to sold, only modifying status and optionally isSold, preserving seller, price, currency, createdAt
+          (
+            existing().status == 'active' &&
+            incoming().status == 'sold' &&
+            incoming().sellerId == existing().sellerId &&
+            incoming().price == existing().price &&
+            incoming().createdAt == existing().createdAt &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isSold'])
+          )
+        );
       allow delete: if isVerified() && isValidId(listingId) && isOwner(existing().sellerId);
     }
 
