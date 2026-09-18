@@ -54,7 +54,17 @@ export const processSecureTransaction = onCall<SecureTransactionRequest>(async (
     throw new HttpsError("invalid-argument", "sellerId must be a valid non-empty string.");
   }
 
-  // Prevent self-dealing unless explicitly specified for a self-deposit
+  // Prevent arbitrary cross-user ledger injection for self-directed operations
+  if (type === 'DEPOSIT' || type === 'PAYOUT') {
+    if (sellerId !== buyerId) {
+      throw new HttpsError(
+        "invalid-argument",
+        `sellerId must match buyerId for ${type} transactions. Cross-user ${type} operations are not permitted.`
+      );
+    }
+  }
+
+  // Prevent self-dealing for PURCHASE transactions
   if (buyerId === sellerId && type === 'PURCHASE') {
     throw new HttpsError("invalid-argument", "Buyer and seller IDs cannot be identical for purchase transactions.");
   }
@@ -71,52 +81,91 @@ export const processSecureTransaction = onCall<SecureTransactionRequest>(async (
   try {
     const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const timestamp = FieldValue.serverTimestamp();
+    const sanitizedAmount = Number(amount.toFixed(2));
+    const nowIso = new Date().toISOString();
+    const dateStr = nowIso.split('T')[0];
+    const cleanTitle = itemTitle.trim().substring(0, 200);
 
-    const ledgerPayload = {
+    // Harmonize ledger schema with frontend LedgerItem and useSellerStats
+    const basePayload = {
       id: transactionId,
       buyerId,
       sellerId,
       userId: buyerId,
-      amount: Number(amount.toFixed(2)),
+      amount: sanitizedAmount,
+      total: sanitizedAmount,
+      value: sanitizedAmount,
+      volume: 1,
       currency: 'USD',
-      itemTitle: itemTitle.trim().substring(0, 200),
+      itemTitle: cleanTitle,
+      description: cleanTitle,
+      category: type === 'PAYOUT' ? 'Payout Withdrawal' : type === 'DEPOSIT' ? 'Deposit' : 'Marketplace Trade',
+      date: dateStr,
       listingId: listingId || null,
-      type,
-      status: 'COMPLETED',
+      status: 'completed',
+      statusUpper: 'COMPLETED',
       createdAt: timestamp,
       updatedAt: timestamp,
       serverVerified: true,
-      processedBy: 'processSecureTransaction_v1'
+      processedBy: 'processSecureTransaction_v1',
+      operator: 'processSecureTransaction_v1',
+      transactionType: type
     };
 
     // 4. ATOMIC ADMIN WRITE (Bypasses Firestore Rules)
     const batch = db.batch();
 
+    // Determine direction for single-party vs two-party transactions
+    const isSelfTransaction = buyerId === sellerId;
+    const selfDirection: 'OUTGOING' | 'INCOMING' = type === 'PAYOUT' ? 'OUTGOING' : 'INCOMING';
+
     // Global Root Ledger Entry
     const globalLedgerRef = db.collection('market_ledger').doc(transactionId);
-    batch.set(globalLedgerRef, ledgerPayload);
-
-    // Buyer Subcollection Ledger Entry
-    const buyerLedgerRef = db
-      .collection('users')
-      .doc(buyerId)
-      .collection('market_ledger')
-      .doc(transactionId);
-    batch.set(buyerLedgerRef, {
-      ...ledgerPayload,
-      direction: 'OUTGOING'
+    batch.set(globalLedgerRef, {
+      ...basePayload,
+      direction: isSelfTransaction ? selfDirection : 'MULTI_PARTY',
+      type: isSelfTransaction ? (selfDirection === 'OUTGOING' ? 'outbound' : 'inbound') : type
     });
 
-    // Seller Subcollection Ledger Entry
-    const sellerLedgerRef = db
-      .collection('users')
-      .doc(sellerId)
-      .collection('market_ledger')
-      .doc(transactionId);
-    batch.set(sellerLedgerRef, {
-      ...ledgerPayload,
-      direction: 'INCOMING'
-    });
+    if (isSelfTransaction) {
+      // Exactly ONE user ledger document is written for self-transactions
+      const userLedgerRef = db
+        .collection('users')
+        .doc(buyerId)
+        .collection('market_ledger')
+        .doc(transactionId);
+
+      batch.set(userLedgerRef, {
+        ...basePayload,
+        direction: selfDirection,
+        type: selfDirection === 'OUTGOING' ? 'outbound' : 'inbound'
+      });
+    } else {
+      // Two-party transaction (buyer !== seller)
+      // Buyer Subcollection Ledger Entry (OUTGOING / outbound)
+      const buyerLedgerRef = db
+        .collection('users')
+        .doc(buyerId)
+        .collection('market_ledger')
+        .doc(transactionId);
+      batch.set(buyerLedgerRef, {
+        ...basePayload,
+        direction: 'OUTGOING',
+        type: 'outbound'
+      });
+
+      // Seller Subcollection Ledger Entry (INCOMING / inbound)
+      const sellerLedgerRef = db
+        .collection('users')
+        .doc(sellerId)
+        .collection('market_ledger')
+        .doc(transactionId);
+      batch.set(sellerLedgerRef, {
+        ...basePayload,
+        direction: 'INCOMING',
+        type: 'inbound'
+      });
+    }
 
     await batch.commit();
 

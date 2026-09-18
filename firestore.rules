@@ -224,6 +224,7 @@ service cloud.firestore {
       
       allow create: if isVerified() && isValidId(orderId) && isValidOrder(incoming())
         && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
+        && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'active'
         && incoming().amount == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price
         && incoming().sellerId == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId;
         
