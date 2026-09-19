@@ -2,8 +2,8 @@ export const translations = {
   en: {
     nav: {
       dashboard: "Dashboard",
-      personas: "Personas",
-      blueprints: "Processes",
+      personas: "AI Assistants",
+      blueprints: "Workflows",
       images: "Images",
       docs: "Documentation",
       hardware: "Hardware",
@@ -15,20 +15,20 @@ export const translations = {
       main: "Tools",
       dashboard: "Home",
       agents: "AI Assistants",
-      organizer: "Planner",
+      organizer: "Organizer",
       creative: "Extra Tools",
       image: "Art Studio",
       translator: "Translator",
       system: "Settings",
-      blueprints: "Processes",
-      personas: "My Agents",
+      blueprints: "Workflows",
+      personas: "AI Assistants",
       settings: "User Account",
       market: "Marketplace",
       commercial: "SaaS Exit Hub",
       finance: "Finance",
       bottom_nav: {
         dashboard: "Home",
-        personas: "Agents"
+        personas: "AI Assistants"
       }
     },
     hub: {
@@ -83,20 +83,20 @@ export const translations = {
       }
     },
     organizer: {
-      title: "Project Organizer",
-      subtitle: "Strategic Task Management",
+      title: "Workspace Organizer",
+      subtitle: "Daily Tasks & Time Management",
       no_tasks: "No active tasks in current buffer.",
       workspace_theme: "Interface Theme",
       theme_cyberpunk: "Cyber",
       theme_minimalist: "Mono",
       theme_executive: "Classic",
-      total_completed: "Ops Completed",
+      total_completed: "Tasks Completed",
       productivity_score: "Productivity",
       analytics: "Task Analytics",
-      tasks: "Operations",
+      tasks: "Tasks",
       priority: "Priority",
-      calendar: "Strategic Calendar",
-      upcoming_workflows: "Scheduled Logic",
+      calendar: "Calendar",
+      upcoming_workflows: "Scheduled Workflows",
       task_placeholder: "Enter new objective...",
       low: "Not Urgent",
       medium: "Normal",
@@ -285,7 +285,7 @@ export const translations = {
       creative: "Creative"
     },
     workflows: {
-      title: "Business Workflows",
+      title: "Workflows",
       subtitle: "Process Automation",
       placeholder_title: "Workflow Title",
       trigger: "Trigger Event",
@@ -474,8 +474,8 @@ export const translations = {
   ka: {
     nav: {
       dashboard: "მართვის დაფა",
-      personas: "პერსონები",
-      blueprints: "პროცესები",
+      personas: "AI ასისტენტები",
+      blueprints: "სამუშაო პროცესები",
       images: "ვიზუალი",
       docs: "დოკუმენტაცია",
       hardware: "აპარატურა",
@@ -486,21 +486,21 @@ export const translations = {
     sidebar: {
       main: "ხელსაწყოები",
       dashboard: "მთავარი",
-      agents: "ასისტენტები",
+      agents: "AI ასისტენტები",
       organizer: "ორგანიზატორი",
       creative: "დამატებითი",
       image: "სტუდია",
       translator: "თარჯიმანი",
       system: "პარამეტრები",
-      blueprints: "გეგმები",
-      personas: "აგენტები",
+      blueprints: "სამუშაო პროცესები",
+      personas: "AI ასისტენტები",
       settings: "ანგარიში",
       market: "მარკეტი",
       commercial: "კომერცია",
       finance: "ფინანსები",
       bottom_nav: {
         dashboard: "მთავარი",
-        personas: "აგენტები"
+        personas: "AI ასისტენტები"
       }
     },
     hub: {
@@ -555,20 +555,20 @@ export const translations = {
       }
     },
     organizer: {
-      title: "ჩემი საქმეები",
+      title: "სამუშაო ორგანიზატორი",
       subtitle: "დაგეგმეთ თქვენი დღე მარტივად",
       no_tasks: "აქტიური დავალებები არ მოიძებნა.",
       workspace_theme: "აირჩიეთ ფერი",
       theme_cyberpunk: "კიბერ",
       theme_minimalist: "მონო",
       theme_executive: "კლასიკი",
-      total_completed: "შესრულებული",
+      total_completed: "შესრულებული საქმეები",
       productivity_score: "პროდუქტიულობა",
       analytics: "ანალიტიკა",
-      tasks: "ოპერაციები",
+      tasks: "საქმეები",
       priority: "პრიორიტეტი",
       calendar: "კალენდარი",
-      upcoming_workflows: "დაგეგმილი ლოგიკა",
+      upcoming_workflows: "დაგეგმილი პროცესები",
       task_placeholder: "ახალი მიზანი...",
       low: "არაა სასწრაფო",
       medium: "ჩვეულებრივი",
@@ -757,7 +757,7 @@ export const translations = {
       creative: "კრეატიული"
     },
     workflows: {
-      title: "ბიზნეს პროცესები",
+      title: "სამუშაო პროცესები",
       subtitle: "ავტომატიზაცია",
       placeholder_title: "პროცესის სათაური",
       trigger: "ტრიგერი",

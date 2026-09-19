@@ -15,11 +15,11 @@ export interface CommandRoute {
 export const COMMAND_ROUTES: CommandRoute[] = [
   {
     id: 'market',
-    keywords: ['market', 'hub', 'shop', 'store', 'trade', 'buy', 'sell', 'items', 'listing', 'მარკეტი', 'მაღაზია', 'ყიდვა', 'გაყიდვა', 'ვაჭრობა'],
+    keywords: ['market', 'marketplace', 'hub', 'shop', 'store', 'trade', 'buy', 'sell', 'items', 'listing', 'მარკეტი', 'მაღაზია', 'ყიდვა', 'გაყიდვა', 'ვაჭრობა'],
     view: 'market-hub',
     uiMode: 'market',
-    titleEn: 'Market Hub',
-    titleKa: 'მარკეტ ჰაბი',
+    titleEn: 'Marketplace',
+    titleKa: 'მარკეტი',
     descriptionEn: 'Local trading marketplace, listings, and map items',
     descriptionKa: 'ადგილობრივი მარკეტი, განცხადებები და რუკა',
     category: 'business'
@@ -51,7 +51,7 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     keywords: ['creative', 'studio', 'art', 'design', 'hub', 'კრეატივი', 'სტუდია', 'დიზაინი', 'ჰაბი'],
     view: 'creative-studio',
     uiMode: 'creative',
-    titleEn: 'Creative Studio Hub',
+    titleEn: 'Creative Studio',
     titleKa: 'კრეატიული სტუდია',
     descriptionEn: 'All visual generation, localization, and copywriting tools',
     descriptionKa: 'ვიზუალური გენერაციის და ლოკალიზაციის ინსტრუმენტები',
@@ -94,8 +94,8 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     id: 'organizer',
     keywords: ['organizer', 'task', 'tasks', 'todo', 'calendar', 'schedule', 'plan', 'დავალებები', 'ორგანიზატორი', 'კალენდარი', 'გეგმა'],
     view: 'organizer',
-    titleEn: 'Smart Organizer & Tasks',
-    titleKa: 'ორგანიზატორი და დავალებები',
+    titleEn: 'Organizer',
+    titleKa: 'ორგანიზატორი',
     descriptionEn: 'Task tracking, interactive calendar, and productivity planning',
     descriptionKa: 'დავალებების მართვა და კალენდარი',
     category: 'core'
@@ -116,7 +116,7 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     keywords: ['workflow', 'workflows', 'blueprint', 'blueprints', 'automation', 'flow', 'pipeline', 'პროცესები', 'ავტომატიზაცია', 'ნაკადები'],
     view: 'blueprints',
     uiMode: 'business',
-    titleEn: 'Workflows & Blueprints',
+    titleEn: 'Workflows',
     titleKa: 'სამუშაო პროცესები',
     descriptionEn: 'Automated workflow builder and multi-step pipelines',
     descriptionKa: 'ავტომატიზირებული სამუშაო ნაკადები',

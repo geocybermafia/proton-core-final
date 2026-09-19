@@ -300,10 +300,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
-                    {isKa ? 'შექმნა' : 'Creation Studio'}
+                    {isKa ? 'კრეატიული სტუდია' : 'Creative Studio'}
                   </div>
                   <div className="text-xs text-zinc-400 font-mono">
-                    {isKa ? 'ვიზუალური ხელოვნება' : 'Visual Studio'}
+                    {isKa ? 'ხელოვნება & კონტენტი' : 'Art & content tools'}
                   </div>
                 </div>
               </div>
@@ -325,10 +325,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
-                    {isKa ? 'ინტელექტი' : 'AI Copilots'}
+                    {isKa ? 'AI ასისტენტები' : 'AI Assistants'}
                   </div>
                   <div className="text-xs text-zinc-400 font-mono">
-                    {isKa ? 'სტრატეგია & დიალოგი' : 'Cognitive reasoning'}
+                    {isKa ? 'სტრატეგია & დიალოგი' : 'Strategy & conversation'}
                   </div>
                 </div>
               </div>
@@ -350,10 +350,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
-                    {isKa ? 'არქიტექტურა' : 'Architecture'}
+                    {isKa ? 'სამუშაო პროცესები' : 'Workflows'}
                   </div>
                   <div className="text-xs text-zinc-400 font-mono">
-                    {isKa ? 'ავტომატიზაცია' : 'Logic workflows'}
+                    {isKa ? 'ავტომატიზაცია' : 'Automated processes'}
                   </div>
                 </div>
               </div>
@@ -375,10 +375,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 </div>
                 <div>
                   <div className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
-                    {isKa ? 'მარკეტი' : 'Storefront'}
+                    {isKa ? 'მარკეტი' : 'Marketplace'}
                   </div>
                   <div className="text-xs text-zinc-400 font-mono">
-                    {isKa ? 'პროდუქტები & ვაჭრობა' : 'Commerce hub'}
+                    {isKa ? 'პროდუქტები & ვაჭრობა' : 'Products & commerce'}
                   </div>
                 </div>
               </div>

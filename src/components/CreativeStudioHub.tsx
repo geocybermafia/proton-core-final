@@ -93,7 +93,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
         <div className="relative z-10 max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-proton-accent/10 border border-proton-accent/20 rounded-full text-[10px] font-black uppercase tracking-widest text-proton-accent">
             <Sparkles size={12} />
-            {isKa ? 'კრეატიული სტუდია' : 'CREATIVE STUDIO HUB'}
+            {isKa ? 'კრეატიული სტუდია' : 'CREATIVE STUDIO'}
           </div>
           <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-none text-proton-text">
             {isKa ? 'გამოავლინეთ თქვენი შემოქმედებითი პოტენციალი' : 'Unleash Your Creative Power'}

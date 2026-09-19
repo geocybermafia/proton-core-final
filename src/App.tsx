@@ -5554,7 +5554,7 @@ export default function App() {
                     </AnimatePresence>
                     <SidebarItem 
                       icon={Sparkles} 
-                      label={language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub'} 
+                      label={language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio'} 
                       active={activeView === 'creative-studio'} 
                       onClick={() => handleViewChange('creative-studio')} 
                       expanded={isSidebarOpen}
@@ -5596,7 +5596,7 @@ export default function App() {
                           exit={{ opacity: 0, x: -10 }}
                           className="text-[10px] font-black text-purple-400 uppercase tracking-[0.2em] px-3"
                         >
-                          {language === 'ka' ? 'მართვა & ფინანსები' : 'PLANNING & FINANCE'}
+                          {language === 'ka' ? 'ორგანიზება & ფინანსები' : 'ORGANIZATION & FINANCE'}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -5647,7 +5647,7 @@ export default function App() {
                           exit={{ opacity: 0, x: -10 }}
                           className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] px-3"
                         >
-                          {language === 'ka' ? 'ადგილობრივი ბაზარი' : 'COMMERCE & MARKET'}
+                          {language === 'ka' ? 'მარკეტი და ვაჭრობა' : 'COMMERCE & MARKETPLACE'}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -6009,7 +6009,7 @@ export default function App() {
                       { id: 'dashboard', label: language === 'ka' ? 'მთავარი დაფა' : 'Home Dashboard', icon: LayoutDashboard },
                       { id: 'business-hub', label: language === 'ka' ? 'ბიზნეს ჰაბი' : 'Business Hub', icon: Briefcase },
                       { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio', icon: Sparkles },
-                      { id: 'market-hub', label: language === 'ka' ? 'მარკეტის ჰაბი' : 'Market Hub', icon: ShoppingBag },
+                      { id: 'market-hub', label: language === 'ka' ? 'მარკეტი' : 'Marketplace', icon: ShoppingBag },
                     ].map((item) => (
                       <button
                         key={item.id}
@@ -6207,13 +6207,13 @@ export default function App() {
               </div>
               <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
                 {activeView === 'dashboard' ? (
-                  language === 'ka' ? 'პერსონალური სამუშაო სივრცე' : 'Personal Workspace Hub'
+                  language === 'ka' ? 'პერსონალური სამუშაო სივრცე' : 'Personal Workspace'
                 ) : uiMode === 'business' ? (
-                  language === 'ka' ? 'ავტომატიზაცია და მულტი-აგენტები' : 'Automation & Multi-Agents Active'
+                  language === 'ka' ? 'ავტომატიზაცია და AI ასისტენტები' : 'Automation & AI Assistants Active'
                 ) : uiMode === 'creative' ? (
-                  language === 'ka' ? 'სტუდია და ლოკალიზაცია' : 'AI Studio & Localization'
+                  language === 'ka' ? 'კრეატიული სტუდია და ლოკალიზაცია' : 'Creative Studio & Localization'
                 ) : (
-                  language === 'ka' ? 'საოპერაციო რეესტრი' : 'Active Ledger & Trading'
+                  language === 'ka' ? 'მარკეტი & ვაჭრობა' : 'Marketplace & Orders'
                 )}
               </span>
             </div>
@@ -6233,7 +6233,7 @@ export default function App() {
                 { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
                 ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
               ] : uiMode === 'creative' ? [
-                { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული ჰაბი' : 'Creative Hub', icon: Sparkles },
+                { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio', icon: Sparkles },
                 { id: 'image', label: t.sidebar.image, icon: ImageIcon },
                 { id: 'translator', label: t.sidebar.translator, icon: Languages },
                 { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
@@ -6386,7 +6386,7 @@ export default function App() {
               {uiMode === 'market' && (activeView as string) === 'market-hub' ? (
                 <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
                   <Loader2 className="animate-spin text-proton-accent" size={24} />
-                  <span className="uppercase tracking-widest font-black text-proton-accent/90 animate-pulse">Initializing Commerce Matrix...</span>
+                  <span className="uppercase tracking-widest font-black text-proton-accent/90 animate-pulse">{language === 'ka' ? 'მარკეტი იტვირთება...' : 'Loading Marketplace...'}</span>
                 </div>
               ) : (
                 <>

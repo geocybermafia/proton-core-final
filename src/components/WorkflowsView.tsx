@@ -324,7 +324,7 @@ const WorkflowEditor = ({
                 </div>
                 <div className="space-y-1">
                   <h4 className="font-bold text-lg text-proton-text">
-                    {language === 'ka' ? 'Gemini აანალიზებს პროცესს...' : 'Gemini Analyzing Process...'}
+                    {language === 'ka' ? 'Gemini აანალიზებს სამუშაო პროცესს...' : 'Gemini Analyzing Workflow...'}
                   </h4>
                   <p className="text-xs text-proton-muted max-w-sm leading-relaxed mx-auto">
                     {language === 'ka' 
@@ -798,7 +798,7 @@ export default function WorkflowsView({
               className="w-full py-2.5 px-3 rounded-xl bg-proton-accent/10 hover:bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-xs font-bold uppercase tracking-wider transition flex items-center justify-center gap-2"
             >
               <Download size={14} />
-              {language === 'ka' ? 'ინსტალაცია (1-Click)' : 'Install Flow'}
+              {language === 'ka' ? 'ინსტალაცია (1-Click)' : 'Install Workflow'}
             </button>
           </div>
         </div>
@@ -882,7 +882,7 @@ export default function WorkflowsView({
                         e.stopPropagation();
                         if (!isCreativeMode) return;
                         setConfirmation({
-                          message: "გსურთ პროცესის ეფექტურობის ანალიზის გაშვება?",
+                          message: language === 'ka' ? "გსურთ სამუშაო პროცესის ეფექტურობის ანალიზის გაშვება?" : "Run workflow efficiency analysis?",
                           action: () => handleAnalyze(wf)
                         });
                       }}

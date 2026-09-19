@@ -690,7 +690,7 @@ ${
           </div>
           <button 
             onClick={() => setIsCreatorOpen(true)}
-            title={language === 'ka' ? 'დაამატეთ ახალი აგენტი' : 'Deploy New Agent'}
+            title={language === 'ka' ? 'ახალი ასისტენტის დამატება' : 'Deploy New AI Assistant'}
             className="p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,243,255,0.3)] transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
           >
             <Plus size={16} strokeWidth={2.5} />
@@ -749,7 +749,7 @@ ${
 
           {personas.length === 0 && (
             <div className="text-center py-16 text-[10px] font-mono font-bold uppercase tracking-widest leading-loose p-6 border border-dashed border-cyan-500/30 rounded-xl bg-black/40 text-cyan-500/60">
-              {language === 'ka' ? '⚡ ინტელექტის მოდულები არ არის სინქრონიზებული' : '⚡ NO AGENTS CREATED YET'}
+              {language === 'ka' ? '⚡ ასისტენტები არ არის დამატებული' : '⚡ NO AI ASSISTANTS YET'}
             </div>
           )}
         </div>
@@ -867,7 +867,7 @@ ${
                     setIsDecommissioning(true);
                   }}
                   className="p-2.5 bg-black/40 hover:bg-red-500/20 hover:text-red-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-red-500/40 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)] cursor-pointer"
-                  title={language === 'ka' ? 'აგენტის წაშლა' : 'Delete Agent'}
+                  title={language === 'ka' ? 'ასისტენტის წაშლა' : 'Delete AI Assistant'}
                 >
                    <Trash2 size={16} />
                 </button>
@@ -888,7 +888,7 @@ ${
                 <div className="flex justify-between items-center">
                   <label className="text-[10px] font-mono font-black uppercase tracking-widest text-cyan-400 flex items-center gap-2">
                     <Sparkles size={14} className="animate-pulse text-cyan-400" />
-                    {language === 'ka' ? '⚡ სისტემური ინსტრუქციები' : '⚡ SYSTEM COGITATIVE BOUNDARIES'}
+                    {language === 'ka' ? '⚡ სისტემური ინსტრუქციები' : '⚡ AI ASSISTANT SYSTEM INSTRUCTIONS'}
                   </label>
                   <span className="text-[9px] font-mono text-cyan-300/80 font-bold uppercase tracking-wider bg-cyan-950/60 px-2.5 py-0.5 rounded border border-cyan-500/30">
                      {language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}
@@ -920,7 +920,7 @@ ${
                   onKeyUp={(e) => e.stopPropagation()}
                   onKeyPress={(e) => e.stopPropagation()}
                   className="w-full h-24 sm:h-32 p-3.5 bg-black/80 border border-cyan-500/40 rounded-xl text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,243,255,0.3)] focus:ring-1 focus:ring-cyan-400 transition-all font-mono leading-relaxed"
-                  placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუმენტი ან ინსტრუქცია...' : 'Specify precise cogitative boundary parameters for the model target...'}
+                  placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუქცია ასისტენტისთვის...' : 'Specify system instructions for the AI assistant...'}
                 />
 
                 <div className="flex justify-between items-center">
@@ -994,7 +994,7 @@ ${
               {/* Title */}
               <h3 className="text-lg sm:text-xl font-semibold text-slate-100 mb-2.5 tracking-tight font-sans">
                 {language === 'ka' 
-                  ? `პერსონაჟი „${selectedPersona?.nameGe || selectedPersona?.name}“ დროებით მიუწვდომელია` 
+                  ? `ასისტენტი „${selectedPersona?.nameGe || selectedPersona?.name}“ დროებით მიუწვდომელია` 
                   : `${selectedPersona?.name} is temporarily unavailable`
                 }
               </h3>
@@ -1190,10 +1190,10 @@ ${
             </ProtonIconBox>
             <div>
               <div className="text-sm font-mono font-black uppercase tracking-widest text-cyan-100">
-                {language === 'ka' ? 'აგენტის დეპლოიმენტი' : 'System Assistant Deployment'}
+                {language === 'ka' ? 'AI ასისტენტის დამატება' : 'Deploy AI Assistant'}
               </div>
               <div className="text-[9px] text-cyan-400/80 uppercase font-mono tracking-widest mt-0.5 font-bold">
-                Configure AI Council Entity Parameters
+                Configure AI Assistant Parameters
               </div>
             </div>
           </div>
@@ -1219,7 +1219,7 @@ ${
               rightIcon={<Check size={14} strokeWidth={3} />}
               className="bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold shadow-[0_0_15px_rgba(0,243,255,0.4)]"
             >
-              Deploy intelligence
+              Deploy AI Assistant
             </ProtonButton>
           </>
         }
@@ -1228,14 +1228,14 @@ ${
           {/* Main forms */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ProtonInput 
-              label="Agent Name (English) *"
+              label="AI Assistant Name (English) *"
               type="text" 
               value={newPersonaNameEn}
               onChange={(e) => setNewPersonaNameEn(e.target.value)}
               placeholder="e.g. Sentry Code"
             />
             <ProtonInput 
-              label="სახელი (ქართულად)"
+              label="AI ასისტენტის სახელი (ქართულად)"
               type="text" 
               value={newPersonaNameKa}
               onChange={(e) => setNewPersonaNameKa(e.target.value)}
@@ -1245,7 +1245,7 @@ ${
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <ProtonInput 
-              label="Agent Specialty Role (e.g. Architect)"
+              label="AI Assistant Role (e.g. Architect)"
               type="text" 
               value={newPersonaRole}
               onChange={(e) => setNewPersonaRole(e.target.value)}
@@ -1370,7 +1370,7 @@ ${
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <label className="text-xs font-mono font-bold text-cyan-300 uppercase tracking-wider">
-                Cogitative Instructions / System Brain Prompt
+                AI Assistant System Instructions
               </label>
               <ProtonBadge variant="accent" size="sm" className="bg-cyan-500/20 text-cyan-300 border-cyan-500/40">Provides System Guidelines</ProtonBadge>
             </div>
@@ -1395,7 +1395,7 @@ ${
           setDecomTarget(null);
         }}
         size="sm"
-        title={language === 'ka' ? 'აგენტის წაშლა' : 'Confirm Delete Agent'}
+        title={language === 'ka' ? 'AI ასისტენტის წაშლა' : 'Confirm Delete AI Assistant'}
         description={
           decomTarget ? (
             <span className="text-rose-400 font-mono font-bold">
@@ -1422,7 +1422,7 @@ ${
               onClick={handleDecommission}
               className="bg-red-600 hover:bg-red-500 text-white font-mono font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)]"
             >
-              {language === 'ka' ? 'წაშლა' : 'Delete Agent'}
+              {language === 'ka' ? 'წაშლა' : 'Delete AI Assistant'}
             </ProtonButton>
           </>
         }
@@ -1433,7 +1433,7 @@ ${
           </div>
           <p className="text-xs font-mono text-slate-300 leading-relaxed font-normal">
             {language === 'ka' 
-              ? `დარწმუნებული ხართ, რომ გსურთ აგენტის წაშლა? ეს ქმედება მთლიანად გაასუფთავებს მის სისტემურ ინსტრუქციებსა და საუბრის მეხსიერებას.` 
+              ? `დარწმუნებული ხართ, რომ გსურთ AI ასისტენტის წაშლა? ეს ქმედება მთლიანად გაასუფთავებს მის სისტემურ ინსტრუქციებსა და საუბრის მეხსიერებას.` 
               : `Are you sure you want to delete ${decomTarget?.name}? All system instructions and chat history will be permanently deleted.`
             }
           </p>
