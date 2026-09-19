@@ -4479,12 +4479,6 @@ export default function App() {
     } catch { return 'auto'; }
   });
 
-  const [organizerTheme, setOrganizerTheme] = useState<Theme>(() => {
-    try {
-      return (safeStorage.get('proton_theme') as Theme) || (safeStorage.get('proton_organizer_theme') as Theme) || 'auto';
-    } catch { return 'auto'; }
-  });
-
   const [isSystemDark, setIsSystemDark] = useState<boolean>(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return true;
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -4536,9 +4530,7 @@ export default function App() {
   const handleGlobalThemeChange = useCallback((newTheme: Theme) => {
     triggerSmoothTransition();
     setTheme(newTheme);
-    setOrganizerTheme(newTheme);
     safeStorage.set('proton_theme', newTheme);
-    safeStorage.set('proton_organizer_theme', newTheme);
     
     const effective = newTheme === 'auto' ? (isSystemDark ? 'enterprise' : 'light') : newTheme;
     document.documentElement.setAttribute('data-theme', effective);
@@ -4556,11 +4548,7 @@ export default function App() {
     }
   }, [user, isSystemDark, triggerSmoothTransition]);
 
-  useThemeSync(setTheme, setOrganizerTheme);
-
-  useEffect(() => {
-    safeStorage.set('proton_organizer_theme', organizerTheme);
-  }, [organizerTheme]);
+  useThemeSync(setTheme);
 
   useLayoutEffect(() => {
     if (isInitialThemeMount.current) {
@@ -4984,9 +4972,7 @@ export default function App() {
           const validThemes: Theme[] = ['auto', 'enterprise', 'proton', 'light', 'vibrant', 'midnight', 'titanium', 'forest', 'sunset', 'rose'];
           if (validThemes.includes(remoteTheme)) {
             setTheme(remoteTheme);
-            setOrganizerTheme(remoteTheme);
             safeStorage.set('proton_theme', remoteTheme);
-            safeStorage.set('proton_organizer_theme', remoteTheme);
           }
         }
 
@@ -6592,8 +6578,6 @@ export default function App() {
                         language={userProfile.language}
                         uiMode={uiMode === 'market' ? 'business' : uiMode}
                         setUiMode={handleModeChange}
-                        organizerTheme={organizerTheme}
-                        setOrganizerTheme={handleGlobalThemeChange}
                         isAdmin={isAdmin}
                       />
                     </Suspense>

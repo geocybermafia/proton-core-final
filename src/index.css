@@ -286,7 +286,28 @@ html.theme-transitioning *::after {
   background: transparent !important;
   border: none !important;
   width: 100% !important;
+  max-width: 100% !important;
   font-family: inherit;
+}
+
+.react-calendar__viewContainer {
+  width: 100% !important;
+}
+
+.react-calendar__month-view {
+  width: 100% !important;
+}
+
+.react-calendar__month-view__days {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  width: 100% !important;
+}
+
+.react-calendar__navigation {
+  display: flex !important;
+  height: 44px !important;
+  margin-bottom: 1em !important;
 }
 
 .react-calendar__navigation button {
@@ -296,7 +317,8 @@ html.theme-transitioning *::after {
   border-radius: 8px;
 }
 
-.react-calendar__navigation button:enabled:hover {
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
   background-color: var(--proton-border) !important;
 }
 
@@ -308,14 +330,30 @@ html.theme-transitioning *::after {
 }
 
 .react-calendar__tile {
-  padding: 0.8em 0.1em !important;
-  font-size: 0.8rem !important;
+  aspect-ratio: 1;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center;
+  justify-content: center;
+  padding: 4px !important;
+  font-size: 0.75rem !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
   color: var(--proton-text) !important;
-  border-radius: 12px;
-  transition: all 0.2s;
+  border-radius: 12px !important;
+  transition: all 0.2s ease !important;
 }
 
-.react-calendar__tile:enabled:hover {
+@media (min-width: 640px) {
+  .react-calendar__tile {
+    font-size: 0.875rem !important;
+    padding: 0.8em 0.1em !important;
+  }
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
   background: var(--proton-border) !important;
 }
 
@@ -324,10 +362,12 @@ html.theme-transitioning *::after {
   border: 1px solid var(--proton-accent) !important;
 }
 
-.react-calendar__tile--active {
+.react-calendar__tile--active,
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
   background: var(--proton-accent) !important;
   color: var(--proton-on-accent) !important;
-  font-weight: bold;
+  font-weight: bold !important;
 }
 
 

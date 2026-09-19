@@ -273,108 +273,15 @@ export const OrganizerView = ({
     };
   }, [activeTimerTaskId, onEditTask]);
 
-  const themes = {
-    light: {
-      container: "bg-[#f8fafc] text-slate-900",
-      card: "bg-white border-slate-200 shadow-xl rounded-[32px] border",
-      accent: "text-blue-600 bg-blue-50 border-blue-100",
-      button: "bg-slate-900 text-white rounded-2xl shadow-lg hover:bg-slate-800",
-      input: "bg-white border-slate-200 text-slate-900 focus:border-blue-500 rounded-2xl border-2",
-      label: "text-slate-500 font-bold tracking-tight",
-      muted: "text-slate-400",
-      calendar: `
-        .react-calendar { background: transparent !important; border: none !important; width: 100% !important; }
-        .react-calendar__navigation button { color: #0f172a !important; font-weight: bold !important; min-width: 44px !important; }
-        .react-calendar__month-view__weekdays { text-transform: uppercase; font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
-        .react-calendar__tile { padding: 0.8em 0.1em !important; font-size: 0.8rem !important; color: #1e293b !important; border-radius: 12px; transition: all 0.2s; }
-        .react-calendar__tile:hover { background: #f1f5f9 !important; }
-        .react-calendar__tile--now { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
-        .react-calendar__tile--active { background: #0f172a !important; color: white !important; font-weight: bold; }
-      `
-    },
-    titanium: {
-      container: "bg-slate-950 text-slate-100",
-      card: "bg-slate-900 border-slate-800 shadow-2xl rounded-3xl border",
-      accent: "text-slate-300 bg-slate-400/10 border-slate-400/20",
-      button: "bg-slate-100 text-slate-900 rounded-2xl font-black shadow-lg hover:bg-slate-200",
-      input: "bg-slate-950/50 border-slate-700 text-slate-100 focus:border-slate-500 rounded-2xl border-2",
-      label: "text-slate-500 font-black uppercase tracking-widest",
-      muted: "text-slate-500",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #f1f5f9 !important; color: #0f172a !important; }`
-    },
-    proton: {
-      container: "bg-black text-cyan-400",
-      card: "bg-black border-cyan-500/20 shadow-[0_0_30px_rgba(34,211,238,0.1)] rounded-[32px] border",
-      accent: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20",
-      button: "bg-cyan-500 text-black rounded-2xl font-black shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:bg-cyan-400",
-      input: "bg-black/80 border-cyan-900 text-cyan-400 focus:border-cyan-400 rounded-2xl border-2",
-      label: "text-cyan-400/60 font-mono italic",
-      muted: "text-cyan-900",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: #22d3ee !important; } .react-calendar__tile--active { background: #22d3ee !important; color: black !important; font-weight: bold; }`
-    },
-    forest: {
-      container: "bg-[#022c22] text-emerald-100",
-      card: "bg-emerald-950/40 border-emerald-500/15 shadow-2xl rounded-[32px] border",
-      accent: "text-emerald-400 bg-emerald-400/15 border-emerald-400/15",
-      button: "bg-emerald-600 text-white rounded-2xl shadow-emerald-500/20 hover:bg-emerald-500",
-      input: "bg-emerald-950/50 border-emerald-900 text-emerald-100 focus:border-emerald-500 rounded-2xl border-2",
-      label: "text-emerald-500/60 font-black uppercase tracking-tight",
-      muted: "text-emerald-800",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #10b981 !important; color: white !important; }`
-    },
-    sunset: {
-      container: "bg-[#431407] text-orange-100",
-      card: "bg-black/20 border-orange-500/15 shadow-2xl rounded-[32px] border",
-      accent: "text-orange-400 bg-orange-400/15 border-orange-400/15",
-      button: "bg-orange-600 text-white rounded-2xl shadow-orange-500/20 hover:bg-orange-500",
-      input: "bg-black/30 border-orange-900 text-orange-100 focus:border-orange-500 rounded-2xl border-2",
-      label: "text-orange-500/60 font-black uppercase tracking-tight",
-      muted: "text-orange-900",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #f97316 !important; color: white !important; }`
-    },
-    rose: {
-      container: "bg-[#2d0611] text-rose-100",
-      card: "bg-black/20 border-rose-500/15 shadow-2xl rounded-[32px] border",
-      accent: "text-rose-400 bg-rose-400/15 border-rose-400/15",
-      button: "bg-rose-600 text-white rounded-2xl shadow-rose-500/20 hover:bg-rose-500",
-      input: "bg-black/30 border-rose-900 text-rose-100 focus:border-rose-500 rounded-2xl border-2",
-      label: "text-rose-500/60 font-black uppercase tracking-tight",
-      muted: "text-rose-900",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #e11d48 !important; color: white !important; }`
-    },
-    enterprise: {
-      container: "bg-[#0B0F17] text-[#F9FAFB]",
-      card: "bg-[#111827] border-white/10 shadow-2xl rounded-[32px] border",
-      accent: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
-      button: "bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-500",
-      input: "bg-[#111827] border-white/10 text-[#F9FAFB] focus:border-indigo-500 rounded-2xl border-2",
-      label: "text-[#9CA3AF] font-bold uppercase tracking-widest text-[10px]",
-      muted: "text-[#9CA3AF]",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: #F9FAFB !important; } .react-calendar__tile--active { background: #6366F1 !important; color: white !important; font-weight: bold; }`
-    },
-    midnight: {
-      container: "bg-black text-white",
-      card: "bg-zinc-900 border-white/5 shadow-2xl rounded-[32px] border",
-      accent: "text-zinc-400 bg-zinc-800 border-white/5",
-      button: "bg-white text-black rounded-2xl font-black shadow-lg hover:bg-zinc-200",
-      input: "bg-black border-zinc-800 text-white focus:border-white rounded-2xl border-2",
-      label: "text-zinc-600 font-black uppercase tracking-widest",
-      muted: "text-zinc-800",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: white !important; } .react-calendar__tile--active { background: white !important; color: black !important; font-weight: bold; }`
-    },
-    vibrant: {
-      container: "bg-[#160e2e] text-purple-100",
-      card: "bg-black/30 border-purple-500/10 shadow-2xl rounded-[32px] border",
-      accent: "text-purple-400 bg-purple-400/15 border-purple-400/15",
-      button: "bg-purple-600 text-white rounded-2xl shadow-purple-500/20 hover:bg-purple-500",
-      input: "bg-black/30 border-purple-900 text-purple-100 focus:border-purple-500 rounded-2xl border-2",
-      label: "text-purple-500/60 font-black uppercase tracking-tight",
-      muted: "text-purple-900",
-      calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #8b5cf6 !important; color: white !important; }`
-    }
+  const currentTheme = {
+    container: "text-proton-text",
+    card: "bg-proton-card/90 border border-proton-border shadow-md rounded-2xl",
+    accent: "text-proton-accent bg-proton-accent/10 border border-proton-accent/20",
+    button: "bg-proton-accent hover:bg-proton-accent/90 text-proton-bg font-bold rounded-xl shadow-md",
+    input: "bg-proton-bg/80 border border-proton-border text-proton-text focus:border-proton-accent rounded-xl",
+    label: "text-xs font-semibold text-proton-muted uppercase tracking-wider font-mono",
+    muted: "text-proton-muted",
   };
-
-  const currentTheme = (themes as Record<string, any>)[theme] || themes.midnight;
 
   const handleAddTaskSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -867,8 +774,8 @@ export const OrganizerView = ({
         {/* Visual theme customizer for organizer workspace */}
         <div className="flex flex-wrap items-center gap-4 justify-center md:justify-end">
           {/* Compact Vibe / Accent Roller */}
-          <div className="flex items-center gap-1.5 bg-black/30 p-2 px-3.5 rounded-2xl border border-white/5 shadow-inner shrink-0">
-            <span className="text-[9px] font-black uppercase tracking-widest opacity-60 mr-1 select-none">
+          <div className="flex items-center gap-1.5 bg-proton-card/60 p-2 px-3.5 rounded-2xl border border-proton-border shadow-inner shrink-0">
+            <span className="text-[9px] font-black uppercase tracking-widest text-proton-muted mr-1 select-none">
               {language === 'ka' ? 'აქცენტი:' : 'Theme:'}
             </span>
             {[
@@ -903,7 +810,7 @@ export const OrganizerView = ({
               placeholder={language === 'ka' ? 'ძიება...' : 'Search tasks...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className={cn("pl-11 pr-4 py-3 text-xs font-black uppercase tracking-widest rounded-2xl border-2 focus:outline-none transition-all w-48 bg-black/20", currentTheme.input)}
+              className={cn("pl-11 pr-4 py-3 text-xs font-black uppercase tracking-widest focus:outline-none transition-all w-48", currentTheme.input)}
             />
           </div>
         </div>
@@ -911,7 +818,7 @@ export const OrganizerView = ({
 
       {/* Primary stats widget row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className={cn("p-6 rounded-[32px] transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
+        <div className={cn("p-6 rounded-2xl transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
           <div>
             <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", currentTheme.muted)}>
               {language === 'ka' ? 'შესრულებული საქმეები' : 'Completed Tasks'}
@@ -926,7 +833,7 @@ export const OrganizerView = ({
           </div>
         </div>
 
-        <div className={cn("p-6 rounded-[32px] transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
+        <div className={cn("p-6 rounded-2xl transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
           <div>
             <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", currentTheme.muted)}>
               {language === 'ka' ? 'აქტიური ტაიმერი' : 'Active Stopwatch'}
@@ -940,7 +847,7 @@ export const OrganizerView = ({
           </div>
         </div>
 
-        <div className={cn("p-6 rounded-[32px] transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
+        <div className={cn("p-6 rounded-2xl transition-all duration-500 flex flex-col justify-center", currentTheme.card, "lg:col-span-2")}>
           <div className="flex items-center justify-between">
             <div className="mr-4">
               <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", currentTheme.muted)}>
@@ -996,7 +903,7 @@ export const OrganizerView = ({
           </div>
 
           {/* Quick Task Creation Card */}
-          <div id="task-form" className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div id="task-form" className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
             <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter mb-6">
               <PlusCircle size={20} className="text-proton-accent" />
               {language === 'ka' ? 'ახალი დავალების დამატება' : 'Register New Task / Objective'}
@@ -1011,7 +918,7 @@ export const OrganizerView = ({
                     placeholder={language === 'ka' ? 'განსაზღვრეთ დავალების სათაური...' : 'Specify task title / goal...'}
                     value={newTaskInput}
                     onChange={e => setNewTaskInput(e.target.value)}
-                    className={cn("w-full rounded-2xl px-6 py-4 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                    className={cn("w-full rounded-xl px-6 py-4 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                   />
                   <button 
                     type="button"
@@ -1021,7 +928,7 @@ export const OrganizerView = ({
                      <ChevronDown size={14} className={cn("transition-transform duration-300", showAdvancedAdd && "rotate-180")} />
                   </button>
                 </div>
-                <button type="submit" className={cn("px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl", currentTheme.button)}>
+                <button type="submit" className={cn("px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl", currentTheme.button)}>
                   {language === 'ka' ? 'დამატება' : 'Add Task'}
                 </button>
               </div>
@@ -1045,7 +952,7 @@ export const OrganizerView = ({
                             placeholder={language === 'ka' ? 'ჩაწერეთ დამატებითი დეტალები...' : 'Enter secondary notes or reminders...'}
                             value={taskDescription}
                             onChange={e => setTaskDescription(e.target.value)}
-                            className={cn("w-full rounded-2xl px-5 py-3.5 text-xs font-medium focus:outline-none transition-all min-h-[90px] resize-none", currentTheme.input)}
+                            className={cn("w-full rounded-xl px-5 py-3.5 text-xs font-medium focus:outline-none transition-all min-h-[90px] resize-none", currentTheme.input)}
                           />
                         </div>
 
@@ -1060,7 +967,7 @@ export const OrganizerView = ({
                               placeholder={language === 'ka' ? 'მაგ: მარკეტინგი, პირადი, ფინანსები...' : 'e.g. Marketing, Personal, Kakheti...'}
                               value={taskCategory}
                               onChange={e => setTaskCategory(e.target.value)}
-                              className={cn("w-full pl-10 pr-4 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                              className={cn("w-full pl-10 pr-4 py-3 text-xs font-bold focus:outline-none transition-all rounded-xl", currentTheme.input)}
                             />
                           </div>
                         </div>
@@ -1079,7 +986,7 @@ export const OrganizerView = ({
                                 return `${y}-${m}-${d}`;
                               })() : ''}
                               onChange={e => setTaskDueDate(e.target.value ? new Date(e.target.value + "T00:00:00") : null)}
-                              className={cn("w-full rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                              className={cn("w-full rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1089,7 +996,7 @@ export const OrganizerView = ({
                                 type="number"
                                 value={taskEstTime}
                                 onChange={e => setTaskEstTime(parseInt(e.target.value) || 0)}
-                                className={cn("w-full rounded-2xl px-4 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                                className={cn("w-full rounded-xl px-4 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                               />
                               <span className="text-[10px] font-black opacity-40">MIN</span>
                             </div>
@@ -1229,7 +1136,7 @@ export const OrganizerView = ({
           {/* Task Render Section */}
           <div className="space-y-4">
              {isCalendarFilterActive && selectedCalendarDate && (
-               <div className={cn("p-6 rounded-[24px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-proton-border/30 shadow-md", currentTheme.card)}>
+               <div className={cn("p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-proton-border/30 shadow-md", currentTheme.card)}>
                  <div className="flex items-center gap-3">
                    <div className="w-10 h-10 rounded-xl bg-proton-accent/10 flex items-center justify-center text-proton-accent border border-proton-accent/20 shrink-0">
                      <CalendarIcon size={18} />
@@ -1263,7 +1170,7 @@ export const OrganizerView = ({
              {viewLayout === 'list' ? (
                 // Flat simple list layout
                 filteredTasks.length === 0 ? (
-                  <div className={cn("p-16 rounded-[40px] text-center space-y-3", currentTheme.card)}>
+                  <div className={cn("p-16 rounded-2xl text-center space-y-3", currentTheme.card)}>
                      <p className="font-bold text-xs uppercase tracking-widest opacity-60">
                        {language === 'ka' ? 'დავალებები არ მოიძებნა' : 'No tasks match your chosen filters'}
                      </p>
@@ -1373,7 +1280,7 @@ export const OrganizerView = ({
         <div className="space-y-8">
           
           {/* Daily Vitality & Habits Dashboard */}
-          <div className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
                 <Sparkles size={20} className="text-amber-400" />
@@ -1398,7 +1305,7 @@ export const OrganizerView = ({
                   placeholder={language === 'ka' ? 'რა არის დღევანდელი მთავარი საქმე?...' : 'What is your single main target today?...'}
                   value={dailyFocus}
                   onChange={(e) => setDailyFocus(e.target.value)}
-                  className={cn("w-full rounded-2xl px-5 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                  className={cn("w-full rounded-xl px-5 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                 />
               </div>
 
@@ -1555,14 +1462,14 @@ export const OrganizerView = ({
                     : 'Draft instant thoughts, reminders, or scratch notes here... (auto-saves)'}
                   value={scratchpad}
                   onChange={(e) => setScratchpad(e.target.value)}
-                  className={cn("w-full h-32 rounded-2xl px-5 py-4 text-xs font-mono focus:outline-none transition-all resize-none bg-black/40 leading-relaxed", currentTheme.input)}
+                  className={cn("w-full h-32 rounded-xl px-5 py-4 text-xs font-mono focus:outline-none transition-all resize-none bg-black/40 leading-relaxed", currentTheme.input)}
                 />
               </div>
             </div>
           </div>
 
           {/* Simple Clean Non-Cosmic Calendar */}
-          <div className={cn("p-3 sm:p-6 md:p-8 rounded-[40px] shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div className={cn("p-3 sm:p-6 md:p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
                 <CalendarIcon size={20} className={currentTheme.muted} />
@@ -1581,44 +1488,6 @@ export const OrganizerView = ({
               )}
             </div>
             <div className="w-full overflow-hidden">
-              <style>{`
-                ${currentTheme.calendar}
-                .react-calendar { width: 100% !important; max-width: 100% !important; border: none !important; background: transparent !important; }
-                .react-calendar__viewContainer { width: 100% !important; }
-                .react-calendar__month-view { width: 100% !important; }
-                .react-calendar__month-view__days { display: grid !important; grid-template-columns: repeat(7, 1fr) !important; width: 100% !important; }
-                .react-calendar__tile { 
-                  aspect-ratio: 1; 
-                  display: flex !important; 
-                  flex-direction: column !important;
-                  align-items: center; 
-                  justify-content: center; 
-                  padding: 4px !important; 
-                  font-size: 0.75rem !important; 
-                  min-width: 0 !important; 
-                  overflow: hidden !important; 
-                  position: relative !important;
-                  border-radius: 12px !important;
-                  transition: all 0.2s ease !important;
-                }
-                .react-calendar__tile:hover {
-                  background-color: rgba(255, 255, 255, 0.05) !important;
-                }
-                .react-calendar__tile--active {
-                  background-color: #22d3ee !important;
-                  color: #000 !important;
-                  font-weight: bold !important;
-                }
-                .react-calendar__tile--now {
-                  border: 1px solid rgba(34, 211, 238, 0.4) !important;
-                }
-                @media (min-width: 640px) {
-                  .react-calendar__tile { 
-                    font-size: 0.875rem !important; 
-                    padding: 0.8em 0.1em !important; 
-                  }
-                }
-              `}</style>
               <Calendar 
                 className="mx-auto" 
                 value={selectedCalendarDate}
@@ -1641,10 +1510,10 @@ export const OrganizerView = ({
               />
 
               {/* Dynamic Monthly Workload Summary Panel */}
-              <div className="mt-8 pt-8 border-t border-white/5 space-y-6">
+              <div className="mt-8 pt-8 border-t border-proton-border/20 space-y-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-black text-xs uppercase tracking-wider text-white">
+                    <h4 className="font-black text-xs uppercase tracking-wider text-proton-text">
                       {language === 'ka' ? 'თვიური დატვირთვის ანალიზი' : 'Monthly Workload Analysis'}
                     </h4>
                     <p className={cn("text-[10px] uppercase tracking-widest mt-0.5 font-bold", currentTheme.muted)}>
@@ -1868,7 +1737,7 @@ export const OrganizerView = ({
           </div>
 
           {/* Quick Offline Templates Pool (Quota Bypass) */}
-          <div className={cn("p-8 rounded-[40px] shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
+          <div className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
             <div className="mb-6">
               <h3 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
                 <Zap size={16} className="text-amber-500 animate-pulse" />
@@ -1925,7 +1794,7 @@ export const OrganizerView = ({
       return (
         <div 
           key={task.id} 
-          className={cn("p-6 rounded-[24px] border transition-all flex flex-col gap-4 relative scroll-m-24 md:scroll-m-0 scroll-mt-[120px] scroll-mb-[120px]", currentTheme.card)}
+          className={cn("p-6 rounded-2xl border transition-all flex flex-col gap-4 relative scroll-m-24 md:scroll-m-0 scroll-mt-[120px] scroll-mb-[120px]", currentTheme.card)}
         >
           <div className="space-y-4">
             <div className="flex flex-col gap-1">
@@ -2028,7 +1897,7 @@ export const OrganizerView = ({
         key={task.id} 
         id={`task-card-${task.id}`}
         className={cn(
-          "p-6 rounded-[24px] border transition-all group flex flex-col gap-4 relative overflow-hidden", 
+          "p-6 rounded-2xl border transition-all group flex flex-col gap-4 relative overflow-hidden", 
           currentTheme.card, 
           task.completed && "opacity-40 select-none border-proton-border/20",
           isOverdue && "border-red-500/40 bg-red-500/[0.02] shadow-[0_0_15px_rgba(239,68,68,0.05)]",

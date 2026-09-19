@@ -84,8 +84,6 @@ interface SettingsViewProps {
   language: 'en' | 'ka';
   uiMode: 'business' | 'creative';
   setUiMode: (mode: 'business' | 'creative') => void;
-  organizerTheme: Theme;
-  setOrganizerTheme: (theme: Theme) => void;
   isAdmin?: boolean;
 }
 
@@ -114,8 +112,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   language,
   uiMode,
   setUiMode,
-  organizerTheme,
-  setOrganizerTheme,
   isAdmin
 }) => {
   const t = translations[language].settings;
