@@ -37,7 +37,8 @@ import {
   Cloud,
   CloudOff,
   FolderKanban,
-  Target
+  Target,
+  Anchor
 } from 'lucide-react';
 import { Task, Workflow, Theme } from '../types';
 import { translations } from '../translations';
@@ -101,8 +102,8 @@ export const OrganizerView = ({
   const [taskCategory, setTaskCategory] = useState('');
 
   // Daily Vitality and Habits states
-  const [dailyFocus, setDailyFocus] = useState(() => {
-    return safeStorage.get('organizer_daily_focus') || '';
+  const [dailyAnchorTaskId, setDailyAnchorTaskId] = useState<string | null>(() => {
+    return safeStorage.get('organizer_daily_anchor_task_id') || null;
   });
   const [waterGlasses, setWaterGlasses] = useState(() => {
     const val = parseInt(safeStorage.get('organizer_water_glasses') || '0', 10);
@@ -136,7 +137,8 @@ export const OrganizerView = ({
       setWaterGlasses(0);
       setHabits(prev => prev.map(h => ({ ...h, completed: false })));
       setMood('');
-      setDailyFocus('');
+      setDailyAnchorTaskId(null);
+      localStorage.removeItem('organizer_daily_anchor_task_id');
       
       if (lastActiveDate) {
         const lastDate = new Date(lastActiveDate);
@@ -154,10 +156,43 @@ export const OrganizerView = ({
     }
   }, []);
 
-  // Syncing to localStorage on state changes
+  // Syncing dailyAnchorTaskId to localStorage on state changes
   useEffect(() => {
-    localStorage.setItem('organizer_daily_focus', dailyFocus);
-  }, [dailyFocus]);
+    if (dailyAnchorTaskId) {
+      localStorage.setItem('organizer_daily_anchor_task_id', dailyAnchorTaskId);
+    } else {
+      localStorage.removeItem('organizer_daily_anchor_task_id');
+    }
+  }, [dailyAnchorTaskId]);
+
+  // Backward-compatibility migration: match legacy raw-string daily focus to task content
+  useEffect(() => {
+    if (!dailyAnchorTaskId && tasks.length > 0) {
+      const legacyFocus = safeStorage.get('organizer_daily_focus');
+      if (legacyFocus && legacyFocus.trim()) {
+        const trimmed = legacyFocus.trim().toLowerCase();
+        const matched = tasks.find(t => 
+          !t.completed && (
+            t.content.trim().toLowerCase() === trimmed || 
+            (t.contentGe && t.contentGe.trim().toLowerCase() === trimmed)
+          )
+        );
+        if (matched) {
+          setDailyAnchorTaskId(matched.id);
+        }
+      }
+    }
+  }, [tasks, dailyAnchorTaskId]);
+
+  // Validate dailyAnchorTaskId existence against active tasks; reset if deleted
+  useEffect(() => {
+    if (dailyAnchorTaskId) {
+      const exists = tasks.some(t => t.id === dailyAnchorTaskId);
+      if (!exists) {
+        setDailyAnchorTaskId(null);
+      }
+    }
+  }, [tasks, dailyAnchorTaskId]);
 
   useEffect(() => {
     localStorage.setItem('organizer_water_glasses', String(waterGlasses));
@@ -203,6 +238,12 @@ export const OrganizerView = ({
   // Workspace Primary View Mode (Phase 5B Scaffold)
   type OrganizerViewMode = 'today' | 'plan' | 'projects' | 'focus';
   const [viewMode, setViewMode] = useState<OrganizerViewMode>('today');
+
+  // Resolved Daily Anchor Task entity
+  const dailyAnchorTask = useMemo(() => {
+    if (!dailyAnchorTaskId) return null;
+    return tasks.find(t => t.id === dailyAnchorTaskId) || null;
+  }, [tasks, dailyAnchorTaskId]);
 
   // Task inline editing states
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -715,8 +756,11 @@ export const OrganizerView = ({
     if (activeTimerTaskId === id) {
       setActiveTimerTaskId(null);
     }
+    if (dailyAnchorTaskId === id) {
+      setDailyAnchorTaskId(null);
+    }
     onDeleteTask(id);
-  }, [tasks, categoryFilter, activeTimerTaskId, onDeleteTask]);
+  }, [tasks, categoryFilter, activeTimerTaskId, dailyAnchorTaskId, onDeleteTask]);
 
   return (
     <div className={cn("max-w-7xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 transition-colors duration-500", currentTheme.container)}>
@@ -1352,18 +1396,97 @@ export const OrganizerView = ({
             </div>
 
             <div className="space-y-6">
-              {/* Daily Focus */}
+              {/* Daily Anchor / Focus Task Binding */}
               <div className="space-y-2">
-                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
-                  {language === 'ka' ? 'დღის მთავარი ფოკუსი' : 'Main Target of the Day'}
+                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1 flex items-center justify-between", currentTheme.label)}>
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <Anchor size={11} className={dailyAnchorTask ? "text-amber-500" : "text-proton-muted"} />
+                    {language === 'ka' ? 'დღის მთავარი ანკორი (ამოცანა)' : 'Daily Anchor (Priority Task)'}
+                  </span>
+                  {dailyAnchorTaskId && (
+                    <button
+                      type="button"
+                      onClick={() => setDailyAnchorTaskId(null)}
+                      className="text-[9px] lowercase opacity-60 hover:opacity-100 hover:text-red-500 transition-colors"
+                      title={language === 'ka' ? 'ანკორის მოხსნა' : 'Clear anchor'}
+                    >
+                      {language === 'ka' ? 'მოხსნა' : 'clear'}
+                    </button>
+                  )}
                 </label>
-                <input
-                  type="text"
-                  placeholder={language === 'ka' ? 'რა არის დღევანდელი მთავარი საქმე?...' : 'What is your single main target today?...'}
-                  value={dailyFocus}
-                  onChange={(e) => setDailyFocus(e.target.value)}
-                  className={cn("w-full rounded-xl px-5 py-3 text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
-                />
+                
+                {/* Selector / Current Anchor View */}
+                {dailyAnchorTask ? (
+                  <div className={cn(
+                    "w-full rounded-xl p-3 text-xs border flex items-center justify-between gap-3 transition-all",
+                    currentTheme.card,
+                    dailyAnchorTask.completed ? "opacity-60 border-emerald-500/30" : "border-amber-500/40 shadow-sm"
+                  )}>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <span className={cn(
+                        "w-2 h-2 rounded-full shrink-0",
+                        dailyAnchorTask.completed 
+                          ? "bg-emerald-500" 
+                          : dailyAnchorTask.priority === 'high' 
+                            ? "bg-red-500" 
+                            : dailyAnchorTask.priority === 'medium' 
+                              ? "bg-amber-500" 
+                              : "bg-blue-500"
+                      )} />
+                      <span className={cn(
+                        "font-bold truncate text-xs",
+                        dailyAnchorTask.completed && "line-through opacity-70"
+                      )}>
+                        {language === 'ka' ? (dailyAnchorTask.contentGe || dailyAnchorTask.content) : dailyAnchorTask.content}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {dailyAnchorTask.completed && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                          {language === 'ka' ? 'შესრულდა' : 'Done'}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const el = document.getElementById(`task-card-${dailyAnchorTask.id}`);
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            setHighlightedTaskId(dailyAnchorTask.id);
+                            if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
+                            highlightTimeoutRef.current = setTimeout(() => setHighlightedTaskId(null), 2500);
+                          }
+                        }}
+                        className="p-1 rounded-lg opacity-60 hover:opacity-100 hover:bg-proton-secondary/20 transition-all text-proton-text"
+                        title={language === 'ka' ? 'ამოცანის ჩვენება სიაში' : 'Jump to task'}
+                      >
+                        <Search size={12} />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      value={dailyAnchorTaskId || ''}
+                      onChange={(e) => setDailyAnchorTaskId(e.target.value || null)}
+                      className={cn(
+                        "w-full rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none transition-all appearance-none cursor-pointer pr-9",
+                        currentTheme.input
+                      )}
+                    >
+                      <option value="">
+                        {language === 'ka' ? '— აირჩიე დღის ანკორი ამოცანებიდან —' : '— Select a task as your Daily Anchor —'}
+                      </option>
+                      {tasks.filter(t => !t.completed).map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.priority === 'high' ? '🔴 ' : t.priority === 'medium' ? '🟡 ' : '🔵 '}
+                          {language === 'ka' ? (t.contentGe || t.content) : t.content}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                  </div>
+                )}
               </div>
 
               {/* Interactive Focus Timer with Custom Duration & Audio */}
@@ -2076,15 +2199,68 @@ export const OrganizerView = ({
             <div className="space-y-6">
               {/* Daily Target & Vitality summary in Focus mode */}
               <div className={cn("p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
-                <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
-                  <Flame size={16} className="text-amber-500" />
-                  {language === 'ka' ? 'დღის მიზანი' : 'Current Intention'}
-                </h4>
-                <p className="text-xs font-semibold text-proton-text bg-proton-secondary/10 p-4 rounded-xl border border-proton-border/20">
-                  {dailyFocus || (language === 'ka' ? 'მთავარი მიზანი ჯერ არ არის მითითებული' : 'No primary daily target set yet. Configure it in Today view.')}
-                </p>
-                <div className="pt-2 text-[10px] text-proton-muted font-bold uppercase tracking-wider">
-                  {language === 'ka' ? 'სესია მიმდინარეობს. კონცენტრირდით ერთ ამოცანაზე.' : 'Focus on the single active task until timer rings.'}
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                    <Flame size={16} className="text-amber-500" />
+                    {language === 'ka' ? 'დღის ანკორი' : 'Daily Anchor'}
+                  </h4>
+                  {dailyAnchorTask && (
+                    <span className={cn(
+                      "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
+                      dailyAnchorTask.completed 
+                        ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" 
+                        : "bg-amber-500/10 text-amber-500 border-amber-500/30"
+                    )}>
+                      {dailyAnchorTask.completed 
+                        ? (language === 'ka' ? 'დასრულებული' : 'Completed') 
+                        : (language === 'ka' ? 'აქტიური' : 'Active Anchor')}
+                    </span>
+                  )}
+                </div>
+
+                {dailyAnchorTask ? (
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-xl border border-proton-border/30 bg-proton-secondary/5 space-y-2">
+                      <div className="flex items-start gap-2.5">
+                        <span className={cn(
+                          "w-2 h-2 rounded-full shrink-0 mt-1.5",
+                          dailyAnchorTask.priority === 'high' ? "bg-red-500" : dailyAnchorTask.priority === 'medium' ? "bg-amber-500" : "bg-blue-500"
+                        )} />
+                        <span className={cn(
+                          "text-sm font-black text-proton-text leading-snug",
+                          dailyAnchorTask.completed && "line-through opacity-60"
+                        )}>
+                          {language === 'ka' ? (dailyAnchorTask.contentGe || dailyAnchorTask.content) : dailyAnchorTask.content}
+                        </span>
+                      </div>
+                      {dailyAnchorTask.description && (
+                        <p className="text-xs text-proton-muted ml-4 line-clamp-2">
+                          {dailyAnchorTask.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 ml-4 pt-1 flex-wrap">
+                        {dailyAnchorTask.category && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-proton-border/30 text-proton-text font-bold uppercase tracking-wider">
+                            {dailyAnchorTask.category}
+                          </span>
+                        )}
+                        <span className="text-[9px] px-2 py-0.5 rounded-md bg-proton-border/20 text-proton-muted font-bold uppercase tracking-wider">
+                          {dailyAnchorTask.priority}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs font-semibold text-proton-text bg-proton-secondary/10 p-4 rounded-xl border border-proton-border/20">
+                    {language === 'ka' ? 'დღის ანკორი ჯერ არ არის არჩეული. აირჩიეთ Today ხედიდან.' : 'No daily anchor selected yet. Select a task as your anchor in Today view.'}
+                  </p>
+                )}
+
+                <div className="pt-1 text-[10px] text-proton-muted font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Anchor size={11} className="shrink-0 text-amber-500" />
+                  {dailyAnchorTask && !dailyAnchorTask.completed
+                    ? (language === 'ka' ? 'კონცენტრირდით ამ ამოცანაზე სესიის დასრულებამდე.' : 'Focus on this core anchor task until completion.')
+                    : (language === 'ka' ? 'სესია მიმდინარეობს. კონცენტრირდით ერთ ამოცანაზე.' : 'Focus on the single active task until timer rings.')}
                 </div>
               </div>
             </div>
@@ -2339,6 +2515,25 @@ export const OrganizerView = ({
 
           {/* Stopwatch control button and utility operations button */}
           <div className="flex items-center gap-2 pr-1 select-none">
+            {/* Daily Anchor Toggle Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setDailyAnchorTaskId(prev => prev === task.id ? null : task.id);
+              }}
+              className={cn(
+                "p-2 rounded-xl border transition-all active:scale-95 flex items-center justify-center shrink-0",
+                dailyAnchorTaskId === task.id
+                  ? "bg-amber-500/15 border-amber-500 text-amber-500 shadow-sm"
+                  : "border-proton-border/30 text-proton-text opacity-40 hover:opacity-100 hover:border-amber-500/40 hover:bg-amber-500/5 group-hover:opacity-100"
+              )}
+              title={dailyAnchorTaskId === task.id 
+                ? (language === 'ka' ? 'დღის ანკორი (აქტიური) - დააჭირეთ მოსახსნელად' : 'Daily Anchor (Active) - click to remove')
+                : (language === 'ka' ? 'დააყენე დღის ანკორად' : 'Set as Daily Anchor')}
+            >
+              <Anchor size={12} className={dailyAnchorTaskId === task.id ? "text-amber-500 fill-amber-500/20" : ""} />
+            </button>
+
             {(!task.completed) && (
               <button 
                 type="button"
