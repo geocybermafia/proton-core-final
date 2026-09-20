@@ -554,23 +554,10 @@ export const OrganizerView = ({
       const categoryMatch = categoryFilter === null
         ? true
         : task.category?.toLowerCase() === categoryFilter.toLowerCase();
-
-      const selectedYear = selectedCalendarDate ? selectedCalendarDate.getFullYear() : null;
-      const selectedMonth = selectedCalendarDate ? selectedCalendarDate.getMonth() : null;
-      const selectedDay = selectedCalendarDate ? selectedCalendarDate.getDate() : null;
-
-      const dateMatch = (!isCalendarFilterActive || !selectedCalendarDate)
-        ? true
-        : task.dueDate && (() => {
-            const d = new Date(task.dueDate);
-            return d.getDate() === selectedDay &&
-                   d.getMonth() === selectedMonth &&
-                   d.getFullYear() === selectedYear;
-          })();
       
-      return contentMatch && statusMatch && energyMatch && categoryMatch && dateMatch;
+      return contentMatch && statusMatch && energyMatch && categoryMatch;
     });
-  }, [tasks, searchQuery, filterStatus, language, energyFilter, categoryFilter, isCalendarFilterActive, selectedCalendarDate]);
+  }, [tasks, searchQuery, filterStatus, language, energyFilter, categoryFilter]);
 
   // Pre-computed map of date keys "YYYY-M-D" to task status indicators for O(1) calendar tile lookup
   const tasksDateMap = useMemo(() => {
@@ -1236,38 +1223,6 @@ export const OrganizerView = ({
 
           {/* Task Render Section */}
           <div className="space-y-4">
-             {isCalendarFilterActive && selectedCalendarDate && (
-               <div className={cn("p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-proton-border/30 shadow-md", currentTheme.card)}>
-                 <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-xl bg-proton-accent/10 flex items-center justify-center text-proton-accent border border-proton-accent/20 shrink-0">
-                     <CalendarIcon size={18} />
-                   </div>
-                   <div>
-                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-proton-accent">
-                       {language === 'ka' ? 'დავალებები არჩეული თარიღით' : 'Filtered by Calendar Date'}
-                     </p>
-                     <p className="text-xs font-black text-proton-text uppercase tracking-wider mt-0.5">
-                       {selectedCalendarDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
-                         weekday: 'long',
-                         year: 'numeric',
-                         month: 'long',
-                         day: 'numeric'
-                       })}
-                     </p>
-                   </div>
-                 </div>
-                 <button 
-                   onClick={() => {
-                     setIsCalendarFilterActive(false);
-                     setSelectedCalendarDate(null);
-                   }}
-                   className="px-4 py-2 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-red-500/20 shrink-0 self-stretch sm:self-auto text-center"
-                 >
-                   {language === 'ka' ? 'ყველა დავალების ჩვენება' : 'Show All Tasks'}
-                 </button>
-               </div>
-             )}
-
              {viewLayout === 'list' ? (
                 // Flat simple list layout
                 filteredTasks.length === 0 ? (
@@ -1648,274 +1603,6 @@ export const OrganizerView = ({
             </div>
           </div>
 
-          {/* Simple Clean Non-Cosmic Calendar */}
-          <div className={cn("p-3 sm:p-6 md:p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
-                <CalendarIcon size={20} className={currentTheme.muted} />
-                {language === 'ka' ? 'კალენდარი' : 'Workspace Calendar'}
-              </h3>
-              {isCalendarFilterActive && (
-                <button 
-                  onClick={() => {
-                    setIsCalendarFilterActive(false);
-                    setSelectedCalendarDate(null);
-                  }}
-                  className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-red-500/15 border border-red-500/20 text-red-400 rounded-md hover:bg-red-500 hover:text-white transition-all"
-                >
-                  {language === 'ka' ? 'ფილტრის გაუქმება' : 'Reset'}
-                </button>
-              )}
-            </div>
-            <div className="w-full overflow-hidden">
-              <Calendar 
-                className="mx-auto" 
-                value={selectedCalendarDate}
-                activeStartDate={currentViewDate}
-                onActiveStartDateChange={({ activeStartDate }: any) => {
-                  if (activeStartDate) {
-                    setCurrentViewDate(activeStartDate);
-                  }
-                }}
-                onChange={(val) => {
-                  const dateVal = val as Date;
-                  setSelectedCalendarDate(dateVal);
-                  setIsCalendarFilterActive(true);
-                  setTaskDueDate(dateVal);
-                  if (dateVal) {
-                    setCurrentViewDate(dateVal);
-                  }
-                }}
-                tileContent={renderTileContent}
-              />
-
-              {/* Dynamic Monthly Workload Summary Panel */}
-              <div className="mt-8 pt-8 border-t border-proton-border/20 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-black text-xs uppercase tracking-wider text-proton-text">
-                      {language === 'ka' ? 'თვიური დატვირთვის ანალიზი' : 'Monthly Workload Analysis'}
-                    </h4>
-                    <p className={cn("text-[10px] uppercase tracking-widest mt-0.5 font-bold", currentTheme.muted)}>
-                      {currentViewDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'long', year: 'numeric' })}
-                    </p>
-                  </div>
-                  <div className={cn("px-3 py-1.5 rounded-xl border font-mono text-xs font-black shrink-0", 
-                    monthStats.workloadPercentage > 50 ? "bg-red-500/10 text-red-400 border-red-500/20" :
-                    monthStats.workloadPercentage > 20 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                    "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                  )}>
-                    {monthStats.workloadPercentage}% {language === 'ka' ? 'დატვირთვა' : 'Load'}
-                  </div>
-                </div>
-
-                {/* Micro metrics bar charts/progress */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className={cn("text-[9px] uppercase tracking-widest font-bold", currentTheme.muted)}>
-                        {language === 'ka' ? 'დატვირთული დღეები' : 'Active Days'}
-                      </span>
-                      <span className="text-xs font-black text-white">
-                        {monthStats.busyDays} / {monthStats.totalDays}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-proton-accent rounded-full transition-all duration-500"
-                        style={{ width: `${monthStats.workloadPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className={cn("text-[9px] uppercase tracking-widest font-bold", currentTheme.muted)}>
-                        {language === 'ka' ? 'შესრულების დონე' : 'Month Progress'}
-                      </span>
-                      <span className="text-xs font-black text-white">
-                        {monthStats.completedTasks} / {monthStats.monthTasks.length}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${monthStats.monthTasks.length > 0 ? Math.round((monthStats.completedTasks / monthStats.monthTasks.length) * 100) : 0}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Day Intensity Distribution */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
-                      {language === 'ka' ? 'ინტენსივობის განაწილება' : 'Intensity Distribution'}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 flex flex-col items-center text-center">
-                      <span className="text-sm font-black text-red-400">{monthStats.highLoadDays}</span>
-                      <span className="text-[8px] uppercase tracking-tighter text-red-400/60 mt-0.5 font-bold">
-                        {language === 'ka' ? 'მძიმე დღე' : 'High Load'}
-                      </span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 flex flex-col items-center text-center">
-                      <span className="text-sm font-black text-amber-400">{monthStats.mediumLoadDays}</span>
-                      <span className="text-[8px] uppercase tracking-tighter text-amber-400/60 mt-0.5 font-bold">
-                        {language === 'ka' ? 'საშუალო დღე' : 'Med Load'}
-                      </span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center">
-                      <span className="text-sm font-black text-emerald-400">{monthStats.freeDays}</span>
-                      <span className="text-[8px] uppercase tracking-tighter text-emerald-400/60 mt-0.5 font-bold">
-                        {language === 'ka' ? 'თავისუფალი' : 'Free Days'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Specific days workload list */}
-                {monthStats.busyDays > 0 && (
-                  <div className="space-y-2">
-                    <p className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
-                      {language === 'ka' ? 'დატვირთული დღეების განრიგი' : 'Active Days Breakdown'}
-                    </p>
-                    <div className="max-h-[140px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
-                      {Object.keys(monthStats.dayTasksMap)
-                        .map(dayStr => Number(dayStr))
-                        .filter(day => monthStats.dayTasksMap[day] && monthStats.dayTasksMap[day].length > 0)
-                        .map(day => {
-                          const dayTasks = monthStats.dayTasksMap[day] || [];
-                          const isHigh = dayTasks.length >= 3;
-                          const completedCount = dayTasks.filter(t => t.completed).length;
-                          return (
-                            <div 
-                              key={day}
-                              className="px-3 py-2 bg-black/20 hover:bg-black/30 rounded-xl border border-white/5 flex items-center justify-between gap-3 text-xs transition-all"
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <span className={cn(
-                                  "w-2 h-2 rounded-full",
-                                  isHigh ? "bg-red-500 animate-pulse" : "bg-amber-500"
-                                )} />
-                                <span className="font-bold text-white">
-                                  {language === 'ka' ? `${day} რიცხვი` : `Day ${day}`}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
-                                  {completedCount} / {dayTasks.length} {language === 'ka' ? 'შესრულებული' : 'done'}
-                                </span>
-                                <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-mono font-black", 
-                                  isHigh ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"
-                                )}>
-                                  {dayTasks.length} {language === 'ka' ? 'საქმე' : 'tasks'}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Dynamic Calendar-Task Integration Dashboard */}
-              {selectedCalendarDate && (
-                <div className="mt-6 pt-6 border-t border-proton-border/20 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <p className="text-[9px] font-black text-proton-muted uppercase tracking-wider">
-                        {language === 'ka' ? 'არჩეული დღე' : 'Selected Day'}
-                      </p>
-                      <p className="text-xs font-black text-proton-text uppercase tracking-wider">
-                        {selectedCalendarDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setIsCalendarFilterActive(!isCalendarFilterActive);
-                        }}
-                        className={cn(
-                          "px-2.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border",
-                          isCalendarFilterActive 
-                            ? "bg-proton-accent text-proton-bg border-proton-accent shadow-md shadow-proton-accent/20" 
-                            : "bg-proton-secondary/20 text-proton-text border-proton-border/30 hover:bg-white/5"
-                        )}
-                      >
-                        {language === 'ka' ? (isCalendarFilterActive ? 'ფილტრი: აქტიური' : 'ფილტრის ჩართვა') : (isCalendarFilterActive ? 'Filter: Active' : 'Filter Tasks')}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setTaskDueDate(selectedCalendarDate);
-                          setShowAdvancedAdd(true);
-                          const formEl = document.getElementById('task-form');
-                          if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="px-2.5 py-1.5 bg-proton-text text-proton-bg font-black text-[8px] uppercase tracking-wider rounded-lg hover:scale-105 transition-all"
-                      >
-                        {language === 'ka' ? '+ საქმე' : '+ Add Task'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Micro-list checklist for the day */}
-                  <div className="space-y-2">
-                    {selectedDateTasks.length === 0 ? (
-                      <div className="p-3 bg-proton-secondary/5 rounded-xl border border-proton-border/10 text-center">
-                        <p className="text-[10px] text-proton-muted italic">
-                          {language === 'ka' ? 'ამ დღეს საქმეები არ არის' : 'No tasks scheduled for this day'}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="max-h-[160px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
-                        {selectedDateTasks.map(t => (
-                          <div 
-                            key={t.id} 
-                            className="p-2.5 bg-black/30 rounded-xl border border-proton-border/10 flex items-center justify-between gap-3 group/item hover:border-proton-accent/30 transition-all"
-                          >
-                            <button 
-                              onClick={() => onToggleTask(t.id)}
-                              className="flex items-center gap-2.5 min-w-0 text-left flex-1"
-                            >
-                              {t.completed ? (
-                                <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
-                              ) : (
-                                <div className="w-3.5 h-3.5 rounded-full border border-proton-text/40 group-hover/item:border-proton-accent shrink-0" />
-                              )}
-                              <span className={cn(
-                                "text-[11px] font-bold truncate",
-                                t.completed ? "text-proton-muted line-through" : "text-proton-text"
-                              )}>
-                                {language === 'ka' ? (t.contentGe || t.content) : t.content}
-                              </span>
-                            </button>
-                            <span className={cn(
-                              "px-1.5 py-0.5 rounded text-[7px] font-black uppercase shrink-0",
-                              t.priority === 'high' ? "bg-red-500/10 text-red-400 border border-red-500/20" :
-                              t.priority === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : 
-                              "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                            )}>
-                              {t.priority}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Quick Offline Templates Pool (Quota Bypass) */}
           <div className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
             <div className="mb-6">
@@ -2002,26 +1689,350 @@ export const OrganizerView = ({
                   </div>
                 </div>
 
+                {/* Filter indicator banner if a calendar date is actively selected in PLAN */}
+                {isCalendarFilterActive && selectedCalendarDate && (
+                  <div className="p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-proton-border/30 shadow-md bg-proton-secondary/10 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-proton-accent/10 flex items-center justify-center text-proton-accent border border-proton-accent/20 shrink-0">
+                        <CalendarIcon size={16} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-proton-accent">
+                          {language === 'ka' ? 'არჩეული თარიღის საქმეები' : 'Filtered by Calendar Date'}
+                        </p>
+                        <p className="text-xs font-black text-proton-text uppercase tracking-wider mt-0.5">
+                          {selectedCalendarDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setIsCalendarFilterActive(false);
+                        setSelectedCalendarDate(null);
+                      }}
+                      className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-red-500/20 shrink-0 self-stretch sm:self-auto text-center"
+                    >
+                      {language === 'ka' ? 'ყველა ვადის ჩვენება' : 'Show All Commitments'}
+                    </button>
+                  </div>
+                )}
+
                 {/* Scheduled tasks list in plan view */}
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-proton-muted">
-                    {language === 'ka' ? 'უახლოესი ვადები' : 'Upcoming Commitments'}
-                  </h4>
-                  {tasks.filter(t => t.dueDate && !t.completed).length === 0 ? (
-                    <div className="p-8 text-center border border-dashed border-proton-border/30 rounded-2xl text-proton-muted text-xs">
-                      {language === 'ka' ? 'დაგეგმილი საქმეები არ არის. დაამატეთ თარიღი საქმეებს.' : 'No scheduled tasks found. Assign a due date in task cards to see them on the timeline.'}
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-proton-muted">
+                      {isCalendarFilterActive && selectedCalendarDate 
+                        ? (language === 'ka' ? 'საქმეები არჩეულ დღეს' : 'Commitments on Selected Date')
+                        : (language === 'ka' ? 'უახლოესი ვადები' : 'Upcoming Commitments')}
+                    </h4>
+                    {isCalendarFilterActive && selectedCalendarDate && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
+                        {selectedDateTasks.length} {language === 'ka' ? 'საქმე' : 'tasks'}
+                      </span>
+                    )}
+                  </div>
+
+                  {isCalendarFilterActive && selectedCalendarDate ? (
+                    selectedDateTasks.length === 0 ? (
+                      <div className="p-8 text-center border border-dashed border-proton-border/30 rounded-2xl text-proton-muted text-xs">
+                        {language === 'ka' ? 'ამ თარიღზე საქმეები არ არის დანიშნული.' : 'No tasks scheduled for this date.'}
+                      </div>
+                    ) : (
+                      selectedDateTasks.map(task => renderTaskCard(task))
+                    )
                   ) : (
-                    tasks
-                      .filter(t => t.dueDate && !t.completed)
-                      .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0))
-                      .map(task => renderTaskCard(task))
+                    tasks.filter(t => t.dueDate && !t.completed).length === 0 ? (
+                      <div className="p-8 text-center border border-dashed border-proton-border/30 rounded-2xl text-proton-muted text-xs">
+                        {language === 'ka' ? 'დაგეგმილი საქმეები არ არის. დაამატეთ თარიღი საქმეებს.' : 'No scheduled tasks found. Assign a due date in task cards to see them on the timeline.'}
+                      </div>
+                    ) : (
+                      tasks
+                        .filter(t => t.dueDate && !t.completed)
+                        .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0))
+                        .map(task => renderTaskCard(task))
+                    )
                   )}
                 </div>
               </div>
             </div>
 
             <div className="space-y-6">
+              {/* Interactive Monthly Calendar in Plan View */}
+              <div className={cn("p-3 sm:p-6 md:p-8 rounded-2xl shadow-sm transition-all duration-500 border", currentTheme.card)}>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
+                    <CalendarIcon size={20} className={currentTheme.muted} />
+                    {language === 'ka' ? 'კალენდარი' : 'Workspace Calendar'}
+                  </h3>
+                  {isCalendarFilterActive && (
+                    <button 
+                      onClick={() => {
+                        setIsCalendarFilterActive(false);
+                        setSelectedCalendarDate(null);
+                      }}
+                      className="px-2.5 py-1 text-[8px] font-black uppercase tracking-widest bg-red-500/15 border border-red-500/20 text-red-400 rounded-md hover:bg-red-500 hover:text-white transition-all"
+                    >
+                      {language === 'ka' ? 'ფილტრის გაუქმება' : 'Reset'}
+                    </button>
+                  )}
+                </div>
+                <div className="w-full overflow-hidden">
+                  <Calendar 
+                    className="mx-auto" 
+                    value={selectedCalendarDate}
+                    activeStartDate={currentViewDate}
+                    onActiveStartDateChange={({ activeStartDate }: any) => {
+                      if (activeStartDate) {
+                        setCurrentViewDate(activeStartDate);
+                      }
+                    }}
+                    onChange={(val) => {
+                      const dateVal = val as Date;
+                      setSelectedCalendarDate(dateVal);
+                      setIsCalendarFilterActive(true);
+                      setTaskDueDate(dateVal);
+                      if (dateVal) {
+                        setCurrentViewDate(dateVal);
+                      }
+                    }}
+                    tileContent={renderTileContent}
+                  />
+
+                  {/* Dynamic Monthly Workload Summary Panel */}
+                  <div className="mt-8 pt-8 border-t border-proton-border/20 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-black text-xs uppercase tracking-wider text-proton-text">
+                          {language === 'ka' ? 'თვიური დატვირთვის ანალიზი' : 'Monthly Workload Analysis'}
+                        </h4>
+                        <p className={cn("text-[10px] uppercase tracking-widest mt-0.5 font-bold", currentTheme.muted)}>
+                          {currentViewDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'long', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <div className={cn("px-3 py-1.5 rounded-xl border font-mono text-xs font-black shrink-0", 
+                        monthStats.workloadPercentage > 50 ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                        monthStats.workloadPercentage > 20 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                        "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      )}>
+                        {monthStats.workloadPercentage}% {language === 'ka' ? 'დატვირთვა' : 'Load'}
+                      </div>
+                    </div>
+
+                    {/* Micro metrics bar charts/progress */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-[9px] uppercase tracking-widest font-bold", currentTheme.muted)}>
+                            {language === 'ka' ? 'დატვირთული დღეები' : 'Active Days'}
+                          </span>
+                          <span className="text-xs font-black text-white">
+                            {monthStats.busyDays} / {monthStats.totalDays}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-proton-accent rounded-full transition-all duration-500"
+                            style={{ width: `${monthStats.workloadPercentage}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-black/20 rounded-2xl border border-white/5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-[9px] uppercase tracking-widest font-bold", currentTheme.muted)}>
+                            {language === 'ka' ? 'შესრულების დონე' : 'Month Progress'}
+                          </span>
+                          <span className="text-xs font-black text-white">
+                            {monthStats.completedTasks} / {monthStats.monthTasks.length}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            style={{ 
+                              width: `${monthStats.monthTasks.length > 0 ? Math.round((monthStats.completedTasks / monthStats.monthTasks.length) * 100) : 0}%` 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Day Intensity Distribution */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
+                          {language === 'ka' ? 'ინტენსივობის განაწილება' : 'Intensity Distribution'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-3 rounded-xl bg-red-500/5 border border-red-500/10 flex flex-col items-center text-center">
+                          <span className="text-sm font-black text-red-400">{monthStats.highLoadDays}</span>
+                          <span className="text-[8px] uppercase tracking-tighter text-red-400/60 mt-0.5 font-bold">
+                            {language === 'ka' ? 'მძიმე დღე' : 'High Load'}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 flex flex-col items-center text-center">
+                          <span className="text-sm font-black text-amber-400">{monthStats.mediumLoadDays}</span>
+                          <span className="text-[8px] uppercase tracking-tighter text-amber-400/60 mt-0.5 font-bold">
+                            {language === 'ka' ? 'საშუალო დღე' : 'Med Load'}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex flex-col items-center text-center">
+                          <span className="text-sm font-black text-emerald-400">{monthStats.freeDays}</span>
+                          <span className="text-[8px] uppercase tracking-tighter text-emerald-400/60 mt-0.5 font-bold">
+                            {language === 'ka' ? 'თავისუფალი' : 'Free Days'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Specific days workload list */}
+                    {monthStats.busyDays > 0 && (
+                      <div className="space-y-2">
+                        <p className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
+                          {language === 'ka' ? 'დატვირთული დღეების განრიგი' : 'Active Days Breakdown'}
+                        </p>
+                        <div className="max-h-[140px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
+                          {Object.keys(monthStats.dayTasksMap)
+                            .map(dayStr => Number(dayStr))
+                            .filter(day => monthStats.dayTasksMap[day] && monthStats.dayTasksMap[day].length > 0)
+                            .map(day => {
+                              const dayTasks = monthStats.dayTasksMap[day] || [];
+                              const isHigh = dayTasks.length >= 3;
+                              const completedCount = dayTasks.filter(t => t.completed).length;
+                              return (
+                                <div 
+                                  key={day} 
+                                  className="px-3 py-2 bg-black/20 hover:bg-black/30 rounded-xl border border-white/5 flex items-center justify-between gap-3 text-xs transition-all"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className={cn(
+                                      "w-2 h-2 rounded-full",
+                                      isHigh ? "bg-red-500 animate-pulse" : "bg-amber-500"
+                                    )} />
+                                    <span className="font-bold text-white">
+                                      {language === 'ka' ? `${day} რიცხვი` : `Day ${day}`}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn("text-[9px] uppercase tracking-widest font-black", currentTheme.muted)}>
+                                      {completedCount} / {dayTasks.length} {language === 'ka' ? 'შესრულებული' : 'done'}
+                                    </span>
+                                    <span className={cn("px-1.5 py-0.5 rounded text-[8px] font-mono font-black", 
+                                      isHigh ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-300"
+                                    )}>
+                                      {dayTasks.length} {language === 'ka' ? 'საქმე' : 'tasks'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dynamic Calendar-Task Integration Dashboard */}
+                  {selectedCalendarDate && (
+                    <div className="mt-6 pt-6 border-t border-proton-border/20 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black text-proton-muted uppercase tracking-wider">
+                            {language === 'ka' ? 'არჩეული დღე' : 'Selected Day'}
+                          </p>
+                          <p className="text-xs font-black text-proton-text uppercase tracking-wider">
+                            {selectedCalendarDate.toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setIsCalendarFilterActive(!isCalendarFilterActive);
+                            }}
+                            className={cn(
+                              "px-2.5 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider transition-all border",
+                              isCalendarFilterActive 
+                                ? "bg-proton-accent text-proton-bg border-proton-accent shadow-md shadow-proton-accent/20" 
+                                : "bg-proton-secondary/20 text-proton-text border-proton-border/30 hover:bg-white/5"
+                            )}
+                          >
+                            {language === 'ka' ? (isCalendarFilterActive ? 'ფილტრი: აქტიური' : 'ფილტრის ჩართვა') : (isCalendarFilterActive ? 'Filter: Active' : 'Filter Tasks')}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setTaskDueDate(selectedCalendarDate);
+                              setShowAdvancedAdd(true);
+                              setViewMode('today');
+                              setTimeout(() => {
+                                const formEl = document.getElementById('task-form');
+                                if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+                              }, 100);
+                            }}
+                            className="px-2.5 py-1.5 bg-proton-text text-proton-bg font-black text-[8px] uppercase tracking-wider rounded-lg hover:scale-105 transition-all"
+                          >
+                            {language === 'ka' ? '+ საქმე' : '+ Add Task'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Micro-list checklist for the day */}
+                      <div className="space-y-2">
+                        {selectedDateTasks.length === 0 ? (
+                          <div className="p-3 bg-proton-secondary/5 rounded-xl border border-proton-border/10 text-center">
+                            <p className="text-[10px] text-proton-muted italic">
+                              {language === 'ka' ? 'ამ დღეს საქმეები არ არის' : 'No tasks scheduled for this day'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="max-h-[160px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
+                            {selectedDateTasks.map(t => (
+                              <div 
+                                key={t.id} 
+                                className="p-2.5 bg-black/30 rounded-xl border border-proton-border/10 flex items-center justify-between gap-3 group/item hover:border-proton-accent/30 transition-all"
+                              >
+                                <button 
+                                  onClick={() => onToggleTask(t.id)}
+                                  className="flex items-center gap-2.5 min-w-0 text-left flex-1"
+                                >
+                                  {t.completed ? (
+                                    <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                                  ) : (
+                                    <div className="w-3.5 h-3.5 rounded-full border border-proton-text/40 group-hover/item:border-proton-accent shrink-0" />
+                                  )}
+                                  <span className={cn(
+                                    "text-[11px] font-bold truncate",
+                                    t.completed ? "text-proton-muted line-through" : "text-proton-text"
+                                  )}>
+                                    {language === 'ka' ? (t.contentGe || t.content) : t.content}
+                                  </span>
+                                </button>
+                                <span className={cn(
+                                  "px-1.5 py-0.5 rounded text-[7px] font-black uppercase shrink-0",
+                                  t.priority === 'high' ? "bg-red-500/10 text-red-400 border border-red-500/20" :
+                                  t.priority === 'medium' ? "bg-amber-500/10 text-amber-400 border border-amber-500/20" : 
+                                  "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                )}>
+                                  {t.priority}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Scratchpad and fast notes in Plan view */}
               <div className={cn("p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
                 <div className="flex items-center justify-between">
