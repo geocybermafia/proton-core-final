@@ -35,7 +35,9 @@ import {
   Package,
   ShoppingBag,
   Cloud,
-  CloudOff
+  CloudOff,
+  FolderKanban,
+  Target
 } from 'lucide-react';
 import { Task, Workflow, Theme } from '../types';
 import { translations } from '../translations';
@@ -197,6 +199,10 @@ export const OrganizerView = ({
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [viewLayout, setViewLayout] = useState<'list' | 'grouped'>('grouped');
   const [isBreakingDown, setIsBreakingDown] = useState<Record<string, boolean>>({});
+
+  // Workspace Primary View Mode (Phase 5B Scaffold)
+  type OrganizerViewMode = 'today' | 'plan' | 'projects' | 'focus';
+  const [viewMode, setViewMode] = useState<OrganizerViewMode>('today');
 
   // Task inline editing states
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -816,6 +822,57 @@ export const OrganizerView = ({
         </div>
       </div>
 
+      {/* Primary Workspace Navigation (Phase 5B Scaffold: TODAY | PLAN | PROJECTS | FOCUS) */}
+      <div className="flex items-center justify-between border-b border-proton-border/30 pb-4 overflow-x-auto select-none gap-2">
+        <nav className="flex items-center gap-1.5 sm:gap-2 p-1 bg-proton-secondary/10 border border-proton-border/20 rounded-2xl shrink-0" role="tablist">
+          {[
+            { id: 'today' as const, labelEn: 'TODAY', labelKa: 'დღეს', icon: CheckCircle2, count: tasks.filter(t => !t.completed).length },
+            { id: 'plan' as const, labelEn: 'PLAN', labelKa: 'დაგეგმვა', icon: CalendarIcon, count: tasks.filter(t => t.dueDate).length },
+            { id: 'projects' as const, labelEn: 'PROJECTS', labelKa: 'პროექტები', icon: FolderKanban, count: uniqueCategories.length },
+            { id: 'focus' as const, labelEn: 'FOCUS', labelKa: 'ფოკუსი', icon: Clock, count: activeTimerTaskId ? 1 : null }
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = viewMode === tab.id;
+            return (
+              <button
+                key={tab.id}
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setViewMode(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap",
+                  isActive
+                    ? "bg-proton-text text-proton-bg shadow-sm"
+                    : "text-proton-muted hover:text-proton-text hover:bg-proton-secondary/20"
+                )}
+              >
+                <Icon size={14} className={cn("shrink-0", isActive ? "text-proton-bg" : "text-proton-accent")} />
+                <span>{language === 'ka' ? tab.labelKa : tab.labelEn}</span>
+                {tab.count !== null && tab.count > 0 && (
+                  <span className={cn(
+                    "text-[9px] font-mono px-1.5 py-0.2 rounded-md",
+                    isActive ? "bg-proton-bg/20 text-proton-bg" : "bg-proton-secondary/30 text-proton-muted"
+                  )}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-proton-muted shrink-0">
+          <span className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+          <span>{viewMode === 'today' ? (language === 'ka' ? 'აქტიური სამუშაო სივრცე' : 'Active Workspace') :
+                 viewMode === 'plan' ? (language === 'ka' ? 'დაგეგმვის რეჟიმი' : 'Planning Mode') :
+                 viewMode === 'projects' ? (language === 'ka' ? 'ინსტრუმენტები & პროექტები' : 'Projects Overview') :
+                 (language === 'ka' ? 'კონცენტრაციის რეჟიმი' : 'Focus Session')}</span>
+        </div>
+      </div>
+
+      {/* TODAY VIEW CONTAINER */}
+      {viewMode === 'today' && (
+        <div id="workspace-today-view" className="space-y-8 animate-in fade-in duration-300">
       {/* Primary stats widget row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className={cn("p-6 rounded-2xl transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
@@ -1783,6 +1840,257 @@ export const OrganizerView = ({
           </div>
         </div>
       </div>
+        </div>
+      )}
+
+      {/* PLAN VIEW CONTAINER (Phase 5B Scaffold Branch) */}
+      {viewMode === 'plan' && (
+        <div id="workspace-plan-view" className="space-y-8 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
+                      <CalendarIcon size={22} className="text-proton-accent" />
+                      {language === 'ka' ? 'დაგეგმვა და განრიგი' : 'Planning & Agenda'}
+                    </h3>
+                    <p className={cn("text-xs mt-1", currentTheme.muted)}>
+                      {language === 'ka' ? 'დაგეგმეთ თქვენი მიზნები და განსაზღვრეთ ვადები' : 'Schedule dates, review upcoming milestones, and plan timeline commitments'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setViewMode('today')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all"
+                  >
+                    {language === 'ka' ? '← დღევანდელი სამუშაო' : '← Today View'}
+                  </button>
+                </div>
+
+                {/* Calendar summary tile in plan view */}
+                <div className="p-4 bg-proton-secondary/5 rounded-2xl border border-proton-border/20 mb-6">
+                  <div className="flex items-center justify-between text-xs font-bold">
+                    <span className="text-proton-text">
+                      {language === 'ka' ? 'დაგეგმილი საქმეები:' : 'Tasks with Deadlines:'} {tasks.filter(t => t.dueDate).length}
+                    </span>
+                    <span className={currentTheme.muted}>
+                      {language === 'ka' ? 'უვადო საქმეები:' : 'Unscheduled Backlog:'} {tasks.filter(t => !t.dueDate).length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Scheduled tasks list in plan view */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-proton-muted">
+                    {language === 'ka' ? 'უახლოესი ვადები' : 'Upcoming Commitments'}
+                  </h4>
+                  {tasks.filter(t => t.dueDate && !t.completed).length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-proton-border/30 rounded-2xl text-proton-muted text-xs">
+                      {language === 'ka' ? 'დაგეგმილი საქმეები არ არის. დაამატეთ თარიღი საქმეებს.' : 'No scheduled tasks found. Assign a due date in task cards to see them on the timeline.'}
+                    </div>
+                  ) : (
+                    tasks
+                      .filter(t => t.dueDate && !t.completed)
+                      .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0))
+                      .map(task => renderTaskCard(task))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Scratchpad and fast notes in Plan view */}
+              <div className={cn("p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                    <PenTool size={16} className="text-proton-accent" />
+                    {language === 'ka' ? 'დაგეგმვის ჩანიშვნები' : 'Planning Scratchpad'}
+                  </h4>
+                </div>
+                <textarea
+                  placeholder={language === 'ka' 
+                    ? 'ჩაწერეთ იდეები, მიზნები ან დაგეგმვის შენიშვნები...' 
+                    : 'Draft upcoming milestones, sprint notes, or backlog thoughts...'}
+                  value={scratchpad}
+                  onChange={(e) => setScratchpad(e.target.value)}
+                  className={cn("w-full h-44 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none transition-all resize-none bg-black/40 leading-relaxed", currentTheme.input)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROJECTS VIEW CONTAINER (Phase 5B Scaffold Branch) */}
+      {viewMode === 'projects' && (
+        <div id="workspace-projects-view" className="space-y-8 animate-in fade-in duration-300">
+          <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
+                  <FolderKanban size={22} className="text-proton-accent" />
+                  {language === 'ka' ? 'პროექტები & ინიციატივები' : 'Projects & Initiatives'}
+                </h3>
+                <p className={cn("text-xs mt-1", currentTheme.muted)}>
+                  {language === 'ka' ? 'დააჯგუფეთ თქვენი საქმეები მიზნებისა და კატეგორიების მიხედვით' : 'Track multi-step initiatives, category streams, and overarching goals'}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewMode('today')}
+                className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all"
+              >
+                {language === 'ka' ? '← დღევანდელი სამუშაო' : '← Today View'}
+              </button>
+            </div>
+
+            {/* Project Categories Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {uniqueCategories.map(cat => {
+                const categoryTasks = tasks.filter(t => t.category?.toLowerCase() === cat.toLowerCase());
+                const completedCount = categoryTasks.filter(t => t.completed).length;
+                const percent = categoryTasks.length > 0 ? Math.round((completedCount / categoryTasks.length) * 100) : 0;
+                return (
+                  <div 
+                    key={cat}
+                    onClick={() => {
+                      setCategoryFilter(cat);
+                      setViewMode('today');
+                    }}
+                    className="p-6 rounded-2xl bg-proton-secondary/5 border border-proton-border/20 hover:border-proton-accent/40 transition-all cursor-pointer group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
+                          {cat}
+                        </span>
+                        <span className="text-xs font-mono font-bold text-proton-muted">
+                          {completedCount}/{categoryTasks.length}
+                        </span>
+                      </div>
+                      <h4 className="text-base font-black text-proton-text group-hover:text-proton-accent transition-colors">
+                        {cat}
+                      </h4>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                      <div className="flex justify-between text-[10px] font-bold text-proton-muted">
+                        <span>{language === 'ka' ? 'პროგრესი' : 'Progress'}</span>
+                        <span className="font-mono text-proton-text">{percent}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-proton-accent transition-all duration-500"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* General / Uncategorized stream */}
+              {tasks.some(t => !t.category) && (
+                <div 
+                  onClick={() => {
+                    setCategoryFilter(null);
+                    setViewMode('today');
+                  }}
+                  className="p-6 rounded-2xl bg-proton-secondary/5 border border-proton-border/20 hover:border-proton-accent/40 transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-proton-secondary/20 text-proton-muted border border-proton-border/20">
+                        {language === 'ka' ? 'ზოგადი' : 'General'}
+                      </span>
+                      <span className="text-xs font-mono font-bold text-proton-muted">
+                        {tasks.filter(t => !t.category && t.completed).length}/{tasks.filter(t => !t.category).length}
+                      </span>
+                    </div>
+                    <h4 className="text-base font-black text-proton-text group-hover:text-proton-accent transition-colors">
+                      {language === 'ka' ? 'დაუკატეგორიზებელი საქმეები' : 'Uncategorized Backlog'}
+                    </h4>
+                  </div>
+
+                  <div className="mt-6 space-y-2">
+                    <div className="flex justify-between text-[10px] font-bold text-proton-muted">
+                      <span>{language === 'ka' ? 'პროგრესი' : 'Progress'}</span>
+                      <span className="font-mono text-proton-text">
+                        {tasks.filter(t => !t.category).length > 0 ? Math.round((tasks.filter(t => !t.category && t.completed).length / tasks.filter(t => !t.category).length) * 100) : 0}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-proton-accent transition-all duration-500"
+                        style={{ width: `${tasks.filter(t => !t.category).length > 0 ? Math.round((tasks.filter(t => !t.category && t.completed).length / tasks.filter(t => !t.category).length) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FOCUS VIEW CONTAINER (Phase 5B Scaffold Branch) */}
+      {viewMode === 'focus' && (
+        <div id="workspace-focus-view" className="space-y-8 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-6">
+              <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
+                      <Target size={22} className="text-proton-accent" />
+                      {language === 'ka' ? 'კონცენტრაციის სესია' : 'Deep Work Session'}
+                    </h3>
+                    <p className={cn("text-xs mt-1", currentTheme.muted)}>
+                      {language === 'ka' ? 'მუშაობა ერთ საქმეზე მინიმალური გადატვირთვით' : 'Eliminate distractions and advance your primary task in timed focus intervals'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setViewMode('today')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all"
+                  >
+                    {language === 'ka' ? '← დღევანდელი სამუშაო' : '← Today View'}
+                  </button>
+                </div>
+
+                {/* Primary Dedicated Focus Timer Component */}
+                <div className="py-4">
+                  <FocusTimerWidget language={language} className="w-full" />
+                </div>
+              </div>
+
+              {/* Active Target Task Card */}
+              {activeTimerTaskId && tasks.find(t => t.id === activeTimerTaskId) && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-proton-muted">
+                    {language === 'ka' ? 'მიმდინარე საქმე' : 'Active Targeted Task'}
+                  </h4>
+                  {renderTaskCard(tasks.find(t => t.id === activeTimerTaskId)!)}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              {/* Daily Target & Vitality summary in Focus mode */}
+              <div className={cn("p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
+                <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+                  <Flame size={16} className="text-amber-500" />
+                  {language === 'ka' ? 'დღის მიზანი' : 'Current Intention'}
+                </h4>
+                <p className="text-xs font-semibold text-proton-text bg-proton-secondary/10 p-4 rounded-xl border border-proton-border/20">
+                  {dailyFocus || (language === 'ka' ? 'მთავარი მიზანი ჯერ არ არის მითითებული' : 'No primary daily target set yet. Configure it in Today view.')}
+                </p>
+                <div className="pt-2 text-[10px] text-proton-muted font-bold uppercase tracking-wider">
+                  {language === 'ka' ? 'სესია მიმდინარეობს. კონცენტრირდით ერთ ამოცანაზე.' : 'Focus on the single active task until timer rings.'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 

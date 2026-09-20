@@ -114,12 +114,24 @@ export type Task = {
   elapsedTime?: number; // in seconds
   orderId?: string;
   orderAmount?: number;
+  projectId?: string;
   metadata?: {
     orderId?: string;
     amount?: number;
     [key: string]: any;
   };
 };
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  targetDate?: number;
+  notes?: string;
+  createdAt: number;
+}
 
 export type Listing = {
   id: string;
