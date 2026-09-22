@@ -66,8 +66,29 @@
         "id": { "type": "string" },
         "content": { "type": "string" },
         "completed": { "type": "boolean" },
-        "priority": { "type": "string" }
+        "priority": { "type": "string" },
+        "projectId": { "type": "string" },
+        "category": { "type": "string" }
       }
+    },
+    "Project": {
+      "title": "Project",
+      "description": "User project initiative",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameGe": { "type": "string" },
+        "description": { "type": "string" },
+        "descriptionGe": { "type": "string" },
+        "color": { "type": "string" },
+        "icon": { "type": "string" },
+        "targetDate": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "name", "createdAt"]
     },
     "LedgerItem": {
       "title": "Ledger Item",
@@ -238,6 +259,10 @@
     "/users/{userId}/tasks/{taskId}": {
       "schema": "Task",
       "description": "User tasks"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "Project",
+      "description": "User projects"
     },
     "/users/{userId}/market_ledger/{ledgerId}": {
       "schema": "LedgerItem",

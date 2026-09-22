@@ -125,12 +125,15 @@ export type Task = {
 export interface Project {
   id: string;
   name: string;
+  nameGe?: string;
   description?: string;
+  descriptionGe?: string;
   color?: string;
   icon?: string;
   targetDate?: number;
   notes?: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export type Listing = {

@@ -38,9 +38,11 @@ import {
   CloudOff,
   FolderKanban,
   Target,
-  Anchor
+  Anchor,
+  Folder,
+  ArrowLeft
 } from 'lucide-react';
-import { Task, Workflow, Theme } from '../types';
+import { Task, Workflow, Theme, Project } from '../types';
 import { translations } from '../translations';
 import { cn } from '../lib/utils';
 import { breakdownTask } from '../lib/gemini';
@@ -53,6 +55,10 @@ interface OrganizerViewProps {
   language: 'en' | 'ka';
   workflows: Workflow[];
   tasks: Task[];
+  projects?: Project[];
+  onCreateProject?: (projectData: Omit<Project, 'id' | 'createdAt'>) => Project;
+  onEditProject?: (id: string, updates: Partial<Project>) => void;
+  onDeleteProject?: (id: string) => void;
   onAddTask: (
     content: string, 
     priority: 'low' | 'medium' | 'high', 
@@ -61,7 +67,8 @@ interface OrganizerViewProps {
     dueDate?: number,
     recurring?: 'none' | 'daily' | 'weekly' | 'monthly',
     energyCost?: 'low' | 'medium' | 'high',
-    estimatedTime?: number
+    estimatedTime?: number,
+    projectId?: string
   ) => void;
   onToggleTask: (id: string) => void;
   onDeleteTask: (id: string) => void;
@@ -77,6 +84,10 @@ export const OrganizerView = ({
   language,
   workflows,
   tasks,
+  projects = [],
+  onCreateProject,
+  onEditProject,
+  onDeleteProject,
   onAddTask,
   onToggleTask,
   onDeleteTask,
@@ -100,6 +111,7 @@ export const OrganizerView = ({
   const [taskEstTime, setTaskEstTime] = useState<number>(30);
   const [taskPriority, setTaskPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [taskCategory, setTaskCategory] = useState('');
+  const [taskProjectId, setTaskProjectId] = useState<string>('');
 
   // Daily Vitality and Habits states
   const [dailyAnchorTaskId, setDailyAnchorTaskId] = useState<string | null>(() => {
@@ -251,9 +263,90 @@ export const OrganizerView = ({
   const [editingDescription, setEditingDescription] = useState('');
   const [editingPriority, setEditingPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [editingCategory, setEditingCategory] = useState('');
+  const [editingProjectId, setEditingProjectId] = useState<string>('');
   const [editingDueDate, setEditingDueDate] = useState<Date | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const highlightTimeoutRef = useRef<any>(null);
+
+  // Canonical Projects workspace states
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [deleteConfirmProjectId, setDeleteConfirmProjectId] = useState<string | null>(null);
+  const [quickTaskContent, setQuickTaskContent] = useState('');
+
+  // Project modal form states
+  const [projectName, setProjectName] = useState('');
+  const [projectNameGe, setProjectNameGe] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
+  const [projectDescriptionGe, setProjectDescriptionGe] = useState('');
+  const [projectColor, setProjectColor] = useState('#00F2FE');
+  const [projectTargetDate, setProjectTargetDate] = useState<Date | null>(null);
+  const [projectNotes, setProjectNotes] = useState('');
+
+  const openCreateProjectModal = () => {
+    setEditingProject(null);
+    setProjectName('');
+    setProjectNameGe('');
+    setProjectDescription('');
+    setProjectDescriptionGe('');
+    setProjectColor('#00F2FE');
+    setProjectTargetDate(null);
+    setProjectNotes('');
+    setIsProjectModalOpen(true);
+  };
+
+  const openEditProjectModal = (proj: Project, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingProject(proj);
+    setProjectName(proj.name);
+    setProjectNameGe(proj.nameGe || '');
+    setProjectDescription(proj.description || '');
+    setProjectDescriptionGe(proj.descriptionGe || '');
+    setProjectColor(proj.color || '#00F2FE');
+    setProjectTargetDate(proj.targetDate ? new Date(proj.targetDate) : null);
+    setProjectNotes(proj.notes || '');
+    setIsProjectModalOpen(true);
+  };
+
+  const handleSaveProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!projectName.trim()) return;
+
+    if (editingProject && onEditProject) {
+      onEditProject(editingProject.id, {
+        name: projectName.trim(),
+        nameGe: projectNameGe.trim() || undefined,
+        description: projectDescription.trim() || undefined,
+        descriptionGe: projectDescriptionGe.trim() || undefined,
+        color: projectColor,
+        targetDate: projectTargetDate ? projectTargetDate.getTime() : undefined,
+        notes: projectNotes.trim() || undefined
+      });
+    } else if (onCreateProject) {
+      onCreateProject({
+        name: projectName.trim(),
+        nameGe: projectNameGe.trim() || undefined,
+        description: projectDescription.trim() || undefined,
+        descriptionGe: projectDescriptionGe.trim() || undefined,
+        color: projectColor,
+        targetDate: projectTargetDate ? projectTargetDate.getTime() : undefined,
+        notes: projectNotes.trim() || undefined
+      });
+    }
+    setIsProjectModalOpen(false);
+    setEditingProject(null);
+  };
+
+  const confirmDeleteProject = (id: string) => {
+    if (onDeleteProject) {
+      onDeleteProject(id);
+    }
+    if (selectedProjectId === id) {
+      setSelectedProjectId(null);
+    }
+    setDeleteConfirmProjectId(null);
+  };
 
   // Timer/Stopwatch states - optimized to batch Firestore updates to avoid lagging on slow hardware
   const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
@@ -342,7 +435,8 @@ export const OrganizerView = ({
       taskDueDate ? taskDueDate.getTime() : undefined,
       taskRecurring,
       taskEnergy,
-      taskEstTime
+      taskEstTime,
+      taskProjectId || undefined
     );
 
     setNewTaskInput('');
@@ -353,6 +447,7 @@ export const OrganizerView = ({
     setTaskEstTime(30);
     setTaskPriority('medium');
     setTaskCategory('');
+    setTaskProjectId('');
     setShowAdvancedAdd(false);
   };
 
@@ -444,6 +539,7 @@ export const OrganizerView = ({
     setEditingDescription(language === 'ka' ? (task.descriptionGe || task.description || '') : (task.description || ''));
     setEditingPriority(task.priority || 'medium');
     setEditingCategory(task.category || '');
+    setEditingProjectId(task.projectId || '');
     setEditingDueDate(task.dueDate ? new Date(task.dueDate) : null);
   };
 
@@ -461,6 +557,7 @@ export const OrganizerView = ({
       descriptionGe: editingDescription.trim() || undefined,
       priority: editingPriority,
       category: editingCategory.trim() || undefined,
+      projectId: editingProjectId.trim() || undefined,
       dueDate: updatedDueDateMs,
     };
 
@@ -471,6 +568,7 @@ export const OrganizerView = ({
 
     onEditTask(id, updates);
     setEditingTaskId(null);
+    setEditingProjectId('');
 
     // Step One: Update active view filters so reinstated/edited task is included in queries immediately
     if (wasCompleted && filterStatus === 'completed') {
@@ -508,6 +606,7 @@ export const OrganizerView = ({
   const cancelEditMode = () => {
     setEditingTaskId(null);
     setEditingDueDate(null);
+    setEditingProjectId('');
   };
 
   const handleAiBreakdown = async (task: Task) => {
@@ -859,7 +958,7 @@ export const OrganizerView = ({
           {[
             { id: 'today' as const, labelEn: 'TODAY', labelKa: 'დღეს', icon: CheckCircle2, count: tasks.filter(t => !t.completed).length },
             { id: 'plan' as const, labelEn: 'PLAN', labelKa: 'დაგეგმვა', icon: CalendarIcon, count: tasks.filter(t => t.dueDate).length },
-            { id: 'projects' as const, labelEn: 'PROJECTS', labelKa: 'პროექტები', icon: FolderKanban, count: uniqueCategories.length },
+            { id: 'projects' as const, labelEn: 'PROJECTS', labelKa: 'პროექტები', icon: FolderKanban, count: projects.length },
             { id: 'focus' as const, labelEn: 'FOCUS', labelKa: 'ფოკუსი', icon: Clock, count: activeTimerTaskId ? 1 : null }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1046,7 +1145,7 @@ export const OrganizerView = ({
 
                         <div className="space-y-2">
                           <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
-                            {language === 'ka' ? 'კატეგორია / ტეგი' : 'Category Tag / Project'}
+                            {language === 'ka' ? 'კატეგორია / ტეგი' : 'Category Tag'}
                           </label>
                           <div className="relative">
                             <Tag size={12} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40 text-proton-text" />
@@ -1057,6 +1156,28 @@ export const OrganizerView = ({
                               onChange={e => setTaskCategory(e.target.value)}
                               className={cn("w-full pl-10 pr-4 py-3 text-xs font-bold focus:outline-none transition-all rounded-xl", currentTheme.input)}
                             />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
+                            {language === 'ka' ? 'პროექტი / ინიციატივა' : 'Project / Initiative'}
+                          </label>
+                          <div className="relative">
+                            <FolderKanban size={12} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-40 text-proton-text pointer-events-none" />
+                            <select
+                              value={taskProjectId}
+                              onChange={e => setTaskProjectId(e.target.value)}
+                              className={cn("w-full pl-10 pr-8 py-3 text-xs font-bold focus:outline-none transition-all rounded-xl appearance-none cursor-pointer", currentTheme.input)}
+                            >
+                              <option value="">{language === 'ka' ? '– პროექტის გარეშე –' : '– No Project –'}</option>
+                              {projects.map(p => (
+                                <option key={p.id} value={p.id}>
+                                  {language === 'ka' && p.nameGe ? p.nameGe : p.name}
+                                </option>
+                              ))}
+                            </select>
+                            <ChevronDown size={12} className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 text-proton-text pointer-events-none" />
                           </div>
                         </div>
                       </div>
@@ -2055,114 +2176,307 @@ export const OrganizerView = ({
         </div>
       )}
 
-      {/* PROJECTS VIEW CONTAINER (Phase 5B Scaffold Branch) */}
+      {/* PROJECTS VIEW CONTAINER (Canonical Project Implementation) */}
       {viewMode === 'projects' && (
         <div id="workspace-projects-view" className="space-y-8 animate-in fade-in duration-300">
-          <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
-                  <FolderKanban size={22} className="text-proton-accent" />
-                  {language === 'ka' ? 'პროექტები & ინიციატივები' : 'Projects & Initiatives'}
-                </h3>
-                <p className={cn("text-xs mt-1", currentTheme.muted)}>
-                  {language === 'ka' ? 'დააჯგუფეთ თქვენი საქმეები მიზნებისა და კატეგორიების მიხედვით' : 'Track multi-step initiatives, category streams, and overarching goals'}
-                </p>
-              </div>
-              <button
-                onClick={() => setViewMode('today')}
-                className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all"
-              >
-                {language === 'ka' ? '← დღევანდელი სამუშაო' : '← Today View'}
-              </button>
-            </div>
-
-            {/* Project Categories Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {uniqueCategories.map(cat => {
-                const categoryTasks = tasks.filter(t => t.category?.toLowerCase() === cat.toLowerCase());
-                const completedCount = categoryTasks.filter(t => t.completed).length;
-                const percent = categoryTasks.length > 0 ? Math.round((completedCount / categoryTasks.length) * 100) : 0;
-                return (
-                  <div 
-                    key={cat}
-                    onClick={() => {
-                      setCategoryFilter(cat);
-                      setViewMode('today');
-                    }}
-                    className="p-6 rounded-2xl bg-proton-secondary/5 border border-proton-border/20 hover:border-proton-accent/40 transition-all cursor-pointer group flex flex-col justify-between"
+          {selectedProjectId ? (() => {
+            const selectedProject = projects.find(p => p.id === selectedProjectId);
+            if (!selectedProject) {
+              return (
+                <div className={cn("p-8 rounded-2xl shadow-sm border text-center space-y-4", currentTheme.card)}>
+                  <p className="text-sm font-bold text-proton-muted">
+                    {language === 'ka' ? 'პროექტი ვერ მოიძებნა ან წაიშალა.' : 'Project not found or was removed.'}
+                  </p>
+                  <button
+                    onClick={() => setSelectedProjectId(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all"
                   >
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-proton-accent/10 text-proton-accent border border-proton-accent/20">
-                          {cat}
-                        </span>
-                        <span className="text-xs font-mono font-bold text-proton-muted">
-                          {completedCount}/{categoryTasks.length}
-                        </span>
-                      </div>
-                      <h4 className="text-base font-black text-proton-text group-hover:text-proton-accent transition-colors">
-                        {cat}
-                      </h4>
-                    </div>
+                    {language === 'ka' ? '← ყველა პროექტი' : '← All Projects'}
+                  </button>
+                </div>
+              );
+            }
 
-                    <div className="mt-6 space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold text-proton-muted">
-                        <span>{language === 'ka' ? 'პროგრესი' : 'Progress'}</span>
-                        <span className="font-mono text-proton-text">{percent}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-proton-accent transition-all duration-500"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
+            const projectTasks = tasks.filter(t => t.projectId === selectedProject.id);
+            const completedCount = projectTasks.filter(t => t.completed).length;
+            const percent = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0;
+
+            return (
+              <div className={cn("p-6 sm:p-8 rounded-2xl shadow-sm border space-y-6", currentTheme.card)}>
+                {/* Top Navigation & Project Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-proton-border/30 pb-6">
+                  <button
+                    onClick={() => setSelectedProjectId(null)}
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all self-start cursor-pointer"
+                  >
+                    <ArrowLeft size={14} />
+                    {language === 'ka' ? 'ყველა პროექტი' : 'All Projects'}
+                  </button>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      onClick={(e) => openEditProjectModal(selectedProject, e)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-accent hover:text-proton-bg text-proton-text transition-all cursor-pointer"
+                    >
+                      <Edit2 size={13} />
+                      {language === 'ka' ? 'რედაქტირება' : 'Edit Project'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmProjectId(selectedProject.id)}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 border border-red-500/20 transition-all cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                      {language === 'ka' ? 'წაშლა' : 'Delete'}
+                    </button>
                   </div>
-                );
-              })}
+                </div>
 
-              {/* General / Uncategorized stream */}
-              {tasks.some(t => !t.category) && (
-                <div 
-                  onClick={() => {
-                    setCategoryFilter(null);
-                    setViewMode('today');
+                {/* Project Header & Metadata */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span 
+                      className="w-4 h-4 rounded-full shrink-0 shadow-sm"
+                      style={{ backgroundColor: selectedProject.color || '#00F2FE' }}
+                    />
+                    <h3 className="font-black text-2xl md:text-3xl uppercase tracking-tight text-proton-text">
+                      {language === 'ka' && selectedProject.nameGe ? selectedProject.nameGe : selectedProject.name}
+                    </h3>
+                    {selectedProject.targetDate && (
+                      <span className="text-xs font-mono font-bold px-3 py-1 rounded-lg border border-proton-border/30 bg-proton-secondary/20 text-proton-muted flex items-center gap-1.5">
+                        <CalendarIcon size={12} className="text-proton-accent" />
+                        {language === 'ka' ? 'ვადა:' : 'Target:'} {new Date(selectedProject.targetDate).toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+
+                  {(selectedProject.description || selectedProject.descriptionGe) && (
+                    <p className="text-sm text-proton-muted max-w-3xl leading-relaxed">
+                      {language === 'ka' && selectedProject.descriptionGe ? selectedProject.descriptionGe : selectedProject.description}
+                    </p>
+                  )}
+
+                  {selectedProject.notes && (
+                    <div className="p-4 rounded-xl bg-proton-secondary/5 border border-proton-border/20 text-xs font-mono text-proton-muted whitespace-pre-wrap">
+                      {selectedProject.notes}
+                    </div>
+                  )}
+                </div>
+
+                {/* Project Progress Statistics */}
+                <div className="p-5 rounded-2xl bg-proton-secondary/5 border border-proton-border/20 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-black uppercase tracking-wider">
+                    <span className="text-proton-muted">
+                      {language === 'ka' ? 'პროექტის პროგრესი' : 'Project Completion Progress'}
+                    </span>
+                    <span className="font-mono text-proton-accent font-black">
+                      {completedCount} / {projectTasks.length} {language === 'ka' ? 'ამოცანა' : 'Tasks'} ({percent}%)
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full transition-all duration-500 rounded-full"
+                      style={{ 
+                        width: `${percent}%`,
+                        backgroundColor: selectedProject.color || '#00F2FE'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Task Creation inside this project */}
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!quickTaskContent.trim()) return;
+                    onAddTask(
+                      quickTaskContent.trim(),
+                      'medium',
+                      undefined,
+                      undefined,
+                      undefined,
+                      'none',
+                      'medium',
+                      30,
+                      selectedProject.id
+                    );
+                    setQuickTaskContent('');
                   }}
-                  className="p-6 rounded-2xl bg-proton-secondary/5 border border-proton-border/20 hover:border-proton-accent/40 transition-all cursor-pointer group flex flex-col justify-between"
+                  className="flex items-center gap-3 pt-2"
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-proton-secondary/20 text-proton-muted border border-proton-border/20">
-                        {language === 'ka' ? 'ზოგადი' : 'General'}
-                      </span>
-                      <span className="text-xs font-mono font-bold text-proton-muted">
-                        {tasks.filter(t => !t.category && t.completed).length}/{tasks.filter(t => !t.category).length}
-                      </span>
-                    </div>
-                    <h4 className="text-base font-black text-proton-text group-hover:text-proton-accent transition-colors">
-                      {language === 'ka' ? 'დაუკატეგორიზებელი საქმეები' : 'Uncategorized Backlog'}
-                    </h4>
-                  </div>
+                  <input
+                    type="text"
+                    placeholder={language === 'ka' ? `დაამატეთ ამოცანა პროექტში "${selectedProject.nameGe || selectedProject.name}"...` : `Add task to project "${selectedProject.name}"...`}
+                    value={quickTaskContent}
+                    onChange={(e) => setQuickTaskContent(e.target.value)}
+                    className={cn("flex-1 px-4 py-3 rounded-xl text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!quickTaskContent.trim()}
+                    className={cn("px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0", currentTheme.button)}
+                  >
+                    <Plus size={14} />
+                    {language === 'ka' ? 'დამატება' : 'Add Task'}
+                  </button>
+                </form>
 
-                  <div className="mt-6 space-y-2">
-                    <div className="flex justify-between text-[10px] font-bold text-proton-muted">
-                      <span>{language === 'ka' ? 'პროგრესი' : 'Progress'}</span>
-                      <span className="font-mono text-proton-text">
-                        {tasks.filter(t => !t.category).length > 0 ? Math.round((tasks.filter(t => !t.category && t.completed).length / tasks.filter(t => !t.category).length) * 100) : 0}%
-                      </span>
+                {/* Project Tasks List */}
+                <div className="space-y-4 pt-4">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-proton-muted">
+                    {language === 'ka' ? 'პროექტის ამოცანები' : 'Project Tasks'}
+                  </h4>
+
+                  {projectTasks.length === 0 ? (
+                    <div className="p-8 text-center rounded-2xl bg-proton-secondary/5 border border-dashed border-proton-border/30 space-y-2">
+                      <FolderKanban size={28} className="mx-auto text-proton-muted opacity-40" />
+                      <p className="text-xs font-semibold text-proton-muted">
+                        {language === 'ka' ? 'ამ პროექტში ამოცანები ჯერ არ არის. გამოიყენეთ ზედა ველი ახალი ამოცანის დასამატებლად.' : 'No tasks assigned to this project yet. Add a task above to get started.'}
+                      </p>
                     </div>
-                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-proton-accent transition-all duration-500"
-                        style={{ width: `${tasks.filter(t => !t.category).length > 0 ? Math.round((tasks.filter(t => !t.category && t.completed).length / tasks.filter(t => !t.category).length) * 100) : 0}%` }}
-                      />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4">
+                      {projectTasks.map(t => renderTaskCard(t))}
                     </div>
+                  )}
+                </div>
+              </div>
+            );
+          })() : (
+            <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div>
+                  <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
+                    <FolderKanban size={22} className="text-proton-accent" />
+                    {language === 'ka' ? 'პროექტები & ინიციატივები' : 'Projects & Initiatives'}
+                  </h3>
+                  <p className={cn("text-xs mt-1", currentTheme.muted)}>
+                    {language === 'ka' ? 'მართეთ სტრატეგიული ინიციატივები, ეტაპები და მიზნები' : 'Track multi-step initiatives, milestones, and overarching goals'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={openCreateProjectModal}
+                    className={cn("px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all cursor-pointer", currentTheme.button)}
+                  >
+                    <Plus size={14} />
+                    {language === 'ka' ? 'ახალი პროექტი' : 'New Project'}
+                  </button>
+                  <button
+                    onClick={() => setViewMode('today')}
+                    className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all cursor-pointer"
+                  >
+                    {language === 'ka' ? '← დღევანდელი სამუშაო' : '← Today View'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Projects Grid */}
+              {projects.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl bg-proton-secondary/5 border border-dashed border-proton-border/30 space-y-4">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center text-proton-accent">
+                    <FolderKanban size={28} />
                   </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-black uppercase tracking-wider text-proton-text">
+                      {language === 'ka' ? 'პროექტები არ არის შექმნილი' : 'No Projects Created Yet'}
+                    </h4>
+                    <p className="text-xs text-proton-muted max-w-md mx-auto">
+                      {language === 'ka' ? 'შექმენით თქვენი პირველი პროექტი ამოცანების დასაჯგუფებლად და ინიციატივების სამართავად.' : 'Create your first project to organize related tasks, set deadlines, and track milestones.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={openCreateProjectModal}
+                    className={cn("px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-2 transition-all cursor-pointer", currentTheme.button)}
+                  >
+                    <Plus size={14} />
+                    {language === 'ka' ? 'პირველი პროექტის შექმნა' : 'Create First Project'}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {projects.map(proj => {
+                    const projectTasks = tasks.filter(t => t.projectId === proj.id);
+                    const completedCount = projectTasks.filter(t => t.completed).length;
+                    const percent = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0;
+
+                    return (
+                      <div 
+                        key={proj.id}
+                        onClick={() => setSelectedProjectId(proj.id)}
+                        className="p-6 rounded-2xl bg-proton-secondary/5 border border-proton-border/20 hover:border-proton-accent/50 transition-all cursor-pointer group flex flex-col justify-between space-y-5"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-3 gap-2">
+                            <div className="flex items-center gap-2">
+                              <span 
+                                className="w-3 h-3 rounded-full shrink-0"
+                                style={{ backgroundColor: proj.color || '#00F2FE' }}
+                              />
+                              {proj.targetDate && (
+                                <span className="text-[9px] font-mono font-bold text-proton-muted px-2 py-0.5 rounded bg-proton-secondary/20">
+                                  {new Date(proj.targetDate).toLocaleDateString(language === 'ka' ? 'ka-GE' : 'en-US', { month: 'short', day: 'numeric' })}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                type="button"
+                                onClick={(e) => openEditProjectModal(proj, e)}
+                                className="p-1.5 rounded-lg hover:bg-proton-secondary/40 text-proton-muted hover:text-proton-text transition-all"
+                                title={language === 'ka' ? 'რედაქტირება' : 'Edit'}
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirmProjectId(proj.id);
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition-all"
+                                title={language === 'ka' ? 'წაშლა' : 'Delete'}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <h4 className="text-base font-black text-proton-text group-hover:text-proton-accent transition-colors line-clamp-1">
+                            {language === 'ka' && proj.nameGe ? proj.nameGe : proj.name}
+                          </h4>
+
+                          {(proj.description || proj.descriptionGe) && (
+                            <p className="text-xs text-proton-muted mt-1.5 line-clamp-2 leading-relaxed">
+                              {language === 'ka' && proj.descriptionGe ? proj.descriptionGe : proj.description}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t border-proton-border/10">
+                          <div className="flex justify-between items-center text-[10px] font-bold text-proton-muted">
+                            <span>{language === 'ka' ? 'პროგრესი' : 'Progress'}</span>
+                            <span className="font-mono text-proton-text font-black">
+                              {completedCount}/{projectTasks.length} ({percent}%)
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full transition-all duration-500 rounded-full"
+                              style={{ 
+                                width: `${percent}%`,
+                                backgroundColor: proj.color || '#00F2FE'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -2278,6 +2592,195 @@ export const OrganizerView = ({
           </div>
         </div>
       )}
+
+      {/* Project Create / Edit Modal */}
+      {isProjectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={cn("w-full max-w-lg p-6 md:p-8 rounded-2xl border shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto", currentTheme.card)}
+          >
+            <div className="flex items-center justify-between border-b border-proton-border/30 pb-4">
+              <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2.5">
+                <FolderKanban size={20} className="text-proton-accent" />
+                {editingProject 
+                  ? (language === 'ka' ? 'პროექტის რედაქტირება' : 'Edit Project') 
+                  : (language === 'ka' ? 'ახალი პროექტი' : 'New Project')}
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setIsProjectModalOpen(false)}
+                className="p-1.5 rounded-lg text-proton-muted hover:text-proton-text hover:bg-proton-secondary/20 transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProject} className="space-y-4">
+              {/* Project Name (En & Ge) */}
+              <div className="space-y-1.5">
+                <label className={cn("text-[9px] uppercase tracking-wider block", currentTheme.label)}>
+                  {language === 'ka' ? 'პროექტის სახელი (სავალდებულო)' : 'Project Name (Required)'}
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder={language === 'ka' ? 'მაგ: პროდუქტის რედიზაინი' : 'e.g. Q3 Growth Campaign'}
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  className={cn("w-full px-4 py-2.5 rounded-xl text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className={cn("text-[9px] uppercase tracking-wider block", currentTheme.label)}>
+                  {language === 'ka' ? 'სახელი ქართულად (არასავალდებულო)' : 'Georgian Name (Optional)'}
+                </label>
+                <input
+                  type="text"
+                  placeholder="მაგ: პროდუქტის რედიზაინი"
+                  value={projectNameGe}
+                  onChange={(e) => setProjectNameGe(e.target.value)}
+                  className={cn("w-full px-4 py-2.5 rounded-xl text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className={cn("text-[9px] uppercase tracking-wider block", currentTheme.label)}>
+                  {language === 'ka' ? 'აღწერა' : 'Description'}
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder={language === 'ka' ? 'მოკლე მიმოხილვა ან მიზანი...' : 'Strategic goal or initiative overview...'}
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
+                  className={cn("w-full px-4 py-2.5 rounded-xl text-xs font-medium focus:outline-none transition-all resize-none", currentTheme.input)}
+                />
+              </div>
+
+              {/* Color & Target Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className={cn("text-[9px] uppercase tracking-wider block", currentTheme.label)}>
+                    {language === 'ka' ? 'ფერი' : 'Color Accent'}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {['#00F2FE', '#38bdf8', '#818cf8', '#a855f7', '#ec4899', '#f43f5e', '#f59e0b', '#10b981'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setProjectColor(c)}
+                        className={cn(
+                          "w-6 h-6 rounded-full transition-transform cursor-pointer",
+                          projectColor === c ? "ring-2 ring-white scale-110" : "opacity-80 hover:opacity-100"
+                        )}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className={cn("text-[9px] uppercase tracking-wider block", currentTheme.label)}>
+                    {language === 'ka' ? 'სამიზნე ვადა' : 'Target Date'}
+                  </label>
+                  <input
+                    type="date"
+                    value={projectTargetDate ? (() => {
+                      const y = projectTargetDate.getFullYear();
+                      const m = String(projectTargetDate.getMonth() + 1).padStart(2, '0');
+                      const d = String(projectTargetDate.getDate()).padStart(2, '0');
+                      return `${y}-${m}-${d}`;
+                    })() : ''}
+                    onChange={(e) => setProjectTargetDate(e.target.value ? new Date(e.target.value + "T00:00:00") : null)}
+                    className={cn("w-full px-4 py-2 rounded-xl text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                  />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <label className={cn("text-[9px] uppercase tracking-wider block", currentTheme.label)}>
+                  {language === 'ka' ? 'შენიშვნები' : 'Internal Notes / Context'}
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder={language === 'ka' ? 'დამატებითი დეტალები...' : 'Key links, context, or sprint notes...'}
+                  value={projectNotes}
+                  onChange={(e) => setProjectNotes(e.target.value)}
+                  className={cn("w-full px-4 py-2.5 rounded-xl text-xs font-mono focus:outline-none transition-all resize-none", currentTheme.input)}
+                />
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-proton-border/30">
+                <button
+                  type="button"
+                  onClick={() => setIsProjectModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all cursor-pointer"
+                >
+                  {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={!projectName.trim()}
+                  className={cn("px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer", currentTheme.button)}
+                >
+                  {language === 'ka' ? 'შენახვა' : 'Save Project'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Project Confirmation Modal */}
+      {deleteConfirmProjectId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className={cn("w-full max-w-md p-6 rounded-2xl border shadow-2xl space-y-5 relative", currentTheme.card)}
+          >
+            <div className="flex items-center gap-3 text-red-400">
+              <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20">
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 className="text-base font-black uppercase tracking-tight text-proton-text">
+                  {language === 'ka' ? 'პროექტის წაშლა' : 'Delete Project?'}
+                </h3>
+                <p className="text-xs text-proton-muted">
+                  {language === 'ka' ? 'ეს მოქმედება შეუქცევადია.' : 'This will remove the project container.'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-proton-muted leading-relaxed">
+              {language === 'ka' 
+                ? 'დარწმუნებული ხართ? ამ პროექტთან დაკავშირებული ამოცანები არ წაიშლება; მათ უბრალოდ მოეხსნებათ პროექტის მიბმა.' 
+                : 'Are you sure you want to delete this project? Associated tasks will NOT be deleted; their project reference will simply be cleared.'}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmProjectId(null)}
+                className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all cursor-pointer"
+              >
+                {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmDeleteProject(deleteConfirmProjectId)}
+                className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-red-500 hover:bg-red-600 text-white transition-all font-bold cursor-pointer"
+              >
+                {language === 'ka' ? 'წაშლა' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -2315,7 +2818,7 @@ export const OrganizerView = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="flex flex-col gap-1">
                 <label className={cn("text-[8px] font-black uppercase tracking-widest", currentTheme.label)}>
                   {language === 'ka' ? 'პრიორიტეტი' : 'Priority'}
@@ -2342,6 +2845,24 @@ export const OrganizerView = ({
                   onChange={e => setEditingCategory(e.target.value)}
                   className={cn("w-full px-4 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent transition-all scroll-m-24 md:scroll-m-0", currentTheme.input)}
                 />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className={cn("text-[8px] font-black uppercase tracking-widest", currentTheme.label)}>
+                  {language === 'ka' ? 'პროექტი' : 'Project'}
+                </label>
+                <select
+                  value={editingProjectId}
+                  onChange={e => setEditingProjectId(e.target.value)}
+                  className={cn("w-full px-3 py-2 text-xs font-semibold rounded-lg focus:outline-none focus:border-proton-accent bg-black border-2 border-proton-border/30 scroll-m-24 md:scroll-m-0", currentTheme.input)}
+                >
+                  <option value="">{language === 'ka' ? '– პროექტის გარეშე –' : '– No Project –'}</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {language === 'ka' && p.nameGe ? p.nameGe : p.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="flex flex-col gap-1">
@@ -2496,6 +3017,24 @@ export const OrganizerView = ({
                   {task.category}
                 </span>
               )}
+              {task.projectId && (() => {
+                const proj = projects.find(p => p.id === task.projectId);
+                if (!proj) return null;
+                return (
+                  <span 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedProjectId(proj.id);
+                      setViewMode('projects');
+                    }}
+                    className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 flex items-center gap-1 cursor-pointer hover:bg-cyan-500 hover:text-black transition-all"
+                    title={language === 'ka' ? 'პროექტის ნახვა' : 'View Project'}
+                  >
+                    <FolderKanban size={8} />
+                    {language === 'ka' && proj.nameGe ? proj.nameGe : proj.name}
+                  </span>
+                );
+              })()}
               {task.estimatedTime && (
                 <span className="text-[8px] font-black uppercase tracking-widest flex items-center gap-1 opacity-40">
                   <Clock size={8} />

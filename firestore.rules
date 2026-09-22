@@ -145,6 +145,9 @@ service cloud.firestore {
       match /tasks/{id} {
         allow read, write: if isOwner(userId);
       }
+      match /projects/{id} {
+        allow read, write: if isOwner(userId);
+      }
       // FINANCIAL LOGS: Read-only for owner. Client-side writes blocked.
       match /market_ledger/{id} {
         allow read: if isOwner(userId);

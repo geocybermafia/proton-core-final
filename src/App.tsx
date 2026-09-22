@@ -91,7 +91,8 @@ import {
   PersonaHistory,
   LogEntry,
   GeminiMetadata,
-  Task
+  Task,
+  Project
 } from './types';
 // Removed unused/unreferenced recharts import for bundle size reduction
 import { 
@@ -195,6 +196,7 @@ import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { safeStorage } from './lib/safeStorage';
 import { taskSyncService } from './lib/taskSyncService';
+import { projectSyncService } from './lib/projectSyncService';
 import { translations } from './translations';
 import { PERSONAS, chatWithPersona, generatePersonaAvatar, generateNewPersona, summarizeConversation, analyzeWorkflow, generateOrEditImage, generateSpeech, architectTask, type TaskPlan } from './lib/gemini';
 
@@ -4660,6 +4662,13 @@ export default function App() {
     } catch { return []; }
   });
 
+  const [projects, setProjects] = useState<Project[]>(() => {
+    try {
+      const saved = safeStorage.get('proton_projects');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
   // Phase D.2: Automated Order-to-Organizer Automation Pipeline & Two-Way Sync Engine
   useEffect(() => {
     if (!sellerOrders || sellerOrders.length === 0) return;
@@ -4817,6 +4826,12 @@ export default function App() {
       } catch {
         setTasks([]);
       }
+      try {
+        const savedProjects = safeStorage.get('proton_projects');
+        setProjects(savedProjects ? JSON.parse(savedProjects) : []);
+      } catch {
+        setProjects([]);
+      }
       setPersonas(PERSONAS);
       setChatHistory({});
       setPersonaAvatars({});
@@ -4912,6 +4927,12 @@ export default function App() {
               return true;
             });
           setTasks(loadedTasks);
+        }
+
+        // Fetch Projects
+        const loadedProjects = await projectSyncService.fetchProjects(user.uid);
+        if (loadedProjects) {
+          setProjects(loadedProjects);
         }
 
         // Fetch Custom Avatars
@@ -5257,6 +5278,52 @@ export default function App() {
     }
   };
 
+  const handleCreateProject = useCallback((projectData: Omit<Project, 'id' | 'createdAt'>) => {
+    const newProject: Project = {
+      ...projectData,
+      id: `proj-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    setProjects(prev => [newProject, ...prev]);
+    projectSyncService.queueProjectUpsert(user?.uid, newProject, 0);
+    return newProject;
+  }, [user]);
+
+  const handleEditProject = useCallback((id: string, updates: Partial<Project>) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === id) {
+        const updated: Project = {
+          ...p,
+          ...updates,
+          updatedAt: Date.now()
+        };
+        projectSyncService.queueProjectUpsert(user?.uid, updated, 300);
+        return updated;
+      }
+      return p;
+    }));
+  }, [user]);
+
+  const handleDeleteProject = useCallback((projectId: string) => {
+    // 1. Identify tasks referencing this project and safely detach projectId
+    setTasks(prevTasks => {
+      const tasksToDetach = prevTasks.filter(t => t.projectId === projectId);
+      if (tasksToDetach.length > 0) {
+        tasksToDetach.forEach(task => {
+          const detachedTask: Task = { ...task, projectId: undefined };
+          taskSyncService.queueTaskUpsert(user?.uid, detachedTask, 0);
+        });
+        return prevTasks.map(t => t.projectId === projectId ? { ...t, projectId: undefined } : t);
+      }
+      return prevTasks;
+    });
+
+    // 2. Remove project from state and queue project delete in projectSyncService
+    setProjects(prev => prev.filter(p => p.id !== projectId));
+    projectSyncService.queueProjectDelete(user?.uid, projectId);
+  }, [user]);
+
   const handleAddTask = (
     content: string, 
     priority: 'low' | 'medium' | 'high' = 'medium', 
@@ -5265,7 +5332,8 @@ export default function App() {
     dueDate?: number,
     recurring: 'none' | 'daily' | 'weekly' | 'monthly' = 'none',
     energyCost: 'low' | 'medium' | 'high' = 'medium',
-    estimatedTime: number = 30
+    estimatedTime: number = 30,
+    projectId?: string
   ) => {
     const newTask: Task = {
       id: `task-${Date.now()}`,
@@ -5279,6 +5347,7 @@ export default function App() {
       recurring,
       energyCost,
       estimatedTime,
+      projectId,
       timestamp: Date.now()
     };
     setTasks(prev => [...prev, newTask]);
@@ -6499,6 +6568,10 @@ export default function App() {
                         language={userProfile.language}
                         workflows={workflows}
                         tasks={tasks}
+                        projects={projects}
+                        onCreateProject={handleCreateProject}
+                        onEditProject={handleEditProject}
+                        onDeleteProject={handleDeleteProject}
                         onAddTask={handleAddTask}
                         onToggleTask={handleToggleTask}
                         onDeleteTask={handleDeleteTask}
