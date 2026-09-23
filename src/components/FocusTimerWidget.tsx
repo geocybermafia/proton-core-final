@@ -16,28 +16,68 @@ import {
   Zap, 
   Sliders,
   Flame,
-  Volume1
+  Volume1,
+  Target
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { notifyFocusEvent, playFocusChime, speakFocusMessage } from '../lib/focusAudio';
+import { Task } from '../types';
 
-interface FocusTimerWidgetProps {
+export interface FocusTimerWidgetProps {
   language: 'en' | 'ka';
   className?: string;
   variant?: 'compact' | 'expanded';
   onExpandZen?: () => void;
+  // Controlled props for unified timer engine
+  activeTask?: Task | null;
+  isRunning?: boolean;
+  timerMode?: 'stopwatch' | 'pomodoro';
+  pomodoroMode?: 'work' | 'break';
+  displaySeconds?: number;
+  totalSeconds?: number;
+  selectedMinutes?: number;
+  completedSessions?: number;
+  soundEnabled?: boolean;
+  voiceEnabled?: boolean;
+  onToggleRunning?: () => void;
+  onReset?: () => void;
+  onModeSwitch?: (mode: 'work' | 'break') => void;
+  onApplyDuration?: (minutes: number) => void;
+  onToggleSound?: () => void;
+  onToggleVoice?: () => void;
+  onToggleTimerMode?: (mode: 'stopwatch' | 'pomodoro') => void;
 }
 
 export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
   language,
   className,
   variant = 'compact',
-  onExpandZen
+  onExpandZen,
+  activeTask,
+  isRunning: propIsRunning,
+  timerMode: propTimerMode,
+  pomodoroMode: propPomodoroMode,
+  displaySeconds: propDisplaySeconds,
+  totalSeconds: propTotalSeconds,
+  selectedMinutes: propSelectedMinutes,
+  completedSessions: propCompletedSessions,
+  soundEnabled: propSoundEnabled,
+  voiceEnabled: propVoiceEnabled,
+  onToggleRunning,
+  onReset,
+  onModeSwitch,
+  onApplyDuration,
+  onToggleSound,
+  onToggleVoice,
+  onToggleTimerMode
 }) => {
+  // Determine if widget is operating in controlled mode via OrganizerView's unified timer engine
+  const isControlled = propIsRunning !== undefined && propDisplaySeconds !== undefined && onToggleRunning !== undefined;
+
   // ---------------------------------------------------------------------------
-  // 1. PERSISTENT SETTINGS & STATE
+  // 1. PERSISTENT SETTINGS & LOCAL FALLBACK STATE
   // ---------------------------------------------------------------------------
-  const [selectedMinutes, setSelectedMinutes] = useState<number>(() => {
+  const [localSelectedMinutes, setLocalSelectedMinutes] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('proton_focus_minutes');
       return saved ? Math.max(1, parseInt(saved, 10)) : 25;
@@ -46,11 +86,11 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
     }
   });
 
-  const [focusMode, setFocusMode] = useState<'work' | 'break'>('work');
-  const [focusSeconds, setFocusSeconds] = useState<number>(() => selectedMinutes * 60);
-  const [totalSeconds, setTotalSeconds] = useState<number>(() => selectedMinutes * 60);
-  const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [completedSessions, setCompletedSessions] = useState<number>(() => {
+  const [localFocusMode, setLocalFocusMode] = useState<'work' | 'break'>('work');
+  const [localFocusSeconds, setLocalFocusSeconds] = useState<number>(() => localSelectedMinutes * 60);
+  const [localTotalSeconds, setLocalTotalSeconds] = useState<number>(() => localSelectedMinutes * 60);
+  const [localIsRunning, setLocalIsRunning] = useState<boolean>(false);
+  const [localCompletedSessions, setLocalCompletedSessions] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('proton_focus_completed_sessions');
       return saved ? parseInt(saved, 10) : 0;
@@ -60,7 +100,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
   });
 
   // Audio & Voice Preferences
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+  const [localSoundEnabled, setLocalSoundEnabled] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('proton_focus_sound_enabled');
       return saved !== null ? saved === 'true' : true;
@@ -69,7 +109,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
     }
   });
 
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
+  const [localVoiceEnabled, setLocalVoiceEnabled] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('proton_focus_voice_enabled');
       return saved !== null ? saved === 'true' : true;
@@ -80,42 +120,52 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
 
   // Modals & Panels
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
-  const [customInputVal, setCustomInputVal] = useState<string>(String(selectedMinutes));
+  const [customInputVal, setCustomInputVal] = useState<string>(String(propSelectedMinutes ?? localSelectedMinutes));
   const [isZenOpen, setIsZenOpen] = useState<boolean>(false);
   const [zenTaskNote, setZenTaskNote] = useState<string>('');
 
-  // ---------------------------------------------------------------------------
-  // 2. TIMERS & TICKS
-  // ---------------------------------------------------------------------------
-  const isRunningRef = useRef(isRunning);
-  isRunningRef.current = isRunning;
+  // Effective unified states
+  const effectiveIsRunning = isControlled ? propIsRunning : localIsRunning;
+  const effectiveDisplaySeconds = isControlled ? propDisplaySeconds : localFocusSeconds;
+  const effectiveTotalSeconds = isControlled ? (propTotalSeconds ?? 1500) : localTotalSeconds;
+  const effectiveFocusMode = isControlled ? (propPomodoroMode ?? 'work') : localFocusMode;
+  const effectiveSelectedMinutes = isControlled ? (propSelectedMinutes ?? 25) : localSelectedMinutes;
+  const effectiveCompletedSessions = isControlled ? (propCompletedSessions ?? 0) : localCompletedSessions;
+  const effectiveSoundEnabled = isControlled && propSoundEnabled !== undefined ? propSoundEnabled : localSoundEnabled;
+  const effectiveVoiceEnabled = isControlled && propVoiceEnabled !== undefined ? propVoiceEnabled : localVoiceEnabled;
+  const effectiveTimerMode = propTimerMode ?? 'pomodoro';
 
+  // ---------------------------------------------------------------------------
+  // 2. TIMERS & TICKS (ONLY ACTIVE IF UNCONTROLLED)
+  // ---------------------------------------------------------------------------
   useEffect(() => {
+    // When controlled by OrganizerView, ZERO timer intervals run inside FocusTimerWidget!
+    if (isControlled) return;
+
     let interval: NodeJS.Timeout | null = null;
-    if (isRunning && focusSeconds > 0) {
+    if (localIsRunning && localFocusSeconds > 0) {
       interval = setInterval(() => {
-        setFocusSeconds((prev) => {
+        setLocalFocusSeconds((prev) => {
           if (prev <= 1) {
-            // Timer expired!
-            setIsRunning(false);
-            if (focusMode === 'work') {
-              setCompletedSessions((cnt) => {
+            setLocalIsRunning(false);
+            if (localFocusMode === 'work') {
+              setLocalCompletedSessions((cnt) => {
                 const next = cnt + 1;
-                localStorage.setItem('proton_focus_completed_sessions', String(next));
+                try {
+                  localStorage.setItem('proton_focus_completed_sessions', String(next));
+                } catch {}
                 return next;
               });
-              notifyFocusEvent('complete', 'work', language, soundEnabled, voiceEnabled);
-              // Switch to break
-              setFocusMode('break');
+              notifyFocusEvent('complete', 'work', language, localSoundEnabled, localVoiceEnabled);
+              setLocalFocusMode('break');
               const breakSec = 5 * 60;
-              setTotalSeconds(breakSec);
+              setLocalTotalSeconds(breakSec);
               return breakSec;
             } else {
-              notifyFocusEvent('complete', 'break', language, soundEnabled, voiceEnabled);
-              // Switch back to work
-              setFocusMode('work');
-              const workSec = selectedMinutes * 60;
-              setTotalSeconds(workSec);
+              notifyFocusEvent('complete', 'break', language, localSoundEnabled, localVoiceEnabled);
+              setLocalFocusMode('work');
+              const workSec = localSelectedMinutes * 60;
+              setLocalTotalSeconds(workSec);
               return workSec;
             }
           }
@@ -126,54 +176,81 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, focusSeconds, focusMode, selectedMinutes, language, soundEnabled, voiceEnabled]);
+  }, [isControlled, localIsRunning, localFocusSeconds, localFocusMode, localSelectedMinutes, language, localSoundEnabled, localVoiceEnabled]);
 
-  // Sync to local storage
+  // Sync to local storage for uncontrolled fallback
   useEffect(() => {
-    localStorage.setItem('proton_focus_sound_enabled', String(soundEnabled));
-  }, [soundEnabled]);
+    if (!isControlled) {
+      try {
+        localStorage.setItem('proton_focus_sound_enabled', String(localSoundEnabled));
+      } catch {}
+    }
+  }, [isControlled, localSoundEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('proton_focus_voice_enabled', String(voiceEnabled));
-  }, [voiceEnabled]);
+    if (!isControlled) {
+      try {
+        localStorage.setItem('proton_focus_voice_enabled', String(localVoiceEnabled));
+      } catch {}
+    }
+  }, [isControlled, localVoiceEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('proton_focus_minutes', String(selectedMinutes));
-  }, [selectedMinutes]);
+    if (!isControlled) {
+      try {
+        localStorage.setItem('proton_focus_minutes', String(localSelectedMinutes));
+      } catch {}
+    }
+  }, [isControlled, localSelectedMinutes]);
+
+  // Keep customInputVal in sync with selected minutes
+  useEffect(() => {
+    setCustomInputVal(String(effectiveSelectedMinutes));
+  }, [effectiveSelectedMinutes]);
 
   // ---------------------------------------------------------------------------
   // 3. ACTION HANDLERS
   // ---------------------------------------------------------------------------
   const handleStartPause = () => {
-    if (!isRunning) {
-      // Starting
-      setIsRunning(true);
-      notifyFocusEvent('start', focusMode, language, soundEnabled, voiceEnabled, focusMode === 'work' ? Math.ceil(focusSeconds / 60) : undefined);
+    if (isControlled && onToggleRunning) {
+      onToggleRunning();
+      return;
+    }
+    if (!localIsRunning) {
+      setLocalIsRunning(true);
+      notifyFocusEvent('start', localFocusMode, language, localSoundEnabled, localVoiceEnabled, localFocusMode === 'work' ? Math.ceil(localFocusSeconds / 60) : undefined);
     } else {
-      // Pausing
-      setIsRunning(false);
+      setLocalIsRunning(false);
       playFocusChime('click');
     }
   };
 
   const handleReset = () => {
-    setIsRunning(false);
+    if (isControlled && onReset) {
+      onReset();
+      return;
+    }
+    setLocalIsRunning(false);
     playFocusChime('click');
-    const resetSec = (focusMode === 'work' ? selectedMinutes : 5) * 60;
-    setFocusSeconds(resetSec);
-    setTotalSeconds(resetSec);
+    const resetSec = (localFocusMode === 'work' ? localSelectedMinutes : 5) * 60;
+    setLocalFocusSeconds(resetSec);
+    setLocalTotalSeconds(resetSec);
   };
 
   const applyCustomDuration = (minutes: number) => {
     const mins = Math.max(1, Math.min(360, minutes));
-    setSelectedMinutes(mins);
     setCustomInputVal(String(mins));
-    setIsRunning(false);
-    setFocusMode('work');
-    const newSec = mins * 60;
-    setFocusSeconds(newSec);
-    setTotalSeconds(newSec);
     setIsSettingsOpen(false);
+    if (isControlled && onApplyDuration) {
+      onApplyDuration(mins);
+      return;
+    }
+    setLocalSelectedMinutes(mins);
+    setLocalIsRunning(false);
+    setLocalFocusMode('work');
+    const newSec = mins * 60;
+    setLocalFocusSeconds(newSec);
+    setLocalTotalSeconds(newSec);
     playFocusChime('start');
   };
 
@@ -190,12 +267,32 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
   };
 
   const handleModeSwitch = (mode: 'work' | 'break') => {
-    setIsRunning(false);
+    if (isControlled && onModeSwitch) {
+      onModeSwitch(mode);
+      return;
+    }
+    setLocalIsRunning(false);
     playFocusChime('click');
-    setFocusMode(mode);
-    const secs = (mode === 'work' ? selectedMinutes : 5) * 60;
-    setFocusSeconds(secs);
-    setTotalSeconds(secs);
+    setLocalFocusMode(mode);
+    const secs = (mode === 'work' ? localSelectedMinutes : 5) * 60;
+    setLocalFocusSeconds(secs);
+    setLocalTotalSeconds(secs);
+  };
+
+  const handleToggleSound = () => {
+    if (isControlled && onToggleSound) {
+      onToggleSound();
+      return;
+    }
+    setLocalSoundEnabled(!localSoundEnabled);
+  };
+
+  const handleToggleVoice = () => {
+    if (isControlled && onToggleVoice) {
+      onToggleVoice();
+      return;
+    }
+    setLocalVoiceEnabled(!localVoiceEnabled);
   };
 
   // Test voice handler
@@ -215,16 +312,23 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
   // 4. FORMATTERS & PERCENTAGE
   // ---------------------------------------------------------------------------
   const formattedTimer = useMemo(() => {
-    const m = Math.floor(focusSeconds / 60);
-    const s = focusSeconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  }, [focusSeconds]);
+    const hours = Math.floor(effectiveDisplaySeconds / 3600);
+    const minutes = Math.floor((effectiveDisplaySeconds % 3600) / 60);
+    const seconds = effectiveDisplaySeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, [effectiveDisplaySeconds]);
 
   const progressPercent = useMemo(() => {
-    if (totalSeconds <= 0) return 0;
-    const elapsed = totalSeconds - focusSeconds;
-    return Math.min(100, Math.max(0, (elapsed / totalSeconds) * 100));
-  }, [focusSeconds, totalSeconds]);
+    if (effectiveTotalSeconds <= 0) return 0;
+    if (effectiveTimerMode === 'stopwatch') {
+      return Math.min(100, ((effectiveDisplaySeconds % 3600) / 3600) * 100);
+    }
+    const elapsed = effectiveTotalSeconds - effectiveDisplaySeconds;
+    return Math.min(100, Math.max(0, (elapsed / effectiveTotalSeconds) * 100));
+  }, [effectiveDisplaySeconds, effectiveTotalSeconds, effectiveTimerMode]);
 
   return (
     <>
@@ -233,7 +337,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
       {/* ========================================================================= */}
       <div className={cn(
         "relative rounded-2xl bg-zinc-950/90 border border-zinc-800/90 p-3 sm:p-3.5 shadow-xl transition-all",
-        isRunning && "border-amber-500/40 shadow-amber-500/5 ring-1 ring-amber-500/20",
+        effectiveIsRunning && "border-amber-500/40 shadow-amber-500/5 ring-1 ring-amber-500/20",
         className
       )}>
         <div className="flex items-center justify-between gap-3 sm:gap-4">
@@ -242,54 +346,86 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
           <div className="flex items-center gap-3">
             {/* Progress Circular Accent or Icon */}
             <div 
-              onClick={() => handleModeSwitch(focusMode === 'work' ? 'break' : 'work')}
+              onClick={() => handleModeSwitch(effectiveFocusMode === 'work' ? 'break' : 'work')}
               className={cn(
                 "w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer transition-all border shrink-0 relative group",
-                focusMode === 'work' 
-                  ? (isRunning ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-zinc-900 text-amber-400/80 border-zinc-800 hover:border-amber-500/30") 
-                  : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                effectiveTimerMode === 'stopwatch'
+                  ? (effectiveIsRunning ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-zinc-900 text-amber-400/80 border-zinc-800 hover:border-amber-500/30")
+                  : effectiveFocusMode === 'work' 
+                    ? (effectiveIsRunning ? "bg-amber-500/20 text-amber-400 border-amber-500/30" : "bg-zinc-900 text-amber-400/80 border-zinc-800 hover:border-amber-500/30") 
+                    : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
               )}
-              title={language === 'ka' ? 'დააკლიკეთ რეჟიმის შესაცვლელად (ფოკუსი / შესვენება)' : 'Click to toggle Work / Break'}
+              title={effectiveTimerMode === 'stopwatch'
+                ? (language === 'ka' ? 'წამმზომი (დროის ზრდადი აღრიცხვა)' : 'Stopwatch (Count Up)')
+                : (language === 'ka' ? 'დააკლიკეთ რეჟიმის შესაცვლელად (ფოკუსი / შესვენება)' : 'Click to toggle Work / Break')}
             >
-              {focusMode === 'work' ? (
-                <Flame size={18} className={cn(isRunning && "animate-pulse text-amber-400")} />
+              {effectiveTimerMode === 'stopwatch' ? (
+                <Clock size={18} className={cn(effectiveIsRunning && "animate-pulse text-amber-400")} />
+              ) : effectiveFocusMode === 'work' ? (
+                <Flame size={18} className={cn(effectiveIsRunning && "animate-pulse text-amber-400")} />
               ) : (
                 <Coffee size={18} className="text-emerald-400" />
               )}
             </div>
 
             <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  isRunning 
-                    ? (focusMode === 'work' ? "bg-amber-400 animate-ping" : "bg-emerald-400 animate-ping") 
+                  "w-1.5 h-1.5 rounded-full shrink-0",
+                  effectiveIsRunning 
+                    ? (effectiveTimerMode === 'stopwatch' || effectiveFocusMode === 'work' ? "bg-amber-400 animate-ping" : "bg-emerald-400 animate-ping") 
                     : "bg-zinc-600"
                 )} />
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                  {focusMode === 'work' 
-                    ? (language === 'ka' ? 'ფოკუსი' : 'Focus Mode') 
-                    : (language === 'ka' ? 'შესვენება' : 'Break')}
+                  {effectiveTimerMode === 'stopwatch'
+                    ? (language === 'ka' ? 'წამმზომი' : 'Stopwatch')
+                    : effectiveFocusMode === 'work' 
+                      ? (language === 'ka' ? 'ფოკუსი' : 'Focus Mode') 
+                      : (language === 'ka' ? 'შესვენება' : 'Break')}
                   <span className="text-zinc-600">·</span>
-                  <button 
-                    type="button"
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="text-amber-400 hover:text-amber-300 font-black cursor-pointer underline decoration-amber-500/40 hover:decoration-amber-400 transition-colors"
-                    title={language === 'ka' ? 'დააკლიკეთ დროის შესაცვლელად' : 'Click to change time'}
-                  >
-                    {selectedMinutes}m ⚙️
-                  </button>
+                  {effectiveTimerMode === 'pomodoro' ? (
+                    <button 
+                      type="button"
+                      onClick={() => setIsSettingsOpen(true)}
+                      className="text-amber-400 hover:text-amber-300 font-black cursor-pointer underline decoration-amber-500/40 hover:decoration-amber-400 transition-colors"
+                      title={language === 'ka' ? 'დააკლიკეთ დროის შესაცვლელად' : 'Click to change time'}
+                    >
+                      {effectiveSelectedMinutes}m ⚙️
+                    </button>
+                  ) : (
+                    <span className="text-zinc-400 font-mono text-[9px] lowercase">
+                      {language === 'ka' ? 'ზრდადი' : 'count up'}
+                    </span>
+                  )}
                 </span>
+                {onToggleTimerMode && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleTimerMode(effectiveTimerMode === 'pomodoro' ? 'stopwatch' : 'pomodoro')}
+                    className="ml-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900/80 text-zinc-400 hover:text-amber-400 transition-all cursor-pointer"
+                    title={language === 'ka' ? 'რეჟიმის შეცვლა (პომოდორო / წამმზომი)' : 'Toggle Pomodoro / Stopwatch'}
+                  >
+                    {effectiveTimerMode === 'pomodoro' ? '⏱️ Stopwatch' : '⏳ Pomodoro'}
+                  </button>
+                )}
               </div>
 
               <div className="text-2xl font-black font-mono tracking-tight text-white flex items-center gap-2">
                 <span>{formattedTimer}</span>
-                {completedSessions > 0 && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold" title={language === 'ka' ? `${completedSessions} დასრულებული სესია` : `${completedSessions} completed sessions`}>
-                    ★ {completedSessions}
+                {effectiveCompletedSessions > 0 && effectiveTimerMode === 'pomodoro' && (
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold" title={language === 'ka' ? `${effectiveCompletedSessions} დასრულებული სესია` : `${effectiveCompletedSessions} completed sessions`}>
+                    ★ {effectiveCompletedSessions}
                   </span>
                 )}
               </div>
+
+              {/* Active Targeted Task Pill */}
+              {activeTask && (
+                <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400/90 font-bold truncate max-w-[200px] sm:max-w-[260px] mt-0.5" title={activeTask.content}>
+                  <Target size={11} className="shrink-0 text-amber-400" />
+                  <span className="truncate">{language === 'ka' ? (activeTask.contentGe || activeTask.content) : activeTask.content}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -301,13 +437,13 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               onClick={handleStartPause}
               className={cn(
                 "p-2.5 rounded-xl transition-all cursor-pointer shadow-md active:scale-95",
-                isRunning 
+                effectiveIsRunning 
                   ? "bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black shadow-amber-500/20" 
                   : "bg-zinc-800 hover:bg-zinc-700 text-white"
               )}
-              title={isRunning ? (language === 'ka' ? 'დაპაუზება' : 'Pause') : (language === 'ka' ? 'დაწყება' : 'Start Focus')}
+              title={effectiveIsRunning ? (language === 'ka' ? 'დაპაუზება' : 'Pause') : (language === 'ka' ? 'დაწყება' : 'Start Focus')}
             >
-              {isRunning ? <Pause size={15} className="fill-current" /> : <Play size={15} className="fill-current" />}
+              {effectiveIsRunning ? <Pause size={15} className="fill-current" /> : <Play size={15} className="fill-current" />}
             </button>
 
             {/* Reset */}
@@ -336,7 +472,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               <span className="text-[10px] font-bold hidden md:inline">
                 {language === 'ka' ? 'დრო & ხმა' : 'Time & Sound'}
               </span>
-              {(soundEnabled || voiceEnabled) && (
+              {(effectiveSoundEnabled || effectiveVoiceEnabled) && (
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
               )}
             </button>
@@ -364,7 +500,9 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
           <div 
             className={cn(
               "h-full transition-all duration-500 rounded-full",
-              focusMode === 'work' ? "bg-amber-400" : "bg-emerald-400"
+              effectiveTimerMode === 'stopwatch'
+                ? "bg-amber-400"
+                : effectiveFocusMode === 'work' ? "bg-amber-400" : "bg-emerald-400"
             )}
             style={{ width: `${progressPercent}%` }}
           />
@@ -425,7 +563,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                       onClick={() => handleQuickPreset(item.mins)}
                       className={cn(
                         "py-3 px-2 rounded-2xl text-xs font-black transition-all border cursor-pointer text-center active:scale-95 shadow-sm",
-                        selectedMinutes === item.mins && focusMode === 'work'
+                        effectiveSelectedMinutes === item.mins && effectiveFocusMode === 'work'
                           ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md shadow-amber-500/30"
                           : "bg-zinc-900/90 text-zinc-300 border-zinc-800 hover:border-zinc-700 hover:text-white hover:bg-zinc-800"
                       )}
@@ -501,15 +639,15 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
 
                 {/* Chime Sound Toggle */}
                 <div 
-                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  onClick={handleToggleSound}
                   className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 cursor-pointer transition-all"
                 >
                   <div className="flex items-center gap-3.5">
                     <div className={cn(
                       "p-2.5 rounded-xl text-xs",
-                      soundEnabled ? "bg-amber-500/20 text-amber-400" : "bg-zinc-800 text-zinc-500"
+                      effectiveSoundEnabled ? "bg-amber-500/20 text-amber-400" : "bg-zinc-800 text-zinc-500"
                     )}>
-                      {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                      {effectiveSoundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
                     </div>
                     <div>
                       <div className="text-sm font-bold text-white">
@@ -522,24 +660,24 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   </div>
                   <div className={cn(
                     "w-11 h-6 rounded-full p-0.5 transition-colors relative shrink-0",
-                    soundEnabled ? "bg-amber-500" : "bg-zinc-800"
+                    effectiveSoundEnabled ? "bg-amber-500" : "bg-zinc-800"
                   )}>
                     <div className={cn(
                       "w-5 h-5 rounded-full bg-white transition-transform shadow-md",
-                      soundEnabled ? "translate-x-5" : "translate-x-0"
+                      effectiveSoundEnabled ? "translate-x-5" : "translate-x-0"
                     )} />
                   </div>
                 </div>
 
                 {/* Spoken Voice Announcement Toggle */}
                 <div 
-                  onClick={() => setVoiceEnabled(!voiceEnabled)}
+                  onClick={handleToggleVoice}
                   className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-zinc-700 cursor-pointer transition-all"
                 >
                   <div className="flex items-center gap-3.5">
                     <div className={cn(
                       "p-2.5 rounded-xl text-xs",
-                      voiceEnabled ? "bg-indigo-500/20 text-indigo-400" : "bg-zinc-800 text-zinc-500"
+                      effectiveVoiceEnabled ? "bg-indigo-500/20 text-indigo-400" : "bg-zinc-800 text-zinc-500"
                     )}>
                       <Volume1 size={18} />
                     </div>
@@ -554,11 +692,11 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   </div>
                   <div className={cn(
                     "w-11 h-6 rounded-full p-0.5 transition-colors relative shrink-0",
-                    voiceEnabled ? "bg-indigo-500" : "bg-zinc-800"
+                    effectiveVoiceEnabled ? "bg-indigo-500" : "bg-zinc-800"
                   )}>
                     <div className={cn(
                       "w-5 h-5 rounded-full bg-white transition-transform shadow-md",
-                      voiceEnabled ? "translate-x-5" : "translate-x-0"
+                      effectiveVoiceEnabled ? "translate-x-5" : "translate-x-0"
                     )} />
                   </div>
                 </div>
@@ -593,22 +731,34 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               <div className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs font-mono font-bold flex items-center gap-2">
                 <span className={cn(
                   "w-2 h-2 rounded-full",
-                  isRunning ? "bg-amber-400 animate-ping" : "bg-zinc-600"
+                  effectiveIsRunning ? "bg-amber-400 animate-ping" : "bg-zinc-600"
                 )} />
                 <span className="text-amber-400 uppercase tracking-widest font-black">
-                  {focusMode === 'work' ? (language === 'ka' ? 'ღრმა ფოკუსი' : 'Deep Work') : (language === 'ka' ? 'განტვირთვა' : 'Rest Break')}
+                  {effectiveTimerMode === 'stopwatch'
+                    ? (language === 'ka' ? 'წამმზომი' : 'Stopwatch')
+                    : effectiveFocusMode === 'work' ? (language === 'ka' ? 'ღრმა ფოკუსი' : 'Deep Work') : (language === 'ka' ? 'განტვირთვა' : 'Rest Break')}
                 </span>
               </div>
+              {onToggleTimerMode && (
+                <button
+                  type="button"
+                  onClick={() => onToggleTimerMode(effectiveTimerMode === 'pomodoro' ? 'stopwatch' : 'pomodoro')}
+                  className="px-3 py-1.5 rounded-xl border border-zinc-800 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white font-mono text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Clock size={14} />
+                  <span>{effectiveTimerMode === 'pomodoro' ? 'Stopwatch' : 'Pomodoro'}</span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setSoundEnabled(!soundEnabled)}
+                onClick={handleToggleSound}
                 className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                title={soundEnabled ? 'Mute Sound' : 'Enable Sound'}
+                title={effectiveSoundEnabled ? 'Mute Sound' : 'Enable Sound'}
               >
-                {soundEnabled ? <Volume2 size={16} className="text-amber-400" /> : <VolumeX size={16} />}
+                {effectiveSoundEnabled ? <Volume2 size={16} className="text-amber-400" /> : <VolumeX size={16} />}
               </button>
 
               <button
@@ -630,13 +780,20 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               <p className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">
                 {language === 'ka' ? 'მიმდინარე მიზანი' : 'Current Single Objective'}
               </p>
-              <input
-                type="text"
-                value={zenTaskNote}
-                onChange={(e) => setZenTaskNote(e.target.value)}
-                placeholder={language === 'ka' ? 'რა არის თქვენი მთავარი ამოცანა ამ სესიაზე?...' : 'What is your primary focus for this block?...'}
-                className="w-full text-center bg-transparent border-b border-zinc-800 focus:border-amber-400/80 text-xl sm:text-2xl font-bold text-white placeholder-zinc-700 py-2 focus:outline-none transition-colors"
-              />
+              {activeTask ? (
+                <div className="text-xl sm:text-2xl font-bold text-amber-400 py-2 flex items-center justify-center gap-2">
+                  <Target size={20} className="text-amber-400 shrink-0" />
+                  <span>{language === 'ka' ? (activeTask.contentGe || activeTask.content) : activeTask.content}</span>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={zenTaskNote}
+                  onChange={(e) => setZenTaskNote(e.target.value)}
+                  placeholder={language === 'ka' ? 'რა არის თქვენი მთავარი ამოცანა ამ სესიაზე?...' : 'What is your primary focus for this block?...'}
+                  className="w-full text-center bg-transparent border-b border-zinc-800 focus:border-amber-400/80 text-xl sm:text-2xl font-bold text-white placeholder-zinc-700 py-2 focus:outline-none transition-colors"
+                />
+              )}
             </div>
 
             {/* Giant Digits */}
@@ -646,7 +803,12 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               </div>
               <div className="w-48 h-1.5 bg-zinc-900 rounded-full mx-auto mt-4 overflow-hidden">
                 <div 
-                  className={cn("h-full transition-all duration-500", focusMode === 'work' ? "bg-amber-400" : "bg-emerald-400")}
+                  className={cn(
+                    "h-full transition-all duration-500", 
+                    effectiveTimerMode === 'stopwatch'
+                      ? "bg-amber-400"
+                      : effectiveFocusMode === 'work' ? "bg-amber-400" : "bg-emerald-400"
+                  )}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -659,12 +821,12 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                 onClick={handleStartPause}
                 className={cn(
                   "px-8 sm:px-12 py-4 sm:py-5 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center gap-3 transition-all shadow-2xl active:scale-95 cursor-pointer",
-                  isRunning 
+                  effectiveIsRunning 
                     ? "bg-amber-500 text-zinc-950 hover:bg-amber-400 shadow-amber-500/20" 
                     : "bg-white text-zinc-950 hover:bg-zinc-200"
                 )}
               >
-                {isRunning ? (
+                {effectiveIsRunning ? (
                   <>
                     <Pause size={18} className="fill-current" />
                     <span>{language === 'ka' ? 'დაპაუზება' : 'Pause'}</span>
@@ -687,24 +849,26 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               </button>
             </div>
 
-            {/* Duration switcher in Zen mode */}
-            <div className="flex items-center justify-center gap-2 pt-4">
-              {[15, 25, 45, 60].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => applyCustomDuration(m)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all border",
-                    selectedMinutes === m 
-                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40" 
-                      : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:text-zinc-300"
-                  )}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
+            {/* Duration switcher in Zen mode (only in Pomodoro mode) */}
+            {effectiveTimerMode === 'pomodoro' && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                {[15, 25, 45, 60].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => applyCustomDuration(m)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition-all border",
+                      effectiveSelectedMinutes === m 
+                        ? "bg-amber-500/20 text-amber-400 border-amber-500/40" 
+                        : "bg-zinc-900/80 text-zinc-500 border-zinc-800 hover:text-zinc-300"
+                    )}
+                  >
+                    {m}m
+                  </button>
+                ))}
+              </div>
+            )}
 
           </div>
 

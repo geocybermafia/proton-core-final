@@ -48,6 +48,7 @@ import { cn } from '../lib/utils';
 import { breakdownTask } from '../lib/gemini';
 import { useTaskSyncStatus } from '../hooks/useTaskSyncStatus';
 import { FocusTimerWidget } from './FocusTimerWidget';
+import { notifyFocusEvent, playFocusChime } from '../lib/focusAudio';
 
 type OrganizerTheme = Theme;
 
@@ -348,11 +349,41 @@ export const OrganizerView = ({
     setDeleteConfirmProjectId(null);
   };
 
-  // Timer/Stopwatch states - optimized to batch Firestore updates to avoid lagging on slow hardware
+  // =========================================================================
+  // UNIFIED TIMING ENGINE (Phase 5C-4: Exactly ONE active timer engine)
+  // Both Stopwatch and Pomodoro share this single active timer state.
+  // Task.elapsedTime remains the canonical persistent accumulator.
+  // =========================================================================
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
-  const [localTimerSeconds, setLocalTimerSeconds] = useState<{ [taskId: string]: number }>({});
-  const tasksRef = useRef<Task[]>(tasks);
+  const [timerPresentationMode, setTimerPresentationMode] = useState<'pomodoro' | 'stopwatch'>('pomodoro');
+  const [focusMode, setFocusMode] = useState<'work' | 'break'>('work');
 
+  // Pomodoro preferences & state
+  const [pomodoroSelectedMinutes, setPomodoroSelectedMinutes] = useState<number>(() => {
+    const saved = safeStorage.get('proton_focus_minutes');
+    return saved ? Math.max(1, parseInt(saved, 10)) : 25;
+  });
+  const [pomodoroRemainingSeconds, setPomodoroRemainingSeconds] = useState<number>(() => pomodoroSelectedMinutes * 60);
+  const [pomodoroTotalSeconds, setPomodoroTotalSeconds] = useState<number>(() => pomodoroSelectedMinutes * 60);
+  const [completedSessions, setCompletedSessions] = useState<number>(() => {
+    const saved = safeStorage.get('proton_focus_completed_sessions');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    const saved = safeStorage.get('proton_focus_sound_enabled');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
+    const saved = safeStorage.get('proton_focus_voice_enabled');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const [localTimerSeconds, setLocalTimerSeconds] = useState<{ [taskId: string]: number }>({});
+  const localTimerSecondsRef = useRef<{ [taskId: string]: number }>({});
+  localTimerSecondsRef.current = localTimerSeconds;
+
+  const tasksRef = useRef<Task[]>(tasks);
   // Sync tasks ref for background timer checks
   useEffect(() => {
     tasksRef.current = tasks;
@@ -366,52 +397,119 @@ export const OrganizerView = ({
     };
   }, []);
 
-  // Stopwatch ticking logic
+  // Restore running timer across page reloads (safeStorage refresh resilience)
   useEffect(() => {
-    if (!activeTimerTaskId) return;
+    const wasRunning = safeStorage.get('proton_active_timer_running') === 'true';
+    const savedStart = parseInt(safeStorage.get('proton_active_timer_start') || '0', 10);
+    const savedTaskId = safeStorage.get('proton_active_timer_task_id') || null;
+    const savedMode = (safeStorage.get('proton_active_timer_mode') as 'pomodoro' | 'stopwatch') || 'pomodoro';
+    const savedFocusMode = (safeStorage.get('proton_active_focus_mode') as 'work' | 'break') || 'work';
+    const savedRemaining = parseInt(safeStorage.get('proton_active_timer_remaining') || '0', 10);
 
-    let isTimerActive = true;
+    if (wasRunning && savedStart > 0) {
+      const deltaSec = Math.max(0, Math.floor((Date.now() - savedStart) / 1000));
+      setTimerPresentationMode(savedMode);
+      setFocusMode(savedFocusMode);
 
-    // Load initial task time if not already tracked locally
-    const initialTask = tasksRef.current.find(tk => tk.id === activeTimerTaskId);
-    const initialSeconds = initialTask ? (initialTask.elapsedTime || 0) : 0;
-    
-    setLocalTimerSeconds(prev => ({
-      ...prev,
-      [activeTimerTaskId]: prev[activeTimerTaskId] !== undefined ? prev[activeTimerTaskId] : initialSeconds
-    }));
+      if (savedTaskId) {
+        const found = tasksRef.current.find(t => t.id === savedTaskId);
+        if (found && !found.completed) {
+          setActiveTimerTaskId(savedTaskId);
+          const initialSec = (found.elapsedTime || 0) + deltaSec;
+          setLocalTimerSeconds(prev => ({ ...prev, [savedTaskId]: initialSec }));
+        }
+      }
+
+      if (savedMode === 'pomodoro') {
+        const total = savedFocusMode === 'work' ? pomodoroSelectedMinutes * 60 : 5 * 60;
+        setPomodoroTotalSeconds(total);
+        if (savedRemaining > deltaSec) {
+          setPomodoroRemainingSeconds(savedRemaining - deltaSec);
+          setIsTimerRunning(true);
+        } else {
+          setPomodoroRemainingSeconds(0);
+          setIsTimerRunning(false);
+          safeStorage.remove('proton_active_timer_running');
+          safeStorage.remove('proton_active_timer_start');
+        }
+      } else {
+        setIsTimerRunning(true);
+      }
+    }
+  }, [pomodoroSelectedMinutes]);
+
+  // Unified single timing interval
+  useEffect(() => {
+    if (!isTimerRunning) return;
 
     let tickCount = 0;
     const interval = setInterval(() => {
-      if (!isTimerActive || !isMountedRef.current) return;
-      
+      if (!isMountedRef.current) return;
       tickCount++;
-      const currentTaskSec = localTimerSeconds[activeTimerTaskId];
-      
-      setLocalTimerSeconds(prev => {
-        const nextSec = (prev[activeTimerTaskId] || 0) + 1;
-        return {
-          ...prev,
-          [activeTimerTaskId]: nextSec
-        };
-      });
 
-      if (tickCount >= 30) {
-        tickCount = 0;
-        const nextSec = (currentTaskSec !== undefined ? currentTaskSec : initialSeconds) + 1;
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            onEditTask(activeTimerTaskId, { elapsedTime: nextSec });
+      // 1. If an active task is bound, accumulate task-level elapsedTime
+      if (activeTimerTaskId) {
+        setLocalTimerSeconds(prev => {
+          const currentSec = prev[activeTimerTaskId] !== undefined 
+            ? prev[activeTimerTaskId] 
+            : (tasksRef.current.find(t => t.id === activeTimerTaskId)?.elapsedTime || 0);
+          const nextSec = currentSec + 1;
+          return {
+            ...prev,
+            [activeTimerTaskId]: nextSec
+          };
+        });
+
+        // Periodic batch persistence to Firestore every 30 seconds
+        if (tickCount % 30 === 0) {
+          const currentSec = (localTimerSecondsRef.current[activeTimerTaskId] || 0) + 1;
+          onEditTask(activeTimerTaskId, { elapsedTime: currentSec });
+        }
+      }
+
+      // 2. If running in Pomodoro mode, decrement remaining seconds
+      if (timerPresentationMode === 'pomodoro') {
+        setPomodoroRemainingSeconds(prev => {
+          if (prev <= 1) {
+            // Milestone complete!
+            setIsTimerRunning(false);
+            safeStorage.remove('proton_active_timer_running');
+            safeStorage.remove('proton_active_timer_start');
+
+            // Flush task elapsed time if task was active
+            if (activeTimerTaskId) {
+              const currentSec = (localTimerSecondsRef.current[activeTimerTaskId] || 0) + 1;
+              onEditTask(activeTimerTaskId, { elapsedTime: currentSec });
+            }
+
+            if (focusMode === 'work') {
+              setCompletedSessions(cnt => {
+                const next = cnt + 1;
+                safeStorage.set('proton_focus_completed_sessions', String(next));
+                return next;
+              });
+              notifyFocusEvent('complete', 'work', language, soundEnabled, voiceEnabled);
+              setFocusMode('break');
+              const breakSec = 5 * 60;
+              setPomodoroTotalSeconds(breakSec);
+              return breakSec;
+            } else {
+              notifyFocusEvent('complete', 'break', language, soundEnabled, voiceEnabled);
+              setFocusMode('work');
+              const workSec = pomodoroSelectedMinutes * 60;
+              setPomodoroTotalSeconds(workSec);
+              return workSec;
+            }
           }
-        }, 0);
+          return prev - 1;
+        });
       }
     }, 1000);
 
     return () => {
-      isTimerActive = false;
       clearInterval(interval);
     };
-  }, [activeTimerTaskId, onEditTask]);
+  }, [isTimerRunning, activeTimerTaskId, timerPresentationMode, focusMode, pomodoroSelectedMinutes, language, soundEnabled, voiceEnabled, onEditTask]);
 
   const currentTheme = {
     container: "text-proton-text",
@@ -496,28 +594,156 @@ export const OrganizerView = ({
     );
   };
 
-  const handleToggleTimer = (id: string) => {
-    // If there is an active timer running, save its accumulated elapsed time to database
+  const flushActiveTimerTaskTime = useCallback(() => {
     if (activeTimerTaskId) {
-      const activeSeconds = localTimerSeconds[activeTimerTaskId];
-      if (activeSeconds !== undefined) {
-        onEditTask(activeTimerTaskId, { elapsedTime: activeSeconds });
+      const currentSec = localTimerSecondsRef.current[activeTimerTaskId];
+      if (currentSec !== undefined) {
+        onEditTask(activeTimerTaskId, { elapsedTime: currentSec });
       }
     }
+  }, [activeTimerTaskId, onEditTask]);
 
+  const handleToggleTimer = (id: string) => {
     if (activeTimerTaskId === id) {
-      setActiveTimerTaskId(null);
+      if (isTimerRunning) {
+        // Pause active stopwatch
+        flushActiveTimerTaskTime();
+        setIsTimerRunning(false);
+        safeStorage.remove('proton_active_timer_running');
+        safeStorage.remove('proton_active_timer_start');
+      } else {
+        // Resume active stopwatch
+        setIsTimerRunning(true);
+        setTimerPresentationMode('stopwatch');
+        safeStorage.set('proton_active_timer_running', 'true');
+        safeStorage.set('proton_active_timer_start', Date.now().toString());
+        safeStorage.set('proton_active_timer_task_id', id);
+        safeStorage.set('proton_active_timer_mode', 'stopwatch');
+      }
     } else {
-      // Load current time of next task
+      // Switching stopwatch to a new task
+      flushActiveTimerTaskTime();
       const nextTask = tasks.find(tk => tk.id === id);
       const nextSeconds = nextTask ? (nextTask.elapsedTime || 0) : 0;
       setLocalTimerSeconds(prev => ({
         ...prev,
-        [id]: nextSeconds
+        [id]: prev[id] !== undefined ? prev[id] : nextSeconds
       }));
       setActiveTimerTaskId(id);
+      setTimerPresentationMode('stopwatch');
+      setIsTimerRunning(true);
+      safeStorage.set('proton_active_timer_running', 'true');
+      safeStorage.set('proton_active_timer_start', Date.now().toString());
+      safeStorage.set('proton_active_timer_task_id', id);
+      safeStorage.set('proton_active_timer_mode', 'stopwatch');
     }
   };
+
+  const handleToggleFocusTimerRunning = useCallback(() => {
+    if (isTimerRunning) {
+      flushActiveTimerTaskTime();
+      setIsTimerRunning(false);
+      safeStorage.remove('proton_active_timer_running');
+      safeStorage.remove('proton_active_timer_start');
+      if (soundEnabled) playFocusChime('click');
+    } else {
+      // If no active task currently selected, but daily anchor is available and pending, bind to it
+      if (!activeTimerTaskId && dailyAnchorTask && !dailyAnchorTask.completed) {
+        setActiveTimerTaskId(dailyAnchorTask.id);
+        setLocalTimerSeconds(prev => ({
+          ...prev,
+          [dailyAnchorTask.id]: prev[dailyAnchorTask.id] !== undefined ? prev[dailyAnchorTask.id] : (dailyAnchorTask.elapsedTime || 0)
+        }));
+      }
+      setIsTimerRunning(true);
+      safeStorage.set('proton_active_timer_running', 'true');
+      safeStorage.set('proton_active_timer_start', Date.now().toString());
+      safeStorage.set('proton_active_timer_task_id', activeTimerTaskId || (dailyAnchorTask && !dailyAnchorTask.completed ? dailyAnchorTask.id : ''));
+      safeStorage.set('proton_active_timer_mode', timerPresentationMode);
+      safeStorage.set('proton_active_focus_mode', focusMode);
+      safeStorage.set('proton_active_timer_remaining', pomodoroRemainingSeconds.toString());
+      notifyFocusEvent('start', focusMode, language, soundEnabled, voiceEnabled);
+    }
+  }, [isTimerRunning, activeTimerTaskId, dailyAnchorTask, flushActiveTimerTaskTime, focusMode, language, soundEnabled, voiceEnabled, timerPresentationMode, pomodoroRemainingSeconds]);
+
+  const handleResetFocusTimer = useCallback(() => {
+    flushActiveTimerTaskTime();
+    setIsTimerRunning(false);
+    safeStorage.remove('proton_active_timer_running');
+    safeStorage.remove('proton_active_timer_start');
+    if (timerPresentationMode === 'pomodoro') {
+      const sec = pomodoroSelectedMinutes * 60;
+      setPomodoroRemainingSeconds(sec);
+      setPomodoroTotalSeconds(sec);
+      setFocusMode('work');
+    }
+    if (soundEnabled) playFocusChime('click');
+  }, [flushActiveTimerTaskTime, timerPresentationMode, pomodoroSelectedMinutes, soundEnabled]);
+
+  const handleModeSwitch = useCallback((mode: 'work' | 'break') => {
+    flushActiveTimerTaskTime();
+    setFocusMode(mode);
+    const sec = mode === 'work' ? pomodoroSelectedMinutes * 60 : 5 * 60;
+    setPomodoroRemainingSeconds(sec);
+    setPomodoroTotalSeconds(sec);
+    if (isTimerRunning) {
+      safeStorage.set('proton_active_focus_mode', mode);
+      safeStorage.set('proton_active_timer_remaining', sec.toString());
+      safeStorage.set('proton_active_timer_start', Date.now().toString());
+    }
+  }, [flushActiveTimerTaskTime, pomodoroSelectedMinutes, isTimerRunning]);
+
+  const handleApplyDuration = useCallback((minutes: number) => {
+    setPomodoroSelectedMinutes(minutes);
+    safeStorage.set('proton_focus_minutes', String(minutes));
+    if (focusMode === 'work') {
+      const sec = minutes * 60;
+      setPomodoroRemainingSeconds(sec);
+      setPomodoroTotalSeconds(sec);
+      if (isTimerRunning) {
+        safeStorage.set('proton_active_timer_remaining', sec.toString());
+        safeStorage.set('proton_active_timer_start', Date.now().toString());
+      }
+    }
+  }, [focusMode, isTimerRunning]);
+
+  const handleToggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const next = !prev;
+      safeStorage.set('proton_focus_sound_enabled', String(next));
+      return next;
+    });
+  }, []);
+
+  const handleToggleVoice = useCallback(() => {
+    setVoiceEnabled(prev => {
+      const next = !prev;
+      safeStorage.set('proton_focus_voice_enabled', String(next));
+      return next;
+    });
+  }, []);
+
+  const handleToggleTimerMode = useCallback((mode: 'stopwatch' | 'pomodoro') => {
+    setTimerPresentationMode(mode);
+    if (isTimerRunning) {
+      safeStorage.set('proton_active_timer_mode', mode);
+    }
+  }, [isTimerRunning]);
+
+  const handleToggleTaskWithTimer = useCallback((id: string) => {
+    if (activeTimerTaskId === id) {
+      // FLUSH accumulated elapsed time to database BEFORE toggling complete status
+      const currentSec = localTimerSecondsRef.current[id];
+      if (currentSec !== undefined) {
+        onEditTask(id, { elapsedTime: currentSec });
+      }
+      setIsTimerRunning(false);
+      setActiveTimerTaskId(null);
+      safeStorage.remove('proton_active_timer_running');
+      safeStorage.remove('proton_active_timer_start');
+    }
+    onToggleTask(id);
+  }, [activeTimerTaskId, onEditTask, onToggleTask]);
 
   // Convert elapsed seconds into MM:SS or HH:MM:SS
   const formatElapsedTime = (sec?: number) => {
@@ -840,7 +1066,10 @@ export const OrganizerView = ({
       }
     }
     if (activeTimerTaskId === id) {
+      setIsTimerRunning(false);
       setActiveTimerTaskId(null);
+      safeStorage.remove('proton_active_timer_running');
+      safeStorage.remove('proton_active_timer_start');
     }
     if (dailyAnchorTaskId === id) {
       setDailyAnchorTaskId(null);
@@ -1023,14 +1252,18 @@ export const OrganizerView = ({
         <div className={cn("p-6 rounded-2xl transition-all duration-500 flex items-center justify-between", currentTheme.card)}>
           <div>
             <p className={cn("text-[9px] font-black uppercase tracking-widest mb-1", currentTheme.muted)}>
-              {language === 'ka' ? 'აქტიური ტაიმერი' : 'Active Stopwatch'}
+              {language === 'ka' ? 'აქტიური ტაიმერი' : 'Active Timer'}
             </p>
-            <h4 className={cn("text-xl font-black font-mono", activeTimerTaskId ? "text-amber-500 animate-pulse" : "opacity-40")}>
-              {activeTimerTaskId ? formatElapsedTime(localTimerSeconds[activeTimerTaskId] ?? tasks.find(tk => tk.id === activeTimerTaskId)?.elapsedTime) : (language === 'ka' ? 'გამორთულია' : 'Idle')}
+            <h4 className={cn("text-xl font-black font-mono", isTimerRunning ? "text-amber-500 animate-pulse" : "opacity-40")}>
+              {isTimerRunning 
+                ? (timerPresentationMode === 'stopwatch'
+                    ? (activeTimerTaskId ? formatElapsedTime(localTimerSeconds[activeTimerTaskId] ?? tasks.find(tk => tk.id === activeTimerTaskId)?.elapsedTime) : '00:00')
+                    : formatElapsedTime(pomodoroRemainingSeconds))
+                : (language === 'ka' ? 'გამორთულია' : 'Idle')}
             </h4>
           </div>
-          <div className={cn("p-3.5 rounded-2xl shrink-0", activeTimerTaskId ? "bg-amber-500/10 text-amber-400" : currentTheme.accent)}>
-            <Clock size={24} className={cn(activeTimerTaskId && "animate-spin")} />
+          <div className={cn("p-3.5 rounded-2xl shrink-0", isTimerRunning ? "bg-amber-500/10 text-amber-400" : currentTheme.accent)}>
+            <Clock size={24} className={cn(isTimerRunning && "animate-spin")} />
           </div>
         </div>
 
@@ -1570,7 +1803,35 @@ export const OrganizerView = ({
                 <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
                   {language === 'ka' ? 'ფოკუსის ტაიმერი & ხმოვანი ასისტენტი' : 'Focus Timer & Voice Alert'}
                 </label>
-                <FocusTimerWidget language={language} className="w-full" />
+                <FocusTimerWidget 
+                  language={language} 
+                  className="w-full" 
+                  activeTask={activeTimerTaskId ? tasks.find(t => t.id === activeTimerTaskId) || null : (dailyAnchorTask && !dailyAnchorTask.completed ? dailyAnchorTask : null)}
+                  isRunning={isTimerRunning}
+                  timerMode={timerPresentationMode}
+                  pomodoroMode={focusMode}
+                  displaySeconds={
+                    timerPresentationMode === 'stopwatch'
+                      ? (activeTimerTaskId ? (localTimerSeconds[activeTimerTaskId] ?? tasks.find(tk => tk.id === activeTimerTaskId)?.elapsedTime ?? 0) : 0)
+                      : pomodoroRemainingSeconds
+                  }
+                  totalSeconds={
+                    timerPresentationMode === 'stopwatch'
+                      ? (activeTimerTaskId ? (tasks.find(tk => tk.id === activeTimerTaskId)?.estimatedTime ? tasks.find(tk => tk.id === activeTimerTaskId)!.estimatedTime! * 60 : 3600) : 3600)
+                      : pomodoroTotalSeconds
+                  }
+                  selectedMinutes={pomodoroSelectedMinutes}
+                  completedSessions={completedSessions}
+                  soundEnabled={soundEnabled}
+                  voiceEnabled={voiceEnabled}
+                  onToggleRunning={handleToggleFocusTimerRunning}
+                  onReset={handleResetFocusTimer}
+                  onModeSwitch={handleModeSwitch}
+                  onApplyDuration={handleApplyDuration}
+                  onToggleSound={handleToggleSound}
+                  onToggleVoice={handleToggleVoice}
+                  onToggleTimerMode={handleToggleTimerMode}
+                />
               </div>
 
               {/* Mood Meter */}
@@ -2121,7 +2382,7 @@ export const OrganizerView = ({
                                 className="p-2.5 bg-black/30 rounded-xl border border-proton-border/10 flex items-center justify-between gap-3 group/item hover:border-proton-accent/30 transition-all"
                               >
                                 <button 
-                                  onClick={() => onToggleTask(t.id)}
+                                  onClick={() => handleToggleTaskWithTimer(t.id)}
                                   className="flex items-center gap-2.5 min-w-0 text-left flex-1"
                                 >
                                   {t.completed ? (
@@ -2506,7 +2767,35 @@ export const OrganizerView = ({
 
                 {/* Primary Dedicated Focus Timer Component */}
                 <div className="py-4">
-                  <FocusTimerWidget language={language} className="w-full" />
+                  <FocusTimerWidget 
+                    language={language} 
+                    className="w-full" 
+                    activeTask={activeTimerTaskId ? tasks.find(t => t.id === activeTimerTaskId) || null : (dailyAnchorTask && !dailyAnchorTask.completed ? dailyAnchorTask : null)}
+                    isRunning={isTimerRunning}
+                    timerMode={timerPresentationMode}
+                    pomodoroMode={focusMode}
+                    displaySeconds={
+                      timerPresentationMode === 'stopwatch'
+                        ? (activeTimerTaskId ? (localTimerSeconds[activeTimerTaskId] ?? tasks.find(tk => tk.id === activeTimerTaskId)?.elapsedTime ?? 0) : 0)
+                        : pomodoroRemainingSeconds
+                    }
+                    totalSeconds={
+                      timerPresentationMode === 'stopwatch'
+                        ? (activeTimerTaskId ? (tasks.find(tk => tk.id === activeTimerTaskId)?.estimatedTime ? tasks.find(tk => tk.id === activeTimerTaskId)!.estimatedTime! * 60 : 3600) : 3600)
+                        : pomodoroTotalSeconds
+                    }
+                    selectedMinutes={pomodoroSelectedMinutes}
+                    completedSessions={completedSessions}
+                    soundEnabled={soundEnabled}
+                    voiceEnabled={voiceEnabled}
+                    onToggleRunning={handleToggleFocusTimerRunning}
+                    onReset={handleResetFocusTimer}
+                    onModeSwitch={handleModeSwitch}
+                    onApplyDuration={handleApplyDuration}
+                    onToggleSound={handleToggleSound}
+                    onToggleVoice={handleToggleVoice}
+                    onToggleTimerMode={handleToggleTimerMode}
+                  />
                 </div>
               </div>
 
@@ -2904,7 +3193,7 @@ export const OrganizerView = ({
       );
     }
 
-    const hasTimerTicking = activeTimerTaskId === task.id;
+    const hasTimerTicking = isTimerRunning && activeTimerTaskId === task.id;
     const isOverdue = task.dueDate ? (!task.completed && Date.now() > task.dueDate) : false;
 
     return (
@@ -2934,12 +3223,7 @@ export const OrganizerView = ({
           {/* Checkbox button */}
           <button 
             type="button"
-            onClick={() => {
-              if (hasTimerTicking) {
-                setActiveTimerTaskId(null);
-              }
-              onToggleTask(task.id);
-            }}
+            onClick={() => handleToggleTaskWithTimer(task.id)}
             className={cn(
               "w-7 h-7 rounded-xl border-2 flex items-center justify-center transition-all shrink-0 mt-1.5 shadow-sm active:scale-90",
               task.completed 
