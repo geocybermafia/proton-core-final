@@ -345,10 +345,15 @@ html.theme-transitioning *::after {
   transition: all 0.2s ease !important;
 }
 
+.react-calendar__tile abbr {
+  line-height: 1;
+  text-decoration: none;
+}
+
 @media (min-width: 640px) {
   .react-calendar__tile {
     font-size: 0.875rem !important;
-    padding: 0.8em 0.1em !important;
+    padding: 0.25em 0.1em !important;
   }
 }
 

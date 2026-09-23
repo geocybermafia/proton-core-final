@@ -2680,7 +2680,7 @@ export const OrganizerView = ({
                               )}
                             </div>
                             
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                               <button
                                 type="button"
                                 onClick={(e) => openEditProjectModal(proj, e)}
@@ -3348,7 +3348,7 @@ export const OrganizerView = ({
           </div>
 
           {/* Stopwatch control button and utility operations button */}
-          <div className="flex items-center gap-2 pr-1 select-none">
+          <div className="flex items-center gap-2 pr-1 select-none shrink-0">
             {/* Daily Anchor Toggle Button */}
             <button
               type="button"
@@ -3387,7 +3387,7 @@ export const OrganizerView = ({
             <button 
               type="button"
               onClick={() => startEditMode(task)} 
-              className={cn("p-2 rounded-xl transition-all hover:scale-110 opacity-0 group-hover:opacity-100 text-proton-text hover:text-proton-accent")}
+              className={cn("p-2 rounded-xl transition-all hover:scale-110 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-proton-text hover:text-proton-accent")}
               title={language === 'ka' ? 'რედაქტირება' : 'Edit Task'}
             >
               <Edit2 size={12} />
@@ -3395,7 +3395,7 @@ export const OrganizerView = ({
             <button 
               type="button"
               onClick={() => handleDeleteTask(task.id)} 
-              className={cn("p-2 rounded-xl transition-all hover:scale-110 opacity-0 group-hover:opacity-100 text-proton-text hover:text-red-500")}
+              className={cn("p-2 rounded-xl transition-all hover:scale-110 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 text-proton-text hover:text-red-500")}
               title={language === 'ka' ? 'წაშლა' : 'Delete Task'}
             >
               <Trash2 size={12} />
