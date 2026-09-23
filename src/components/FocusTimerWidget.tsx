@@ -336,14 +336,14 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
       {/* COMPACT DASHBOARD FOCUS WIDGET                                            */}
       {/* ========================================================================= */}
       <div className={cn(
-        "relative rounded-2xl bg-zinc-950/90 border border-zinc-800/90 p-3 sm:p-3.5 shadow-xl transition-all",
+        "@container relative rounded-2xl bg-zinc-950/90 border border-zinc-800/90 p-3 sm:p-3.5 shadow-xl transition-all",
         effectiveIsRunning && "border-amber-500/40 shadow-amber-500/5 ring-1 ring-amber-500/20",
         className
       )}>
-        <div className="flex items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 @sm:gap-4">
           
           {/* Status, Mode Pill & Digital Clock */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1 @md:flex-initial">
             {/* Progress Circular Accent or Icon */}
             <div 
               onClick={() => handleModeSwitch(effectiveFocusMode === 'work' ? 'break' : 'work')}
@@ -368,7 +368,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               )}
             </div>
 
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className={cn(
                   "w-1.5 h-1.5 rounded-full shrink-0",
@@ -402,7 +402,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   <button
                     type="button"
                     onClick={() => onToggleTimerMode(effectiveTimerMode === 'pomodoro' ? 'stopwatch' : 'pomodoro')}
-                    className="ml-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900/80 text-zinc-400 hover:text-amber-400 transition-all cursor-pointer"
+                    className="ml-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900/80 text-zinc-400 hover:text-amber-400 transition-all cursor-pointer shrink-0"
                     title={language === 'ka' ? 'რეჟიმის შეცვლა (პომოდორო / წამმზომი)' : 'Toggle Pomodoro / Stopwatch'}
                   >
                     {effectiveTimerMode === 'pomodoro' ? '⏱️ Stopwatch' : '⏳ Pomodoro'}
@@ -413,7 +413,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               <div className="text-2xl font-black font-mono tracking-tight text-white flex items-center gap-2">
                 <span>{formattedTimer}</span>
                 {effectiveCompletedSessions > 0 && effectiveTimerMode === 'pomodoro' && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold" title={language === 'ka' ? `${effectiveCompletedSessions} დასრულებული სესია` : `${effectiveCompletedSessions} completed sessions`}>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold shrink-0" title={language === 'ka' ? `${effectiveCompletedSessions} დასრულებული სესია` : `${effectiveCompletedSessions} completed sessions`}>
                     ★ {effectiveCompletedSessions}
                   </span>
                 )}
@@ -421,7 +421,10 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
 
               {/* Active Targeted Task Pill */}
               {activeTask && (
-                <div className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400/90 font-bold truncate max-w-[200px] sm:max-w-[260px] mt-0.5" title={activeTask.content}>
+                <div 
+                  className="flex items-center gap-1.5 text-[10px] font-mono text-amber-400/90 font-bold min-w-0 max-w-full mt-0.5" 
+                  title={language === 'ka' ? (activeTask.contentGe || activeTask.content) : activeTask.content}
+                >
                   <Target size={11} className="shrink-0 text-amber-400" />
                   <span className="truncate">{language === 'ka' ? (activeTask.contentGe || activeTask.content) : activeTask.content}</span>
                 </div>
@@ -430,7 +433,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 border-l border-zinc-800 pl-2.5 sm:pl-3">
+          <div className="flex items-center gap-1.5 w-full @md:w-auto justify-end pt-2 @md:pt-0 border-t @md:border-t-0 border-zinc-800/80 @md:border-l @md:border-zinc-800 @md:pl-3 shrink-0">
             {/* Play / Pause */}
             <button
               type="button"
@@ -442,6 +445,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   : "bg-zinc-800 hover:bg-zinc-700 text-white"
               )}
               title={effectiveIsRunning ? (language === 'ka' ? 'დაპაუზება' : 'Pause') : (language === 'ka' ? 'დაწყება' : 'Start Focus')}
+              aria-label={effectiveIsRunning ? (language === 'ka' ? 'დაპაუზება' : 'Pause') : (language === 'ka' ? 'დაწყება' : 'Start Focus')}
             >
               {effectiveIsRunning ? <Pause size={15} className="fill-current" /> : <Play size={15} className="fill-current" />}
             </button>
@@ -452,6 +456,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
               onClick={handleReset}
               className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer active:scale-95"
               title={language === 'ka' ? 'განულება' : 'Reset Timer'}
+              aria-label={language === 'ka' ? 'განულება' : 'Reset Timer'}
             >
               <RotateCcw size={14} />
             </button>
@@ -467,9 +472,10 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   : "bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-amber-400 border-zinc-800"
               )}
               title={language === 'ka' ? 'დროის მითითება და ხმის პარამეტრები' : 'Custom Duration & Audio'}
+              aria-label={language === 'ka' ? 'დროის მითითება და ხმის პარამეტრები' : 'Custom Duration & Audio'}
             >
               <Sliders size={14} />
-              <span className="text-[10px] font-bold hidden md:inline">
+              <span className="text-[10px] font-bold hidden @md:inline">
                 {language === 'ka' ? 'დრო & ხმა' : 'Time & Sound'}
               </span>
               {(effectiveSoundEnabled || effectiveVoiceEnabled) && (
@@ -487,8 +493,9 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   setIsZenOpen(true);
                 }
               }}
-              className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer hidden sm:flex active:scale-95"
+              className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer flex items-center justify-center active:scale-95"
               title={language === 'ka' ? 'სრული ეკრანის ზენ რეჟიმი' : 'Full Zen Screen'}
+              aria-label={language === 'ka' ? 'სრული ეკრანის ზენ რეჟიმი' : 'Full Zen Screen'}
             >
               <Maximize2 size={14} />
             </button>

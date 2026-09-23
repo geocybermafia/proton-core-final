@@ -1690,7 +1690,7 @@ export const OrganizerView = ({
         <div className="space-y-8">
           
           {/* Daily Vitality & Habits Dashboard */}
-          <div className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
                 <Sparkles size={20} className="text-amber-400" />
