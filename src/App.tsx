@@ -51,7 +51,7 @@ const SettingsView = lazyWithRetry(() => import('./components/SettingsView').the
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useSeller } from './contexts/SellerContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })));
 const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
 import { LandingPage } from './components/LandingPage';
@@ -4053,6 +4053,30 @@ export default function App() {
     }
   }, [location.pathname, navigate]);
 
+  // Route Persistence: Save last valid non-root route to sessionStorage
+  useEffect(() => {
+    if (location.pathname && location.pathname !== '/') {
+      try {
+        sessionStorage.setItem('proton_last_route', location.pathname);
+      } catch (e) {
+        // Fallback for sandboxed storage environments
+      }
+    }
+  }, [location.pathname]);
+
+  // Restore route for authenticated users if starting at root '/'
+  useEffect(() => {
+    if (authInitialized && user && location.pathname === '/') {
+      try {
+        const lastRoute = sessionStorage.getItem('proton_last_route');
+        const targetRoute = (lastRoute && lastRoute !== '/') ? lastRoute : '/dashboard';
+        navigate(targetRoute, { replace: true });
+      } catch (e) {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [authInitialized, user, location.pathname, navigate]);
+
   // Scroll main container & window to top on view changes with layout safety and multi-stage timing
   useEffect(() => {
     // Reset window scrolling
@@ -5539,6 +5563,19 @@ export default function App() {
   }
 
   if (activeView === 'landing') {
+    if (user) {
+      let targetRoute = '/dashboard';
+      try {
+        const lastRoute = sessionStorage.getItem('proton_last_route');
+        if (lastRoute && lastRoute !== '/') {
+          targetRoute = lastRoute;
+        }
+      } catch (e) {
+        // Fallback for restricted storage environments
+      }
+      return <Navigate to={targetRoute} replace />;
+    }
+
     return (
       <LandingPage
         onGetStarted={() => {
