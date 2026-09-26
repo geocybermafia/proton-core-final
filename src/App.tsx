@@ -5365,23 +5365,113 @@ export default function App() {
     }));
   }, [user]);
 
-  const handleToggleTask = useCallback((id: string) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id === id) {
-        const nextCompleted = !t.completed;
-        const updated = { ...t, completed: nextCompleted };
+  const handleToggleTask = useCallback(async (id: string) => {
+    const targetTask = tasks.find(t => t.id === id);
+    if (!targetTask) return;
 
-        const targetOrderId = t.orderId || t.metadata?.orderId;
-        if (targetOrderId && updateOrderStatus) {
-          updateOrderStatus(targetOrderId, nextCompleted ? 'completed' : 'pending');
+    const nextCompleted = !targetTask.completed;
+    const targetOrderId = targetTask.orderId || targetTask.metadata?.orderId;
+    const linkedOrder = targetOrderId ? sellerOrders?.find(o => o.id === targetOrderId) : undefined;
+
+    // Determine target order status transition strictly based on current order status and role rules
+    let targetOrderStatus: string | null = null;
+
+    if (nextCompleted && linkedOrder && updateOrderStatus) {
+      const isService = linkedOrder.orderType === 'service' || linkedOrder.orderType === 'project';
+      const currentStatus = linkedOrder.status;
+
+      if (isService) {
+        if (currentStatus === 'booked') {
+          targetOrderStatus = 'in_progress';
+        } else if (currentStatus === 'in_progress') {
+          targetOrderStatus = 'completed';
         }
-
-        taskSyncService.queueTaskUpsert(user?.uid, updated, 300);
-        return updated;
+      } else {
+        // Physical product order:
+        // pending -> processing (advances order to processing; does NOT skip directly to completed)
+        // processing -> shipped (dispatch completion; does NOT skip directly to completed)
+        if (currentStatus === 'pending') {
+          targetOrderStatus = 'processing';
+        } else if (currentStatus === 'processing') {
+          targetOrderStatus = 'shipped';
+        }
       }
-      return t;
-    }));
-  }, [user, updateOrderStatus]);
+    }
+
+    if (targetOrderStatus && targetOrderId && updateOrderStatus) {
+      // Optimistically update local task
+      const updatedTask: Task = { ...targetTask, completed: true };
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+
+      try {
+        await updateOrderStatus(targetOrderId, targetOrderStatus);
+        taskSyncService.queueTaskUpsert(user?.uid, updatedTask, 300);
+
+        const shortId = targetOrderId.slice(-6);
+        if (targetOrderStatus === 'processing') {
+          showToast(
+            language === 'ka' 
+              ? `შეკვეთა #${shortId} გადავიდა დამუშავებაში` 
+              : `Order #${shortId} advanced to Processing`,
+            'success'
+          );
+        } else if (targetOrderStatus === 'shipped') {
+          showToast(
+            language === 'ka' 
+              ? `შეკვეთა #${shortId} მონიშნულია როგორც გაგზავნილი` 
+              : `Order #${shortId} marked as Shipped`,
+            'success'
+          );
+        } else if (targetOrderStatus === 'in_progress') {
+          showToast(
+            language === 'ka' 
+              ? `სერვისის შეკვეთა #${shortId} გადავიდა შესრულებაში` 
+              : `Service order #${shortId} marked In Progress`,
+            'success'
+          );
+        } else if (targetOrderStatus === 'completed') {
+          showToast(
+            language === 'ka' 
+              ? `სერვისის შეკვეთა #${shortId} დასრულებულია` 
+              : `Service order #${shortId} marked Completed`,
+            'success'
+          );
+        }
+      } catch (err: any) {
+        console.error("[OrganizerSync] Failed to update order status:", err);
+        // Roll back local task state to original completed state on failure
+        const rollbackTask: Task = { ...targetTask, completed: targetTask.completed };
+        setTasks(prev => prev.map(t => t.id === id ? rollbackTask : t));
+        taskSyncService.queueTaskUpsert(user?.uid, rollbackTask, 300);
+        showToast(
+          err instanceof Error ? err.message : 'Failed to update linked order status',
+          'error'
+        );
+      }
+    } else if (targetOrderId && !nextCompleted) {
+      // Reopening fulfillment task:
+      // Terminal and progressed order statuses (processing, shipped, completed, in_progress) cannot be reversed.
+      // Do not force the commercial order back to pending.
+      const updatedTask: Task = { ...targetTask, completed: false };
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+      taskSyncService.queueTaskUpsert(user?.uid, updatedTask, 300);
+
+      if (linkedOrder && linkedOrder.status !== 'pending' && linkedOrder.status !== 'booked') {
+        const shortId = targetOrderId.slice(-6);
+        showToast(
+          language === 'ka'
+            ? `შეკვეთის #${shortId} სტატუსი დარჩა უცვლელი (${linkedOrder.status})`
+            : `Order #${shortId} status remains unchanged (${linkedOrder.status})`,
+          'info'
+        );
+      }
+    } else {
+      // Standard task toggle or task whose linked order requires no further status transition
+      const updatedTask: Task = { ...targetTask, completed: nextCompleted };
+      setTasks(prev => prev.map(t => t.id === id ? updatedTask : t));
+      taskSyncService.queueTaskUpsert(user?.uid, updatedTask, 300);
+    }
+  }, [user, updateOrderStatus, tasks, sellerOrders, language, showToast]);
 
   const handleDeleteTask = useCallback((id: string) => {
     setTasks(prev => prev.filter(t => t.id !== id));
