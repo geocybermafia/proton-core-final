@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
+import { useToast } from './Toast';
 
 interface WorkflowNode {
   id: string;
@@ -57,6 +58,7 @@ export const EnterpriseWorkflowBuilder = ({
   onSave: (wf: any) => void,
   language: 'en' | 'ka'
 }) => {
+  const { showToast } = useToast();
   const t = translations[language].workflows.builder;
   const [nodes, setNodes] = useState<WorkflowNode[]>(workflow.nodes || []);
   const [workflowName, setWorkflowName] = useState(workflow.name || '');
@@ -185,7 +187,7 @@ export const EnterpriseWorkflowBuilder = ({
             </div>
             <button 
               onClick={() => {
-                alert(language === 'ka' ? 'ვორქფლოუ წარმატებით შეინახა და გაიშვა!' : 'Workflow successfully saved and deployed!');
+                showToast(language === 'ka' ? 'ვორქფლოუ წარმატებით შეინახა და გაიშვა!' : 'Workflow successfully saved and deployed!', 'success');
                 onSave({ ...workflow, name: workflowName, nodes });
               }}
               className="bg-proton-text text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2"

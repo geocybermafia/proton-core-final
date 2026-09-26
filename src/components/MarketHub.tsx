@@ -1001,20 +1001,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეფასების დასაწერად." : "Please log in to write a review.");
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეფასების დასაწერად." : "Please log in to write a review.", 'warning');
       return;
     }
     if (!selectedVendor) return;
     if (user.uid === selectedVendor.id) {
-      alert(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება." : "You cannot review yourself.");
+      showToast(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება." : "You cannot review yourself.", 'warning');
       return;
     }
     if (reviewRating < 1 || reviewRating > 5) {
-      alert(language === 'ka' ? "გთხოვთ აირჩიოთ რეიტინგი 1-დან 5-მდე." : "Please select a rating between 1 and 5.");
+      showToast(language === 'ka' ? "გთხოვთ აირჩიოთ რეიტინგი 1-დან 5-მდე." : "Please select a rating between 1 and 5.", 'warning');
       return;
     }
     if (!reviewText.trim()) {
-      alert(language === 'ka' ? "გთხოვთ დაწეროთ შეფასების ტექსტი." : "Please write a review comment.");
+      showToast(language === 'ka' ? "გთხოვთ დაწეროთ შეფასების ტექსტი." : "Please write a review comment.", 'warning');
       return;
     }
 
@@ -1034,10 +1034,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       
       setReviewText('');
       setReviewRating(5);
-      alert(language === 'ka' ? "შეფასება წარმატებით დაემატა!" : "Review added successfully!");
+      showToast(language === 'ka' ? "შეფასება წარმატებით დაემატა!" : "Review added successfully!", 'success');
     } catch (err) {
       console.error("Error creating review:", err);
-      alert(language === 'ka' ? "შეფასების დამატება ვერ მოხერხდა." : "Could not add your review.");
+      showToast(language === 'ka' ? "შეფასების დამატება ვერ მოხერხდა." : "Could not add your review.", 'error');
     } finally {
       setIsSubmittingReview(false);
     }
@@ -1049,7 +1049,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       await deleteDoc(doc(db, 'seller_reviews', reviewId));
     } catch (err) {
       console.error("Error deleting review:", err);
-      alert(language === 'ka' ? "წაშლა ვერ მოხერხდა." : "Could not delete review.");
+      showToast(language === 'ka' ? "წაშლა ვერ მოხერხდა." : "Could not delete review.", 'error');
     }
   };
 
@@ -1575,26 +1575,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             data.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
           }
 
-          // Reclaim / heal corrupted listings where sellerName matches the logged-in user but sellerId is wrong
-          const loggedUser = auth.currentUser;
-          if (loggedUser) {
-            data.forEach((l) => {
-              const sellerNameLower = String(l.sellerName || '').trim().toLowerCase();
-              const userEmailPrefix = loggedUser.email ? String(loggedUser.email.split('@')[0]).trim().toLowerCase() : '';
-              const userDisplayName = loggedUser.displayName ? String(loggedUser.displayName).trim().toLowerCase() : '';
-
-              if (loggedUser.email !== 'devdarianib@gmail.com') {
-                const isMatch = sellerNameLower && (
-                  sellerNameLower === userEmailPrefix ||
-                  sellerNameLower === userDisplayName
-                );
-                if (isMatch && l.sellerId !== loggedUser.uid) {
-                  updateDoc(doc(db, 'listings', l.id), { sellerId: loggedUser.uid }).catch(() => {});
-                }
-              }
-            });
-          }
-
           const realPage1 = data.filter(isRealListing);
           page1DocsRef.current = realPage1;
 
@@ -1861,7 +1841,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       }
     } catch (error: any) {
       console.error("Error seeding listings:", error);
-      alert("Error seeding: " + error.message);
+      showToast("Error seeding: " + error.message, 'error');
     } finally {
       setIsSeeding(false);
     }
@@ -2299,7 +2279,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert(language === 'ka' ? "გთხოვთ აირჩიოთ ფოტოს ფაილი." : "Please select an image file.");
+        showToast(language === 'ka' ? "გთხოვთ აირჩიოთ ფოტოს ფაილი." : "Please select an image file.", 'warning');
         return;
       }
 
@@ -2341,13 +2321,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         };
         img.onerror = () => {
           setIsResizing(false);
-          alert(language === 'ka' ? "ფოტოს დამუშავებისას მოხდა შეცდომა." : "Error processing image.");
+          showToast(language === 'ka' ? "ფოტოს დამუშავებისას მოხდა შეცდომა." : "Error processing image.", 'error');
         };
         img.src = event.target?.result as string;
       };
       reader.onerror = () => {
         setIsResizing(false);
-        alert(language === 'ka' ? "ფაილის წაკითხვისას მოხდა შეცდომა." : "Error reading file.");
+        showToast(language === 'ka' ? "ფაილის წაკითხვისას მოხდა შეცდომა." : "Error reading file.", 'error');
       };
       reader.readAsDataURL(file);
     }
@@ -2361,7 +2341,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const handleAiDescription = async () => {
     if (!formData.title) {
-      alert(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first");
+      showToast(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first", 'warning');
       return;
     }
 
@@ -2394,9 +2374,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           const tenMins = 10 * 60 * 1000;
           if (now.getTime() - lastGen.getTime() < tenMins) {
             const waitTime = Math.ceil((tenMins - (now.getTime() - lastGen.getTime())) / 60000);
-            alert(language === 'ka' 
+            showToast(language === 'ka' 
               ? `გთხოვთ დაიცადოთ ${waitTime} წუთი შემდეგი გენერაციისთვის.` 
-              : `Please wait ${waitTime} minutes before using AI again.`);
+              : `Please wait ${waitTime} minutes before using AI again.`,
+              'warning'
+            );
             
             // Provide fallback if requested
             if (window.confirm(language === 'ka' ? "გსურთ გამოიყენოთ სტანდარტული შაბლონი?" : "Would you like to use a standard template instead?")) {
@@ -2458,7 +2440,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     } catch (error: any) {
       if (controller.signal.aborted || (error && error.name === 'AbortError')) return;
       console.error("Error generating tech spec:", error);
-      alert(language === 'ka' ? "AI-სთან კავშირი ვერ მოხერხდა. გამოიყენეთ შაბლონი." : "AI service unavailable. Falling back to template.");
+      showToast(language === 'ka' ? "AI-სთან კავშირი ვერ მოხერხდა. გამოიყენეთ შაბლონი." : "AI service unavailable. Falling back to template.", 'error');
       const template = getFallbackTemplate(formData.title, formData.category);
       if (!controller.signal.aborted) {
         setFormData(prev => ({ ...prev, description: template }));
@@ -2498,7 +2480,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      alert(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად" : "Please log in to post a listing.");
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად" : "Please log in to post a listing.", 'warning');
       return;
     }
 
@@ -2507,7 +2489,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       if (viewMode !== 'edit') {
         const canPost = await checkRateLimit();
         if (!canPost) {
-          alert(language === 'ka' ? "გთხოვთ დაიცადოთ. თქვენ ძალიან ბევრ განცხადებას დებთ." : "Rate limit exceeded. Please wait a minute before posting more.");
+          showToast(language === 'ka' ? "გთხოვთ დაიცადოთ. თქვენ ძალიან ბევრ განცხადებას დებთ." : "Rate limit exceeded. Please wait a minute before posting more.", 'warning');
           setIsSubmitting(false);
           return;
         }
@@ -2515,7 +2497,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
       // Step 1 validation: Title
       if (!formData.title.trim()) {
-        alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის სათაური." : "Please fill in the product title.");
+        showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის სათაური." : "Please fill in the product title.", 'warning');
         setFormStep(1);
         setIsSubmitting(false);
         return;
@@ -2525,9 +2507,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       const priceStr = String(formData.price || '').trim().replace(',', '.');
       const parsedPrice = parseFloat(priceStr);
       if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
-        alert(language === 'ka' 
+        showToast(language === 'ka' 
           ? "გთხოვთ შეიყვანოთ სწორი ფასი (მხოლოდ დადებითი რიცხვები)." 
-          : "Please enter a valid price (positive numbers only)."
+          : "Please enter a valid price (positive numbers only).",
+          'warning'
         );
         setFormStep(2);
         setIsSubmitting(false);
@@ -2538,9 +2521,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       const countryStr = (formData.country || '').trim();
       const cityStr = (formData.city || '').trim();
       if (!countryStr || !cityStr) {
-        alert(language === 'ka' 
+        showToast(language === 'ka' 
           ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი." 
-          : "Please select a country and enter a city."
+          : "Please select a country and enter a city.",
+          'warning'
         );
         setFormStep(3);
         setIsSubmitting(false);
@@ -2549,7 +2533,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
       // Step 3 validation: Description
       if (!formData.description.trim()) {
-        alert(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა." : "Please fill in the product description.");
+        showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა." : "Please fill in the product description.", 'warning');
         setFormStep(3);
         setIsSubmitting(false);
         return;
@@ -2615,7 +2599,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       resetListingForm();
     } catch (error: any) {
       console.error(error);
-      alert("Firebase Error: " + error.message);
+      showToast("Firebase Error: " + error.message, 'error');
     } finally {
       setIsSubmitting(false);
     }

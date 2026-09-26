@@ -18,6 +18,7 @@ import { cn } from '../../lib/utils';
 import { MarketTheme, CURRENCIES, WORLD_COUNTRIES } from './MarketConstants';
 import { FastInput } from './FastInputs';
 import { MapPicker } from '../MapPicker';
+import { useToast } from '../Toast';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
@@ -79,6 +80,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   isAiGenerating,
   handleAiDescription,
 }) => {
+  const { showToast } = useToast();
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 30 }}
@@ -146,16 +149,17 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     type="button"
                     onClick={() => {
                       if (step > 1 && !formData.title.trim()) {
-                        alert(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a listing title on Step 1 first.");
+                        showToast(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a listing title on Step 1 first.", 'warning');
                         return;
                       }
                       if (step > 2) {
                         const priceStr = String(formData.price || '').trim().replace(',', '.');
                         const parsedPrice = parseFloat(priceStr);
                         if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
-                          alert(language === 'ka' 
+                          showToast(language === 'ka' 
                             ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
-                            : "Please enter a valid price to continue (positive numbers only)."
+                            : "Please enter a valid price to continue (positive numbers only).",
+                            'warning'
                           );
                           return;
                         }
@@ -792,16 +796,17 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 onClick={() => {
                   if (formStep === 1) {
                     if (!formData.title.trim()) {
-                      alert(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a title on Step 1 to continue.");
+                      showToast(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a title on Step 1 to continue.", 'warning');
                       return;
                     }
                   } else if (formStep === 2) {
                     const priceStr = String(formData.price || '').trim().replace(',', '.');
                     const parsedPrice = parseFloat(priceStr);
                     if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
-                      alert(language === 'ka' 
+                      showToast(language === 'ka' 
                         ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
-                        : "Please enter a valid price to continue (positive numbers only)."
+                        : "Please enter a valid price to continue (positive numbers only).",
+                        'warning'
                       );
                       return;
                     }

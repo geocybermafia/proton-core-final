@@ -237,11 +237,9 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [user]);
 
   const updateLedgerItem = useCallback(async (id: string, updates: Partial<LedgerItem>) => {
-    let previousLedger: LedgerItem[] = [];
     let mergedItem: LedgerItem | undefined;
 
     setLedgerItems((prev) => {
-      previousLedger = prev;
       const originalItem = prev.find(it => it.id === id);
       if (!originalItem) return prev;
 
@@ -252,61 +250,23 @@ export const MarketHubProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.setItem('proton_market_hub_ledger', JSON.stringify(updated));
       return updated;
     });
-
-    if (!mergedItem) return;
-
-    if (user) {
-      try {
-        const docRef = doc(db, 'users', user.uid, 'market_ledger', id);
-        await setDoc(docRef, mergedItem);
-      } catch (error) {
-        console.error("Failed to update ledger item in Firestore, rolling back:", error);
-        setLedgerItems(previousLedger);
-        localStorage.setItem('proton_market_hub_ledger', JSON.stringify(previousLedger));
-        throw error;
-      }
-    }
-  }, [user]);
+  }, []);
 
   const deleteLedgerItem = useCallback(async (id: string) => {
-    let previousLedger: LedgerItem[] = [];
-
     setLedgerItems((prev) => {
-      previousLedger = prev;
       const updated = prev.filter(item => item.id !== id);
       localStorage.setItem('proton_market_hub_ledger', JSON.stringify(updated));
       return updated;
     });
-
-    if (user) {
-      try {
-        const docRef = doc(db, 'users', user.uid, 'market_ledger', id);
-        await deleteDoc(docRef);
-      } catch (error) {
-        console.error("Failed to delete ledger item from Firestore, rolling back:", error);
-        setLedgerItems(previousLedger);
-        localStorage.setItem('proton_market_hub_ledger', JSON.stringify(previousLedger));
-        throw error;
-      }
-    }
-  }, [user]);
+  }, []);
 
   const generateSampleLedger = useCallback(() => {
-    if (user) {
-      defaultLedger.forEach(async (item) => {
-        const id = generateTxId();
-        const newItem = { ...item, id };
-        const docRef = doc(db, 'users', user.uid, 'market_ledger', id);
-        await setDoc(docRef, newItem).catch(e => console.warn("Sample item set failed:", e));
-      });
-    } else {
-      setLedgerItems(prev => {
-        const freshList = [...defaultLedger.map(item => ({ ...item, id: generateTxId() })), ...prev];
-        localStorage.setItem('proton_market_hub_ledger', JSON.stringify(freshList));
-        return freshList;
-      });
-    }
-  }, [user, ledgerItems, saveLocalAndCommit]);
+    setLedgerItems(prev => {
+      const freshList = [...defaultLedger.map(item => ({ ...item, id: generateTxId() })), ...prev];
+      localStorage.setItem('proton_market_hub_ledger', JSON.stringify(freshList));
+      return freshList;
+    });
+  }, []);
 
   const value = useMemo(() => ({
     ledgerItems,

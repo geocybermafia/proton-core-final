@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { safeStorage } from '../lib/safeStorage';
+import { useToast } from './Toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
@@ -247,6 +248,7 @@ export const OrganizerView = ({
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [viewLayout, setViewLayout] = useState<'list' | 'grouped'>('grouped');
   const [isBreakingDown, setIsBreakingDown] = useState<Record<string, boolean>>({});
+  const { showToast } = useToast();
 
   // Workspace Primary View Mode (Phase 5B Scaffold)
   type OrganizerViewMode = 'today' | 'plan' | 'projects' | 'focus';
@@ -852,9 +854,9 @@ export const OrganizerView = ({
       if (!isMountedRef.current) return;
       console.error("Failed to auto breakdown task with AI:", error);
       const msg = error?.message || String(error);
-      alert(language === 'ka' 
+      showToast(language === 'ka' 
         ? `ავტომატური დაყოფა ვერ მოხერხდა: ${msg}` 
-        : `Failed to auto breakdown task: ${msg}`);
+        : `Failed to auto breakdown task: ${msg}`, 'error');
     } finally {
       if (isMountedRef.current) {
         setIsBreakingDown(prev => ({ ...prev, [task.id]: false }));

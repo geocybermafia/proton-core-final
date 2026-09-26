@@ -2894,9 +2894,9 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
     } catch (error: any) {
       console.error(error);
       if (error?.message?.includes('PROHIBITED_CONTENT') || error?.toString().includes('PROHIBITED_CONTENT')) {
-        alert(t.safety_error);
+        showToast(t.safety_error, 'error');
       } else {
-        alert(t.fail_error);
+        showToast(t.fail_error, 'error');
       }
     } finally {
       setLoading(false);
@@ -3185,6 +3185,7 @@ const OldWorkflowEditor = ({
 }) => {
   const [formData, setFormData] = useState<Workflow>(workflow);
   const [editorMode, setEditorMode] = useState<'form' | 'flow'>('form');
+  const { showToast } = useToast();
   const t = translations[language].editor;
 
   return (
@@ -3348,7 +3349,7 @@ const OldWorkflowEditor = ({
                 const permitted = await checkAndIncrementAiQuota();
                 if (!permitted) return;
                 const analysis = await analyzeWorkflow(formData);
-                alert(analysis);
+                showToast(analysis, 'info');
               }}
               className="w-full py-4 rounded-2xl border border-proton-accent/30 text-proton-accent text-xs font-bold hover:bg-proton-accent/10 transition-all flex items-center justify-center gap-2 group"
             >
@@ -4350,7 +4351,7 @@ export default function App() {
       setUiMode('business');
     }
 
-    const isUserAdmin = (auth.currentUser?.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
+    const isUserAdmin = (auth.currentUser?.email === 'devdarianib@gmail.com' || userProfile?.role === 'admin');
     const isCreativeActive = isCreativeMode || isUserAdmin;
     if (!isCreativeActive && !isSafeMode && (view === 'compute')) {
       setShowOptimizationModal(true);
@@ -4697,6 +4698,8 @@ export default function App() {
   useEffect(() => {
     if (!sellerOrders || sellerOrders.length === 0) return;
 
+    const tasksToPersist: Task[] = [];
+
     setTasks(prevTasks => {
       let updated = false;
       const nextTasks = [...prevTasks];
@@ -4738,12 +4741,8 @@ export default function App() {
             };
 
             nextTasks.unshift(newTask);
+            tasksToPersist.push(newTask);
             updated = true;
-
-            if (user) {
-              const docRef = doc(db, 'users', user.uid, 'tasks', newTask.id);
-              trackFirestore(setDoc(docRef, sanitizeForFirestore(newTask)), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
-            }
           }
         }
 
@@ -4756,22 +4755,28 @@ export default function App() {
           );
 
           if (existingIndex !== -1 && !nextTasks[existingIndex].completed) {
-            nextTasks[existingIndex] = {
+            const updatedTask = {
               ...nextTasks[existingIndex],
               completed: true
             };
+            nextTasks[existingIndex] = updatedTask;
+            tasksToPersist.push(updatedTask);
             updated = true;
-
-            if (user) {
-              const docRef = doc(db, 'users', user.uid, 'tasks', nextTasks[existingIndex].id);
-              trackFirestore(setDoc(docRef, sanitizeForFirestore(nextTasks[existingIndex])), 'write', docRef.path).catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
-            }
           }
         }
       });
 
       return updated ? nextTasks : prevTasks;
     });
+
+    // Execute network writes cleanly outside of the React state updater
+    if (user && tasksToPersist.length > 0) {
+      tasksToPersist.forEach(task => {
+        const docRef = doc(db, 'users', user.uid, 'tasks', task.id);
+        trackFirestore(setDoc(docRef, sanitizeForFirestore(task)), 'write', docRef.path)
+          .catch((e: any) => handleFirestoreError(e, 'write', docRef.path));
+      });
+    }
   }, [sellerOrders, user, trackFirestore]);
   const [userStats, setUserStats] = useState<{
     storageGB: number;
@@ -4977,7 +4982,7 @@ export default function App() {
     };
 
     fetchInitialData();
-  }, [user]);
+  }, [user?.uid]);
 
   useEffect(() => {
     if (!user) return;
@@ -5203,7 +5208,7 @@ export default function App() {
         const errMsg = userProfile.language === 'ka' ? errMsgKa : errMsgEn;
         
         addLog('warning', errMsg);
-        alert(errMsg);
+        showToast(errMsg, 'warning');
         return false;
       }
 
@@ -5215,7 +5220,7 @@ export default function App() {
         const errMsgKa = "AI ლიმიტი ამოიწურა ან მოთხოვნა უარყოფილია უსაფრთხოების წესებით.";
         const errMsg = userProfile.language === 'ka' ? errMsgKa : errMsgEn;
         addLog('warning', errMsg);
-        alert(errMsg);
+        showToast(errMsg, 'error');
         return false;
       }
       return true;
@@ -5544,15 +5549,15 @@ export default function App() {
     } catch (error: any) {
       addLog('error', 'AI Suggestion failed', error);
       const msg = error?.message || String(error);
-      alert(language === 'ka' 
+      showToast(language === 'ka' 
         ? `ავტომატური დავალებების შემოთავაზება ვერ მოხერხდა: ${msg}` 
-        : `Failed to suggest tasks with AI: ${msg}`);
+        : `Failed to suggest tasks with AI: ${msg}`, 'error');
     }
   };
 
   const currentLanguage = (userProfile?.language === 'ka' || userProfile?.language === 'en') ? userProfile.language : 'en';
   const t = translations[currentLanguage];
-  const isAdmin = !!user && (userProfile?.role === 'admin' || user.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost'));
+  const isAdmin = !!user && (userProfile?.role === 'admin' || user.email === 'devdarianib@gmail.com');
 
   if (!authInitialized) {
     return (

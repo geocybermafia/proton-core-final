@@ -867,7 +867,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }, 600);
   };
 
-  const isDevUser = isAdmin ?? (!!user && (userProfile?.role === 'admin' || user.email === 'devdarianib@gmail.com' || window.location.hostname.includes('ais-dev-') || window.location.hostname.includes('localhost')));
+  const isDevUser = isAdmin ?? (!!user && (userProfile?.role === 'admin' || user.email === 'devdarianib@gmail.com'));
 
   const tabs = [
     { 

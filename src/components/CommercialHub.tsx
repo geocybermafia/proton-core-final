@@ -37,12 +37,14 @@ import {
 } from 'lucide-react';
 import { generateOrEditImage } from '../lib/gemini';
 import { useSeller, useSellerStats } from '../contexts/SellerContext';
+import { useToast } from './Toast';
 
 interface CommercialHubProps {
   language: 'en' | 'ka';
 }
 
 export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
+  const { showToast } = useToast();
   // Real-time Seller Context data binding
   const { sellerOrders, ledgerItems, addLedgerItem, updateOrderStatus } = useSeller();
   const sellerStats = useSellerStats();
@@ -133,7 +135,7 @@ export const CommercialHub: React.FC<CommercialHubProps> = ({ language }) => {
     const val = Number(payoutAmount);
     if (isNaN(val) || val <= 0) return;
     if (val > sellerStats.walletBalance) {
-      alert(language === 'ka' ? 'თანხა აღემატება ხელმისაწვდომ ბალანსს' : 'Amount exceeds available wallet balance');
+      showToast(language === 'ka' ? 'თანხა აღემატება ხელმისაწვდომ ბალანსს' : 'Amount exceeds available wallet balance', 'warning');
       return;
     }
     setPayoutProcessing(true);
