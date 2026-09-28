@@ -404,7 +404,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
 
       getVideoDuration(activeUrl).then(dur => {
         setNewClipDuration(dur);
-      });
+      }).catch((err) => console.warn('Video fetch error:', err));
     }
   }, [newClipVideoUrl, selectedPresetId]);
 

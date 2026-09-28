@@ -24,7 +24,8 @@ import {
   Clock
 } from 'lucide-react';
 import { collection, query, onSnapshot, doc, setDoc, deleteDoc, writeBatch, orderBy, limit, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
 import { NotificationItem, NotificationCategory, View } from '../types';
 import { safeStorage } from '../lib/safeStorage';
 import { cn } from '../lib/utils';
@@ -93,7 +94,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     }
   });
 
-  const currentUser = auth.currentUser;
+  const { user } = useAuth();
 
   // Real-time Sync with Firestore if logged in and notifications are globally enabled
   useEffect(() => {
@@ -102,14 +103,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       return; // Bypass listener: saves Firestore reads completely when muted!
     }
 
-    if (!currentUser) {
+    if (!user) {
       safeStorage.set('proton_notifications', JSON.stringify(notifications));
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const notifRef = collection(db, 'users', currentUser.uid, 'notifications');
+    const notifRef = collection(db, 'users', user.uid, 'notifications');
     const q = query(notifRef, orderBy('timestamp', 'desc'), limit(50));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -142,7 +143,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     });
 
     return () => unsubscribe();
-  }, [currentUser, isEnabled]);
+  }, [user, isEnabled]);
 
   // Save to safeStorage when local state mutates (for guest/offline mode)
   useEffect(() => {
@@ -201,24 +202,24 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   const markAsRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
 
-    if (currentUser) {
+    if (user) {
       try {
-        await updateDoc(doc(db, 'users', currentUser.uid, 'notifications', id), { read: true });
+        await updateDoc(doc(db, 'users', user.uid, 'notifications', id), { read: true });
       } catch (err) {
         // Ignored fallback
       }
     }
-  }, [currentUser]);
+  }, [user]);
 
   // Mark all as read
   const markAllAsRead = useCallback(async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
 
-    if (currentUser) {
+    if (user) {
       try {
         const batch = writeBatch(db);
         notifications.filter(n => !n.read).forEach(n => {
-          const ref = doc(db, 'users', currentUser.uid, 'notifications', n.id);
+          const ref = doc(db, 'users', user.uid, 'notifications', n.id);
           batch.update(ref, { read: true });
         });
         await batch.commit();
@@ -233,32 +234,32 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         'success'
       );
     }
-  }, [currentUser, notifications, showToast, language]);
+  }, [user, notifications, showToast, language]);
 
   // Delete single item
   const deleteNotification = useCallback(async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setNotifications(prev => prev.filter(n => n.id !== id));
 
-    if (currentUser) {
+    if (user) {
       try {
-        await deleteDoc(doc(db, 'users', currentUser.uid, 'notifications', id));
+        await deleteDoc(doc(db, 'users', user.uid, 'notifications', id));
       } catch (err) {
         // Fallback
       }
     }
-  }, [currentUser]);
+  }, [user]);
 
   // Clear all
   const clearAllNotifications = useCallback(async () => {
     if (notifications.length === 0) return;
     setNotifications([]);
 
-    if (currentUser) {
+    if (user) {
       try {
         const batch = writeBatch(db);
         notifications.forEach(n => {
-          const ref = doc(db, 'users', currentUser.uid, 'notifications', n.id);
+          const ref = doc(db, 'users', user.uid, 'notifications', n.id);
           batch.delete(ref);
         });
         await batch.commit();
@@ -273,7 +274,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         'info'
       );
     }
-  }, [currentUser, notifications, showToast, language]);
+  }, [user, notifications, showToast, language]);
 
   // Handle clicking notification item
   const handleItemClick = (item: NotificationItem) => {
@@ -302,9 +303,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
 
     setNotifications(prev => [testItem, ...prev]);
 
-    if (currentUser) {
+    if (user) {
       try {
-        await setDoc(doc(db, 'users', currentUser.uid, 'notifications', testItem.id), testItem);
+        await setDoc(doc(db, 'users', user.uid, 'notifications', testItem.id), testItem);
       } catch (e) {
         // Fallback
       }

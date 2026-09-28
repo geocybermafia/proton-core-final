@@ -1470,16 +1470,16 @@ export const OrganizerView = ({
 
                         <div className="space-y-2">
                           <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>{t.recurring}</label>
-                          <div className="flex gap-2">
+                          <div className="grid grid-cols-2 min-[480px]:grid-cols-4 md:grid-cols-2 min-[1100px]:grid-cols-4 gap-2">
                             {(['none', 'daily', 'weekly', 'monthly'] as const).map(r => (
                               <button
                                 key={r}
                                 type="button"
                                 onClick={() => setTaskRecurring(r)}
                                 className={cn(
-                                  "flex-1 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border",
+                                  "py-2.5 px-1.5 sm:px-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border flex items-center justify-center text-center min-h-[38px]",
                                   taskRecurring === r 
-                                    ? "bg-proton-text text-proton-bg"
+                                    ? "bg-proton-text text-proton-bg shadow-sm"
                                     : "border-proton-border/40 text-proton-text opacity-50 hover:bg-white/5"
                                 )}
                               >
@@ -1532,7 +1532,7 @@ export const OrganizerView = ({
           )}
 
           {/* Quick status selection row */}
-          <div className="flex bg-proton-secondary/10 p-1 rounded-2xl border border-proton-border/20 gap-1.5 flex-wrap sm:flex-nowrap">
+          <div className="flex bg-proton-secondary/10 p-1 rounded-2xl border border-proton-border/20 gap-1.5 flex-wrap min-[1100px]:flex-nowrap">
             {(['all', 'pending', 'fulfillments', 'completed'] as const).map(status => {
               const pendingFulfillmentCount = tasks.filter(t => !t.completed && (t.orderId || t.metadata?.orderId || t.category === 'Fulfillment')).length;
               const isActive = status === 'fulfillments'
@@ -1552,7 +1552,7 @@ export const OrganizerView = ({
                     }
                   }}
                   className={cn(
-                    "flex-1 py-2.5 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5",
+                    "flex-1 min-w-[calc(50%-0.375rem)] min-[1100px]:min-w-0 py-2.5 px-2 sm:px-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider text-center transition-all flex items-center justify-center gap-1.5",
                     isActive
                       ? "bg-proton-text text-proton-bg font-black shadow-md"
                       : "text-proton-muted hover:text-proton-text hover:bg-white/5"
@@ -1562,10 +1562,10 @@ export const OrganizerView = ({
                    status === 'pending' ? (language === 'ka' ? 'შესასრულებელი' : 'To Do Pending') :
                    status === 'fulfillments' ? (
                      <>
-                       <Package size={12} className={cn(isActive ? "text-proton-bg" : "text-emerald-400")} />
+                       <Package size={12} className={cn("shrink-0", isActive ? "text-proton-bg" : "text-emerald-400")} />
                        <span>{language === 'ka' ? 'შეკვეთები' : 'Fulfillments'}</span>
                        {pendingFulfillmentCount > 0 && (
-                         <span className="ml-1 px-1.5 py-0.2 text-[8px] bg-emerald-500 text-black font-black rounded-full">
+                         <span className="ml-1 px-1.5 py-0.2 text-[8px] bg-emerald-500 text-black font-black rounded-full shrink-0">
                            {pendingFulfillmentCount}
                          </span>
                        )}
@@ -1689,10 +1689,10 @@ export const OrganizerView = ({
         </div>
 
         {/* Right Column: Calendar + Templates Pool */}
-        <div className="space-y-8">
+        <div className="space-y-8 min-w-0">
           
           {/* Daily Vitality & Habits Dashboard */}
-          <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
+          <div className={cn("p-4 sm:p-6 rounded-2xl shadow-sm transition-all duration-500 min-w-0", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
                 <Sparkles size={20} className="text-amber-400" />
@@ -1708,17 +1708,19 @@ export const OrganizerView = ({
 
             <div className="space-y-6">
               {/* Daily Anchor / Focus Task Binding */}
-              <div className="space-y-2">
-                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1 flex items-center justify-between", currentTheme.label)}>
-                  <span className="flex items-center gap-1.5 font-bold">
-                    <Anchor size={11} className={dailyAnchorTask ? "text-amber-500" : "text-proton-muted"} />
-                    {language === 'ka' ? 'დღის მთავარი ანკორი (ამოცანა)' : 'Daily Anchor (Priority Task)'}
+              <div className="space-y-2 min-w-0">
+                <label className={cn("text-[9px] uppercase tracking-[0.1em] ml-1 flex items-center justify-between gap-1 flex-wrap", currentTheme.label)}>
+                  <span className="flex items-center gap-1.5 font-bold min-w-0">
+                    <Anchor size={11} className={cn("shrink-0", dailyAnchorTask ? "text-amber-500" : "text-proton-muted")} />
+                    <span className="break-words leading-tight">
+                      {language === 'ka' ? 'დღის მთავარი ანკორი (ამოცანა)' : 'Daily Anchor (Priority Task)'}
+                    </span>
                   </span>
                   {dailyAnchorTaskId && (
                     <button
                       type="button"
                       onClick={() => setDailyAnchorTaskId(null)}
-                      className="text-[9px] lowercase opacity-60 hover:opacity-100 hover:text-red-500 transition-colors"
+                      className="text-[9px] lowercase opacity-60 hover:opacity-100 hover:text-red-500 transition-colors shrink-0 ml-auto"
                       title={language === 'ka' ? 'ანკორის მოხსნა' : 'Clear anchor'}
                     >
                       {language === 'ka' ? 'მოხსნა' : 'clear'}
@@ -1729,13 +1731,13 @@ export const OrganizerView = ({
                 {/* Selector / Current Anchor View */}
                 {dailyAnchorTask ? (
                   <div className={cn(
-                    "w-full rounded-xl p-3 text-xs border flex items-center justify-between gap-3 transition-all",
+                    "w-full rounded-xl p-3 text-xs border flex items-center justify-between gap-2.5 transition-all min-w-0",
                     currentTheme.card,
                     dailyAnchorTask.completed ? "opacity-60 border-emerald-500/30" : "border-amber-500/40 shadow-sm"
                   )}>
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <span className={cn(
-                        "w-2 h-2 rounded-full shrink-0",
+                        "w-2 h-2 rounded-full shrink-0 mt-1",
                         dailyAnchorTask.completed 
                           ? "bg-emerald-500" 
                           : dailyAnchorTask.priority === 'high' 
@@ -1745,15 +1747,15 @@ export const OrganizerView = ({
                               : "bg-blue-500"
                       )} />
                       <span className={cn(
-                        "font-bold truncate text-xs",
+                        "font-bold text-xs leading-snug break-words flex-1 min-w-0",
                         dailyAnchorTask.completed && "line-through opacity-70"
                       )}>
                         {language === 'ka' ? (dailyAnchorTask.contentGe || dailyAnchorTask.content) : dailyAnchorTask.content}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0 self-start pt-0.5">
                       {dailyAnchorTask.completed && (
-                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shrink-0 whitespace-nowrap">
                           {language === 'ka' ? 'შესრულდა' : 'Done'}
                         </span>
                       )}
@@ -1768,7 +1770,7 @@ export const OrganizerView = ({
                             highlightTimeoutRef.current = setTimeout(() => setHighlightedTaskId(null), 2500);
                           }
                         }}
-                        className="p-1 rounded-lg opacity-60 hover:opacity-100 hover:bg-proton-secondary/20 transition-all text-proton-text"
+                        className="p-1 rounded-lg opacity-60 hover:opacity-100 hover:bg-proton-secondary/20 transition-all text-proton-text shrink-0"
                         title={language === 'ka' ? 'ამოცანის ჩვენება სიაში' : 'Jump to task'}
                       >
                         <Search size={12} />
@@ -1776,14 +1778,15 @@ export const OrganizerView = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="relative">
+                  <div className="relative min-w-0 w-full">
                     <select
                       value={dailyAnchorTaskId || ''}
                       onChange={(e) => setDailyAnchorTaskId(e.target.value || null)}
                       className={cn(
-                        "w-full rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none transition-all appearance-none cursor-pointer pr-9",
+                        "w-full max-w-full rounded-xl pl-3 sm:pl-4 pr-8 sm:pr-9 py-2.5 text-xs font-bold focus:outline-none transition-all appearance-none cursor-pointer truncate",
                         currentTheme.input
                       )}
+                      title={language === 'ka' ? 'აირჩიე დღის ანკორი ამოცანებიდან' : 'Select a task as your Daily Anchor'}
                     >
                       <option value="">
                         {language === 'ka' ? '— აირჩიე დღის ანკორი ამოცანებიდან —' : '— Select a task as your Daily Anchor —'}
@@ -1795,7 +1798,7 @@ export const OrganizerView = ({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
+                    <ChevronDown size={13} className="absolute right-2.5 sm:right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 shrink-0" />
                   </div>
                 )}
               </div>
@@ -1837,11 +1840,11 @@ export const OrganizerView = ({
               </div>
 
               {/* Mood Meter */}
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
                   {language === 'ka' ? 'როგორი განწყობა გაქვს დღეს?' : 'How is your energy/mood today?'}
                 </label>
-                <div className="grid grid-cols-5 gap-1.5 select-none">
+                <div className="grid grid-cols-2 min-[420px]:grid-cols-5 lg:grid-cols-2 min-[1280px]:grid-cols-3 min-[1440px]:grid-cols-5 gap-1.5 select-none">
                   {[
                     { val: 'superb', emoji: '🤩', labelEn: 'Superb', labelKa: 'საუკეთესო' },
                     { val: 'focused', emoji: '😎', labelEn: 'Focused', labelKa: 'აქტიური' },
@@ -1856,7 +1859,8 @@ export const OrganizerView = ({
                         type="button"
                         onClick={() => setMood(mood === m.val ? '' : m.val)}
                         className={cn(
-                          "py-2 px-1 rounded-xl text-center border transition-all hover:scale-105 flex flex-col items-center justify-center gap-1 min-h-[50px]",
+                          "py-2 px-1 sm:px-1.5 rounded-xl text-center border transition-all hover:scale-105 flex flex-col items-center justify-center gap-1 min-h-[52px] min-w-0",
+                          "last:col-span-2 min-[420px]:last:col-span-1 lg:last:col-span-2 min-[1280px]:last:col-span-1",
                           isSelected 
                             ? "bg-proton-accent/20 border-proton-accent text-proton-text shadow-sm" 
                             : "border-proton-border/30 opacity-60 hover:opacity-100"
@@ -1864,7 +1868,7 @@ export const OrganizerView = ({
                         title={language === 'ka' ? m.labelKa : m.labelEn}
                       >
                         <span className="text-base leading-none">{m.emoji}</span>
-                        <span className="text-[7px] font-black uppercase tracking-tight truncate max-w-full">
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight text-center leading-tight break-words max-w-full">
                           {language === 'ka' ? m.labelKa : m.labelEn}
                         </span>
                       </button>
@@ -2465,7 +2469,7 @@ export const OrganizerView = ({
             const percent = projectTasks.length > 0 ? Math.round((completedCount / projectTasks.length) * 100) : 0;
 
             return (
-              <div className={cn("p-6 sm:p-8 rounded-2xl shadow-sm border space-y-6", currentTheme.card)}>
+              <div className={cn("p-4 sm:p-6 md:p-8 rounded-2xl shadow-sm border space-y-6 min-w-0", currentTheme.card)}>
                 {/* Top Navigation & Project Actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-proton-border/30 pb-6">
                   <button
@@ -2564,19 +2568,19 @@ export const OrganizerView = ({
                     );
                     setQuickTaskContent('');
                   }}
-                  className="flex items-center gap-3 pt-2"
+                  className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-2 min-w-0"
                 >
                   <input
                     type="text"
                     placeholder={language === 'ka' ? `დაამატეთ ამოცანა პროექტში "${selectedProject.nameGe || selectedProject.name}"...` : `Add task to project "${selectedProject.name}"...`}
                     value={quickTaskContent}
                     onChange={(e) => setQuickTaskContent(e.target.value)}
-                    className={cn("flex-1 px-4 py-3 rounded-xl text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
+                    className={cn("w-full flex-1 min-w-0 px-4 py-3 rounded-xl text-xs font-bold focus:outline-none transition-all", currentTheme.input)}
                   />
                   <button
                     type="submit"
                     disabled={!quickTaskContent.trim()}
-                    className={cn("px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0", currentTheme.button)}
+                    className={cn("w-full sm:w-auto px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0", currentTheme.button)}
                   >
                     <Plus size={14} />
                     {language === 'ka' ? 'დამატება' : 'Add Task'}
@@ -2843,7 +2847,7 @@ export const OrganizerView = ({
                           dailyAnchorTask.priority === 'high' ? "bg-red-500" : dailyAnchorTask.priority === 'medium' ? "bg-amber-500" : "bg-blue-500"
                         )} />
                         <span className={cn(
-                          "text-sm font-black text-proton-text leading-snug",
+                          "text-sm font-black text-proton-text leading-snug break-words min-w-0 flex-1",
                           dailyAnchorTask.completed && "line-through opacity-60"
                         )}>
                           {language === 'ka' ? (dailyAnchorTask.contentGe || dailyAnchorTask.content) : dailyAnchorTask.content}

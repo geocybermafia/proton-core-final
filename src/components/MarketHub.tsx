@@ -61,6 +61,7 @@ import { cn } from '../lib/utils';
 import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useMarketHub, isRealListing } from '../contexts/MarketHubContext';
+import { useSeller } from '../contexts/SellerContext';
 import { useToast } from './Toast';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
@@ -653,8 +654,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     };
   }, [t, language, checkoutItem]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
-  const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
-  const [sellerOrders, setSellerOrders] = useState<any[]>([]);
+  const { sellerOrders = [], buyerOrders = [] } = useSeller();
   const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>('all');
 
   // Keep sellerSelectedOrder synced with real-time updates in sellerOrders
@@ -1633,52 +1633,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       if (unsub) unsub();
     };
   }, [user, authLoading, activeCategory, viewMode, search, activeCountry, activeCity, activeListingType, minPrice, maxPrice, showOnlyFavorites, isSearchActive, hasActiveFilters, getBaseQuery]);
-
-  useEffect(() => {
-    if (!user) {
-      setBuyerOrders([]);
-      setSellerOrders([]);
-      return;
-    }
-
-    let active = true;
-
-    const qBuyerOrders = query(
-      collection(db, 'orders'), 
-      where('buyerId', '==', user.uid)
-    );
-    const unsubscribeBuyer = onSnapshot(qBuyerOrders, (snapshot) => {
-      if (!active) return;
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setBuyerOrders(data);
-    }, (error) => {
-      console.warn("Buyer orders listen failed:", error);
-    });
-
-    const qSellerOrders = query(
-      collection(db, 'orders'), 
-      where('sellerId', '==', user.uid)
-    );
-    const unsubscribeSeller = onSnapshot(qSellerOrders, (snapshot) => {
-      if (!active) return;
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSellerOrders(data);
-    }, (error) => {
-      console.warn("Seller orders listen failed:", error);
-    });
-
-    return () => {
-      active = false;
-      unsubscribeBuyer();
-      unsubscribeSeller();
-    };
-  }, [user?.uid]);
 
   const clearFilters = useCallback(() => {
     setSearch('');
@@ -5118,9 +5072,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                             </span>
                           </div>
                           <div>
-                            <h5 className="text-xs font-black text-white">{order.listingTitle || 'Proton Asset'}</h5>
+                            <h5 className="text-xs font-black text-white">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
                             <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
-                              Total: <span className="text-white font-black">{order.price} {order.currency}</span>
+                              Total: <span className="text-white font-black">{order.amount ?? (order as any).price} {order.currency}</span>
                             </p>
                           </div>
                         </div>
@@ -5138,9 +5092,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                             </span>
                           </div>
                           <div>
-                            <h5 className="text-xs font-black text-white">{order.listingTitle || 'Proton Asset'}</h5>
+                            <h5 className="text-xs font-black text-white">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
                             <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
-                              Incoming: <span className="text-[#dfb257] font-black">{order.price} {order.currency}</span>
+                              Incoming: <span className="text-[#dfb257] font-black">{order.amount ?? (order as any).price} {order.currency}</span>
                             </p>
                           </div>
                         </div>

@@ -4806,38 +4806,20 @@ export default function App() {
     safeStorage.set('user-profile', JSON.stringify(userProfile));
   }, [userProfile]);
 
-  // Synchronize language selection with our global state hook to keep all components aligned
-  const prevLangRef = useRef(language);
-  const prevProfileLangRef = useRef(userProfile.language);
-
-  useEffect(() => {
-    if (userProfile.language && userProfile.language !== language && userProfile.language !== prevProfileLangRef.current) {
-      prevLangRef.current = userProfile.language;
-      prevProfileLangRef.current = userProfile.language;
-      setLanguage(userProfile.language);
-    }
-  }, [userProfile.language, language]);
-
-  useEffect(() => {
-    if (language !== userProfile.language && language !== prevLangRef.current) {
-      prevLangRef.current = language;
-      prevProfileLangRef.current = language;
-      setUserProfile(prev => {
-        if (prev.language === language) return prev;
-        return { ...prev, language };
-      });
-    }
-  }, [language, userProfile.language]);
-
-  // Instantly write user-selected language to Firestore when changed by the user to avoid race conditions
-  useEffect(() => {
-    if (user && language) {
+  // Explicit user-triggered language handler preventing ping-pong loop with Firestore
+  const handleLanguageChange = useCallback((newLang: 'en' | 'ka') => {
+    setLanguage(newLang);
+    setUserProfile(prev => {
+      if (prev.language === newLang) return prev;
+      return { ...prev, language: newLang };
+    });
+    if (user) {
       const userDocRef = doc(db, 'users', user.uid);
-      setDoc(userDocRef, { language }, { merge: true }).catch(err => {
+      setDoc(userDocRef, { language: newLang }, { merge: true }).catch(err => {
         console.error("Error writing changed language to Firestore:", err);
       });
     }
-  }, [language, user]);
+  }, [user, setLanguage]);
 
   // Background data fetch for logged in user
   useEffect(() => {
@@ -4996,12 +4978,15 @@ export default function App() {
           // Trigger asynchronous migration of legacy plaintext PIN to PBKDF2 hash
           import('./lib/securityUtils').then(({ checkAndMigrateLegacyPin }) => {
             checkAndMigrateLegacyPin(user.uid, rawData);
-          });
+          }).catch((err) => console.warn('Dynamic import error:', err));
         }
 
         const data = rawData as Partial<UserProfile>;
         const dbLanguage = data.language as 'en' | 'ka';
         const isStale = snap.metadata.fromCache;
+        if (dbLanguage && !isStale) {
+          setLanguage(dbLanguage);
+        }
         setUserProfile(prev => {
           const targetLanguage = (dbLanguage && !isStale) ? dbLanguage : prev.language;
           const { securityPin, ...cleanData } = data as any; // Strip raw securityPin if present
@@ -5591,7 +5576,7 @@ export default function App() {
           setShowAuth(true);
         }}
         language={language}
-        onLanguageChange={setLanguage}
+        onLanguageChange={handleLanguageChange}
       />
     );
   }
@@ -5888,8 +5873,7 @@ export default function App() {
                       <button 
                         onClick={() => {
                           if (language !== 'en') {
-                            setLanguage('en');
-                            setUserProfile(prev => ({ ...prev, language: 'en' }));
+                            handleLanguageChange('en');
                             setTimeout(() => {
                               showToast('Language changed to English successfully!', 'success');
                             }, 50);
@@ -5905,8 +5889,7 @@ export default function App() {
                       <button 
                         onClick={() => {
                           if (language !== 'ka') {
-                            setLanguage('ka');
-                            setUserProfile(prev => ({ ...prev, language: 'ka' }));
+                            handleLanguageChange('ka');
                             setTimeout(() => {
                               showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');
                             }, 50);
@@ -6470,8 +6453,7 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     if (language !== 'en') {
-                      setLanguage('en');
-                      setUserProfile(prev => ({ ...prev, language: 'en' }));
+                      handleLanguageChange('en');
                       setTimeout(() => {
                         showToast('Language set to English', 'success');
                       }, 50);
@@ -6491,8 +6473,7 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     if (language !== 'ka') {
-                      setLanguage('ka');
-                      setUserProfile(prev => ({ ...prev, language: 'ka' }));
+                      handleLanguageChange('ka');
                       setTimeout(() => {
                         showToast('აქტიური ენა: ქართული', 'success');
                       }, 50);
