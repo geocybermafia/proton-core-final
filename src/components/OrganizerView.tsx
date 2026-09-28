@@ -1325,9 +1325,9 @@ export const OrganizerView = ({
           </div>
 
           {/* Quick Task Creation Card */}
-          <div id="task-form" className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
-            <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter mb-6">
-              <PlusCircle size={20} className="text-proton-accent" />
+          <div id="task-form" className={cn("p-5 sm:p-6 md:p-8 rounded-2xl shadow-sm transition-all duration-500", currentTheme.card)}>
+            <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight mb-6">
+              <PlusCircle size={22} className="text-proton-accent" />
               {language === 'ka' ? 'ახალი დავალების დამატება' : 'Register New Task / Objective'}
             </h3>
 
@@ -1582,7 +1582,7 @@ export const OrganizerView = ({
              {viewLayout === 'list' ? (
                 // Flat simple list layout
                 filteredTasks.length === 0 ? (
-                  <div className={cn("p-16 rounded-2xl text-center space-y-3", currentTheme.card)}>
+                  <div className={cn("p-8 sm:p-12 md:p-16 rounded-2xl text-center space-y-3", currentTheme.card)}>
                      <p className="font-bold text-xs uppercase tracking-widest opacity-60">
                        {language === 'ka' ? 'დავალებები არ მოიძებნა' : 'No tasks match your chosen filters'}
                      </p>
@@ -1992,12 +1992,12 @@ export const OrganizerView = ({
           </div>
 
           {/* Quick Offline Templates Pool (Quota Bypass) */}
-          <div className={cn("p-8 rounded-2xl shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
+          <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
             <div className="mb-6">
-              <h3 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+              <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
                 <Zap size={16} className="text-amber-500 animate-pulse" />
                 {language === 'ka' ? 'სწრაფი საქმეების შაბლონები' : 'Bypass Quotas: Local Task Ideas'}
-              </h3>
+              </h4>
               <p className={cn("text-[9px] font-black uppercase tracking-wider mt-1.5 leading-relaxed", currentTheme.muted)}>
                 {language === 'ka' 
                   ? 'დაამატეთ საქმეები ადგილობრივი შაბლონებით - სერვერის API-ს გარეშე' 
@@ -2046,7 +2046,7 @@ export const OrganizerView = ({
         <div id="workspace-plan-view" className="space-y-8 animate-in fade-in duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+              <div className={cn("p-5 sm:p-6 md:p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
@@ -2113,7 +2113,7 @@ export const OrganizerView = ({
                 {/* Scheduled tasks list in plan view */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-proton-muted">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-proton-muted">
                       {isCalendarFilterActive && selectedCalendarDate 
                         ? (language === 'ka' ? 'საქმეები არჩეულ დღეს' : 'Commitments on Selected Date')
                         : (language === 'ka' ? 'უახლოესი ვადები' : 'Upcoming Commitments')}
@@ -2422,7 +2422,7 @@ export const OrganizerView = ({
               </div>
 
               {/* Scratchpad and fast notes in Plan view */}
-              <div className={cn("p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
+              <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
                 <div className="flex items-center justify-between">
                   <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
                     <PenTool size={16} className="text-proton-accent" />
@@ -2450,7 +2450,7 @@ export const OrganizerView = ({
             const selectedProject = projects.find(p => p.id === selectedProjectId);
             if (!selectedProject) {
               return (
-                <div className={cn("p-8 rounded-2xl shadow-sm border text-center space-y-4", currentTheme.card)}>
+                <div className={cn("p-5 sm:p-6 md:p-8 rounded-2xl shadow-sm border text-center space-y-4", currentTheme.card)}>
                   <p className="text-sm font-bold text-proton-muted">
                     {language === 'ka' ? 'პროექტი ვერ მოიძებნა ან წაიშალა.' : 'Project not found or was removed.'}
                   </p>
@@ -2609,8 +2609,8 @@ export const OrganizerView = ({
               </div>
             );
           })() : (
-            <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className={cn("p-5 sm:p-6 md:p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                   <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
                     <FolderKanban size={22} className="text-proton-accent" />
@@ -2630,7 +2630,7 @@ export const OrganizerView = ({
                   </button>
                   <button
                     onClick={() => setViewMode('today')}
-                    className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-secondary/20 hover:bg-proton-secondary/40 text-proton-text transition-all cursor-pointer"
                   >
                     {language === 'ka' ? '← დღევანდელი სამუშაო' : '← Today View'}
                   </button>
@@ -2639,7 +2639,7 @@ export const OrganizerView = ({
 
               {/* Projects Grid */}
               {projects.length === 0 ? (
-                <div className="p-12 text-center rounded-2xl bg-proton-secondary/5 border border-dashed border-proton-border/30 space-y-4">
+                <div className="p-8 sm:p-12 text-center rounded-2xl bg-proton-secondary/5 border border-dashed border-proton-border/30 space-y-4">
                   <div className="w-14 h-14 mx-auto rounded-2xl bg-proton-accent/10 border border-proton-accent/20 flex items-center justify-center text-proton-accent">
                     <FolderKanban size={28} />
                   </div>
@@ -2752,7 +2752,7 @@ export const OrganizerView = ({
         <div id="workspace-focus-view" className="space-y-8 animate-in fade-in duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <div className={cn("p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
+              <div className={cn("p-5 sm:p-6 md:p-8 rounded-2xl shadow-sm border", currentTheme.card)}>
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h3 className="font-black text-xl flex items-center gap-3 uppercase tracking-tight">
@@ -2808,7 +2808,7 @@ export const OrganizerView = ({
               {/* Active Target Task Card */}
               {activeTimerTaskId && tasks.find(t => t.id === activeTimerTaskId) && (
                 <div className="space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-widest text-proton-muted">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-proton-muted">
                     {language === 'ka' ? 'მიმდინარე საქმე' : 'Active Targeted Task'}
                   </h4>
                   {renderTaskCard(tasks.find(t => t.id === activeTimerTaskId)!)}
@@ -2818,7 +2818,7 @@ export const OrganizerView = ({
 
             <div className="space-y-6">
               {/* Daily Target & Vitality summary in Focus mode */}
-              <div className={cn("p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
+              <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm border space-y-4", currentTheme.card)}>
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
                     <Flame size={16} className="text-amber-500" />
