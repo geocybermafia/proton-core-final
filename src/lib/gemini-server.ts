@@ -93,22 +93,12 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
     let text = "";
     if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.toLowerCase().includes("resource_exhausted")) {
       text = appLanguage === 'ka'
-        ? `⚠️ **კვოტა ამოიწურა / ლიმიტის გადაჭარბება (შეცდომა 429)**
-        
-გაზიარებულმა Gemini API გასაღებმა მიაღწია Google-ის მიერ დაწესებულ მოთხოვნების ლიმიტს:
-1. **როგორ მოვაგვაროთ:** 
-   * გთხოვთ, **დაელოდოთ 1 წუთი** და სცადოთ ხელახლა.
-   * შეფერხების გარეშე მუშაობისთვის, ჩართეთ **„AI სიმულაციური რეჟიმი“** ზედა მარჯვენა კუთხეში არსებული ⚙️ პარამეტრების მენიუდან.`
-        : `⚠️ **Quota Exceeded / Rate Limit Reached (Error 429)**
-        
-The shared environment key has exceeded Google's service limits:
-1. **How to resolve:**
-   * Please **wait 1 minute** before trying your request again.
-   * To continue without any interruption, please enable **'AI Simulation Mode'** in the ⚙️ Settings panel.`;
+        ? "დღიური AI მოთხოვნების ლიმიტი ამოიწურა. შეგიძლიათ Settings-იდან ჩართოთ ოფლაინ რეჟიმი ან ცოტა ხანში სცადოთ თავიდან."
+        : "Daily AI request limit reached. You can turn on Offline Mode in Settings or try again shortly.";
     } else {
       text = appLanguage === 'ka'
-        ? `⚠️ **კავშირის შეცდომა:** სასურველი პასუხის მიღება ვერ მოხერხდა. (${errStr.substring(0, 80)}). გთხოვთ სცადოთ მოგვიანებით.`
-        : `⚠️ **Connection Error:** Failed to generate response. (${errStr.substring(0, 80)}). Please try again later.`;
+        ? "AI დროებით მიუწვდომელია. გთხოვთ, ცოტა ხანში სცადოთ თავიდან."
+        : "AI is temporarily unavailable. Please try again shortly.";
     }
 
     return { 

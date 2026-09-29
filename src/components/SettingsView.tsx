@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
   User, 
@@ -100,6 +100,19 @@ const THEMES: { id: Theme; labelKey: string; fallbackLabel: string; icon: React.
   { id: 'midnight', labelKey: 'theme_midnight', fallbackLabel: 'Dark', icon: <Moon size={18} />, color: 'bg-slate-900' },
 ];
 
+const useReducedMotion = () => {
+  const [shouldReduce, setShouldReduce] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setShouldReduce(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setShouldReduce(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return shouldReduce;
+};
+
 export const SettingsView: React.FC<SettingsViewProps> = ({
   userProfile,
   setUserProfile,
@@ -114,10 +127,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setUiMode,
   isAdmin
 }) => {
+  const { user } = useAuth();
+  const { showToast } = useToast();
+  const { setLanguage } = useLanguage();
+  const shouldReduceMotion = useReducedMotion();
   const t = translations[language].settings;
   const common = translations[language].common;
-  const { user } = useAuth();
-  const shouldReduceMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo' | 'cost_control'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -559,10 +574,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       'success'
     );
   };
-  
-  // Connect to the custom systems toast notification portal
-  const { showToast } = useToast();
-  const { setLanguage } = useLanguage();
 
   const updateAiSettings = (updater: (prev: GlobalAiSettings) => GlobalAiSettings) => {
     setAiSettings(prev => {
@@ -841,11 +852,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setIntegrityLogs([]);
     
     const messages = [
-      language === 'ka' ? '⚡ ბირთვის უსაფრთხოების დაფის ინიციალიზაცია...' : '⚡ Initializing secure core system handshake...',
-      language === 'ka' ? '🔒 Firestore-ის წესების უსაფრთხოების შემოწმება...' : '🔒 Validating Firestore rules and schema integrity...',
-      language === 'ka' ? '💻 მე-4 დონის შიფრირების კვანძების ანალიზი...' : '💻 Analyzing level 4 encryption hash compliance...',
-      language === 'ka' ? '🛡️ აქტიური ქსელური უსაფრთხოების ფაირვოლის სკანირება...' : '🛡️ Verifying active firewall telemetry pipelines...',
-      language === 'ka' ? '✅ დიაგნოსტიკა დასრულებულია: 100% წარმატებული კავშირი!' : '✅ Diagnostics Complete: 100% integrity verified! All nodes optimal.'
+      language === 'ka' ? 'მოწმდება უსაფრთხო კავშირი...' : 'Checking secure connection...',
+      language === 'ka' ? 'მოწმდება მონაცემთა ბაზის უსაფრთხოების წესები...' : 'Checking database security rules...',
+      language === 'ka' ? 'მოწმდება ანგარიშის კონფიდენციალურობის პარამეტრები...' : 'Checking account privacy settings...',
+      language === 'ka' ? 'მოწმდება მონაცემების სინქრონიზაცია...' : 'Testing data synchronization...',
+      language === 'ka' ? 'უსაფრთხოების ყველა შემოწმება წარმატებით დასრულდა. თქვენი ანგარიში დაცულია.' : 'All security checks passed. Your account is protected.'
     ];
 
     let currentStep = 0;
@@ -860,7 +871,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
         setIsIntegrityChecking(false);
         showToast(
-          language === 'ka' ? 'სისტემის მთლიანობის სკანირება წარმატებულია!' : 'Core system integrity diagnostics completed successfully!',
+          language === 'ka' ? 'უსაფრთხოების შემოწმება წარმატებით დასრულდა!' : 'All security checks completed successfully!',
           'success'
         );
       }
@@ -2936,3 +2947,5 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 };
+
+export default SettingsView;

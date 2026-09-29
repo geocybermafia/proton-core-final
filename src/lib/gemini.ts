@@ -138,15 +138,15 @@ export async function chatWithPersona(
     if (isRateLimit) {
       return {
         text: isKa
-          ? "⚠️ **კვოტა ამოიწურა / ლიმიტის გადაჭარბება (429 ResourceExhausted)**\n\nმოთხოვნების ლიმიტი გადაჭარბებულია. გთხოვთ დაელოდოთ 1 წუთი და სცადოთ ხელახლა."
-          : "⚠️ **Quota Exceeded / Rate Limit Reached (429 ResourceExhausted)**\n\nRate limit reached. Please wait a moment and try again.",
+          ? "დღიური AI მოთხოვნების ლიმიტი ამოიწურა. შეგიძლიათ Settings-იდან ჩართოთ ოფლაინ რეჟიმი ან ცოტა ხანში სცადოთ თავიდან."
+          : "Daily AI request limit reached. You can turn on Offline Mode in Settings or try again shortly.",
         metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: 0 }
       };
     }
     return {
       text: isKa 
-        ? "⚠️ პრობლემა შეიქმნა Gemini API-სთან კავშირისას. გთხოვთ, შეამოწმოთ თქვენი ინტერნეტ კავშირი ან სცადოთ მოგვიანებით."
-        : "⚠️ An error occurred while communicating with the Gemini API. Please check your network connection or try again later.",
+        ? "AI დროებით მიუწვდომელია. გთხოვთ, ცოტა ხანში სცადოთ თავიდან."
+        : "AI is temporarily unavailable. Please try again shortly.",
       metadata: { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, latency: 0 }
     };
   }

@@ -640,19 +640,19 @@ ${
       
       const errorMsg = error?.message || String(error);
       let friendlyError = language === 'ka' 
-        ? "სისტემური შეცდომა: AI-სთან დაკავშირება ვერ მოხერხდა. გთხოვთ შეამოწმოთ თქვენი ინტერნეტ კავშირი ან სცადოთ მოგვიანებით."
-        : "System Error: Failed to communicate with AI. Please check your network connection or try again later.";
+        ? "AI დროებით მიუწვდომელია. გთხოვთ, ცოტა ხანში სცადოთ თავიდან."
+        : "AI is temporarily unavailable. Please try again shortly.";
       
       if (errorMsg.includes("429") || errorMsg.includes("RESOURCE_EXHAUSTED") || errorMsg.toLowerCase().includes("quota") || errorMsg.toLowerCase().includes("limit")) {
         friendlyError = language === 'ka'
-          ? "ყოველდღიური მოთხოვნების ლიმიტი ამოიწურა (429 Quota Exceeded). გთხოვთ, ჩართოთ „AI სიმულაციური რეჟიმი“ პარამეტრების მენიუდან შეუფერხებელი მუშაობისთვის."
-          : "API Quota Exceeded (429). Please enable 'AI Simulation Mode' in the Settings menu to continue without interruption.";
+          ? "დღიური AI მოთხოვნების ლიმიტი ამოიწურა. შეგიძლიათ Settings-იდან ჩართოთ ოფლაინ რეჟიმი ან ცოტა ხანში სცადოთ თავიდან."
+          : "Daily AI request limit reached. You can turn on Offline Mode in Settings or try again shortly.";
       }
 
       const systemErrorMessage: ChatMessage = {
         id: (Date.now() + 2).toString(),
         role: 'model',
-        content: `⚠️ **${language === 'ka' ? 'შეცდომა' : 'Error'}**: ${friendlyError}`,
+        content: friendlyError,
         timestamp: Date.now()
       };
       

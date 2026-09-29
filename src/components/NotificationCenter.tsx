@@ -462,7 +462,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       {language === 'ka' ? 'შეტყობინებები გათიშულია' : 'Global Notifications Muted'}
                     </p>
                     <p className="text-[9px] text-proton-muted font-bold">
-                      {language === 'ka' ? 'რეალური დროის მონაცემების კითხვა შეჩერებულია' : 'Polling paused to save bandwidth & reads'}
+                      {language === 'ka' ? 'შეტყობინებები შეჩერებულია. მათი ჩართვა ნებისმიერ დროს შეგიძლიათ.' : 'Notifications are paused. You can re-enable them anytime.'}
                     </p>
                   </div>
                 </div>
