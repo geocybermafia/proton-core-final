@@ -1991,17 +1991,17 @@ export const OrganizerView = ({
             </div>
           </div>
 
-          {/* Quick Offline Templates Pool (Quota Bypass) */}
+          {/* Quick Task Templates Pool */}
           <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
             <div className="mb-6">
               <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
                 <Zap size={16} className="text-amber-500 animate-pulse" />
-                {language === 'ka' ? 'სწრაფი საქმეების შაბლონები' : 'Bypass Quotas: Local Task Ideas'}
+                {language === 'ka' ? 'სწრაფი საქმის შაბლონები' : 'Quick Task Templates'}
               </h4>
               <p className={cn("text-[9px] font-black uppercase tracking-wider mt-1.5 leading-relaxed", currentTheme.muted)}>
                 {language === 'ka' 
-                  ? 'დაამატეთ საქმეები ადგილობრივი შაბლონებით - სერვერის API-ს გარეშე' 
-                  : 'Add pre-defined localized tasks without exhausting any Gemini AI quota limits'}
+                  ? 'დაამატეთ წინასწარ მომზადებული საქმის იდეები ინტერნეტთან დაკავშირების გარეშე.' 
+                  : 'Add pre-set task ideas instantly without using internet requests.'}
               </p>
             </div>
 

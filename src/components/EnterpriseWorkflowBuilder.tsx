@@ -255,7 +255,7 @@ export const EnterpriseWorkflowBuilder = ({
                                     {node.type}
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-[#E2E8F0]" />
-                                <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest font-mono">NODE_{node.id.toUpperCase().substring(0,4)}</span>
+                                <span className="text-[9px] font-bold text-[#94A3B8] uppercase tracking-widest font-mono">{language === 'ka' ? `ნაბიჯი ${index + 1}` : `Step ${index + 1}`}</span>
                              </div>
                              <h4 className="text-base font-bold text-[#1E293B]">{node.label}</h4>
                           </div>
