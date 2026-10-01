@@ -6518,7 +6518,7 @@ export default function App() {
           id="main-scroll-container"
           className={cn(
             "flex-1 min-h-0 w-full relative z-10 flex flex-col",
-            activeView === 'personas' ? "overflow-hidden" : "overflow-y-auto overscroll-y-contain custom-scrollbar-minimal"
+            (activeView === 'personas' || activeView === 'clips') ? "overflow-hidden" : "overflow-y-auto overscroll-y-contain custom-scrollbar-minimal"
           )}
         >
           {/* Custom Mobile Pull-to-Refresh Indicator */}
@@ -6534,7 +6534,7 @@ export default function App() {
           <div 
             className={cn(
               "w-full flex-1 min-h-0 flex flex-col",
-              activeView === 'personas'
+              (activeView === 'personas' || activeView === 'clips')
                 ? "h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0" 
                 : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
             )}
@@ -6542,13 +6542,13 @@ export default function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
-                initial={activeView === 'personas' ? { opacity: 0 } : { opacity: 0, y: 15 }}
-                animate={activeView === 'personas' ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                exit={activeView === 'personas' ? { opacity: 0 } : { opacity: 0, y: -15 }}
+                initial={(activeView === 'personas' || activeView === 'clips') ? { opacity: 0 } : { opacity: 0, y: 15 }}
+                animate={(activeView === 'personas' || activeView === 'clips') ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                exit={(activeView === 'personas' || activeView === 'clips') ? { opacity: 0 } : { opacity: 0, y: -15 }}
                 transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                 className={cn(
                   "w-full flex-1 min-h-0 flex flex-col",
-                  activeView === 'personas' ? "h-full overflow-hidden" : ""
+                  (activeView === 'personas' || activeView === 'clips') ? "h-full overflow-hidden" : ""
                 )}
               >
               {uiMode === 'market' && (activeView as string) === 'market-hub' ? (
