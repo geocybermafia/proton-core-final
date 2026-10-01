@@ -37,7 +37,7 @@ export const translations = {
       system_status: "Status",
       active: "Online",
       quick_tasks: "My Tasks",
-      technical_base_desc: "Access your dashboard and infrastructure.",
+      technical_base_desc: "Access your workspace and tools.",
       tools_desc: "Use automated business tools.",
       ai_assistant_desc: "Chat with your AI assistants."
     },
@@ -67,7 +67,7 @@ export const translations = {
     },
     dashboard: {
       title: "System Overview",
-      subtitle: "Management Control Center",
+      subtitle: "Overview & Quick Access",
       optimization_title: "Performance Optimization",
       system_sync: "Data Sync",
       optimization_desc: "Optimize system performance for the best experience.",
@@ -152,7 +152,7 @@ export const translations = {
         category: "Category",
         description: "Description",
         price: "Price",
-        currency: "Valuation unit",
+        currency: "Currency",
         image_url: "Photo Selection",
         upload_button: "Select File",
         country: "Country",
@@ -509,7 +509,7 @@ export const translations = {
       system_status: "სტატუსი",
       active: "აქტიური",
       quick_tasks: "ჩემი საქმეები",
-      technical_base_desc: "მართვის დაფა და ინფრასტრუქტურა.",
+      technical_base_desc: "წვდომა თქვენს სამუშაო სივრცესა და ხელსაწყოებზე.",
       tools_desc: "ბიზნეს ავტომატიზაციის ხელსაწყოები.",
       ai_assistant_desc: "AI ასისტენტების მართვა."
     },
@@ -539,7 +539,7 @@ export const translations = {
     },
     dashboard: {
       title: "სისტემის მიმოხილვა",
-      subtitle: "მართვის ცენტრი",
+      subtitle: "მიმოხილვა და სწრაფი წვდომა",
       optimization_title: "სისტემის ოპტიმიზაცია",
       system_sync: "მონაცემთა სინქრონიზაცია",
       optimization_desc: "სისტემის ოპტიმიზაცია მაქსიმალური წარმადობისთვის.",
