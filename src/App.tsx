@@ -4099,6 +4099,7 @@ export default function App() {
   const [isControlExpanded, setIsControlExpanded] = useState(false);
   const [isMobileControlOpen, setIsMobileControlOpen] = useState(false);
   const [isMobileNavDrawerOpen, setIsMobileNavDrawerOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const handleModeChange = (newMode: 'business' | 'creative' | 'market', targetView?: View) => {
     const getViewPath = (v: View): string => {
@@ -5809,20 +5810,7 @@ export default function App() {
               )}
             </AnimatePresence>
 
-            {/* Mobile Backdrop */}
-            <AnimatePresence>
-              {isSidebarOpen && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[65]"
-                  onClick={() => setIsSidebarOpen(false)}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* Sidebar - FIXED ON MOBILE, FLEX ON DESKTOP */}
+            {/* Desktop Sidebar (hidden on mobile to prevent navigation duplication) */}
             <motion.aside 
               initial={false}
               animate={{ 
@@ -5831,8 +5819,7 @@ export default function App() {
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
               className={cn(
-                "flex flex-col border-r border-proton-border bg-proton-card z-[70] overflow-x-hidden relative",
-                "fixed inset-y-0 left-0 md:relative",
+                "hidden md:flex flex-col border-r border-proton-border bg-proton-card z-[70] overflow-x-hidden relative md:relative",
                 isSidebarOpen ? "shadow-2xl" : "shadow-none"
               )}
             >
@@ -6342,6 +6329,69 @@ export default function App() {
 
               {/* View Links Section */}
               <div className="flex-1 py-4 space-y-5">
+                {/* Mobile Quick Controls: Language & Notifications */}
+                <div className="flex items-center gap-2 p-2 rounded-2xl bg-proton-bg/40 border border-proton-border/40">
+                  {/* Language Selector */}
+                  <div className="flex-1 flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-proton-card/60 border border-proton-border/50">
+                    <div className="flex items-center gap-2">
+                      <Globe size={14} className="text-proton-accent shrink-0" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-proton-text">
+                        {language === 'ka' ? 'ენა' : 'Lang'}
+                      </span>
+                    </div>
+                    <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-lg p-0.5 shrink-0 shadow-inner">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (language !== 'en') {
+                            handleLanguageChange('en');
+                            showToast('Language set to English', 'success');
+                          }
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 text-[9px] font-black rounded transition-all uppercase tracking-wider cursor-pointer",
+                          language === 'en'
+                            ? "bg-proton-accent text-proton-bg font-black shadow-sm"
+                            : "text-proton-muted hover:text-proton-text"
+                        )}
+                      >
+                        EN
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (language !== 'ka') {
+                            handleLanguageChange('ka');
+                            showToast('აქტიური ენა: ქართული', 'success');
+                          }
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 text-[9px] font-black rounded transition-all uppercase tracking-wider cursor-pointer",
+                          language === 'ka'
+                            ? "bg-proton-accent text-proton-bg font-black shadow-sm"
+                            : "text-proton-muted hover:text-proton-text"
+                        )}
+                      >
+                        KA
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Notifications in Drawer */}
+                  <div className="flex items-center justify-center p-1 rounded-xl bg-proton-card/60 border border-proton-border/50 shrink-0">
+                    <NotificationCenter 
+                      language={userProfile.language}
+                      activeView={activeView}
+                      setActiveView={(view) => {
+                        handleViewChange(view);
+                        setIsMobileNavDrawerOpen(false);
+                      }}
+                      showToast={showToast}
+                      notificationsEnabled={userProfile.notifications !== false && userProfile.notificationsEnabled !== false}
+                    />
+                  </div>
+                </div>
+
                 {/* Main Hubs */}
                 <div className="space-y-2">
                   <p className="text-[10px] font-black font-mono uppercase tracking-widest text-proton-muted px-1">
@@ -6361,7 +6411,7 @@ export default function App() {
                           setIsMobileNavDrawerOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-3.5 py-3 rounded-2xl border transition-all text-left",
+                          "w-full flex items-center justify-between px-3.5 py-3 rounded-2xl border transition-all text-left cursor-pointer",
                           activeView === item.id
                             ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold shadow-sm"
                             : "bg-proton-bg/40 border-proton-border/40 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
@@ -6390,6 +6440,7 @@ export default function App() {
                       { id: 'translator', label: t.sidebar.translator, icon: Languages },
                       { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
                       { id: 'organizer', label: t.sidebar.organizer, icon: CalendarIcon },
+                      { id: 'finance', label: t.sidebar.finance, icon: Wallet },
                       ...(userProfile.showCommercialHub ? [{ id: 'commercial', label: t.sidebar.commercial, icon: TrendingUp }] : []),
                     ].map((item) => (
                       <button
@@ -6399,7 +6450,7 @@ export default function App() {
                           setIsMobileNavDrawerOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left",
+                          "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
                           activeView === item.id
                             ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold shadow-sm"
                             : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
@@ -6431,7 +6482,7 @@ export default function App() {
                         setIsMobileNavDrawerOpen(false);
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left",
+                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
                         activeView === 'profile'
                           ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
                           : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
@@ -6450,7 +6501,7 @@ export default function App() {
                         setIsMobileNavDrawerOpen(false);
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left",
+                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
                         activeView === 'settings'
                           ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
                           : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
@@ -6462,6 +6513,34 @@ export default function App() {
                       </div>
                       <ChevronRight size={14} className="text-proton-muted opacity-40" />
                     </button>
+
+                    {/* Auth Action in Drawer */}
+                    {user ? (
+                      <button
+                        onClick={() => {
+                          handleSignOut();
+                          setIsMobileNavDrawerOpen(false);
+                        }}
+                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-left cursor-pointer mt-1"
+                      >
+                        <div className="flex items-center gap-3">
+                          <LogOut size={15} />
+                          <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'გამოსვლა' : 'Sign Out'}</span>
+                        </div>
+                        <span className="text-[9px] font-mono text-rose-400/80 truncate max-w-[120px]">{user.email || user.displayName}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setShowAuth(true);
+                          setIsMobileNavDrawerOpen(false);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 text-proton-bg font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 transition-all cursor-pointer mt-1"
+                      >
+                        <LogIn size={15} />
+                        <span>{language === 'ka' ? 'სისტემაში შესვლა' : 'Sign In'}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -6493,197 +6572,286 @@ export default function App() {
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-proton-secondary/5 rounded-full blur-[150px] pointer-events-none -ml-40 -mb-40 z-0" />
 
         {/* Dynamic Header */}
-        <header className="min-h-14 sm:min-h-16 h-auto md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-6 md:px-8 py-2 md:py-0 gap-x-2 sm:gap-x-6 flex-wrap md:flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md">
-          {/* Left Section: User & Status */}
-          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0 max-w-full">
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)]"
-              title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Hide Sidebar') : (language === 'ka' ? 'საიდბარი' : 'Show Sidebar')}
-            >
-              <Grid size={16} className={cn("transition-transform duration-500 sm:w-[18px] sm:h-[18px]", isSidebarOpen ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
-            </button>
-
-            {activeView !== 'dashboard' && (
-              <button
-                onClick={() => {
-                  setUiMode('business');
-                  handleViewChange('dashboard');
-                }}
-                className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[9px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0"
-                title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
-              >
-                <ArrowLeft size={12} className="stroke-[2.5] sm:w-[13px] sm:h-[13px]" />
-                <span>{language === 'ka' ? 'მთავარი' : 'Home'}</span>
-              </button>
-            )}
-            
-            <div className="hidden md:flex flex-col select-none">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "w-1.5 h-1.5 rounded-full animate-pulse",
-                  systemHealth.status === 'optimal'
-                    ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
-                    : systemHealth.status === 'degraded'
-                      ? "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
-                      : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
-                )} />
-                <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono">
-                  PROTON // {
-                    activeView === 'dashboard'
-                      ? (language === 'ka' ? 'მთავარი' : 'HOME')
-                      : uiMode === 'business' 
-                        ? (language === 'ka' ? 'ბიზნესი' : 'BUSINESS') 
-                        : uiMode === 'creative' 
-                          ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE') 
-                          : (language === 'ka' ? 'მარკეტი' : 'MARKET')
-                  }
-                </span>
-                <SystemStatusBadge
-                  status={systemHealth.status}
-                  latency={systemHealth.latency}
-                  language={language}
-                  size="sm"
-                  showLatency={false}
-                  onClick={() => systemHealth.checkHealth()}
+        <header className="h-14 md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-6 md:px-8 gap-x-2 sm:gap-x-6 flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md overflow-hidden md:overflow-visible">
+          {isMobileSearchOpen ? (
+            <div className="flex md:hidden items-center gap-2 w-full h-full animate-in fade-in duration-150">
+              <div className="flex-1 min-w-0">
+                <HeaderQuickSearch 
+                  language={userProfile.language}
+                  setActiveView={(view) => {
+                    handleViewChange(view);
+                    setIsMobileSearchOpen(false);
+                  }}
+                  setUiMode={(mode, targetView) => {
+                    handleModeChange(mode, targetView);
+                    setIsMobileSearchOpen(false);
+                  }}
+                  className="w-full"
                 />
               </div>
-              <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
-                {activeView === 'dashboard' ? (
-                  language === 'ka' ? 'პერსონალური სამუშაო სივრცე' : 'Personal Workspace'
-                ) : uiMode === 'business' ? (
-                  language === 'ka' ? 'ავტომატიზაცია და AI ასისტენტები' : 'Automation & AI Assistants Active'
-                ) : uiMode === 'creative' ? (
-                  language === 'ka' ? 'კრეატიული სტუდია და ლოკალიზაცია' : 'Creative Studio & Localization'
-                ) : (
-                  language === 'ka' ? 'მარკეტი & ვაჭრობა' : 'Marketplace & Orders'
-                )}
-              </span>
+              <button
+                onClick={() => setIsMobileSearchOpen(false)}
+                className="w-9 h-9 min-w-[36px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text flex items-center justify-center shrink-0 cursor-pointer transition-all"
+                title={language === 'ka' ? 'დახურვა' : 'Close Search'}
+                aria-label="Close search"
+              >
+                <X size={16} />
+              </button>
             </div>
-          </div>
-
-          {/* Center Section: Quick Command Search Bar & Nav Icons */}
-          <div className="flex items-center justify-center gap-3 flex-1 min-w-0 px-2 sm:px-4">
-            <HeaderQuickSearch 
-              language={userProfile.language}
-              setActiveView={handleViewChange}
-              setUiMode={handleModeChange}
-            />
-
-            <nav className="hidden md:flex items-center justify-center gap-2 lg:gap-3 shrink-0">
-              {(uiMode === 'business' ? [
-                { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
-                { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
-                ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
-              ] : uiMode === 'creative' ? [
-                { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio', icon: Sparkles },
-                { id: 'image', label: t.sidebar.image, icon: ImageIcon },
-                { id: 'translator', label: t.sidebar.translator, icon: Languages },
-                { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
-              ] : [
-                { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
-                { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video },
-              ]).map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => handleViewChange(link.id as any)}
-                  title={link.label}
-                  className={cn(
-                    "p-2.5 rounded-xl transition-all flex items-center justify-center shrink-0",
-                    activeView === link.id ? "bg-proton-accent/10 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
-                  )}
+          ) : (
+            <>
+              {/* Left Section: Sidebar Toggle & Back to Dashboard */}
+              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
+                {/* Desktop-only Sidebar Toggle */}
+                <button 
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="hidden md:flex w-9 sm:w-10 h-9 sm:h-10 min-w-[36px] sm:min-w-[40px] rounded-xl bg-proton-bg border border-proton-border items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] cursor-pointer"
+                  title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Hide Sidebar') : (language === 'ka' ? 'საიდბარი' : 'Show Sidebar')}
+                  aria-label="Toggle sidebar"
                 >
-                  <link.icon size={16} />
+                  <Grid size={16} className={cn("transition-transform duration-500 sm:w-[18px] sm:h-[18px]", isSidebarOpen ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
                 </button>
-              ))}
-            </nav>
 
-            {/* Mobile Hamburger Navigation Trigger */}
-            <button
-              onClick={() => setIsMobileNavDrawerOpen(prev => !prev)}
-              className="md:hidden p-2 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent transition-all shrink-0 flex items-center justify-center"
-              title={isMobileNavDrawerOpen ? (language === 'ka' ? 'მენიუს დახურვა' : 'Close Menu') : (language === 'ka' ? 'მენიუს გახსნა' : 'Open Menu')}
-            >
-              {isMobileNavDrawerOpen ? <X size={18} /> : <Menu size={18} />}
-            </button>
-          </div>
-          
-          {/* Right Section: System Controls */}
-          <div className="flex items-center justify-end gap-1.5 sm:gap-4 lg:gap-6 shrink-0 ml-auto md:ml-0">
-            <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
-              {/* Notification Center Hub */}
-              <NotificationCenter 
-                language={userProfile.language}
-                activeView={activeView}
-                setActiveView={handleViewChange}
-                showToast={showToast}
-                notificationsEnabled={userProfile.notifications !== false && userProfile.notificationsEnabled !== false}
-              />
-
-              {/* Elegant Compact Language Selector for 1-click accessibility */}
-              <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (language !== 'en') {
-                      handleLanguageChange('en');
-                      setTimeout(() => {
-                        showToast('Language set to English', 'success');
-                      }, 50);
-                    }
-                  }}
-                  className={cn(
-                    "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
-                    language === 'en' 
-                      ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
-                      : "text-proton-muted hover:text-proton-text-light"
-                  )}
-                  title="Switch to English"
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (language !== 'ka') {
-                      handleLanguageChange('ka');
-                      setTimeout(() => {
-                        showToast('აქტიური ენა: ქართული', 'success');
-                      }, 50);
-                    }
-                  }}
-                  className={cn(
-                    "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none",
-                    language === 'ka' 
-                      ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
-                      : "text-proton-muted hover:text-proton-text-light"
-                  )}
-                  title="გადართვა ქართულზე"
-                >
-                  KA
-                </button>
+                {/* Mobile: Compact brand badge on Dashboard, Back button on other views */}
+                {activeView === 'dashboard' ? (
+                  <div className="flex md:hidden items-center justify-center w-9 h-9 rounded-xl bg-proton-accent/10 border border-proton-accent/20 text-proton-accent font-black font-mono text-xs select-none">
+                    P
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setUiMode('business');
+                      handleViewChange('dashboard');
+                    }}
+                    className="flex items-center gap-1 px-2 sm:px-3 h-9 sm:h-auto py-1 sm:py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[9px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0 cursor-pointer"
+                    title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
+                    aria-label="Back to dashboard"
+                  >
+                    <ArrowLeft size={13} className="stroke-[2.5]" />
+                    <span className="hidden xs:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
+                  </button>
+                )}
+                
+                {/* Desktop-only status indicators */}
+                <div className="hidden md:flex flex-col select-none">
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-1.5 h-1.5 rounded-full animate-pulse",
+                      systemHealth.status === 'optimal'
+                        ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                        : systemHealth.status === 'degraded'
+                          ? "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
+                          : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
+                    )} />
+                    <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono">
+                      PROTON // {
+                        activeView === 'dashboard'
+                          ? (language === 'ka' ? 'მთავარი' : 'HOME')
+                          : uiMode === 'business' 
+                            ? (language === 'ka' ? 'ბიზნესი' : 'BUSINESS') 
+                            : uiMode === 'creative' 
+                              ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE') 
+                              : (language === 'ka' ? 'მარკეტი' : 'MARKET')
+                      }
+                    </span>
+                    <SystemStatusBadge
+                      status={systemHealth.status}
+                      latency={systemHealth.latency}
+                      language={language}
+                      size="sm"
+                      showLatency={false}
+                      onClick={() => systemHealth.checkHealth()}
+                    />
+                  </div>
+                  <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
+                    {activeView === 'dashboard' ? (
+                      language === 'ka' ? 'პერსონალური სამუშაო სივრცე' : 'Personal Workspace'
+                    ) : uiMode === 'business' ? (
+                      language === 'ka' ? 'ავტომატიზაცია და AI ასისტენტები' : 'Automation & AI Assistants Active'
+                    ) : uiMode === 'creative' ? (
+                      language === 'ka' ? 'კრეატიული სტუდია და ლოკალიზაცია' : 'Creative Studio & Localization'
+                    ) : (
+                      language === 'ka' ? 'მარკეტი & ვაჭრობა' : 'Marketplace & Orders'
+                    )}
+                  </span>
+                </div>
               </div>
 
-              {user ? (
-                <button 
-                  onClick={handleSignOut}
-                  className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0 cursor-pointer"
-                  title="Firebase Sign Out"
+              {/* Center Section: Page Title on Mobile, Quick Command Search Bar on Desktop */}
+              <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-4">
+                {/* Mobile-only compact view title with truncation */}
+                <div className="flex md:hidden items-center gap-1.5 min-w-0 truncate select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-proton-accent shrink-0 animate-pulse" />
+                  <span className="text-[11px] sm:text-xs font-black tracking-wider text-proton-text uppercase font-mono truncate">
+                    {activeView === 'dashboard'
+                      ? (language === 'ka' ? 'მთავარი' : 'DASHBOARD')
+                      : activeView === 'market-hub'
+                        ? (language === 'ka' ? 'მარკეტი' : 'MARKETPLACE')
+                        : activeView === 'clips'
+                          ? (language === 'ka' ? 'კლიპები' : 'PROTON CLIPS')
+                          : activeView === 'personas'
+                            ? (language === 'ka' ? 'ასისტენტები' : 'PERSONAS')
+                            : activeView === 'organizer'
+                              ? (language === 'ka' ? 'ორგანაიზერი' : 'ORGANIZER')
+                              : activeView === 'creative-studio'
+                                ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE STUDIO')
+                                : activeView === 'business-hub'
+                                  ? (language === 'ka' ? 'ბიზნეს ჰაბი' : 'BUSINESS HUB')
+                                  : activeView === 'blueprints'
+                                    ? (language === 'ka' ? 'ბლუპრინტები' : 'BLUEPRINTS')
+                                    : activeView === 'image'
+                                      ? (language === 'ka' ? 'სტუდია' : 'AI STUDIO')
+                                      : activeView === 'translator'
+                                        ? (language === 'ka' ? 'თარჯიმანი' : 'TRANSLATOR')
+                                        : activeView === 'copywriting'
+                                          ? (language === 'ka' ? 'კოპირაიტინგი' : 'COPYWRITING')
+                                          : String(activeView).toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Desktop Search Bar */}
+                <div className="hidden md:flex items-center justify-center w-full max-w-md">
+                  <HeaderQuickSearch 
+                    language={userProfile.language}
+                    setActiveView={handleViewChange}
+                    setUiMode={handleModeChange}
+                  />
+                </div>
+
+                {/* Desktop sub-navigation shortcuts */}
+                <nav className="hidden md:flex items-center justify-center gap-2 lg:gap-3 shrink-0 ml-3">
+                  {(uiMode === 'business' ? [
+                    { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
+                    { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
+                    ...(userProfile.showCommercialHub ? [{ id: 'commercial', icon: TrendingUp, label: t.sidebar.commercial }] : []),
+                  ] : uiMode === 'creative' ? [
+                    { id: 'creative-studio', label: language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio', icon: Sparkles },
+                    { id: 'image', label: t.sidebar.image, icon: ImageIcon },
+                    { id: 'translator', label: t.sidebar.translator, icon: Languages },
+                    { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
+                  ] : [
+                    { id: 'market-hub', label: t.sidebar.market, icon: ShoppingBag },
+                    { id: 'clips', label: language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips', icon: Video },
+                  ]).map((link) => (
+                    <button
+                      key={link.id}
+                      onClick={() => handleViewChange(link.id as any)}
+                      title={link.label}
+                      className={cn(
+                        "p-2.5 rounded-xl transition-all flex items-center justify-center shrink-0 cursor-pointer",
+                        activeView === link.id ? "bg-proton-accent/10 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
+                      )}
+                    >
+                      <link.icon size={16} />
+                    </button>
+                  ))}
+                </nav>
+              </div>
+              
+              {/* Right Section: Mobile Search & Menu Triggers | Desktop System Controls */}
+              <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
+                {/* Mobile-only Search Button */}
+                <button
+                  onClick={() => setIsMobileSearchOpen(true)}
+                  className="md:hidden w-9 h-9 min-w-[36px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                  title={language === 'ka' ? 'ძიება' : 'Search'}
+                  aria-label="Open search"
                 >
-                  <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <Search size={16} />
                 </button>
-              ) : (
-                <button 
-                  onClick={() => setShowAuth(true)}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
-                  title={language === 'ka' ? 'შესვლა' : 'Sign In'}
+
+                {/* Mobile-only Hamburger Menu Drawer Trigger */}
+                <button
+                  onClick={() => setIsMobileNavDrawerOpen(prev => !prev)}
+                  className={cn(
+                    "md:hidden w-9 h-9 min-w-[36px] rounded-xl border transition-all shrink-0 flex items-center justify-center cursor-pointer",
+                    isMobileNavDrawerOpen 
+                      ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent" 
+                      : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-accent"
+                  )}
+                  title={isMobileNavDrawerOpen ? (language === 'ka' ? 'მენიუს დახურვა' : 'Close Menu') : (language === 'ka' ? 'მენიუს გახსნა' : 'Open Menu')}
+                  aria-label="Toggle navigation menu"
                 >
-                  <LogIn size={14} />
-                  <span className="hidden xs:inline">{language === 'ka' ? 'შესვლა' : 'Sign In'}</span>
+                  {isMobileNavDrawerOpen ? <X size={17} /> : <Menu size={17} />}
                 </button>
-              )}
-            </div>
-          </div>
+
+                {/* Desktop-only System Controls */}
+                <div className="hidden md:flex items-center gap-1.5 md:gap-3 shrink-0">
+                  {/* Notification Center Hub */}
+                  <NotificationCenter 
+                    language={userProfile.language}
+                    activeView={activeView}
+                    setActiveView={handleViewChange}
+                    showToast={showToast}
+                    notificationsEnabled={userProfile.notifications !== false && userProfile.notificationsEnabled !== false}
+                  />
+
+                  {/* Elegant Compact Language Selector for 1-click accessibility */}
+                  <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (language !== 'en') {
+                          handleLanguageChange('en');
+                          setTimeout(() => {
+                            showToast('Language set to English', 'success');
+                          }, 50);
+                        }
+                      }}
+                      className={cn(
+                        "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none cursor-pointer",
+                        language === 'en' 
+                          ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
+                          : "text-proton-muted hover:text-proton-text-light"
+                      )}
+                      title="Switch to English"
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (language !== 'ka') {
+                          handleLanguageChange('ka');
+                          setTimeout(() => {
+                            showToast('აქტიური ენა: ქართული', 'success');
+                          }, 50);
+                        }
+                      }}
+                      className={cn(
+                        "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none cursor-pointer",
+                        language === 'ka' 
+                          ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
+                          : "text-proton-muted hover:text-proton-text-light"
+                      )}
+                      title="გადართვა ქართულზე"
+                    >
+                      KA
+                    </button>
+                  </div>
+
+                  {user ? (
+                    <button 
+                      onClick={handleSignOut}
+                      className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0 cursor-pointer"
+                      title="Firebase Sign Out"
+                    >
+                      <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setShowAuth(true)}
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
+                      title={language === 'ka' ? 'შესვლა' : 'Sign In'}
+                    >
+                      <LogIn size={14} />
+                      <span className="hidden xs:inline">{language === 'ka' ? 'შესვლა' : 'Sign In'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </header>
 
         <div 
@@ -6709,7 +6877,7 @@ export default function App() {
               "w-full flex-1 min-h-0 flex flex-col",
               (activeView === 'personas' || activeView === 'clips')
                 ? "h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0" 
-                : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 md:py-10 pb-32 md:pb-12"
+                : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 pt-6 md:pt-10 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-12"
             )}
           >
             <AnimatePresence mode="wait">

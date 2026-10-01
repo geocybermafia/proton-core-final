@@ -3042,7 +3042,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       className="fixed inset-0 z-40" 
                       onClick={() => setIsCategoryDropdownOpen(false)} 
                     />
-                    <div className="absolute left-0 mt-2 w-72 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-900 w-full flex justify-between items-center mb-1.5">
                         <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         <span className="text-[#dfb257] text-[8px] tracking-widest">★ PROTON</span>
@@ -3190,7 +3190,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         className="fixed inset-0 z-40" 
                         onClick={() => setIsCategoryDropdownOpen(false)} 
                       />
-                      <div className="absolute left-0 top-12 w-64 bg-zinc-950 border-2 border-[#dfb257]/30 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute left-0 top-12 w-[calc(200%+0.5rem)] sm:w-64 max-w-[calc(100vw-2.5rem)] bg-zinc-950 border-2 border-[#dfb257]/30 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-900 w-full flex justify-between items-center mb-1.5">
                           <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         </div>

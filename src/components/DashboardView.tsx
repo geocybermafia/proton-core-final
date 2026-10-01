@@ -212,7 +212,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
   const hasAnyArtifacts = Boolean(latestImage || latestChat);
 
   return (
-    <div className="w-full min-h-[calc(100vh-4rem)] flex flex-col justify-between py-6 sm:py-10 px-4 sm:px-8 lg:px-14 select-none animate-in fade-in duration-300">
+    <div className="w-full min-h-0 md:min-h-[calc(100vh-4rem)] flex flex-col justify-between pt-2 pb-6 sm:py-10 px-0 sm:px-8 lg:px-14 select-none animate-in fade-in duration-300">
       <div className="max-w-[1280px] w-full mx-auto space-y-12 sm:space-y-16">
 
         {/* ========================================================================= */}
