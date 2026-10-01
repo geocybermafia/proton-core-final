@@ -129,7 +129,7 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
             {isResetting ? t.reset_password : (isLogin ? t.login : t.signup)}
           </h1>
           <p className="text-sm text-proton-muted mt-2">
-            Professional Business Intelligence
+            {language === 'ka' ? 'თქვენი კრეატიული და ბიზნეს სამუშაო სივრცე' : 'Your creative & business workspace'}
           </p>
         </div>
 

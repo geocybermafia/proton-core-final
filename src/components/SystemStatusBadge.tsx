@@ -56,7 +56,7 @@ export const SystemStatusBadge: React.FC<SystemStatusBadgeProps> = ({
       )}
       title={
         status === 'optimal'
-          ? (language === 'ka' ? 'სისტემა მუშაობს გამართულად' : `System Optimal ${latency ? `(${latency}ms)` : ''}`)
+          ? (language === 'ka' ? 'ონლაინ · სისტემა გამართულია' : 'Connected · All systems working')
           : status === 'degraded'
             ? (language === 'ka' ? 'ინტერნეტთან კავშირი შენელებულია' : 'Network connection is slow')
             : (language === 'ka' ? 'ინტერნეტთან კავშირი გაწყვეტილია. გამოიყენება შენახული მონაცემები.' : 'Network offline. Using cached data.')

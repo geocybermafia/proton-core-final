@@ -105,8 +105,8 @@ export const HeaderQuickSearch: React.FC<HeaderQuickSearchProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={
             language === 'ka' 
-              ? 'მოძებნეთ გვერდი ან ბრძანება (მაგ. მარკეტი, ჩატი, პარამეტრები)...' 
-              : 'Quick search command (e.g. market, chat, settings)...'
+              ? 'მოძებნეთ ხელსაწყოები, გვერდები და ელემენტები...' 
+              : 'Search tools, pages, and items...'
           }
           className="w-full bg-proton-bg/80 border border-proton-border focus:border-proton-accent/60 rounded-xl pl-9 pr-16 py-1.5 text-xs text-proton-text placeholder:text-proton-muted/60 focus:outline-none focus:ring-1 focus:ring-proton-accent/30 transition-all font-mono shadow-inner"
         />

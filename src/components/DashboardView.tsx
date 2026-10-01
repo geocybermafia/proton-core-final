@@ -439,9 +439,9 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
       <footer className="max-w-[1280px] w-full mx-auto pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono text-zinc-400">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400/80" />
-          <span className="text-zinc-400 font-medium">PROTON SOVEREIGN OS</span>
+          <span className="text-zinc-400 font-medium">{isKa ? 'PROTON' : 'PROTON Workspace'}</span>
           <span className="text-zinc-600">·</span>
-          <span>{isKa ? 'სრული ციფრული სუვერენიტეტი' : 'Digital Sovereignty'}</span>
+          <span>{isKa ? 'თქვენი დამოუკიდებელი სამუშაო სივრცე' : 'Private & Independent'}</span>
         </div>
         <div className="text-[11px] text-zinc-400">
           v2.9 · {isKa ? 'პირადი გარემო' : 'Private Sanctuary'}
