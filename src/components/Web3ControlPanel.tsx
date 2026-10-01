@@ -238,7 +238,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
   };
 
   return (
-    <div id="web3_financial_ledger_panel" className="bg-[#0b0c0f] border border-zinc-900 rounded-[28px] p-8 shadow-2xl relative overflow-hidden transition-all duration-300">
+    <div id="web3_financial_ledger_panel" className="bg-[#0b0c0f] border border-zinc-900 rounded-2xl sm:rounded-[28px] p-4 sm:p-6 md:p-8 shadow-2xl relative overflow-hidden transition-all duration-300">
       {/* Dynamic Ambient Background Highlights */}
       <div className="absolute top-0 left-1/4 w-[400px] h-[250px] bg-[#dfc394]/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f293706_1px,transparent_1px),linear-gradient(to_bottom,#1f293706_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
@@ -271,10 +271,10 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
             </div>
 
             {/* Balanced Desktop Bento Layout (L/R Structure for ultimate legibility) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full max-w-5xl items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 w-full max-w-5xl items-stretch">
               
               {/* Left Column: Direct Action Handshake Entrance (Primary Focal Point) */}
-              <div className="lg:col-span-7 p-8 bg-zinc-950/70 border border-zinc-900 rounded-[24px] text-center font-mono relative overflow-hidden flex flex-col items-center justify-between">
+              <div className="lg:col-span-7 p-4 sm:p-6 md:p-8 bg-zinc-950/70 border border-zinc-900 rounded-2xl sm:rounded-[24px] text-center font-mono relative overflow-hidden flex flex-col items-center justify-between">
                 <div className="absolute inset-0 bg-gradient-to-b from-[#dfc394]/2 to-transparent pointer-events-none" />
                 
                 <div className="w-full flex flex-col items-center mt-2">
@@ -307,7 +307,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
               {/* Right Column: Key Technical Specification Pillars (Support Info) */}
               <div className="lg:col-span-5 flex flex-col gap-4 justify-between">
                 {/* Feature 1 */}
-                <div className="p-5.5 bg-zinc-950/45 border border-zinc-900 hover:border-zinc-800 rounded-2xl flex gap-4 group/card transition-all duration-200 h-full flex-col sm:flex-row items-start sm:items-center">
+                <div className="p-4 sm:p-5.5 bg-zinc-950/45 border border-zinc-900 hover:border-zinc-800 rounded-2xl flex gap-4 group/card transition-all duration-200 h-full flex-col sm:flex-row items-start sm:items-center">
                   <div className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-[#dfc394] shrink-0 group-hover/card:scale-105 transition-transform">
                     <Lock size={18} />
                   </div>
@@ -322,7 +322,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                 </div>
 
                 {/* Feature 2 */}
-                <div className="p-5.5 bg-zinc-950/45 border border-zinc-900 hover:border-zinc-800 rounded-2xl flex gap-4 group/card transition-all duration-200 h-full flex-col sm:flex-row items-start sm:items-center">
+                <div className="p-4 sm:p-5.5 bg-zinc-950/45 border border-zinc-900 hover:border-zinc-800 rounded-2xl flex gap-4 group/card transition-all duration-200 h-full flex-col sm:flex-row items-start sm:items-center">
                   <div className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-[#dfc394] shrink-0 group-hover/card:scale-105 transition-transform">
                     <Globe size={18} />
                   </div>
@@ -337,7 +337,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                 </div>
 
                 {/* Feature 3 */}
-                <div className="p-5.5 bg-zinc-950/45 border border-zinc-900 hover:border-zinc-800 rounded-2xl flex gap-4 group/card transition-all duration-200 h-full flex-col sm:flex-row items-start sm:items-center">
+                <div className="p-4 sm:p-5.5 bg-zinc-950/45 border border-zinc-900 hover:border-zinc-800 rounded-2xl flex gap-4 group/card transition-all duration-200 h-full flex-col sm:flex-row items-start sm:items-center">
                   <div className="w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center text-[#dfc394] shrink-0 group-hover/card:scale-105 transition-transform">
                     <Database size={18} />
                   </div>
@@ -417,9 +417,9 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
             </div>
 
             {/* Symmetrical Grid: Balance Chart & Network Statistics */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Column 1 & 2: Active Balance Graph */}
-              <div className="lg:col-span-2 p-6 bg-zinc-950/50 border border-zinc-900 rounded-2xl flex flex-col sm:flex-row items-stretch justify-between gap-6 hover:border-zinc-800/80 transition-all relative overflow-hidden duration-300">
+              <div className="lg:col-span-2 p-4 sm:p-6 bg-zinc-950/50 border border-zinc-900 rounded-2xl flex flex-col sm:flex-row items-stretch justify-between gap-6 hover:border-zinc-800/80 transition-all relative overflow-hidden duration-300">
                 <div className="flex flex-col justify-between py-1 shrink-0 font-mono">
                   <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest flex items-center gap-2">
                     <Activity size={10} className="text-[#dfc394]" /> {cur.connected.activeBalance}
@@ -487,7 +487,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
 
               {/* Column 3: Diagnostic and Network Status stack */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 lg:col-span-1">
-                <div className="p-5 bg-zinc-950/50 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-all font-mono duration-300">
+                <div className="p-4 sm:p-5 bg-zinc-950/50 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-all font-mono duration-300">
                   <span className="text-[9px] font-bold uppercase text-zinc-500 tracking-widest flex items-center gap-1.5">
                     <Activity size={10} className="text-zinc-400" /> {cur.connected.networkSync}
                   </span>
@@ -501,7 +501,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                   </div>
                 </div>
 
-                <div className="p-5 bg-zinc-950/50 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-all font-mono duration-300">
+                <div className="p-4 sm:p-5 bg-zinc-950/50 border border-zinc-900 rounded-2xl flex flex-col justify-between hover:border-zinc-800 transition-all font-mono duration-300">
                   <span className="text-[9px] font-bold uppercase text-zinc-500 tracking-widest flex items-center gap-1.5">
                     <Sparkles size={10} className="text-zinc-400" /> {cur.connected.diagnostics}
                   </span>
@@ -518,7 +518,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
             </div>
 
             {/* Sandbox simulation tools */}
-            <div className="p-6 bg-zinc-950/40 border border-zinc-900 rounded-2xl space-y-4 font-mono">
+            <div className="p-4 sm:p-6 bg-zinc-950/40 border border-zinc-900 rounded-2xl space-y-4 font-mono">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-900 pb-3">
                 <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-2">
                   <Terminal size={12} className="text-[#dfc394]" /> {cur.connected.sandboxTitle}
@@ -610,7 +610,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                     {filteredLedger.map((tx) => (
                       <div 
                         key={tx.id} 
-                        className="p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-950/90 transition-all duration-200"
+                        className="p-3 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-950/90 transition-all duration-200"
                       >
                         <div className="flex items-center gap-3.5 min-w-0 flex-1">
                           <div className={cn(
