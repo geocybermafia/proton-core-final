@@ -234,6 +234,43 @@ export default function PersonasView({
   const [mobileShowChat, setMobileShowChat] = useState(!!initialPersonaId || !!selectedPersona);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handleViewportChange = () => {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      if (window.innerWidth >= 768) {
+        setKeyboardInset(0);
+        return;
+      }
+      const bottomOffset = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
+      setKeyboardInset(bottomOffset);
+    };
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', handleViewportChange);
+      vv.addEventListener('scroll', handleViewportChange);
+      handleViewportChange();
+    }
+
+    return () => {
+      if (vv) {
+        vv.removeEventListener('resize', handleViewportChange);
+        vv.removeEventListener('scroll', handleViewportChange);
+      }
+    };
+  }, []);
+
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 150);
+  };
 
   useEffect(() => {
     // Smooth scroll to the end of the conversation when messages array or isSending state changes
@@ -762,7 +799,12 @@ ${
         mobileShowChat 
           ? "fixed inset-0 z-[80] bg-black/90 md:relative md:inset-auto md:z-auto md:bg-black/70 md:border md:border-cyan-500/30 md:rounded-2xl h-[100dvh] md:h-full" 
           : "hidden md:flex md:relative"
-      )}>
+      )}
+      style={mobileShowChat && keyboardInset > 0 ? {
+        bottom: `${keyboardInset}px`,
+        height: `calc(100dvh - ${keyboardInset}px)`
+      } : undefined}
+      >
         {/* Permanent Locked Header */}
         <header className="px-5 py-4 border-b border-cyan-500/30 bg-black/60 backdrop-blur-md flex items-center justify-between relative flex-shrink-0 shrink-0 w-full z-30 top-0 block">
            {/* Top neon line */}
@@ -1060,7 +1102,10 @@ ${
         )}
 
         {/* Active Footer with Quick Action Chips & Interactive Prompt Input */}
-        <footer className="p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-5 backdrop-blur-xl relative z-20">
+        <footer className={cn(
+          "p-3 sm:p-5 border-t border-cyan-500/30 bg-black/80 flex-shrink-0 shrink-0 backdrop-blur-xl relative z-20",
+          keyboardInset > 0 ? "pb-2 lg:pb-5" : "pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pb-5"
+        )}>
            <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
               {/* Quick Action Prompt Chips for Merchant Copilot & Store Guidance */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar-minimal">
@@ -1138,7 +1183,9 @@ ${
                 </div>
 
                 <input 
+                  ref={chatInputRef}
                   type="text" 
+                  onFocus={handleInputFocus}
                   disabled={isSending || isMaintenanceActive}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
