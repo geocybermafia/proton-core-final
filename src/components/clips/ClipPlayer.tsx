@@ -19,7 +19,9 @@ import {
   Play, 
   AlertCircle, 
   Plus,
-  Scissors
+  Scissors,
+  MoreVertical,
+  X
 } from 'lucide-react';
 import { Clip } from '../../types';
 import { cn } from '../../lib/utils';
@@ -174,6 +176,18 @@ export function ClipPlayer({
   const hasProduct = !!clip.productId;
   const isVirtualMounted = isMounted ?? (Math.abs(idx - currentIndex) <= 1);
   const isCurrentActive = idx === currentIndex;
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
+
+  const isTrimmed = Boolean(
+    (clip.trimStart && clip.trimStart > 0) || 
+    (clip.trimEnd && clip.trimEnd < (clip.duration || 100))
+  );
+
+  useEffect(() => {
+    if (idx !== currentIndex) {
+      setIsMobileMoreOpen(false);
+    }
+  }, [idx, currentIndex]);
 
   return (
     <div 
@@ -439,7 +453,7 @@ export function ClipPlayer({
               whileTap={{ scale: 0.75 }}
               onClick={() => onLikeToggle(clip)}
               className={cn(
-                "p-3 rounded-full bg-black/50 backdrop-blur-md border transition-all shadow-xl cursor-pointer hover:scale-110",
+                "min-w-[44px] min-h-[44px] p-3 rounded-full bg-black/50 backdrop-blur-md border transition-all shadow-xl cursor-pointer hover:scale-110 flex items-center justify-center",
                 isLikedByMe 
                   ? "border-red-500/50 text-red-500 bg-red-500/20 shadow-red-500/20" 
                   : "border-white/15 text-white hover:bg-black/75"
@@ -456,7 +470,7 @@ export function ClipPlayer({
           <div className="flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={onOpenComments}
-              className="p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer"
+              className="min-w-[44px] min-h-[44px] p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer flex items-center justify-center"
             >
               <MessageSquare className="h-5 w-5" />
             </button>
@@ -469,19 +483,47 @@ export function ClipPlayer({
           <div className="flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={() => onShareClip(clip)}
-              className="p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer"
+              className="min-w-[44px] min-h-[44px] p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer flex items-center justify-center"
               title="Share Reel"
             >
               <Share2 className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Filters toggle button */}
-          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          {/* Mobile "More Tools" button (compact toggle for small screens) */}
+          <div className="flex md:hidden flex-col items-center gap-1 pointer-events-auto">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsMobileMoreOpen((prev) => !prev);
+              }}
+              className={cn(
+                "min-w-[44px] min-h-[44px] p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110 active:scale-95 flex items-center justify-center relative",
+                isMobileMoreOpen 
+                  ? "bg-purple-600/60 border-purple-400 text-white shadow-purple-500/30" 
+                  : "bg-black/50 border-white/15 text-white hover:bg-black/75"
+              )}
+              title={language === 'ka' ? 'მეტი ხელსაწყო' : 'More actions'}
+              aria-label="More actions"
+              aria-expanded={isMobileMoreOpen}
+            >
+              <MoreVertical className="h-5 w-5" />
+              {/* Active indicator dot if secondary feature is currently engaged */}
+              {(showFiltersPanel || isTrimmed || clip.productId) && !isMobileMoreOpen && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-purple-400 border border-black" />
+              )}
+            </button>
+            <span className="text-[9px] font-bold text-white/90 drop-shadow">
+              {language === 'ka' ? 'მეტი' : 'More'}
+            </span>
+          </div>
+
+          {/* Filters toggle button (Desktop only - in rail) */}
+          <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={onToggleFiltersPanel}
               className={cn(
-                "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
+                "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center",
                 showFiltersPanel 
                   ? "bg-purple-600/50 border-purple-400 text-purple-200 shadow-purple-500/30" 
                   : "bg-black/50 border-white/15 text-white hover:bg-black/75"
@@ -492,13 +534,13 @@ export function ClipPlayer({
             </button>
           </div>
 
-          {/* Video Trim & Precision Controls button */}
-          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          {/* Video Trim & Precision Controls button (Desktop only - in rail) */}
+          <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={() => onRunAutoFix(clip)}
               className={cn(
-                "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
-                ((clip.trimStart && clip.trimStart > 0) || (clip.trimEnd && clip.trimEnd < (clip.duration || 100)))
+                "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center",
+                isTrimmed
                   ? "bg-purple-600/50 border-purple-400 text-purple-200 shadow-purple-500/30"
                   : "bg-black/50 border-white/15 text-white hover:bg-black/75"
               )}
@@ -512,16 +554,16 @@ export function ClipPlayer({
             </span>
           </div>
 
-          {/* Tag Product Button (Creator / Merchant) */}
+          {/* Tag Product Button (Creator / Merchant) (Desktop only - in rail) */}
           {(clip.creatorId === currentUser?.uid || (currentUser && hasSellerListings)) && (
-            <div className="flex flex-col items-center gap-1 pointer-events-auto">
+            <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenTagging(clip);
                 }}
                 className={cn(
-                  "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110",
+                  "p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110 min-w-[44px] min-h-[44px] flex items-center justify-center",
                   clip.productId 
                     ? "bg-pink-600/50 border-pink-400 text-pink-200 shadow-pink-500/30" 
                     : "bg-black/50 border-white/15 text-white hover:bg-black/75"
@@ -536,12 +578,12 @@ export function ClipPlayer({
             </div>
           )}
 
-          {/* Delete button (owner only) */}
+          {/* Delete button (owner only) (Desktop only - in rail) */}
           {clip.creatorId === currentUser?.uid && (
-            <div className="flex flex-col items-center gap-1 pointer-events-auto">
+            <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
               <button
                 onClick={() => onDeleteClip(clip)}
-                className="p-3 rounded-full bg-red-500/20 backdrop-blur-md border border-red-500/40 text-red-400 hover:bg-red-500/40 hover:scale-110 transition-all shadow-xl cursor-pointer"
+                className="p-3 rounded-full bg-red-500/20 backdrop-blur-md border border-red-500/40 text-red-400 hover:bg-red-500/40 hover:scale-110 transition-all shadow-xl cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Delete Clip"
               >
                 <Trash2 className="h-5 w-5" />
@@ -562,6 +604,132 @@ export function ClipPlayer({
           </div>
 
         </div>
+
+        {/* MOBILE "MORE TOOLS" POPOVER MENU */}
+        <AnimatePresence>
+          {isMobileMoreOpen && (
+            <>
+              {/* Tap backdrop to dismiss */}
+              <div 
+                className="absolute inset-0 z-30 pointer-events-auto bg-black/30 backdrop-blur-[2px] transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMobileMoreOpen(false);
+                }}
+              />
+              {/* Menu Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-16 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 w-48 max-w-[calc(100vw-5rem)] rounded-2xl bg-zinc-950/95 border border-white/20 shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-1 pointer-events-auto select-none"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="px-3 py-1.5 flex items-center justify-between border-b border-white/10 text-white/50">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider">
+                    {language === 'ka' ? 'ხელსაწყოები' : 'Clip Tools'}
+                  </span>
+                  <button
+                    onClick={() => setIsMobileMoreOpen(false)}
+                    className="p-1 rounded-md hover:bg-white/10 text-white/60 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+
+                {/* Filters */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFiltersPanel();
+                    setIsMobileMoreOpen(false);
+                  }}
+                  className={cn(
+                    "w-full min-h-[44px] px-3 py-2 rounded-xl flex items-center justify-between text-left text-xs font-semibold transition-all cursor-pointer",
+                    showFiltersPanel 
+                      ? "bg-purple-600/30 text-purple-200 border border-purple-500/40" 
+                      : "text-white/90 hover:bg-white/10 active:bg-white/15"
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles size={16} className={showFiltersPanel ? "text-purple-300" : "text-purple-400"} />
+                    <span>{language === 'ka' ? 'ფილტრები' : 'Filters'}</span>
+                  </div>
+                  {showFiltersPanel && (
+                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                  )}
+                </button>
+
+                {/* Trim & Adjust */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRunAutoFix(clip);
+                    setIsMobileMoreOpen(false);
+                  }}
+                  className={cn(
+                    "w-full min-h-[44px] px-3 py-2 rounded-xl flex items-center justify-between text-left text-xs font-semibold transition-all cursor-pointer",
+                    isTrimmed
+                      ? "bg-purple-600/30 text-purple-200 border border-purple-500/40"
+                      : "text-white/90 hover:bg-white/10 active:bg-white/15"
+                  )}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Scissors size={16} className="text-purple-300" />
+                    <span>{language === 'ka' ? 'ვიდეოს მოჭრა' : 'Trim & Adjust'}</span>
+                  </div>
+                  {isTrimmed && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300 font-mono font-bold">
+                      {language === 'ka' ? 'მოჭრილია' : 'Trimmed'}
+                    </span>
+                  )}
+                </button>
+
+                {/* Tag Product (Creator / Merchant) */}
+                {(clip.creatorId === currentUser?.uid || (currentUser && hasSellerListings)) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTagging(clip);
+                      setIsMobileMoreOpen(false);
+                    }}
+                    className={cn(
+                      "w-full min-h-[44px] px-3 py-2 rounded-xl flex items-center justify-between text-left text-xs font-semibold transition-all cursor-pointer",
+                      clip.productId
+                        ? "bg-pink-600/30 text-pink-200 border border-pink-500/40"
+                        : "text-white/90 hover:bg-white/10 active:bg-white/15"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Tag size={16} className="text-pink-300" />
+                      <span>{clip.productId ? (language === 'ka' ? 'პროდუქტი მიბმულია' : 'Tagged') : (language === 'ka' ? 'პროდუქტის მიბმა' : 'Tag Product')}</span>
+                    </div>
+                    {clip.productId && (
+                      <span className="w-2 h-2 rounded-full bg-pink-400" />
+                    )}
+                  </button>
+                )}
+
+                {/* Delete button (owner only) */}
+                {clip.creatorId === currentUser?.uid && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteClip(clip);
+                      setIsMobileMoreOpen(false);
+                    }}
+                    className="w-full min-h-[44px] px-3 py-2 rounded-xl flex items-center gap-2.5 text-left text-xs font-semibold text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-all cursor-pointer"
+                  >
+                    <Trash2 size={16} className="text-red-400" />
+                    <span>{language === 'ka' ? 'კლიპის წაშლა' : 'Delete Clip'}</span>
+                  </button>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         {/* BOTTOM-LEFT OVERLAY: CREATOR PROFILE, CAPTION, TAGS & AUDIO TRACK */}
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4 sm:p-5 pr-16 md:pr-20 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">

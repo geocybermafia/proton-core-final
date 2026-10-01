@@ -2713,6 +2713,165 @@ const DocumentationView = ({ language }: { language: 'en' | 'ka' }) => {
 
 
 
+interface ImageHistoryRecord {
+  id: string;
+  url: string;
+  prompt: string;
+  ratio: string;
+  style: string;
+  timestamp: number;
+}
+
+const MAX_IMAGE_HISTORY_ENTRIES = 6;
+const MAX_PERSISTED_URL_CHAR_LENGTH = 35000; // ~25KB max for thumbnail, strictly preventing multi-megabyte Base64 in localStorage
+
+/**
+ * Creates a lightweight canvas thumbnail data URL (max 120x120px JPEG)
+ * to safely persist in localStorage without exhausting quota.
+ * Typical 120px JPEG thumbnail is only ~2KB to 4KB.
+ */
+async function generateLightweightThumbnail(dataUrl: string, maxDim = 120, quality = 0.5): Promise<string> {
+  if (!dataUrl || !dataUrl.startsWith('data:image') || dataUrl.length <= MAX_PERSISTED_URL_CHAR_LENGTH) {
+    return dataUrl;
+  }
+  return new Promise((resolve) => {
+    try {
+      if (typeof document === 'undefined') {
+        resolve('');
+        return;
+      }
+      const img = document.createElement('img');
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = Math.max(width, 1);
+          canvas.height = Math.max(height, 1);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve('');
+            return;
+          }
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const thumb = canvas.toDataURL('image/jpeg', quality);
+          resolve(thumb.length <= MAX_PERSISTED_URL_CHAR_LENGTH ? thumb : '');
+        } catch {
+          resolve('');
+        }
+      };
+      img.onerror = () => resolve('');
+      img.src = dataUrl;
+    } catch {
+      resolve('');
+    }
+  });
+}
+
+/**
+ * Loads, validates, and sanitizes existing image history from localStorage.
+ * Automatically migrates or discards legacy multi-megabyte Base64 payloads to free up mobile storage.
+ */
+function loadAndSanitizeImageHistory(): ImageHistoryRecord[] {
+  try {
+    const raw = localStorage.getItem('proton_image_history');
+    if (!raw) return [];
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      console.warn('[ImageView] Corrupted proton_image_history JSON detected. Safely clearing.');
+      localStorage.removeItem('proton_image_history');
+      return [];
+    }
+
+    if (!Array.isArray(parsed)) return [];
+
+    let detectedOversized = false;
+    const sanitized: ImageHistoryRecord[] = [];
+
+    for (const item of parsed.slice(0, MAX_IMAGE_HISTORY_ENTRIES)) {
+      if (!item || typeof item !== 'object') continue;
+
+      const rawUrl = typeof item.url === 'string' ? item.url : '';
+      const isOversized = rawUrl.length > MAX_PERSISTED_URL_CHAR_LENGTH;
+      if (isOversized) {
+        detectedOversized = true;
+      }
+
+      sanitized.push({
+        id: String(item.id || `img-${Date.now()}`),
+        // If legacy item has a massive full-res Base64 string, drop the heavy payload
+        url: isOversized ? '' : rawUrl,
+        prompt: String(item.prompt || ''),
+        ratio: String(item.ratio || '1:1'),
+        style: String(item.style || 'none'),
+        timestamp: Number(item.timestamp || Date.now())
+      });
+    }
+
+    // Immediately rewrite sanitized lightweight collection to free up mobile browser storage
+    if (detectedOversized || parsed.length > MAX_IMAGE_HISTORY_ENTRIES) {
+      try {
+        localStorage.setItem('proton_image_history', JSON.stringify(sanitized));
+      } catch (writeErr) {
+        console.warn('[ImageView] Failed to write sanitized image history to localStorage:', writeErr);
+      }
+    }
+
+    return sanitized;
+  } catch (err) {
+    console.warn('[ImageView] Non-fatal error initializing image history:', err);
+    return [];
+  }
+}
+
+/**
+ * Safely persists lightweight thumbnails and metadata to localStorage.
+ * Guaranteed to never crash or throw QuotaExceededError.
+ */
+function safePersistImageHistory(items: ImageHistoryRecord[]): void {
+  try {
+    const boundedPayload = items.slice(0, MAX_IMAGE_HISTORY_ENTRIES).map(item => ({
+      id: item.id,
+      prompt: item.prompt,
+      ratio: item.ratio,
+      style: item.style,
+      timestamp: item.timestamp,
+      url: (item.url && item.url.length <= MAX_PERSISTED_URL_CHAR_LENGTH) ? item.url : ''
+    }));
+
+    localStorage.setItem('proton_image_history', JSON.stringify(boundedPayload));
+  } catch (err: any) {
+    console.warn('[ImageView] Non-fatal localStorage persistence failure:', err?.name || err);
+    // If quota was exceeded, retry with minimal footprint (at most 2 items without URLs)
+    try {
+      const minimalPayload = items.slice(0, 2).map(item => ({
+        id: item.id,
+        prompt: item.prompt,
+        ratio: item.ratio,
+        style: item.style,
+        timestamp: item.timestamp,
+        url: ''
+      }));
+      localStorage.setItem('proton_image_history', JSON.stringify(minimalPayload));
+    } catch {
+      // Degrade gracefully - active session in-memory state remains completely unharmed
+    }
+  }
+}
+
 const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndIncrementAiQuota, onBack }: { uiMode: 'business' | 'creative', isCreativeMode?: boolean, language: 'en' | 'ka', isAdmin: boolean, checkAndIncrementAiQuota: () => Promise<boolean>, onBack?: () => void }) => {
   const isKa = language === 'ka';
   const { showToast } = useToast();
@@ -2728,14 +2887,9 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
   const [exportingDraft, setExportingDraft] = useState(false);
   const [lastCreatedListingId, setLastCreatedListingId] = useState<string | null>(null);
   
-  // History state with LocalStorage persistence
-  const [historyList, setHistoryList] = useState<{ id: string; url: string; prompt: string; ratio: string; style: string; timestamp: number }[]>(() => {
-    try {
-      const saved = localStorage.getItem('proton_image_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
+  // History state initialized with sanitized, lightweight records (never multi-megabyte base64)
+  const [historyList, setHistoryList] = useState<ImageHistoryRecord[]>(() => {
+    return loadAndSanitizeImageHistory();
   });
 
   const handleExportToMarket = async () => {
@@ -2877,8 +3031,8 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
       const result = await generateOrEditImage(finalPrompt);
       setImage(result);
 
-      // Add to history
-      const newItem = {
+      // Add to in-memory active session history (keeps full-resolution URL for current session)
+      const inMemoryItem: ImageHistoryRecord = {
         id: `img-${Date.now()}`,
         url: result,
         prompt: prompt.trim(),
@@ -2887,9 +3041,21 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
         timestamp: Date.now()
       };
 
-      const updatedHistory = [newItem, ...historyList].slice(0, 12);
+      const updatedHistory = [inMemoryItem, ...historyList].slice(0, MAX_IMAGE_HISTORY_ENTRIES);
       setHistoryList(updatedHistory);
-      localStorage.setItem('proton_image_history', JSON.stringify(updatedHistory));
+
+      // Asynchronously generate compact thumbnail (~2-4KB) and safely persist bounded payload to localStorage
+      generateLightweightThumbnail(result).then((thumbUrl) => {
+        const persistedItems = updatedHistory.map((item, idx) => {
+          if (idx === 0) {
+            return { ...item, url: thumbUrl };
+          }
+          return item;
+        });
+        safePersistImageHistory(persistedItems);
+      }).catch(() => {
+        safePersistImageHistory(updatedHistory);
+      });
 
     } catch (error: any) {
       console.error(error);
@@ -2913,7 +3079,7 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
     e.stopPropagation();
     const updated = historyList.filter(item => item.id !== id);
     setHistoryList(updated);
-    localStorage.setItem('proton_image_history', JSON.stringify(updated));
+    safePersistImageHistory(updated);
   };
 
   return (
@@ -3124,7 +3290,7 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
                   <div 
                     key={item.id} 
                     onClick={() => {
-                      setImage(item.url);
+                      if (item.url) setImage(item.url);
                       setPrompt(item.prompt);
                       setSelectedRatio(item.ratio as any);
                       setSelectedStyle(item.style);
@@ -3132,8 +3298,15 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
                     className="group relative bg-[#090d16] rounded-2xl border border-white/5 overflow-hidden cursor-pointer hover:border-proton-accent/30 transition-all shadow-sm"
                   >
                     {/* Thumbnail */}
-                    <div className="aspect-square w-full overflow-hidden relative">
-                      <img src={item.url} alt="Thumbnail" className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" referrerPolicy="no-referrer" />
+                    <div className="aspect-square w-full overflow-hidden relative flex items-center justify-center bg-zinc-950">
+                      {item.url ? (
+                        <img src={item.url} alt="Thumbnail" className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" referrerPolicy="no-referrer" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-proton-muted">
+                          <ImageIcon size={22} className="opacity-40 mb-1" />
+                          <span className="text-[8px] font-mono uppercase tracking-widest line-clamp-1">{item.ratio}</span>
+                        </div>
+                      )}
                       
                       {/* Trash action */}
                       <button

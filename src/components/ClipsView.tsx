@@ -647,10 +647,15 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       } catch (err: any) {
         console.error("Storage upload error:", err);
         setIsUploading(false);
+        const isTimeout = err?.message?.toLowerCase().includes('timed out') || err?.code === 'storage/timeout';
         showToast(
-          language === 'ka' 
-            ? 'ვიდეოს ატვირთვა ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან.' 
-            : `Failed to upload video to cloud storage: ${err?.message || 'Network error'}. Please retry.`,
+          isTimeout
+            ? (language === 'ka'
+                ? 'ვიდეოს ატვირთვას ძალიან დიდი დრო დასჭირდა. გთხოვთ, შეამოწმოთ ინტერნეტი და თავიდან სცადოთ.'
+                : 'Video upload is taking too long. Please check your connection and try again.')
+            : (language === 'ka' 
+                ? 'ვიდეოს ატვირთვა ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან.' 
+                : `Failed to upload video to cloud storage: ${err?.message || 'Network error'}. Please retry.`),
           'error'
         );
         return;

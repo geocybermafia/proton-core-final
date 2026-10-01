@@ -147,10 +147,28 @@ export async function uploadClipVideo(
   clipId: string,
   file: File | Blob,
   onProgress?: (progress: number) => void,
-  timeoutMs: number = 30000
+  timeoutMs?: number
 ): Promise<string> {
   const fileExt = file instanceof File && file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
   const path = `clips/${userId}/${clipId}.${fileExt}`;
+
+  // File-size-aware timeout for mobile resilience:
+  // - small videos (<=5MB): at least 60 seconds
+  // - medium videos (5MB-20MB): at least 120 seconds
+  // - larger mobile videos (>20MB): up to 180 seconds
+  let computedTimeout = 120000;
+  if (file && typeof file.size === 'number' && file.size > 0) {
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB <= 5) {
+      computedTimeout = 60000;
+    } else if (sizeMB <= 20) {
+      computedTimeout = 120000;
+    } else {
+      computedTimeout = 180000;
+    }
+  }
+
+  const effectiveTimeoutMs = timeoutMs ?? computedTimeout;
 
   const result = await uploadFileToStorage({
     path,
@@ -163,7 +181,7 @@ export async function uploadClipVideo(
       },
     },
     onProgress,
-  }, timeoutMs);
+  }, effectiveTimeoutMs);
 
   return result.downloadUrl;
 }
