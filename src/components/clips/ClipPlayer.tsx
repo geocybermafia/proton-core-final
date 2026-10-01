@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Heart, 
@@ -34,16 +34,25 @@ interface ReelProgressBarProps {
 
 export function ReelProgressBar({ videoElement, clip }: ReelProgressBarProps) {
   const [progress, setProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragProgress, setDragProgress] = useState(0);
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!videoElement) return;
 
     const handleTimeUpdate = () => {
-      const start = clip.trimStart || 0;
-      const end = clip.trimEnd || videoElement.duration || 1;
-      const total = end - start;
-      const current = videoElement.currentTime - start;
-      const percent = Math.min(100, Math.max(0, (current / (total || 1)) * 100));
+      // Don't overwrite visual state while the user is actively scrubbing
+      if (isDragging) return;
+
+      const duration = videoElement.duration;
+      if (!Number.isFinite(duration) || duration <= 0) return;
+
+      const start = Math.max(0, clip.trimStart || 0);
+      const end = Math.min(duration, clip.trimEnd || duration);
+      const total = Math.max(0.01, end - start);
+      const current = Math.min(end, Math.max(start, videoElement.currentTime)) - start;
+      const percent = Math.min(100, Math.max(0, (current / total) * 100));
       setProgress(percent);
     };
 
@@ -51,32 +60,161 @@ export function ReelProgressBar({ videoElement, clip }: ReelProgressBarProps) {
     return () => {
       videoElement.removeEventListener('timeupdate', handleTimeUpdate);
     };
-  }, [videoElement, clip.trimStart, clip.trimEnd]);
+  }, [videoElement, clip.trimStart, clip.trimEnd, isDragging]);
 
-  const handleScrub = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    if (!videoElement) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const width = rect.width;
-    const percent = Math.min(1, Math.max(0, clickX / (width || 1)));
-
-    const start = clip.trimStart || 0;
-    const end = clip.trimEnd || videoElement.duration || 1;
-    const total = end - start;
-
-    videoElement.currentTime = start + percent * total;
+  const calculateFractionFromPointer = (clientX: number): number => {
+    if (!progressBarRef.current) return 0;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    const clickX = clientX - rect.left;
+    return Math.min(1, Math.max(0, clickX / rect.width));
   };
+
+  const applySeek = (fraction: number) => {
+    if (!videoElement) return;
+    const duration = videoElement.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    const start = Math.max(0, clip.trimStart || 0);
+    const end = Math.min(duration, clip.trimEnd || duration);
+    const total = Math.max(0.01, end - start);
+
+    const targetTime = start + fraction * total;
+    if (Number.isFinite(targetTime)) {
+      videoElement.currentTime = Math.min(end, Math.max(start, targetTime));
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    // Only respond to primary button
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+    const fraction = calculateFractionFromPointer(e.clientX);
+    const percent = fraction * 100;
+
+    setIsDragging(true);
+    setDragProgress(percent);
+    applySeek(fraction);
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore if pointer capture unsupported
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    e.stopPropagation();
+
+    const fraction = calculateFractionFromPointer(e.clientX);
+    const percent = fraction * 100;
+
+    setDragProgress(percent);
+    applySeek(fraction);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    e.stopPropagation();
+
+    const fraction = calculateFractionFromPointer(e.clientX);
+    applySeek(fraction);
+    setProgress(fraction * 100);
+    setIsDragging(false);
+
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!videoElement) return;
+    const duration = videoElement.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    const start = Math.max(0, clip.trimStart || 0);
+    const end = Math.min(duration, clip.trimEnd || duration);
+    const total = Math.max(0.01, end - start);
+
+    let step = 0;
+    if (e.key === 'ArrowLeft') step = -total * 0.05;
+    else if (e.key === 'ArrowRight') step = total * 0.05;
+    else if (e.key === 'Home') {
+      videoElement.currentTime = start;
+      return;
+    } else if (e.key === 'End') {
+      videoElement.currentTime = end;
+      return;
+    } else {
+      return;
+    }
+
+    e.preventDefault();
+    const newTime = Math.min(end, Math.max(start, videoElement.currentTime + step));
+    videoElement.currentTime = newTime;
+    const newPercent = Math.min(100, Math.max(0, ((newTime - start) / total) * 100));
+    setProgress(newPercent);
+  };
+
+  const displayProgress = isDragging ? dragProgress : progress;
 
   return (
     <div
-      onClick={handleScrub}
-      className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 hover:h-2 transition-all cursor-pointer z-30 group"
+      ref={progressBarRef}
+      role="slider"
+      tabIndex={0}
+      aria-label="Video playback scrub bar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(displayProgress)}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
+      onKeyDown={handleKeyDown}
+      className="absolute bottom-0 left-0 right-0 h-11 flex items-end pb-0 cursor-pointer z-30 group touch-none select-none focus:outline-none"
+      style={{ touchAction: 'none' }}
     >
-      <div
-        className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 group-hover:from-purple-400 group-hover:via-pink-400 group-hover:to-amber-400 transition-all rounded-r"
-        style={{ width: `${progress}%` }}
-      />
+      {/* Visual timeline bar: thin 4px baseline, expands to 10px on hover/drag with scrub thumb */}
+      <div className={cn(
+        "w-full bg-white/20 transition-all rounded-r relative overflow-visible",
+        isDragging ? "h-2.5 bg-white/30" : "h-1 group-hover:h-2"
+      )}>
+        <div
+          className={cn(
+            "h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 transition-[width] rounded-r relative",
+            isDragging ? "duration-0" : "duration-75"
+          )}
+          style={{ width: `${displayProgress}%` }}
+        >
+          {/* Tactile scrub thumb */}
+          <div className={cn(
+            "absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rounded-full bg-white shadow-lg border border-purple-500/40 pointer-events-none transition-all",
+            isDragging 
+              ? "w-3.5 h-3.5 opacity-100 scale-100" 
+              : "w-2.5 h-2.5 opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100"
+          )} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -183,11 +321,129 @@ export function ClipPlayer({
     (clip.trimEnd && clip.trimEnd < (clip.duration || 100))
   );
 
+  // Touch gesture & double-tap state
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const isSwipingRef = useRef(false);
+  const lastTapRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const singleTapTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTouchTimeRef = useRef<number>(0);
+  const lastDoubleTapFiredRef = useRef<number>(0);
+
+  useEffect(() => {
+    return () => {
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (idx !== currentIndex) {
       setIsMobileMoreOpen(false);
+      if (singleTapTimerRef.current) {
+        clearTimeout(singleTapTimerRef.current);
+        singleTapTimerRef.current = null;
+      }
+      lastTapRef.current = null;
+      touchStartRef.current = null;
     }
   }, [idx, currentIndex]);
+
+  const handleVideoTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    };
+    isSwipingRef.current = false;
+    lastTouchTimeRef.current = Date.now();
+  };
+
+  const handleVideoTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartRef.current.x);
+    const dy = Math.abs(touch.clientY - touchStartRef.current.y);
+
+    // If movement exceeds 12px in any direction, it's a drag/scroll, not a tap
+    if (dx > 12 || dy > 12) {
+      isSwipingRef.current = true;
+    }
+  };
+
+  const handleVideoTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    lastTouchTimeRef.current = Date.now();
+    if (!touchStartRef.current) return;
+    const now = Date.now();
+    const duration = now - touchStartRef.current.time;
+    const wasSwiping = isSwipingRef.current;
+    const touchPoint = touchStartRef.current;
+    touchStartRef.current = null;
+
+    // If it was a swipe (reel scrolling) or a long press (> 450ms), ignore as a tap gesture
+    if (wasSwiping || duration > 450) {
+      lastTapRef.current = null;
+      return;
+    }
+
+    // Check if this tap qualifies as a double-tap
+    const prevTap = lastTapRef.current;
+    if (prevTap) {
+      const timeDiff = now - prevTap.time;
+      const dist = Math.hypot(touchPoint.x - prevTap.x, touchPoint.y - prevTap.y);
+
+      // Between 50ms and 350ms, within 40px radius
+      if (timeDiff >= 50 && timeDiff <= 350 && dist < 40) {
+        // QUALIFIED TOUCH DOUBLE-TAP!
+        if (singleTapTimerRef.current) {
+          clearTimeout(singleTapTimerRef.current);
+          singleTapTimerRef.current = null;
+        }
+        lastTapRef.current = null;
+        lastDoubleTapFiredRef.current = now;
+        onDoubleTap(clip);
+        return;
+      }
+    }
+
+    // Otherwise, this is a first/single tap candidate
+    lastTapRef.current = {
+      x: touchPoint.x,
+      y: touchPoint.y,
+      time: now
+    };
+
+    // Schedule single-tap play/pause if no second tap follows within 280ms
+    if (singleTapTimerRef.current) {
+      clearTimeout(singleTapTimerRef.current);
+    }
+    singleTapTimerRef.current = setTimeout(() => {
+      onTogglePlay(idx);
+      singleTapTimerRef.current = null;
+      lastTapRef.current = null;
+    }, 280);
+  };
+
+  const handleVideoClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // If this click was synthesized from a recent touch gesture (< 600ms ago), ignore it
+    // because touch handlers already accurately processed single-tap or double-tap.
+    if (Date.now() - lastTouchTimeRef.current < 600) {
+      return;
+    }
+    // Desktop mouse click: toggle play/pause immediately
+    onTogglePlay(idx);
+  };
+
+  const handleVideoDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent duplicate firing if a touch double-tap already fired within 600ms
+    if (Date.now() - lastDoubleTapFiredRef.current < 600) {
+      return;
+    }
+    lastDoubleTapFiredRef.current = Date.now();
+    onDoubleTap(clip);
+  };
 
   return (
     <div 
@@ -207,8 +463,11 @@ export function ClipPlayer({
         {/* VIDEO PLAYER ELEMENT */}
         <div 
           className="absolute inset-0 z-0 flex items-center justify-center overflow-hidden cursor-pointer bg-zinc-950"
-          onDoubleClick={() => onDoubleTap(clip)}
-          onClick={() => onTogglePlay(idx)}
+          onTouchStart={handleVideoTouchStart}
+          onTouchMove={handleVideoTouchMove}
+          onTouchEnd={handleVideoTouchEnd}
+          onClick={handleVideoClick}
+          onDoubleClick={handleVideoDoubleClick}
         >
           {isVirtualMounted ? (
             <video
