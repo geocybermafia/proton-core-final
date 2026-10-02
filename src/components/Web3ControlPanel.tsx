@@ -541,7 +541,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                     step="0.01"
                     value={demoAmount}
                     onChange={(e) => setDemoAmount(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-900 hover:border-zinc-800 focus:border-[#dfc394] rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none tracking-widest font-mono text-center sm:text-left"
+                    className="w-full bg-zinc-950 border border-zinc-900 hover:border-zinc-800 focus:border-[#dfc394] rounded-xl px-3 py-2.5 text-base md:text-xs text-white focus:outline-none tracking-widest font-mono text-center sm:text-left"
                   />
                 </div>
                 <div>
@@ -552,7 +552,7 @@ export function Web3ControlPanel({ language = 'ka' }: { language?: string }) {
                     type="text" 
                     value={demoRecipient}
                     onChange={(e) => setDemoRecipient(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-900 hover:border-zinc-800 focus:border-[#dfc394] rounded-xl px-3 py-2.5 text-xs text-zinc-350 focus:outline-none tracking-widest font-mono truncate"
+                    className="w-full bg-zinc-950 border border-zinc-900 hover:border-zinc-800 focus:border-[#dfc394] rounded-xl px-3 py-2.5 text-base md:text-xs text-zinc-350 focus:outline-none tracking-widest font-mono truncate"
                   />
                 </div>
 

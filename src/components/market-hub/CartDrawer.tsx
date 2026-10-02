@@ -245,7 +245,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                                 ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." 
                                 : "Enter requirements, project brief, links or specifics..."}
                               className={cn(
-                                "w-full h-18 p-2.5 rounded-xl border text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/25 bg-black/40 resize-none",
+                                "w-full h-18 p-2.5 rounded-xl border text-base md:text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/25 bg-black/40 resize-none",
                                 currentTheme.input
                               )}
                             />
@@ -274,7 +274,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                           value={shippingDetails.recipientName}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, recipientName: e.target.value })}
                           placeholder={language === 'ka' ? 'მიმღების სახელი, გვარი' : 'Recipient Name'}
-                          className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                          className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
                         />
                         <div className="grid grid-cols-2 gap-2">
                           <input
@@ -282,14 +282,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                             value={shippingDetails.phone}
                             onChange={e => onChangeShippingDetails({ ...shippingDetails, phone: e.target.value })}
                             placeholder={language === 'ka' ? 'ტელეფონი *' : 'Phone *'}
-                            className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 font-mono", currentTheme.input)}
+                            className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 font-mono", currentTheme.input)}
                           />
                           <input
                             type="text"
                             value={shippingDetails.city}
                             onChange={e => onChangeShippingDetails({ ...shippingDetails, city: e.target.value })}
                             placeholder={language === 'ka' ? 'ქალაქი *' : 'City *'}
-                            className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                            className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
                           />
                         </div>
                         <input
@@ -297,14 +297,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                           value={shippingDetails.address}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, address: e.target.value })}
                           placeholder={language === 'ka' ? 'ზუსტი მისამართი (ქუჩა, ბინა) *' : 'Full Address (Street, Apt / Suite) *'}
-                          className={cn("w-full px-3 py-2 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                          className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
                         />
                         <textarea
                           value={shippingDetails.notes || ''}
                           maxLength={200}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, notes: e.target.value })}
                           placeholder={language === 'ka' ? 'კურიერის შენიშვნა (სურვილისამებრ)' : 'Delivery notes (optional)'}
-                          className={cn("w-full h-14 px-3 py-1.5 rounded-xl border text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
+                          className={cn("w-full h-14 px-3 py-1.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
                         />
                       </div>
                     </div>

@@ -2657,7 +2657,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
-                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-xs transition-all shadow-inner"
+                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner"
               />
               {searchRaw && (
                 <button 
@@ -2761,7 +2761,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               value={searchRaw}
               onChange={(e) => setSearchRaw(e.target.value)}
               placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search...'}
-              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-xs transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-base md:text-xs transition-colors"
             />
             {searchRaw && (
               <button 
@@ -2935,7 +2935,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   value={searchRaw}
                   onChange={(e) => setSearchRaw(e.target.value)}
                   placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Type search word...'}
-                  className="w-full bg-transparent pl-11 pr-20 py-2.5 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-sm"
+                  className="w-full bg-transparent pl-11 pr-20 py-2.5 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-base md:text-sm"
                 />
                 <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-1.5">
                   <div className="h-4 w-[1px] bg-zinc-800" />
@@ -3710,7 +3710,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                               value={chatMessageText}
                               onChange={(e) => setChatMessageText(e.target.value)}
                               placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
+                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 text-base md:text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
                             />
                             <button 
                               type="submit"
@@ -4230,14 +4230,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                             value={shipmentTrackingInput?.carrier || ''}
                                             onChange={(e) => setShipmentTrackingInput(prev => prev ? ({ ...prev, carrier: e.target.value }) : null)}
                                             placeholder={language === 'ka' ? 'გადამზიდი (მაგ. Georgian Post, DHL)' : 'Carrier (e.g. Courier, Post)'}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-base md:text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400"
                                           />
                                           <input
                                             type="text"
                                             value={shipmentTrackingInput?.trackingNumber || ''}
                                             onChange={(e) => setShipmentTrackingInput(prev => prev ? ({ ...prev, trackingNumber: e.target.value }) : null)}
                                             placeholder={language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Code / Number'}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400 font-mono"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-base md:text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400 font-mono"
                                           />
                                           <div className="flex gap-2 pt-1">
                                             <button
@@ -4950,7 +4950,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     value={chatMessageText}
                     onChange={(e) => setChatMessageText(e.target.value)}
                     placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                    className="flex-1 bg-zinc-900 border border-zinc-800/70 rounded-xl px-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
+                    className="flex-1 bg-zinc-900 border border-zinc-800/70 rounded-xl px-4 py-2 text-base md:text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
                   />
                   <button 
                     type="submit"
