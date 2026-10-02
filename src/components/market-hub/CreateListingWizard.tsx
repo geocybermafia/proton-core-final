@@ -718,8 +718,19 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {/* Mobile Persistent Edit/Replace Badge */}
+                    <div className="md:hidden absolute top-5 right-5 bg-black/85 border border-[#dfb257]/40 px-2.5 py-1.5 rounded-xl backdrop-blur-md select-none pointer-events-none shadow-lg animate-fade-in">
+                      <div className="flex items-center gap-1.5">
+                        <Camera size={12} className="text-[#dfb257]" />
+                        <span className="text-[8px] font-black uppercase tracking-wider text-[#dfb257]">
+                          {language === 'ka' ? 'შეცვლა' : 'Replace'}
+                        </span>
+                      </div>
+                    </div>
                     
-                    <div className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-3xl duration-300">
+                    {/* Desktop Hover Overlay */}
+                    <div className="hidden md:flex absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 items-center justify-center transition-opacity rounded-3xl duration-300">
                       <span className="text-[9px] font-black uppercase tracking-widest text-[#dfb257] border border-[#dfb257]/30 bg-black/85 px-4.5 py-2.5 rounded-xl flex items-center gap-2 hover:scale-105 transition-all">
                         <Camera size={12} className="text-[#dfb257]" /> 
                         {language === 'ka' ? 'სურათის შეცვლა' : 'Replace Image Asset'}
