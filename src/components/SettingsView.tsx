@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, 
@@ -136,6 +136,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo' | 'cost_control'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Horizontal scroll indicator state for mobile settings sidebar
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const sidebarScrollRef = useRef<HTMLDivElement>(null);
+
+  const checkScroll = useCallback(() => {
+    const el = sidebarScrollRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 2;
+    const isAtRightEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 3;
+    setCanScrollRight(hasOverflow && !isAtRightEnd);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const el = sidebarScrollRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver(() => {
+      checkScroll();
+    });
+    ro.observe(el);
+
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll]);
+
+  useEffect(() => {
+    const timer = setTimeout(checkScroll, 50);
+    return () => clearTimeout(timer);
+  }, [activeTab, checkScroll]);
 
   const [lastSavedProfile, setLastSavedProfile] = useState<UserProfile>(() => ({ ...userProfile }));
 
@@ -984,38 +1018,54 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}
-        <div className="w-full md:w-60 lg:w-72 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 p-3 md:p-4 lg:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal relative z-10 shrink-0" id="settings-sidebar">
-          {tabs.map((tab) => (
-            <motion.button
-              key={tab.id}
-              type="button"
-              whileHover={shouldReduceMotion ? undefined : { scale: 1.01, x: 2 }}
-              whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 450, damping: 30 }}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={cn(
-                "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3.5 p-2.5 md:p-3 rounded-xl transition-all group shrink-0 relative min-w-[76px] md:min-w-0 md:min-h-[52px] cursor-pointer w-full text-left select-none",
-                activeTab === tab.id 
-                  ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20 font-black" 
-                  : "text-proton-muted hover:text-proton-text hover:bg-white/5 font-semibold"
-              )}
-              id={`tab-settings-${tab.id}`}
-            >
-              <div className={cn(
-                "w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition-all shrink-0",
-                activeTab === tab.id ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" : "bg-proton-secondary/20 text-proton-muted group-hover:bg-proton-secondary/30"
-              )}>
-                <tab.icon size={18} />
-              </div>
-              <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap leading-tight">{tab.shortLabel}</span>
-              <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left whitespace-normal break-words leading-tight">{tab.label}</span>
-              {tab.id === 'profile' && isProfileDirty && (
-                <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-mono font-bold animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                </span>
-              )}
-            </motion.button>
-          ))}
+        <div className="relative w-full md:w-60 lg:w-72 border-b md:border-b-0 md:border-r border-proton-border bg-proton-bg/30 shrink-0 z-10">
+          <div 
+            ref={sidebarScrollRef}
+            onScroll={checkScroll}
+            className="w-full p-3 md:p-4 lg:p-6 flex md:flex-col gap-2 overflow-x-auto md:overflow-x-visible custom-scrollbar-minimal" 
+            id="settings-sidebar"
+          >
+            {tabs.map((tab) => (
+              <motion.button
+                key={tab.id}
+                type="button"
+                whileHover={shouldReduceMotion ? undefined : { scale: 1.01, x: 2 }}
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 450, damping: 30 }}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={cn(
+                  "flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3.5 p-2.5 md:p-3 rounded-xl transition-all group shrink-0 relative min-w-[76px] md:min-w-0 md:min-h-[52px] cursor-pointer w-full text-left select-none",
+                  activeTab === tab.id 
+                    ? "bg-proton-accent/10 text-proton-accent shadow-lg border border-proton-accent/20 font-black" 
+                    : "text-proton-muted hover:text-proton-text hover:bg-white/5 font-semibold"
+                )}
+                id={`tab-settings-${tab.id}`}
+              >
+                <div className={cn(
+                  "w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition-all shrink-0",
+                  activeTab === tab.id ? "bg-proton-accent text-proton-bg shadow-lg shadow-proton-accent/20" : "bg-proton-secondary/20 text-proton-muted group-hover:bg-proton-secondary/30"
+                )}>
+                  <tab.icon size={18} />
+                </div>
+                <span className="block md:hidden text-[9px] font-black uppercase tracking-tight text-center whitespace-nowrap leading-tight">{tab.shortLabel}</span>
+                <span className="hidden md:block text-[11px] font-black uppercase tracking-wider flex-1 text-left whitespace-normal break-words leading-tight">{tab.label}</span>
+                {tab.id === 'profile' && isProfileDirty && (
+                  <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 text-[9px] font-mono font-bold animate-pulse shrink-0 absolute top-1.5 right-1.5 md:relative md:top-auto md:right-auto" title="Unsaved changes">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  </span>
+                )}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* Mobile Right-Edge Scroll Overflow Indicator */}
+          <div 
+            className={cn(
+              "md:hidden absolute top-0 right-0 bottom-0 w-8 sm:w-10 pointer-events-none bg-gradient-to-l from-proton-card via-proton-card/75 to-transparent z-20 transition-opacity duration-300",
+              canScrollRight ? "opacity-100" : "opacity-0"
+            )}
+            aria-hidden="true"
+          />
         </div>
 
         {/* Settings Content */}

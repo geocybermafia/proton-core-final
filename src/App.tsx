@@ -6591,7 +6591,7 @@ export default function App() {
               </div>
               <button
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="w-9 h-9 min-w-[36px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text flex items-center justify-center shrink-0 cursor-pointer transition-all"
+                className="w-11 h-11 min-w-[44px] md:w-9 md:h-9 md:min-w-[36px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text flex items-center justify-center shrink-0 cursor-pointer transition-all"
                 title={language === 'ka' ? 'დახურვა' : 'Close Search'}
                 aria-label="Close search"
               >
