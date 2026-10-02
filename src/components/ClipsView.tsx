@@ -247,6 +247,8 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     height: number;
     isHighRes: boolean;
     isLargeFile: boolean;
+    isMovOrQuickTime?: boolean;
+    isDecodeWarning?: boolean;
     acknowledged: boolean;
   } | null>(null);
 
@@ -278,6 +280,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   const [doubleTapHearts, setDoubleTapHearts] = useState<{ [clipId: string]: boolean }>({});
   const [loadedVideoIds, setLoadedVideoIds] = useState<{ [clipId: string]: boolean }>({});
   const [failedVideoIds, setFailedVideoIds] = useState<{ [clipId: string]: boolean }>({});
+  const [fallbackOverrideUrls, setFallbackOverrideUrls] = useState<{ [clipId: string]: string }>({});
   const [dynamicPlaceholderThumbnails, setDynamicPlaceholderThumbnails] = useState<{ [clipId: string]: string }>({});
   const [expandedCaptions, setExpandedCaptions] = useState<{ [clipId: string]: boolean }>({});
 
@@ -410,6 +413,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
 
   // Video URL helper
   const getClipVideoUrl = (clip: Clip, index?: number): string => {
+    if (fallbackOverrideUrls[clip.id]) return fallbackOverrideUrls[clip.id];
     if (clip.videoUrl && clip.videoUrl.startsWith('http')) return clip.videoUrl;
     const fallbackIdx = (index !== undefined ? index : 0) % PRESET_LOOPS.length;
     return PRESET_LOOPS[fallbackIdx].url;
@@ -602,6 +606,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     // Inspect file size & resolution
     const sizeMB = +(file.size / (1024 * 1024)).toFixed(1);
     const isLargeFile = file.size > 50 * 1024 * 1024; // > 50MB
+    const isMovOrQuickTime = file.type === 'video/quicktime' || file.name.toLowerCase().endsWith('.mov');
 
     const tempVideo = document.createElement('video');
     tempVideo.preload = 'metadata';
@@ -610,18 +615,32 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       const width = tempVideo.videoWidth || 0;
       const height = tempVideo.videoHeight || 0;
       const isHighRes = width >= 2160 || height >= 2160 || (width >= 1440 && height >= 2560);
-      if (isLargeFile || isHighRes) {
+      if (isLargeFile || isHighRes || isMovOrQuickTime) {
         setVideoQualityWarning({
           sizeMB,
           width,
           height,
           isHighRes,
           isLargeFile,
+          isMovOrQuickTime,
+          isDecodeWarning: false,
           acknowledged: false,
         });
       } else {
         setVideoQualityWarning(null);
       }
+    };
+    tempVideo.onerror = () => {
+      setVideoQualityWarning({
+        sizeMB,
+        width: 0,
+        height: 0,
+        isHighRes: false,
+        isLargeFile,
+        isMovOrQuickTime,
+        isDecodeWarning: true,
+        acknowledged: false,
+      });
     };
   };
 
@@ -1112,7 +1131,18 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               onVideoPlayStateChange={(playing) => setIsPlaying(playing)}
               onVideoBufferingStateChange={() => {}}
               onVideoLoadSuccess={(id) => setLoadedVideoIds(prev => ({ ...prev, [id]: true }))}
-              onVideoFallback={(id, _url) => setFailedVideoIds(prev => ({ ...prev, [id]: true }))}
+              onVideoFallback={(id, url) => {
+                if (url) {
+                  setFallbackOverrideUrls(prev => ({ ...prev, [id]: url }));
+                  setFailedVideoIds(prev => {
+                    const next = { ...prev };
+                    delete next[id];
+                    return next;
+                  });
+                } else {
+                  setFailedVideoIds(prev => ({ ...prev, [id]: true }));
+                }
+              }}
             />
           ))
         )}

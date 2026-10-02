@@ -595,8 +595,8 @@ export function ClipPlayer({
               </h4>
               <p className="text-[10px] sm:text-[11px] text-proton-muted max-w-[280px] leading-relaxed">
                 {language === 'ka' 
-                  ? 'ბრაუზერს არ აქვს ამ ვიდეოს კოდეკის მხარდაჭერა. გთხოვთ გამოიყენოთ MP4.' 
-                  : 'This specific video codec is not supported by your browser.'}
+                  ? 'ბრაუზერს არ აქვს ამ ვიდეოს კოდეკის (მაგ. HEVC) მხარდაჭერა. გთხოვთ გამოიყენოთ MP4.' 
+                  : 'This specific video codec (e.g. HEVC/QuickTime) is not supported by your browser.'}
               </p>
               <button
                 onClick={(e) => {

@@ -24,6 +24,8 @@ export interface VideoQualityWarning {
   height: number;
   isHighRes: boolean;
   isLargeFile: boolean;
+  isMovOrQuickTime?: boolean;
+  isDecodeWarning?: boolean;
   acknowledged: boolean;
 }
 
@@ -211,7 +213,7 @@ export function ClipUploadModal({
                               {localVideoFile.name}
                             </p>
                             <p className="text-[10px] text-proton-muted font-mono uppercase tracking-widest">
-                              {(localVideoFile.size / (1024 * 1024)).toFixed(2)} MB • MP4 Video
+                              {(localVideoFile.size / (1024 * 1024)).toFixed(2)} MB • {localVideoFile.name.split('.').pop()?.toUpperCase() || 'MP4'} Video
                             </p>
                             <button
                               type="button"
@@ -240,21 +242,31 @@ export function ClipUploadModal({
                       </div>
                     </div>
 
-                    {/* High-Resolution / Large Media Advisory Card */}
+                    {/* Media Quality & Compatibility Advisory Card */}
                     {localVideoFile && videoQualityWarning && !videoQualityWarning.acknowledged && (
                       <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5 animate-in fade-in slide-in-from-top-2">
                         <div className="flex items-start gap-2.5">
                           <AlertTriangle className="text-amber-400 shrink-0 mt-0.5" size={16} />
                           <div className="space-y-1">
                             <h4 className="text-xs font-black text-amber-300">
-                              {language === 'ka' 
-                                ? 'მაღალი გარჩევადობის / დიდი ზომის ვიდეო' 
-                                : 'High-Resolution / Heavy Media Advisory'}
+                              {videoQualityWarning.isDecodeWarning
+                                ? (language === 'ka' ? 'კოდეკის თავსებადობის გაფრთხილება' : 'Codec Compatibility Advisory')
+                                : videoQualityWarning.isMovOrQuickTime
+                                  ? (language === 'ka' ? 'ვიდეო ფორმატის თავსებადობა' : 'Video Compatibility Advisory')
+                                  : (language === 'ka' ? 'მაღალი გარჩევადობის / დიდი ზომის ვიდეო' : 'High-Resolution / Heavy Media Advisory')}
                             </h4>
                             <p className="text-[11px] text-amber-200/80 leading-relaxed">
-                              {language === 'ka'
-                                ? `ვიდეოს გარჩევადობაა ${videoQualityWarning.width}×${videoQualityWarning.height} (${videoQualityWarning.sizeMB} MB). ატვირთვა და მობილურზე ჩვენება შეიძლება მეტ ტრაფიკსა და დროს მოითხოვდეს.`
-                                : `Detected resolution of ${videoQualityWarning.width}×${videoQualityWarning.height} (${videoQualityWarning.sizeMB} MB). This file will upload in original quality, which may take longer on slower connections.`}
+                              {videoQualityWarning.isDecodeWarning
+                                ? (language === 'ka'
+                                    ? 'თქვენს ბრაუზერს გაუჭირდა ამ ვიდეო ფაილის წაკითხვა. შესაძლოა ზოგიერთ მოწყობილობაზე (Android, Windows) ვერ ჩაირთოს. რეკომენდირებულია სტანდარტული MP4 (H.264).'
+                                    : 'Your current browser could not decode this video file. It may not play on certain Android or Windows devices. For universal playback, standard MP4 (H.264) is recommended.')
+                                : videoQualityWarning.isMovOrQuickTime
+                                  ? (language === 'ka'
+                                      ? 'შერჩეულია QuickTime (.mov) ვიდეო. Apple HEVC/QuickTime ფორმატი შესაძლოა ყველა არა-Apple მოწყობილობაზე არ გაიხსნას. მაქსიმალური თავსებადობისთვის რეკომენდირებულია სტანდარტული MP4 (H.264).'
+                                      : 'QuickTime (.mov) video selected. Apple HEVC/QuickTime streams may not play on all non-Apple devices. For universal playback across all platforms, standard MP4 (H.264) is recommended.')
+                                  : (language === 'ka'
+                                      ? `ვიდეოს გარჩევადობაა ${videoQualityWarning.width}×${videoQualityWarning.height} (${videoQualityWarning.sizeMB} MB). ატვირთვა და მობილურზე ჩვენება შეიძლება მეტ ტრაფიკსა და დროს მოითხოვდეს.`
+                                      : `Detected resolution of ${videoQualityWarning.width}×${videoQualityWarning.height} (${videoQualityWarning.sizeMB} MB). This file will upload in original quality, which may take longer on slower connections.`)}
                             </p>
                           </div>
                         </div>
