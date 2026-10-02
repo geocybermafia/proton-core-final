@@ -614,7 +614,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                       <button
                         type="button"
                         onClick={(e) => deleteNotification(item.id, e)}
-                        className="absolute right-2.5 top-2.5 p-1 rounded-lg text-proton-muted hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
+                        className="absolute right-2.5 top-2.5 p-1 rounded-lg text-proton-muted hover:text-red-400 hover:bg-red-500/10 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
                         title={language === 'ka' ? 'წაშლა' : 'Delete'}
                       >
                         <Trash2 size={12} />
