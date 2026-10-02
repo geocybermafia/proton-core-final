@@ -123,7 +123,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
               transition={{ delay: idx * 0.1, duration: 0.5 }}
               onClick={card.action}
               className={cn(
-                "group relative p-6 md:p-8 rounded-[32px] border border-proton-border bg-gradient-to-b from-proton-card/50 to-proton-bg hover:bg-proton-card/80 cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-sm",
+                "group relative p-4 sm:p-6 md:p-8 rounded-[32px] border border-proton-border bg-gradient-to-b from-proton-card/50 to-proton-bg hover:bg-proton-card/80 cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-sm",
                 "hover:shadow-lg hover:-translate-y-1"
               )}
             >
