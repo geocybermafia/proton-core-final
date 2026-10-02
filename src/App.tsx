@@ -4012,7 +4012,7 @@ const MobileBottomNav = React.memo(({
     }
   }, [setIsMobileControlOpen, handleViewChange]);
 
-  const isVisible = isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas';
+  const isVisible = isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas' || (activeView as string) === 'market-hub' || (activeView as string) === 'translator';
 
   return (
     <nav 
@@ -5766,7 +5766,7 @@ export default function App() {
       {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
       {((activeView as string) === 'market-hub' || hasVisitedMarketHub) && (
         <div 
-          className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
+          className={cn("fixed inset-0 z-[45] md:z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
         >
           <Suspense fallback={
             <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
@@ -5790,7 +5790,7 @@ export default function App() {
       {((activeView as string) === 'translator' || hasVisitedTranslator) && (
         <div 
           style={{ contain: 'strict', transform: 'translateZ(0)', willChange: 'transform' }}
-          className={cn("fixed inset-0 z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}
+          className={cn("fixed inset-0 z-[45] md:z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}
         >
           <Suspense fallback={
             <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
