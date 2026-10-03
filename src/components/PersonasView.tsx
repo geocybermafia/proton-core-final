@@ -85,7 +85,7 @@ function PersonaAvatarView({
 
   return (
     <div className="relative inline-block shrink-0">
-      <div className={cn("rounded-xl overflow-hidden bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center select-none font-mono font-bold text-cyan-300 shadow-[0_0_10px_rgba(0,243,255,0.15)]", sizeClasses[size], className)}>
+      <div className={cn("rounded-xl overflow-hidden bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center select-none font-mono font-bold text-cyan-300 shadow-sm", sizeClasses[size], className)}>
         {isUrl && !hasImageError ? (
           <img
             src={trimmed}
@@ -101,7 +101,7 @@ function PersonaAvatarView({
         <span
           className={cn(
             'absolute -bottom-0.5 -right-0.5 rounded-full ring-2 ring-black w-3 h-3',
-            status === 'online' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse' : 'bg-zinc-500'
+            status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-500'
           )}
         />
       )}
@@ -710,7 +710,7 @@ ${
       {/* Persona Selector Sidebar */}
       <div 
         className={cn(
-          "w-full md:w-80 flex flex-col h-full min-h-0 flex-shrink-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_25px_rgba(0,243,255,0.1)] relative overflow-hidden",
+          "w-full md:w-80 flex flex-col h-full min-h-0 flex-shrink-0 backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-xl relative overflow-hidden",
           (mobileShowChat || selectedPersona) ? "hidden md:flex" : "flex"
         )}
       >
@@ -719,7 +719,7 @@ ${
 
         <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-black/40 flex justify-between items-center relative flex-shrink-0 z-10 w-full">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)] animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
             <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-cyan-400 flex items-center gap-2">
               <Cpu size={14} className="text-cyan-400 animate-pulse" />
               {t.title}
@@ -728,7 +728,7 @@ ${
           <button 
             onClick={() => setIsCreatorOpen(true)}
             title={language === 'ka' ? 'ახალი ასისტენტის დამატება' : 'Deploy New AI Assistant'}
-            className="p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,243,255,0.3)] transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
+            className="p-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:border-cyan-400 transition-all duration-300 cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold"
           >
             <Plus size={16} strokeWidth={2.5} />
             <span className="hidden sm:inline text-[10px] uppercase tracking-wider">{language === 'ka' ? 'ახალი' : 'DEPLOY'}</span>
@@ -751,12 +751,12 @@ ${
                 className={cn(
                   "w-full flex items-center gap-3.5 p-3 rounded-xl transition-all duration-300 text-left group border text-xs select-none relative cursor-pointer overflow-hidden",
                   isSelected 
-                    ? "bg-gradient-to-r from-cyan-950/70 to-black/80 border-cyan-400 text-cyan-200 shadow-[0_0_20px_rgba(0,243,255,0.25)] ring-1 ring-cyan-400/40" 
-                    : "bg-black/40 border-cyan-900/30 text-slate-400 hover:border-cyan-500/50 hover:bg-cyan-950/20 hover:text-slate-200 hover:shadow-[0_0_15px_rgba(0,243,255,0.15)]"
+                    ? "bg-gradient-to-r from-cyan-950/70 to-black/80 border-cyan-400 text-cyan-200 ring-1 ring-cyan-400/40" 
+                    : "bg-black/40 border-cyan-900/30 text-slate-400 hover:border-cyan-500/50 hover:bg-cyan-950/20 hover:text-slate-200"
                 )}
               >
                 {isSelected && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.9)]" />
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400" />
                 )}
                 
                 <PersonaAvatarView 
@@ -776,7 +776,7 @@ ${
                     )}
                   </div>
                   <div className="text-[9px] font-mono uppercase tracking-wider truncate mt-1 text-slate-400 flex items-center gap-1.5">
-                    <span className={cn("inline-block w-1.5 h-1.5 rounded-full shrink-0", isSelected ? "bg-cyan-400 shadow-[0_0_6px_rgba(0,243,255,0.8)]" : "bg-slate-600")} />
+                    <span className={cn("inline-block w-1.5 h-1.5 rounded-full shrink-0", isSelected ? "bg-cyan-400" : "bg-slate-600")} />
                     <span className="truncate">{language === 'ka' ? (p.roleGe || p.role) : p.role}</span>
                   </div>
                 </div>
@@ -795,7 +795,7 @@ ${
       {/* Main Chat Interface */}
       <div 
         className={cn(
-        "flex-1 flex flex-col h-full min-h-0 overflow-hidden backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-[0_0_35px_rgba(0,243,255,0.1)] relative",
+        "flex-1 flex flex-col h-full min-h-0 overflow-hidden backdrop-blur-xl bg-black/70 border border-cyan-500/30 rounded-2xl shadow-xl relative",
         mobileShowChat 
           ? "fixed inset-0 z-[80] bg-black/90 md:relative md:inset-auto md:z-auto md:bg-black/70 md:border md:border-cyan-500/30 md:rounded-2xl h-[100dvh] md:h-full" 
           : "hidden md:flex md:relative"
@@ -831,14 +831,14 @@ ${
                        <h3 className="font-mono font-black text-sm sm:text-base tracking-tight text-cyan-100 truncate max-w-[180px] sm:max-w-xs md:max-w-md">
                          {language === 'ka' ? (selectedPersona.nameGe || selectedPersona.name) : selectedPersona.name}
                        </h3>
-                       <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,243,255,0.2)]">
+                       <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest bg-cyan-500/15 text-cyan-300 border border-cyan-500/40">
                          {language === 'ka' ? 'დროებით მიუწვდომელია' : 'Temporarily Unavailable'}
                        </span>
                      </div>
                      <div className="flex items-center gap-2 text-[9px] font-mono font-bold tracking-[0.2em] text-cyan-400 uppercase mt-0.5">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.9)]"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
                         </span>
                         <span className="truncate max-w-[160px] sm:max-w-none text-slate-300">{language === 'ka' ? (selectedPersona.roleGe || selectedPersona.role) : selectedPersona.role}</span>
                      </div>
@@ -846,7 +846,7 @@ ${
                  </>
                ) : (
                  <>
-                   <div className="w-12 h-12 rounded-xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.15)]">
+                   <div className="w-12 h-12 rounded-xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
                      <Users size={20} />
                    </div>
                    <div>
@@ -865,13 +865,13 @@ ${
            {selectedPersona && (
              <div className="flex gap-2 items-center">
                 {showConfirmClear ? (
-                  <div className="flex items-center gap-1.5 bg-red-950/70 border border-red-500/50 px-2 py-1 rounded-xl h-9 animate-in fade-in zoom-in-95 duration-200 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                  <div className="flex items-center gap-1.5 bg-red-950/70 border border-red-500/50 px-2 py-1 rounded-xl h-9 animate-in fade-in zoom-in-95 duration-200">
                     <span className="text-[10px] font-mono font-bold uppercase text-red-300 tracking-wider">
                       {language === 'ka' ? 'წავშალო?' : 'Clear?'}
                     </span>
                     <button
                       onClick={handleClearChat}
-                      className="px-2 py-1 bg-red-500 hover:bg-red-400 text-black rounded-lg text-[9px] font-mono font-black cursor-pointer transition-all shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                      className="px-2 py-1 bg-red-500 hover:bg-red-400 text-black rounded-lg text-[9px] font-mono font-black cursor-pointer transition-all"
                     >
                       {language === 'ka' ? 'კი' : 'Yes'}
                     </button>
@@ -885,7 +885,7 @@ ${
                 ) : (
                   <button 
                     onClick={() => setShowConfirmClear(true)}
-                    className="p-2.5 bg-black/40 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-cyan-500/40 hover:shadow-[0_0_12px_rgba(0,243,255,0.2)] cursor-pointer"
+                    className="p-2.5 bg-black/40 hover:bg-cyan-500/10 hover:text-cyan-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-cyan-500/40 cursor-pointer"
                     title={language === 'ka' ? 'ჩატის გასუფთავება' : 'Clear Chat History'}
                   >
                      <RotateCcw size={16} />
@@ -896,8 +896,8 @@ ${
                    className={cn(
                       "p-2.5 rounded-xl transition-all border cursor-pointer",
                       isEditingInstructions 
-                        ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(0,243,255,0.3)]" 
-                        : "bg-black/40 text-slate-400 border-cyan-900/30 hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:text-cyan-300 hover:shadow-[0_0_12px_rgba(0,243,255,0.2)]"
+                        ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 ring-1 ring-cyan-400/40" 
+                        : "bg-black/40 text-slate-400 border-cyan-900/30 hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:text-cyan-300"
                    )}
                    title={language === 'ka' ? 'სისტემური ინსტრუქციების რედაქტირება' : 'Edit System Instructions'}
                 >
@@ -908,7 +908,7 @@ ${
                     setDecomTarget(selectedPersona);
                     setIsDecommissioning(true);
                   }}
-                  className="p-2.5 bg-black/40 hover:bg-red-500/20 hover:text-red-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-red-500/40 hover:shadow-[0_0_12px_rgba(239,68,68,0.3)] cursor-pointer"
+                  className="p-2.5 bg-black/40 hover:bg-red-500/20 hover:text-red-300 rounded-xl text-slate-400 transition-all border border-cyan-900/30 hover:border-red-500/40 cursor-pointer"
                   title={language === 'ka' ? 'ასისტენტის წაშლა' : 'Delete AI Assistant'}
                 >
                    <Trash2 size={16} />
@@ -924,7 +924,7 @@ ${
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-b border-cyan-500/30 bg-black/90 backdrop-blur-xl shadow-[0_0_25px_rgba(0,243,255,0.15)] flex-shrink-0 w-full z-20"
+              className="overflow-hidden border-b border-cyan-500/30 bg-black/90 backdrop-blur-xl shadow-lg flex-shrink-0 w-full z-20"
             >
               <div className="p-5 space-y-4">
                 <div className="flex justify-between items-center">
@@ -943,7 +943,7 @@ ${
                     <button
                       key={idx}
                       onClick={() => setEditingInstructions(p.prompt)}
-                      className="p-2.5 text-left bg-cyan-950/20 hover:bg-cyan-500/15 border border-cyan-900/40 hover:border-cyan-400/80 hover:shadow-[0_0_12px_rgba(0,243,255,0.25)] rounded-xl group transition-all cursor-pointer shrink-0 w-52 md:w-auto hover:scale-[1.01]"
+                      className="p-2.5 text-left bg-cyan-950/20 hover:bg-cyan-500/15 border border-cyan-900/40 hover:border-cyan-400/80 rounded-xl group transition-all cursor-pointer shrink-0 w-52 md:w-auto hover:scale-[1.01]"
                     >
                       <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-200 group-hover:text-cyan-300 transition-colors">
                         {language === 'ka' ? p.titleKa : p.titleEn}
@@ -961,7 +961,7 @@ ${
                   onKeyDown={(e) => e.stopPropagation()}
                   onKeyUp={(e) => e.stopPropagation()}
                   onKeyPress={(e) => e.stopPropagation()}
-                  className="w-full h-24 sm:h-32 p-3.5 bg-black/80 border border-cyan-500/40 rounded-xl text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,243,255,0.3)] focus:ring-1 focus:ring-cyan-400 transition-all font-mono leading-relaxed"
+                  className="w-full h-24 sm:h-32 p-3.5 bg-black/80 border border-cyan-500/40 rounded-xl text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-mono leading-relaxed"
                   placeholder={language === 'ka' ? 'შეიყვანეთ სისტემური ინსტრუქცია ასისტენტისთვის...' : 'Specify system instructions for the AI assistant...'}
                 />
 
@@ -990,7 +990,7 @@ ${
                     <button
                       onClick={handleSaveInstructions}
                       disabled={isSavingInstructions}
-                      className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-black rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(0,243,255,0.4)]"
+                      className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-black rounded-xl text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 cursor-pointer"
                     >
                       {isSavingInstructions 
                         ? (language === 'ka' ? 'ინახება...' : 'Compiling...')
@@ -1012,7 +1012,7 @@ ${
               initial={{ opacity: 0, scale: 0.98, y: 8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_40px_rgba(0,243,255,0.08)] text-center flex flex-col items-center relative overflow-hidden shrink-0 my-auto"
+              className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-black/60 border border-cyan-500/25 backdrop-blur-xl shadow-2xl text-center flex flex-col items-center relative overflow-hidden shrink-0 my-auto"
             >
               {/* Subtle top ambient bar */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0" />
@@ -1029,7 +1029,7 @@ ${
               </div>
 
               {/* Icon */}
-              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5 shadow-[0_0_25px_rgba(0,243,255,0.15)]">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 mb-5">
                 <Sparkles size={32} className="text-cyan-400" />
               </div>
 
@@ -1061,7 +1061,7 @@ ${
           /* Empty State Viewport */
           <div className="flex-1 min-h-0 flex flex-col items-center overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-black/20 via-black/40 to-black/80 relative z-10 w-full custom-scrollbar-minimal">
             <div className="flex flex-col items-center justify-center text-center p-8 space-y-6 my-auto shrink-0">
-               <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shadow-[0_0_25px_rgba(0,243,255,0.2)]">
+               <div className="w-20 h-20 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
                      <Users size={40} strokeWidth={1.5} />
                </div>
                <div className="space-y-2 max-w-sm">
@@ -1118,7 +1118,7 @@ ${
                       ? "📋 შეაჯამე დღევანდელი გაყიდვები, შემოსავლები და მომლოდინე შეკვეთები." 
                       : "📋 Summarize today's sales, revenue & pending orders.");
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,243,255,0.1)] shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-cyan-950/60 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
                 >
                   <FileText size={13} className="text-cyan-400" />
                   <span>{language === 'ka' ? "📋 გაყიდვების & შეკვეთების შეჯამება" : "📋 Summarize Today's Sales & Orders"}</span>
@@ -1133,7 +1133,7 @@ ${
                       ? "⚠️ შეადგინე მარაგების შევსების გეგმა დაბალი ნაშთის მქონე პროდუქტებისთვის." 
                       : "⚠️ Draft restock plan for low stock items.");
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-amber-950/60 hover:bg-amber-500/20 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.1)] shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-amber-950/60 hover:bg-amber-500/20 border border-amber-500/40 hover:border-amber-400 text-amber-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
                 >
                   <Zap size={13} className="text-amber-400" />
                   <span>{language === 'ka' ? "⚠️ დაბალი ნაშთების შევსების გეგმა" : "⚠️ Draft Restock Plan for Low Stock"}</span>
@@ -1156,7 +1156,7 @@ ${
                         : "✉️ Draft customer order confirmation and fulfillment message template.");
                     }
                   }}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-500/20 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.1)] shrink-0"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-500/20 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 text-[10px] font-mono font-bold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1.5 shrink-0"
                 >
                   <Send size={13} className="text-emerald-400" />
                   <span>{language === 'ka' ? "✉️ შეტყობინება შეკვეთაზე" : "✉️ Draft Customer Message for Order"}</span>
@@ -1173,7 +1173,7 @@ ${
                     className={cn(
                       "p-2 rounded-xl border transition-all cursor-pointer",
                       showTools
-                        ? "bg-cyan-500/30 border-cyan-400 text-cyan-200 shadow-[0_0_12px_rgba(0,243,255,0.3)]"
+                        ? "bg-cyan-500/30 border-cyan-400 text-cyan-200 ring-1 ring-cyan-400/40"
                         : "border-cyan-500/30 bg-cyan-950/40 text-cyan-400 hover:bg-cyan-500/20"
                     )}
                     title={language === 'ka' ? 'AI ინსტრუმენტები' : 'AI Tools'}
@@ -1204,7 +1204,7 @@ ${
                           ? 'აირჩიეთ ასისტენტი საუბრის დასაწყებად...'
                           : 'Select an assistant from the sidebar to begin...')
                   }
-                  className="w-full bg-black/80 border border-cyan-500/40 rounded-2xl pl-14 pr-16 py-3.5 sm:py-4 text-xs sm:text-sm text-cyan-100 placeholder:text-cyan-600/60 font-sans tracking-wide focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_20px_rgba(0,243,255,0.25)] transition-all"
+                  className="w-full bg-black/80 border border-cyan-500/40 rounded-2xl pl-14 pr-16 py-3.5 sm:py-4 text-xs sm:text-sm text-cyan-100 placeholder:text-cyan-600/60 font-sans tracking-wide focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 transition-all"
                 />
 
                 <div className="absolute right-2.5 flex items-center gap-2 z-40">
@@ -1212,7 +1212,7 @@ ${
                     type="button"
                     disabled={isSending || !input.trim() || isMaintenanceActive}
                     onClick={handleSendMessage}
-                    className="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold rounded-xl border border-cyan-400 transition-all cursor-pointer shadow-[0_0_12px_rgba(0,243,255,0.4)] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold rounded-xl border border-cyan-400 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     title={language === 'ka' ? 'გაგზავნა' : 'Send'}
                   >
                     {isSending ? <Loader2 size={16} className="animate-spin text-black" /> : <Send size={16} strokeWidth={2.5} />}
@@ -1232,7 +1232,7 @@ ${
         size="lg"
         title={
           <div className="flex items-center gap-3">
-            <ProtonIconBox variant="accent" size="sm" className="bg-cyan-500/20 border-cyan-400/50 text-cyan-300 shadow-[0_0_12px_rgba(0,243,255,0.3)]">
+            <ProtonIconBox variant="accent" size="sm" className="bg-cyan-500/20 border-cyan-400/50 text-cyan-300">
               <Laptop size={18} />
             </ProtonIconBox>
             <div>
@@ -1264,7 +1264,7 @@ ${
               isLoading={isCreatingPersona}
               disabled={!newPersonaNameEn.trim()}
               rightIcon={<Check size={14} strokeWidth={3} />}
-              className="bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold shadow-[0_0_15px_rgba(0,243,255,0.4)]"
+              className="bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold"
             >
               Deploy AI Assistant
             </ProtonButton>
@@ -1312,7 +1312,7 @@ ${
                     onClick={() => setNewPersonaLang(l as any)}
                     className={cn(
                       "py-2.5 text-[10px] font-mono font-bold",
-                      newPersonaLang === l ? "bg-cyan-500/20 text-cyan-300 border-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.2)]" : "text-slate-400 hover:text-white"
+                      newPersonaLang === l ? "bg-cyan-500/20 text-cyan-300 border-cyan-400" : "text-slate-400 hover:text-white"
                     )}
                   >
                     {l}
@@ -1374,7 +1374,7 @@ ${
                     className={cn(
                       "w-11 h-11 rounded-xl text-xl flex items-center justify-center border transition-all cursor-pointer select-none",
                       newPersonaAvatarEmoji === av.emoji 
-                        ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 scale-110 shadow-[0_0_15px_rgba(0,243,255,0.3)]" 
+                        ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 scale-110 ring-1 ring-cyan-400/40" 
                         : "bg-black/50 border-cyan-900/40 text-slate-400 hover:bg-black/80 hover:scale-105"
                     )}
                   >
@@ -1428,7 +1428,7 @@ ${
               onKeyUp={(e) => e.stopPropagation()}
               onKeyPress={(e) => e.stopPropagation()}
               placeholder="E.g. Analyze all user statements for business priorities. Structure answers inside highly clean markdown tags..."
-              className="w-full h-28 bg-black/80 border border-cyan-500/40 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,243,255,0.3)] focus:ring-1 focus:ring-cyan-400 rounded-xl p-3.5 text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none transition-all font-mono leading-relaxed"
+              className="w-full h-28 bg-black/80 border border-cyan-500/40 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 rounded-xl p-3.5 text-xs text-cyan-100 placeholder:text-cyan-600/50 focus:outline-none transition-all font-mono leading-relaxed"
             />
           </div>
         </div>
@@ -1467,7 +1467,7 @@ ${
               variant="danger"
               size="sm"
               onClick={handleDecommission}
-              className="bg-red-600 hover:bg-red-500 text-white font-mono font-bold shadow-[0_0_12px_rgba(239,68,68,0.4)]"
+              className="bg-red-600 hover:bg-red-500 text-white font-mono font-bold"
             >
               {language === 'ka' ? 'წაშლა' : 'Delete AI Assistant'}
             </ProtonButton>
@@ -1475,7 +1475,7 @@ ${
         }
       >
         <div className="text-center space-y-4 py-2">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 mx-auto animate-pulse">
             <ShieldAlert size={32} />
           </div>
           <p className="text-xs font-mono text-slate-300 leading-relaxed font-normal">

@@ -272,7 +272,7 @@ app.post('/api/checkout/session', async (req, res) => {
           onClick={() => setActiveSubTab('finance')}
           className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'finance'
-              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
+              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
           }`}
         >
@@ -283,7 +283,7 @@ app.post('/api/checkout/session', async (req, res) => {
           onClick={() => setActiveSubTab('valuation')}
           className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'valuation'
-              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
+              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
           }`}
         >
@@ -294,7 +294,7 @@ app.post('/api/checkout/session', async (req, res) => {
           onClick={() => setActiveSubTab('whitelabel')}
           className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'whitelabel'
-              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
+              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
           }`}
         >
@@ -305,7 +305,7 @@ app.post('/api/checkout/session', async (req, res) => {
           onClick={() => setActiveSubTab('pitch')}
           className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'pitch'
-              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
+              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
           }`}
         >
@@ -316,7 +316,7 @@ app.post('/api/checkout/session', async (req, res) => {
           onClick={() => setActiveSubTab('stripe')}
           className={`flex-1 min-w-[110px] sm:min-w-[140px] flex items-center justify-center gap-2 py-3 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeSubTab === 'stripe'
-              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.08)]'
+              ? 'bg-proton-accent/10 border border-proton-accent/30 text-proton-accent'
               : 'border border-transparent text-proton-muted hover:text-white hover:bg-white/5'
           }`}
         >
@@ -341,7 +341,7 @@ app.post('/api/checkout/session', async (req, res) => {
               {/* Top 4 Financial Reconciled Metrics */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Net Revenue */}
-                <div className="proton-glass p-5 rounded-2xl border border-proton-accent/30 bg-gradient-to-br from-proton-accent/10 to-transparent flex flex-col justify-between">
+                <div className="proton-glass p-5 rounded-2xl border border-proton-accent/30 flex flex-col justify-between">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-[10px] font-mono uppercase text-proton-muted tracking-wider">
                       {language === 'ka' ? 'წმინდა შემოსავალი' : 'Net Revenue'}
@@ -425,7 +425,7 @@ app.post('/api/checkout/session', async (req, res) => {
               {/* Middle Grid: Payout Pipeline & Balance Overview */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Available Balance Box */}
-                <div className="lg:col-span-5 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-accent/40 bg-gradient-to-br from-proton-accent/5 via-proton-bg to-proton-bg flex flex-col justify-between space-y-6">
+                <div className="lg:col-span-5 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-accent/40 flex flex-col justify-between space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-[10px] font-mono uppercase tracking-widest text-proton-muted">
@@ -581,7 +581,7 @@ app.post('/api/checkout/session', async (req, res) => {
                     <button
                       type="submit"
                       disabled={payoutProcessing || sellerStats.walletBalance <= 0}
-                      className="w-full py-3.5 px-4 bg-proton-accent text-proton-bg hover:opacity-90 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,242,255,0.2)] disabled:opacity-50"
+                      className="w-full py-3.5 px-4 bg-proton-accent text-proton-bg hover:opacity-90 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                     >
                       {payoutProcessing ? (
                         <>
@@ -854,9 +854,7 @@ app.post('/api/checkout/session', async (req, res) => {
               {/* Right calculated outcomes */}
               <div className="lg:col-span-5 flex flex-col gap-6">
                 {/* Outlined Price Widget */}
-                <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-accent/30 bg-gradient-to-br from-proton-accent/5 to-proton-bg flex flex-col justify-beteen relative overflow-hidden">
-                  <div className="absolute right-[-40px] top-[-40px] w-24 h-24 bg-proton-accent/10 rounded-full blur-2xl" />
-                  
+                <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-accent/30 flex flex-col justify-between relative overflow-hidden">
                   <span className="text-[10px] font-mono tracking-widest uppercase text-proton-muted mb-1 block">
                     {t.valuationEst}
                   </span>
@@ -1047,7 +1045,7 @@ High-Value Infrastructure Assets Included:
                             AI
                           </div>
                         )}
-                        <span className="text-xs font-black uppercase tracking-wide text-white" style={{ textShadow: `0 0 10px ${accentColor}44` }}>
+                        <span className="text-xs font-black uppercase tracking-wide text-white">
                           {brandName}
                         </span>
                       </div>
