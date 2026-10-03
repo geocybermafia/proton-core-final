@@ -707,20 +707,20 @@ const LegacyOrganizerView = ({
   const themes = {
     enterprise: {
       container: "bg-[#0B0F17] text-[#F9FAFB]",
-      card: "bg-[#111827] border-white/10 shadow-xl rounded-[32px]",
+      card: "bg-[#111827] border-white/10 shadow-xl rounded-xl",
       accent: "text-indigo-400 bg-indigo-500/10 border-indigo-500/20",
-      button: "bg-indigo-600 text-white hover:bg-indigo-500 rounded-2xl font-bold shadow-lg shadow-indigo-600/20",
-      input: "bg-[#111827] border-white/10 text-[#F9FAFB] focus:border-indigo-500 rounded-2xl",
+      button: "bg-indigo-600 text-white hover:bg-indigo-500 rounded-xl font-bold shadow-lg shadow-indigo-600/20",
+      input: "bg-[#111827] border-white/10 text-[#F9FAFB] focus:border-indigo-500 rounded-xl",
       label: "text-[#9CA3AF] font-bold tracking-tight",
       muted: "text-[#9CA3AF]",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: #F9FAFB !important; } .react-calendar__tile--active { background: #6366F1 !important; color: white !important; font-weight: bold; }`
     },
     light: {
       container: "bg-[#f8fafc] text-slate-900",
-      card: "bg-white border-slate-200 shadow-xl rounded-[32px]",
+      card: "bg-white border-slate-200 shadow-xl rounded-xl",
       accent: "text-blue-600 bg-blue-50 border-blue-100",
-      button: "bg-slate-900 text-white rounded-2xl shadow-lg",
-      input: "bg-white border-slate-200 text-slate-900 focus:border-blue-500 rounded-2xl",
+      button: "bg-slate-900 text-white rounded-xl shadow-lg",
+      input: "bg-white border-slate-200 text-slate-900 focus:border-blue-500 rounded-xl",
       label: "text-slate-500 font-bold tracking-tight",
       muted: "text-slate-400",
       calendar: `
@@ -735,70 +735,70 @@ const LegacyOrganizerView = ({
     },
     titanium: {
       container: "bg-slate-950 text-slate-100",
-      card: "bg-slate-900 border-slate-800 shadow-2xl rounded-3xl",
+      card: "bg-slate-900 border-slate-800 shadow-2xl rounded-xl",
       accent: "text-slate-400 bg-slate-400/10 border-slate-400/20",
-      button: "bg-slate-100 text-slate-900 rounded-2xl font-black shadow-lg",
-      input: "bg-slate-950/50 border-slate-700 text-slate-100 focus:border-slate-500 rounded-2xl",
+      button: "bg-slate-100 text-slate-900 rounded-xl font-black shadow-lg",
+      input: "bg-slate-950/50 border-slate-700 text-slate-100 focus:border-slate-500 rounded-xl",
       label: "text-slate-500 font-black uppercase tracking-widest",
       muted: "text-slate-500",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #f1f5f9 !important; color: #0f172a !important; }`
     },
     proton: {
       container: "bg-black text-cyan-400",
-      card: "bg-black border-cyan-500/20 shadow-[0_0_30px_rgba(34,211,238,0.1)] rounded-[32px]",
+      card: "bg-black border-cyan-500/20 shadow-[0_0_30px_rgba(34,211,238,0.1)] rounded-xl",
       accent: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20",
-      button: "bg-cyan-500 text-black rounded-2xl font-black shadow-[0_0_20px_rgba(34,211,238,0.4)]",
-      input: "bg-black/80 border-cyan-900 text-cyan-400 focus:border-cyan-400 rounded-2xl",
+      button: "bg-cyan-500 text-black rounded-xl font-black shadow-[0_0_20px_rgba(34,211,238,0.4)]",
+      input: "bg-black/80 border-cyan-900 text-cyan-400 focus:border-cyan-400 rounded-xl",
       label: "text-cyan-400/60 font-mono italic",
       muted: "text-cyan-900",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: #22d3ee !important; } .react-calendar__tile--active { background: #22d3ee !important; color: black !important; font-weight: bold; }`
     },
     forest: {
       container: "bg-[#022c22] text-emerald-100",
-      card: "bg-emerald-950/40 border-emerald-500/10 shadow-2xl rounded-[32px]",
+      card: "bg-emerald-950/40 border-emerald-500/10 shadow-2xl rounded-xl",
       accent: "text-emerald-400 bg-emerald-400/10 border-emerald-400/10",
-      button: "bg-emerald-600 text-white rounded-2xl shadow-emerald-500/20",
-      input: "bg-emerald-950/50 border-emerald-900 text-emerald-100 focus:border-emerald-500 rounded-2xl",
+      button: "bg-emerald-600 text-white rounded-xl shadow-emerald-500/20",
+      input: "bg-emerald-950/50 border-emerald-900 text-emerald-100 focus:border-emerald-500 rounded-xl",
       label: "text-emerald-500/60 font-black uppercase tracking-tight",
       muted: "text-emerald-800",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #10b981 !important; color: white !important; }`
     },
     sunset: {
       container: "bg-[#431407] text-orange-100",
-      card: "bg-black/20 border-orange-500/10 shadow-2xl rounded-[32px]",
+      card: "bg-black/20 border-orange-500/10 shadow-2xl rounded-xl",
       accent: "text-orange-400 bg-orange-400/10 border-orange-400/10",
-      button: "bg-orange-600 text-white rounded-2xl shadow-orange-500/20",
-      input: "bg-black/30 border-orange-900 text-orange-100 focus:border-orange-500 rounded-2xl",
+      button: "bg-orange-600 text-white rounded-xl shadow-orange-500/20",
+      input: "bg-black/30 border-orange-900 text-orange-100 focus:border-orange-500 rounded-xl",
       label: "text-orange-500/60 font-black uppercase tracking-tight",
       muted: "text-orange-900",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #f97316 !important; color: white !important; }`
     },
     rose: {
       container: "bg-[#2d0611] text-rose-100",
-      card: "bg-black/20 border-rose-500/10 shadow-2xl rounded-[32px]",
+      card: "bg-black/20 border-rose-500/10 shadow-2xl rounded-xl",
       accent: "text-rose-400 bg-rose-400/10 border-rose-400/10",
-      button: "bg-rose-600 text-white rounded-2xl shadow-rose-500/20",
-      input: "bg-black/30 border-rose-900 text-rose-100 focus:border-rose-500 rounded-2xl",
+      button: "bg-rose-600 text-white rounded-xl shadow-rose-500/20",
+      input: "bg-black/30 border-rose-900 text-rose-100 focus:border-rose-500 rounded-xl",
       label: "text-rose-500/60 font-black uppercase tracking-tight",
       muted: "text-rose-900",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #e11d48 !important; color: white !important; }`
     },
     vibrant: {
       container: "bg-[#1e1b4b] text-purple-100",
-      card: "bg-purple-950/30 border-purple-500/10 shadow-2xl rounded-[32px]",
+      card: "bg-purple-950/30 border-purple-500/10 shadow-2xl rounded-xl",
       accent: "text-purple-400 bg-purple-400/10 border-purple-400/10",
-      button: "bg-purple-600 text-white rounded-2xl shadow-purple-500/20",
-      input: "bg-black/30 border-purple-900 text-purple-100 focus:border-purple-500 rounded-2xl",
+      button: "bg-purple-600 text-white rounded-xl shadow-purple-500/20",
+      input: "bg-black/30 border-purple-900 text-purple-100 focus:border-purple-500 rounded-xl",
       label: "text-purple-500/60 font-black",
       muted: "text-purple-900",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile--active { background: #9333ea !important; color: white !important; }`
     },
     midnight: {
       container: "bg-black text-white",
-      card: "bg-zinc-900 border-white/5 shadow-2xl rounded-[32px]",
+      card: "bg-zinc-900 border-white/5 shadow-2xl rounded-xl",
       accent: "text-zinc-400 bg-zinc-800 border-white/5",
-      button: "bg-white text-black rounded-2xl font-black shadow-lg",
-      input: "bg-black border-zinc-800 text-white focus:border-white rounded-2xl",
+      button: "bg-white text-black rounded-xl font-black shadow-lg",
+      input: "bg-black border-zinc-800 text-white focus:border-white rounded-xl",
       label: "text-zinc-600 font-black uppercase tracking-widest",
       muted: "text-zinc-800",
       calendar: `.react-calendar { background: transparent !important; border: none !important; width: 100% !important; } .react-calendar__tile { color: white !important; } .react-calendar__tile--active { background: white !important; color: black !important; font-weight: bold; }`
@@ -6738,7 +6738,7 @@ export default function App() {
                       onClick={() => handleViewChange(link.id as any)}
                       title={link.label}
                       className={cn(
-                        "p-2.5 rounded-xl transition-all flex items-center justify-center shrink-0 cursor-pointer",
+                        "p-2 rounded-lg transition-all flex items-center justify-center shrink-0 cursor-pointer",
                         activeView === link.id ? "bg-proton-accent/10 text-proton-accent shadow-[0_0_15px_rgba(0,242,255,0.1)]" : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5"
                       )}
                     >
@@ -6753,7 +6753,7 @@ export default function App() {
                 {/* Mobile-only Search Button */}
                 <button
                   onClick={() => setIsMobileSearchOpen(true)}
-                  className="md:hidden w-9 h-9 min-w-[36px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                  className="md:hidden w-9 h-9 min-w-[36px] rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
                   title={language === 'ka' ? 'ძიება' : 'Search'}
                   aria-label="Open search"
                 >
@@ -6764,7 +6764,7 @@ export default function App() {
                 <button
                   onClick={() => setIsMobileNavDrawerOpen(prev => !prev)}
                   className={cn(
-                    "md:hidden w-9 h-9 min-w-[36px] rounded-xl border transition-all shrink-0 flex items-center justify-center cursor-pointer",
+                    "md:hidden w-9 h-9 min-w-[36px] rounded-lg border transition-all shrink-0 flex items-center justify-center cursor-pointer",
                     isMobileNavDrawerOpen 
                       ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent" 
                       : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-accent"
@@ -6787,7 +6787,7 @@ export default function App() {
                   />
 
                   {/* Elegant Compact Language Selector for 1-click accessibility */}
-                  <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
+                  <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-lg p-0.5 shrink-0 select-none shadow-sm backdrop-blur-subtle">
                     <button
                       type="button"
                       onClick={() => {
@@ -6799,7 +6799,7 @@ export default function App() {
                         }
                       }}
                       className={cn(
-                        "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none cursor-pointer",
+                        "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-md transition-all uppercase tracking-wider select-none cursor-pointer",
                         language === 'en' 
                           ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
                           : "text-proton-muted hover:text-proton-text-light"
@@ -6819,7 +6819,7 @@ export default function App() {
                         }
                       }}
                       className={cn(
-                        "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider select-none cursor-pointer",
+                        "px-1.5 sm:px-2 py-1 text-[9px] font-black rounded-md transition-all uppercase tracking-wider select-none cursor-pointer",
                         language === 'ka' 
                           ? "bg-proton-accent text-proton-bg font-black shadow-sm" 
                           : "text-proton-muted hover:text-proton-text-light"
@@ -6833,7 +6833,7 @@ export default function App() {
                   {user ? (
                     <button 
                       onClick={handleSignOut}
-                      className="w-8 sm:w-10 h-8 sm:h-10 rounded-xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0 cursor-pointer"
+                      className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted hover:text-red-500 hover:border-red-500 transition-all shrink-0 cursor-pointer"
                       title="Firebase Sign Out"
                     >
                       <LogOut size={16} className="sm:w-[18px] sm:h-[18px]" />
@@ -6841,7 +6841,7 @@ export default function App() {
                   ) : (
                     <button 
                       onClick={() => setShowAuth(true)}
-                      className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
+                      className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
                       title={language === 'ka' ? 'შესვლა' : 'Sign In'}
                     >
                       <LogIn size={14} />

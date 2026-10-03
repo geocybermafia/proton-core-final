@@ -2608,7 +2608,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
   if (authLoading) {
     return (
-      <div className={cn("min-h-[600px] rounded-[36px] border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden", currentTheme.card)}>
+      <div className={cn("min-h-[600px] rounded-xl border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden", currentTheme.card)}>
         <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-[#dfb257]/[0.02] blur-[120px] pointer-events-none rounded-full" />
         <div className="flex flex-col items-center gap-5 relative z-10">
           <Loader2 className="w-12 h-12 animate-spin text-[#dfb257] opacity-80" />
@@ -2928,7 +2928,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full pt-1">
             {/* Elegant AI Powered Search Panel */}
             <div className="relative flex-1 group">
-              <div className="relative w-full flex items-center bg-[#101012] rounded-2xl border border-zinc-800/80 focus-within:border-[#dfb257] transition-all min-h-[46px] overflow-hidden shadow-inner">
+              <div className="relative w-full flex items-center bg-[#101012] rounded-xl border border-zinc-800/80 focus-within:border-[#dfb257] transition-all min-h-[46px] overflow-hidden shadow-inner">
                 <Search size={15} className="absolute left-4 opacity-40 text-[#dfb257]" />
                 <input 
                   type="text"
@@ -3146,7 +3146,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         <div className="space-y-10 w-full">
           {/* SPACE-SAVING MOBILE TOOLBAR - Only for Browse View */}
           {viewMode === 'browse' && (
-            <div className="block md:hidden bg-zinc-950/45 border border-zinc-900 rounded-3xl p-4 mb-3.5 space-y-3.5 transition-all">
+            <div className="block md:hidden bg-zinc-950/45 border border-zinc-900 rounded-xl p-4 mb-3.5 space-y-3.5 transition-all">
               {/* Listing Type Select tabs (scrollable with horizontal scroll indicator) */}
               <div className="relative group/typescroll">
                 <div className="flex items-center overflow-x-auto scrollbar-none py-0.5 pr-6">
@@ -3281,7 +3281,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Desktop Left Sidebar: Categories/Filters */}
             {viewMode === 'browse' && (
               <aside className="hidden md:block w-72 shrink-0 space-y-6 sticky top-20 animate-in fade-in slide-in-from-left duration-300">
-                <div className={cn("p-6 rounded-3xl border border-zinc-800/60 backdrop-blur-xl", currentTheme.card)}>
+                <div className={cn("p-6 rounded-xl border border-zinc-800/60 backdrop-blur-xl", currentTheme.card)}>
                   <MarketFilterPanel
                     language={language}
                     t={t}
@@ -3326,9 +3326,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <button
                         type="button"
                         onClick={() => setActiveBottomTab('categories')}
-                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-zinc-900/80 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
+                        <div className="w-9 h-9 rounded-lg bg-zinc-900/80 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
                           <LayoutGrid size={18} />
                         </div>
                         <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase">
@@ -3343,9 +3343,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           setActiveListingType('product');
                           setSearch(language === 'ka' ? 'მეორადი' : 'Used');
                         }}
-                        className="bg-gradient-to-br from-blue-700/40 to-blue-600/30 hover:from-blue-700/60 hover:to-blue-600/40 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-blue-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md relative overflow-hidden group"
+                        className="bg-gradient-to-br from-blue-700/40 to-blue-600/30 hover:from-blue-700/60 hover:to-blue-600/40 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-blue-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md relative overflow-hidden group"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-200">
+                        <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-200">
                           <Coins size={16} />
                         </div>
                         <p className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight uppercase relative z-10">
@@ -3360,9 +3360,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           setActiveCategory('technics');
                           setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
                         }}
-                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-[#dfb257]/10 flex items-center justify-center text-[#dfb257]">
+                        <div className="w-9 h-9 rounded-lg bg-[#dfb257]/10 flex items-center justify-center text-[#dfb257]">
                           📱
                         </div>
                         <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
@@ -3376,9 +3376,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         onClick={() => {
                           setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
                         }}
-                        className="bg-rose-500/5 hover:bg-rose-500/10 p-5 rounded-3xl min-h-[120px] flex flex-col justify-between text-left border border-rose-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
+                        className="bg-rose-500/5 hover:bg-rose-500/10 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-rose-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-400 font-black text-sm">
+                        <div className="w-9 h-9 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-black text-sm">
                           %
                         </div>
                         <p className="text-xs sm:text-sm font-black text-rose-400 tracking-tight leading-tight uppercase">
@@ -3530,7 +3530,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               <div className="space-y-8">
                 {viewMode === 'my-listings' && activeBottomTab === 'messages' && (
                   /* Dedicated Desktop Inbox / Direct Messages layout */
-                  <div className="hidden md:grid grid-cols-12 gap-6 bg-zinc-950/20 border border-zinc-900/60 rounded-[32px] p-6 h-[620px] animate-in fade-in duration-300">
+                  <div className="hidden md:grid grid-cols-12 gap-6 bg-zinc-950/20 border border-zinc-900/60 rounded-xl p-6 h-[620px] animate-in fade-in duration-300">
                     {/* Left Column: Conversational threads */}
                     <div className="col-span-4 border-r border-zinc-900/60 pr-6 flex flex-col h-full overflow-hidden">
                       <div className="pb-4 border-b border-zinc-900/40">
@@ -4008,13 +4008,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           key={order.id}
-                          className={cn("p-8 rounded-[40px] border border-white/5 group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
+                          className={cn("p-8 rounded-xl border border-white/5 group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
                         >
                           <div>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 blur-3xl rounded-full -mr-16 -mt-16" />
                             <div className="flex items-center justify-between mb-6 relative">
                               <div className={cn(
-                                "p-4 rounded-2xl border border-white/5",
+                                "p-4 rounded-lg border border-white/5",
                                 isService 
                                   ? "bg-amber-500/10 text-amber-300" 
                                   : isPhysical 
@@ -4338,8 +4338,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       );
                     })
                   ) : (
-                    <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-zinc-950/40 border border-zinc-900/80 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
-                      <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10 text-white">
+                    <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-zinc-950/40 border border-zinc-900/80 rounded-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
+                      <div className="w-14 h-14 bg-white/5 rounded-xl flex items-center justify-center mx-auto border border-white/10 text-white">
                         {sellerOrderFilter === 'action-required' ? (
                           <CheckCircle2 size={24} className="text-emerald-400" />
                         ) : sellerOrderFilter === 'processing' ? (
@@ -4473,8 +4473,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       </div>
 
             {!loading && !isSearchingBackend && listings.length === 0 && !isFilteredMode && (
-              <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-zinc-950/40 border border-zinc-900 rounded-3xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 bg-[#dfb257]/10 rounded-2xl flex items-center justify-center mx-auto border border-[#dfb257]/20">
+              <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-zinc-950/40 border border-zinc-900 rounded-xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
+                <div className="w-16 h-16 bg-[#dfb257]/10 rounded-xl flex items-center justify-center mx-auto border border-[#dfb257]/20">
                   <LayoutGrid size={28} className="text-[#dfb257]" />
                 </div>
                 <div className="space-y-3">

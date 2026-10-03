@@ -220,7 +220,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
         {/* ========================================================================= */}
         <div className="flex items-center justify-between gap-4 border-b border-white/5 pb-6">
           <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-500/5 border border-amber-400/30 flex items-center justify-center text-amber-400 font-mono text-xs font-black shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400/20 to-amber-500/5 border border-amber-400/30 flex items-center justify-center text-amber-400 font-mono text-xs font-black shadow-[0_0_12px_rgba(245,158,11,0.2)]">
               P
             </div>
             <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
@@ -292,10 +292,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('creative', 'creative-studio');
                 setActiveView('creative-studio');
               }}
-              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-cyan-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              className="group p-4 sm:p-5 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-cyan-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-cyan-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 inline-block">
+                <div className="p-2 rounded-md bg-cyan-500/10 text-cyan-400 inline-block">
                   <Palette size={18} />
                 </div>
                 <div>
@@ -317,10 +317,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('business', 'personas');
                 setActiveView('personas');
               }}
-              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-indigo-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="group p-4 sm:p-5 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-indigo-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-indigo-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 inline-block">
+                <div className="p-2 rounded-md bg-indigo-500/10 text-indigo-400 inline-block">
                   <Sparkles size={18} />
                 </div>
                 <div>
@@ -342,10 +342,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('business', 'blueprints');
                 setActiveView('blueprints');
               }}
-              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-purple-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-purple-400"
+              className="group p-4 sm:p-5 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-purple-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-purple-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 inline-block">
+                <div className="p-2 rounded-md bg-purple-500/10 text-purple-400 inline-block">
                   <WorkflowIcon size={18} />
                 </div>
                 <div>
@@ -367,10 +367,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('market', 'market-hub');
                 setActiveView('market-hub');
               }}
-              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-amber-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-amber-400"
+              className="group p-4 sm:p-5 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-amber-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-amber-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 inline-block">
+                <div className="p-2 rounded-md bg-amber-500/10 text-amber-400 inline-block">
                   <Store size={18} />
                 </div>
                 <div>
@@ -403,7 +403,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                       setUiMode('creative', 'creative-studio');
                       setActiveView('creative-studio');
                     }}
-                    className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/10 hover:border-cyan-500/40 text-xs text-zinc-300 hover:text-white transition-colors"
+                    className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-white/[0.03] border border-white/10 hover:border-cyan-500/40 text-xs text-zinc-300 hover:text-white transition-colors"
                   >
                     <ImageIcon size={14} className="text-cyan-400 shrink-0" />
                     <span className="truncate max-w-[220px] sm:max-w-[320px]">„{latestImage.prompt}“</span>
@@ -417,7 +417,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                       setUiMode('business', 'personas');
                       setActiveView('personas');
                     }}
-                    className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white/[0.03] border border-white/10 hover:border-indigo-500/40 text-xs text-zinc-300 hover:text-white transition-colors"
+                    className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-white/[0.03] border border-white/10 hover:border-indigo-500/40 text-xs text-zinc-300 hover:text-white transition-colors"
                   >
                     <MessageSquare size={14} className="text-indigo-400 shrink-0" />
                     <span className="font-bold text-indigo-300">{latestChat.personaName}:</span>

@@ -145,7 +145,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
       key={listing.id}
       transition={{ delay: idx * 0.03 }}
       className={cn(
-        "group rounded-2xl overflow-hidden transition-all duration-300 flex flex-col relative border bg-zinc-950/40 hover:shadow-[0_8px_30px_rgba(223,178,87,0.05)] hover:-translate-y-1 hover:bg-zinc-950/60",
+        "group rounded-xl overflow-hidden transition-all duration-300 flex flex-col relative border bg-zinc-950/40 hover:shadow-[0_8px_30px_rgba(223,178,87,0.05)] hover:-translate-y-1 hover:bg-zinc-950/60",
         isItemSold 
           ? "border-zinc-800/50 opacity-85" 
           : "border-zinc-900/40 hover:border-[#dfb257]/30",
