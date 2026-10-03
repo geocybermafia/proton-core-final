@@ -88,7 +88,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
       {/* Top Welcome / Banner */}
-      <div className="relative overflow-hidden rounded-[32px] border border-proton-border bg-gradient-to-br from-proton-card to-proton-bg p-8 md:p-12 shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-proton-border bg-gradient-to-br from-proton-card to-proton-bg p-8 md:p-12 shadow-xl">
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-gradient-to-br from-proton-accent/20 to-purple-500/5 blur-3xl opacity-60 pointer-events-none" />
         <div className="relative z-10 max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-proton-accent/10 border border-proton-accent/20 rounded-full text-[10px] font-black uppercase tracking-widest text-proton-accent">
@@ -123,7 +123,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
               transition={{ delay: idx * 0.1, duration: 0.5 }}
               onClick={card.action}
               className={cn(
-                "group relative p-4 sm:p-6 md:p-8 rounded-[32px] border border-proton-border bg-gradient-to-b from-proton-card/50 to-proton-bg hover:bg-proton-card/80 cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-sm",
+                "group relative p-4 sm:p-6 md:p-8 rounded-xl border border-proton-border bg-gradient-to-b from-proton-card/50 to-proton-bg hover:bg-proton-card/80 cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-sm",
                 "hover:shadow-lg hover:-translate-y-1"
               )}
             >
@@ -133,7 +133,7 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
               <div className="space-y-6 relative z-10">
                 <div className="flex justify-between items-start">
                   <div className={cn(
-                    "p-4 rounded-2xl bg-proton-bg border border-proton-border transition-transform group-hover:scale-110 duration-300",
+                    "p-3.5 rounded-lg bg-proton-bg border border-proton-border transition-transform group-hover:scale-110 duration-300",
                     card.color === 'cyan' && 'text-proton-accent group-hover:border-proton-accent/40',
                     card.color === 'amber' && 'text-amber-500 group-hover:border-amber-500/40',
                     card.color === 'purple' && 'text-purple-400 group-hover:border-purple-400/40'

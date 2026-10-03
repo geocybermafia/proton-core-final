@@ -5,10 +5,10 @@
 
 export const protonRadius = {
   /** Modals, Dialogs, Floating Drawers, Popups */
-  modals: 'rounded-3xl', // 24px
+  modals: 'rounded-2xl', // 16px
 
   /** Main Cards, Sections, Grid Panels, Dashboard Containers */
-  cards: 'rounded-2xl', // 16px
+  cards: 'rounded-xl', // 12px
 
   /** Buttons, Inputs, Textareas, Selects, Icon Chips, Dropdowns */
   controls: 'rounded-xl', // 12px
@@ -21,13 +21,13 @@ export const protonRadius = {
 
   /** Class lookup dictionary for type-safe components */
   classes: {
-    modal: 'rounded-3xl',
-    card: 'rounded-2xl',
+    modal: 'rounded-2xl',
+    card: 'rounded-xl',
     button: 'rounded-xl',
     input: 'rounded-xl',
     badge: 'rounded-full',
     avatar: 'rounded-full',
-    iconBox: 'rounded-xl',
+    iconBox: 'rounded-lg',
     dropdown: 'rounded-xl',
     tooltip: 'rounded-lg',
   },

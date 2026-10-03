@@ -1014,7 +1014,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      <div className="w-full flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-3xl md:rounded-[32px] overflow-hidden shadow-2xl relative min-h-[600px]">
+      <div className="w-full flex-1 flex flex-col md:flex-row bg-proton-card border border-proton-border rounded-2xl overflow-hidden shadow-2xl relative min-h-[600px]">
         <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent pointer-events-none" />
         
         {/* Settings Sidebar */}

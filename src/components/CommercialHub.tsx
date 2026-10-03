@@ -425,7 +425,7 @@ app.post('/api/checkout/session', async (req, res) => {
               {/* Middle Grid: Payout Pipeline & Balance Overview */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Available Balance Box */}
-                <div className="lg:col-span-5 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-accent/40 bg-gradient-to-br from-proton-accent/5 via-proton-bg to-proton-bg flex flex-col justify-between space-y-6">
+                <div className="lg:col-span-5 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-accent/40 bg-gradient-to-br from-proton-accent/5 via-proton-bg to-proton-bg flex flex-col justify-between space-y-6">
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-[10px] font-mono uppercase tracking-widest text-proton-muted">
@@ -462,7 +462,7 @@ app.post('/api/checkout/session', async (req, res) => {
                 </div>
 
                 {/* Payout & Withdrawal Pipeline Form */}
-                <div className="lg:col-span-7 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-6">
+                <div className="lg:col-span-7 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border space-y-6">
                   <div className="flex items-center justify-between border-b border-proton-border/45 pb-4">
                     <div>
                       <h3 className="text-lg font-black uppercase text-white flex items-center gap-2">
@@ -600,7 +600,7 @@ app.post('/api/checkout/session', async (req, res) => {
               </div>
 
               {/* Order-to-Finance Settlement Table */}
-              <div className="proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-4">
+              <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-proton-border/45 pb-4">
                   <div>
                     <h3 className="text-base font-black uppercase text-white flex items-center gap-2">
@@ -750,7 +750,7 @@ app.post('/api/checkout/session', async (req, res) => {
           {activeSubTab === 'valuation' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left sliders */}
-              <div className="lg:col-span-7 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-6">
+              <div className="lg:col-span-7 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border space-y-6">
                 <div>
                   <h3 className="text-lg font-black uppercase text-white flex items-center gap-2 mb-2">
                     <Sliders className="text-proton-accent" size={18} />
@@ -854,7 +854,7 @@ app.post('/api/checkout/session', async (req, res) => {
               {/* Right calculated outcomes */}
               <div className="lg:col-span-5 flex flex-col gap-6">
                 {/* Outlined Price Widget */}
-                <div className="proton-glass p-6 sm:p-8 rounded-3xl border border-proton-accent/30 bg-gradient-to-br from-proton-accent/5 to-proton-bg flex flex-col justify-beteen relative overflow-hidden">
+                <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-accent/30 bg-gradient-to-br from-proton-accent/5 to-proton-bg flex flex-col justify-beteen relative overflow-hidden">
                   <div className="absolute right-[-40px] top-[-40px] w-24 h-24 bg-proton-accent/10 rounded-full blur-2xl" />
                   
                   <span className="text-[10px] font-mono tracking-widest uppercase text-proton-muted mb-1 block">
@@ -888,7 +888,7 @@ app.post('/api/checkout/session', async (req, res) => {
                 </div>
 
                 {/* Flip list details */}
-                <div className="proton-glass p-6 rounded-3xl border border-proton-border space-y-4">
+                <div className="proton-glass p-6 rounded-2xl border border-proton-border space-y-4">
                   <span className="text-[10px] font-mono uppercase tracking-wider text-proton-muted block">
                     {language === 'ka' ? 'ბიზნეს აქტივები გასასხვისებლად' : 'Commercial Assets For Acquisition'}
                   </span>
@@ -953,7 +953,7 @@ High-Value Infrastructure Assets Included:
           {activeSubTab === 'whitelabel' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* WL Configuration Inputs */}
-              <div className="lg:col-span-6 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-6">
+              <div className="lg:col-span-6 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border space-y-6">
                 <div>
                   <h3 className="text-lg font-black uppercase text-white flex items-center gap-2 mb-2">
                     <Globe className="text-proton-accent" size={18} />
@@ -1029,14 +1029,14 @@ High-Value Infrastructure Assets Included:
 
               {/* Instant WL Preview */}
               <div className="lg:col-span-6 flex flex-col gap-6">
-                <div className="proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border relative overflow-hidden flex flex-col gap-4">
+                <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border relative overflow-hidden flex flex-col gap-4">
                   <span className="text-[10px] font-mono tracking-widest uppercase text-proton-muted flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 block animate-pulse" />
                     {t.wlSimulate}
                   </span>
 
                   {/* Simulated App Frame */}
-                  <div className="border border-proton-border rounded-2xl bg-black/40 p-5 space-y-4">
+                  <div className="border border-proton-border rounded-xl bg-black/40 p-5 space-y-4">
                     <div className="flex items-center justify-between border-b border-proton-border/30 pb-3">
                       <div className="flex items-center gap-2">
                         {/* Logo preview */}
@@ -1097,7 +1097,7 @@ High-Value Infrastructure Assets Included:
 
           {/* TAB 3: PITCH DECK FOR INVESTORS */}
           {activeSubTab === 'pitch' && (
-            <div className="proton-glass p-6 sm:p-10 rounded-3xl border border-proton-border space-y-6">
+            <div className="proton-glass p-6 sm:p-10 rounded-2xl border border-proton-border space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-proton-border/45 pb-4">
                 <div>
                   <h3 className="text-lg font-black uppercase text-white flex items-center gap-2 mb-1">
@@ -1130,7 +1130,7 @@ High-Value Infrastructure Assets Included:
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-3">
                     {slides[currentSlide].metrics.map((m, idx) => (
-                      <div key={idx} className="p-4 bg-proton-bg border border-proton-border/80 rounded-2xl flex flex-col justify-center">
+                      <div key={idx} className="p-4 bg-proton-bg border border-proton-border/80 rounded-xl flex flex-col justify-center">
                         <span className="text-[9px] font-mono uppercase text-proton-muted leading-relaxed">{m.label}</span>
                         <span className="text-sm font-black text-white">{m.value}</span>
                       </div>
@@ -1173,7 +1173,7 @@ High-Value Infrastructure Assets Included:
           {activeSubTab === 'stripe' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Left subscription billing configuration */}
-              <div className="lg:col-span-6 proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border space-y-6">
+              <div className="lg:col-span-6 proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border space-y-6">
                 <div>
                   <h3 className="text-lg font-black uppercase text-white flex items-center gap-2 mb-2">
                     <Receipt className="text-proton-accent" size={18} />
@@ -1252,7 +1252,7 @@ High-Value Infrastructure Assets Included:
 
               {/* Right Developer Integration snippet */}
               <div className="lg:col-span-6 flex flex-col gap-6">
-                <div className="proton-glass p-6 sm:p-8 rounded-3xl border border-proton-border flex flex-col gap-4">
+                <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border flex flex-col gap-4">
                   <div className="flex justify-between items-center xl:gap-8">
                     <span className="text-[10px] font-mono tracking-widest uppercase text-proton-muted flex items-center gap-1.5">
                       <FileCode size={14} className="text-proton-accent" />

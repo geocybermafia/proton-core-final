@@ -395,7 +395,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-12 w-[340px] sm:w-[420px] max-w-[calc(100vw-1.5rem)] bg-[#0c0d0f]/95 border border-proton-border/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-3xl z-[100] overflow-hidden flex flex-col origin-top-right"
+            className="absolute right-0 top-12 w-[340px] sm:w-[420px] max-w-[calc(100vw-1.5rem)] bg-[#0c0d0f]/95 border border-proton-border/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-2xl z-[100] overflow-hidden flex flex-col origin-top-right"
           >
             {/* Header */}
             <div className="p-4 border-b border-proton-border/50 flex items-center justify-between bg-proton-bg/40">

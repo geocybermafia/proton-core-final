@@ -292,10 +292,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('creative', 'creative-studio');
                 setActiveView('creative-studio');
               }}
-              className="group p-4 sm:p-5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-cyan-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-cyan-400"
+              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-cyan-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-cyan-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 inline-block">
+                <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 inline-block">
                   <Palette size={18} />
                 </div>
                 <div>
@@ -317,10 +317,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('business', 'personas');
                 setActiveView('personas');
               }}
-              className="group p-4 sm:p-5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-indigo-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-indigo-400"
+              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-indigo-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-indigo-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 inline-block">
+                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 inline-block">
                   <Sparkles size={18} />
                 </div>
                 <div>
@@ -342,10 +342,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('business', 'blueprints');
                 setActiveView('blueprints');
               }}
-              className="group p-4 sm:p-5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-purple-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-purple-400"
+              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-purple-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-purple-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 inline-block">
+                <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400 inline-block">
                   <WorkflowIcon size={18} />
                 </div>
                 <div>
@@ -367,10 +367,10 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 setUiMode('market', 'market-hub');
                 setActiveView('market-hub');
               }}
-              className="group p-4 sm:p-5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-amber-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-amber-400"
+              className="group p-4 sm:p-5 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-amber-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-amber-400"
             >
               <div className="space-y-2">
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 inline-block">
+                <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 inline-block">
                   <Store size={18} />
                 </div>
                 <div>

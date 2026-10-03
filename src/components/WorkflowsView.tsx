@@ -698,7 +698,7 @@ export default function WorkflowsView({
       </div>
 
       {/* 1-Click Preset Merchant Automation Templates */}
-      <div className="proton-glass p-6 sm:p-8 rounded-[32px] border border-proton-border space-y-4">
+      <div className="proton-glass p-6 sm:p-8 rounded-2xl border border-proton-border space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-proton-border/45 pb-4">
           <div>
             <h3 className="text-base font-black uppercase tracking-wider text-white flex items-center gap-2">
@@ -855,7 +855,7 @@ export default function WorkflowsView({
               <div 
                 key={wf.id} 
                 className={cn(
-                  "group proton-glass p-6 rounded-[32px] space-y-6 hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-full",
+                  "group proton-glass p-6 rounded-xl space-y-6 hover:border-proton-accent/50 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between h-full",
                   persona ? "border-l-4 border-l-proton-accent/50" : ""
                 )} 
                 onClick={() => setEditingWorkflow(wf)}
@@ -865,7 +865,7 @@ export default function WorkflowsView({
                 <div className="space-y-4 relative z-10">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="p-3 rounded-2xl bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                      <div className="p-3 rounded-lg bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform duration-500 shadow-inner">
                         <Zap size={22} fill="currentColor" />
                       </div>
                       <div>
