@@ -827,7 +827,7 @@ export default function WorkflowsView({
 
       {workflows.length === 0 ? (
         <div className="proton-glass p-12 rounded-[40px] flex flex-col items-center justify-center text-center space-y-6 border border-dashed border-proton-border/50">
-          <div className="w-20 h-20 rounded-[32px] bg-proton-accent/10 flex items-center justify-center text-proton-accent shadow-[0_0_50px_rgba(0,242,255,0.1)]">
+          <div className="w-20 h-20 rounded-[32px] bg-proton-accent/10 flex items-center justify-center text-proton-accent border border-proton-accent/20">
             <Zap size={40} className="animate-pulse" />
           </div>
           <div className="space-y-2">
@@ -860,8 +860,6 @@ export default function WorkflowsView({
                 )} 
                 onClick={() => setEditingWorkflow(wf)}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-proton-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
-                
                 <div className="space-y-4 relative z-10">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
@@ -887,7 +885,7 @@ export default function WorkflowsView({
                         });
                       }}
                       disabled={!isCreativeMode}
-                      className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border group-hover:shadow-[0_0_15px_rgba(0,242,255,0.1)] disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border disabled:opacity-30 disabled:cursor-not-allowed"
                       title={isCreativeMode ? "Analyze efficiency" : "System in Stasis"}
                     >
                       {isCreativeMode ? <Activity size={18} /> : <Lock size={14} />}

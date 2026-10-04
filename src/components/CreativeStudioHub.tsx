@@ -47,7 +47,6 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
         : 'Generate high-quality illustrations, graphics, and art with custom aspect ratios, style presets, and magic prompt enhancers.',
       icon: ImageIcon,
       color: 'cyan',
-      bgGlow: 'from-cyan-500/20 to-blue-500/10 hover:border-cyan-500/40 shadow-cyan-500/5',
       badge: isKa ? 'ახალი ფუნქციები' : 'Enhanced',
       action: () => {
         setActiveView('image');
@@ -62,7 +61,6 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
         : 'Real-time face-to-face vocal and text translation between English and Georgian with built-in creative industry glossary terms.',
       icon: Languages,
       color: 'amber',
-      bgGlow: 'from-amber-500/20 to-orange-500/10 hover:border-amber-500/40 shadow-amber-500/5',
       badge: isKa ? 'სინქრონული ხმა' : 'Real-Time Voice',
       action: () => {
         setActiveView('translator');
@@ -77,7 +75,6 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
         : 'Generate persuasive marketing copy, slogans, and social media captions with customizable tones, platforms, and interactive previews.',
       icon: FileText,
       color: 'purple',
-      bgGlow: 'from-purple-500/20 to-pink-500/10 hover:border-purple-500/40 shadow-purple-500/5',
       badge: isKa ? 'ახალი' : 'New Tool',
       action: () => {
         setActiveView('copywriting');
@@ -124,12 +121,12 @@ export const CreativeStudioHub: React.FC<CreativeStudioHubProps> = ({
               onClick={card.action}
               className={cn(
                 "group relative p-4 sm:p-6 md:p-8 rounded-xl border border-proton-border bg-gradient-to-b from-proton-card/50 to-proton-bg hover:bg-proton-card/80 cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-sm",
-                "hover:shadow-lg hover:-translate-y-1"
+                "hover:shadow-lg hover:-translate-y-1",
+                card.color === 'cyan' && 'hover:border-proton-accent/40',
+                card.color === 'amber' && 'hover:border-amber-500/40',
+                card.color === 'purple' && 'hover:border-purple-400/40'
               )}
             >
-              {/* Card background glow */}
-              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none", card.bgGlow)} />
-
               <div className="space-y-6 relative z-10">
                 <div className="flex justify-between items-start">
                   <div className={cn(
