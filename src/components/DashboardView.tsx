@@ -19,6 +19,8 @@ import { SystemHealthState } from '../hooks/useSystemHealth';
 import { useSeller } from '../contexts/SellerContext';
 import { useAuth } from '../contexts/AuthContext';
 import { PERSONAS } from '../lib/gemini';
+import { useOpportunities, Opportunity } from '../hooks/useOpportunities';
+import { OpportunitiesWidget } from './dashboard/OpportunitiesWidget';
 
 export interface DashboardViewProps {
   setActiveView: (v: View) => void;
@@ -67,6 +69,12 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
   const isKa = language === 'ka';
   const { user } = useAuth();
   const { sellerOrders } = useSeller();
+  const opportunities = useOpportunities(language);
+
+  const handleOpportunityAction = (opportunity: Opportunity) => {
+    setUiMode('market', 'market-hub');
+    setActiveView('market-hub');
+  };
 
   // ---------------------------------------------------------------------------
   // 1. ENVIRONMENTAL TIME & ATMOSPHERE (CALM 30s TICK)
@@ -386,6 +394,15 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
             </button>
 
           </div>
+
+          {/* ======================================================================= */}
+          {/* 3.5 OPEN OPPORTUNITIES (ACTIVE MOMENTUM & LOW STOCK)                    */}
+          {/* ======================================================================= */}
+          <OpportunitiesWidget
+            opportunities={opportunities}
+            onAction={handleOpportunityAction}
+            language={language}
+          />
 
           {/* ======================================================================= */}
           {/* 4. LIVING ARTIFACTS (SHOWN ONLY WHEN GENUINE USER ARTIFACTS EXIST)       */}
