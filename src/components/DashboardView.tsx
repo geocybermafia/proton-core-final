@@ -72,6 +72,39 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
   const opportunities = useOpportunities(language);
 
   const handleOpportunityAction = (opportunity: Opportunity) => {
+    if (opportunity.category === 'creative') {
+      try {
+        const copyRecord = safeStorage.getJSON<any>('proton_creative_ad_draft', null);
+        if (copyRecord) {
+          const title = (copyRecord.title || copyRecord.hook || '').trim();
+          const fullDesc = `${copyRecord.body || ''}\n\n${copyRecord.cta || ''}`.trim();
+          safeStorage.set('proton_markethub_draft_form_data', JSON.stringify({
+            mode: 'create',
+            editingId: null,
+            data: {
+              title,
+              titleGe: title,
+              description: fullDesc,
+              descriptionGe: fullDesc,
+              price: '',
+              currency: isKa ? 'GEL' : 'USD',
+              category: 'technics',
+              country: isKa ? 'GEO' : 'USA',
+              city: '',
+              location: '',
+              images: [],
+              condition: 'new',
+              isNegotiable: false,
+              listingType: 'service',
+              serviceDuration: '',
+              serviceTerms: ''
+            }
+          }));
+        }
+      } catch (err) {
+        console.warn("[DashboardView] Failed to populate market draft form data:", err);
+      }
+    }
     setUiMode('market', 'market-hub');
     setActiveView('market-hub');
   };

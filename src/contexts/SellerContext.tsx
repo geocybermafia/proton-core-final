@@ -194,6 +194,19 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Development-only in-memory simulation for Opportunity testing (zero Firestore writes)
+  const [devSimulateOpportunity, setDevSimulateOpportunity] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const handleSimToggle = (e: Event) => {
+      const customEvent = e as CustomEvent<{ enabled: boolean }>;
+      setDevSimulateOpportunity(Boolean(customEvent.detail?.enabled));
+    };
+    window.addEventListener('proton-debug-simulate-opportunity', handleSimToggle);
+    return () => window.removeEventListener('proton-debug-simulate-opportunity', handleSimToggle);
+  }, []);
+
   // 1. Real-time Scoped Seller Listings Listener
   useEffect(() => {
     if (!user) {
@@ -355,8 +368,50 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // 4. Derive seller listings
   const sellerListings = useMemo(() => {
     if (!user) return [];
-    return allListings.filter(l => l.sellerId === user.uid);
-  }, [allListings, user]);
+    const baseListings = allListings.filter(l => l.sellerId === user.uid);
+    if (import.meta.env.DEV && devSimulateOpportunity && user?.uid) {
+      const simulatedListing: Listing = {
+        id: "debug-opportunity-low-stock-1",
+        title: "Debug Artisan Product",
+        titleGe: "დეველოპერის სატესტო პროდუქტი",
+        description: "Simulated artisan product for developer testing.",
+        price: 25,
+        currency: "USD",
+        sellerId: user.uid,
+        sellerName: user.displayName || user.email?.split('@')[0] || "Debug Merchant",
+        category: "Artisan Crafts",
+        location: "Tbilisi, Georgia",
+        country: "Georgia",
+        city: "Tbilisi",
+        status: "active",
+        isSold: false,
+        stock: 1,
+        quantity: 1,
+        createdAt: Date.now() - 7200000
+      };
+      return [...baseListings, simulatedListing];
+    }
+    return baseListings;
+  }, [allListings, user, devSimulateOpportunity]);
+
+  // Derive seller orders with optional development-only simulation
+  const effectiveSellerOrders = useMemo(() => {
+    if (import.meta.env.DEV && devSimulateOpportunity && user?.uid) {
+      const simulatedOrder: Order = {
+        id: "debug-opportunity-order-1",
+        listingId: "debug-opportunity-low-stock-1",
+        sellerId: user.uid,
+        buyerId: "debug-test-buyer",
+        amount: 25,
+        currency: "USD",
+        itemTitle: "Debug Artisan Product",
+        status: "pending",
+        createdAt: Date.now() - 3600000 // 1 hour ago (within 72h window)
+      };
+      return [...sellerOrders, simulatedOrder];
+    }
+    return sellerOrders;
+  }, [sellerOrders, devSimulateOpportunity, user?.uid]);
 
   /**
    * Financial ledger entry creation.
@@ -745,7 +800,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const value = useMemo(() => ({
     allListings,
     sellerListings,
-    sellerOrders,
+    sellerOrders: effectiveSellerOrders,
     buyerOrders,
     ledgerItems,
     loading,
@@ -761,7 +816,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }), [
     allListings,
     sellerListings,
-    sellerOrders,
+    effectiveSellerOrders,
     buyerOrders,
     ledgerItems,
     loading,

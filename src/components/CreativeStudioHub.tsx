@@ -23,6 +23,20 @@ import { chatWithPersona } from '../lib/gemini';
 import { Persona } from '../types';
 import { useToast } from './Toast';
 import { useSeller } from '../contexts/SellerContext';
+import { safeStorage } from '../lib/safeStorage';
+
+export interface CreativeAdDraft {
+  id: string;
+  title: string;
+  hook: string;
+  body: string;
+  cta: string;
+  brandName: string;
+  createdAt: number;
+  exportedAt?: number;
+  exportedListingId?: string;
+  dismissed?: boolean;
+}
 
 interface CreativeStudioHubProps {
   language: 'en' | 'ka';
@@ -201,8 +215,18 @@ export const CopywritingView: React.FC<{
   const [exportingDraft, setExportingDraft] = useState(false);
   const [lastCreatedListingId, setLastCreatedListingId] = useState<string | null>(null);
 
-  // Result state
-  const [result, setResult] = useState<{ hook: string; body: string; cta: string } | null>(null);
+  // Result state - restored from safeStorage if an unexported ad copy exists
+  const [result, setResult] = useState<{ hook: string; body: string; cta: string } | null>(() => {
+    try {
+      const stored = safeStorage.getJSON<CreativeAdDraft | null>('proton_creative_ad_draft', null);
+      if (stored && !stored.exportedAt && stored.hook && stored.body) {
+        return { hook: stored.hook, body: stored.body, cta: stored.cta };
+      }
+    } catch {
+      // Ignore parse failure
+    }
+    return null;
+  });
   const [showAllHashtags, setShowAllHashtags] = useState(false);
 
   const handleCopy = (text: string, section: string) => {
@@ -226,6 +250,22 @@ export const CopywritingView: React.FC<{
         listingType: 'service'
       });
       setLastCreatedListingId(newListing.id);
+
+      // Record export in safeStorage so Opportunity #2 ceases to qualify
+      try {
+        const stored = safeStorage.getJSON<CreativeAdDraft | null>('proton_creative_ad_draft', null);
+        if (stored) {
+          safeStorage.set('proton_creative_ad_draft', JSON.stringify({
+            ...stored,
+            exportedAt: Date.now(),
+            exportedListingId: newListing?.id || undefined
+          }));
+          window.dispatchEvent(new CustomEvent('proton-creative-ad-updated'));
+        }
+      } catch (storageErr) {
+        console.warn("[CopywritingView] Failed to record export in safeStorage:", storageErr);
+      }
+
       showToast(
         isKa ? 'დრაფტი წარმატებით შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
         'success'
@@ -299,20 +339,47 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
         cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
       }
 
+      let finalHook = 'Ad Copy Headline';
+      let finalBody = 'Ad content was generated successfully.';
+      let finalCta = '#marketing #leads';
+
       try {
         const parsed = JSON.parse(cleanedText);
+        finalHook = parsed.hook || 'Ad Copy Headline';
+        finalBody = parsed.body || 'Ad content was generated successfully.';
+        finalCta = parsed.cta || '#marketing #leads';
         setResult({
-          hook: parsed.hook || 'Ad Copy Headline',
-          body: parsed.body || 'Ad content was generated successfully.',
-          cta: parsed.cta || '#marketing #leads'
+          hook: finalHook,
+          body: finalBody,
+          cta: finalCta
         });
       } catch (parseError) {
         console.warn("Could not parse JSON directly, setting raw fallback", parseError);
+        finalHook = `${brandName} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`;
+        finalBody = aiResponse.text.trim();
+        finalCta = '#marketing #business';
         setResult({
-          hook: `${brandName} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`,
-          body: aiResponse.text.trim(),
-          cta: '#marketing #business'
+          hook: finalHook,
+          body: finalBody,
+          cta: finalCta
         });
+      }
+
+      // Persist generated ad copy in safeStorage (Opportunity #2 active state)
+      try {
+        const newRecord: CreativeAdDraft = {
+          id: `ad-copy-${Date.now()}`,
+          title: finalHook,
+          hook: finalHook,
+          body: finalBody,
+          cta: finalCta,
+          brandName: brandName.trim(),
+          createdAt: Date.now()
+        };
+        safeStorage.set('proton_creative_ad_draft', JSON.stringify(newRecord));
+        window.dispatchEvent(new CustomEvent('proton-creative-ad-updated'));
+      } catch (storageErr) {
+        console.warn("[CopywritingView] Failed to save creative ad draft to safeStorage:", storageErr);
       }
 
     } catch (err) {

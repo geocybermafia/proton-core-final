@@ -42,6 +42,19 @@ export const DebugPanel: React.FC = () => {
     timestamp: string;
   } | null>(null);
 
+  const [isSimulatingOpportunity, setIsSimulatingOpportunity] = useState(false);
+
+  const handleToggleSimulateOpportunity = () => {
+    if (!authState?.uid) return;
+    const nextVal = !isSimulatingOpportunity;
+    setIsSimulatingOpportunity(nextVal);
+    window.dispatchEvent(
+      new CustomEvent('proton-debug-simulate-opportunity', {
+        detail: { enabled: nextVal }
+      })
+    );
+  };
+
   useEffect(() => {
     // Direct Firebase auth state listener for reliable initial state
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -181,6 +194,41 @@ export const DebugPanel: React.FC = () => {
                   <p className="text-slate-400 italic text-[11px]">No active Firebase user</p>
                 )}
               </div>
+            </div>
+
+            {/* Opportunities Simulation Section (Dev Only) */}
+            <div className="bg-slate-900/50 p-2.5 rounded-xl border border-slate-800/60 space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex justify-between items-center">
+                <span>Opportunity #1 Simulation</span>
+                <span className={isSimulatingOpportunity ? "text-amber-400 font-bold" : "text-slate-500"}>
+                  {isSimulatingOpportunity ? "ACTIVE" : "OFF"}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 leading-tight">
+                Simulate Opportunity #1 / Opportunity #1-ის სიმულაცია (In-memory low-stock listing with recent order. Zero Firestore writes).
+              </p>
+              {!authState?.uid ? (
+                <div className="text-[10px] text-amber-400/90 italic bg-amber-950/30 p-1.5 rounded border border-amber-900/30">
+                  Authentication required to simulate seller opportunity.
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleToggleSimulateOpportunity}
+                  className={`w-full py-1.5 px-2.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    isSimulatingOpportunity
+                      ? "bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-md shadow-amber-500/20"
+                      : "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700/80"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isSimulatingOpportunity ? "bg-slate-950 animate-pulse" : "bg-slate-400"}`} />
+                  <span>
+                    {isSimulatingOpportunity
+                      ? "Turn Off Simulation"
+                      : "Simulate Opportunity #1"}
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* Storage Progress Section */}
