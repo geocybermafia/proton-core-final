@@ -6568,9 +6568,9 @@ export default function App() {
 
       <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg w-full">
         {/* Dynamic Header */}
-        <header className="h-14 md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-6 md:px-8 gap-x-2 sm:gap-x-6 flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md overflow-hidden md:overflow-visible">
+        <header className="h-14 md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-4 md:px-5 lg:px-8 gap-x-2 md:gap-x-3 lg:gap-x-6 flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md overflow-hidden md:overflow-visible">
           {isMobileSearchOpen ? (
-            <div className="flex md:hidden items-center gap-2 w-full h-full animate-in fade-in duration-150">
+            <div className="flex lg:hidden items-center gap-2 w-full h-full animate-in fade-in duration-150">
               <div className="flex-1 min-w-0">
                 <HeaderQuickSearch 
                   language={userProfile.language}
@@ -6597,7 +6597,7 @@ export default function App() {
           ) : (
             <>
               {/* Left Section: Sidebar Toggle & Back to Dashboard */}
-              <div className="flex items-center gap-1.5 sm:gap-3 shrink-0 min-w-0">
+              <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 shrink-0 min-w-0">
                 {/* Desktop-only Sidebar Toggle */}
                 <button 
                   onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -6629,17 +6629,17 @@ export default function App() {
                 )}
                 
                 {/* Desktop-only status indicators */}
-                <div className="hidden md:flex flex-col select-none">
-                  <div className="flex items-center gap-2">
+                <div className="hidden md:flex flex-col select-none min-w-0">
+                  <div className="flex items-center gap-1.5 md:gap-2">
                     <div className={cn(
-                      "w-1.5 h-1.5 rounded-full animate-pulse",
+                      "w-1.5 h-1.5 rounded-full animate-pulse shrink-0",
                       systemHealth.status === 'optimal'
                         ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
                         : systemHealth.status === 'degraded'
                           ? "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
                           : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
                     )} />
-                    <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono">
+                    <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono truncate">
                       PROTON // {
                         activeView === 'dashboard'
                           ? (language === 'ka' ? 'მთავარი' : 'HOME')
@@ -6659,7 +6659,7 @@ export default function App() {
                       onClick={() => systemHealth.checkHealth()}
                     />
                   </div>
-                  <span className="text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide">
+                  <span className="hidden xl:block text-[8px] sm:text-[9px] font-mono text-proton-muted/80 mt-0.5 uppercase tracking-wide truncate max-w-[200px]">
                     {activeView === 'dashboard' ? (
                       language === 'ka' ? 'პერსონალური სამუშაო სივრცე' : 'Personal Workspace'
                     ) : uiMode === 'business' ? (
@@ -6673,10 +6673,10 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Center Section: Page Title on Mobile, Quick Command Search Bar on Desktop */}
+              {/* Center Section: Page Title on Mobile & Tablet, Quick Command Search Bar on Desktop */}
               <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-4">
-                {/* Mobile-only compact view title with truncation */}
-                <div className="flex md:hidden items-center gap-1.5 min-w-0 truncate select-none">
+                {/* Mobile & Tablet compact view title with truncation */}
+                <div className="flex lg:hidden items-center gap-1.5 min-w-0 truncate select-none">
                   <span className="w-1.5 h-1.5 rounded-full bg-proton-accent shrink-0 animate-pulse" />
                   <span className="text-[11px] sm:text-xs font-black tracking-wider text-proton-text uppercase font-mono truncate">
                     {activeView === 'dashboard'
@@ -6706,7 +6706,7 @@ export default function App() {
                 </div>
 
                 {/* Desktop Search Bar */}
-                <div className="hidden md:flex items-center justify-center w-full max-w-md">
+                <div className="hidden lg:flex items-center justify-center w-full max-w-xs xl:max-w-md min-w-0">
                   <HeaderQuickSearch 
                     language={userProfile.language}
                     setActiveView={handleViewChange}
@@ -6715,7 +6715,7 @@ export default function App() {
                 </div>
 
                 {/* Desktop sub-navigation shortcuts */}
-                <nav className="hidden md:flex items-center justify-center gap-2 lg:gap-3 shrink-0 ml-3">
+                <nav className="hidden xl:flex items-center justify-center gap-2 lg:gap-3 shrink-0 ml-3">
                   {(uiMode === 'business' ? [
                     { id: 'business-hub', label: language === 'ka' ? 'მართვის დაფა' : 'Business Hub', icon: Briefcase },
                     { id: 'blueprints', label: t.sidebar.blueprints, icon: WorkflowIcon },
@@ -6746,10 +6746,10 @@ export default function App() {
               
               {/* Right Section: Mobile Search & Menu Triggers | Desktop System Controls */}
               <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
-                {/* Mobile-only Search Button */}
+                {/* Mobile & Tablet Search Button */}
                 <button
                   onClick={() => setIsMobileSearchOpen(true)}
-                  className="md:hidden w-9 h-9 min-w-[36px] rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                  className="lg:hidden w-9 h-9 min-w-[36px] rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
                   title={language === 'ka' ? 'ძიება' : 'Search'}
                   aria-label="Open search"
                 >
@@ -6772,7 +6772,7 @@ export default function App() {
                 </button>
 
                 {/* Desktop-only System Controls */}
-                <div className="hidden md:flex items-center gap-1.5 md:gap-3 shrink-0">
+                <div className="hidden md:flex items-center gap-1.5 md:gap-2 lg:gap-3 shrink-0">
                   {/* Notification Center Hub */}
                   <NotificationCenter 
                     language={userProfile.language}
