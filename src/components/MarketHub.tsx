@@ -4774,7 +4774,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c]/98 backdrop-blur-lg z-40 overflow-y-auto px-6 py-8 border-t border-zinc-800/70"
+        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c]/98 backdrop-blur-lg z-40 overflow-y-auto px-6 pt-8 pb-0 border-t border-zinc-800/70"
       >
         <div className="max-w-md mx-auto space-y-8">
           <div className="flex items-center justify-between border-b border-zinc-900/40 pb-4">
@@ -4789,7 +4789,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pb-6">
+          <div className="grid grid-cols-2 gap-3 pb-[calc(5rem+env(safe-area-inset-bottom,16px))]">
             <button
               type="button"
               onClick={() => {
@@ -4843,7 +4843,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c] z-40 overflow-y-auto px-4 py-6 md:hidden"
+        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c] z-40 overflow-y-auto px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,16px))] md:hidden"
       >
         <div className="max-w-md mx-auto space-y-6">
           {/* Top Selector Panel: Chats vs. Orders */}
