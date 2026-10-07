@@ -483,7 +483,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   };
 
   const handleCartCheckout = async () => {
-    if (!user || cart.length === 0) return;
+    if (!user) {
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შესყიდვისთვის." : "Please sign in to make a purchase.", 'warning');
+      return;
+    }
+    if (cart.length === 0) return;
     setIsPlacingCartOrders(true);
     try {
 
@@ -940,7 +944,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   });
 
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (authLoading) return;
     const qReviews = query(collection(db, 'seller_reviews'), limit(20));
     const unsubscribe = onSnapshot(qReviews, (snapshot) => {
       const list = snapshot.docs.map(doc => ({
@@ -952,7 +956,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       console.warn("Firestore reviews read fallback:", err);
     });
     return () => unsubscribe();
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const sellerRatings = useMemo(() => {
     const map: { [sellerId: string]: { avg: number; count: number } } = {};
@@ -1176,6 +1180,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return () => unsubscribe();
   }, [activeChatListing, user, activeChatOrder, sellerOrders, buyerOrders]);
 
+  const handleStartChat = useCallback((listing: Listing) => {
+    if (!user) {
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინების გასაგზავნად." : "Please sign in to message the seller.", 'warning');
+      return;
+    }
+    setActiveChatListing(listing);
+  }, [user, language, showToast]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !activeChatListing || !chatMessageText.trim()) return;
@@ -1385,7 +1397,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, [isLoadingMore, isFilteredMode, searchVisibleLimit, listings.length, hasMore, activeCategory, viewMode, user?.uid, getBaseQuery]);
 
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (authLoading) return;
+    if (viewMode === 'my-listings' && !user) {
+      setListings([]);
+      setLoading(false);
+      return;
+    }
 
     let unsub: (() => void) | null = null;
     let isActive = true;
@@ -1442,6 +1459,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             try {
               let qScoped;
               if (viewMode === 'my-listings') {
+                if (!user) return null;
                 qScoped = query(coll, where('sellerId', '==', user.uid), limit(200));
               } else if (activeCategory !== 'all') {
                 qScoped = query(coll, where('category', '==', activeCategory), limit(200));
@@ -1515,6 +1533,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           const coll = collection(db, 'listings');
           let qFiltered;
           if (viewMode === 'my-listings') {
+            if (!user) return;
             qFiltered = query(coll, where('sellerId', '==', user.uid), limit(200));
           } else if (activeCategory !== 'all') {
             qFiltered = query(coll, where('category', '==', activeCategory), limit(200));
@@ -1601,11 +1620,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           setLoading(false);
 
           // Clean up legacy mock/seed documents from Firestore if present
-          data.forEach(l => {
-            if (!isRealListing(l) && l.id) {
-              deleteDoc(doc(db, 'listings', l.id)).catch(() => {});
-            }
-          });
+          if (user) {
+            data.forEach(l => {
+              if (!isRealListing(l) && l.id) {
+                deleteDoc(doc(db, 'listings', l.id)).catch(() => {});
+              }
+            });
+          }
         }, (error) => {
           console.warn(`[MarketHub] Listings listener failed (useOrderBy=${useOrderBy}):`, error);
           if (useOrderBy) {
@@ -2000,7 +2021,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   };
 
   const processPurchase = async () => {
-    if (!user || !checkoutItem) return;
+    if (!user) {
+      showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შესყიდვისთვის." : "Please sign in to make a purchase.", 'warning');
+      return;
+    }
+    if (!checkoutItem) return;
 
     setIsCheckingOut(true);
     try {
@@ -2675,6 +2700,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Create Listing Button */}
             <button
               onClick={() => {
+                if (!user) {
+                  showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                  return;
+                }
                 resetListingForm();
                 setViewMode('create');
               }}
@@ -2687,6 +2716,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             {/* Messages tab */}
             <button 
               onClick={() => {
+                if (!user) {
+                  showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინებების სანახავად." : "Please sign in to view your messages.", 'warning');
+                  return;
+                }
                 setViewMode('my-listings');
                 setProfileSubMode('buying');
                 setActiveBottomTab('messages');
@@ -2812,6 +2845,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <button
             type="button"
             onClick={() => {
+              if (!user) {
+                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                return;
+              }
               resetListingForm();
               setViewMode('create');
               setActiveBottomTab('home');
@@ -2830,6 +2867,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <button
             type="button"
             onClick={() => {
+              if (!user) {
+                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინებების სანახავად." : "Please sign in to view your messages.", 'warning');
+                return;
+              }
               setActiveBottomTab('messages');
             }}
             className={cn(
@@ -2851,6 +2892,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           <button
             type="button"
             onClick={() => {
+              if (!user) {
+                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია პროფილის სანახავად." : "Please sign in to view your profile.", 'warning');
+                return;
+              }
               setActiveBottomTab('home');
               setViewMode('my-listings');
             }}
@@ -3410,6 +3455,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                       <button
                         type="button"
                         onClick={() => {
+                          if (!user) {
+                            showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                            return;
+                          }
                           resetListingForm();
                           setViewMode('create');
                         }}
@@ -4411,7 +4460,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         sellerRating={sellerRatings[listing.sellerId]}
                         onSelectListing={setCheckoutItem}
                         onSelectVendor={setSelectedVendor}
-                        onStartChat={setActiveChatListing}
+                        onStartChat={handleStartChat}
                         onStartEdit={startEdit}
                         onDeleteListing={handleDeleteListing}
                         onBuyNow={handleBuyNow}
@@ -4496,6 +4545,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                   <button
                     type="button"
                     onClick={() => {
+                      if (!user) {
+                        showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                        return;
+                      }
                       resetListingForm();
                       setViewMode('create');
                     }}

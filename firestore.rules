@@ -196,7 +196,7 @@ service cloud.firestore {
     // 3. LISTINGS
     // ======================================================
     match /listings/{listingId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isVerified() && isValidId(listingId) && isValidListingCreate(incoming());
       allow update: if isVerified() && isValidId(listingId)
         && incoming().createdAt == existing().createdAt
@@ -289,7 +289,7 @@ service cloud.firestore {
     // 5. SELLER REVIEWS & RATINGS
     // ======================================================
     match /seller_reviews/{reviewId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isVerified() && isValidId(reviewId) 
         && incoming().buyerId == request.auth.uid 
         && incoming().sellerId != request.auth.uid 
