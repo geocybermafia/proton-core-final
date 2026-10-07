@@ -2873,141 +2873,146 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           animate={{ opacity: 1, y: 0 }}
           className="space-y-12 bg-transparent pb-40 relative z-10"
         >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-zinc-900/40">
-        <div className="flex items-center gap-4">
-          {viewMode !== 'browse' && (
-            <button 
-              onClick={() => setViewMode('browse')}
-              className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white"
-            >
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <div>
-            <h1 className={cn("text-3xl md:text-4xl font-black mb-1.5 tracking-tighter uppercase leading-none", currentTheme.text)}>
-              <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
-            </h1>
-            <div className="flex items-center gap-3">
-              <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80", currentTheme.muted)}>
-                  {viewMode === 'browse' ? t.market.subtitle : 
-                   viewMode === 'my-listings' ? t.market.my_listings :
-                   viewMode === 'privacy' ? t.market.legal.privacy_policy :
-                   viewMode === 'terms' ? t.market.legal.terms_of_service :
-                   viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
-                </span>
-              </div>
-              {viewMode === 'my-listings' && (
-                <div className={cn("flex items-center gap-1.5 p-0.5 rounded-lg border", currentTheme.cardAlt)}>
-                  <button 
-                    onClick={() => setProfileSubMode('selling')}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
-                      profileSubMode === 'selling' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
-                    )}
-                  >
-                    {t.market.selling_mode}
-                  </button>
-                  <button 
-                    onClick={() => setProfileSubMode('buying')}
-                    className={cn(
-                      "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
-                      profileSubMode === 'buying' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
-                    )}
-                  >
-                    {t.market.buying_mode}
-                  </button>
+      {/* Market Hub Header / Banner Section */}
+      <div className="flex flex-col gap-6 pb-6 border-b border-zinc-900/40">
+        {/* Row 1: Title & Status on left, Search / Mode / Currency on right */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+          <div className="flex items-center gap-4">
+            {viewMode !== 'browse' && (
+              <button 
+                onClick={() => setViewMode('browse')}
+                className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white"
+              >
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            <div>
+              <h1 className={cn("text-3xl md:text-4xl font-black mb-1.5 tracking-tighter uppercase leading-none", currentTheme.text)}>
+                <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
+              </h1>
+              <div className="flex items-center gap-3">
+                <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80", currentTheme.muted)}>
+                    {viewMode === 'browse' ? t.market.subtitle : 
+                     viewMode === 'my-listings' ? t.market.my_listings :
+                     viewMode === 'privacy' ? t.market.legal.privacy_policy :
+                     viewMode === 'terms' ? t.market.legal.terms_of_service :
+                     viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
+                  </span>
                 </div>
-              )}
+                {viewMode === 'my-listings' && (
+                  <div className={cn("flex items-center gap-1.5 p-0.5 rounded-lg border", currentTheme.cardAlt)}>
+                    <button 
+                      onClick={() => setProfileSubMode('selling')}
+                      className={cn(
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
+                        profileSubMode === 'selling' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
+                      )}
+                    >
+                      {t.market.selling_mode}
+                    </button>
+                    <button 
+                      onClick={() => setProfileSubMode('buying')}
+                      className={cn(
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
+                        profileSubMode === 'buying' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
+                      )}
+                    >
+                      {t.market.buying_mode}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+
+          {viewMode === 'browse' && (
+            <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full pt-1">
+              {/* Elegant AI Powered Search Panel */}
+              <div className="relative flex-1 group">
+                <div className="relative w-full flex items-center bg-[#101012] rounded-xl border border-zinc-800/80 focus-within:border-[#dfb257] transition-all min-h-[46px] overflow-hidden shadow-inner">
+                  <Search size={15} className="absolute left-4 opacity-40 text-[#dfb257]" />
+                  <input 
+                    type="text"
+                    value={searchRaw}
+                    onChange={(e) => setSearchRaw(e.target.value)}
+                    placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Type search word...'}
+                    className="w-full bg-transparent pl-11 pr-20 py-2.5 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-base md:text-sm"
+                  />
+                  <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-1.5">
+                    <div className="h-4 w-[1px] bg-zinc-800" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = language === 'ka' ? 'Apple iPhone' : 'Apple';
+                        setSearch(val);
+                        setSearchRaw(val);
+                        setActiveCategory('technics');
+                      }}
+                      className="px-2.5 py-1 h-full rounded-lg bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/20 text-[#dfb257] transition-all font-black text-[9px] tracking-widest flex items-center gap-1 shrink-0"
+                    >
+                      <Sparkles size={10} className="text-[#dfb257] fill-[#dfb257]/20" />
+                      <span>AI</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Display / Map option switchers alongside selected Display Currency picker */}
+              <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0">
+                {/* Grid / Map View Toggle */}
+                <div className={cn("flex items-center gap-1 p-0.5 rounded-xl border shadow-inner", currentTheme.cardAlt)}>
+                  <button 
+                    type="button"
+                    onClick={() => setDisplayMode('grid')}
+                    className={cn(
+                      "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
+                      displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-sm") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    )}
+                    title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
+                  >
+                    <LayoutGrid size={13} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setDisplayMode('map')}
+                    className={cn(
+                      "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
+                      displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-sm border border-zinc-700/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    )}
+                    title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
+                  >
+                    <MapPin size={13} />
+                    <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
+                  </button>
+                </div>
+
+                {/* Display Currency Menu Selector */}
+                <div className="relative group shrink-0">
+                  <select 
+                    value={displayCurrency}
+                    onChange={(e) => setDisplayCurrency(e.target.value)}
+                    className={cn(
+                      "h-9 pl-3 pr-8 py-1.5 rounded-xl border appearance-none text-[9px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
+                      currentTheme.input
+                    )}
+                  >
+                    {CURRENCIES.map(curr => (
+                      <option key={curr.code} value={curr.code}>{curr.code}</option>
+                    ))}
+                  </select>
+                  <ChevronRight size={12} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Row 2: Listing Type Tabs, Category Selector, Sort, Count spanning full width underneath Row 1 */}
         {viewMode === 'browse' && (
-          <div className="hidden md:flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full pt-1">
-            {/* Elegant AI Powered Search Panel */}
-            <div className="relative flex-1 group">
-              <div className="relative w-full flex items-center bg-[#101012] rounded-xl border border-zinc-800/80 focus-within:border-[#dfb257] transition-all min-h-[46px] overflow-hidden shadow-inner">
-                <Search size={15} className="absolute left-4 opacity-40 text-[#dfb257]" />
-                <input 
-                  type="text"
-                  value={searchRaw}
-                  onChange={(e) => setSearchRaw(e.target.value)}
-                  placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Type search word...'}
-                  className="w-full bg-transparent pl-11 pr-20 py-2.5 text-zinc-100 placeholder-zinc-500 font-bold tracking-wide focus:outline-none text-base md:text-sm"
-                />
-                <div className="absolute right-2 top-1.5 bottom-1.5 flex items-center gap-1.5">
-                  <div className="h-4 w-[1px] bg-zinc-800" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const val = language === 'ka' ? 'Apple iPhone' : 'Apple';
-                      setSearch(val);
-                      setSearchRaw(val);
-                      setActiveCategory('technics');
-                    }}
-                    className="px-2.5 py-1 h-full rounded-lg bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/20 text-[#dfb257] transition-all font-black text-[9px] tracking-widest flex items-center gap-1 shrink-0"
-                  >
-                    <Sparkles size={10} className="text-[#dfb257] fill-[#dfb257]/20" />
-                    <span>AI</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Display / Map option switchers alongside selected Display Currency picker */}
-            <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0">
-              {/* Grid / Map View Toggle */}
-              <div className={cn("flex items-center gap-1 p-0.5 rounded-xl border shadow-inner", currentTheme.cardAlt)}>
-                <button 
-                  type="button"
-                  onClick={() => setDisplayMode('grid')}
-                  className={cn(
-                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
-                    displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-sm") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                  )}
-                  title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
-                >
-                  <LayoutGrid size={13} />
-                  <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'ბადე' : 'Grid'}</span>
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setDisplayMode('map')}
-                  className={cn(
-                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
-                    displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-sm border border-zinc-700/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
-                  )}
-                  title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
-                >
-                  <MapPin size={13} />
-                  <span className="text-[9px] font-black uppercase tracking-widest">{language === 'ka' ? 'რუკა' : 'Map'}</span>
-                </button>
-              </div>
-
-              {/* Display Currency Menu Selector */}
-              <div className="relative group shrink-0">
-                <select 
-                  value={displayCurrency}
-                  onChange={(e) => setDisplayCurrency(e.target.value)}
-                  className={cn(
-                    "h-9 pl-3 pr-8 py-1.5 rounded-xl border appearance-none text-[9px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
-                    currentTheme.input
-                  )}
-                >
-                  {CURRENCIES.map(curr => (
-                    <option key={curr.code} value={curr.code}>{curr.code}</option>
-                  ))}
-                </select>
-                <ChevronRight size={12} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {viewMode === 'browse' && (
-          <div className={cn("hidden md:flex flex-col md:flex-row md:items-center justify-between gap-5 mt-6 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
+          <div className={cn("hidden md:flex flex-col md:flex-row md:items-center justify-between gap-5 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
             {/* Listing Type & Categories Wrap */}
             <div className="flex items-center gap-3 relative">
               {/* Listing Type Selection Tabs */}
