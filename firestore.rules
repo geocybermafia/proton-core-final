@@ -316,11 +316,25 @@ service cloud.firestore {
       allow read, list: if isSignedIn() && (
         ('participants' in resource.data && request.auth.uid in resource.data.participants) ||
         getStr(resource.data, 'senderId', '') == request.auth.uid || 
-        getStr(resource.data, 'receiverId', '') == request.auth.uid || 
-        getStr(resource.data, 'sellerId', '') == request.auth.uid
+        getStr(resource.data, 'receiverId', '') == request.auth.uid
       );
       allow create: if isVerified() && isValidId(messageId) 
-        && (getStr(incoming(), 'senderId', '') == request.auth.uid || ('participants' in incoming() && request.auth.uid in incoming().participants));
+        && incoming().senderId == request.auth.uid
+        && incoming().participants is list
+        && incoming().participants.size() == 2
+        && request.auth.uid in incoming().participants
+        && incoming().buyerId is string && isValidId(incoming().buyerId)
+        && incoming().sellerId is string && isValidId(incoming().sellerId)
+        && incoming().listingId is string && isValidId(incoming().listingId)
+        && incoming().participants.hasAll([incoming().buyerId, incoming().sellerId])
+        && incoming().conversationId is string
+        && incoming().conversationId == incoming().listingId + '_' + incoming().buyerId
+        && incoming().receiverId == (request.auth.uid == incoming().sellerId ? incoming().buyerId : incoming().sellerId)
+        && incoming().text is string && incoming().text.size() > 0 && incoming().text.size() <= 2000
+        && incoming().listingTitle is string && incoming().listingTitle.size() <= 300
+        && (!('orderId' in incoming()) || (incoming().orderId is string && isValidId(incoming().orderId)))
+        && (!('senderAvatar' in incoming()) || (incoming().senderAvatar is string && incoming().senderAvatar.size() <= 2000))
+        && (!('senderName' in incoming()) || (incoming().senderName is string && incoming().senderName.size() <= 200));
       allow update, delete: if false;
     }
 

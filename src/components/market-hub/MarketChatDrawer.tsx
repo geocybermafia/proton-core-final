@@ -38,6 +38,7 @@ export interface MarketChatDrawerProps {
   chatMessageText: string;
   onChangeChatMessageText: (text: string) => void;
   onSendMessage: (e: React.FormEvent) => void;
+  buyerName?: string;
 }
 
 export const MarketChatDrawer = React.memo(function MarketChatDrawer({
@@ -52,7 +53,8 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
   messagesList,
   chatMessageText,
   onChangeChatMessageText,
-  onSendMessage
+  onSendMessage,
+  buyerName
 }: MarketChatDrawerProps) {
   const isSellerViewing = user && activeChatListing && user.uid === activeChatListing.sellerId;
 
@@ -92,7 +94,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
-                    {(activeChatListing.sellerName || 'Vendor').substring(0, 2).toUpperCase()}
+                    {((isSellerViewing ? buyerName : activeChatListing.sellerName) || 'User').substring(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-wider text-white">
@@ -100,7 +102,9 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                         ? (language === 'ka' ? 'კავშირი მყიდველთან' : 'Chat with Buyer')
                         : (language === 'ka' ? 'კავშირი გამყიდველთან' : 'Chat with Seller')}
                     </h3>
-                    <p className="text-[10px] text-white/50">{activeChatListing.sellerName} • {activeChatListing.title}</p>
+                    <p className="text-[10px] text-white/50">
+                      {isSellerViewing ? (buyerName || 'Buyer') : activeChatListing.sellerName} • {activeChatListing.title}
+                    </p>
                   </div>
                 </div>
                 <button 
