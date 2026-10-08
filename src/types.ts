@@ -272,5 +272,11 @@ export interface NotificationItem {
   category: NotificationCategory;
   targetView?: View;
   actionUrl?: string;
+  type?: string;
+  orderId?: string;
+  listingId?: string;
+  buyerId?: string;
+  sellerId?: string;
+  conversationId?: string;
   metadata?: Record<string, any>;
 }

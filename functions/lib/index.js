@@ -33,16 +33,25 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.resetUserWorkspace = exports.updateSecurityPin = exports.verifyStepUpPin = exports.processSecureTransaction = void 0;
+exports.onMarketMessageCreated = exports.onOrderCreated = exports.resetUserWorkspace = exports.updateSecurityPin = exports.verifyStepUpPin = exports.processSecureTransaction = void 0;
 const https_1 = require("firebase-functions/v2/https");
+const firestore_1 = require("firebase-functions/v2/firestore");
 const app_1 = require("firebase-admin/app");
-const firestore_1 = require("firebase-admin/firestore");
+const firestore_2 = require("firebase-admin/firestore");
 const crypto = __importStar(require("crypto"));
 // Initialize Firebase Admin SDK (Only once)
 if (!(0, app_1.getApps)().length) {
     (0, app_1.initializeApp)();
 }
-const db = (0, firestore_1.getFirestore)();
+const DATABASE_ID = process.env.FIRESTORE_DATABASE_ID || "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
+const db = (() => {
+    try {
+        return (0, firestore_2.getFirestore)(DATABASE_ID);
+    }
+    catch {
+        return (0, firestore_2.getFirestore)();
+    }
+})();
 /**
  * Serverless Callable Function: processSecureTransaction
  *
@@ -86,7 +95,7 @@ exports.processSecureTransaction = (0, https_1.onCall)(async (request) => {
     }
     try {
         const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-        const timestamp = firestore_1.FieldValue.serverTimestamp();
+        const timestamp = firestore_2.FieldValue.serverTimestamp();
         const sanitizedAmount = Number(amount.toFixed(2));
         const nowIso = new Date().toISOString();
         const dateStr = nowIso.split('T')[0];
@@ -374,5 +383,200 @@ exports.resetUserWorkspace = (0, https_1.onCall)(async (request) => {
         success: true,
         message: "Workspace subcollections securely reset via Admin SDK."
     };
+});
+/**
+ * Backend Event Trigger: onOrderCreated
+ *
+ * Automatically and reliably notifies the seller when a buyer places a new order.
+ * - Validates order fields and seller ID
+ * - Uses orderId for deterministic document identity (idempotent, no duplicates)
+ * - Writes to users/{sellerId}/notifications/{notificationId} via Admin SDK (bypasses client security rules)
+ * - Safe against failures (does not fail order transaction)
+ */
+exports.onOrderCreated = (0, firestore_1.onDocumentCreated)({
+    document: "orders/{orderId}",
+    database: DATABASE_ID
+}, async (event) => {
+    try {
+        const snapshot = event.data;
+        if (!snapshot) {
+            console.warn("[onOrderCreated] No snapshot data available in event.");
+            return;
+        }
+        const orderData = snapshot.data();
+        if (!orderData) {
+            console.warn("[onOrderCreated] Document data is empty.");
+            return;
+        }
+        const orderId = event.params.orderId || snapshot.id;
+        const { sellerId, buyerId, listingId, itemTitle } = orderData;
+        // 1. Validate required order fields & identify seller
+        if (!sellerId || typeof sellerId !== "string" || !sellerId.trim()) {
+            console.warn(`[onOrderCreated] Order ${orderId} missing or invalid sellerId.`);
+            return;
+        }
+        // Avoid self-notifications
+        if (buyerId && buyerId === sellerId) {
+            console.log(`[onOrderCreated] Order ${orderId} buyer matches seller (${sellerId}). Skipping notification.`);
+            return;
+        }
+        const cleanSellerId = sellerId.trim();
+        const firestore = snapshot.ref.firestore || db;
+        // 2. Deterministic notification ID for strict idempotency
+        const notificationId = `market_order_${orderId}`;
+        const notifRef = firestore
+            .collection("users")
+            .doc(cleanSellerId)
+            .collection("notifications")
+            .doc(notificationId);
+        // Check if already created (duplicate event protection)
+        const existingSnap = await notifRef.get();
+        if (existingSnap.exists) {
+            console.log(`[onOrderCreated] Order notification ${notificationId} already exists. Skipping.`);
+            return;
+        }
+        const title = "New Order Received";
+        const titleKa = "მიღებულია ახალი შეკვეთა";
+        const shortId = orderId.length > 6 ? orderId.slice(-6).toUpperCase() : orderId;
+        const itemLabel = itemTitle || "an item";
+        const message = `You received a new order for "${itemLabel}" (#${shortId}).`;
+        const messageKa = `თქვენ მიიღეთ ახალი შეკვეთა: "${itemLabel}" (#${shortId}).`;
+        const notificationDoc = {
+            id: notificationId,
+            title,
+            titleKa,
+            message,
+            messageKa,
+            timestamp: Date.now(),
+            read: false,
+            category: "market",
+            type: "market_order",
+            targetView: "market",
+            orderId: orderId,
+            listingId: listingId || "",
+            buyerId: buyerId || "",
+            sellerId: cleanSellerId,
+            metadata: {
+                type: "market_order",
+                orderId: orderId,
+                listingId: listingId || "",
+                buyerId: buyerId || "",
+                sellerId: cleanSellerId
+            }
+        };
+        await notifRef.set(notificationDoc);
+        console.log(`[onOrderCreated] Successfully created seller notification ${notificationId} for seller ${cleanSellerId}`);
+    }
+    catch (error) {
+        // Failure safety: Log error clearly without throwing to prevent cascading failures
+        console.error(`[onOrderCreated] Error creating seller notification for order ${event.params?.orderId}:`, error);
+    }
+});
+/**
+ * Backend Event Trigger: onMarketMessageCreated
+ *
+ * Automatically and reliably notifies the seller when a buyer sends a direct message.
+ * - Direction guard: Only buyer -> seller incoming messages create seller notifications.
+ *   Seller -> buyer replies NEVER create seller notifications for the seller.
+ * - Strict Conversation Isolation: Preserves canonical conversationId = listingId + "_" + buyerId.
+ * - Deterministic notification ID based on messageId (idempotent, no duplicates).
+ * - Safe against failures.
+ */
+exports.onMarketMessageCreated = (0, firestore_1.onDocumentCreated)({
+    document: "market_messages/{messageId}",
+    database: DATABASE_ID
+}, async (event) => {
+    try {
+        const snapshot = event.data;
+        if (!snapshot) {
+            console.warn("[onMarketMessageCreated] No snapshot data available in event.");
+            return;
+        }
+        const messageData = snapshot.data();
+        if (!messageData) {
+            console.warn("[onMarketMessageCreated] Document data is empty.");
+            return;
+        }
+        const messageId = event.params.messageId || snapshot.id;
+        const { senderId, sellerId, buyerId, listingId, conversationId, text, senderName, listingTitle } = messageData;
+        // 1. Identify and validate participants
+        if (!sellerId || typeof sellerId !== "string" || !sellerId.trim()) {
+            console.warn(`[onMarketMessageCreated] Message ${messageId} missing sellerId.`);
+            return;
+        }
+        if (!listingId || typeof listingId !== "string" || !listingId.trim()) {
+            console.warn(`[onMarketMessageCreated] Message ${messageId} missing listingId.`);
+            return;
+        }
+        const cleanSellerId = sellerId.trim();
+        // 2. CRITICAL DIRECTION GUARD:
+        // Only buyer -> seller incoming messages create seller notification.
+        // Seller -> buyer replies must NEVER create a seller notification for the seller.
+        if (senderId === cleanSellerId) {
+            console.log(`[onMarketMessageCreated] Message ${messageId} sent by seller ${cleanSellerId}. Skipping seller notification.`);
+            return;
+        }
+        // Determine resolved buyer ID
+        const resolvedBuyerId = (buyerId && typeof buyerId === "string" && buyerId.trim())
+            ? buyerId.trim()
+            : (senderId || "");
+        if (!resolvedBuyerId) {
+            console.warn(`[onMarketMessageCreated] Message ${messageId} could not resolve buyerId.`);
+            return;
+        }
+        // 3. CRITICAL CONVERSATION ISOLATION:
+        // Preserve canonical conversationId = listingId + "_" + buyerId
+        const canonicalConversationId = conversationId || `${listingId.trim()}_${resolvedBuyerId}`;
+        const firestore = snapshot.ref.firestore || db;
+        // 4. Deterministic notification ID for strict idempotency
+        const notificationId = `market_msg_${messageId}`;
+        const notifRef = firestore
+            .collection("users")
+            .doc(cleanSellerId)
+            .collection("notifications")
+            .doc(notificationId);
+        const existingSnap = await notifRef.get();
+        if (existingSnap.exists) {
+            console.log(`[onMarketMessageCreated] Message notification ${notificationId} already exists. Skipping.`);
+            return;
+        }
+        const itemLabel = listingTitle || "Marketplace Item";
+        const senderLabel = senderName || "Buyer";
+        const snippet = typeof text === "string" && text.length > 80 ? `${text.slice(0, 77)}...` : (text || "New message");
+        const title = `New Message: ${itemLabel}`;
+        const titleKa = `ახალი შეტყობინება: ${itemLabel}`;
+        const message = `${senderLabel}: "${snippet}"`;
+        const messageKa = `${senderLabel}: "${snippet}"`;
+        const notificationDoc = {
+            id: notificationId,
+            title,
+            titleKa,
+            message,
+            messageKa,
+            timestamp: Date.now(),
+            read: false,
+            category: "market",
+            type: "market_message",
+            targetView: "market",
+            sellerId: cleanSellerId,
+            buyerId: resolvedBuyerId,
+            listingId: listingId.trim(),
+            conversationId: canonicalConversationId,
+            metadata: {
+                type: "market_message",
+                sellerId: cleanSellerId,
+                buyerId: resolvedBuyerId,
+                listingId: listingId.trim(),
+                conversationId: canonicalConversationId,
+                messageId: messageId
+            }
+        };
+        await notifRef.set(notificationDoc);
+        console.log(`[onMarketMessageCreated] Successfully created seller message notification ${notificationId} for seller ${cleanSellerId}`);
+    }
+    catch (error) {
+        // Failure safety: Do not fail core message transaction
+        console.error(`[onMarketMessageCreated] Error creating seller message notification for message ${event.params?.messageId}:`, error);
+    }
 });
 //# sourceMappingURL=index.js.map

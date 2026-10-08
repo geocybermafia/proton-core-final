@@ -1223,6 +1223,164 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     };
   }, []);
 
+  // SELLER NOTIFICATION ROUTING (P1 Support)
+  const pendingNavOrderIdRef = useRef<string | null>(null);
+  const pendingNavConversationIdRef = useRef<string | null>(null);
+
+  const handleProcessMarketNavigation = useCallback(async (target: any) => {
+    if (!target) return;
+    const { type, orderId, listingId, conversationId, buyerId } = target;
+
+    if (type === 'market_order' || (!type && orderId)) {
+      setViewMode('my-listings');
+      setProfileSubMode('selling');
+      setActiveSellingTab('incoming-orders');
+      if (orderId) {
+        setExpandedOrderId(orderId);
+        pendingNavOrderIdRef.current = orderId;
+        const matched = sellerOrders.find(o => o.id === orderId);
+        if (matched) {
+          setSellerSelectedOrder(matched);
+          pendingNavOrderIdRef.current = null;
+        }
+      }
+    } else if (type === 'market_message' || (!type && conversationId)) {
+      setViewMode('my-listings');
+      setActiveBottomTab('messages');
+      const targetConvId = conversationId || (listingId && buyerId ? `${listingId}_${buyerId}` : null);
+      if (targetConvId) {
+        pendingNavConversationIdRef.current = targetConvId;
+
+        // Check if thread is in groupedChats
+        const matchedChat = groupedChats.find(c => c.conversationId === targetConvId);
+        if (matchedChat) {
+          const relListing = listings.find(l => l.id === matchedChat.listingId) || {
+            id: matchedChat.listingId,
+            title: matchedChat.listingTitle,
+            sellerId: matchedChat.sellerId || user?.uid || '',
+            sellerName: matchedChat.sellerName || 'Seller',
+            price: 0,
+            currency: 'USD',
+            condition: 'new',
+            isNegotiable: false,
+            status: 'active'
+          } as any;
+          const ctx: ActiveChatContext = {
+            conversationId: targetConvId,
+            listing: relListing,
+            buyerId: matchedChat.buyerId,
+            sellerId: matchedChat.sellerId || user?.uid || '',
+            buyerName: matchedChat.buyerName,
+            sellerName: matchedChat.sellerName,
+            orderId: matchedChat.orderId || null
+          };
+          setActiveChatContext(ctx);
+          setActiveChatListing(relListing);
+          pendingNavConversationIdRef.current = null;
+        } else {
+          // Resolve listing and buyer details for immediate conversation opening
+          const targetListingId = listingId || targetConvId.split('_')[0];
+          const targetBuyerId = buyerId || targetConvId.split('_').slice(1).join('_');
+          let foundListing: Listing | null = listings.find(l => l.id === targetListingId) || null;
+          if (!foundListing && targetListingId) {
+            try {
+              const snap = await getDoc(doc(db, 'listings', targetListingId));
+              if (snap.exists()) {
+                foundListing = { id: snap.id, ...snap.data() } as Listing;
+              }
+            } catch (e) {
+              // Ignore
+            }
+          }
+          const finalListing: Listing = foundListing || ({
+            id: targetListingId,
+            title: 'Marketplace Item',
+            sellerId: user?.uid || '',
+            sellerName: user?.displayName || 'Seller',
+            price: 0,
+            currency: 'USD',
+            condition: 'new',
+            isNegotiable: false,
+            status: 'active'
+          } as any);
+
+          const ctx: ActiveChatContext = {
+            conversationId: targetConvId,
+            listing: finalListing,
+            buyerId: targetBuyerId,
+            sellerId: user?.uid || '',
+            buyerName: 'Buyer',
+            sellerName: user?.displayName || 'Seller',
+            orderId: target.orderId || null
+          };
+          setActiveChatContext(ctx);
+          setActiveChatListing(finalListing);
+        }
+      }
+    }
+  }, [sellerOrders, groupedChats, listings, user]);
+
+  useEffect(() => {
+    // Check initial window navigation target if set before MarketHub mounted
+    const initialTarget = (window as any).__protonMarketNavTarget;
+    if (initialTarget) {
+      (window as any).__protonMarketNavTarget = null;
+      handleProcessMarketNavigation(initialTarget);
+    }
+
+    const handleCustomNav = (e: any) => {
+      if (e.detail) {
+        handleProcessMarketNavigation(e.detail);
+      }
+    };
+
+    window.addEventListener('proton:navigate_market', handleCustomNav);
+    return () => {
+      window.removeEventListener('proton:navigate_market', handleCustomNav);
+    };
+  }, [handleProcessMarketNavigation]);
+
+  useEffect(() => {
+    if (pendingNavOrderIdRef.current && sellerOrders.length > 0) {
+      const found = sellerOrders.find(o => o.id === pendingNavOrderIdRef.current);
+      if (found) {
+        setSellerSelectedOrder(found);
+        pendingNavOrderIdRef.current = null;
+      }
+    }
+  }, [sellerOrders]);
+
+  useEffect(() => {
+    if (pendingNavConversationIdRef.current && groupedChats.length > 0) {
+      const found = groupedChats.find(c => c.conversationId === pendingNavConversationIdRef.current);
+      if (found) {
+        const relListing = listings.find(l => l.id === found.listingId) || {
+          id: found.listingId,
+          title: found.listingTitle,
+          sellerId: found.sellerId || user?.uid || '',
+          sellerName: found.sellerName || 'Seller',
+          price: 0,
+          currency: 'USD',
+          condition: 'new',
+          isNegotiable: false,
+          status: 'active'
+        } as any;
+        const ctx: ActiveChatContext = {
+          conversationId: found.conversationId,
+          listing: relListing,
+          buyerId: found.buyerId,
+          sellerId: found.sellerId || user?.uid || '',
+          buyerName: found.buyerName,
+          sellerName: found.sellerName,
+          orderId: found.orderId || null
+        };
+        setActiveChatContext(ctx);
+        setActiveChatListing(relListing);
+        pendingNavConversationIdRef.current = null;
+      }
+    }
+  }, [groupedChats, listings, user]);
+
   useEffect(() => {
     if (!activeChatContext || !user) {
       setMessagesList([]);

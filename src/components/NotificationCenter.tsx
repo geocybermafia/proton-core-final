@@ -119,6 +119,15 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       } else {
         const items: NotificationItem[] = snapshot.docs.map(docSnap => {
           const data = docSnap.data();
+          const category = (data.category as NotificationCategory) || 'system';
+          const type = data.type || data.metadata?.type;
+          const orderId = data.orderId || data.metadata?.orderId;
+          const listingId = data.listingId || data.metadata?.listingId;
+          const buyerId = data.buyerId || data.metadata?.buyerId;
+          const sellerId = data.sellerId || data.metadata?.sellerId;
+          const conversationId = data.conversationId || data.metadata?.conversationId;
+          const isMarket = category === 'market' || (typeof type === 'string' && type.startsWith('market_'));
+
           return {
             id: docSnap.id,
             title: data.title || '',
@@ -127,10 +136,23 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
             messageKa: data.messageKa || data.message || '',
             timestamp: data.timestamp || Date.now(),
             read: !!data.read,
-            category: (data.category as NotificationCategory) || 'system',
-            targetView: data.targetView as View | undefined,
+            category,
+            targetView: (data.targetView as View | undefined) || (isMarket ? ('market' as View) : undefined),
             actionUrl: data.actionUrl,
-            metadata: data.metadata
+            type,
+            orderId,
+            listingId,
+            buyerId,
+            sellerId,
+            conversationId,
+            metadata: data.metadata || {
+              type,
+              orderId,
+              listingId,
+              buyerId,
+              sellerId,
+              conversationId
+            }
           };
         });
         setNotifications(items);
@@ -281,6 +303,34 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     if (!item.read) {
       markAsRead(item.id);
     }
+
+    const type = item.type || item.metadata?.type;
+    const isMarket = item.category === 'market' || (typeof type === 'string' && type.startsWith('market_'));
+
+    if (isMarket) {
+      const navTarget = {
+        type: type || 'market_order',
+        orderId: item.orderId || item.metadata?.orderId,
+        listingId: item.listingId || item.metadata?.listingId,
+        conversationId: item.conversationId || item.metadata?.conversationId,
+        buyerId: item.buyerId || item.metadata?.buyerId,
+        sellerId: item.sellerId || item.metadata?.sellerId
+      };
+
+      // Store in window for instant access when MarketHub mounts
+      (window as any).__protonMarketNavTarget = navTarget;
+
+      // Dispatch custom event for already mounted MarketHub
+      window.dispatchEvent(new CustomEvent('proton:navigate_market', {
+        detail: navTarget
+      }));
+
+      // Route to Market Space
+      setActiveView('market');
+      setIsOpen(false);
+      return;
+    }
+
     if (item.targetView) {
       setActiveView(item.targetView);
       setIsOpen(false);
