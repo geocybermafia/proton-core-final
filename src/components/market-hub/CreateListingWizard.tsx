@@ -12,7 +12,8 @@ import {
   Camera,
   Link,
   ArrowLeft,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MarketTheme, CURRENCIES, WORLD_COUNTRIES } from './MarketConstants';
@@ -81,6 +82,25 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   handleAiDescription,
 }) => {
   const { showToast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleRemovePhoto = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setFormData(prev => ({
+      ...prev,
+      images: []
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    showToast(
+      language === 'ka' ? 'სურათი წაიშალა' : 'Photo removed',
+      'info'
+    );
+  };
 
   return (
     <motion.div 
@@ -672,16 +692,28 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 
             {/* Graphic/Image upload box */}
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
-                <span>🖼️</span> {t.market.form.image_url}
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                  <span>🖼️</span> {t.market.form.image_url}
+                </label>
+                {formData.images?.[0] && !isResizing && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="text-[10px] font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors cursor-pointer px-2 py-0.5 rounded-lg hover:bg-red-950/40"
+                  >
+                    <Trash2 size={11} />
+                    <span>{language === 'ka' ? 'ფოტოს წაშლა' : 'Remove Photo'}</span>
+                  </button>
+                )}
+              </div>
               
-              <label 
+              <div 
                 className={cn(
-                  "w-full h-44 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all overflow-hidden group relative",
+                  "w-full h-44 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all overflow-hidden relative",
                   (formData.images?.[0] || isResizing) 
                     ? "border-transparent bg-black/60 shadow-[0_8px_30px_rgb(0,0,0,0.8)]" 
-                    : "bg-[#09090b]/60 border-zinc-800/70 hover:border-[#dfb257]/40 hover:bg-[#09090b]/90"
+                    : "bg-[#09090b]/60 border-zinc-800/70 hover:border-[#dfb257]/40 hover:bg-[#09090b]/90 group cursor-pointer"
                 )}
               >
                 {!formData.images?.[0] && !isResizing && (
@@ -689,6 +721,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 )}
                 
                 <input 
+                  ref={fileInputRef}
+                  id="listing-photo-upload-input"
                   type="file" 
                   onChange={handleFileUpload}
                   accept="image/*"
@@ -698,7 +732,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 {isResizing ? (
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-[#dfb257]" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-[#dfb257] tracking-widest">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-[#dfb257]">
                       {language === 'ka' ? 'ინფორმაცია მუშავდება...' : 'Optimizing Visual Asset...'}
                     </span>
                   </div>
@@ -706,7 +740,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   <div className="relative w-full h-full p-2.5">
                     <img 
                       src={formData.images[0]} 
-                      className="w-full h-full object-cover rounded-2xl transition-transform duration-700 group-hover:scale-[1.03]" 
+                      className="w-full h-full object-cover rounded-2xl" 
                       alt={formData.title} 
                     />
                     
@@ -719,26 +753,36 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       </div>
                     </div>
 
-                    {/* Mobile Persistent Edit/Replace Badge */}
-                    <div className="md:hidden absolute top-5 right-5 bg-black/85 border border-[#dfb257]/40 px-2.5 py-1.5 rounded-xl backdrop-blur-md select-none pointer-events-none shadow-lg animate-fade-in">
-                      <div className="flex items-center gap-1.5">
-                        <Camera size={12} className="text-[#dfb257]" />
-                        <span className="text-[8px] font-black uppercase tracking-wider text-[#dfb257]">
+                    {/* Action Controls: Replace and Remove */}
+                    <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                      <label 
+                        htmlFor="listing-photo-upload-input"
+                        className="bg-black/85 hover:bg-black border border-[#dfb257]/40 hover:border-[#dfb257] px-2.5 py-1.5 rounded-xl backdrop-blur-md cursor-pointer shadow-lg flex items-center gap-1.5 transition-all text-[#dfb257] active:scale-95 select-none"
+                      >
+                        <Camera size={12} />
+                        <span className="text-[8px] font-black uppercase tracking-wider">
                           {language === 'ka' ? 'შეცვლა' : 'Replace'}
                         </span>
-                      </div>
-                    </div>
-                    
-                    {/* Desktop Hover Overlay */}
-                    <div className="hidden md:flex absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 items-center justify-center transition-opacity rounded-3xl duration-300">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-[#dfb257] border border-[#dfb257]/30 bg-black/85 px-4.5 py-2.5 rounded-xl flex items-center gap-2 hover:scale-105 transition-all">
-                        <Camera size={12} className="text-[#dfb257]" /> 
-                        {language === 'ka' ? 'სურათის შეცვლა' : 'Replace Image Asset'}
-                      </span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleRemovePhoto}
+                        className="bg-black/85 hover:bg-red-950 border border-red-500/40 hover:border-red-500 px-2.5 py-1.5 rounded-xl backdrop-blur-md cursor-pointer shadow-lg flex items-center gap-1.5 transition-all text-red-400 hover:text-red-200 active:scale-95 select-none"
+                        title={language === 'ka' ? 'ფოტოს წაშლა' : 'Remove photo'}
+                      >
+                        <Trash2 size={12} />
+                        <span className="text-[8px] font-black uppercase tracking-wider">
+                          {language === 'ka' ? 'წაშლა' : 'Remove'}
+                        </span>
+                      </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-3.5 select-none text-center px-6">
+                  <label 
+                    htmlFor="listing-photo-upload-input"
+                    className="w-full h-full flex flex-col items-center justify-center gap-3.5 select-none text-center px-6 cursor-pointer"
+                  >
                     <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-900 group-hover:scale-105 transition-transform text-zinc-500 group-hover:text-[#dfb257] group-hover:border-[#dfb257]/30 group-hover:shadow-[0_0_15px_rgba(223,178,87,0.1)] duration-300">
                       <Camera size={22} />
                     </div>
@@ -750,9 +794,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         {language === 'ka' ? 'PNG, JPG ან WEBP (მაქს. 5MB)' : 'PNG, JPG or WEBP (Max 5MB)'}
                       </span>
                     </div>
-                  </div>
+                  </label>
                 )}
-              </label>
+              </div>
 
               <div className="relative mt-2.5 group">
                 <Link size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-[#dfb257] transition-colors" />
