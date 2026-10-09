@@ -156,7 +156,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             <div className="flex items-center justify-between relative">
               {[1, 2, 3].map((step) => {
                 const stepTitles = [
-                  language === 'ka' ? 'კატეგორია' : 'Classification',
+                  language === 'ka' ? 'კატეგორია' : 'Category',
                   language === 'ka' ? 'ფასი & პირობები' : 'Price & Terms',
                   language === 'ka' ? 'ლოკაცია & მედია' : 'Media & Map'
                 ];
@@ -228,9 +228,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-black uppercase tracking-widest text-[#dfb257] flex items-center gap-1.5">
-                  <span>⚡</span> {language === 'ka' ? 'განცხადების კლასიფიკაცია' : 'Classification Class'}
+                  <span>⚡</span> {language === 'ka' ? 'განცხადების ტიპი' : 'Listing Type'}
                 </label>
-                <span className="text-[8px] font-mono text-zinc-600 block uppercase">Select node archetype</span>
+                <span className="text-[8px] font-mono text-zinc-600 block uppercase">{language === 'ka' ? 'აირჩიეთ ტიპი' : 'Choose type'}</span>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -248,16 +248,16 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     emoji: '📦', 
                     labelEn: 'Product', 
                     labelKa: 'პროდუქტი',
-                    descEn: 'Componentry & inventory items',
-                    descKa: 'დანადგარები, ნაწილები და ქონება'
+                    descEn: 'Items, equipment & physical goods',
+                    descKa: 'ნივთები, ტექნიკა და პროდუქცია'
                   },
                   { 
                     type: 'project', 
                     emoji: '🚀', 
                     labelEn: 'Project', 
                     labelKa: 'პროექტი',
-                    descEn: 'Complex ventures & systems',
-                    descKa: 'კომპლექსური საინჟინრო ინიციატივები'
+                    descEn: 'Projects & initiatives',
+                    descKa: 'პროექტები და ინიციატივები'
                   }
                 ].map(item => {
                   const isSelected = formData.listingType === item.type;
@@ -342,7 +342,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     type="text"
                     value={formData.title}
                     onCommit={val => setFormData(p => ({ ...p, title: val }))}
-                    placeholder={language === 'ka' ? 'მაგ: ინდუსტრიული მართვის პულტი v3' : 'e.g. Industrial Control Unit v3'}
+                    placeholder={language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა' : 'e.g. iPhone 14 Pro or Wooden Desk'}
                     className={cn(
                       "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
                       "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-500",
@@ -365,7 +365,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     type="text"
                     value={formData.titleGe}
                     onCommit={val => setFormData(p => ({ ...p, titleGe: val }))}
-                    placeholder={language === 'ka' ? 'მაგ: ინდუსტრიული მართვის პულტი' : 'e.g. Industrial Control Unit (GE)'}
+                    placeholder={language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა' : 'e.g. iPhone 14 Pro or Wooden Desk'}
                     className={cn(
                       "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
                       "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-600",
@@ -440,12 +440,12 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             {/* Product Condition Selection Header & Sliding Tabs */}
             <div className="space-y-4">
               <label className="text-[10px] font-black uppercase tracking-widest text-[#dfb257] flex items-center gap-1.5">
-                <span>📦</span> {language === 'ka' ? 'აქტივის მდგომარეობა' : 'Asset Operational Condition'}
+                <span>📦</span> {language === 'ka' ? 'ნივთის მდგომარეობა' : 'Item Condition'}
               </label>
               
               <div className="grid grid-cols-3 gap-3 p-1.5 rounded-2xl bg-[#09090b]/90 border border-zinc-900">
                 {[
-                  { id: 'new', icon: '✨', titleEn: 'Brand New', titleKa: 'ახალი-ახალი' },
+                  { id: 'new', icon: '✨', titleEn: 'Brand New', titleKa: 'ახალი' },
                   { id: 'used', icon: '⚙️', titleEn: 'Used', titleKa: 'მეორადი' },
                   { id: 'refurbished', icon: '🛠️', titleEn: 'Restored', titleKa: 'აღდგენილი' }
                 ].map(cond => {
@@ -478,10 +478,10 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 </div>
                 <div>
                   <h4 className="text-xs font-black uppercase tracking-wider text-white">
-                    {language === 'ka' ? 'ფასი შეთანხმებით' : 'Price Offer Open'}
+                    {language === 'ka' ? 'ფასი შეთანხმებით' : 'Negotiable Price'}
                   </h4>
                   <p className="text-[9px] font-semibold text-zinc-500 uppercase tracking-widest mt-0.5">
-                    {language === 'ka' ? 'ფასი ექვემდებარება მოლაპარაკებას' : 'Listing allows open technical bids'}
+                    {language === 'ka' ? 'ფასი ექვემდებარება მოლაპარაკებას' : 'Open to price offers from buyers'}
                   </p>
                 </div>
               </div>
@@ -508,7 +508,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 rounded-3xl bg-[#dfb257]/5 border border-[#dfb257]/15 shadow-inner">
                 <div className="space-y-3">
                   <label className="text-[9px] font-black uppercase tracking-wider text-[#dfb257] flex items-center gap-1 ml-0.5">
-                    <span className="text-[10px]">⏱️</span> {language === 'ka' ? 'შესრულების ვადა' : 'Delivery Lead Time'}
+                    <span className="text-[10px]">⏱️</span> {language === 'ka' ? 'შესრულების ვადა' : 'Estimated Completion Time'}
                   </label>
                   <FastInput 
                     type="text"
@@ -525,13 +525,13 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 
                 <div className="space-y-3">
                   <label className="text-[9px] font-black uppercase tracking-wider text-[#dfb257] flex items-center gap-1 ml-0.5">
-                    <span className="text-[10px]">📋</span> {language === 'ka' ? 'სამუშაო პირობები' : 'Technical Specifications Requirement'}
+                    <span className="text-[10px]">📋</span> {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms & Requirements'}
                   </label>
                   <FastInput 
                     type="text"
                     value={formData.serviceTerms || ''}
                     onCommit={val => setFormData(p => ({ ...p, serviceTerms: val }))}
-                    placeholder={language === 'ka' ? "მაგ: სრული ტექნიკური დავალება" : "e.g. Detailed project specs"}
+                    placeholder={language === 'ka' ? "მაგ: შეთანხმების მიხედვით" : "e.g. As agreed with client"}
                     className={cn(
                       "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder-zinc-600",
                       "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257]",
@@ -625,19 +625,19 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-[10px] font-black uppercase tracking-widest text-[#dfb257] flex items-center gap-1.5">
-                  <span>🛰️</span> {language === 'ka' ? 'გეო-ლოკალური კოორდინირება' : 'Coordinate Telemetry Scope'}
+                  <span>🛰️</span> {language === 'ka' ? 'მდებარეობა რუკაზე' : 'Location on Map'}
                 </label>
                 <span className="text-[8px] font-mono text-zinc-500 block uppercase">
-                  COORDS: {formData.lat !== undefined && formData.lat !== null ? formData.lat.toFixed(4) : "41.7151"}, {formData.lng !== undefined && formData.lng !== null ? formData.lng.toFixed(4) : "44.8271"}
+                  {language === 'ka' ? 'კოორდინატები: ' : 'COORDS: '}{formData.lat !== undefined && formData.lat !== null ? formData.lat.toFixed(4) : "41.7151"}, {formData.lng !== undefined && formData.lng !== null ? formData.lng.toFixed(4) : "44.8271"}
                 </span>
               </div>
               
               <div className="p-1 rounded-[28px] bg-black/60 border border-zinc-800/50 overflow-hidden shadow-2xl relative">
                 <div className="absolute top-3 left-4 text-[7px] font-mono font-black text-[#dfb257]/40 z-20 pointer-events-none uppercase tracking-widest">
-                  GPS LINKED
+                  {language === 'ka' ? 'ლოკაცია მონიშნულია' : 'LOCATION PINNED'}
                 </div>
                 <div className="absolute bottom-3 right-4 text-[7px] font-mono font-black text-zinc-600 z-20 pointer-events-none uppercase tracking-widest">
-                  SYSTEM ACTIVE
+                  {language === 'ka' ? 'ინტერაქტიული რუკა' : 'INTERACTIVE MAP'}
                 </div>
                 
                 <div className="w-full h-64 min-h-[250px] rounded-[24px] overflow-hidden relative">
@@ -673,7 +673,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   ) : (
                     <Sparkles size={10} className="stroke-[2.5] text-[#dfb257]" />
                   )}
-                  {language === 'ka' ? 'AI შაბლონი' : 'AI Generate Specification'}
+                  {language === 'ka' ? 'AI შაბლონი' : 'AI Generate Description'}
                 </button>
               </div>
               
@@ -681,7 +681,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 required
                 value={formData.description}
                 onChange={e => setFormData({...formData, description: e.target.value})}
-                placeholder={language === 'ka' ? 'მიუთითეთ დეტალური ტექნიკური სპეციფიკაციები...' : 'Provide highly detailed product technical specifications...'}
+                placeholder={language === 'ka' ? 'აღწერეთ თქვენი ნივთი ან მომსახურება დეტალურად...' : 'Describe your item or service in detail...'}
                 className={cn(
                   "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-semibold h-36 resize-none text-white shadow-inner transition-all",
                   "bg-[#09090b]/95 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-600",
@@ -733,7 +733,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-[#dfb257]" />
                     <span className="text-[9px] font-black uppercase tracking-widest text-[#dfb257]">
-                      {language === 'ka' ? 'ინფორმაცია მუშავდება...' : 'Optimizing Visual Asset...'}
+                      {language === 'ka' ? 'ფოტო მუშავდება...' : 'Processing Photo...'}
                     </span>
                   </div>
                 ) : formData.images?.[0] ? (
@@ -748,7 +748,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257] animate-pulse" />
                         <span className="text-[8px] font-mono font-black text-white uppercase tracking-wider">
-                          ASSET READY
+                          {language === 'ka' ? 'ფოტო მზადაა' : 'PHOTO READY'}
                         </span>
                       </div>
                     </div>
