@@ -405,6 +405,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [buyerSelectedOrder, setBuyerSelectedOrder] = useState<Order | null>(null);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
+  const [publishSuccessModal, setPublishSuccessModal] = useState<{
+    title: string;
+    isEdit: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (user?.displayName && !shippingDetails.recipientName) {
@@ -2871,7 +2875,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         serviceTerms: formData.serviceTerms || ''
       };
 
-      if (viewMode === 'edit' && editingListing) {
+      const savedTitle = formData.title.trim();
+      const isEdit = viewMode === 'edit' && Boolean(editingListing);
+
+      if (isEdit && editingListing) {
         // Remove createdAt from updates to keep it immutable
         const { createdAt, ...updateData } = listingData;
         await updateDoc(doc(db, 'listings', editingListing.id), updateData);
@@ -2882,6 +2889,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       localStorage.removeItem('proton_markethub_draft_form_data');
       setViewMode('browse');
       resetListingForm();
+      setPublishSuccessModal({
+        title: savedTitle,
+        isEdit
+      });
     } catch (error: any) {
       console.error(error);
       showToast("Firebase Error: " + error.message, 'error');
@@ -5154,6 +5165,105 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }}
         onMessageSeller={handleStartOrderChat}
       />
+
+      {/* Publish Success Confirmation Modal */}
+      <AnimatePresence>
+        {publishSuccessModal && (
+          <div 
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publish-success-dialog-title"
+          >
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPublishSuccessModal(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            {/* Modal Dialog Card */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 16 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-[#dfb257]/30 bg-zinc-950/95 p-6 sm:p-8 flex flex-col items-center text-center shadow-[0_24px_50px_-12px_rgba(0,0,0,0.85)] overflow-hidden z-10"
+            >
+              {/* Radial glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#dfb257]/15 rounded-full blur-[80px] pointer-events-none" />
+
+              {/* Close Button */}
+              <button 
+                type="button"
+                onClick={() => setPublishSuccessModal(null)}
+                className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-xl transition-colors cursor-pointer"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Success Icon */}
+              <div className="w-16 h-16 rounded-2xl bg-[#dfb257]/10 border border-[#dfb257]/30 flex items-center justify-center text-[#dfb257] shadow-[0_0_25px_rgba(223,178,87,0.2)] mb-4">
+                <CheckCircle2 size={32} className="stroke-[2.5]" />
+              </div>
+
+              {/* Title */}
+              <h3 
+                id="publish-success-dialog-title"
+                className="text-lg sm:text-xl font-black uppercase tracking-wider text-white"
+              >
+                {language === 'ka' 
+                  ? (publishSuccessModal.isEdit ? 'განცხადება განახლდა!' : 'განცხადება გამოქვეყნდა!') 
+                  : (publishSuccessModal.isEdit ? 'Listing Updated!' : 'Listing Published!')}
+              </h3>
+
+              {/* Description */}
+              <p className="text-xs font-semibold text-zinc-400 mt-2 max-w-xs leading-relaxed">
+                {language === 'ka' ? (
+                  <>
+                    თქვენი განცხადება <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> წარმატებით შეინახა და უკვე ხელმისაწვდომია მყიდველებისთვის.
+                  </>
+                ) : (
+                  <>
+                    Your listing <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> was saved successfully and is now live on Proton Market.
+                  </>
+                )}
+              </p>
+
+              {/* Navigation Options / Clear Next Steps */}
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishSuccessModal(null);
+                    setProfileSubMode('selling');
+                    setViewMode('my-listings');
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#dfb257] text-zinc-950 hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_15px_rgba(223,178,87,0.25)] flex items-center justify-center gap-2 cursor-pointer font-sans"
+                >
+                  <Package size={14} />
+                  <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Listings'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPublishSuccessModal(null);
+                    setViewMode('browse');
+                  }}
+                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+                >
+                  <LayoutGrid size={14} />
+                  <span>{language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   </div>
 
