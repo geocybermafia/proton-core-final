@@ -176,8 +176,11 @@ async function startServer() {
       index: false
     }));
 
-    // Handle SPA routing - no cache for index.html to ensure users get latest version
+    // Handle SPA routing - ensure missing assets or files with extensions return 404, never index.html
     app.get("*", (req, res) => {
+      if (req.path.startsWith("/assets/") || path.extname(req.path)) {
+        return res.status(404).send("Asset not found");
+      }
       res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
       res.sendFile(path.join(distPath, "index.html"));
     });

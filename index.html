@@ -221,6 +221,20 @@
                 return true;
               }
             }, true);
+
+            // Vite preload & dynamic import recovery fallback
+            window.addEventListener('vite:preloadError', function(event) {
+              try {
+                const now = Date.now();
+                const last = parseInt(sessionStorage.getItem('proton_last_chunk_reload_ts') || '0', 10);
+                if (now - last > 25000 && !sessionStorage.getItem('proton_chunk_retry_vite_preload')) {
+                  sessionStorage.setItem('proton_last_chunk_reload_ts', String(now));
+                  sessionStorage.setItem('proton_chunk_retry_vite_preload', 'true');
+                  if (event && event.preventDefault) event.preventDefault();
+                  window.location.reload();
+                }
+              } catch (e) {}
+            });
           }
         } catch (e) {
           // ignore

@@ -1,39 +1,14 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Dispatch, SetStateAction, Suspense, lazy } from 'react';
-
-function lazyWithRetry<T extends React.ComponentType<any>>(
-  componentImport: () => Promise<{ default: T } | { [key: string]: any }>,
-  retries = 3,
-  baseDelay = 800
-): React.LazyExoticComponent<T> {
-  return lazy(async () => {
-    let lastError: any;
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const module = await componentImport();
-        if (module && typeof module === 'object' && 'default' in module && module.default) {
-          return module as { default: T };
-        }
-        return { default: module } as { default: T };
-      } catch (error) {
-        lastError = error;
-        console.warn(`Dynamic module import attempt ${attempt + 1}/${retries + 1} failed, retrying...`, error);
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(1.5, attempt)));
-        }
-      }
-    }
-    console.error("Dynamic module load failed after retries:", lastError);
-    throw lastError;
-  });
-}
+import { lazyWithRetry } from './lib/lazyWithRetry';
+import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 
 import { useThemeSync } from './hooks/useThemeSync';
 import { useThemeSchedule } from './hooks/useThemeSchedule';
 import { AutomationEngine } from './components/AutomationEngine';
 
-const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
+const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })), 'EnterpriseWorkflowBuilder');
 // Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
-const LocalFileScanner = lazyWithRetry(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })));
+const LocalFileScanner = lazyWithRetry(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })), 'LocalFileScanner');
 import { auth, db, googleProvider } from './firebase';
 import { useAuth } from './contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -47,19 +22,19 @@ import {
   User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocs, collection, getDocFromServer, addDoc, deleteDoc, updateDoc, increment, runTransaction, serverTimestamp, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-const SettingsView = lazyWithRetry(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })));
+const SettingsView = lazyWithRetry(() => import('./components/SettingsView').then(module => ({ default: module.SettingsView })), 'SettingsView');
 import { useToast } from './components/Toast';
 import { useLanguage } from './contexts/LanguageContext';
 import { useSeller } from './contexts/SellerContext';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })));
-const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })));
+const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })), 'CabinetView');
+const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })), 'Web3ControlPanel');
 import { LandingPage } from './components/LandingPage';
-const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView || module.default })));
-const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })));
-const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })));
-const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub || module.default })));
-const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })));
+const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView || module.default })), 'TranslatorView');
+const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })), 'CreativeStudioHub');
+const CopywritingView = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CopywritingView })), 'CopywritingView');
+const MarketHub = lazyWithRetry(() => import('./components/MarketHub').then(module => ({ default: module.MarketHub || module.default })), 'MarketHub');
+const ClipsView = lazyWithRetry(() => import('./components/ClipsView').then(module => ({ default: module.default })), 'ClipsView');
 import { HeaderQuickSearch } from './components/HeaderQuickSearch';
 import { FocusTimerWidget } from './components/FocusTimerWidget';
 import { NotificationCenter } from './components/NotificationCenter';
@@ -69,11 +44,11 @@ import { DashboardView } from './components/DashboardView';
 import { useSystemHealth } from './hooks/useSystemHealth';
 import { SystemStatusBadge } from './components/SystemStatusBadge';
 import { DebugPanel } from './components/debug/DebugPanel';
-const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })));
-const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })));
-const BusinessHubView = lazyWithRetry(() => import('./components/BusinessHubView').then(module => ({ default: module.default })));
-const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView').then(module => ({ default: module.default })));
-const PersonasView = lazyWithRetry(() => import('./components/PersonasView').then(module => ({ default: module.default })));
+const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })), 'OrganizerView');
+const CommercialHub = lazyWithRetry(() => import('./components/CommercialHub').then(module => ({ default: module.CommercialHub })), 'CommercialHub');
+const BusinessHubView = lazyWithRetry(() => import('./components/BusinessHubView').then(module => ({ default: module.default })), 'BusinessHubView');
+const WorkflowsView = lazyWithRetry(() => import('./components/WorkflowsView').then(module => ({ default: module.default })), 'WorkflowsView');
+const PersonasView = lazyWithRetry(() => import('./components/PersonasView').then(module => ({ default: module.default })), 'PersonasView');
 import { 
   handleFirestoreError, 
   OperationType, 
@@ -191,7 +166,7 @@ import {
   Menu
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })));
+const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })), 'Calendar');
 import 'react-calendar/dist/Calendar.css';
 import { cn } from './lib/utils';
 import { safeStorage } from './lib/safeStorage';
@@ -5768,22 +5743,31 @@ export default function App() {
         <div 
           className={cn("fixed inset-0 z-[45] md:z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
         >
-          <Suspense fallback={
-            <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
-              <Loader2 className="animate-spin text-proton-accent" size={24} />
-              <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
-            </div>
-          }>
-            <MarketHub 
-              language={userProfile.language} 
-              t={t}
-              themeId={theme}
-              onBack={() => {
-                setUiMode('business');
-                setActiveView('dashboard');
-              }}
-            />
-          </Suspense>
+          <ViewErrorBoundary 
+            viewName="Market Hub" 
+            language={userProfile.language}
+            onBack={() => {
+              setUiMode('business');
+              setActiveView('dashboard');
+            }}
+          >
+            <Suspense fallback={
+              <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+                <Loader2 className="animate-spin text-proton-accent" size={24} />
+                <span className="uppercase tracking-widest font-bold">Loading Market Space...</span>
+              </div>
+            }>
+              <MarketHub 
+                language={userProfile.language} 
+                t={t}
+                themeId={theme}
+                onBack={() => {
+                  setUiMode('business');
+                  setActiveView('dashboard');
+                }}
+              />
+            </Suspense>
+          </ViewErrorBoundary>
         </div>
       )}
 
@@ -5792,16 +5776,24 @@ export default function App() {
           style={{ contain: 'strict', transform: 'translateZ(0)', willChange: 'transform' }}
           className={cn("fixed inset-0 z-[45] md:z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'translator' ? "block" : "hidden")}
         >
-          <Suspense fallback={
-            <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
-              <Loader2 className="animate-spin text-proton-accent" size={24} />
-              <span className="uppercase tracking-widest">Loading Live Translator...</span>
-            </div>
-          }>
-            <TranslatorView onBack={() => {
+          <ViewErrorBoundary 
+            viewName="Translator" 
+            language={userProfile.language}
+            onBack={() => {
               handleViewChange('creative-studio');
-            }} />
-          </Suspense>
+            }}
+          >
+            <Suspense fallback={
+              <div className="h-[100dvh] w-screen flex flex-col items-center justify-center bg-proton-bg text-proton-muted/50 font-mono text-xs gap-3">
+                <Loader2 className="animate-spin text-proton-accent" size={24} />
+                <span className="uppercase tracking-widest">Loading Live Translator...</span>
+              </div>
+            }>
+              <TranslatorView onBack={() => {
+                handleViewChange('creative-studio');
+              }} />
+            </Suspense>
+          </ViewErrorBoundary>
         </div>
       )}
             <AnimatePresence>
@@ -6894,7 +6886,11 @@ export default function App() {
                   <span className="uppercase tracking-widest font-black text-proton-accent/90 animate-pulse">{language === 'ka' ? 'მარკეტი იტვირთება...' : 'Loading Marketplace...'}</span>
                 </div>
               ) : (
-                <>
+                <ViewErrorBoundary 
+                  viewName={String(activeView)} 
+                  language={userProfile.language}
+                  onBack={() => setActiveView('dashboard')}
+                >
                   {activeView === 'dashboard' && (
                     <DashboardView 
                       setActiveView={setActiveView}
@@ -7134,7 +7130,7 @@ export default function App() {
                       />
                     </Suspense>
                   )}
-                </>
+                </ViewErrorBoundary>
               )}
             </motion.div>
           </AnimatePresence>

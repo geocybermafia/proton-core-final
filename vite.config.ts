@@ -38,11 +38,14 @@ export default defineConfig(({ mode }) => ({
   build: {
     sourcemap: false,
     reportCompressedSize: false,
-    modulePreload: false,
+    modulePreload: { polyfill: true },
     minify: 'esbuild',
     target: 'esnext',
     rollupOptions: {
       output: {
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],

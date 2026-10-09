@@ -12,32 +12,12 @@ import { handleFirestoreError } from '../lib/firebaseUtils';
 import { analyzeWorkflow } from '../lib/gemini';
 import { useToast } from './Toast';
 import Markdown from 'react-markdown';
+import { lazyWithRetry } from '../lib/lazyWithRetry';
 
-function lazyWithRetry<T extends React.ComponentType<any>>(
-  componentImport: () => Promise<{ default: T } | { [key: string]: any }>
-): React.LazyExoticComponent<T> {
-  return lazy(async () => {
-    const hasRetried = window.sessionStorage.getItem('chunk-retry-flag');
-    try {
-      const module = await componentImport();
-      window.sessionStorage.removeItem('chunk-retry-flag');
-      if (module && typeof module === 'object' && 'default' in module) {
-        return module as { default: T };
-      }
-      return { default: module } as { default: T };
-    } catch (error) {
-       console.error("Chunk load failed, retrying page reload...", error);
-       if (!hasRetried) {
-         window.sessionStorage.setItem('chunk-retry-flag', 'true');
-         window.location.reload();
-         return new Promise<never>(() => {});
-       }
-       throw error;
-    }
-  });
-}
-
-const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })));
+const EnterpriseWorkflowBuilder = lazyWithRetry(
+  () => import('./EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })),
+  'EnterpriseWorkflowBuilder'
+);
 
 const sanitizeForFirestore = (data: any): any => {
   if (data === null || data === undefined) return null;
