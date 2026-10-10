@@ -122,7 +122,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        "max-w-2xl mx-auto p-4 sm:p-12 rounded-[28px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7)]", 
+        "max-w-2xl mx-auto p-4 sm:p-12 pb-24 sm:pb-12 rounded-[28px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7)]", 
         "bg-zinc-950/75 border-zinc-800/80 hover:border-[#dfb257]/30 transition-colors duration-500"
       )}
     >

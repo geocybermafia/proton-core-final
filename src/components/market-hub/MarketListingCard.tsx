@@ -247,7 +247,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               e.stopPropagation();
               onSelectListing(listing);
             }}
-            className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] leading-snug mb-1"
+            className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] leading-normal pb-0.5 mb-1"
           >
             {displayTitle}
           </h2>
@@ -260,7 +260,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           {/* Price Section: Scannable, prominent, flex-shrink controlled with no line wraps */}
           <div className="flex items-end justify-between gap-2 mb-3 min-w-0">
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-bold mb-0.5 block font-mono">
+              <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold mb-0.5 block font-mono">
                 {t.market.price}
               </span>
               <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
@@ -277,11 +277,11 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             </div>
 
             {listing.isNegotiable ? (
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                 {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
               </span>
             ) : listing.listingType === 'service' || listing.category === 'service' ? (
-              <span className="text-[9px] font-bold text-amber-400/80 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+              <span className="text-[9px] font-bold text-[#dfb257] uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                 {language === 'ka' ? 'სერვისი' : 'Service'}
               </span>
             ) : null}
@@ -319,7 +319,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                       </span>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest font-mono">
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
                       {language === 'ka' ? 'ახალი' : 'New'}
                     </span>
                   )}

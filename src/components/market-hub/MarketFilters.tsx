@@ -236,11 +236,11 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
           >
             <div className="flex items-center gap-2 min-w-0">
               <span className="shrink-0">{t.market.form.category}</span>
-              <span className="text-[10px] lowercase text-zinc-500 font-normal truncate max-w-[120px]">
+              <span className="text-[10px] lowercase text-zinc-400 font-normal truncate max-w-[120px]">
                 ({activeCategory === 'all' ? (language === 'ka' ? 'ყველა' : 'all') : (t.market.categories[activeCategory] || activeCategory)})
               </span>
             </div>
-            <ChevronDown size={14} className={cn("text-zinc-500 transition-transform duration-250", isSidebarCategoriesOpen && "rotate-180")} />
+            <ChevronDown size={14} className={cn("text-zinc-400 transition-transform duration-250", isSidebarCategoriesOpen && "rotate-180")} />
           </button>
           
           {isSidebarCategoriesOpen && (

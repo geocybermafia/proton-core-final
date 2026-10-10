@@ -59,9 +59,9 @@ export const MarketPulseMetrics = React.memo(function MarketPulseMetrics({
   language
 }: MarketPulseMetricsProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-zinc-950/60 border border-zinc-900/80 backdrop-blur-md">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-zinc-950/70 border border-zinc-900 backdrop-blur-md">
       <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
           {language === 'ka' ? 'აქტიური ლოტები' : 'Active Listings'}
         </span>
         <span className="text-base sm:text-lg font-black text-white font-mono">
@@ -69,7 +69,7 @@ export const MarketPulseMetrics = React.memo(function MarketPulseMetrics({
         </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
           {language === 'ka' ? 'საშუალო ფასი' : 'Average Price'}
         </span>
         <span className="text-base sm:text-lg font-black text-[#dfb257] font-mono">
@@ -77,7 +77,7 @@ export const MarketPulseMetrics = React.memo(function MarketPulseMetrics({
         </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
           {language === 'ka' ? 'ვაჭრობის მოცულობა' : 'Total Traded'}
         </span>
         <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
@@ -85,7 +85,7 @@ export const MarketPulseMetrics = React.memo(function MarketPulseMetrics({
         </span>
       </div>
       <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">
+        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
           {language === 'ka' ? 'ტოპ კატეგორია' : 'Top Category'}
         </span>
         <span className="text-base sm:text-lg font-black text-blue-400 truncate">

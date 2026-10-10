@@ -104,8 +104,8 @@ export const CheckoutModal = React.memo(function CheckoutModal({
               </button>
             </div>
 
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 custom-scrollbar-minimal overscroll-contain">
+            {/* Scrollable Body with bottom clearance for virtual keyboard & sticky action footer */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-32 sm:pb-8 space-y-5 custom-scrollbar-minimal overscroll-contain">
               {/* Cart Sync Warning Banner */}
               {cart.length > 0 && (
                 <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
