@@ -13,10 +13,13 @@ import {
   Link,
   ArrowLeft,
   ChevronRight,
-  Trash2
+  Trash2,
+  Eye,
+  Edit3,
+  ShoppingBag
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { MarketTheme, CURRENCIES, WORLD_COUNTRIES } from './MarketConstants';
+import { MarketTheme, CURRENCIES, WORLD_COUNTRIES, CATEGORY_EMOJIS } from './MarketConstants';
 import { FastInput } from './FastInputs';
 import { MapPicker } from '../MapPicker';
 import { useToast } from '../Toast';
@@ -102,6 +105,17 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     );
   };
 
+  const selectedCountry = React.useMemo(() => {
+    return WORLD_COUNTRIES.find(c => c.code === formData.country);
+  }, [formData.country]);
+
+  const conditionLabel = React.useMemo(() => {
+    if (formData.condition === 'new') return language === 'ka' ? 'ახალი' : 'Brand New';
+    if (formData.condition === 'used') return language === 'ka' ? 'მეორადი' : 'Used';
+    if (formData.condition === 'refurbished') return language === 'ka' ? 'აღდგენილი' : 'Restored';
+    return formData.condition || (language === 'ka' ? 'ახალი' : 'New');
+  }, [formData.condition, language]);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 30 }}
@@ -131,7 +145,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <div className="flex items-center gap-2 mt-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
                   <p className="text-[10px] font-black text-proton-accent uppercase tracking-widest">
-                    {language === 'ka' ? `ნაბიჯი ${formStep} 3-დან` : `Step ${formStep} of 3`}
+                    {language === 'ka' ? `ნაბიჯი ${formStep} 4-დან` : `Step ${formStep} of 4`}
                   </p>
                 </div>
               </div>
@@ -139,7 +153,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             
             {/* Compact step progress radial tracker */}
             <div className="text-[10px] font-mono font-black text-zinc-500 bg-zinc-950 px-3 py-1.5 rounded-full border border-zinc-900 select-none">
-              PROGRESS: {formStep === 1 ? '33%' : formStep === 2 ? '66%' : '100%'}
+              PROGRESS: {formStep === 1 ? '25%' : formStep === 2 ? '50%' : formStep === 3 ? '75%' : '100%'}
             </div>
           </div>
 
@@ -149,16 +163,17 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             <div className="absolute top-6 left-0 right-0 h-[2px] bg-proton-border/45 rounded-full">
               <div 
                 className="h-full bg-proton-accent transition-all duration-500 rounded-full"
-                style={{ width: formStep === 1 ? '16.66%' : formStep === 2 ? '50%' : '83.33%' }}
+                style={{ width: formStep === 1 ? '12.5%' : formStep === 2 ? '37.5%' : formStep === 3 ? '62.5%' : '87.5%' }}
               />
             </div>
             
             <div className="flex items-center justify-between relative">
-              {[1, 2, 3].map((step) => {
+              {[1, 2, 3, 4].map((step) => {
                 const stepTitles = [
                   language === 'ka' ? 'კატეგორია' : 'Category',
                   language === 'ka' ? 'ფასი & პირობები' : 'Price & Terms',
-                  language === 'ka' ? 'ლოკაცია & მედია' : 'Media & Map'
+                  language === 'ka' ? 'ლოკაცია & მედია' : 'Media & Map',
+                  language === 'ka' ? 'გადახედვა' : 'Preview'
                 ];
                 const isCompleted = formStep > step;
                 const isActive = formStep === step;
@@ -181,6 +196,22 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                             : "Please enter a valid price to continue (positive numbers only).",
                             'warning'
                           );
+                          return;
+                        }
+                      }
+                      if (step > 3) {
+                        const countryStr = (formData.country || '').trim();
+                        const cityStr = (formData.city || '').trim();
+                        if (!countryStr || !cityStr) {
+                          showToast(language === 'ka' 
+                            ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი გადახედვამდე." 
+                            : "Please select a country and enter a city before preview.",
+                            'warning'
+                          );
+                          return;
+                        }
+                        if (!formData.description.trim()) {
+                          showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა გადახედვამდე." : "Please fill in the product description before preview.", 'warning');
                           return;
                         }
                       }
@@ -816,6 +847,251 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
           </motion.div>
         )}
 
+        {/* STEP 4: Listing Preview */}
+        {formStep === 4 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }} 
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.35 }}
+            className="space-y-8 animate-in fade-in"
+          >
+            {/* Preview Banner Header */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#dfb257]/15 via-zinc-950/80 to-zinc-950 border border-[#dfb257]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#dfb257]/20 text-[#dfb257] border border-[#dfb257]/40 shadow-[0_0_15px_rgba(223,178,87,0.2)]">
+                  <Eye size={18} className="stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+                    <span>{language === 'ka' ? 'განცხადების გადახედვა' : 'Listing Preview'}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[8px] font-mono font-black uppercase tracking-widest bg-[#dfb257] text-black">
+                      {language === 'ka' ? 'მყიდველის ხედვა' : 'Buyer View'}
+                    </span>
+                  </h3>
+                  <p className="text-[10px] font-semibold text-zinc-400 mt-0.5">
+                    {language === 'ka' 
+                      ? 'ასე გამოჩნდება თქვენი განცხადება ბაზარზე. გადაამოწმეთ ინფორმაცია გამოქვეყნებამდე.' 
+                      : 'This is how your listing will appear to buyers. Review all details before publishing.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Buyer-Facing Marketplace Card Mockup */}
+            <div className="flex flex-col items-center">
+              <div className="w-full max-w-sm rounded-2xl overflow-hidden border border-zinc-800/80 bg-zinc-950/90 shadow-[0_16px_40px_rgba(0,0,0,0.8)] relative group">
+                {/* Card Image Container */}
+                <div className="w-full aspect-[4/3] bg-zinc-900/90 relative overflow-hidden flex items-center justify-center">
+                  {formData.images?.[0] ? (
+                    <img 
+                      src={formData.images[0]} 
+                      alt={formData.title} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-zinc-600">
+                      <ShoppingBag size={36} className="opacity-40 text-[#dfb257]" />
+                      <span className="text-[9px] font-mono uppercase tracking-widest text-zinc-500">
+                        {language === 'ka' ? 'ფოტოს გარეშე' : 'No Photo'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Top floating badges */}
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+                    <span className="px-2 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-[9px] font-black uppercase tracking-wider text-white flex items-center gap-1">
+                      <span>{CATEGORY_EMOJIS[formData.category] || '📦'}</span>
+                      <span>{t.market.categories?.[formData.category] || formData.category}</span>
+                    </span>
+                  </div>
+
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+                    <span className="px-2 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-white/10 text-[9px] font-bold text-zinc-300 flex items-center gap-1">
+                      <span>{selectedCountry?.flag || '🌐'}</span>
+                      <span>{formData.city || selectedCountry?.name || 'Global'}</span>
+                    </span>
+                  </div>
+
+                  {/* Condition or Listing Type Badge */}
+                  <div className="absolute bottom-3 left-3 z-10">
+                    <span className="px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-md border border-[#dfb257]/30 text-[8px] font-mono font-black text-[#dfb257] uppercase tracking-wider">
+                      {formData.listingType === 'service' 
+                        ? (language === 'ka' ? 'სერვისი' : 'SERVICE') 
+                        : formData.listingType === 'project'
+                        ? (language === 'ka' ? 'პროექტი' : 'PROJECT')
+                        : conditionLabel}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h4 className="text-sm font-black text-white line-clamp-1">
+                      {language === 'ka' ? (formData.titleGe || formData.title) : formData.title}
+                    </h4>
+                    {formData.titleGe && formData.title && formData.titleGe !== formData.title && (
+                      <p className="text-[10px] text-zinc-500 font-semibold line-clamp-1 mt-0.5">
+                        {language === 'ka' ? formData.title : formData.titleGe}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Price and Escrow */}
+                  <div className="flex items-center justify-between pt-1 border-t border-zinc-900">
+                    <div>
+                      <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-wider">
+                        {language === 'ka' ? 'ფასი' : 'PRICE'}
+                      </span>
+                      <span className="text-base font-black text-[#dfb257] font-mono">
+                        {parseFloat(formData.price || '0').toLocaleString(undefined, { maximumFractionDigits: 2 })} {formData.currency}
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black uppercase tracking-wider">
+                        <ShieldCheck size={11} className="stroke-[2.5]" />
+                        <span>ESCROW</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Simulated Buyer Actions */}
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <div className="py-2 px-3 rounded-xl bg-[#dfb257]/20 border border-[#dfb257]/40 text-[#dfb257] text-[9px] font-black uppercase tracking-wider text-center select-none opacity-80">
+                      {language === 'ka' ? 'ყიდვა (მყიდველი)' : 'Buy Now (Mock)'}
+                    </div>
+                    <div className="py-2 px-3 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 text-[9px] font-black uppercase tracking-wider text-center select-none opacity-80">
+                      {language === 'ka' ? 'ჩატი (მყიდველი)' : 'Chat (Mock)'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Details & Quick Edit Jump Links */}
+            <div className="space-y-3">
+              <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center justify-between">
+                <span>📋 {language === 'ka' ? 'მონაცემების შემოწმება' : 'Details Breakdown'}</span>
+                <span className="text-[8px] font-mono text-zinc-600 uppercase">
+                  {language === 'ka' ? 'შეცდომის შემთხვევაში დააჭირეთ „შეცვლას“' : 'Click edit to adjust any section'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Step 1 Review */}
+                <div className="p-4 rounded-2xl bg-[#09090b]/90 border border-zinc-800/80 flex flex-col justify-between gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-mono font-black text-[#dfb257] uppercase tracking-wider">
+                        {language === 'ka' ? 'ნაბიჯი 1: კატეგორია' : 'Step 1: Category'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFormStep(1)}
+                        className="text-[9px] font-black text-[#dfb257] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit3 size={10} />
+                        <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                      </button>
+                    </div>
+                    <p className="text-xs font-bold text-white line-clamp-1">{formData.title || '—'}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
+                        {formData.listingType?.toUpperCase()}
+                      </span>
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
+                        {t.market.categories?.[formData.category] || formData.category}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 Review */}
+                <div className="p-4 rounded-2xl bg-[#09090b]/90 border border-zinc-800/80 flex flex-col justify-between gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-mono font-black text-[#dfb257] uppercase tracking-wider">
+                        {language === 'ka' ? 'ნაბიჯი 2: ფასი' : 'Step 2: Price'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFormStep(2)}
+                        className="text-[9px] font-black text-[#dfb257] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit3 size={10} />
+                        <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                      </button>
+                    </div>
+                    <p className="text-xs font-bold text-white font-mono">{formData.price} {formData.currency}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
+                        {conditionLabel}
+                      </span>
+                      {formData.isNegotiable && (
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400">
+                          {language === 'ka' ? 'მოლაპარაკებადი' : 'Negotiable'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 Review */}
+                <div className="p-4 rounded-2xl bg-[#09090b]/90 border border-zinc-800/80 flex flex-col justify-between gap-3">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-mono font-black text-[#dfb257] uppercase tracking-wider">
+                        {language === 'ka' ? 'ნაბიჯი 3: ლოკაცია' : 'Step 3: Location'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setFormStep(3)}
+                        className="text-[9px] font-black text-[#dfb257] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit3 size={10} />
+                        <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                      </button>
+                    </div>
+                    <p className="text-xs font-bold text-white line-clamp-1">
+                      {selectedCountry?.flag} {formData.city}, {selectedCountry?.name}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
+                        {formData.images?.[0] ? (language === 'ka' ? '1 ფოტო' : '1 Photo') : (language === 'ka' ? 'ფოტოს გარეშე' : 'No Photo')}
+                      </span>
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
+                        {formData.lat !== undefined && formData.lat !== null ? (language === 'ka' ? 'GPS მონიშნულია' : 'GPS Pinned') : (language === 'ka' ? 'GPS გარეშე' : 'No GPS')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description Preview */}
+              <div className="p-4 rounded-2xl bg-[#09090b]/90 border border-zinc-800/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-mono font-black text-zinc-500 uppercase tracking-wider">
+                    {language === 'ka' ? 'აღწერა' : 'Description'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setFormStep(3)}
+                    className="text-[9px] font-black text-[#dfb257] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit3 size={10} />
+                    <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-300 font-sans whitespace-pre-line leading-relaxed max-h-32 overflow-y-auto">
+                  {formData.description || '—'}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Steps Progress Footer Bar */}
         <div className="flex items-center justify-between gap-4 pt-8 mt-8 border-t border-zinc-900/80">
           <div className="flex gap-2.5">
@@ -845,7 +1121,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
           </div>
 
           <div className="flex gap-2.5">
-            {formStep < 3 ? (
+            {formStep < 4 ? (
               <button 
                 type="button"
                 onClick={() => {
@@ -865,16 +1141,34 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       );
                       return;
                     }
+                  } else if (formStep === 3) {
+                    const countryStr = (formData.country || '').trim();
+                    const cityStr = (formData.city || '').trim();
+                    if (!countryStr || !cityStr) {
+                      showToast(language === 'ka' 
+                        ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი გადახედვამდე." 
+                        : "Please select a country and city before preview.",
+                        'warning'
+                      );
+                      return;
+                    }
+                    if (!formData.description.trim()) {
+                      showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა გადახედვამდე." : "Please fill in the product description before preview.", 'warning');
+                      return;
+                    }
                   }
                   setFormStep(prev => prev + 1);
                 }}
                 className="h-11 px-6 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 text-zinc-950 bg-[#dfb257] border border-[#dfb257] font-sans shadow-[0_4px_15px_rgba(223,178,87,0.25)]"
               >
-                {language === 'ka' ? 'შემდეგი ნაბიჯი' : 'Next Step'}
-                <ChevronRight size={13} className="stroke-[2.5]" />
+                {formStep === 3 
+                  ? (language === 'ka' ? 'გადახედვა' : 'Preview Listing')
+                  : (language === 'ka' ? 'შემდეგი ნაბიჯი' : 'Next Step')}
+                {formStep === 3 ? <Eye size={13} className="stroke-[2.5]" /> : <ChevronRight size={13} className="stroke-[2.5]" />}
               </button>
             ) : (
               <button 
+                type="submit"
                 disabled={isSubmitting}
                 className={cn(
                   "h-11 px-7 rounded-2xl text-[9px] font-black uppercase tracking-widest tracking-[0.18em] hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 text-black border border-[#dfb257] shadow-[0_6px_20px_rgba(223,178,87,0.3)]",
