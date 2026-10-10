@@ -171,7 +171,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
         <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 max-w-[calc(100%-105px)] overflow-hidden pointer-events-none">
           <div className="px-2 py-1 bg-black/85 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[130px]">
             <span className="text-[10px] leading-none shrink-0">{CATEGORY_EMOJIS[listing.category] || '🏷️'}</span>
-            <span className="text-[9px] font-black text-proton-accent uppercase tracking-wider truncate block">
+            <span className="text-[9px] font-black text-[#dfb257] uppercase tracking-wider truncate block">
               {t.market.categories[listing.category] || listing.category}
             </span>
           </div>
@@ -397,8 +397,9 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     onBuyNow(listing);
                   }}
                   className={cn(
-                    "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-proton-accent/20 active:scale-[0.98]",
-                    currentTheme.accentBg, "text-white"
+                    "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-[#dfb257]/20 active:scale-[0.98]",
+                    currentTheme.accentBg, 
+                    currentTheme.accentBg?.includes('#dfb257') ? "text-zinc-950 font-black" : "text-white"
                   )}
                 >
                   <ShoppingBag size={15} />

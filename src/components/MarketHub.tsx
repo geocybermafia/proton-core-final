@@ -3735,12 +3735,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           setActiveListingType('product');
                           setSearch(language === 'ka' ? 'მეორადი' : 'Used');
                         }}
-                        className="bg-gradient-to-br from-blue-700/40 to-blue-600/30 hover:from-blue-700/60 hover:to-blue-600/40 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-blue-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md relative overflow-hidden group"
+                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
                       >
-                        <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-200">
+                        <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
                           <Coins size={16} />
                         </div>
-                        <p className="text-xs sm:text-sm font-black text-white tracking-tight leading-tight uppercase relative z-10">
+                        <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
                           {language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
                         </p>
                       </button>
