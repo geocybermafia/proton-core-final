@@ -1928,15 +1928,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           }
           setListings(combined);
           setLoading(false);
-
-          // Clean up legacy mock/seed documents from Firestore if present
-          if (user) {
-            data.forEach(l => {
-              if (!isRealListing(l) && l.id) {
-                deleteDoc(doc(db, 'listings', l.id)).catch(() => {});
-              }
-            });
-          }
         }, (error) => {
           console.warn(`[MarketHub] Listings listener failed (useOrderBy=${useOrderBy}):`, error);
           if (useOrderBy) {
@@ -2808,7 +2799,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       // Step 2 validation: Price & Currency
       const priceStr = String(formData.price || '').trim().replace(',', '.');
       const parsedPrice = parseFloat(priceStr);
-      if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
+      if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
         showToast(language === 'ka' 
           ? "გთხოვთ შეიყვანოთ სწორი ფასი (მხოლოდ დადებითი რიცხვები)." 
           : "Please enter a valid price (positive numbers only).",
@@ -2858,7 +2849,28 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           });
           finalImages = await Promise.all(uploadPromises);
         } catch (uploadErr) {
-          console.warn("[MarketHub] Storage upload warning:", uploadErr);
+          console.error("[MarketHub] Storage upload error:", uploadErr);
+          showToast(
+            language === 'ka'
+              ? "ფოტოს ატვირთვა ვერ მოხერხდა. გთხოვთ შეამოწმოთ კავშირი და სცადოთ თავიდან."
+              : "Failed to upload images. Please check your connection and try again.",
+            'error'
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Safety guard: ensure no raw base64 data URLs leak into Firestore
+        const hasUnuploadedBase64 = finalImages.some(img => typeof img === 'string' && img.startsWith('data:image/'));
+        if (hasUnuploadedBase64) {
+          showToast(
+            language === 'ka'
+              ? "ფოტოს დამუშავება ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან."
+              : "Image upload could not be verified. Please try again.",
+            'error'
+          );
+          setIsSubmitting(false);
+          return;
         }
       }
 

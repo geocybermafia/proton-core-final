@@ -195,7 +195,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       if (step > 2) {
                         const priceStr = String(formData.price || '').trim().replace(',', '.');
                         const parsedPrice = parseFloat(priceStr);
-                        if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
+                        if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
                           showToast(language === 'ka' 
                             ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
                             : "Please enter a valid price to continue (positive numbers only).",
@@ -1148,7 +1148,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   } else if (formStep === 2) {
                     const priceStr = String(formData.price || '').trim().replace(',', '.');
                     const parsedPrice = parseFloat(priceStr);
-                    if (!priceStr || isNaN(parsedPrice) || parsedPrice < 0) {
+                    if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
                       showToast(language === 'ka' 
                         ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
                         : "Please enter a valid price to continue (positive numbers only).",
