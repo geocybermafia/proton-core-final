@@ -122,7 +122,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        "max-w-2xl mx-auto p-6 sm:p-12 rounded-[32px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7)]", 
+        "max-w-2xl mx-auto p-4 sm:p-12 rounded-[28px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-[0_24px_50px_-12px_rgba(0,0,0,0.7)]", 
         "bg-zinc-950/75 border-zinc-800/80 hover:border-[#dfb257]/30 transition-colors duration-500"
       )}
     >
@@ -183,8 +183,13 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     key={step}
                     type="button"
                     onClick={() => {
-                      if (step > 1 && !formData.title.trim()) {
-                        showToast(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a listing title on Step 1 first.", 'warning');
+                      if (step > 1 && !(formData.title || '').trim() && !(formData.titleGe || '').trim()) {
+                        showToast(
+                          language === 'ka' 
+                            ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური (ქართულად ან ინგლისურად) გასაგრძელებლად" 
+                            : "Please enter a listing title (English or Georgian) on Step 1 to continue.", 
+                          'warning'
+                        );
                         return;
                       }
                       if (step > 2) {
@@ -234,7 +239,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       )}
                     </div>
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest mt-2.5 transition-all duration-500",
+                      "text-[8px] sm:text-[9px] font-black uppercase tracking-tight sm:tracking-widest mt-2 sm:mt-2.5 transition-all duration-500 text-center",
                       isActive ? "text-[#dfb257]" : "text-zinc-500 group-hover:text-zinc-400"
                     )}>
                       {stepTitles[step - 1]}
@@ -365,11 +370,12 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     <span className="text-xs">🇬🇧</span>
                     <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t.market.form.title} (EN)</label>
                   </div>
-                  <span className="text-[8px] font-mono text-zinc-600">{language === 'ka' ? 'სავალდებულო' : 'Required'}</span>
+                  <span className="text-[8px] font-mono text-zinc-500">
+                    {language === 'ka' ? 'სავალდებულოა ერთ-ერთი სათაური' : 'At least one title required'}
+                  </span>
                 </div>
                 <div className="relative">
                   <FastInput 
-                    required
                     type="text"
                     value={formData.title}
                     onCommit={val => setFormData(p => ({ ...p, title: val }))}
@@ -389,7 +395,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     <span className="text-xs">🇬🇪</span>
                     <label className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]">{t.market.form.title} (GE)</label>
                   </div>
-                  <span className="text-[8px] font-mono text-zinc-600">{language === 'ka' ? 'თარგმანი არჩევითია' : 'Optional Translation'}</span>
+                  <span className="text-[8px] font-mono text-zinc-500">
+                    {language === 'ka' ? 'ქართული სათაური' : 'Georgian title'}
+                  </span>
                 </div>
                 <div className="relative">
                   <FastInput 
@@ -772,7 +780,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     <img 
                       src={formData.images[0]} 
                       className="w-full h-full object-cover rounded-2xl" 
-                      alt={formData.title} 
+                      alt={formData.title || formData.titleGe || 'Listing'} 
                     />
                     
                     <div className="absolute bottom-5 left-5 bg-black/85 border border-[#dfb257]/30 px-3 py-1.5 rounded-xl backdrop-blur-md select-none pointer-events-none animate-fade-in">
@@ -886,7 +894,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   {formData.images?.[0] ? (
                     <img 
                       src={formData.images[0]} 
-                      alt={formData.title} 
+                      alt={formData.title || formData.titleGe || 'Listing'} 
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -929,7 +937,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <div className="p-4 space-y-3">
                   <div>
                     <h4 className="text-sm font-black text-white line-clamp-1">
-                      {language === 'ka' ? (formData.titleGe || formData.title) : formData.title}
+                      {language === 'ka' 
+                        ? (formData.titleGe || formData.title || '—') 
+                        : (formData.title || formData.titleGe || '—')}
                     </h4>
                     {formData.titleGe && formData.title && formData.titleGe !== formData.title && (
                       <p className="text-[10px] text-zinc-500 font-semibold line-clamp-1 mt-0.5">
@@ -996,7 +1006,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
                       </button>
                     </div>
-                    <p className="text-xs font-bold text-white line-clamp-1">{formData.title || '—'}</p>
+                    <p className="text-xs font-bold text-white line-clamp-1">{formData.title || formData.titleGe || '—'}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
                         {formData.listingType?.toUpperCase()}
@@ -1093,8 +1103,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
         )}
 
         {/* Steps Progress Footer Bar */}
-        <div className="flex items-center justify-between gap-4 pt-8 mt-8 border-t border-zinc-900/80">
-          <div className="flex gap-2.5">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 pt-6 sm:pt-8 mt-6 sm:mt-8 border-t border-zinc-900/80">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             <button 
               type="button"
               onClick={() => {
@@ -1102,32 +1112,37 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 resetListingForm();
                 setViewMode('browse');
               }}
-              className="h-11 px-5 bg-zinc-950/80 hover:bg-zinc-900/80 hover:text-white border border-zinc-900 hover:border-zinc-800 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all text-zinc-400 flex items-center gap-2 shadow-inner"
+              className="flex-1 sm:flex-initial h-11 px-3 sm:px-5 bg-zinc-950/80 hover:bg-zinc-900/80 hover:text-white border border-zinc-900 hover:border-zinc-800 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all text-zinc-400 flex items-center justify-center gap-1.5 sm:gap-2 shadow-inner active:scale-95 shrink-0 sm:shrink"
             >
-              <ArrowLeft size={13} />
-              {t.common.cancel}
+              <ArrowLeft size={13} className="shrink-0" />
+              <span>{t.common.cancel}</span>
             </button>
 
             {formStep > 1 && (
               <button 
                 type="button"
                 onClick={() => setFormStep(prev => prev - 1)}
-                className="h-11 px-5 bg-zinc-950/80 hover:bg-zinc-900/80 border border-zinc-900 hover:border-zinc-800 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all text-white flex items-center gap-2"
+                className="flex-1 sm:flex-initial h-11 px-3 sm:px-5 bg-zinc-950/80 hover:bg-zinc-900/80 border border-zinc-900 hover:border-zinc-800 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all text-white flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 shrink-0 sm:shrink"
               >
-                <ChevronRight size={13} className="rotate-180 text-zinc-400" />
-                {language === 'ka' ? 'უკან' : 'Back'}
+                <ChevronRight size={13} className="rotate-180 text-zinc-400 shrink-0" />
+                <span>{language === 'ka' ? 'უკან' : 'Back'}</span>
               </button>
             )}
           </div>
 
-          <div className="flex gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
             {formStep < 4 ? (
               <button 
                 type="button"
                 onClick={() => {
                   if (formStep === 1) {
-                    if (!formData.title.trim()) {
-                      showToast(language === 'ka' ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური გასაგრძელებლად" : "Please input a title on Step 1 to continue.", 'warning');
+                    if (!(formData.title || '').trim() && !(formData.titleGe || '').trim()) {
+                      showToast(
+                        language === 'ka' 
+                          ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური (ქართულად ან ინგლისურად) გასაგრძელებლად" 
+                          : "Please enter a title (English or Georgian) on Step 1 to continue.", 
+                        'warning'
+                      );
                       return;
                     }
                   } else if (formStep === 2) {
@@ -1159,24 +1174,26 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   }
                   setFormStep(prev => prev + 1);
                 }}
-                className="h-11 px-6 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 text-zinc-950 bg-[#dfb257] border border-[#dfb257] font-sans shadow-[0_4px_15px_rgba(223,178,87,0.25)]"
+                className="w-full sm:w-auto h-11 px-5 sm:px-6 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 text-zinc-950 bg-[#dfb257] border border-[#dfb257] font-sans shadow-[0_4px_15px_rgba(223,178,87,0.25)]"
               >
-                {formStep === 3 
-                  ? (language === 'ka' ? 'გადახედვა' : 'Preview Listing')
-                  : (language === 'ka' ? 'შემდეგი ნაბიჯი' : 'Next Step')}
-                {formStep === 3 ? <Eye size={13} className="stroke-[2.5]" /> : <ChevronRight size={13} className="stroke-[2.5]" />}
+                <span>
+                  {formStep === 3 
+                    ? (language === 'ka' ? 'გადახედვა' : 'Preview Listing')
+                    : (language === 'ka' ? 'შემდეგი ნაბიჯი' : 'Next Step')}
+                </span>
+                {formStep === 3 ? <Eye size={13} className="stroke-[2.5] shrink-0" /> : <ChevronRight size={13} className="stroke-[2.5] shrink-0" />}
               </button>
             ) : (
               <button 
                 type="submit"
                 disabled={isSubmitting}
                 className={cn(
-                  "h-11 px-7 rounded-2xl text-[9px] font-black uppercase tracking-widest tracking-[0.18em] hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 text-black border border-[#dfb257] shadow-[0_6px_20px_rgba(223,178,87,0.3)]",
+                  "w-full sm:w-auto h-11 px-6 sm:px-7 rounded-2xl text-[9px] font-black uppercase tracking-widest tracking-[0.18em] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 text-black border border-[#dfb257] shadow-[0_6px_20px_rgba(223,178,87,0.3)]",
                   currentTheme.accentBg
                 )}
               >
-                {isSubmitting ? <Loader2 size={13} className="animate-spin text-black" /> : <ShieldCheck size={15} className="stroke-[2.5]" />}
-                {viewMode === 'edit' ? t.market.form.update : t.market.form.submit}
+                {isSubmitting ? <Loader2 size={13} className="animate-spin text-black shrink-0" /> : <ShieldCheck size={15} className="stroke-[2.5] shrink-0" />}
+                <span>{viewMode === 'edit' ? t.market.form.update : t.market.form.submit}</span>
               </button>
             )}
           </div>

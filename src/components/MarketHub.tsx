@@ -2629,7 +2629,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   };
 
   const handleAiDescription = async () => {
-    if (!formData.title) {
+    const titleForAi = (formData.title || formData.titleGe || '').trim();
+    if (!titleForAi) {
       showToast(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first", 'warning');
       return;
     }
@@ -2671,7 +2672,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             
             // Provide fallback if requested
             if (window.confirm(language === 'ka' ? "გსურთ გამოიყენოთ სტანდარტული შაბლონი?" : "Would you like to use a standard template instead?")) {
-              const template = getFallbackTemplate(formData.title, formData.category);
+              const template = getFallbackTemplate(titleForAi, formData.category);
               if (!controller.signal.aborted) {
                 setFormData(prev => ({ ...prev, description: template }));
               }
@@ -2682,7 +2683,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       }
 
       // 2. Check Cache
-      const specId = `${formData.title}_${formData.category}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const specId = `${titleForAi}_${formData.category}`.toLowerCase().replace(/[^a-z0-9]/g, '_');
       const cacheRef = doc(db, 'shared_specs', specId);
       const cacheSnap = await getDoc(cacheRef);
       if (controller.signal.aborted) return;
@@ -2700,13 +2701,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       }
 
       // 3. Generate with Gemini
-      const spec = await generateTechSpec(formData.title, formData.category);
+      const spec = await generateTechSpec(titleForAi, formData.category);
       if (controller.signal.aborted) return;
       if (spec) {
         // 4. Save to Cache
         await setDoc(cacheRef, {
           spec,
-          title: formData.title,
+          title: titleForAi,
           category: formData.category,
           createdAt: serverTimestamp()
         });
@@ -2730,7 +2731,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       if (controller.signal.aborted || (error && error.name === 'AbortError')) return;
       console.error("Error generating tech spec:", error);
       showToast(language === 'ka' ? "AI-სთან კავშირი ვერ მოხერხდა. გამოიყენეთ შაბლონი." : "AI service unavailable. Falling back to template.", 'error');
-      const template = getFallbackTemplate(formData.title, formData.category);
+      const template = getFallbackTemplate(titleForAi, formData.category);
       if (!controller.signal.aborted) {
         setFormData(prev => ({ ...prev, description: template }));
       }
@@ -2784,13 +2785,25 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }
       }
 
-      // Step 1 validation: Title
-      if (!formData.title.trim()) {
-        showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის სათაური." : "Please fill in the product title.", 'warning');
+      // Step 1 validation: Title (Allow either English or Georgian title)
+      const titleEn = (formData.title || '').trim();
+      const titleGe = (formData.titleGe || '').trim();
+      if (!titleEn && !titleGe) {
+        showToast(
+          language === 'ka' 
+            ? "გთხოვთ შეავსოთ ნივთის სათაური (ქართულად ან ინგლისურად)." 
+            : "Please fill in the product title (English or Georgian).", 
+          'warning'
+        );
         setFormStep(1);
         setIsSubmitting(false);
         return;
       }
+
+      // Safe fallback: if primary title is empty, provide titleGe; if titleGe is empty, provide primary title.
+      // If both are filled, preserve the original values entered by the seller.
+      const resolvedPrimaryTitle = titleEn || titleGe;
+      const resolvedTitleGe = titleGe || titleEn;
 
       // Step 2 validation: Price & Currency
       const priceStr = String(formData.price || '').trim().replace(',', '.');
@@ -2850,8 +2863,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       }
 
       const listingData = {
-        title: formData.title.trim(),
-        titleGe: (formData.titleGe || formData.title).trim(),
+        title: resolvedPrimaryTitle,
+        titleGe: resolvedTitleGe,
         description: formData.description.trim(),
         descriptionGe: (formData.descriptionGe || formData.description).trim(),
         price: parsedPrice,
@@ -2875,7 +2888,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         serviceTerms: formData.serviceTerms || ''
       };
 
-      const savedTitle = formData.title.trim();
+      const savedTitle = resolvedPrimaryTitle;
       const isEdit = viewMode === 'edit' && Boolean(editingListing);
 
       if (isEdit && editingListing) {
