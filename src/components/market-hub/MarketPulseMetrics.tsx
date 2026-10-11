@@ -44,54 +44,20 @@ export const ListingTypeTabs = React.memo(function ListingTypeTabs({
   );
 });
 
-export interface MarketPulseMetricsProps {
-  metrics: {
-    active: number;
-    avgPrice: string;
-    sold: number;
-    topCat: string;
-  };
+export interface ActiveListingsBadgeProps {
+  count: number;
   language: string;
 }
 
-export const MarketPulseMetrics = React.memo(function MarketPulseMetrics({
-  metrics,
+export const ActiveListingsBadge = React.memo(function ActiveListingsBadge({
+  count,
   language
-}: MarketPulseMetricsProps) {
+}: ActiveListingsBadgeProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-zinc-950/70 border border-zinc-900 backdrop-blur-md">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-          {language === 'ka' ? 'აქტიური ლოტები' : 'Active Listings'}
-        </span>
-        <span className="text-base sm:text-lg font-black text-white font-mono">
-          {metrics.active.toLocaleString()}
-        </span>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-          {language === 'ka' ? 'საშუალო ფასი' : 'Average Price'}
-        </span>
-        <span className="text-base sm:text-lg font-black text-[#dfb257] font-mono">
-          {metrics.avgPrice}
-        </span>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-          {language === 'ka' ? 'ვაჭრობის მოცულობა' : 'Total Traded'}
-        </span>
-        <span className="text-base sm:text-lg font-black text-emerald-400 font-mono">
-          {metrics.sold.toLocaleString()}
-        </span>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">
-          {language === 'ka' ? 'ტოპ კატეგორია' : 'Top Category'}
-        </span>
-        <span className="text-base sm:text-lg font-black text-blue-400 truncate">
-          {metrics.topCat}
-        </span>
-      </div>
+    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-900/80 border border-zinc-800 text-[9px] font-bold text-zinc-400 tracking-wider">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+      <span>{language === 'ka' ? `აქტიური განცხადებები: ${count}` : `Active Listings: ${count}`}</span>
     </div>
   );
 });
+

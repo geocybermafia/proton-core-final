@@ -108,7 +108,7 @@ import { MarketChatDrawer } from './market-hub/MarketChatDrawer';
 import { VendorReviewsModal } from './market-hub/VendorReviewsModal';
 import { CreateListingWizard } from './market-hub/CreateListingWizard';
 import { MarketFilterPanel, MobileFilterBottomSheet } from './market-hub/MarketFilters';
-import { ListingTypeTabs, MarketPulseMetrics } from './market-hub/MarketPulseMetrics';
+import { ListingTypeTabs } from './market-hub/MarketPulseMetrics';
 import { MarketListingCard } from './market-hub/MarketListingCard';
 import { BuyerOrders } from './market-hub/BuyerOrders';
 import { OrderDetailsModal } from './market-hub/OrderDetailsModal';
@@ -246,7 +246,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const [isMarketPulseExpanded, setIsMarketPulseExpanded] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [isSeeding, setIsSeeding] = useState(false);
   const [allUserMessages, setAllUserMessages] = useState<any[]>([]);
@@ -2257,55 +2256,17 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return hasMore;
   }, [isFilteredMode, searchVisibleLimit, filteredListings.length, hasMore]);
 
-  const marketMetrics = useMemo(() => {
-    const total = listings.length;
+  const activeListingsCount = useMemo(() => {
     let active = 0;
-    let soldInListings = 0;
-    let priceSum = 0;
-    let priceCount = 0;
-    const catCounts: Record<string, number> = {};
-
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < listings.length; i++) {
       const l = listings[i];
       const isSold = l.status === 'sold' || (l as any).isSold;
-      if (isSold) {
-        soldInListings++;
-      } else {
+      if (!isSold) {
         active++;
       }
-
-      if (typeof l.price === 'number' && !isNaN(l.price) && l.price > 0) {
-        const conv = priceMap.get(l.id) ?? convertPrice(l.price, l.currency || 'USD', displayCurrency);
-        priceSum += conv;
-        priceCount++;
-      }
-
-      if (l.category) {
-        catCounts[l.category] = (catCounts[l.category] || 0) + 1;
-      }
     }
-
-    const sold = soldInListings + orders.length;
-    const currencySymbol = CURRENCIES.find(c => c.code === displayCurrency)?.symbol || displayCurrency;
-    const avgPrice = priceCount > 0 ? Math.round(priceSum / priceCount) : 0;
-
-    let topCat = 'technics';
-    let maxCatCount = 0;
-    for (const cat in catCounts) {
-      if (catCounts[cat] > maxCatCount) {
-        maxCatCount = catCounts[cat];
-        topCat = cat;
-      }
-    }
-
-    return {
-      total,
-      active,
-      sold,
-      avgPrice: `${currencySymbol}${avgPrice}`,
-      topCat: topCat.toUpperCase()
-    };
-  }, [listings, orders.length, displayCurrency, priceMap]);
+    return active;
+  }, [listings]);
 
   const handleBuyNow = async (listing: Listing) => {
     if (!user) {
@@ -3289,6 +3250,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                      viewMode === 'create' ? t.market.create_listing : t.market.edit_listing}
                   </span>
                 </div>
+                {viewMode === 'browse' && (
+                  <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80 font-mono", currentTheme.muted)}>
+                      {language === 'ka' ? `აქტიური განცხადებები: ${activeListingsCount}` : `Active Listings: ${activeListingsCount}`}
+                    </span>
+                  </div>
+                )}
                 {viewMode === 'my-listings' && (
                   <div className={cn("flex items-center gap-1.5 p-0.5 rounded-lg border", currentTheme.cardAlt)}>
                     <button 
@@ -3700,95 +3669,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             )}
 
             <div className="flex-1 min-w-0 space-y-8">
-              {viewMode === 'browse' && displayMode === 'grid' && (
-                <div className="space-y-4 mb-2 animate-in fade-in duration-300">
-                  {/* Compact Marketplace Discovery Bar: Quick Navigation, Popular Brands & Collapsible Pulse */}
-                  <div className="p-3 sm:p-4 rounded-2xl bg-zinc-950/40 border border-zinc-900/80 backdrop-blur-md space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2.5">
-                      {/* Left: Quick Category / Feature Shortcuts */}
-                      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-0.5">
-                        <span className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
-                          <span>⚡</span>
-                          <span className="hidden xs:inline">{language === 'ka' ? 'სწრაფი:' : 'Quick:'}</span>
-                        </span>
 
-                        {/* All Categories button */}
-                        <button
-                          type="button"
-                          onClick={() => setActiveBottomTab('categories')}
-                          className="h-8 px-2.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
-                          title={language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
-                        >
-                          <LayoutGrid size={12} className="text-[#dfb257]" />
-                          <span>{language === 'ka' ? 'ყველა კატეგორია' : 'Categories'}</span>
-                        </button>
-
-                        {/* Used Installment button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveListingType('product');
-                            setSearch(language === 'ka' ? 'მეორადი' : 'Used');
-                          }}
-                          className="h-8 px-2.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
-                          title={language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
-                        >
-                          <Coins size={12} className="text-blue-400" />
-                          <span>{language === 'ka' ? 'განვადება' : 'Installment'}</span>
-                        </button>
-
-                        {/* Mobile Phones button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveCategory('technics');
-                            setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
-                          }}
-                          className="h-8 px-2.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
-                          title={language === 'ka' ? 'მობილური ტელეფონები' : 'Mobile Phones'}
-                        >
-                          <span className="text-xs">📱</span>
-                          <span>{language === 'ka' ? 'ტელეფონები' : 'Phones'}</span>
-                        </button>
-
-                        {/* Discounted button */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
-                          }}
-                          className="h-8 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:text-rose-200 flex items-center gap-1 transition-all shrink-0 active:scale-95 cursor-pointer"
-                          title={language === 'ka' ? 'ფასდაკლებული' : 'With Discount'}
-                        >
-                          <span className="text-[10px] font-black">%</span>
-                          <span>{language === 'ka' ? 'ფასდაკლება' : 'Discounts'}</span>
-                        </button>
-                      </div>
-
-                      {/* Right: Collapsible Market Pulse Metrics toggle */}
-                      <button
-                        type="button"
-                        onClick={() => setIsMarketPulseExpanded(prev => !prev)}
-                        className="h-8 px-2.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 transition-all ml-auto shrink-0 cursor-pointer"
-                        title={language === 'ka' ? 'სტატისტიკის ნახვა' : 'Toggle Market Stats'}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span className="font-mono text-[9px] uppercase tracking-wider">
-                          {language === 'ka' ? 'სტატისტიკა' : 'Pulse'}
-                        </span>
-                        <ChevronDown size={12} className={cn("transition-transform duration-200", isMarketPulseExpanded && "rotate-180")} />
-                      </button>
-                    </div>
-
-                    {/* Collapsible Section: Detailed Market Pulse Metrics */}
-                    {isMarketPulseExpanded && (
-                      <div className="pt-2 border-t border-zinc-900/60 animate-in fade-in slide-in-from-top-1 duration-200">
-                        <MarketPulseMetrics metrics={marketMetrics} language={language} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {viewMode === 'browse' && displayMode === 'map' && (
                 <div className="mb-8 animate-in fade-in duration-300">
