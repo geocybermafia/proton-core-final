@@ -246,6 +246,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isMarketPulseExpanded, setIsMarketPulseExpanded] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
   const [isSeeding, setIsSeeding] = useState(false);
   const [allUserMessages, setAllUserMessages] = useState<any[]>([]);
@@ -3700,100 +3701,145 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
             <div className="flex-1 min-w-0 space-y-8">
               {viewMode === 'browse' && displayMode === 'grid' && (
-                <div className="space-y-12 animate-in fade-in duration-500">
-                  {/* Section 1: Market Pulse Metrics */}
-                  <MarketPulseMetrics metrics={marketMetrics} language={language} />
+                <div className="space-y-4 mb-2 animate-in fade-in duration-300">
+                  {/* Compact Marketplace Discovery Bar: Quick Navigation, Popular Brands & Collapsible Pulse */}
+                  <div className="p-3 sm:p-4 rounded-2xl bg-zinc-950/40 border border-zinc-900/80 backdrop-blur-md space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2.5">
+                      {/* Left: Quick Category / Feature Shortcuts */}
+                      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none py-0.5">
+                        <span className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                          <span>⚡</span>
+                          <span className="hidden xs:inline">{language === 'ka' ? 'სწრაფი:' : 'Quick:'}</span>
+                        </span>
 
-                  {/* Section 2: Quick Highlights Navigation */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 px-1">
-                      <span className="text-sm">⚡</span>
-                      <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">
-                        {language === 'ka' ? 'სწრაფი ნავიგაცია' : 'QUICK NAVIGATOR'}
-                      </h3>
-                    </div>
+                        {/* All Categories button */}
+                        <button
+                          type="button"
+                          onClick={() => setActiveBottomTab('categories')}
+                          className="h-8 px-2.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                          title={language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
+                        >
+                          <LayoutGrid size={12} className="text-[#dfb257]" />
+                          <span>{language === 'ka' ? 'ყველა კატეგორია' : 'Categories'}</span>
+                        </button>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* All Categories */}
-                      <button
-                        type="button"
-                        onClick={() => setActiveBottomTab('categories')}
-                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-zinc-900/80 flex items-center justify-center text-zinc-400 group-hover:text-white transition-colors">
-                          <LayoutGrid size={18} />
-                        </div>
-                        <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase">
-                          {language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
-                        </p>
-                      </button>
+                        {/* Used Installment button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveListingType('product');
+                            setSearch(language === 'ka' ? 'მეორადი' : 'Used');
+                          }}
+                          className="h-8 px-2.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                          title={language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
+                        >
+                          <Coins size={12} className="text-blue-400" />
+                          <span>{language === 'ka' ? 'განვადება' : 'Installment'}</span>
+                        </button>
 
-                      {/* Secondary on installment */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveListingType('product');
-                          setSearch(language === 'ka' ? 'მეორადი' : 'Used');
-                        }}
-                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                          <Coins size={16} />
-                        </div>
-                        <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
-                          {language === 'ka' ? 'მეორადი განვადებით' : 'Used Installment'}
-                        </p>
-                      </button>
+                        {/* Mobile Phones button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveCategory('technics');
+                            setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
+                          }}
+                          className="h-8 px-2.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800/80 text-[10px] font-black uppercase tracking-wider text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                          title={language === 'ka' ? 'მობილური ტელეფონები' : 'Mobile Phones'}
+                        >
+                          <span className="text-xs">📱</span>
+                          <span>{language === 'ka' ? 'ტელეფონები' : 'Phones'}</span>
+                        </button>
 
-                      {/* Mobile Phone */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActiveCategory('technics');
-                          setSearch(language === 'ka' ? 'ტელეფონი' : 'iPhone');
-                        }}
-                        className="bg-zinc-950/40 hover:bg-zinc-900/60 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-zinc-900 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-[#dfb257]/10 flex items-center justify-center text-[#dfb257]">
-                          📱
-                        </div>
-                        <p className="text-xs sm:text-sm font-black text-zinc-100 tracking-tight leading-tight uppercase font-sans">
-                          {language === 'ka' ? 'მობილური ტელეფონი' : 'Mobile Phones'}
-                        </p>
-                      </button>
-
-                      {/* Discounted */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
-                        }}
-                        className="bg-rose-500/5 hover:bg-rose-500/10 p-5 rounded-xl min-h-[120px] flex flex-col justify-between text-left border border-rose-500/10 transition-all duration-300 hover:-translate-y-0.5 shadow-md group"
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-400 font-black text-sm">
-                          %
-                        </div>
-                        <p className="text-xs sm:text-sm font-black text-rose-400 tracking-tight leading-tight uppercase">
-                          {language === 'ka' ? 'ფასდაკლებული' : 'With Discount'}
-                        </p>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Section 3: Popular Brand Shortcuts */}
-                  <div className="p-6 bg-zinc-950/40 border border-zinc-900/80 rounded-[28px] space-y-4">
-                    <div className="flex items-center justify-between border-b border-zinc-900/40 pb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">🏷️</span>
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400 font-mono">
-                          {language === 'ka' ? 'პოპულარული ბრენდები' : 'SHOP BY BRANDS'}
-                        </h3>
+                        {/* Discounted button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearch(language === 'ka' ? 'ფასდაკლება' : 'Discount');
+                          }}
+                          className="h-8 px-2.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-[10px] font-black uppercase tracking-wider text-rose-300 hover:text-rose-200 flex items-center gap-1 transition-all shrink-0 active:scale-95 cursor-pointer"
+                          title={language === 'ka' ? 'ფასდაკლებული' : 'With Discount'}
+                        >
+                          <span className="text-[10px] font-black">%</span>
+                          <span>{language === 'ka' ? 'ფასდაკლება' : 'Discounts'}</span>
+                        </button>
                       </div>
-                      <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">shortcuts</span>
+
+                      {/* Right: Collapsible Market Pulse Metrics toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setIsMarketPulseExpanded(prev => !prev)}
+                        className="h-8 px-2.5 rounded-lg bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5 transition-all ml-auto shrink-0 cursor-pointer"
+                        title={language === 'ka' ? 'სტატისტიკის ნახვა' : 'Toggle Market Stats'}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="font-mono text-[9px] uppercase tracking-wider">
+                          {language === 'ka' ? 'სტატისტიკა' : 'Pulse'}
+                        </span>
+                        <ChevronDown size={12} className={cn("transition-transform duration-200", isMarketPulseExpanded && "rotate-180")} />
+                      </button>
                     </div>
 
-                    <div className="flex items-center gap-5 overflow-x-auto pb-2 pt-1 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none scroll-smooth">
-                      {/* Add shortcut circle */}
+                    {/* Popular Brand Shortcuts in compact row */}
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1 border-t border-zinc-900/60">
+                      <span className="text-[9px] font-mono text-zinc-500 font-bold uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                        <span>🏷️</span>
+                        <span className="hidden sm:inline">{language === 'ka' ? 'ბრენდები:' : 'Brands:'}</span>
+                      </span>
+
+                      {/* Apple */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Apple');
+                          setActiveCategory('technics');
+                        }}
+                        className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        <span className="text-white text-xs"></span>
+                        <span>Apple</span>
+                      </button>
+
+                      {/* Xiaomi */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Xiaomi');
+                          setActiveCategory('technics');
+                        }}
+                        className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        <span className="text-[#ff6700] font-mono text-[10px] font-black">mi</span>
+                        <span>Xiaomi</span>
+                      </button>
+
+                      {/* Samsung */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Samsung');
+                          setActiveCategory('technics');
+                        }}
+                        className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        <span className="text-blue-400 font-bold text-[9px]">SMG</span>
+                        <span>Samsung</span>
+                      </button>
+
+                      {/* Sony */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('Sony');
+                          setActiveCategory('technics');
+                        }}
+                        className="h-7 px-2.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-[10px] font-bold text-zinc-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer"
+                      >
+                        <span className="text-indigo-400 font-bold text-[9px]">SONY</span>
+                        <span>Sony</span>
+                      </button>
+
+                      {/* Add listing shortcut */}
                       <button
                         type="button"
                         onClick={() => {
@@ -3804,107 +3850,50 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           resetListingForm();
                           setViewMode('create');
                         }}
-                        className="hidden md:flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
+                        className="h-7 px-2.5 rounded-lg bg-[#dfb257]/10 hover:bg-[#dfb257]/20 border border-[#dfb257]/30 text-[10px] font-black uppercase tracking-wider text-[#dfb257] hover:text-[#ebd083] flex items-center gap-1 transition-all shrink-0 ml-auto active:scale-95 cursor-pointer"
                       >
-                        <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#dfb257] flex items-center justify-center bg-[#dfb257]/5 group-hover:bg-[#dfb257]/10 group-hover:scale-105 transition-all text-[#dfb257]">
-                          <Plus size={20} className="stroke-[3]" />
-                        </div>
-                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                          {language === 'ka' ? 'დამატება' : 'Add Listing'}
-                        </span>
-                      </button>
-
-                      {/* Apple */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearch('Apple');
-                          setActiveCategory('technics');
-                        }}
-                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
-                      >
-                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-white font-sans font-black text-base shadow-sm">
-                          
-                        </div>
-                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                          Apple
-                        </span>
-                      </button>
-
-                      {/* Xiaomi */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearch('Xiaomi');
-                          setActiveCategory('technics');
-                        }}
-                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
-                      >
-                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-[#ff6700] font-mono font-black text-xs shadow-sm">
-                          mi
-                        </div>
-                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                          Xiaomi
-                        </span>
-                      </button>
-
-                      {/* Samsung */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearch('Samsung');
-                          setActiveCategory('technics');
-                        }}
-                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
-                      >
-                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-blue-400 font-sans font-black text-[9px] shadow-sm uppercase leading-none tracking-tighter">
-                          SMG
-                        </div>
-                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                          Samsung
-                        </span>
-                      </button>
-
-                      {/* Sony */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearch('Sony');
-                          setActiveCategory('technics');
-                        }}
-                        className="flex flex-col items-center gap-2.5 shrink-0 group focus:outline-none"
-                      >
-                        <div className="w-14 h-14 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-105 transition-all text-indigo-400 font-sans font-black text-[8px] tracking-tight shadow-sm uppercase">
-                          SONY
-                        </div>
-                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">
-                          Sony
-                        </span>
+                        <Plus size={11} className="stroke-[3]" />
+                        <span>{language === 'ka' ? 'დამატება' : 'Add Listing'}</span>
                       </button>
                     </div>
+
+                    {/* Collapsible Section 1: Detailed Market Pulse Metrics */}
+                    {isMarketPulseExpanded && (
+                      <div className="pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <MarketPulseMetrics metrics={marketMetrics} language={language} />
+                      </div>
+                    )}
                   </div>
 
-                  {/* Section 4: Super VIP Listings Feed */}
-                  <div className="flex items-center justify-between border-b border-zinc-900/60 pb-3 pt-4">
+                  {/* Sleek Catalog Header with Super VIP & Reset */}
+                  <div className="flex items-center justify-between border-b border-zinc-900/60 pb-2.5 pt-1">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500">
+                      <div className="w-6 h-6 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 text-xs">
                         🚀
                       </div>
                       <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#dfb257] font-sans">
-                        SUPER VIP
+                        {language === 'ka' ? 'კატალოგი / SUPER VIP' : 'CATALOG / SUPER VIP'}
                       </h3>
+                      {filteredListings.length > 0 && (
+                        <span className="text-[10px] font-mono text-zinc-500 ml-1">
+                          ({filteredListings.length})
+                        </span>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearch('');
-                        setActiveCategory('all');
-                        setActiveListingType('all');
-                      }}
-                      className="text-xs font-bold text-zinc-400 hover:text-white transition-colors"
-                    >
-                      {language === 'ka' ? 'ყველას ნახვა' : 'See All'}
-                    </button>
+                    {(isFilteredMode || activeCategory !== 'all') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearch('');
+                          setSearchRaw('');
+                          setActiveCategory('all');
+                          setActiveListingType('all');
+                        }}
+                        className="text-xs font-bold text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {language === 'ka' ? 'ყველას ნახვა' : 'See All'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
