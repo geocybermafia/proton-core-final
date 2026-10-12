@@ -127,8 +127,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   onAddToCart
 }: MarketListingCardProps) {
   const isOwnListing = !!user && listing.sellerId === user.uid;
-  const isAdminUser = !!user && user.email === 'devdarianib@gmail.com';
-  const canManageListing = isOwnListing || isAdminUser;
+  const canManageListing = isOwnListing;
   const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
   const displayTitle = language === 'ka' ? (listing.titleGe || listing.title) : listing.title;
   const imageUrl = (listing.images && listing.images.length > 0) ? listing.images[0] : listing.image;

@@ -2196,13 +2196,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       if (minP !== null && convertedPrice < minP) return false;
       if (maxP !== null && convertedPrice > maxP) return false;
 
-      // Filter by Search
+      // Filter by Search (Bilingual & cross-language: checks both English and Georgian fields independently)
       if (searchLower) {
-        const title = (language === 'ka' ? (l.titleGe || l.title) : l.title) || '';
-        const desc = (language === 'ka' ? (l.descriptionGe || l.description) : l.description) || '';
         const matchesSearch = 
-          title.toLowerCase().includes(searchLower) ||
-          desc.toLowerCase().includes(searchLower) ||
+          (l.title && l.title.toLowerCase().includes(searchLower)) ||
+          (l.titleGe && l.titleGe.toLowerCase().includes(searchLower)) ||
+          (l.description && l.description.toLowerCase().includes(searchLower)) ||
+          (l.descriptionGe && l.descriptionGe.toLowerCase().includes(searchLower)) ||
           (l.sellerName && l.sellerName.toLowerCase().includes(searchLower)) ||
           (l.city && l.city.toLowerCase().includes(searchLower)) ||
           (l.country && l.country.toLowerCase().includes(searchLower));
