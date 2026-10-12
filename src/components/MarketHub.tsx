@@ -3368,9 +3368,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
         {/* Row 2: Listing Type Tabs, Category Selector, Sort, Count spanning full width underneath Row 1 */}
         {viewMode === 'browse' && (
-          <div className={cn("hidden md:flex flex-col md:flex-row md:items-center justify-between gap-5 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
+          <div className={cn("hidden md:flex flex-col xl:flex-row xl:items-center justify-between gap-4 xl:gap-5 border-t pt-6 animate-in fade-in duration-300", currentTheme.border)}>
             {/* Listing Type & Categories Wrap */}
-            <div className="flex items-center gap-3 relative">
+            <div className="flex flex-wrap items-center gap-3 relative">
               {/* Listing Type Selection Tabs */}
               <ListingTypeTabs
                 activeType={activeListingType}
@@ -3384,7 +3384,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 <button
                   type="button"
                   onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                  className="flex items-center gap-2 px-3.5 py-2 h-[38px] rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 hover:text-white transition-all text-[10px] font-black uppercase tracking-wider text-zinc-300 cursor-pointer active:scale-95 shadow-md"
+                  className="flex items-center gap-2 px-3.5 py-2 h-[38px] rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 hover:text-white transition-all text-[10px] font-black uppercase tracking-wider text-zinc-300 cursor-pointer active:scale-95 shadow-md shrink-0"
                 >
                   <span className="text-sm shrink-0">
                     {activeCategory === 'all' ? '📊' : (CATEGORY_EMOJIS[activeCategory] || '🏷️')}
