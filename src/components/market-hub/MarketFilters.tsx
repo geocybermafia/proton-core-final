@@ -6,7 +6,8 @@ import {
   Globe, 
   ChevronRight, 
   MapPin, 
-  Trash2 
+  Trash2,
+  ArrowUpDown
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { 
@@ -35,6 +36,8 @@ export interface MarketFilterPanelProps {
   displayCurrency: string;
   clearFilters: () => void;
   onCloseMobile?: () => void;
+  sortBy?: 'rating' | 'newest' | 'priceAsc' | 'priceDesc';
+  setSortBy?: (sort: 'rating' | 'newest' | 'priceAsc' | 'priceDesc') => void;
 }
 
 export const MarketFilterPanel = React.memo(function MarketFilterPanel({
@@ -55,7 +58,9 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
   setMaxPrice,
   displayCurrency,
   clearFilters,
-  onCloseMobile
+  onCloseMobile,
+  sortBy,
+  setSortBy
 }: MarketFilterPanelProps) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -149,6 +154,29 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
       )}
 
       <div className="space-y-5">
+        {/* Sorting Dropdown */}
+        {sortBy && setSortBy && (
+          <div className="space-y-2">
+            <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+              {language === 'ka' ? 'სორტირება' : 'Sort By'}
+            </label>
+            <div className="relative group">
+              <ArrowUpDown size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60 pointer-events-none" />
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full pl-10 pr-10 py-3 bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700/85 rounded-xl text-xs font-bold focus:border-[#dfb257] focus:outline-none transition-all text-white appearance-none cursor-pointer"
+              >
+                <option value="rating">{language === 'ka' ? '★ რეიტინგი' : '★ RATING'}</option>
+                <option value="newest">{language === 'ka' ? '📅 უახლესი' : '📅 NEWEST'}</option>
+                <option value="priceAsc">{language === 'ka' ? '📉 ფასი (ზრდადი)' : '📉 PRICE (LOW)'}</option>
+                <option value="priceDesc">{language === 'ka' ? '📈 ფასი (კლებადი)' : '📈 PRICE (HIGH)'}</option>
+              </select>
+              <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-40 pointer-events-none text-zinc-400" />
+            </div>
+          </div>
+        )}
+
         {/* Location Dropdown */}
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
@@ -281,6 +309,8 @@ export interface MobileFilterBottomSheetProps {
   filterContent?: React.ReactNode;
   children?: React.ReactNode;
   sheetRef?: React.Ref<HTMLDivElement>;
+  sortBy?: 'rating' | 'newest' | 'priceAsc' | 'priceDesc';
+  setSortBy?: (sort: 'rating' | 'newest' | 'priceAsc' | 'priceDesc') => void;
 }
 
 export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomSheet({
@@ -292,7 +322,9 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
   matchCount,
   filterContent,
   children,
-  sheetRef
+  sheetRef,
+  sortBy,
+  setSortBy
 }: MobileFilterBottomSheetProps) {
   return (
     <AnimatePresence>

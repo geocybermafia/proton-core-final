@@ -1966,7 +1966,6 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setMaxPrice('');
     setActiveListingType('all');
     setShowOnlyFavorites(false);
-    setSortBy('rating');
     setSearchVisibleLimit(PAGE_SIZE);
   }, [PAGE_SIZE]);
 
@@ -4731,6 +4730,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             onClearFilters={clearFilters}
             matchCount={filteredListings.length}
             sheetRef={filtersDrawerRef}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
           >
             <MarketFilterPanel
               language={language}
@@ -4752,6 +4753,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               displayCurrency={displayCurrency}
               clearFilters={clearFilters}
               onCloseMobile={() => setIsFiltersOpen(false)}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
             />
           </MobileFilterBottomSheet>
         </div>
