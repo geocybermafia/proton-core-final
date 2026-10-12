@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { 
   LayoutGrid, 
@@ -6,7 +6,6 @@ import {
   Globe, 
   ChevronRight, 
   MapPin, 
-  ChevronDown, 
   Trash2 
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -58,8 +57,6 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
   clearFilters,
   onCloseMobile
 }: MarketFilterPanelProps) {
-  const [isSidebarCategoriesOpen, setIsSidebarCategoriesOpen] = useState(false);
-
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
       {/* Header */}
@@ -152,33 +149,6 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
       )}
 
       <div className="space-y-5">
-        {/* Listing Type Filter inside Sidebar */}
-        <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
-            {language === 'ka' ? 'კატეგორიზაცია' : 'Listing Type'}
-          </label>
-          <div className="grid grid-cols-2 gap-1.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800">
-            {(['all', 'product', 'service', 'project'] as const).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setActiveListingType(type)}
-                className={cn(
-                  "py-1.5 px-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-center cursor-pointer",
-                  activeListingType === type
-                    ? "bg-[#dfb257] text-[#070708] shadow"
-                    : "text-zinc-400 hover:text-white"
-                )}
-              >
-                {type === 'all' ? (language === 'ka' ? 'ყველა' : 'All') :
-                 type === 'product' ? (language === 'ka' ? 'პროდუქტი' : 'Product') :
-                 type === 'service' ? (language === 'ka' ? 'სერვისი' : 'Service') :
-                 (language === 'ka' ? 'პროექტი' : 'Project')}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Location Dropdown */}
         <div className="space-y-2">
           <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
@@ -226,68 +196,6 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
             )}
           </div>
         </div>
-
-        {/* Category Selection (Collapsible Accordion) */}
-        <div className="space-y-2 border-b border-zinc-900/60 pb-4">
-          <button
-            type="button"
-            onClick={() => setIsSidebarCategoriesOpen(!isSidebarCategoriesOpen)}
-            className="w-full flex items-center justify-between text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block cursor-pointer"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="shrink-0">{t.market.form.category}</span>
-              <span className="text-[10px] lowercase text-zinc-400 font-normal truncate max-w-[120px]">
-                ({activeCategory === 'all' ? (language === 'ka' ? 'ყველა' : 'all') : (t.market.categories[activeCategory] || activeCategory)})
-              </span>
-            </div>
-            <ChevronDown size={14} className={cn("text-zinc-400 transition-transform duration-250", isSidebarCategoriesOpen && "rotate-180")} />
-          </button>
-          
-          {isSidebarCategoriesOpen && (
-            <div className="grid grid-cols-1 gap-1.5 max-h-[200px] overflow-y-auto pr-1 mt-2 animate-in fade-in slide-in-from-top-2 duration-200 custom-scrollbar">
-              <button 
-                type="button"
-                onClick={() => setActiveCategory('all')}
-                className={cn(
-                  "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all border text-left cursor-pointer",
-                  activeCategory === 'all' 
-                    ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
-                    : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">🌍</span>
-                  <span className="truncate">{t.market.all_categories}</span>
-                </div>
-                {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
-              </button>
-              {Object.entries(t.market.categories).map(([key, label]) => {
-                const isSelected = activeCategory === key;
-                return (
-                  <button 
-                    key={key}
-                    type="button"
-                    onClick={() => setActiveCategory(key)}
-                    className={cn(
-                      "flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-tight transition-all border text-left cursor-pointer",
-                      isSelected 
-                        ? "bg-gradient-to-b from-zinc-800 to-zinc-900 border-[#dfb257] text-[#dfb257] shadow"
-                        : "bg-zinc-950 border-zinc-900 text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
-                    )}
-                    title={label as string}
-                  >
-                    <div className="flex items-center gap-2 min-w-0 font-bold">
-                      <span className="text-sm shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                      <span className="truncate">{label as string}</span>
-                    </div>
-                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         {/* Price Filter with presets */}
         <div className="space-y-3">
           <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
