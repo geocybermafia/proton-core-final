@@ -2890,8 +2890,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     if (window.confirm(t.market.delete_confirm)) {
       try {
         await deleteDoc(doc(db, 'listings', id));
+        showToast(
+          language === 'ka' 
+            ? 'განცხადება წარმატებით წაიშალა.' 
+            : 'Listing deleted successfully.', 
+          'success'
+        );
       } catch (error) {
         console.error("Error deleting listing:", error);
+        showToast(
+          language === 'ka' 
+            ? 'განცხადების წაშლა ვერ მოხერხდა.' 
+            : 'Could not delete listing.', 
+          'error'
+        );
       }
     }
   };
