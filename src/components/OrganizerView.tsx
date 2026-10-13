@@ -80,6 +80,8 @@ interface OrganizerViewProps {
   theme: Theme;
   setTheme: (theme: Theme) => void;
   onNavigateView?: (view: any) => void;
+  initialViewMode?: 'today' | 'plan' | 'projects' | 'focus';
+  onConsumeInitialViewMode?: () => void;
 }
 
 export const OrganizerView = ({
@@ -99,6 +101,8 @@ export const OrganizerView = ({
   theme,
   setTheme,
   onNavigateView,
+  initialViewMode,
+  onConsumeInitialViewMode,
 }: OrganizerViewProps) => {
   const t = translations[language].organizer;
   const commonT = translations[language].common || { add: language === 'ka' ? 'დამატება' : 'Add' };
@@ -252,7 +256,19 @@ export const OrganizerView = ({
 
   // Workspace Primary View Mode (Phase 5B Scaffold)
   type OrganizerViewMode = 'today' | 'plan' | 'projects' | 'focus';
-  const [viewMode, setViewMode] = useState<OrganizerViewMode>('today');
+  const [viewMode, setViewMode] = useState<OrganizerViewMode>(() => {
+    return initialViewMode || 'today';
+  });
+
+  // Safe consumption of initialViewMode transition prop so re-renders do not overwrite user's manual mode switches
+  useEffect(() => {
+    if (initialViewMode) {
+      setViewMode(initialViewMode);
+      if (onConsumeInitialViewMode) {
+        onConsumeInitialViewMode();
+      }
+    }
+  }, [initialViewMode, onConsumeInitialViewMode]);
 
   // Resolved Daily Anchor Task entity
   const dailyAnchorTask = useMemo(() => {

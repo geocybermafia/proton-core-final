@@ -30,6 +30,7 @@ export interface DashboardViewProps {
   setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void;
   systemHealth?: SystemHealthState;
   tasks?: Task[];
+  onOpenOrganizerFocus?: () => void;
 }
 
 const isRealTask = (t: any): boolean => {
@@ -68,7 +69,8 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
   setActiveView, 
   language = 'en',
   setUiMode,
-  tasks = []
+  tasks = [],
+  onOpenOrganizerFocus
 }) => {
   const isKa = language === 'ka';
   const { user } = useAuth();
@@ -367,17 +369,39 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setUiMode('business', 'organizer');
-                  setActiveView('organizer');
-                }}
-                className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold tracking-wider transition-all shrink-0 cursor-pointer self-start sm:self-auto"
-              >
-                <span>{isKa ? 'ორგანაიზერში გახსნა' : 'Open Organizer'}</span>
-                <ArrowUpRight size={14} />
-              </button>
+              <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto flex-wrap">
+                {/* Action B: Direct Focus Session */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onOpenOrganizerFocus) {
+                      onOpenOrganizerFocus();
+                    } else {
+                      setUiMode('business', 'organizer');
+                      setActiveView('organizer');
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 hover:border-emerald-500/60 text-xs font-mono font-bold tracking-wider transition-all cursor-pointer shadow-sm shadow-emerald-500/10"
+                  title={isKa ? 'გადასვლა Focus რეჟიმში' : 'Jump to Focus Session'}
+                >
+                  <Target size={13} className="text-emerald-400" />
+                  <span>{isKa ? 'ფოკუსირება' : 'Focus'}</span>
+                </button>
+
+                {/* Action A: Standard Organizer Open */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUiMode('business', 'organizer');
+                    setActiveView('organizer');
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/10 hover:border-white/20 text-xs font-mono font-bold tracking-wider transition-all cursor-pointer"
+                  title={isKa ? 'ორგანაიზერის გახსნა' : 'Open in Organizer'}
+                >
+                  <span>{isKa ? 'ორგანაიზერში გახსნა' : 'Open Organizer'}</span>
+                  <ArrowUpRight size={13} className="text-zinc-400" />
+                </button>
+              </div>
             </div>
           )}
 

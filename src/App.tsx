@@ -4070,6 +4070,7 @@ export default function App() {
       return (safeStorage.get('proton_ui_mode') as 'business' | 'creative' | 'market') || 'business';
     } catch { return 'business'; }
   });
+  const [organizerInitialViewMode, setOrganizerInitialViewMode] = useState<'today' | 'plan' | 'projects' | 'focus' | undefined>(undefined);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isControlExpanded, setIsControlExpanded] = useState(false);
   const [isMobileControlOpen, setIsMobileControlOpen] = useState(false);
@@ -4195,6 +4196,12 @@ export default function App() {
   const setActiveView = React.useCallback((view: View) => {
     navigate(getPathnameFromView(view));
   }, [navigate, getPathnameFromView]);
+
+  const handleOpenOrganizerFocus = useCallback(() => {
+    setOrganizerInitialViewMode('focus');
+    handleModeChange('business', 'organizer');
+    setActiveView('organizer');
+  }, [handleModeChange, setActiveView]);
 
   // Synchronize persona ID from deep-linking URL (/personas/:id) & auto-redirect disabled personas route
   useEffect(() => {
@@ -6898,6 +6905,7 @@ export default function App() {
                       setUiMode={handleModeChange}
                       systemHealth={systemHealth}
                       tasks={tasks}
+                      onOpenOrganizerFocus={handleOpenOrganizerFocus}
                     />
                   )}
                   {activeView === 'business-hub' && (
@@ -7028,6 +7036,8 @@ export default function App() {
                         theme={theme}
                         setTheme={handleGlobalThemeChange}
                         onNavigateView={handleViewChange}
+                        initialViewMode={organizerInitialViewMode}
+                        onConsumeInitialViewMode={() => setOrganizerInitialViewMode(undefined)}
                       />
                     </Suspense>
                   )}
