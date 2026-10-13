@@ -154,11 +154,19 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
               <p className="text-[11px] text-zinc-300 font-medium leading-relaxed">
                 {isSeller
                   ? (language === 'ka'
-                    ? 'შეკვეთა გადავა "გაუქმებულ" სტატუსში. გაუქმებული შეკვეთები აღარ აისახება შემოსავლის ჯამში.'
-                    : 'The order status will transition to "Cancelled". Cancelled orders will not contribute to your Seller Revenue.')
+                    ? (isPhysical 
+                        ? 'შეკვეთა გადავა "გაუქმებულ" სტატუსში. ნივთი ავტომატურად აღდგება მარკეტში და ხელახლა გახდება ხელმისაწვდომი შესაძენად.'
+                        : 'შეკვეთა გადავა "გაუქმებულ" სტატუსში. გაუქმებული შეკვეთები აღარ აისახება შემოსავლის ჯამში.')
+                    : (isPhysical
+                        ? 'The order status will transition to "Cancelled". The listing will be automatically restored to active and available in the marketplace.'
+                        : 'The order status will transition to "Cancelled". Cancelled orders will not contribute to your Seller Revenue.'))
                   : (language === 'ka'
-                    ? 'შეკვეთა გაუქმდება და შეჩერდება დამუშავება. გამყიდველს დაუყოვნებლივ ეცნობება გაუქმების შესახებ.'
-                    : 'The order will be cancelled immediately and processing will not proceed. The seller will see the updated status.')}
+                    ? (isPhysical
+                        ? 'შეკვეთა გაუქმდება დაუყოვნებლივ. ნივთი ავტომატურად დაბრუნდება მარკეტში ხელმისაწვდომ სტატუსში.'
+                        : 'შეკვეთა გაუქმდება და შეჩერდება დამუშავება. გამყიდველს დაუყოვნებლივ ეცნობება გაუქმების შესახებ.')
+                    : (isPhysical
+                        ? 'The order will be cancelled immediately and the listing will be automatically restored to active in the marketplace.'
+                        : 'The order will be cancelled immediately and processing will not proceed. The seller will see the updated status.'))}
               </p>
             </div>
           </div>

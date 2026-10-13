@@ -2423,14 +2423,14 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           );
         }
 
-        // Atomically update only the status to 'cancelled'
+        // Atomically update only the order status to 'cancelled'
         transaction.update(orderRef, {
           status: 'cancelled'
         });
       });
 
       showToast(
-        language === 'ka' ? "შეკვეთა წარმატებით გაუქმდა!" : "Order cancelled successfully!",
+        language === 'ka' ? "შეკვეთა წარმატებით გაუქმდა." : "Order cancelled successfully.",
         'success'
       );
       setOrderToCancel(null);
