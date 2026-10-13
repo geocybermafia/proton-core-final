@@ -6897,6 +6897,7 @@ export default function App() {
                       language={userProfile.language}
                       setUiMode={handleModeChange}
                       systemHealth={systemHealth}
+                      tasks={tasks}
                     />
                   )}
                   {activeView === 'business-hub' && (

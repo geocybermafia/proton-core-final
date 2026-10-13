@@ -644,7 +644,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             if (!isService) {
               transaction.update(listingRef, {
                 status: 'sold',
-                isSold: true
+                isSold: true,
+                activeOrderId: newOrderRef.id
               });
             }
           }
@@ -2333,7 +2334,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         if (!isService) {
           transaction.update(listingRef, {
             status: 'sold',
-            isSold: true
+            isSold: true,
+            activeOrderId: newOrderRef.id
           });
         }
       });

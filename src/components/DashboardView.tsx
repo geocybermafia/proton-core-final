@@ -11,7 +11,9 @@ import {
   Workflow as WorkflowIcon,
   Store,
   Compass,
-  CornerDownRight
+  CornerDownRight,
+  Calendar,
+  Target
 } from 'lucide-react';
 import { safeStorage } from '../lib/safeStorage';
 import { View, Task } from '../types';
@@ -27,6 +29,7 @@ export interface DashboardViewProps {
   language: 'en' | 'ka';
   setUiMode: (m: 'business' | 'creative' | 'market', targetView?: View) => void;
   systemHealth?: SystemHealthState;
+  tasks?: Task[];
 }
 
 const isRealTask = (t: any): boolean => {
@@ -64,12 +67,36 @@ const formatRelativeTime = (timestamp: number, language: 'en' | 'ka'): string =>
 export const DashboardView: React.FC<DashboardViewProps> = React.memo(({ 
   setActiveView, 
   language = 'en',
-  setUiMode
+  setUiMode,
+  tasks = []
 }) => {
   const isKa = language === 'ka';
   const { user } = useAuth();
   const { sellerOrders } = useSeller();
   const opportunities = useOpportunities(language);
+
+  // ---------------------------------------------------------------------------
+  // 0. DAILY ANCHOR TASK (READ-ONLY SOVEREIGN FOCUS ENTITY)
+  // ---------------------------------------------------------------------------
+  const dailyAnchorTask = useMemo(() => {
+    if (!tasks || !Array.isArray(tasks) || tasks.length === 0) return null;
+    try {
+      const anchorId = safeStorage.get('organizer_daily_anchor_task_id');
+      if (!anchorId || typeof anchorId !== 'string' || !anchorId.trim()) return null;
+      const matched = tasks.find(t => t && t.id === anchorId && !t.completed);
+      return matched || null;
+    } catch {
+      return null;
+    }
+  }, [tasks]);
+
+  const anchorTaskTitle = useMemo(() => {
+    if (!dailyAnchorTask) return '';
+    if (isKa && dailyAnchorTask.contentGe && dailyAnchorTask.contentGe.trim()) {
+      return dailyAnchorTask.contentGe.trim();
+    }
+    return dailyAnchorTask.content?.trim() || '';
+  }, [dailyAnchorTask, isKa]);
 
   const handleOpportunityAction = (opportunity: Opportunity) => {
     if (opportunity.category === 'creative') {
@@ -322,9 +349,42 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
           </div>
 
           {/* ======================================================================= */}
+          {/* 2.5 DAILY ANCHOR TASK (SOVEREIGN SANCTUARY FOCUS)                       */}
+          {/* ======================================================================= */}
+          {dailyAnchorTask && anchorTaskTitle && (
+            <div className="max-w-4xl p-4 sm:p-5 rounded-lg bg-white/[0.02] border border-white/10 hover:border-emerald-500/30 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-400 shrink-0 mt-0.5 sm:mt-0">
+                  <Target size={18} />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <div className="text-[11px] font-mono uppercase tracking-widest text-emerald-400 font-bold flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <span>{isKa ? 'დღის მთავარი ფოკუსი' : "Today's Main Focus"}</span>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold text-white truncate max-w-xl">
+                    {anchorTaskTitle}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUiMode('business', 'organizer');
+                  setActiveView('organizer');
+                }}
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 text-xs font-mono font-bold tracking-wider transition-all shrink-0 cursor-pointer self-start sm:self-auto"
+              >
+                <span>{isKa ? 'ორგანაიზერში გახსნა' : 'Open Organizer'}</span>
+                <ArrowUpRight size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* ======================================================================= */}
           {/* 3. REFINED DIRECT DOORWAYS (QUIET INGRESS INTO PROTON)                  */}
           {/* ======================================================================= */}
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-4xl">
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 max-w-5xl">
             
             {/* Create Doorway */}
             <button
@@ -399,6 +459,31 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 </div>
               </div>
               <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-purple-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            </button>
+
+            {/* Organizer Doorway */}
+            <button
+              type="button"
+              onClick={() => {
+                setUiMode('business', 'organizer');
+                setActiveView('organizer');
+              }}
+              className="group p-4 sm:p-5 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-emerald-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            >
+              <div className="space-y-2">
+                <div className="p-2 rounded-md bg-emerald-500/10 text-emerald-400 inline-block">
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                    {isKa ? 'ორგანაიზერი' : 'Organizer'}
+                  </div>
+                  <div className="text-xs text-zinc-400 font-mono">
+                    {isKa ? 'დღის გეგმა და დავალებები' : 'Daily plan and tasks'}
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-emerald-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </button>
 
             {/* Market Doorway */}

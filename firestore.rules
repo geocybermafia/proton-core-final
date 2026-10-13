@@ -204,15 +204,29 @@ service cloud.firestore {
         && (
           (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId) ||
           (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
-          // Legitimate buyer purchase transition:
-          // Must be transitioning from active to sold, only modifying status and optionally isSold, preserving seller, price, currency, createdAt
+          // Legitimate buyer purchase transition with atomic order link:
+          // Must be transitioning from active to sold, modifying status, isSold and activeOrderId atomically linked to order creation
           (
             existing().status == 'active' &&
             incoming().status == 'sold' &&
             incoming().sellerId == existing().sellerId &&
             incoming().price == existing().price &&
             incoming().createdAt == existing().createdAt &&
-            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isSold'])
+            incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isSold', 'activeOrderId']) &&
+            (
+              !('activeOrderId' in incoming()) ||
+              (
+                incoming().activeOrderId is string &&
+                isValidId(incoming().activeOrderId) &&
+                existsAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)) &&
+                getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.listingId == listingId &&
+                getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.buyerId == request.auth.uid &&
+                getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.sellerId == existing().sellerId &&
+                getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.amount == existing().price &&
+                getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.status in ['pending', 'completed'] &&
+                getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.orderType == 'product'
+              )
+            )
           )
         );
       allow delete: if isVerified() && isValidId(listingId) && isOwner(existing().sellerId);

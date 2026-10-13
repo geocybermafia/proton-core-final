@@ -657,13 +657,35 @@ exports.onOrderUpdated = (0, firestore_1.onDocumentUpdated)({
                 `A schema migration adding activeOrderId at purchase time is required for safe server restoration.`);
             return;
         }
-        // If explicit provenance is proven, restore safely:
-        await listingRef.update({
-            status: "active",
-            isSold: false,
-            activeOrderId: firestore_2.FieldValue.delete()
+        // 6. TRANSACTIONAL ATOMIC RESTORATION:
+        // Re-read and update inside a transaction to prevent race conditions or overwriting re-sold items
+        await firestore.runTransaction(async (tx) => {
+            const freshListingSnap = await tx.get(listingRef);
+            if (!freshListingSnap.exists)
+                return;
+            const freshListing = freshListingSnap.data();
+            if (!freshListing)
+                return;
+            // Double-check sellerId, status, and activeOrderId inside transaction lock
+            if (freshListing.sellerId !== sellerId) {
+                console.warn(`[onOrderUpdated] Transaction aborted: sellerId mismatch.`);
+                return;
+            }
+            if (freshListing.status !== "sold") {
+                console.log(`[onOrderUpdated] Transaction aborted: listing is no longer in 'sold' status (${freshListing.status}).`);
+                return;
+            }
+            if (freshListing.activeOrderId !== orderId) {
+                console.warn(`[onOrderUpdated] Transaction aborted: activeOrderId '${freshListing.activeOrderId}' does not match order '${orderId}'.`);
+                return;
+            }
+            tx.update(listingRef, {
+                status: "active",
+                isSold: false,
+                activeOrderId: firestore_2.FieldValue.delete()
+            });
+            console.log(`[onOrderUpdated] Safely restored listing ${listingId} to active for verified order ${orderId}.`);
         });
-        console.log(`[onOrderUpdated] Safely restored listing ${listingId} to active for verified order ${orderId}.`);
     }
     catch (error) {
         console.error(`[onOrderUpdated] Error handling cancellation event for order ${event.params?.orderId}:`, error);
