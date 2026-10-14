@@ -157,6 +157,7 @@ export type Listing = {
   createdAt: number;
   status: 'active' | 'sold' | 'low_stock' | string;
   isSold?: boolean;
+  activeOrderId?: string;
   condition?: 'new' | 'used' | 'refurbished' | string;
   isNegotiable?: boolean;
   listingType?: 'product' | 'service' | 'project';

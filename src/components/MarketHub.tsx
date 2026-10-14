@@ -53,7 +53,8 @@ import {
   serverTimestamp,
   limit,
   startAfter,
-  runTransaction
+  runTransaction,
+  deleteField
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
@@ -2425,11 +2426,66 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           );
         }
 
-        // Atomically update only the order status to 'cancelled'
+        // Read listing document before any writes (all reads must precede all writes in Firestore transactions)
+        let shouldRestoreListing = false;
+        let listingRef: any = null;
+
+        if (freshOrder.listingId) {
+          listingRef = doc(db, 'listings', freshOrder.listingId);
+          const listingSnap = await transaction.get(listingRef);
+
+          if (listingSnap.exists()) {
+            const listingData = listingSnap.data() as Record<string, any>;
+
+            // Safety and integrity checks to safely restore listing:
+            // 1. Seller match: Listing sellerId must match order sellerId
+            const isMatchingSeller = listingData.sellerId === freshOrder.sellerId;
+            // 2. State check: Listing is currently marked sold or isSold
+            const isCurrentlySold = listingData.status === 'sold' || listingData.isSold === true;
+            // 3. Relational link check:
+            //    If activeOrderId is present, it MUST match this order (order.id or freshOrder.id).
+            //    If activeOrderId is empty/missing, it must match seller and be currently sold.
+            //    If activeOrderId points to a different order, do not overwrite it.
+            const belongsToThisOrder = 
+              listingData.activeOrderId === order.id ||
+              listingData.activeOrderId === freshOrder.id ||
+              (!listingData.activeOrderId && isMatchingSeller);
+
+            if (isCurrentlySold && isMatchingSeller && belongsToThisOrder) {
+              shouldRestoreListing = true;
+            }
+          }
+        }
+
+        // Atomically update the order status to 'cancelled'
         transaction.update(orderRef, {
           status: 'cancelled'
         });
+
+        // Atomically restore the listing to 'active' if safety conditions met
+        if (shouldRestoreListing && listingRef) {
+          transaction.update(listingRef, {
+            status: 'active',
+            isSold: false,
+            activeOrderId: deleteField()
+          });
+        }
       });
+
+      // Update local listings state for immediate UI responsiveness
+      if (order.listingId) {
+        setListings(prev => prev.map(item => {
+          if (item.id === order.listingId && (item.status === 'sold' || item.isSold)) {
+            return {
+              ...item,
+              status: 'active',
+              isSold: false,
+              activeOrderId: undefined
+            };
+          }
+          return item;
+        }));
+      }
 
       showToast(
         language === 'ka' ? "შეკვეთა წარმატებით გაუქმდა." : "Order cancelled successfully.",
