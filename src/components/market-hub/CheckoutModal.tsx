@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, ShoppingBag, ShieldCheck, MapPin, Loader2, Truck } from 'lucide-react';
+import { X, ShoppingCart, ShoppingBag, ShieldCheck, MapPin, Loader2, Truck, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Listing, ShippingDetails } from '../../types';
 import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing } from './MarketConstants';
@@ -24,6 +24,7 @@ export interface CheckoutModalProps {
   onChangeShippingDetails: (details: ShippingDetails) => void;
   isCheckingOut: boolean;
   onConfirmPurchase: () => void;
+  onStartChat?: (listing: Listing) => void;
 }
 
 export const CheckoutModal = React.memo(function CheckoutModal({
@@ -43,7 +44,8 @@ export const CheckoutModal = React.memo(function CheckoutModal({
   shippingDetails,
   onChangeShippingDetails,
   isCheckingOut,
-  onConfirmPurchase
+  onConfirmPurchase,
+  onStartChat
 }: CheckoutModalProps) {
   const isPhysical = checkoutItem ? isPhysicalListing(checkoutItem) : false;
   const isServiceOrProject = checkoutItem ? (isServiceListing(checkoutItem) || isProjectListing(checkoutItem)) : false;
@@ -86,12 +88,12 @@ export const CheckoutModal = React.memo(function CheckoutModal({
             <div className="p-5 sm:p-6 border-b border-white/10 flex items-center justify-between shrink-0 bg-zinc-950/60 backdrop-blur-md">
               <div>
                 <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
-                  {language === 'ka' ? 'შეკვეთის გაფორმება' : 'Complete Purchase'}
+                  {language === 'ka' ? 'შეკვეთის შეთანხმება' : 'Direct Order Request'}
                 </h3>
                 <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-none mt-1", currentTheme.muted)}>
                   {isServiceOrProject
-                    ? (language === 'ka' ? 'პირდაპირი ჯავშანი' : 'Direct Service Booking')
-                    : (language === 'ka' ? 'პირდაპირი შესყიდვა & მიწოდება' : 'Direct Item Purchase & Shipping')}
+                    ? (language === 'ka' ? 'პირდაპირი ჯავშანი • ანგარიშსწორება შემსრულებელთან' : 'Direct Booking • Direct Settlement')
+                    : (language === 'ka' ? 'პირდაპირი შეკვეთა • ანგარიშსწორება გამყიდველთან' : 'Direct Order • Direct Settlement with Seller')}
                 </p>
               </div>
               <button 
@@ -106,6 +108,35 @@ export const CheckoutModal = React.memo(function CheckoutModal({
 
             {/* Scrollable Body with bottom clearance for virtual keyboard & sticky action footer */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-32 sm:pb-8 space-y-5 custom-scrollbar-minimal overscroll-contain">
+              {/* Direct Marketplace Model Disclosure Banner */}
+              <div className="p-4 rounded-2xl bg-[#dfb257]/10 border border-[#dfb257]/25 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-[#dfb257]/20 text-[#dfb257] shrink-0 mt-0.5">
+                  <ShieldCheck size={16} />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-xs font-black uppercase tracking-wider text-[#dfb257] leading-snug">
+                    {language === 'ka'
+                      ? 'პირდაპირი ანგარიშსწორება & მიწოდება'
+                      : 'Direct Buyer-Seller Settlement'}
+                  </p>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed font-normal">
+                    {language === 'ka'
+                      ? 'Proton არის პირდაპირი დაკავშირების პლატფორმა და არ იღებს მომხმარებლების ფულს. გადახდის ფორმაზე (ნაღდი ანგარიშსწორება მიღებისას ან პირდაპირი გადარიცხვა) და მიწოდებაზე თანხმდებით უშუალოდ გამყიდველთან.'
+                      : 'Proton is a connection platform and does not process payments or hold funds. Payment method (cash on delivery or direct bank transfer) and handover are agreed directly with the seller.'}
+                  </p>
+                  {onStartChat && (
+                    <button
+                      type="button"
+                      onClick={() => onStartChat(checkoutItem)}
+                      className="mt-2 text-[10px] font-black uppercase tracking-wider text-[#dfb257] hover:text-[#ebd083] hover:underline flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <MessageCircle size={13} />
+                      <span>{language === 'ka' ? 'გახსენი ჩატი გამყიდველთან' : 'Chat with Seller Directly'}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Cart Sync Warning Banner */}
               {cart.length > 0 && (
                 <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
@@ -253,14 +284,14 @@ export const CheckoutModal = React.memo(function CheckoutModal({
 
                     <div>
                       <label htmlFor="shipping-notes" className="text-[9px] font-black uppercase tracking-wider text-white/60 block mb-1.5 ml-0.5">
-                        {language === 'ka' ? 'კურიერის შენიშვნა (სურვილისამებრ)' : 'Courier Notes (Optional)'}
+                        {language === 'ka' ? 'შენიშვნა ან კითხვა გამყიდველს (გადახდის/მიწოდების სასურველი ფორმა)' : 'Notes or Inquiry for Seller (preferred payment or handover)'}
                       </label>
                       <textarea
                         id="shipping-notes"
                         maxLength={300}
                         value={shippingDetails.notes || ''}
                         onChange={e => onChangeShippingDetails({ ...shippingDetails, notes: e.target.value })}
-                        placeholder={language === 'ka' ? 'მაგ: სადარბაზოს კოდი, სასურველი საათი...' : 'e.g. Entry code, preferred drop-off time...'}
+                        placeholder={language === 'ka' ? 'მაგ: ნაღდი ანგარიშსწორება ადგილზე, სადარბაზოს კოდი, სასურველი საათი...' : 'e.g. Cash on delivery, gate code, preferred delivery time...'}
                         className={cn("w-full h-16 p-3 rounded-xl border text-base md:text-xs font-normal text-white focus:outline-none placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
                       />
                     </div>
@@ -311,7 +342,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
             <div className="p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 shrink-0 bg-zinc-950/95 backdrop-blur-md space-y-4">
               <div className="flex items-center justify-between">
                 <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
-                  {language === 'ka' ? 'საბოლოო თანხა' : 'Total Amount'}
+                  {language === 'ka' ? 'ღირებულება (პირდაპირი ანგარიშსწორება)' : 'Amount (Direct Settlement)'}
                 </span>
                 <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap">
                   {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -329,8 +360,8 @@ export const CheckoutModal = React.memo(function CheckoutModal({
 
               <p className={cn("text-[9px] font-bold text-center leading-relaxed opacity-60", currentTheme.muted)}>
                 {language === 'ka' 
-                  ? 'ღილაკზე დაჭერით თქვენ ეთანხმებით მომსახურების პირობებს და კონფიდენციალურობის პოლიტიკას.'
-                  : 'By confirming, you agree to the marketplace terms and conditions.'}
+                  ? 'მოთხოვნა გაეგზავნება გამყიდველს. თანხის გადახდა ხდება პირდაპირ გამყიდველთან შეთანხმებით.'
+                  : 'Order request will be sent to the seller. Payment is settled directly with the seller.'}
               </p>
               
               <button 
@@ -344,12 +375,12 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                 {isCheckingOut ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    {language === 'ka' ? 'მუშავდება...' : 'Processing...'}
+                    {language === 'ka' ? 'იგზავნება მოთხოვნა...' : 'Sending Request...'}
                   </>
                 ) : (
                   <>
-                    <ShieldCheck size={16} />
-                    {language === 'ka' ? 'შესყიდვის დადასტურება' : 'Confirm & Purchase'}
+                    <CheckCircle2 size={16} />
+                    {language === 'ka' ? 'შეკვეთის მოთხოვნის გაგზავნა' : 'Send Order Request to Seller'}
                   </>
                 )}
               </button>

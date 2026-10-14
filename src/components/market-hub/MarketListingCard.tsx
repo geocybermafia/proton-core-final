@@ -393,7 +393,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    onBuyNow(listing);
+                    onStartChat(listing);
                   }}
                   className={cn(
                     "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-[#dfb257]/20 active:scale-[0.98]",
@@ -401,8 +401,21 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     currentTheme.accentBg?.includes('#dfb257') ? "text-zinc-950 font-black" : "text-white"
                   )}
                 >
-                  <ShoppingBag size={15} />
-                  <span>{t.market.buy_now}</span>
+                  <MessageCircle size={15} />
+                  <span>{t.market.contact_seller || (language === 'ka' ? 'დაუკავშირდი გამყიდველს' : 'Contact Seller')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    onBuyNow(listing);
+                  }}
+                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-white/10 hover:bg-white/20 text-white border border-white/15 focus:outline-none flex items-center justify-center shrink-0 cursor-pointer"
+                  title={language === 'ka' ? 'შეკვეთის შეთანხმება' : 'Order Agreement'}
+                  aria-label={language === 'ka' ? 'შეკვეთის შეთანხმება' : 'Order Agreement'}
+                >
+                  <ShoppingBag size={16} />
                 </button>
                 <button
                   type="button"
@@ -411,7 +424,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     e.preventDefault();
                     onAddToCart(listing);
                   }}
-                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30 shrink-0"
+                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30 shrink-0 cursor-pointer"
                   title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                   aria-label={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                 >

@@ -334,6 +334,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                   </p>
                 )}
 
+                <div className="p-3 rounded-xl bg-[#dfb257]/10 border border-[#dfb257]/20 text-left">
+                  <p className="text-[10px] text-zinc-300 leading-relaxed font-normal">
+                    {language === 'ka' 
+                      ? 'ℹ️ Proton არ ამუშავებს ონლაინ გადახდებს. თითოეულ გამყიდველთან ანგარიშსწორება და მიწოდება ხდება პირდაპირ.' 
+                      : 'ℹ️ Proton does not process payments. Settlement and delivery are arranged directly with each seller.'}
+                  </p>
+                </div>
+
                 <button 
                   onClick={onCheckout}
                   disabled={!canCheckout}
@@ -344,12 +352,12 @@ export const CartDrawer = React.memo(function CartDrawer({
                   {isPlacingCartOrders ? (
                     <>
                       <Loader2 size={15} className="animate-spin" />
-                      <span>{language === 'ka' ? 'მუშავდება...' : 'Processing...'}</span>
+                      <span>{language === 'ka' ? 'იგზავნება მოთხოვნები...' : 'Sending Requests...'}</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck size={16} />
-                      <span>{language === 'ka' ? 'შეკვეთის გაფორმება' : 'Proceed to Checkout'}</span>
+                      <span>{language === 'ka' ? 'შეკვეთის მოთხოვნის გაგზავნა' : 'Send Order Requests'}</span>
                     </>
                   )}
                 </button>

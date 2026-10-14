@@ -2345,8 +2345,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       setBuyerInstructions('');
       showToast(
         language === 'ka' 
-          ? `შეკვეთა "${purchasedTitle}" წარმატებით გაფორმდა!` 
-          : `Order for "${purchasedTitle}" completed successfully!`, 
+          ? `შეკვეთის მოთხოვნა "${purchasedTitle}" წარმატებით გაეგზავნა გამყიდველს! დეტალებზე დაუკავშირდით გამყიდველს ჩატში.` 
+          : `Order request for "${purchasedTitle}" sent to seller! Please arrange payment and delivery with seller in chat.`, 
         'success'
       );
       setViewMode('my-listings');
@@ -4836,6 +4836,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         onChangeShippingDetails={setShippingDetails}
         isCheckingOut={isCheckingOut}
         onConfirmPurchase={processPurchase}
+        onStartChat={(item) => {
+          setCheckoutItem(null);
+          handleStartChat(item);
+        }}
       />
 
       {/* Direct Buyer-Seller Chat Drawer */}

@@ -226,7 +226,7 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
                 data-listing-id="${listing.id}"
                 class="popup-buy-btn w-full mt-2 py-2 px-4 text-center text-[9px] font-black uppercase tracking-widest text-white rounded-xl bg-gradient-to-r from-blue-600 to-[#2e5bff] border border-white/10 hover:brightness-110 cursor-pointer active:scale-95 transition-all duration-200 block shadow-md shadow-blue-500/10"
               >
-                ${language === 'ka' ? 'დეტალები / ყიდვა' : 'Details / Buy Now'}
+                ${language === 'ka' ? 'დეტალები / შეკვეთის შეთანხმება' : 'Details / Order Request'}
               </button>
             </div>
           </div>
