@@ -398,7 +398,7 @@ service cloud.firestore {
     // 9. PROTON CLIPS
     // ======================================================
     match /clips/{clipId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isVerified() && isValidId(clipId) 
         && incoming().creatorId == request.auth.uid
         && incoming().videoUrl is string && incoming().videoUrl.size() <= 2000
@@ -415,12 +415,12 @@ service cloud.firestore {
           && incoming().creatorId == request.auth.uid 
           && incoming().videoUrl == existing().videoUrl
           && incoming().createdAt == existing().createdAt
-          && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'soundName', 'productId', 'trimStart', 'trimEnd']))
+          && incoming().diff(existing()).affectedKeys().hasOnly(['caption', 'soundName', 'productId', 'productInfo', 'trimStart', 'trimEnd']))
       );
       allow delete: if isVerified() && isValidId(clipId) && existing().creatorId == request.auth.uid;
 
       match /comments/{commentId} {
-        allow read: if isSignedIn();
+        allow read: if true;
         allow create: if isVerified() && isValidId(commentId)
           && incoming().userId == request.auth.uid
           && incoming().clipId == clipId

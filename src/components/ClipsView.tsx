@@ -851,6 +851,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       }
 
       let committedOrderId = '';
+      let finalOrderStatus: 'pending' | 'booked' = 'pending';
       const isPreset = productId.startsWith('preset-') || checkoutClip.id.startsWith('preset-');
 
       if (!isPreset) {
@@ -869,6 +870,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
           }
 
           const isService = freshData.category === 'service' || freshData.listingType === 'service';
+          finalOrderStatus = isService ? 'booked' : 'pending';
           const verifiedOrderData = {
             listingId: productId,
             buyerId: currentUser.uid,
@@ -876,9 +878,9 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
             amount: freshData.price,
             currency: freshData.currency || 'USD',
             itemTitle: freshData.title || checkoutClip.productInfo?.title || 'Shoppable Item',
-            status: isService ? 'booked' : 'completed',
+            status: finalOrderStatus,
             orderType: isService ? 'service' : 'product',
-            buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Shoppable Clip Instant Purchase',
+            buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Shoppable Clip Order Request',
             createdAt: serverTimestamp()
           };
 
@@ -889,12 +891,14 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
           if (!isService) {
             transaction.update(listingRef, {
               status: 'sold',
-              isSold: true
+              isSold: true,
+              activeOrderId: newOrderRef.id
             });
           }
         });
       } else {
         // Preset / Demo showcase checkout
+        finalOrderStatus = 'pending';
         const orderData = {
           listingId: productId,
           buyerId: currentUser.uid,
@@ -902,9 +906,9 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
           amount: checkoutClip.productInfo.price,
           currency: 'USD',
           itemTitle: checkoutClip.productInfo.title,
-          status: 'completed',
+          status: 'pending',
           orderType: 'product',
-          buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Demo Shoppable Clip Purchase',
+          buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Demo Shoppable Clip Order Request',
           createdAt: serverTimestamp()
         };
 
@@ -926,13 +930,13 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         itemTitle: checkoutClip.productInfo.title,
         amount: checkoutClip.productInfo.price * checkoutQuantity,
         quantity: checkoutQuantity,
-        status: 'completed',
+        status: finalOrderStatus,
         createdAt: Date.now()
       });
       setIsCheckingOut(false);
 
       showToast(
-        language === 'ka' ? 'შეკვეთა წარმატებით გაფორმდა!' : 'Order placed successfully!',
+        language === 'ka' ? 'შეკვეთის მოთხოვნა წარმატებით გაეგზავნა გამყიდველს!' : 'Order request sent to seller successfully!',
         'success'
       );
     } catch (e: any) {

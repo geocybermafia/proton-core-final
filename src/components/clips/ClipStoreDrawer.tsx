@@ -314,31 +314,31 @@ export function ClipStoreDrawer({
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-lg font-black text-white">
-                      {language === 'ka' ? 'შეკვეთა მიღებულია!' : 'Order Placed Successfully!'}
+                      {language === 'ka' ? 'მოთხოვნა გაგზავნილია!' : 'Order Request Submitted!'}
                     </h3>
                     <p className="text-xs text-proton-muted max-w-xs mx-auto">
                       {language === 'ka' 
-                        ? 'გმადლობთ კლიპიდან შეძენისთვის. გამყიდველი მიიღებს შეტყობინებას.' 
-                        : 'Thank you for buying directly from this clip loop! Merchant has been notified.'}
+                        ? 'შეკვეთის მოთხოვნა წარმატებით გაეგზავნა გამყიდველს. გადახდისა და მიწოდების დეტალებზე დაუკავშირდით პირდაპირ ჩატში.' 
+                        : 'Order request was sent to the seller. Please coordinate payment and delivery terms directly in chat.'}
                     </p>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-2 font-mono text-xs text-gray-300">
                     <div className="flex justify-between">
-                      <span className="text-proton-muted">Order ID:</span>
+                      <span className="text-proton-muted">{language === 'ka' ? 'შეკვეთის ID:' : 'Order ID:'}</span>
                       <span className="text-purple-400 font-bold">{checkoutSuccessOrder.id}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-proton-muted">Item:</span>
+                      <span className="text-proton-muted">{language === 'ka' ? 'პროდუქტი:' : 'Item:'}</span>
                       <span className="text-white truncate max-w-[180px]">{checkoutSuccessOrder.itemTitle}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-proton-muted">Total Paid:</span>
+                      <span className="text-proton-muted">{language === 'ka' ? 'თანხა:' : 'Total Amount:'}</span>
                       <span className="text-emerald-400 font-bold">${checkoutSuccessOrder.amount} USD</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-proton-muted">Source:</span>
-                      <span className="text-pink-400 font-bold">Shoppable Clip #{checkoutClip.id.slice(0, 6)}</span>
+                      <span className="text-proton-muted">{language === 'ka' ? 'სტატუსი:' : 'Status:'}</span>
+                      <span className="text-amber-400 font-bold uppercase">{checkoutSuccessOrder.status || 'pending'}</span>
                     </div>
                   </div>
 
@@ -355,7 +355,7 @@ export function ClipStoreDrawer({
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-1 rounded-full bg-pink-500/20 border border-pink-500/40 text-[10px] font-black text-pink-300 uppercase tracking-widest flex items-center gap-1">
                       <Sparkles size={11} className="text-pink-400 animate-pulse" />
-                      {language === 'ka' ? 'სწრაფი შეძენა' : 'Shoppable Clip Checkout'}
+                      {language === 'ka' ? 'შეკვეთის მოთხოვნა' : 'Shoppable Clip Order'}
                     </span>
                   </div>
 
@@ -426,7 +426,7 @@ export function ClipStoreDrawer({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="block text-[11px] font-bold text-proton-muted">
-                        {language === 'ka' ? 'მიწოდების მისამართი ან შენიშვნა:' : 'Delivery Address / Special Notes:'}
+                        {language === 'ka' ? 'მიწოდების მისამართი ან საკონტაქტო შენიშვნა:' : 'Delivery Address / Contact Notes:'}
                       </label>
                       <span className={cn("text-[10px] font-mono", checkoutDeliveryNotes.length >= 280 ? "text-amber-400 font-bold" : "text-proton-muted")}>
                         {checkoutDeliveryNotes.length}/300
@@ -437,78 +437,38 @@ export function ClipStoreDrawer({
                       maxLength={300}
                       value={checkoutDeliveryNotes}
                       onChange={(e) => onChangeDeliveryNotes(e.target.value)}
-                      placeholder={language === 'ka' ? 'მაგ: თბილისი, რუსთაველის #12, ბინა 4' : 'e.g. Tbilisi, Rustaveli Ave #12, Apt 4'}
+                      placeholder={language === 'ka' ? 'მაგ: თბილისი, რუსთაველის #12, ტელ: 599 00 00 00' : 'e.g. Tbilisi, Rustaveli Ave #12, Tel: 599 00 00 00'}
                       className="w-full bg-white/5 border border-white/10 focus:border-pink-500/50 outline-none rounded-xl p-3 text-xs text-white placeholder:text-gray-500 transition-all resize-none font-sans"
                     />
                   </div>
 
-                  {/* Payment Method Selector */}
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-bold text-proton-muted">
-                      {language === 'ka' ? 'გადახდის მეთოდი:' : 'Payment Method:'}
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onChangePaymentMethod('proton_pay')}
-                        className={cn(
-                          "p-2.5 rounded-xl border flex flex-col items-center gap-1 transition-all",
-                          checkoutPaymentMethod === 'proton_pay'
-                            ? "bg-purple-600/30 border-purple-500 text-purple-300 ring-1 ring-purple-500/40"
-                            : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                        )}
-                      >
-                        <Zap size={14} className="text-purple-400" />
-                        <span className="text-[10px] font-extrabold">Proton Pay</span>
-                        <span className="text-[8px] text-emerald-400 font-mono">-5% Fee</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onChangePaymentMethod('card')}
-                        className={cn(
-                          "p-2.5 rounded-xl border flex flex-col items-center gap-1 transition-all",
-                          checkoutPaymentMethod === 'card'
-                            ? "bg-purple-600/30 border-purple-500 text-purple-300 ring-1 ring-purple-500/40"
-                            : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                        )}
-                      >
-                        <CreditCard size={14} className="text-pink-400" />
-                        <span className="text-[10px] font-extrabold">Card / Apple</span>
-                        <span className="text-[8px] text-proton-muted font-mono">Instant</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => onChangePaymentMethod('crypto')}
-                        className={cn(
-                          "p-2.5 rounded-xl border flex flex-col items-center gap-1 transition-all",
-                          checkoutPaymentMethod === 'crypto'
-                            ? "bg-purple-600/30 border-purple-500 text-purple-300 ring-1 ring-purple-500/40"
-                            : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
-                        )}
-                      >
-                        <Coins size={14} className="text-amber-400" />
-                        <span className="text-[10px] font-extrabold">USDT / TON</span>
-                        <span className="text-[8px] text-amber-400/80 font-mono">Web3</span>
-                      </button>
-                    </div>
+                  {/* Direct Agreement Notice */}
+                  <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                    <p className="text-[11px] font-bold text-gray-200 flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-purple-400" />
+                      {language === 'ka' ? 'პირდაპირი ანგარიშსწორება' : 'Direct Merchant Settlement'}
+                    </p>
+                    <p className="text-[10px] text-proton-muted leading-relaxed">
+                      {language === 'ka'
+                        ? 'Proton აკავშირებს მხარეებს. გადახდისა და მიწოდების პირობებზე მყიდველი და გამყიდველი პირდაპირ თანხმდებიან.'
+                        : 'Proton connects buyers and sellers. Payment terms and fulfillment are arranged directly between parties.'}
+                    </p>
                   </div>
 
-                  {/* Pricing Summary */}
+                  {/* Order Pricing Summary */}
                   {checkoutClip.productInfo && (
                     <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5 space-y-1.5 text-xs font-mono">
                       <div className="flex justify-between text-proton-muted">
-                        <span>Subtotal ({checkoutQuantity}x):</span>
-                        <span>${(checkoutClip.productInfo.price * checkoutQuantity).toFixed(2)}</span>
+                        <span>{language === 'ka' ? 'რაოდენობა:' : 'Quantity:'}</span>
+                        <span>{checkoutQuantity}x</span>
                       </div>
                       <div className="flex justify-between text-proton-muted">
-                        <span>Proton Escrow Fee:</span>
-                        <span className="text-emerald-400">$0.00 (Free)</span>
+                        <span>{language === 'ka' ? 'ერთეულის ფასი:' : 'Unit Price:'}</span>
+                        <span>${checkoutClip.productInfo.price.toFixed(2)} USD</span>
                       </div>
                       <div className="h-[1px] bg-white/10 my-1" />
                       <div className="flex justify-between text-white font-bold text-sm">
-                        <span>Total:</span>
+                        <span>{language === 'ka' ? 'სავარაუდო თანხა:' : 'Estimated Total:'}</span>
                         <span className="text-emerald-400">
                           ${(checkoutClip.productInfo.price * checkoutQuantity).toFixed(2)} USD
                         </span>
@@ -529,12 +489,12 @@ export function ClipStoreDrawer({
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        <span>{language === 'ka' ? 'მუშავდება...' : 'Processing Secure Escrow...'}</span>
+                        <span>{language === 'ka' ? 'იგზავნება...' : 'Sending Request...'}</span>
                       </>
                     ) : (
                       <>
                         <Sparkles size={14} />
-                        <span>{language === 'ka' ? 'მყისიერი შეკვეთა' : 'Complete Instant Purchase'}</span>
+                        <span>{language === 'ka' ? 'შეკვეთის მოთხოვნის გაგზავნა' : 'Send Order Request'}</span>
                       </>
                     )}
                   </button>

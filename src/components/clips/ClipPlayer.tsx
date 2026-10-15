@@ -315,6 +315,7 @@ export function ClipPlayer({
   const isVirtualMounted = isMounted ?? (Math.abs(idx - currentIndex) <= 1);
   const isCurrentActive = idx === currentIndex;
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
+  const [localVideoEl, setLocalVideoEl] = useState<HTMLVideoElement | null>(null);
 
   const isTrimmed = Boolean(
     (clip.trimStart && clip.trimStart > 0) || 
@@ -463,7 +464,10 @@ export function ClipPlayer({
         >
           {isVirtualMounted ? (
             <video
-              ref={el => videoRefCallback(idx, el)}
+              ref={el => {
+                videoRefCallback(idx, el);
+                setLocalVideoEl(el);
+              }}
               src={getClipVideoUrl(clip, idx)}
               loop
               playsInline
@@ -650,7 +654,7 @@ export function ClipPlayer({
           {/* Custom Play Progress Bar Timeline */}
           {idx === currentIndex && (
             <ReelProgressBar 
-              videoElement={videoElement} 
+              videoElement={videoElement || localVideoEl} 
               clip={clip} 
             />
           )}
