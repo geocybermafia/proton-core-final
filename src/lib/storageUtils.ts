@@ -1,4 +1,4 @@
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../firebase';
 
 export interface UploadOptions {
@@ -184,6 +184,67 @@ export async function uploadClipVideo(
   }, effectiveTimeoutMs);
 
   return result.downloadUrl;
+}
+
+/**
+ * Safely deletes a clip's video file from Firebase Storage.
+ * Handles both full download URLs and relative storage paths.
+ * If the URL is external (e.g. non-Firebase or preset loop), it safely ignores it without throwing.
+ */
+export async function deleteClipVideoFromStorage(
+  videoUrlOrPath: string | undefined | null,
+  userId?: string
+): Promise<boolean> {
+  if (!videoUrlOrPath || typeof videoUrlOrPath !== 'string') {
+    return false;
+  }
+
+  // Check if this is an external URL (e.g. third-party MP4, CDN, blob, or data URL)
+  const isFirebaseStorageUrl = videoUrlOrPath.includes('firebasestorage.googleapis.com');
+  const isStoragePath = videoUrlOrPath.startsWith('clips/') || (Boolean(userId) && videoUrlOrPath.startsWith(`clips/${userId}`));
+
+  if (!isFirebaseStorageUrl && !isStoragePath) {
+    // External MP4 URL, local asset, or preset loop — safely ignore
+    dispatchProtonDebugEvent({
+      type: 'storage-info',
+      action: 'deleteClipVideo-skipped',
+      message: 'Video URL is external or preset; Firebase Storage deletion skipped.',
+      url: videoUrlOrPath
+    });
+    return true;
+  }
+
+  if (!storage) {
+    console.warn('[StorageUtils] Firebase Storage is not initialized, cannot delete object.');
+    return false;
+  }
+
+  try {
+    const storageRef = ref(storage, videoUrlOrPath);
+    await deleteObject(storageRef);
+
+    dispatchProtonDebugEvent({
+      type: 'storage-success',
+      action: 'deleteClipVideo',
+      path: storageRef.fullPath
+    });
+    return true;
+  } catch (err: any) {
+    // If the file was already deleted or not found, treat it as successfully cleaned up
+    if (err?.code === 'storage/object-not-found') {
+      console.info(`[StorageUtils] Storage file already removed: ${videoUrlOrPath}`);
+      return true;
+    }
+    console.warn('[StorageUtils] Failed to delete clip video from Firebase Storage:', err);
+    dispatchProtonDebugEvent({
+      type: 'storage-error',
+      action: 'deleteClipVideo',
+      code: err?.code || 'UNKNOWN_STORAGE_ERROR',
+      message: err?.message || String(err)
+    });
+    // Non-blocking: return false without throwing so caller can proceed with metadata cleanup
+    return false;
+  }
 }
 
 /**

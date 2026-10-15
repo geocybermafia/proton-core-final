@@ -7138,6 +7138,11 @@ export default function App() {
                         user={user} 
                         userProfile={userProfile}
                         onOpenAuthModal={() => setShowAuth(true)}
+                        onOpenCreatorProfile={(creatorId: string) => {
+                          if (user && user.uid === creatorId) {
+                            handleViewChange('profile');
+                          }
+                        }}
                       />
                     </Suspense>
                   )}

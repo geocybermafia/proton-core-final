@@ -13,7 +13,10 @@ import {
   CheckCircle2, 
   HelpCircle,
   Video,
-  Scissors
+  Scissors,
+  Trash2,
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { 
   collection, 
@@ -32,7 +35,7 @@ import {
 } from 'firebase/firestore';
 import { signInWithPopup } from 'firebase/auth';
 import { db, auth, googleProvider } from '../firebase';
-import { uploadClipVideo } from '../lib/storageUtils';
+import { uploadClipVideo, deleteClipVideoFromStorage } from '../lib/storageUtils';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSeller } from '../contexts/SellerContext';
@@ -198,16 +201,20 @@ const generateThumbnailFromVideoUrl = (videoUrl: string): Promise<string> => {
 
 export interface ClipsViewProps {
   language: 'en' | 'ka';
-  listings: MarketplaceItem[];
+  listings?: MarketplaceItem[];
   onOpenAuthModal?: () => void;
   onOpenCreatorProfile?: (creatorId: string, creatorName: string, creatorAvatar?: string) => void;
+  setActiveView?: (view: any) => void;
+  user?: any;
+  userProfile?: any;
 }
 
 export const ClipsView: React.FC<ClipsViewProps> = ({
   language,
   listings = [],
   onOpenAuthModal,
-  onOpenCreatorProfile: onOpenCreatorProfileProp
+  onOpenCreatorProfile: onOpenCreatorProfileProp,
+  setActiveView
 }) => {
   const { user: currentUser } = useAuth();
   const { sellerListings, allListings: sellerAllListings } = useSeller();
@@ -309,6 +316,10 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   const [showFeaturesModal, setShowFeaturesModal] = useState(false);
   const [showAuthModalPrompt, setShowAuthModalPrompt] = useState(false);
   const [pendingActionType, setPendingActionType] = useState<'like' | 'comment' | null>(null);
+
+  // Deletion Lifecycle State
+  const [clipToDelete, setClipToDelete] = useState<Clip | null>(null);
+  const [isDeletingClip, setIsDeletingClip] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -472,22 +483,87 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     }
   };
 
-  // Delete Clip
-  const handleDeleteClip = async (clip: Clip) => {
-    if (!currentUser || clip.creatorId !== currentUser.uid) return;
-    try {
-      await deleteDoc(doc(db, 'clips', clip.id));
-      await deleteVideoFromLocalCache(clip.id);
+  // Delete Clip - Request Confirmation
+  const handleDeleteClip = (clip: Clip) => {
+    if (!currentUser) {
+      if (onOpenAuthModal) onOpenAuthModal();
+      return;
+    }
+    if (clip.creatorId !== currentUser.uid) {
       showToast(
-        language === 'ka' ? 'კლიპი წარმატებით წაიშალა' : 'Clip deleted successfully',
-        'success'
-      );
-    } catch (err) {
-      console.warn("Delete clip failed:", err);
-      showToast(
-        language === 'ka' ? 'კლიპის წაშლა ვერ მოხერხდა' : 'Failed to delete clip',
+        language === 'ka' ? 'თქვენ არ გაქვთ ამ კლიპის წაშლის უფლება' : 'You can only delete your own clips',
         'error'
       );
+      return;
+    }
+    setClipToDelete(clip);
+  };
+
+  // Execute Full Deletion Lifecycle
+  const confirmDeleteClip = async () => {
+    if (!currentUser || !clipToDelete) {
+      setClipToDelete(null);
+      return;
+    }
+    if (clipToDelete.creatorId !== currentUser.uid) {
+      setClipToDelete(null);
+      showToast(
+        language === 'ka' ? 'თქვენ არ გაქვთ ამ კლიპის წაშლის უფლება' : 'You can only delete your own clips',
+        'error'
+      );
+      return;
+    }
+
+    const targetClip = clipToDelete;
+    setIsDeletingClip(true);
+
+    try {
+      // 1. Pause active playback if deleting the currently playing clip
+      setIsPlaying(false);
+
+      // 2. Comments subcollection cleanup
+      // Crucial: Must be deleted while the parent clip document exists so creator security rules pass!
+      try {
+        const commentsSnapshot = await getDocs(collection(db, 'clips', targetClip.id, 'comments'));
+        if (!commentsSnapshot.empty) {
+          const deleteCommentPromises = commentsSnapshot.docs.map(cDoc => 
+            deleteDoc(doc(db, 'clips', targetClip.id, 'comments', cDoc.id)).catch(err => {
+              console.warn(`[ClipsView] Failed to delete comment ${cDoc.id}:`, err);
+            })
+          );
+          await Promise.allSettled(deleteCommentPromises);
+        }
+      } catch (commentErr) {
+        console.warn("[ClipsView] Comments subcollection cleanup warning:", commentErr);
+      }
+
+      // 3. Storage video cleanup (Firebase Storage deletion + external URL safety)
+      try {
+        await deleteClipVideoFromStorage(targetClip.videoUrl, targetClip.creatorId);
+      } catch (storageErr) {
+        console.warn("[ClipsView] Storage video deletion warning:", storageErr);
+      }
+
+      // 4. Firestore clip document deletion
+      await deleteDoc(doc(db, 'clips', targetClip.id));
+
+      // 5. Local IndexedDB cache cleanup
+      await deleteVideoFromLocalCache(targetClip.id);
+
+      // 6. UI and State transition
+      setClipToDelete(null);
+      showToast(
+        language === 'ka' ? 'კლიპი და მისი მონაცემები წარმატებით წაიშალა' : 'Clip and media deleted successfully',
+        'success'
+      );
+    } catch (err: any) {
+      console.error("[ClipsView] Delete clip lifecycle error:", err);
+      showToast(
+        language === 'ka' ? 'კლიპის წაშლა ვერ მოხერხდა' : 'Failed to delete clip. Please try again.',
+        'error'
+      );
+    } finally {
+      setIsDeletingClip(false);
     }
   };
 
@@ -1114,6 +1190,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               onDeleteClip={(c) => handleDeleteClip(c)}
               onOpenCreatorProfile={(id, name, avatar) => {
                 if (onOpenCreatorProfileProp) onOpenCreatorProfileProp(id, name, avatar);
+                setSearchQuery(`@${name}`);
               }}
               onHashtagClick={(tag) => setSelectedTag(tag)}
               onToggleExpandCaption={(id) => setExpandedCaptions(prev => ({ ...prev, [id]: !prev[id] }))}
@@ -1511,6 +1588,100 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               >
                 {language === 'ka' ? 'გასაგებია' : 'Got it'}
               </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 8. Delete Clip Confirmation Modal */}
+      <AnimatePresence>
+        {clipToDelete && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 select-none font-sans">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!isDeletingClip) setClipToDelete(null);
+              }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
+              className="relative bg-[#121318] w-full max-w-sm rounded-3xl border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.2)] overflow-hidden p-6 space-y-5 text-center"
+            >
+              <button
+                onClick={() => {
+                  if (!isDeletingClip) setClipToDelete(null);
+                }}
+                disabled={isDeletingClip}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <div className="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shadow-inner">
+                  <Trash2 size={26} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black tracking-wide text-white uppercase">
+                    {language === 'ka' ? 'კლიპის წაშლა' : 'Delete Clip'}
+                  </h3>
+                  <p className="text-xs text-red-400 font-mono mt-1 font-bold">
+                    {language === 'ka' ? 'შეუქცევადი მოქმედება' : 'Permanent Action'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-2xl p-4 border border-white/10 text-left space-y-2 text-xs text-proton-muted">
+                <div className="flex items-center gap-2 text-amber-400 font-bold">
+                  <AlertTriangle size={15} />
+                  <span>{language === 'ka' ? 'ყურადღება' : 'Warning'}</span>
+                </div>
+                <p className="text-white/80 leading-relaxed font-sans text-xs">
+                  {language === 'ka' 
+                    ? 'ნამდვილად გსურთ ამ კლიპის წაშლა? ვიდეო ფაილი, კომენტარები და ყველა ასოცირებული მონაცემი შეუქცევად წაიშლება.' 
+                    : 'Are you sure you want to delete this clip? The video file, comments, and all associated metadata will be permanently deleted.'}
+                </p>
+                {clipToDelete.caption && (
+                  <p className="text-white/50 text-[11px] truncate italic border-t border-white/5 pt-2">
+                    "{clipToDelete.caption}"
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isDeletingClip}
+                  onClick={() => setClipToDelete(null)}
+                  className="flex-1 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {language === 'ka' ? 'გაუქმება' : 'Cancel'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingClip}
+                  onClick={confirmDeleteClip}
+                  className="flex-1 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs transition-all shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {isDeletingClip ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>{language === 'ka' ? 'იშლება...' : 'Deleting...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={15} />
+                      <span>{language === 'ka' ? 'წაშლა' : 'Delete'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
