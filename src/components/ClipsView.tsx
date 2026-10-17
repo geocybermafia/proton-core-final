@@ -742,17 +742,30 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
       } catch (err: any) {
         console.error("Storage upload error:", err);
         setIsUploading(false);
-        const isTimeout = err?.message?.toLowerCase().includes('timed out') || err?.code === 'storage/timeout';
-        showToast(
-          isTimeout
-            ? (language === 'ka'
-                ? 'ვიდეოს ატვირთვას ძალიან დიდი დრო დასჭირდა. გთხოვთ, შეამოწმოთ ინტერნეტი და თავიდან სცადოთ.'
-                : 'Video upload is taking too long. Please check your connection and try again.')
-            : (language === 'ka' 
-                ? 'ვიდეოს ატვირთვა ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან.' 
-                : `Failed to upload video to cloud storage: ${err?.message || 'Network error'}. Please retry.`),
-          'error'
-        );
+        const errMsg = err?.message || String(err);
+        const isTimeout = errMsg.toLowerCase().includes('timed out') || err?.code === 'storage/timeout';
+        const isRls = errMsg.toLowerCase().includes('row-level security') || 
+                      errMsg.toLowerCase().includes('violates row-level') || 
+                      err?.statusCode === '403' || 
+                      err?.status === 403 ||
+                      err?.statusCode === 403;
+
+        let toastMessage = '';
+        if (isTimeout) {
+          toastMessage = language === 'ka'
+            ? 'ვიდეოს ატვირთვას ძალიან დიდი დრო დასჭირდა. გთხოვთ, შეამოწმოთ ინტერნეტი და თავიდან სცადოთ.'
+            : 'Video upload is taking too long. Please check your connection and try again.';
+        } else if (isRls) {
+          toastMessage = language === 'ka'
+            ? 'Supabase Storage RLS შეცდომა: `clips` bucket-ს სჭირდება INSERT policy-ის ჩართვა Supabase SQL რედაქტორში.'
+            : 'Supabase Storage RLS error: "clips" bucket requires an INSERT policy in Supabase SQL editor.';
+        } else {
+          toastMessage = language === 'ka' 
+            ? `ვიდეოს ატვირთვა ვერ მოხერხდა: ${errMsg}` 
+            : `Failed to upload video to cloud storage: ${errMsg}. Please retry.`;
+        }
+
+        showToast(toastMessage, 'error');
         return;
       }
     } else if (newClipVideoUrl && !newClipVideoUrl.startsWith('blob:')) {
