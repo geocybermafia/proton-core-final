@@ -4261,10 +4261,10 @@ export default function App() {
     }
   }, [activeView]);
 
-  // Mobile Navigation IntersectionObserver for performant visibility toggling
+  // Mobile Navigation scroll-direction & delta visibility tracker
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
-  const mobileNavSentinelRef = useRef<HTMLDivElement | null>(null);
   const mainScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastScrollTopRef = useRef<number>(0);
 
   // Custom touch-driven pull-to-refresh for #main-scroll-container
   const [pullDistance, setPullDistance] = useState<number>(0);
@@ -4367,43 +4367,103 @@ export default function App() {
     };
   }, [activeView, isPullRefreshing]);
 
+  // FIX A: Direction-aware scroll listener with delta threshold for Mobile Bottom Navigation
   useEffect(() => {
-    const sentinel = mobileNavSentinelRef.current;
-    if (!sentinel) return;
+    // When changing routes or views, ensure mobile nav is promptly visible and reset scroll tracker
+    setIsMobileNavVisible(true);
+    lastScrollTopRef.current = 0;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry) {
-          setIsMobileNavVisible(entry.isIntersecting);
-        }
-      },
-      {
-        root: document.getElementById('main-scroll-container'),
-        threshold: 0.1,
-        rootMargin: '0px',
+    const container = mainScrollContainerRef.current || document.getElementById('main-scroll-container');
+    if (!container) return;
+
+    // SCROLL DELTA THRESHOLD:
+    // Ignore micro-fluctuations (< 10px) to prevent flickering on touch gestures and iOS bounce
+    const SCROLL_DELTA_THRESHOLD = 10;
+    // TOP SAFE ZONE:
+    // Bottom nav must always be visible near the top of the page
+    const TOP_SAFE_ZONE = 20;
+
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollTop = container.scrollTop;
+          const prevScrollTop = lastScrollTopRef.current;
+          const delta = currentScrollTop - prevScrollTop;
+
+          // 1. At or near page top: always visible
+          if (currentScrollTop <= TOP_SAFE_ZONE) {
+            setIsMobileNavVisible(true);
+            lastScrollTopRef.current = Math.max(0, currentScrollTop);
+            ticking = false;
+            return;
+          }
+
+          // 2. Ignore micro-movements within threshold
+          if (Math.abs(delta) < SCROLL_DELTA_THRESHOLD) {
+            ticking = false;
+            return;
+          }
+
+          // 3. Downward scroll: hide bottom navigation to maximize view space
+          if (delta > 0 && currentScrollTop > TOP_SAFE_ZONE) {
+            setIsMobileNavVisible(false);
+          }
+          // 4. Upward scroll: show bottom navigation promptly without needing to reach page top
+          else if (delta < 0) {
+            setIsMobileNavVisible(true);
+          }
+
+          lastScrollTopRef.current = currentScrollTop;
+          ticking = false;
+        });
+        ticking = true;
       }
-    );
+    };
 
-    observer.observe(sentinel);
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
     return () => {
-      observer.disconnect();
+      container.removeEventListener('scroll', handleScroll);
     };
   }, [activeView]);
 
-  // Clean up any lingering body overflow styles
+  // FIX B: Mobile Overlay Background Scroll Lock
+  // Locks the background scroll container (#main-scroll-container) and document elements
+  // whenever Mobile Nav Drawer or Mobile Control Hub popover is open.
+  const isAnyMobileOverlayOpen = isMobileNavDrawerOpen || isMobileControlOpen;
+
   useEffect(() => {
-    document.documentElement.style.overflow = '';
-    document.documentElement.style.height = '';
-    document.body.style.overflow = '';
-    document.body.style.height = '';
+    if (!isAnyMobileOverlayOpen) return;
+
+    const container = mainScrollContainerRef.current || document.getElementById('main-scroll-container');
+    const prevContainerOverflow = container ? container.style.overflow : '';
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    if (container) {
+      container.style.overflow = 'hidden';
+    }
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
     return () => {
-      document.documentElement.style.overflow = '';
-      document.documentElement.style.height = '';
-      document.body.style.overflow = '';
-      document.body.style.height = '';
+      if (container) {
+        container.style.overflow = prevContainerOverflow;
+      }
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
     };
-  }, []);
+  }, [isAnyMobileOverlayOpen]);
+
+  // Responsive safeguard: auto-close mobile overlays if viewport expands to desktop size (>= 768px)
+  useEffect(() => {
+    if (viewportWidth >= 768) {
+      if (isMobileNavDrawerOpen) setIsMobileNavDrawerOpen(false);
+      if (isMobileControlOpen) setIsMobileControlOpen(false);
+    }
+  }, [viewportWidth, isMobileNavDrawerOpen, isMobileControlOpen]);
   
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
@@ -7042,8 +7102,6 @@ export default function App() {
             language={userProfile.language} 
           />
 
-          {/* IntersectionObserver Sentinel for Mobile Nav Visibility */}
-          <div ref={mobileNavSentinelRef} id="mobile-nav-sentinel" className="h-px w-full shrink-0 pointer-events-none opacity-0" />
           <div 
             className={cn(
               "w-full flex-1 min-h-0 flex flex-col",
