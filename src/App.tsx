@@ -163,7 +163,10 @@ import {
   Pause,
   Tag,
   Video,
-  Menu
+  Menu,
+  PanelLeft,
+  LayoutGrid,
+  MousePointer
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 const Calendar = lazyWithRetry(() => import('react-calendar').then(module => ({ default: module.default })), 'Calendar');
@@ -4490,6 +4493,49 @@ export default function App() {
     }
   }, [location.pathname, uiMode, isTransitioning]);
 
+  // Desktop Sidebar Display Modes:
+  // 1. 'expanded' (full ~280px, icons + labels)
+  // 2. 'compact' (icons only ~80px)
+  // 3. 'hover' (expand on hover: idle at ~80px, expands to ~280px on cursor hover / keyboard focus)
+  type SidebarDisplayMode = 'expanded' | 'compact' | 'hover';
+
+  const [sidebarDisplayMode, setSidebarDisplayMode] = useState<SidebarDisplayMode>(() => {
+    const savedMode = safeStorage.get('proton_sidebar_mode') as SidebarDisplayMode | null;
+    if (savedMode && (savedMode === 'expanded' || savedMode === 'compact' || savedMode === 'hover')) {
+      return savedMode;
+    }
+    const savedOpen = safeStorage.get('proton_sidebar_open');
+    if (savedOpen === 'false') return 'compact';
+    return 'expanded';
+  });
+
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+
+  // Effective expanded state: true when explicitly 'expanded', or when 'hover' mode is active and cursor is over sidebar
+  const isEffectiveExpanded = sidebarDisplayMode === 'expanded' || (sidebarDisplayMode === 'hover' && isSidebarHovered);
+  const isSidebarExpanded = isEffectiveExpanded;
+  const isSidebarOpen = true;
+
+  const setIsSidebarOpen = useCallback((openOrFn: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarDisplayMode(prevMode => {
+      const currentIsOpen = prevMode === 'expanded';
+      const nextIsOpen = typeof openOrFn === 'function' ? openOrFn(currentIsOpen) : openOrFn;
+      return nextIsOpen ? 'expanded' : 'compact';
+    });
+    setIsSidebarHovered(false);
+  }, []);
+
+  const isModeActive = useCallback((mode: SidebarDisplayMode) => {
+    return sidebarDisplayMode === mode;
+  }, [sidebarDisplayMode]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && viewportWidth >= 768) {
+      safeStorage.set('proton_sidebar_mode', sidebarDisplayMode);
+      safeStorage.set('proton_sidebar_open', (sidebarDisplayMode === 'expanded').toString());
+    }
+  }, [sidebarDisplayMode, viewportWidth]);
+
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
     if (view === 'market-hub' || view === 'market') {
       setUiMode('market');
@@ -4518,21 +4564,10 @@ export default function App() {
 
     if (viewportWidth < 768) {
       setIsSidebarOpen(false);
+    } else if (sidebarDisplayMode === 'hover') {
+      setIsSidebarHovered(false);
     }
-  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView, uiMode, viewportWidth]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return false;
-    }
-    const saved = safeStorage.get('proton_sidebar_open');
-    return saved !== null ? saved === 'true' : true;
-  });
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && viewportWidth >= 768) {
-      safeStorage.set('proton_sidebar_open', isSidebarOpen.toString());
-    }
-  }, [isSidebarOpen, viewportWidth]);
+  }, [user, isCreativeMode, isSafeMode, navigate, setActiveView, uiMode, viewportWidth, sidebarDisplayMode, setIsSidebarOpen]);
   const [isAgentsExpanded, setIsAgentsExpanded] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -5813,32 +5848,56 @@ export default function App() {
             <motion.aside 
               initial={false}
               animate={{ 
-                width: isSidebarOpen ? 280 : 0,
-                x: isSidebarOpen ? 0 : -280
+                width: isEffectiveExpanded ? 280 : 80,
+                x: 0
               }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className={cn(
-                "hidden md:flex flex-col border-r border-proton-border bg-proton-card z-[70] overflow-x-hidden relative md:relative",
-                isSidebarOpen ? "shadow-2xl" : "shadow-none"
-              )}
+              onMouseEnter={() => {
+                if (sidebarDisplayMode === 'hover') {
+                  setIsSidebarHovered(true);
+                }
+              }}
+              onMouseLeave={() => {
+                if (sidebarDisplayMode === 'hover') {
+                  setIsSidebarHovered(false);
+                }
+              }}
+              onFocusCapture={() => {
+                if (sidebarDisplayMode === 'hover') {
+                  setIsSidebarHovered(true);
+                }
+              }}
+              onBlurCapture={(e) => {
+                if (sidebarDisplayMode === 'hover') {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setIsSidebarHovered(false);
+                  }
+                }
+              }}
+              className="hidden md:flex flex-col border-r border-proton-border bg-proton-card z-[70] overflow-x-hidden relative md:relative shadow-2xl"
             >
               {/* Sidebar Interior - Glass effect */}
               <div className="absolute inset-0 bg-gradient-to-b from-proton-accent/[0.03] to-transparent pointer-events-none" />
               
               <div className={cn(
                 "h-16 shrink-0 flex items-center gap-3 px-5 border-b border-proton-border/30 overflow-hidden relative z-10 transition-all duration-500",
-                !isSidebarOpen && "md:justify-center md:px-0"
+                !isSidebarExpanded && "md:justify-center md:px-0"
               )}>
-                <div className="w-8 h-8 rounded-xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110">
+                <div 
+                  onClick={() => handleViewChange('dashboard')}
+                  className="w-8 h-8 rounded-xl bg-proton-accent flex items-center justify-center text-proton-bg shrink-0 shadow-2xl shadow-proton-accent/30 border border-white/20 transition-transform duration-500 hover:scale-110 cursor-pointer"
+                  title="Proton OS"
+                >
                   <Layout size={18} fill="currentColor" />
                 </div>
                 <AnimatePresence mode="wait">
-                  {isSidebarOpen && (
+                  {isSidebarExpanded && (
                     <motion.div 
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      className="flex flex-col transition-all duration-200 ease-in-out hover:opacity-80 cursor-default select-none"
+                      className="flex flex-col transition-all duration-200 ease-in-out hover:opacity-80 cursor-pointer select-none"
+                      onClick={() => handleViewChange('dashboard')}
                     >
                       <span className="text-sm font-black tracking-tight text-proton-text uppercase">{language === 'ka' ? 'სისტემა' : 'System'}</span>
                       <span className="text-[8px] font-bold text-proton-accent uppercase tracking-widest leading-none opacity-90 mt-0.5">{language === 'ka' ? 'სამუშაო სივრცე' : 'Workspace'}</span>
@@ -5849,7 +5908,7 @@ export default function App() {
 
               <nav className={cn(
                 "flex-1 py-8 space-y-10 mt-2 overflow-y-auto overflow-x-hidden custom-scrollbar relative z-10 transition-all duration-500",
-                isSidebarOpen ? "px-4" : "px-0"
+                isSidebarExpanded ? "px-4" : "px-2"
               )}>
                 {/* Permanent Home Navigation */}
                 <div className="space-y-3 min-h-[1.5rem]">
@@ -5860,7 +5919,7 @@ export default function App() {
                     onClick={() => {
                       handleViewChange('dashboard');
                     }} 
-                    expanded={isSidebarOpen}
+                    expanded={isSidebarExpanded}
                     uiMode={uiMode}
                   />
                 </div>
@@ -5872,7 +5931,7 @@ export default function App() {
                   {/* GROUP 2: CREATIVE STUDIO */}
                   <div className="space-y-3">
                     <AnimatePresence mode="wait">
-                      {isSidebarOpen && (
+                      {isSidebarExpanded && (
                         <motion.p 
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -5888,7 +5947,7 @@ export default function App() {
                       label={language === 'ka' ? 'კრეატიული სტუდია' : 'Creative Studio'} 
                       active={activeView === 'creative-studio'} 
                       onClick={() => handleViewChange('creative-studio')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     <SidebarItem 
@@ -5896,7 +5955,7 @@ export default function App() {
                       label={t.sidebar.image} 
                       active={activeView === 'image'} 
                       onClick={() => handleViewChange('image')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     <SidebarItem 
@@ -5904,7 +5963,7 @@ export default function App() {
                       label={t.sidebar.translator} 
                       active={(activeView as string) === 'translator'} 
                       onClick={() => handleViewChange('translator')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     <SidebarItem 
@@ -5912,7 +5971,7 @@ export default function App() {
                       label={language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting'} 
                       active={activeView === 'copywriting'} 
                       onClick={() => handleViewChange('copywriting')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                   </div>
@@ -5920,7 +5979,7 @@ export default function App() {
                   {/* GROUP 3: MANAGEMENT & FINANCE */}
                   <div className="space-y-3">
                     <AnimatePresence mode="wait">
-                      {isSidebarOpen && (
+                      {isSidebarExpanded && (
                         <motion.p 
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -5936,7 +5995,7 @@ export default function App() {
                       label={t.sidebar.organizer} 
                       active={activeView === 'organizer'} 
                       onClick={() => handleViewChange('organizer')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     <SidebarItem 
@@ -5944,7 +6003,7 @@ export default function App() {
                       label={t.sidebar.blueprints} 
                       active={activeView === 'blueprints'} 
                       onClick={() => handleViewChange('blueprints')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     <SidebarItem 
@@ -5952,7 +6011,7 @@ export default function App() {
                       label={t.sidebar.finance} 
                       active={activeView === 'finance'} 
                       onClick={() => handleViewChange('finance')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     {userProfile.showCommercialHub && (
@@ -5961,7 +6020,7 @@ export default function App() {
                         label={t.sidebar.commercial} 
                         active={activeView === 'commercial'} 
                         onClick={() => handleViewChange('commercial')} 
-                        expanded={isSidebarOpen}
+                        expanded={isSidebarExpanded}
                         uiMode={uiMode}
                         badge="EXIT"
                       />
@@ -5971,7 +6030,7 @@ export default function App() {
                   {/* GROUP 4: NEIGHBORHOOD MARKET */}
                   <div className="space-y-3">
                     <AnimatePresence mode="wait">
-                      {isSidebarOpen && (
+                      {isSidebarExpanded && (
                         <motion.p 
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -5987,7 +6046,7 @@ export default function App() {
                       label={t.sidebar.market} 
                       active={activeView === 'market-hub' || activeView === 'market'} 
                       onClick={() => handleViewChange('market-hub')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
                     <SidebarItem 
@@ -5995,7 +6054,7 @@ export default function App() {
                       label={language === 'ka' ? 'მოკლე კლიპები' : 'Proton Clips'} 
                       active={activeView === 'clips'} 
                       onClick={() => handleViewChange('clips')} 
-                      expanded={isSidebarOpen}
+                      expanded={isSidebarExpanded}
                       uiMode={uiMode}
                       badge="LIVE"
                     />
@@ -6003,190 +6062,298 @@ export default function App() {
                 </div>
 
                 <div className="pt-8 mt-8 border-t border-proton-border/30 space-y-4">
-              <AnimatePresence mode="wait">
-                {isSidebarOpen && (
-                <motion.p 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
-                >
-                  {t.sidebar.system}
-                </motion.p>
-              )}
-            </AnimatePresence>
-            
-            <AnimatePresence mode="wait">
-              {isSidebarOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="px-3 space-y-4 mb-6 overflow-hidden"
-                >
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">
-                      {language === 'ka' ? 'ენა / LANGUAGE' : 'LANG / ენა'}
-                    </p>
-                    <div className="flex bg-proton-bg/60 border border-proton-border/50 rounded-xl p-0.5 w-full">
-                      <button 
+                  <AnimatePresence mode="wait">
+                    {isSidebarExpanded && (
+                      <motion.p 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] px-3 mb-4"
+                      >
+                        {t.sidebar.system}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                  
+                  <AnimatePresence mode="wait">
+                    {isSidebarExpanded && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="px-3 space-y-4 mb-6 overflow-hidden"
+                      >
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-black text-proton-muted uppercase tracking-[0.1em] px-1">
+                            {language === 'ka' ? 'ენა / LANGUAGE' : 'LANG / ენა'}
+                          </p>
+                          <div className="flex bg-proton-bg/60 border border-proton-border/50 rounded-xl p-0.5 w-full">
+                            <button 
+                              onClick={() => {
+                                if (language !== 'en') {
+                                  handleLanguageChange('en');
+                                  setTimeout(() => {
+                                    showToast('Language changed to English successfully!', 'success');
+                                  }, 50);
+                                }
+                              }}
+                              className={cn(
+                                "flex-1 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider cursor-pointer",
+                                language === 'en' ? "bg-proton-accent text-proton-bg shadow-md" : "text-proton-muted hover:text-proton-text-light"
+                              )}
+                            >
+                              EN
+                            </button>
+                            <button 
+                              onClick={() => {
+                                if (language !== 'ka') {
+                                  handleLanguageChange('ka');
+                                  setTimeout(() => {
+                                    showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');
+                                  }, 50);
+                                }
+                              }}
+                              className={cn(
+                                "flex-1 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider cursor-pointer",
+                                language === 'ka' ? "bg-proton-accent text-proton-bg shadow-md" : "text-proton-muted hover:text-proton-text-light"
+                              )}
+                            >
+                              KA/ქარ
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Consolidated Controls Accordion */}
+                  <div className="space-y-1">
+                    <SidebarItem 
+                      icon={Settings} 
+                      label={language === 'ka' ? 'პარამეტრები' : 'Settings'} 
+                      active={activeView === 'profile' || activeView === 'settings'} 
+                      onClick={() => {
+                        if (!isSidebarExpanded) {
+                          handleViewChange('settings');
+                        } else {
+                          setIsControlExpanded(!isControlExpanded);
+                        }
+                      }} 
+                      expanded={isSidebarExpanded}
+                      uiMode={uiMode === 'market' ? 'business' : uiMode}
+                      badge="SYS"
+                    />
+                    <AnimatePresence>
+                      {isControlExpanded && isSidebarExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          className="pl-5 pr-1 space-y-1 border-l-2 border-proton-border/30 ml-4 mb-2 overflow-hidden"
+                        >
+                          <button
+                            onClick={() => handleViewChange('profile')}
+                            className={cn(
+                              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5 cursor-pointer",
+                              activeView === 'profile'
+                                ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
+                                : "text-proton-muted hover:text-proton-text-light border border-transparent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <UserIcon size={14} className={activeView === 'profile' ? "text-proton-accent font-bold" : "text-proton-muted"} />
+                              <span>{language === 'ka' ? 'კაბინეტი' : 'Personal Cabinet'}</span>
+                            </div>
+                            <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">HUB</span>
+                          </button>
+                          <button
+                            onClick={() => handleViewChange('settings')}
+                            className={cn(
+                              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5 cursor-pointer",
+                              activeView === 'settings'
+                                ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
+                                : "text-proton-muted hover:text-proton-text-light border border-transparent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Settings size={14} className={activeView === 'settings' ? "text-proton-accent font-bold" : "text-proton-muted"} />
+                              <span>{language === 'ka' ? 'სისტემა და AI' : 'System & AI'}</span>
+                            </div>
+                            <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">CFG</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </nav>
+
+              {/* Bottom Section: Sidebar Display Modes + Profile */}
+              <div className={cn(
+                "mt-auto border-t border-proton-border/30 relative z-10 flex flex-col gap-2.5 transition-all duration-300",
+                isEffectiveExpanded ? "p-3.5" : "p-2 items-center"
+              )}>
+                {/* 1. Sidebar Display Mode Selector */}
+                {isEffectiveExpanded ? (
+                  <div className="space-y-1.5 w-full">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-proton-muted/70">
+                        {language === 'ka' ? 'მენიუს რეჟიმი' : 'Sidebar Mode'}
+                      </span>
+                      <span className="text-[8px] font-mono text-proton-accent font-bold uppercase tracking-wider">
+                        {isModeActive('expanded')
+                          ? (language === 'ka' ? 'გაშლილი' : 'EXPANDED')
+                          : isModeActive('compact')
+                          ? (language === 'ka' ? 'ხატულები' : 'ICONS')
+                          : (language === 'ka' ? 'კურსორზე' : 'HOVER')}
+                      </span>
+                    </div>
+                    <div className="p-1 rounded-2xl bg-proton-bg/60 border border-proton-border/50 flex items-center justify-between gap-1 shadow-inner">
+                      <button
+                        type="button"
                         onClick={() => {
-                          if (language !== 'en') {
-                            handleLanguageChange('en');
-                            setTimeout(() => {
-                              showToast('Language changed to English successfully!', 'success');
-                            }, 50);
-                          }
+                          setSidebarDisplayMode('expanded');
+                          setIsSidebarHovered(false);
                         }}
                         className={cn(
-                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider",
-                          language === 'en' ? "bg-proton-accent text-proton-bg shadow-md" : "text-proton-muted hover:text-proton-text-light"
+                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                          isModeActive('expanded')
+                            ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
+                            : "text-proton-muted hover:text-proton-text hover:bg-white/5 border border-transparent"
                         )}
+                        title={language === 'ka' ? 'გაშლილი რეჟიმი: მუდმივად სრული მენიუ წარწერებით (~280px)' : 'Expanded Mode: Full sidebar with text labels (~280px)'}
                       >
-                        EN
+                        <PanelLeft size={13} className="shrink-0" />
+                        <span className="truncate">{language === 'ka' ? 'გაშლილი' : 'Full'}</span>
                       </button>
-                      <button 
+
+                      <button
+                        type="button"
                         onClick={() => {
-                          if (language !== 'ka') {
-                            handleLanguageChange('ka');
-                            setTimeout(() => {
-                              showToast('ინტერფეისის ენა შეიცვალა ქართულად!', 'success');
-                            }, 50);
-                          }
+                          setSidebarDisplayMode('compact');
+                          setIsSidebarHovered(false);
                         }}
                         className={cn(
-                          "flex-1 py-1 text-[9px] font-black rounded-lg transition-all uppercase tracking-wider",
-                          language === 'ka' ? "bg-proton-accent text-proton-bg shadow-md" : "text-proton-muted hover:text-proton-text-light"
+                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                          isModeActive('compact')
+                            ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
+                            : "text-proton-muted hover:text-proton-text hover:bg-white/5 border border-transparent"
                         )}
+                        title={language === 'ka' ? 'ხატულების რეჟიმი: მხოლოდ ხატულები (~80px)' : 'Icons Mode: Compact icon bar (~80px)'}
                       >
-                        KA/ქარ
+                        <LayoutGrid size={13} className="shrink-0" />
+                        <span className="truncate">{language === 'ka' ? 'ხატულები' : 'Icons'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSidebarDisplayMode('hover');
+                          setIsSidebarHovered(false);
+                        }}
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer",
+                          isModeActive('hover')
+                            ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_12px_rgba(0,242,255,0.15)]"
+                            : "text-proton-muted hover:text-proton-text hover:bg-white/5 border border-transparent"
+                        )}
+                        title={language === 'ka' ? 'კურსორზე გაშლა: შეკუმშულია (~80px), მაუსის მიტანისას ფართოვდება' : 'Expand on Hover: Compact (~80px), expands on mouse hover'}
+                      >
+                        <MousePointer size={13} className="shrink-0" />
+                        <span className="truncate">{language === 'ka' ? 'კურსორი' : 'Hover'}</span>
                       </button>
                     </div>
                   </div>
-
-
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Consolidated Controls Accordion */}
-            <div className="space-y-1">
-              <SidebarItem 
-                icon={Settings} 
-                label={language === 'ka' ? 'პარამეტრები' : 'Settings'} 
-                active={activeView === 'profile' || activeView === 'settings'} 
-                onClick={() => {
-                  if (!isSidebarOpen) {
-                    setIsSidebarOpen(true);
-                    setIsControlExpanded(true);
-                  } else {
-                    setIsControlExpanded(!isControlExpanded);
-                  }
-                }} 
-                expanded={isSidebarOpen}
-                uiMode={uiMode === 'market' ? 'business' : uiMode}
-                badge="SYS"
-              />
-              <AnimatePresence>
-                {isControlExpanded && isSidebarOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="pl-5 pr-1 space-y-1 border-l-2 border-proton-border/30 ml-4 mb-2 overflow-hidden"
-                  >
-                    <button
-                      onClick={() => handleViewChange('profile')}
-                      className={cn(
-                        "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5",
-                        activeView === 'profile'
-                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
-                          : "text-proton-muted hover:text-proton-text-light border border-transparent"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <UserIcon size={14} className={activeView === 'profile' ? "text-proton-accent font-bold" : "text-proton-muted"} />
-                        <span>{language === 'ka' ? 'კაბინეტი' : 'Personal Cabinet'}</span>
-                      </div>
-                      <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">HUB</span>
-                    </button>
-                    <button
-                      onClick={() => handleViewChange('settings')}
-                      className={cn(
-                        "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5",
-                        activeView === 'settings'
-                          ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
-                          : "text-proton-muted hover:text-proton-text-light border border-transparent"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Settings size={14} className={activeView === 'settings' ? "text-proton-accent font-bold" : "text-proton-muted"} />
-                        <span>{language === 'ka' ? 'სისტემა და AI' : 'System & AI'}</span>
-                      </div>
-                      <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">CFG</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        </nav>
-
-        <div className="mt-auto p-4 border-t border-proton-border/30 relative z-10">
-          <div className={cn(
-            "p-1.5 rounded-3xl bg-proton-bg/40 border border-proton-border/50 group cursor-pointer transition-all duration-500 hover:border-proton-accent/30 overflow-hidden shadow-sm",
-            !isSidebarOpen && "md:rounded-2xl"
-          )} onClick={() => handleViewChange('profile')}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-bold shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
-                {userProfile.avatar ? (
-                  <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : user?.photoURL ? (
-                  <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-sm font-black uppercase">{(userProfile.name || user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}</span>
+                  <div className="w-full flex flex-col items-center gap-1 p-1 rounded-2xl bg-proton-bg/60 border border-proton-border/50 shadow-inner">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarDisplayMode('expanded');
+                        setIsSidebarHovered(false);
+                      }}
+                      className={cn(
+                        "w-10 h-7 flex items-center justify-center rounded-xl transition-all cursor-pointer",
+                        isModeActive('expanded')
+                          ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_8px_rgba(0,242,255,0.15)]"
+                          : "text-proton-muted hover:text-proton-accent hover:bg-white/5 border border-transparent"
+                      )}
+                      title={language === 'ka' ? 'გაშლილი: სრული მენიუ (~280px)' : 'Expanded: Full sidebar (~280px)'}
+                    >
+                      <PanelLeft size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarDisplayMode('compact');
+                        setIsSidebarHovered(false);
+                      }}
+                      className={cn(
+                        "w-10 h-7 flex items-center justify-center rounded-xl transition-all cursor-pointer",
+                        isModeActive('compact')
+                          ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_8px_rgba(0,242,255,0.15)]"
+                          : "text-proton-muted hover:text-proton-accent hover:bg-white/5 border border-transparent"
+                      )}
+                      title={language === 'ka' ? 'ხატულები: მხოლოდ ხატულები (~80px)' : 'Icons: Compact icon bar (~80px)'}
+                    >
+                      <LayoutGrid size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSidebarDisplayMode('hover');
+                        setIsSidebarHovered(false);
+                      }}
+                      className={cn(
+                        "w-10 h-7 flex items-center justify-center rounded-xl transition-all cursor-pointer",
+                        isModeActive('hover')
+                          ? "bg-proton-accent/20 text-proton-accent border border-proton-accent/30 shadow-[0_0_8px_rgba(0,242,255,0.15)]"
+                          : "text-proton-muted hover:text-proton-accent hover:bg-white/5 border border-transparent"
+                      )}
+                      title={language === 'ka' ? 'კურსორზე გაშლა: მაუსის მიტანისას გაშლა' : 'Expand on Hover'}
+                    >
+                      <MousePointer size={14} />
+                    </button>
+                  </div>
                 )}
+
+                {/* 2. User Profile Card */}
+                <div className={cn(
+                  "p-1.5 rounded-3xl bg-proton-bg/40 border border-proton-border/50 group cursor-pointer transition-all duration-500 hover:border-proton-accent/30 overflow-hidden shadow-sm w-full",
+                  !isEffectiveExpanded && "md:rounded-2xl"
+                )} onClick={() => handleViewChange('profile')}>
+                  <div className={cn("flex items-center", isEffectiveExpanded ? "gap-3" : "justify-center")}>
+                    <div className="w-10 h-10 rounded-2xl bg-proton-accent flex items-center justify-center text-proton-bg font-bold shadow-xl group-hover:scale-105 transition-all overflow-hidden shrink-0 border border-white/10">
+                      {userProfile.avatar ? (
+                        <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : user?.photoURL ? (
+                        <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="text-sm font-black uppercase">{(userProfile.name || user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <AnimatePresence mode="wait">
+                      {isEffectiveExpanded && (
+                        <motion.div 
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="flex flex-col min-w-0"
+                        >
+                          <span className="text-xs font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">
+                            {user ? (user.displayName || 'User') : (language === 'ka' ? 'ავტორიზაცია' : 'Sign In')}
+                          </span>
+                          <span className="text-[10px] font-medium text-proton-accent/70 truncate tracking-widest uppercase">
+                            {user ? (language === 'ka' ? 'ვერიფიცირებული პროფილი' : 'Verified Account') : (language === 'ka' ? 'კავშირგარეშე' : 'Offline Access')}
+                          </span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
               </div>
-              <AnimatePresence mode="wait">
-                {isSidebarOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex flex-col min-w-0"
-                  >
-                    <span className="text-xs font-bold text-proton-text truncate uppercase tracking-tight leading-none mb-1">
-                      {user ? (user.displayName || 'User') : (language === 'ka' ? 'ავტორიზაცია' : 'Sign In')}
-                    </span>
-                    <span className="text-[10px] font-medium text-proton-accent/70 truncate tracking-widest uppercase">
-                      {user ? (language === 'ka' ? 'ვერიფიცირებული პროფილი' : 'Verified Account') : (language === 'ka' ? 'კავშირგარეშე' : 'Offline Access')}
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={cn(
-              "mt-4 flex items-center gap-2 justify-center w-full py-2.5 rounded-xl border border-proton-border/40 bg-proton-bg/20 text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 hover:bg-proton-accent/[0.02] transition-all duration-300 hidden md:flex select-none",
-              !isSidebarOpen && "px-0"
-            )}
-            title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Collapse Sidebar') : (language === 'ka' ? 'გაშლა' : 'Expand Sidebar')}
-          >
-            <div className={cn("transition-transform duration-500", isSidebarOpen ? "rotate-180" : "rotate-0")}>
-              <ChevronRight size={18} />
-            </div>
-            {isSidebarOpen && (
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                {language === 'ka' ? 'აკეცვა' : 'Collapse'}
-              </span>
-            )}
-          </button>
-        </div>
-      </motion.aside>
+            </motion.aside>
 
       {/* Mobile Control Hub Menu Popover */}
       <AnimatePresence>
@@ -6599,12 +6766,22 @@ export default function App() {
               <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 shrink-0 min-w-0">
                 {/* Desktop-only Sidebar Toggle */}
                 <button 
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  type="button"
+                  onClick={() => {
+                    if (sidebarDisplayMode === 'expanded') {
+                      setSidebarDisplayMode('compact');
+                    } else if (sidebarDisplayMode === 'compact') {
+                      setSidebarDisplayMode('expanded');
+                    } else {
+                      setSidebarDisplayMode('expanded');
+                    }
+                    setIsSidebarHovered(false);
+                  }}
                   className="hidden md:flex w-9 sm:w-10 h-9 sm:h-10 min-w-[36px] sm:min-w-[40px] rounded-xl bg-proton-bg border border-proton-border items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] cursor-pointer"
-                  title={isSidebarOpen ? (language === 'ka' ? 'აკეცვა' : 'Hide Sidebar') : (language === 'ka' ? 'საიდბარი' : 'Show Sidebar')}
+                  title={isEffectiveExpanded ? (language === 'ka' ? 'აკეცვა (ხატულები)' : 'Collapse to Icons') : (language === 'ka' ? 'გაშლა (სრული)' : 'Expand to Full')}
                   aria-label="Toggle sidebar"
                 >
-                  <Grid size={16} className={cn("transition-transform duration-500 sm:w-[18px] sm:h-[18px]", isSidebarOpen ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
+                  <Grid size={16} className={cn("transition-transform duration-500 sm:w-[18px] sm:h-[18px]", isEffectiveExpanded ? "rotate-90 text-proton-accent" : "rotate-0 text-proton-muted group-hover:text-proton-accent")} />
                 </button>
 
                 {/* Mobile: Compact brand badge on Dashboard, Back button on other views */}
