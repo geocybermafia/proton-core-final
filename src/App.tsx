@@ -4,6 +4,7 @@ import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 
 import { useThemeSync } from './hooks/useThemeSync';
 import { useThemeSchedule } from './hooks/useThemeSchedule';
+import { useFocusTrap } from './hooks/useFocusTrap';
 import { AutomationEngine } from './components/AutomationEngine';
 
 const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })), 'EnterpriseWorkflowBuilder');
@@ -3925,8 +3926,9 @@ const MobileNavItem = React.memo(({ id, icon: Icon, label, isActive, onClick }: 
   return (
     <button
       onClick={handleClick}
+      aria-label={label}
       className={cn(
-        "flex flex-col items-center justify-center gap-1 w-full h-full transition-all duration-300 relative",
+        "flex flex-col items-center justify-center gap-1 w-full h-full min-h-[44px] min-w-[44px] transition-all duration-300 relative cursor-pointer",
         isActive ? "text-proton-accent" : "text-proton-muted"
       )}
     >
@@ -4465,6 +4467,19 @@ export default function App() {
     }
   }, [viewportWidth, isMobileNavDrawerOpen, isMobileControlOpen]);
   
+  // Accessibility Focus Trap & Escape key handling (FINDING-MOB-03)
+  const mobileNavDrawerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isMobileNavDrawerOpen,
+    onClose: () => setIsMobileNavDrawerOpen(false),
+    autoFocus: true,
+  });
+
+  const mobileControlHubRef = useFocusTrap<HTMLDivElement>({
+    isOpen: isMobileControlOpen,
+    onClose: () => setIsMobileControlOpen(false),
+    autoFocus: true,
+  });
+
   const [lastGeminiMetadata, setLastGeminiMetadata] = useState<GeminiMetadata | null>(null);
   const [isCreativeMode, setIsCreativeMode] = useState<boolean>(false);
 
@@ -6431,11 +6446,17 @@ export default function App() {
             
             {/* Floating Menu Card */}
             <motion.div
+              ref={mobileControlHubRef}
+              id="mobile-control-hub"
+              role="dialog"
+              aria-modal="true"
+              aria-label={language === 'ka' ? 'მართვის პანელი' : 'Control Hub'}
+              tabIndex={-1}
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 50, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 350 }}
-              className="md:hidden fixed bottom-20 left-4 right-4 bg-[#0c0d0f]/95 border border-proton-border shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl rounded-[28px] p-5 flex flex-col gap-3"
+              className="md:hidden fixed bottom-20 left-4 right-4 bg-[#0c0d0f]/95 border border-proton-border shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-xl rounded-[28px] p-5 flex flex-col gap-3 outline-none"
               style={{ zIndex: 50 }}
             >
               {/* Title Header */}
@@ -6448,9 +6469,11 @@ export default function App() {
                 </div>
                 <button 
                   onClick={() => setIsMobileControlOpen(false)}
-                  className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-proton-muted"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-proton-muted hover:text-white transition-all cursor-pointer"
+                  title={language === 'ka' ? 'მართვის პანელის დახურვა' : 'Close control panel'}
+                  aria-label={language === 'ka' ? 'მართვის პანელის დახურვა' : 'Close control panel'}
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               </div>
 
@@ -6461,7 +6484,7 @@ export default function App() {
                   setIsMobileControlOpen(false);
                 }}
                 className={cn(
-                  "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                  "min-h-[48px] flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer",
                   activeView === 'profile'
                     ? "bg-proton-accent/15 border-proton-accent/30 text-proton-accent"
                     : "bg-white/5 border-white/5 text-proton-text hover:bg-white/10"
@@ -6487,7 +6510,7 @@ export default function App() {
                   setIsMobileControlOpen(false);
                 }}
                 className={cn(
-                  "flex items-center justify-between p-4 rounded-2xl border transition-all text-left",
+                  "min-h-[48px] flex items-center justify-between p-4 rounded-2xl border transition-all text-left cursor-pointer",
                   activeView === 'settings'
                     ? "bg-proton-accent/15 border-proton-accent/30 text-proton-accent"
                     : "bg-white/5 border-white/5 text-proton-text hover:bg-white/10"
@@ -6526,11 +6549,17 @@ export default function App() {
 
             {/* Slide-over Drawer Panel */}
             <motion.div
+              ref={mobileNavDrawerRef}
+              id="mobile-nav-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label={language === 'ka' ? 'ნავიგაციის მენიუ' : 'Navigation Menu'}
+              tabIndex={-1}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="md:hidden fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-proton-card/95 border-l border-proton-border shadow-2xl backdrop-blur-xl flex flex-col p-6 z-[95] overflow-y-auto custom-scrollbar-minimal"
+              className="md:hidden fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-proton-card/95 border-l border-proton-border shadow-2xl backdrop-blur-xl flex flex-col p-6 z-[95] overflow-y-auto custom-scrollbar-minimal outline-none"
             >
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-proton-border/50">
@@ -6547,9 +6576,11 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setIsMobileNavDrawerOpen(false)}
-                  className="p-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-all"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text flex items-center justify-center transition-all cursor-pointer"
+                  title={language === 'ka' ? 'მენიუს დახურვა' : 'Close navigation menu'}
+                  aria-label={language === 'ka' ? 'მენიუს დახურვა' : 'Close navigation menu'}
                 >
-                  <X size={16} />
+                  <X size={18} />
                 </button>
               </div>
 
@@ -6565,7 +6596,7 @@ export default function App() {
                         {language === 'ka' ? 'ენა' : 'Lang'}
                       </span>
                     </div>
-                    <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-lg p-0.5 shrink-0 shadow-inner">
+                    <div className="flex bg-proton-bg/80 border border-proton-border/80 rounded-xl p-1 shrink-0 shadow-inner gap-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -6574,8 +6605,9 @@ export default function App() {
                             showToast('Language set to English', 'success');
                           }
                         }}
+                        aria-label="Switch language to English"
                         className={cn(
-                          "px-2 py-0.5 text-[9px] font-black rounded transition-all uppercase tracking-wider cursor-pointer",
+                          "min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center cursor-pointer",
                           language === 'en'
                             ? "bg-proton-accent text-proton-bg font-black shadow-sm"
                             : "text-proton-muted hover:text-proton-text"
@@ -6591,8 +6623,9 @@ export default function App() {
                             showToast('აქტიური ენა: ქართული', 'success');
                           }
                         }}
+                        aria-label="ენის გადართვა ქართულზე"
                         className={cn(
-                          "px-2 py-0.5 text-[9px] font-black rounded transition-all uppercase tracking-wider cursor-pointer",
+                          "min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-black rounded-lg transition-all uppercase tracking-wider flex items-center justify-center cursor-pointer",
                           language === 'ka'
                             ? "bg-proton-accent text-proton-bg font-black shadow-sm"
                             : "text-proton-muted hover:text-proton-text"
@@ -6637,7 +6670,7 @@ export default function App() {
                           setIsMobileNavDrawerOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-3.5 py-3 rounded-2xl border transition-all text-left cursor-pointer",
+                          "w-full min-h-[48px] flex items-center justify-between px-3.5 py-3 rounded-2xl border transition-all text-left cursor-pointer",
                           activeView === item.id
                             ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold shadow-sm"
                             : "bg-proton-bg/40 border-proton-border/40 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
@@ -6676,7 +6709,7 @@ export default function App() {
                           setIsMobileNavDrawerOpen(false);
                         }}
                         className={cn(
-                          "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
+                          "w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
                           activeView === item.id
                             ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold shadow-sm"
                             : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
@@ -6708,7 +6741,7 @@ export default function App() {
                         setIsMobileNavDrawerOpen(false);
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
+                        "w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
                         activeView === 'profile'
                           ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
                           : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
@@ -6727,7 +6760,7 @@ export default function App() {
                         setIsMobileNavDrawerOpen(false);
                       }}
                       className={cn(
-                        "w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
+                        "w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
                         activeView === 'settings'
                           ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
                           : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
@@ -6747,7 +6780,7 @@ export default function App() {
                           handleSignOut();
                           setIsMobileNavDrawerOpen(false);
                         }}
-                        className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-left cursor-pointer mt-1"
+                        className="w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all text-left cursor-pointer mt-1"
                       >
                         <div className="flex items-center gap-3">
                           <LogOut size={15} />
@@ -6761,7 +6794,7 @@ export default function App() {
                           setShowAuth(true);
                           setIsMobileNavDrawerOpen(false);
                         }}
-                        className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 text-proton-bg font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 transition-all cursor-pointer mt-1"
+                        className="w-full min-h-[44px] flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 text-proton-bg font-black text-xs uppercase tracking-wider shadow-md hover:brightness-110 transition-all cursor-pointer mt-1"
                       >
                         <LogIn size={15} />
                         <span>{language === 'ka' ? 'სისტემაში შესვლა' : 'Sign In'}</span>
@@ -6855,11 +6888,11 @@ export default function App() {
                       setUiMode('business');
                       handleViewChange('dashboard');
                     }}
-                    className="flex items-center gap-1 px-2 sm:px-3 h-9 sm:h-auto py-1 sm:py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[9px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0 cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 px-2.5 sm:px-3 min-h-[44px] min-w-[44px] h-11 py-2 rounded-xl bg-proton-accent/10 border border-proton-accent/20 hover:bg-proton-accent/20 text-proton-accent hover:text-white text-[9px] sm:text-xs font-black font-mono uppercase tracking-wider transition-all duration-300 shadow-sm shrink-0 cursor-pointer"
                     title={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to Dashboard'}
-                    aria-label="Back to dashboard"
+                    aria-label={language === 'ka' ? 'მთავარ გვერდზე დაბრუნება' : 'Back to dashboard'}
                   >
-                    <ArrowLeft size={13} className="stroke-[2.5]" />
+                    <ArrowLeft size={14} className="stroke-[2.5]" />
                     <span className="hidden xs:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
                   </button>
                 )}
@@ -6985,26 +7018,28 @@ export default function App() {
                 {/* Mobile & Tablet Search Button */}
                 <button
                   onClick={() => setIsMobileSearchOpen(true)}
-                  className="lg:hidden w-9 h-9 min-w-[36px] rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                  className="lg:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
                   title={language === 'ka' ? 'ძიება' : 'Search'}
-                  aria-label="Open search"
+                  aria-label={language === 'ka' ? 'ძიების გახსნა' : 'Open search'}
                 >
-                  <Search size={16} />
+                  <Search size={18} />
                 </button>
 
                 {/* Mobile-only Hamburger Menu Drawer Trigger */}
                 <button
                   onClick={() => setIsMobileNavDrawerOpen(prev => !prev)}
                   className={cn(
-                    "md:hidden w-9 h-9 min-w-[36px] rounded-lg border transition-all shrink-0 flex items-center justify-center cursor-pointer",
+                    "md:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border transition-all shrink-0 flex items-center justify-center cursor-pointer",
                     isMobileNavDrawerOpen 
                       ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent" 
                       : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-accent"
                   )}
                   title={isMobileNavDrawerOpen ? (language === 'ka' ? 'მენიუს დახურვა' : 'Close Menu') : (language === 'ka' ? 'მენიუს გახსნა' : 'Open Menu')}
-                  aria-label="Toggle navigation menu"
+                  aria-label={isMobileNavDrawerOpen ? (language === 'ka' ? 'მენიუს დახურვა' : 'Close navigation menu') : (language === 'ka' ? 'მენიუს გახსნა' : 'Open navigation menu')}
+                  aria-expanded={isMobileNavDrawerOpen}
+                  aria-controls="mobile-nav-drawer"
                 >
-                  {isMobileNavDrawerOpen ? <X size={17} /> : <Menu size={17} />}
+                  {isMobileNavDrawerOpen ? <X size={18} /> : <Menu size={18} />}
                 </button>
 
                 {/* Desktop-only System Controls */}
