@@ -6647,6 +6647,7 @@ export default function App() {
                       }}
                       showToast={showToast}
                       notificationsEnabled={userProfile.notifications !== false && userProfile.notificationsEnabled !== false}
+                      isMobileDrawer={true}
                     />
                   </div>
                 </div>

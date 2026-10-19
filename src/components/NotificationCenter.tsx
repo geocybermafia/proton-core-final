@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, 
@@ -36,6 +37,7 @@ interface NotificationCenterProps {
   setActiveView: (view: View) => void;
   showToast?: (message: string, type?: 'success' | 'info' | 'error' | 'warning') => void;
   notificationsEnabled?: boolean;
+  isMobileDrawer?: boolean;
 }
 
 // Initial default notifications (empty for clean user state)
@@ -72,7 +74,8 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   activeView,
   setActiveView,
   showToast,
-  notificationsEnabled = true
+  notificationsEnabled = true,
+  isMobileDrawer = false,
 }) => {
   const isEnabled = notificationsEnabled !== false;
   const [isOpen, setIsOpen] = useState(false);
@@ -83,6 +86,24 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   });
 
   const popoverRef = useRef<HTMLDivElement>(null);
+  const mobileModalRef = useRef<HTMLDivElement>(null);
+
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 768;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
+  const isMobileMode = isMobileDrawer || !isDesktop;
 
   // Local state for fallback / instant reactivity
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
@@ -185,24 +206,30 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   // Close on outside click or Escape key press
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+      const target = event.target as Node;
+      if (popoverRef.current && popoverRef.current.contains(target)) {
+        return;
       }
+      if (mobileModalRef.current && mobileModalRef.current.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.stopPropagation();
         setIsOpen(false);
       }
     };
 
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      window.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown, true);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [isOpen]);
 
@@ -437,281 +464,324 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         )}
       </button>
 
-      {/* Popover Dropdown */}
+      {/* Popover Dropdown / Mobile Modal */}
       <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute right-0 top-12 w-[340px] sm:w-[420px] max-w-[calc(100vw-1.5rem)] bg-[#0c0d0f]/95 border border-proton-border/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-2xl z-[100] overflow-hidden flex flex-col origin-top-right"
-          >
-            {/* Header */}
-            <div className="p-4 border-b border-proton-border/50 flex items-center justify-between bg-proton-bg/40">
-              <div className="flex items-center gap-2.5">
-                <div className={cn(
-                  "w-8 h-8 rounded-xl border flex items-center justify-center",
-                  isEnabled ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" : "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                )}>
-                  {isEnabled ? <Bell size={16} /> : <BellOff size={16} />}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-black uppercase tracking-wider text-proton-text">
-                      {language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub'}
-                    </h3>
-                    {isEnabled && unreadCount > 0 ? (
-                      <span className="px-2 py-0.5 rounded-full bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-[9px] font-mono font-bold">
-                        {unreadCount} {language === 'ka' ? 'ახალი' : 'NEW'}
-                      </span>
-                    ) : !isEnabled ? (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-mono font-bold">
-                        {language === 'ka' ? 'გათიშულია' : 'MUTED'}
-                      </span>
-                    ) : null}
+        {isOpen && (() => {
+          const content = (
+            <>
+              {/* Header */}
+              <div className="p-4 border-b border-proton-border/50 flex items-center justify-between bg-proton-bg/40">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={cn(
+                    "w-8 h-8 rounded-xl border flex items-center justify-center shrink-0",
+                    isEnabled ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+                  )}>
+                    {isEnabled ? <Bell size={16} /> : <BellOff size={16} />}
                   </div>
-                  <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mt-0.5">
-                    {isEnabled ? 'PROTON OS // LIVE REALTIME ALERTS' : 'ALERTS MUTED // SAVING BANDWIDTH'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Top Controls */}
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={toggleSound}
-                  className={cn(
-                    "p-1.5 rounded-lg border transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
-                    soundEnabled && isEnabled
-                      ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" 
-                      : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text"
-                  )}
-                  title={soundEnabled ? (language === 'ka' ? 'ხმის გამორთვა' : 'Disable Sound') : (language === 'ka' ? 'ხმის ჩართვა' : 'Enable Sound')}
-                >
-                  {soundEnabled && isEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
-                >
-                  <X size={13} />
-                </button>
-              </div>
-            </div>
-
-            {/* Banner when Muted */}
-            {!isEnabled && (
-              <div className="mx-3 mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <BellOff size={15} className="text-amber-400 shrink-0" />
-                  <div className="text-left">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-amber-300">
-                      {language === 'ka' ? 'შეტყობინებები გათიშულია' : 'Global Notifications Muted'}
-                    </p>
-                    <p className="text-[9px] text-proton-muted font-bold">
-                      {language === 'ka' ? 'შეტყობინებები შეჩერებულია. მათი ჩართვა ნებისმიერ დროს შეგიძლიათ.' : 'Notifications are paused. You can re-enable them anytime.'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveView('settings');
-                    setIsOpen(false);
-                  }}
-                  className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[9px] font-black uppercase tracking-wider shrink-0 transition-all border border-amber-500/40 flex items-center gap-1 cursor-pointer"
-                >
-                  <Settings size={10} />
-                  <span>{language === 'ka' ? 'ჩართვა' : 'Settings'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* Filter Tabs */}
-            <div className="p-2 border-b border-proton-border/30 bg-proton-bg/20 flex items-center gap-1 overflow-x-auto custom-scrollbar-minimal">
-              {[
-                { id: 'all', label: language === 'ka' ? 'ყველა' : 'All' },
-                { id: 'unread', label: language === 'ka' ? 'წაუკითხავი' : 'Unread', badge: unreadCount },
-                { id: 'system', label: language === 'ka' ? 'სისტემა' : 'System' },
-                { id: 'market', label: language === 'ka' ? 'მარკეტი' : 'Market' },
-                { id: 'ai', label: language === 'ka' ? 'AI' : 'AI' },
-                { id: 'tasks', label: language === 'ka' ? 'დავალებები' : 'Tasks' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1 shrink-0 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
-                    activeTab === tab.id
-                      ? "bg-proton-accent/20 border border-proton-accent/40 text-proton-accent shadow-sm"
-                      : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5 border border-transparent"
-                  )}
-                >
-                  <span>{tab.label}</span>
-                  {tab.badge !== undefined && tab.badge > 0 && (
-                    <span className="w-4 h-4 rounded-full bg-proton-accent text-proton-bg text-[8px] font-black flex items-center justify-center">
-                      {tab.badge}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Notification Items List */}
-            <div className="max-h-[60vh] sm:max-h-[380px] overflow-y-auto custom-scrollbar-minimal p-2 space-y-1.5">
-              <AnimatePresence mode="popLayout">
-                {loading ? (
-                  // Sleek Skeleton Loading State
-                  <div className="space-y-2 py-1">
-                    {[1, 2, 3].map((key) => (
-                      <div
-                        key={key}
-                        className="p-3 rounded-2xl border border-proton-border/30 bg-proton-bg/40 animate-pulse flex items-start gap-3"
-                      >
-                        <div className="w-8 h-8 rounded-xl bg-proton-border/40 shrink-0 mt-0.5" />
-                        <div className="flex-1 space-y-2 py-0.5">
-                          <div className="h-3 bg-proton-border/50 rounded-md w-2/3" />
-                          <div className="h-2.5 bg-proton-border/30 rounded-md w-full" />
-                          <div className="h-2 bg-proton-border/20 rounded-md w-1/3" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : filteredNotifications.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="py-12 px-4 flex flex-col items-center justify-center text-center text-proton-muted"
-                  >
-                    <div className="w-12 h-12 rounded-2xl bg-proton-accent/5 border border-proton-border flex items-center justify-center text-proton-muted mb-3">
-                      <Bell size={20} className="opacity-40" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-proton-text truncate">
+                        {language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub'}
+                      </h3>
+                      {isEnabled && unreadCount > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full bg-proton-accent/20 border border-proton-accent/30 text-proton-accent text-[9px] font-mono font-bold shrink-0">
+                          {unreadCount} {language === 'ka' ? 'ახალი' : 'NEW'}
+                        </span>
+                      ) : !isEnabled ? (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-mono font-bold shrink-0">
+                          {language === 'ka' ? 'გათიშულია' : 'MUTED'}
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="text-xs font-black uppercase tracking-wider text-proton-text/80">
-                      {language === 'ka' ? 'შეტყობინება არ არის' : 'No notifications'}
+                    <p className="text-[9px] font-mono text-proton-muted uppercase tracking-widest mt-0.5 truncate">
+                      {isEnabled ? 'PROTON OS // LIVE REALTIME ALERTS' : 'ALERTS MUTED // SAVING BANDWIDTH'}
                     </p>
-                    <p className="text-[10px] text-proton-muted max-w-[220px] mt-1 font-mono">
-                      {activeTab === 'unread' 
-                        ? (language === 'ka' ? 'ყველა შეტყობინება წაკითხულია' : 'All notifications are marked as read')
-                        : (language === 'ka' ? 'ამ კატეგორიაში შეტყობინებები არ იძებნება' : 'No items match the selected category filter')}
-                    </p>
-                  </motion.div>
-                ) : (
-                  filteredNotifications.map(item => (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      onClick={() => handleItemClick(item)}
-                      className={cn(
-                        "p-3 rounded-2xl border transition-all duration-200 cursor-pointer relative group flex items-start gap-3 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
-                        !item.read
-                          ? "bg-proton-accent/[0.06] border-proton-accent/30 hover:border-proton-accent/60 shadow-sm"
-                          : "bg-proton-bg/40 border-proton-border/40 hover:bg-proton-accent/[0.02] hover:border-proton-border"
-                      )}
-                      tabIndex={0}
-                      role="button"
-                    >
-                      {/* Category Icon */}
-                      <div className={cn(
-                        "w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 transition-all",
-                        !item.read
-                          ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent"
-                          : "bg-proton-bg border-proton-border text-proton-muted"
-                      )}>
-                        {getCategoryIcon(item.category)}
-                      </div>
+                  </div>
+                </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0 pr-6">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <h4 className={cn(
-                            "text-xs font-bold leading-snug truncate",
-                            !item.read ? "text-proton-text font-black" : "text-proton-text/80"
-                          )}>
-                            {language === 'ka' ? (item.titleKa || item.title) : item.title}
-                          </h4>
-                          {!item.read && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-proton-accent shrink-0 animate-pulse" />
-                          )}
-                        </div>
-
-                        <p className="text-[11px] text-proton-muted/90 line-clamp-2 leading-relaxed">
-                          {language === 'ka' ? (item.messageKa || item.message) : item.message}
-                        </p>
-
-                        <div className="flex items-center gap-3 mt-2 text-[9px] font-mono text-proton-muted">
-                          <span className="flex items-center gap-1">
-                            <Clock size={10} className="text-proton-accent/70" />
-                            {formatTimeAgo(item.timestamp)}
-                          </span>
-                          {item.targetView && (
-                            <span className="text-proton-accent uppercase font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                              <span>{language === 'ka' ? 'გახსნა' : 'Open'}</span>
-                              <ChevronRight size={10} />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Delete Item Action */}
-                      <button
-                        type="button"
-                        onClick={(e) => deleteNotification(item.id, e)}
-                        className="absolute right-2.5 top-2.5 p-1 rounded-lg text-proton-muted hover:text-red-400 hover:bg-red-500/10 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
-                        title={language === 'ka' ? 'წაშლა' : 'Delete'}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Footer Toolbar */}
-            <div className="p-3 border-t border-proton-border/50 bg-proton-bg/60 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                {unreadCount > 0 && (
+                {/* Top Controls */}
+                <div className="flex items-center gap-1 shrink-0 ml-2">
                   <button
                     type="button"
-                    onClick={markAllAsRead}
-                    className="px-2.5 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
+                    onClick={toggleSound}
+                    className={cn(
+                      "w-8 h-8 rounded-lg border flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none cursor-pointer",
+                      soundEnabled && isEnabled
+                        ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent" 
+                        : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text"
+                    )}
+                    title={soundEnabled ? (language === 'ka' ? 'ხმის გამორთვა' : 'Disable Sound') : (language === 'ka' ? 'ხმის ჩართვა' : 'Enable Sound')}
+                    aria-label={soundEnabled ? 'Disable Sound' : 'Enable Sound'}
                   >
-                    <CheckCheck size={12} />
-                    <span>{language === 'ka' ? 'ყველას წაკითხვა' : 'Mark all read'}</span>
+                    {soundEnabled && isEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleAddTestNotification}
-                  className="px-2 py-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
-                  title={language === 'ka' ? 'ტესტური შეტყობინების დამატება' : 'Add Test Alert'}
-                >
-                  <Plus size={12} />
-                  <span>{language === 'ka' ? 'ტესტი' : 'Test'}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
+                    className="w-8 h-8 rounded-lg bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
               </div>
 
-              {notifications.length > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAllNotifications}
-                  className="px-2.5 py-1.5 rounded-xl text-proton-muted hover:text-red-400 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
-                >
-                  <Trash2 size={12} />
-                  <span>{language === 'ka' ? 'გასუფთავება' : 'Clear all'}</span>
-                </button>
+              {/* Banner when Muted */}
+              {!isEnabled && (
+                <div className="mx-3 mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <BellOff size={15} className="text-amber-400 shrink-0" />
+                    <div className="text-left">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-amber-300">
+                        {language === 'ka' ? 'შეტყობინებები გათიშულია' : 'Global Notifications Muted'}
+                      </p>
+                      <p className="text-[9px] text-proton-muted font-bold">
+                        {language === 'ka' ? 'შეტყობინებები შეჩერებულია. მათი ჩართვა ნებისმიერ დროს შეგიძლიათ.' : 'Notifications are paused. You can re-enable them anytime.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveView('settings');
+                      setIsOpen(false);
+                    }}
+                    className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[9px] font-black uppercase tracking-wider shrink-0 transition-all border border-amber-500/40 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Settings size={10} />
+                    <span>{language === 'ka' ? 'ჩართვა' : 'Settings'}</span>
+                  </button>
+                </div>
               )}
-            </div>
-          </motion.div>
-        )}
+
+              {/* Filter Tabs */}
+              <div className="p-2 border-b border-proton-border/30 bg-proton-bg/20 flex items-center gap-1 overflow-x-auto custom-scrollbar-minimal">
+                {[
+                  { id: 'all', label: language === 'ka' ? 'ყველა' : 'All' },
+                  { id: 'unread', label: language === 'ka' ? 'წაუკითხავი' : 'Unread', badge: unreadCount },
+                  { id: 'system', label: language === 'ka' ? 'სისტემა' : 'System' },
+                  { id: 'market', label: language === 'ka' ? 'მარკეტი' : 'Market' },
+                  { id: 'ai', label: language === 'ka' ? 'AI' : 'AI' },
+                  { id: 'tasks', label: language === 'ka' ? 'დავალებები' : 'Tasks' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={cn(
+                      "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1 shrink-0 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
+                      activeTab === tab.id
+                        ? "bg-proton-accent/20 border border-proton-accent/40 text-proton-accent shadow-sm"
+                        : "text-proton-muted hover:text-proton-text hover:bg-proton-accent/5 border border-transparent"
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                    {tab.badge !== undefined && tab.badge > 0 && (
+                      <span className="w-4 h-4 rounded-full bg-proton-accent text-proton-bg text-[8px] font-black flex items-center justify-center">
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Notification Items List */}
+              <div className="max-h-[60vh] sm:max-h-[380px] overflow-y-auto custom-scrollbar-minimal p-2 space-y-1.5">
+                <AnimatePresence mode="popLayout">
+                  {loading ? (
+                    // Sleek Skeleton Loading State
+                    <div className="space-y-2 py-1">
+                      {[1, 2, 3].map((key) => (
+                        <div
+                          key={key}
+                          className="p-3 rounded-2xl border border-proton-border/30 bg-proton-bg/40 animate-pulse flex items-start gap-3"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-proton-border/40 shrink-0 mt-0.5" />
+                          <div className="flex-1 space-y-2 py-0.5">
+                            <div className="h-3 bg-proton-border/50 rounded-md w-2/3" />
+                            <div className="h-2.5 bg-proton-border/30 rounded-md w-full" />
+                            <div className="h-2 bg-proton-border/20 rounded-md w-1/3" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredNotifications.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="py-12 px-4 flex flex-col items-center justify-center text-center text-proton-muted"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-proton-accent/5 border border-proton-border flex items-center justify-center text-proton-muted mb-3">
+                        <Bell size={20} className="opacity-40" />
+                      </div>
+                      <p className="text-xs font-black uppercase tracking-wider text-proton-text/80">
+                        {language === 'ka' ? 'შეტყობინება არ არის' : 'No notifications'}
+                      </p>
+                      <p className="text-[10px] text-proton-muted max-w-[220px] mt-1 font-mono">
+                        {activeTab === 'unread' 
+                          ? (language === 'ka' ? 'ყველა შეტყობინება წაკითხულია' : 'All notifications are marked as read')
+                          : (language === 'ka' ? 'ამ კატეგორიაში შეტყობინებები არ იძებნება' : 'No items match the selected category filter')}
+                      </p>
+                    </motion.div>
+                  ) : (
+                    filteredNotifications.map(item => (
+                      <motion.div
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        onClick={() => handleItemClick(item)}
+                        className={cn(
+                          "p-3 rounded-2xl border transition-all duration-200 cursor-pointer relative group flex items-start gap-3 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none",
+                          !item.read
+                            ? "bg-proton-accent/[0.06] border-proton-accent/30 hover:border-proton-accent/60 shadow-sm"
+                            : "bg-proton-bg/40 border-proton-border/40 hover:bg-proton-accent/[0.02] hover:border-proton-border"
+                        )}
+                        tabIndex={0}
+                        role="button"
+                      >
+                        {/* Category Icon */}
+                        <div className={cn(
+                          "w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 mt-0.5 transition-all",
+                          !item.read
+                            ? "bg-proton-accent/10 border-proton-accent/30 text-proton-accent"
+                            : "bg-proton-bg border-proton-border text-proton-muted"
+                        )}>
+                          {getCategoryIcon(item.category)}
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 pr-6">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h4 className={cn(
+                              "text-xs font-bold leading-snug truncate",
+                              !item.read ? "text-proton-text font-black" : "text-proton-text/80"
+                            )}>
+                              {language === 'ka' ? (item.titleKa || item.title) : item.title}
+                            </h4>
+                            {!item.read && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-proton-accent shrink-0 animate-pulse" />
+                            )}
+                          </div>
+
+                          <p className="text-[11px] text-proton-muted/90 line-clamp-2 leading-relaxed">
+                            {language === 'ka' ? (item.messageKa || item.message) : item.message}
+                          </p>
+
+                          <div className="flex items-center gap-3 mt-2 text-[9px] font-mono text-proton-muted">
+                            <span className="flex items-center gap-1">
+                              <Clock size={10} className="text-proton-accent/70" />
+                              {formatTimeAgo(item.timestamp)}
+                            </span>
+                            {item.targetView && (
+                              <span className="text-proton-accent uppercase font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                                <span>{language === 'ka' ? 'გახსნა' : 'Open'}</span>
+                                <ChevronRight size={10} />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Delete Item Action */}
+                        <button
+                          type="button"
+                          onClick={(e) => deleteNotification(item.id, e)}
+                          className="absolute right-2.5 top-2.5 p-1 rounded-lg text-proton-muted hover:text-red-400 hover:bg-red-500/10 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
+                          title={language === 'ka' ? 'წაშლა' : 'Delete'}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </motion.div>
+                    ))
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Footer Toolbar */}
+              <div className="p-3 border-t border-proton-border/50 bg-proton-bg/60 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllAsRead}
+                      className="px-2.5 py-1.5 rounded-xl bg-proton-accent/10 border border-proton-accent/30 text-proton-accent hover:bg-proton-accent hover:text-proton-bg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
+                    >
+                      <CheckCheck size={12} />
+                      <span>{language === 'ka' ? 'ყველას წაკითხვა' : 'Mark all read'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAddTestNotification}
+                    className="px-2 py-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
+                    title={language === 'ka' ? 'ტესტური შეტყობინების დამატება' : 'Add Test Alert'}
+                  >
+                    <Plus size={12} />
+                    <span>{language === 'ka' ? 'ტესტი' : 'Test'}</span>
+                  </button>
+                </div>
+
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllNotifications}
+                    className="px-2.5 py-1.5 rounded-xl text-proton-muted hover:text-red-400 text-[9px] font-mono uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:outline-none"
+                  >
+                    <Trash2 size={12} />
+                    <span>{language === 'ka' ? 'გასუფთავება' : 'Clear all'}</span>
+                  </button>
+                )}
+              </div>
+            </>
+          );
+
+          if (isMobileMode && typeof document !== 'undefined') {
+            return createPortal(
+              <div 
+                className="fixed inset-0 z-[110] flex items-start justify-center pt-14 sm:pt-20 px-3 sm:px-6 pointer-events-auto"
+                role="dialog"
+                aria-modal="true"
+                aria-label={language === 'ka' ? 'შეტყობინებების ცენტრი' : 'Notification Hub'}
+              >
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsOpen(false)}
+                  className="fixed inset-0 bg-black/70 backdrop-blur-md"
+                />
+
+                {/* Mobile Floating Card */}
+                <motion.div
+                  ref={mobileModalRef}
+                  initial={{ opacity: 0, y: -12, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 0.96 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative w-full max-w-lg max-h-[82vh] bg-[#0c0d0f]/98 border border-proton-border/80 shadow-[0_16px_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl rounded-2xl z-10 overflow-hidden flex flex-col"
+                >
+                  {content}
+                </motion.div>
+              </div>,
+              document.body
+            );
+          }
+
+          return (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.95 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute right-0 top-12 w-[340px] sm:w-[420px] max-w-[calc(100vw-1.5rem)] bg-[#0c0d0f]/95 border border-proton-border/80 shadow-[0_12px_45px_rgba(0,0,0,0.85)] backdrop-blur-2xl rounded-2xl z-[100] overflow-hidden flex flex-col origin-top-right"
+            >
+              {content}
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );
