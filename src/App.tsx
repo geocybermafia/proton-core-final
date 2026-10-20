@@ -1765,14 +1765,21 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   const requestHardwareAccess = async () => {
     setPermissionRequested(true);
     
-    // Request Camera/Mic access to trigger prompt
-    if (supported.camera || supported.mic) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        stream.getTracks().forEach(track => track.stop()); // Stop immediately
-      } catch (err) {
-        console.warn("Hardware access denied:", err);
-      }
+    // Explicit Geolocation request only when user clicks this action button
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocation({ 
+            lat: pos.coords.latitude, 
+            lng: pos.coords.longitude, 
+            accuracy: pos.coords.accuracy 
+          });
+        },
+        (err) => {
+          console.warn("Geolocation permission not granted or unavailable:", err);
+        },
+        { enableHighAccuracy: false }
+      );
     }
     
     // iOS DeviceOrientation permission handling
@@ -1805,22 +1812,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       camera: hasMedia,
       mic: hasMedia
     });
-
-    if (hasGeoloc) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          if (isMounted) {
-            setLocation({ 
-              lat: pos.coords.latitude, 
-              lng: pos.coords.longitude, 
-              accuracy: pos.coords.accuracy 
-            });
-          }
-        },
-        (err) => console.warn("Geolocation permission not available directly"),
-        { enableHighAccuracy: false } // Low-accuracy is lightweight and prevents heavy hardware polling
-      );
-    }
 
     let batteryInstance: any = null;
     const onBatteryChange = () => {
@@ -1870,9 +1861,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     if (hasOrientation) {
       window.addEventListener('deviceorientation', onOrientationChange);
     }
-
-    // Automatically trigger permission prompt if appropriate
-    requestHardwareAccess();
 
     return () => {
       isMounted = false;
@@ -1995,14 +1983,14 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.compute}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
-                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? 'CPU' : ''}</span>
+                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? (language === 'ka' ? 'ბირთვი' : 'Cores') : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
-                {hardware.cores ? t.status_healthy : t.status_syncing}
+                {language === 'ka' ? 'დატვირთვა: მიუწვდომელია' : 'Load: Not Measured'}
               </p>
               <div className="mt-3 flex gap-1">
                 {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className={cn("h-1 flex-1 rounded-full", hardware.cores && i < (hardware.cores/2) ? "bg-purple-400" : "bg-proton-bg")} />
+                  <div key={i} className={cn("h-1 flex-1 rounded-full", hardware.cores && i < hardware.cores ? "bg-purple-400/50" : "bg-proton-bg")} />
                 ))}
               </div>
             </div>
@@ -2021,15 +2009,17 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.memory}</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.memory || 'N/A'}</span>
-                <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? 'GB' : ''}</span>
+                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">
+                  {hardware.memory ? `~${hardware.memory}` : 'N/A'}
+                </span>
+                <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? (language === 'ka' ? 'GB (შეფასება)' : 'GB (Est.)') : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
-                {hardware.memory ? t.status_healthy : t.status_syncing}
+                {language === 'ka' ? 'მოხმარება: მიუწვდომელია' : 'Usage: Unavailable'}
               </p>
               <div className="flex items-center gap-3 mt-3">
                   <div className="flex-1 h-1.5 bg-proton-bg rounded-full overflow-hidden">
-                    <div className={cn("h-full bg-blue-400/60", hardware.memory ? "w-1/3" : "w-0")} />
+                    <div className="h-full bg-blue-400/20 w-full" />
                   </div>
               </div>
             </div>
@@ -2087,10 +2077,10 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.camera}</h4>
               <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
-                {supported.camera ? 'Ready' : 'Locked'}
+                {supported.camera ? (language === 'ka' ? 'მხარდაჭერილია' : 'Supported') : (language === 'ka' ? 'მიუწვდომელია' : 'Locked')}
               </p>
               <p className="mt-2 text-[10px] font-bold text-amber-400 uppercase tracking-tight">
-                {supported.camera ? 'Hardware Active' : 'Access Restricted'}
+                {supported.camera ? (language === 'ka' ? 'API მზადაა (მოლოდინი)' : 'API Available (Standby)') : (language === 'ka' ? 'შეზღუდულია' : 'Access Restricted')}
               </p>
             </div>
           </div>
@@ -2111,10 +2101,10 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.mic}</h4>
               <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
-                {supported.mic ? 'Active' : 'Locked'}
+                {supported.mic ? (language === 'ka' ? 'მხარდაჭერილია' : 'Supported') : (language === 'ka' ? 'მიუწვდომელია' : 'Locked')}
               </p>
               <p className="mt-2 text-[10px] font-bold text-red-400 uppercase tracking-tight">
-                {supported.mic ? 'Sensor Streaming' : 'Awaiting Authorization'}
+                {supported.mic ? (language === 'ka' ? 'სენსორი მზადაა (მოლოდინი)' : 'Sensor Available (Standby)') : (language === 'ka' ? 'ნებართვა არ არის' : 'Awaiting Authorization')}
               </p>
             </div>
           </div>
@@ -2149,13 +2139,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lat}</p>
                 <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
-                  {location?.lat.toFixed(6) || 'Scanning...'}
+                  {location ? location.lat.toFixed(6) : '--'}
                 </div>
               </div>
               <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lng}</p>
                 <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
-                  {location?.lng.toFixed(6) || 'Scanning...'}
+                  {location ? location.lng.toFixed(6) : '--'}
                 </div>
               </div>
             </div>
@@ -2165,8 +2155,12 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                 <ShieldCheck size={20} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{t.location_secured}</p>
-                <p className="text-[9px] font-medium text-proton-muted uppercase truncate">{t.location_sync}</p>
+                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
+                  {location ? (language === 'ka' ? 'ლოკალური კოორდინატები' : 'Local Sensor') : (language === 'ka' ? 'სენსორი უმოქმედოა' : 'Sensor Standby')}
+                </p>
+                <p className="text-[9px] font-medium text-proton-muted uppercase truncate">
+                  {location ? (language === 'ka' ? 'მეხსიერებაში (არ სინქრონიზდება)' : 'In-Memory (No Sync)') : (language === 'ka' ? 'მოთხოვნილი არ არის' : 'Not Requested')}
+                </p>
               </div>
             </div>
           </div>
@@ -6828,7 +6822,7 @@ export default function App() {
 
       <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg w-full">
         {/* Dynamic Header */}
-        <header className="h-14 md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-4 md:px-5 lg:px-8 gap-x-2 md:gap-x-3 lg:gap-x-6 flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md overflow-hidden md:overflow-visible">
+        <header className="h-14 md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-4 md:px-3 lg:px-8 gap-x-2 md:gap-x-2.5 lg:gap-x-6 flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md overflow-hidden lg:overflow-visible">
           {isMobileSearchOpen ? (
             <div className="flex lg:hidden items-center gap-2 w-full h-full animate-in fade-in duration-150">
               <div className="flex-1 min-w-0">
@@ -6871,7 +6865,7 @@ export default function App() {
                     }
                     setIsSidebarHovered(false);
                   }}
-                  className="hidden md:flex w-9 sm:w-10 h-9 sm:h-10 min-w-[36px] sm:min-w-[40px] rounded-xl bg-proton-bg border border-proton-border items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] cursor-pointer"
+                  className="hidden md:flex w-9 sm:w-10 h-9 sm:h-10 min-w-[36px] sm:min-w-[40px] md:w-9 md:h-9 md:min-w-[36px] lg:w-10 lg:h-10 lg:min-w-[40px] rounded-xl bg-proton-bg border border-proton-border items-center justify-center text-proton-muted hover:text-proton-accent hover:border-proton-accent/30 transition-all duration-300 shrink-0 relative group shadow-sm hover:shadow-[0_0_12px_rgba(0,242,255,0.15)] cursor-pointer"
                   title={isEffectiveExpanded ? (language === 'ka' ? 'აკეცვა (ხატულები)' : 'Collapse to Icons') : (language === 'ka' ? 'გაშლა (სრული)' : 'Expand to Full')}
                   aria-label="Toggle sidebar"
                 >
@@ -6909,7 +6903,7 @@ export default function App() {
                           ? "bg-amber-400 shadow-[0_0_8px_#fbbf24]"
                           : "bg-rose-500 shadow-[0_0_8px_#f43f5e]"
                     )} />
-                    <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono truncate">
+                    <span className="text-[10px] sm:text-xs font-black tracking-widest text-proton-text uppercase font-mono truncate hidden lg:inline">
                       PROTON // {
                         activeView === 'dashboard'
                           ? (language === 'ka' ? 'მთავარი' : 'HOME')
@@ -6944,11 +6938,11 @@ export default function App() {
               </div>
 
               {/* Center Section: Page Title on Mobile & Tablet, Quick Command Search Bar on Desktop */}
-              <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-4">
+              <div className="flex items-center justify-center flex-1 min-w-0 px-1 sm:px-2 md:px-2 lg:px-4">
                 {/* Mobile & Tablet compact view title with truncation */}
-                <div className="flex lg:hidden items-center gap-1.5 min-w-0 truncate select-none">
+                <div className="flex lg:hidden items-center gap-1.5 min-w-0 select-none">
                   <span className="w-1.5 h-1.5 rounded-full bg-proton-accent shrink-0 animate-pulse" />
-                  <span className="text-[11px] sm:text-xs font-black tracking-wider text-proton-text uppercase font-mono truncate">
+                  <span className="text-[11px] sm:text-xs font-black tracking-wider text-proton-text uppercase font-mono truncate whitespace-nowrap">
                     {activeView === 'dashboard'
                       ? (language === 'ka' ? 'მთავარი' : 'DASHBOARD')
                       : activeView === 'market-hub'
@@ -7015,15 +7009,15 @@ export default function App() {
               </div>
               
               {/* Right Section: Mobile Search & Menu Triggers | Desktop System Controls */}
-              <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
+              <div className="flex items-center justify-end gap-1.5 md:gap-2 lg:gap-3 shrink-0">
                 {/* Mobile & Tablet Search Button */}
                 <button
                   onClick={() => setIsMobileSearchOpen(true)}
-                  className="lg:hidden w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
+                  className="lg:hidden w-11 h-11 min-w-[44px] min-h-[44px] md:w-9 md:h-9 md:min-w-[36px] md:min-h-[36px] rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-accent flex items-center justify-center shrink-0 transition-all cursor-pointer"
                   title={language === 'ka' ? 'ძიება' : 'Search'}
                   aria-label={language === 'ka' ? 'ძიების გახსნა' : 'Open search'}
                 >
-                  <Search size={18} />
+                  <Search size={18} className="md:w-4 md:h-4" />
                 </button>
 
                 {/* Mobile-only Hamburger Menu Drawer Trigger */}
@@ -7109,11 +7103,11 @@ export default function App() {
                   ) : (
                     <button 
                       onClick={() => setShowAuth(true)}
-                      className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
+                      className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-proton-accent via-blue-500 to-indigo-600 hover:brightness-110 text-proton-bg font-black text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
                       title={language === 'ka' ? 'შესვლა' : 'Sign In'}
                     >
                       <LogIn size={14} />
-                      <span className="hidden xs:inline">{language === 'ka' ? 'შესვლა' : 'Sign In'}</span>
+                      <span className="hidden xs:inline md:hidden lg:inline">{language === 'ka' ? 'შესვლა' : 'Sign In'}</span>
                     </button>
                   )}
                 </div>
