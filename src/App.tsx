@@ -1744,20 +1744,17 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   const t = translations[language].hardware;
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
   const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
-  const [network, setNetwork] = useState<{ downlink: number; rtt: number; type: string } | null>(null);
-  const [orientation, setOrientation] = useState<{ alpha: number; beta: number; gamma: number } | null>(null);
+  const [network, setNetwork] = useState<{ downlink: number; rtt: number; effectiveType: string; type?: string } | null>(null);
   const [permissionRequested, setPermissionRequested] = useState(false);
-  const [hardware, setHardware] = useState<{ cores: number; memory: number; platform: string }>({
+  const [hardware] = useState<{ cores: number; memory: number }>({
     cores: navigator.hardwareConcurrency || 0,
-    memory: (navigator as any).deviceMemory || 0,
-    platform: (navigator as any).userAgentData?.platform || navigator.platform
+    memory: (navigator as any).deviceMemory || 0
   });
   
   const [supported, setSupported] = useState<Record<string, boolean>>({
     geolocation: 'geolocation' in navigator,
     battery: 'getBattery' in navigator,
     network: 'connection' in navigator,
-    orientation: 'DeviceOrientationEvent' in window,
     camera: 'mediaDevices' in navigator,
     mic: 'mediaDevices' in navigator
   });
@@ -1781,18 +1778,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         { enableHighAccuracy: false }
       );
     }
-    
-    // iOS DeviceOrientation permission handling
-    if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      try {
-        const permission = await (DeviceOrientationEvent as any).requestPermission();
-        if (permission === 'granted') {
-          setSupported(prev => ({ ...prev, orientation: true }));
-        }
-      } catch (err) {
-        console.warn("Orientation permission denied:", err);
-      }
-    }
   };
 
   useEffect(() => {
@@ -1801,14 +1786,12 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     const hasGeoloc = 'geolocation' in navigator;
     const hasBattery = 'getBattery' in navigator;
     const hasNetwork = 'connection' in navigator;
-    const hasOrientation = 'DeviceOrientationEvent' in window;
     const hasMedia = 'mediaDevices' in navigator;
 
     setSupported({
       geolocation: hasGeoloc,
       battery: hasBattery,
       network: hasNetwork,
-      orientation: hasOrientation,
       camera: hasMedia,
       mic: hasMedia
     });
@@ -1833,33 +1816,26 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
     let conn: any = null;
     const onNetworkChange = () => {
       if (isMounted && conn) {
-        setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
+        setNetwork({ 
+          downlink: conn.downlink, 
+          rtt: conn.rtt, 
+          effectiveType: conn.effectiveType || 'N/A',
+          type: conn.type 
+        });
       }
     };
 
     if (hasNetwork) {
       conn = (navigator as any).connection;
       if (conn) {
-        setNetwork({ downlink: conn.downlink, rtt: conn.rtt, type: conn.effectiveType });
+        setNetwork({ 
+          downlink: conn.downlink, 
+          rtt: conn.rtt, 
+          effectiveType: conn.effectiveType || 'N/A',
+          type: conn.type 
+        });
         conn.addEventListener('change', onNetworkChange);
       }
-    }
-
-    let lastOrientUpdate = 0;
-    const onOrientationChange = (event: DeviceOrientationEvent) => {
-      const now = Date.now();
-      if (isMounted && now - lastOrientUpdate > 150) {
-        lastOrientUpdate = now;
-        setOrientation({
-          alpha: event.alpha || 0,
-          beta: event.beta || 0,
-          gamma: event.gamma || 0
-        });
-      }
-    };
-
-    if (hasOrientation) {
-      window.addEventListener('deviceorientation', onOrientationChange);
     }
 
     return () => {
@@ -1870,9 +1846,6 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
       }
       if (conn) {
         conn.removeEventListener('change', onNetworkChange);
-      }
-      if (hasOrientation) {
-        window.removeEventListener('deviceorientation', onOrientationChange);
       }
     };
   }, []);
@@ -1920,7 +1893,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="flex items-center gap-2">
                 <div className={cn("w-2 h-2 rounded-full", battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {supported.battery ? (battery ? (battery.level > 0.2 ? t.status_healthy : t.status_critical) : t.status_syncing) : t.status_locked}
+                  {supported.battery ? (battery ? (battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal) : t.status_syncing) : t.status_locked}
                 </span>
               </div>
             </div>
@@ -1963,7 +1936,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                   {battery?.charging ? t.charging : t.discharging}
                 </p>
                 <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase leading-tight">
-                  {battery ? (battery.level * 100 > 50 ? t.optimal : t.optimization) : t.awaiting}
+                  {battery ? `${language === 'ka' ? 'მუხტის დონე' : 'Charge Level'}: ${battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal}` : t.awaiting}
                 </p>
               </div>
             </div>
@@ -1983,16 +1956,14 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.compute}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
-                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? (language === 'ka' ? 'ბირთვი' : 'Cores') : ''}</span>
+                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? t.threads : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
                 {language === 'ka' ? 'დატვირთვა: მიუწვდომელია' : 'Load: Not Measured'}
               </p>
-              <div className="mt-3 flex gap-1">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className={cn("h-1 flex-1 rounded-full", hardware.cores && i < hardware.cores ? "bg-purple-400/50" : "bg-proton-bg")} />
-                ))}
-              </div>
+              <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
+                {language === 'ka' ? 'ლოგიკური ნაკადები ბრაუზერიდან' : 'Logical threads from runtime'}
+              </p>
             </div>
           </div>
         </div>
@@ -2017,11 +1988,9 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <p className="mt-2 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
                 {language === 'ka' ? 'მოხმარება: მიუწვდომელია' : 'Usage: Unavailable'}
               </p>
-              <div className="flex items-center gap-3 mt-3">
-                  <div className="flex-1 h-1.5 bg-proton-bg rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-400/20 w-full" />
-                  </div>
-              </div>
+              <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
+                {language === 'ka' ? 'სისტემური RAM დაცულია ბრაუზერით' : 'OS memory isolated by sandbox'}
+              </p>
             </div>
           </div>
         </div>
@@ -2042,18 +2011,18 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="flex items-center gap-2">
                 <div className={cn("w-2 h-2 rounded-full animate-pulse", network ? "bg-green-400" : "bg-gray-600")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {network ? (network.downlink > 10 ? 'Broadband' : 'Mobile Data') : t.status_syncing}
+                  {network ? (network.type && network.type !== 'unknown' ? network.type : t.effective_type) : t.status_syncing}
                 </span>
               </div>
             </div>
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.network}</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.type || 'N/A'}</span>
-                <span className="text-xs font-black text-green-400 opacity-50">{network ? 'Active Path' : ''}</span>
+                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.effectiveType || 'N/A'}</span>
+                <span className="text-xs font-black text-green-400 opacity-50">{network ? t.effective_type : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-green-400 uppercase tracking-tight">
-                {network?.downlink ? `${network.downlink} MBPS ${t.downlink}` : t.awaiting}
+                {network?.downlink ? `${network.downlink} Mbps ${t.downlink}` : t.awaiting}
               </p>
               <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
                 {t.rtt}: {network?.rtt ? `${network.rtt}ms` : '--'}
@@ -2135,17 +2104,25 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-              <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+              <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lat}</p>
-                <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
+                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter truncate">
                   {location ? location.lat.toFixed(6) : '--'}
                 </div>
               </div>
-              <div className="p-6 md:p-8 rounded-[24px] md:rounded-[32px] bg-proton-bg border border-proton-border space-y-2 md:space-y-4">
+              <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lng}</p>
-                <div className="text-xl md:text-3xl font-mono text-proton-text tracking-tighter truncate">
+                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter truncate">
                   {location ? location.lng.toFixed(6) : '--'}
+                </div>
+              </div>
+              <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.accuracy}</p>
+                <div className="text-lg md:text-2xl font-mono text-cyan-400 tracking-tighter truncate">
+                  {location && typeof location.accuracy === 'number' && !isNaN(location.accuracy)
+                    ? `± ${Math.round(location.accuracy)} m`
+                    : '--'}
                 </div>
               </div>
             </div>
@@ -2156,10 +2133,10 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
-                  {location ? (language === 'ka' ? 'ლოკალური კოორდინატები' : 'Local Sensor') : (language === 'ka' ? 'სენსორი უმოქმედოა' : 'Sensor Standby')}
+                  {location ? (language === 'ka' ? 'ლოკალური სენსორი (შეფასებითი)' : 'Local Sensor (Estimated)') : (language === 'ka' ? 'სენსორი უმოქმედოა' : 'Sensor Standby')}
                 </p>
                 <p className="text-[9px] font-medium text-proton-muted uppercase truncate">
-                  {location ? (language === 'ka' ? 'მეხსიერებაში (არ სინქრონიზდება)' : 'In-Memory (No Sync)') : (language === 'ka' ? 'მოთხოვნილი არ არის' : 'Not Requested')}
+                  {location ? (language === 'ka' ? 'კოორდინატები მეხსიერებაშია (სერვერზე არ იგზავნება)' : 'In-Memory Only (Not Sent to Server)') : (language === 'ka' ? 'მოთხოვნილი არ არის' : 'Not Requested')}
                 </p>
               </div>
             </div>

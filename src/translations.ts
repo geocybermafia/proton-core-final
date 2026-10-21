@@ -270,7 +270,13 @@ export const translations = {
       restriction: "Browser file system access restricted or unsupported",
       no_mount: "No Directory Selected",
       scanning: "Scanning Files...",
-      mount_btn: "Select Local Directory"
+      mount_btn: "Select Local Directory",
+      charge_low: "Low Charge",
+      charge_normal: "Normal Charge",
+      charge_high: "High Charge",
+      effective_type: "Effective Profile",
+      accuracy: "Reported Accuracy",
+      threads: "Logical Threads"
     },
     systems: {
       title: "System Architecture",
@@ -749,7 +755,13 @@ export const translations = {
       restriction: "ბრაუზერის ფაილურ სისტემაზე წვდომა შეზღუდულია",
       no_mount: "საქაღალდე არ არის არჩეული",
       scanning: "მიმდინარეობს სკანირება...",
-      mount_btn: "საქაღალდის არჩევა"
+      mount_btn: "საქაღალდის არჩევა",
+      charge_low: "დაბალი მუხტი",
+      charge_normal: "საკმარისი მუხტი",
+      charge_high: "მაღალი მუხტი",
+      effective_type: "ეფექტური პროფილი",
+      accuracy: "დაფიქსირებული სიზუსტე",
+      threads: "ლოგიკური ნაკადი"
     },
     systems: {
       title: "სისტემის არქიტექტურა",
