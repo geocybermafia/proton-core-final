@@ -161,6 +161,17 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     descriptionEn: 'Platform user manual and technical guide',
     descriptionKa: 'პლატფორმის ინსტრუქცია და დოკუმენტაცია',
     category: 'utility'
+  },
+  {
+    id: 'device',
+    keywords: ['device', 'hardware', 'diagnostics', 'system', 'specs', 'cpu', 'battery', 'memory', 'ram', 'location', 'აპარატურა', 'დიაგნოსტიკა', 'სისტემა', 'ელემენტი', 'პროცესორი', 'მეხსიერება'],
+    view: 'device',
+    uiMode: 'business',
+    titleEn: 'Hardware Diagnostics',
+    titleKa: 'ტექნიკური დიაგნოსტიკა',
+    descriptionEn: 'Device specs, battery status, and sensor diagnostics',
+    descriptionKa: 'მოწყობილობის პარამეტრები და ტექნიკური დიაგნოსტიკა',
+    category: 'utility'
   }
 ];
 

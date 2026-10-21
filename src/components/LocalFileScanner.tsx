@@ -97,10 +97,13 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
       if (err.name === 'AbortError') {
         setError(null);
       } else if (err.message === 'FRAME_RESTRICTION' || err.message?.includes('Cross origin sub frames')) {
-        setError('Security restriction: File system access is blocked in preview frames. Please open the app in a new tab to use this feature.');
+        setError(t.frame_restriction_error || 'Preview restriction: File system access is blocked in preview frames.');
+        setIsSupported(false);
+      } else if (err.message === 'FileSystemAccess API not supported' || !('showDirectoryPicker' in window)) {
+        setError(t.file_picker_unsupported || 'Folder selection is unavailable in this browser or context.');
         setIsSupported(false);
       } else {
-        setError(err.message || 'Failed to scan directory');
+        setError(t.file_picker_failed || 'Failed to inspect selected directory.');
         setIsSupported(false);
       }
     } finally {
@@ -160,7 +163,7 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
           </div>
           {isIframe && (
             <p className="text-[9px] font-medium text-amber-500/70 border-t border-amber-500/10 pt-2">
-              Note: Preview frames block directory pickers. Open the application in a new tab for native OS file system interaction.
+              {t.frame_note || 'Note: Preview frames block directory pickers. Open the application in a new tab for native OS file system interaction.'}
             </p>
           )}
         </div>
@@ -200,7 +203,7 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
                         {file.name}
                       </span>
                       <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-                          {file.kind === 'directory' ? 'Folder' : `Type: ${file.type.split('/')[1] || 'Unknown'}`}
+                          {file.kind === 'directory' ? (t.folder || 'Folder') : `${t.type || 'Type'}: ${file.type.split('/')[1] || t.unknown || 'Unknown'}`}
                       </span>
                     </div>
                   </div>

@@ -1740,53 +1740,79 @@ const SystemsView = ({
   );
 };
 
+type GeoState = 'idle' | 'pending' | 'granted' | 'denied' | 'unavailable' | 'error';
+
 const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
   const t = translations[language].hardware;
+  const [geoState, setGeoState] = useState<GeoState>('idle');
   const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [geoErrorMessage, setGeoErrorMessage] = useState<string | null>(null);
+  const locationRequestIdRef = useRef<number>(0);
+
   const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
   const [network, setNetwork] = useState<{ downlink: number; rtt: number; effectiveType: string; type?: string } | null>(null);
-  const [permissionRequested, setPermissionRequested] = useState(false);
   const [hardware] = useState<{ cores: number; memory: number }>({
-    cores: navigator.hardwareConcurrency || 0,
-    memory: (navigator as any).deviceMemory || 0
+    cores: typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 0) : 0,
+    memory: typeof navigator !== 'undefined' ? ((navigator as any).deviceMemory || 0) : 0
   });
   
   const [supported, setSupported] = useState<Record<string, boolean>>({
-    geolocation: 'geolocation' in navigator,
-    battery: 'getBattery' in navigator,
-    network: 'connection' in navigator,
-    camera: 'mediaDevices' in navigator,
-    mic: 'mediaDevices' in navigator
+    geolocation: typeof navigator !== 'undefined' && 'geolocation' in navigator,
+    battery: typeof navigator !== 'undefined' && 'getBattery' in navigator,
+    network: typeof navigator !== 'undefined' && 'connection' in navigator && !!(navigator as any).connection,
+    camera: typeof navigator !== 'undefined' && 'mediaDevices' in navigator,
+    mic: typeof navigator !== 'undefined' && 'mediaDevices' in navigator
   });
 
-  const requestHardwareAccess = async () => {
-    setPermissionRequested(true);
-    
-    // Explicit Geolocation request only when user clicks this action button
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation({ 
-            lat: pos.coords.latitude, 
-            lng: pos.coords.longitude, 
-            accuracy: pos.coords.accuracy 
-          });
-        },
-        (err) => {
-          console.warn("Geolocation permission not granted or unavailable:", err);
-        },
-        { enableHighAccuracy: false }
-      );
+  const requestLocationAccess = () => {
+    if (!('geolocation' in navigator)) {
+      setGeoState('unavailable');
+      setGeoErrorMessage(t.location_unavailable);
+      return;
     }
+
+    const currentRequestId = ++locationRequestIdRef.current;
+    setGeoState('pending');
+    setGeoErrorMessage(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (locationRequestIdRef.current !== currentRequestId) return;
+        setLocation({ 
+          lat: pos.coords.latitude, 
+          lng: pos.coords.longitude, 
+          accuracy: pos.coords.accuracy 
+        });
+        setGeoState('granted');
+        setGeoErrorMessage(null);
+      },
+      (err) => {
+        if (locationRequestIdRef.current !== currentRequestId) return;
+        if (err.code === 1 /* PERMISSION_DENIED */) {
+          setGeoState('denied');
+          setGeoErrorMessage(t.location_denied);
+        } else if (err.code === 2 /* POSITION_UNAVAILABLE */) {
+          setGeoState('unavailable');
+          setGeoErrorMessage(t.location_unavailable);
+        } else if (err.code === 3 /* TIMEOUT */) {
+          setGeoState('error');
+          setGeoErrorMessage(t.location_timeout);
+        } else {
+          setGeoState('error');
+          setGeoErrorMessage(t.location_error);
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
   };
 
   useEffect(() => {
     let isMounted = true;
     
-    const hasGeoloc = 'geolocation' in navigator;
-    const hasBattery = 'getBattery' in navigator;
-    const hasNetwork = 'connection' in navigator;
-    const hasMedia = 'mediaDevices' in navigator;
+    const hasGeoloc = typeof navigator !== 'undefined' && 'geolocation' in navigator;
+    const hasBattery = typeof navigator !== 'undefined' && 'getBattery' in navigator && typeof (navigator as any).getBattery === 'function';
+    const hasNetwork = typeof navigator !== 'undefined' && 'connection' in navigator && !!(navigator as any).connection;
+    const hasMedia = typeof navigator !== 'undefined' && 'mediaDevices' in navigator;
 
     setSupported({
       geolocation: hasGeoloc,
@@ -1810,7 +1836,11 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         setBattery({ level: bat.level, charging: bat.charging });
         bat.addEventListener('levelchange', onBatteryChange);
         bat.addEventListener('chargingchange', onBatteryChange);
-      }).catch(() => {});
+      }).catch(() => {
+        if (isMounted) {
+          setSupported(s => ({ ...s, battery: false }));
+        }
+      });
     }
 
     let conn: any = null;
@@ -1861,18 +1891,38 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             {t.description}
           </p>
         </div>
-        {!permissionRequested ? (
+        {geoState === 'idle' ? (
           <button 
-            onClick={requestHardwareAccess}
-            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base"
+            onClick={requestLocationAccess}
+            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base cursor-pointer"
           >
-            <RefreshCw size={20} className="animate-spin-slow" />
-            {t.request_access}
+            <MapPin size={20} />
+            {t.get_location}
+          </button>
+        ) : geoState === 'pending' ? (
+          <div className="flex items-center gap-2.5 px-6 py-4 bg-proton-card text-proton-text rounded-[2rem] border border-proton-border text-sm font-bold shadow-sm">
+            <RefreshCw size={18} className="animate-spin text-proton-accent" />
+            <span>{t.location_requesting}</span>
+          </div>
+        ) : geoState === 'granted' ? (
+          <button
+            onClick={requestLocationAccess}
+            className="flex items-center gap-2.5 px-6 py-3.5 bg-proton-card hover:bg-proton-bg text-proton-text rounded-full font-bold border border-proton-border transition-all text-xs cursor-pointer shadow-sm"
+            title={t.location_acquired}
+          >
+            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span>{t.location_acquired}</span>
+            <RefreshCw size={14} className="text-proton-muted ml-1" />
           </button>
         ) : (
-          <div className="text-[10px] bg-proton-border/50 text-proton-muted px-4 py-2 rounded-full font-black uppercase tracking-widest border border-proton-border">
-            {t.status_active}
-          </div>
+          <button
+            onClick={requestLocationAccess}
+            className="flex items-center gap-2 px-6 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full font-bold border border-red-500/20 transition-all text-xs cursor-pointer"
+            title={geoErrorMessage || t.location_error}
+          >
+            <RefreshCw size={14} className="text-red-400" />
+            <span>{geoState === 'denied' ? t.location_denied : t.location_error}</span>
+          </button>
         )}
       </div>
 
@@ -1886,14 +1936,14 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div className="flex items-center justify-between">
               <div className={cn(
                 "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
-                battery ? "bg-cyan-400/10 text-cyan-400" : "bg-proton-bg text-proton-muted"
+                supported.battery && battery ? "bg-cyan-400/10 text-cyan-400" : "bg-proton-bg text-proton-muted"
               )}>
-                {battery?.charging ? <Zap size={20} className="animate-pulse fill-cyan-400" /> : <Zap size={20} />}
+                {supported.battery && battery?.charging ? <Zap size={20} className="animate-pulse fill-cyan-400" /> : <Zap size={20} />}
               </div>
               <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
+                <div className={cn("w-2 h-2 rounded-full", supported.battery && battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {supported.battery ? (battery ? (battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal) : t.status_syncing) : t.status_locked}
+                  {supported.battery ? (battery ? (battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal) : t.status_syncing) : t.status_unavailable}
                 </span>
               </div>
             </div>
@@ -1911,7 +1961,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                   />
                   <motion.circle
                     initial={{ strokeDasharray: "0, 100" }}
-                    animate={{ strokeDasharray: `${(battery?.level || 0) * 100}, 100` }}
+                    animate={{ strokeDasharray: `${(supported.battery && battery?.level ? battery.level : 0) * 100}, 100` }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
                     cx="50%"
                     cy="50%"
@@ -1933,10 +1983,12 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="min-w-0">
                 <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 truncate">{t.battery}</h4>
                 <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-tight">
-                  {battery?.charging ? t.charging : t.discharging}
+                  {supported.battery ? (battery?.charging ? t.charging : t.discharging) : t.status_unavailable}
                 </p>
                 <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase leading-tight">
-                  {battery ? `${language === 'ka' ? 'მუხტის დონე' : 'Charge Level'}: ${battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal}` : t.awaiting}
+                  {supported.battery 
+                    ? (battery ? `${language === 'ka' ? 'მუხტის დონე' : 'Charge Level'}: ${battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal}` : t.awaiting) 
+                    : t.battery_unsupported}
                 </p>
               </div>
             </div>
@@ -2004,28 +2056,34 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div className="flex items-center justify-between">
               <div className={cn(
                 "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
-                network ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
+                supported.network && network ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
               )}>
                 <Wifi size={20} />
               </div>
               <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full animate-pulse", network ? "bg-green-400" : "bg-gray-600")} />
+                <div className={cn("w-2 h-2 rounded-full", supported.network && network ? "bg-green-400 animate-pulse" : "bg-gray-600")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {network ? (network.type && network.type !== 'unknown' ? network.type : t.effective_type) : t.status_syncing}
+                  {supported.network 
+                    ? (network ? (network.type && network.type !== 'unknown' ? network.type : t.effective_type) : t.status_syncing) 
+                    : t.status_unavailable}
                 </span>
               </div>
             </div>
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.network}</h4>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">{network?.effectiveType || 'N/A'}</span>
-                <span className="text-xs font-black text-green-400 opacity-50">{network ? t.effective_type : ''}</span>
+                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">
+                  {supported.network ? (network?.effectiveType || 'N/A') : '--'}
+                </span>
+                <span className="text-xs font-black text-green-400 opacity-50">{supported.network && network ? t.effective_type : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-green-400 uppercase tracking-tight">
-                {network?.downlink ? `${network.downlink} Mbps ${t.downlink}` : t.awaiting}
+                {supported.network 
+                  ? (network?.downlink ? `${network.downlink} Mbps ${t.downlink}` : t.awaiting) 
+                  : t.network_unsupported}
               </p>
               <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
-                {t.rtt}: {network?.rtt ? `${network.rtt}ms` : '--'}
+                {t.rtt}: {supported.network && network?.rtt ? `${network.rtt}ms` : '--'}
               </p>
             </div>
           </div>
@@ -2046,10 +2104,10 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.camera}</h4>
               <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
-                {supported.camera ? (language === 'ka' ? 'მხარდაჭერილია' : 'Supported') : (language === 'ka' ? 'მიუწვდომელია' : 'Locked')}
+                {supported.camera ? t.api_supported : t.api_unsupported}
               </p>
               <p className="mt-2 text-[10px] font-bold text-amber-400 uppercase tracking-tight">
-                {supported.camera ? (language === 'ka' ? 'API მზადაა (მოლოდინი)' : 'API Available (Standby)') : (language === 'ka' ? 'შეზღუდულია' : 'Access Restricted')}
+                {supported.camera ? t.api_available : t.api_unavailable}
               </p>
             </div>
           </div>
@@ -2070,10 +2128,10 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
             <div>
               <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.mic}</h4>
               <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
-                {supported.mic ? (language === 'ka' ? 'მხარდაჭერილია' : 'Supported') : (language === 'ka' ? 'მიუწვდომელია' : 'Locked')}
+                {supported.mic ? t.api_supported : t.api_unsupported}
               </p>
               <p className="mt-2 text-[10px] font-bold text-red-400 uppercase tracking-tight">
-                {supported.mic ? (language === 'ka' ? 'სენსორი მზადაა (მოლოდინი)' : 'Sensor Available (Standby)') : (language === 'ka' ? 'ნებართვა არ არის' : 'Awaiting Authorization')}
+                {supported.mic ? t.api_available : t.api_unavailable}
               </p>
             </div>
           </div>
@@ -2108,35 +2166,76 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lat}</p>
                 <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter truncate">
-                  {location ? location.lat.toFixed(6) : '--'}
+                  {geoState === 'granted' && location ? location.lat.toFixed(6) : '--'}
                 </div>
               </div>
               <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lng}</p>
                 <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter truncate">
-                  {location ? location.lng.toFixed(6) : '--'}
+                  {geoState === 'granted' && location ? location.lng.toFixed(6) : '--'}
                 </div>
               </div>
               <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.accuracy}</p>
                 <div className="text-lg md:text-2xl font-mono text-cyan-400 tracking-tighter truncate">
-                  {location && typeof location.accuracy === 'number' && !isNaN(location.accuracy)
+                  {geoState === 'granted' && location && typeof location.accuracy === 'number' && !isNaN(location.accuracy)
                     ? `± ${Math.round(location.accuracy)} m`
                     : '--'}
                 </div>
               </div>
             </div>
 
-            <div className="p-4 md:p-6 rounded-2xl bg-cyan-400/5 border border-cyan-400/10 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-cyan-400/10 flex items-center justify-center text-cyan-400 shrink-0">
-                <ShieldCheck size={20} />
+            <div className={cn(
+              "p-4 md:p-6 rounded-2xl border flex items-center gap-4 transition-colors",
+              geoState === 'granted'
+                ? "bg-cyan-400/5 border-cyan-400/10"
+                : geoState === 'denied' || geoState === 'error'
+                ? "bg-red-500/5 border-red-500/15"
+                : "bg-proton-bg border-proton-border"
+            )}>
+              <div className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                geoState === 'granted'
+                  ? "bg-cyan-400/10 text-cyan-400"
+                  : geoState === 'denied' || geoState === 'error'
+                  ? "bg-red-500/10 text-red-400"
+                  : "bg-proton-card text-proton-muted"
+              )}>
+                {geoState === 'granted' ? (
+                  <ShieldCheck size={20} />
+                ) : geoState === 'pending' ? (
+                  <RefreshCw size={20} className="animate-spin text-proton-accent" />
+                ) : (
+                  <MapPin size={20} />
+                )}
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
-                  {location ? (language === 'ka' ? 'ლოკალური სენსორი (შეფასებითი)' : 'Local Sensor (Estimated)') : (language === 'ka' ? 'სენსორი უმოქმედოა' : 'Sensor Standby')}
+              <div className="min-w-0 flex-1">
+                <p className={cn(
+                  "text-[10px] font-black uppercase tracking-widest",
+                  geoState === 'granted' ? "text-cyan-400" : geoState === 'denied' || geoState === 'error' ? "text-red-400" : "text-proton-text"
+                )}>
+                  {geoState === 'granted'
+                    ? t.location_acquired
+                    : geoState === 'pending'
+                    ? t.location_requesting
+                    : geoState === 'denied'
+                    ? t.location_denied
+                    : geoState === 'unavailable'
+                    ? t.location_unavailable
+                    : geoState === 'error'
+                    ? (geoErrorMessage || t.location_error)
+                    : t.location_idle_desc}
                 </p>
-                <p className="text-[9px] font-medium text-proton-muted uppercase truncate">
-                  {location ? (language === 'ka' ? 'კოორდინატები მეხსიერებაშია (სერვერზე არ იგზავნება)' : 'In-Memory Only (Not Sent to Server)') : (language === 'ka' ? 'მოთხოვნილი არ არის' : 'Not Requested')}
+                <p className="text-[9px] font-medium text-proton-muted uppercase">
+                  {geoState === 'granted'
+                    ? t.location_acquired_desc
+                    : geoState === 'denied'
+                    ? t.location_denied_desc
+                    : geoState === 'unavailable'
+                    ? t.location_unavailable_desc
+                    : geoState === 'pending'
+                    ? t.location_requesting
+                    : t.geo_subtitle}
                 </p>
               </div>
             </div>
@@ -6177,7 +6276,7 @@ export default function App() {
                     <SidebarItem 
                       icon={Settings} 
                       label={language === 'ka' ? 'პარამეტრები' : 'Settings'} 
-                      active={activeView === 'profile' || activeView === 'settings'} 
+                      active={activeView === 'profile' || activeView === 'settings' || activeView === 'device'} 
                       onClick={() => {
                         if (!isSidebarExpanded) {
                           handleViewChange('settings');
@@ -6227,6 +6326,21 @@ export default function App() {
                               <span>{language === 'ka' ? 'სისტემა და AI' : 'System & AI'}</span>
                             </div>
                             <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">CFG</span>
+                          </button>
+                          <button
+                            onClick={() => handleViewChange('device')}
+                            className={cn(
+                              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5 cursor-pointer",
+                              activeView === 'device'
+                                ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
+                                : "text-proton-muted hover:text-proton-text-light border border-transparent"
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Cpu size={14} className={activeView === 'device' ? "text-proton-accent font-bold" : "text-proton-muted"} />
+                              <span>{language === 'ka' ? 'ტექნიკური დიაგნოსტიკა' : 'Hardware Diagnostics'}</span>
+                            </div>
+                            <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">DEV</span>
                           </button>
                         </motion.div>
                       )}
@@ -6741,6 +6855,25 @@ export default function App() {
                       <div className="flex items-center gap-3">
                         <Settings size={15} className={activeView === 'settings' ? "text-proton-accent" : "text-proton-muted"} />
                         <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}</span>
+                      </div>
+                      <ChevronRight size={14} className="text-proton-muted opacity-40" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        handleViewChange('device');
+                        setIsMobileNavDrawerOpen(false);
+                      }}
+                      className={cn(
+                        "w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
+                        activeView === 'device'
+                          ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
+                          : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Cpu size={15} className={activeView === 'device' ? "text-proton-accent" : "text-proton-muted"} />
+                        <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'ტექნიკური დიაგნოსტიკა' : 'Hardware Diagnostics'}</span>
                       </div>
                       <ChevronRight size={14} className="text-proton-muted opacity-40" />
                     </button>
