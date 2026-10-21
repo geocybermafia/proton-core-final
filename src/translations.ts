@@ -263,7 +263,14 @@ export const translations = {
       lat: "Latitude",
       lng: "Longitude",
       location_secured: "Connection Secured",
-      location_sync: "Satellite Linked"
+      location_sync: "Satellite Linked",
+      workspace: "Local Workspace",
+      local_mount: "File System Mount",
+      total_files: "Total Files",
+      restriction: "Browser file system access restricted or unsupported",
+      no_mount: "No Directory Selected",
+      scanning: "Scanning Files...",
+      mount_btn: "Select Local Directory"
     },
     systems: {
       title: "System Architecture",
@@ -735,7 +742,14 @@ export const translations = {
       lat: "განედი",
       lng: "გრძედი",
       location_secured: "კვანძი დაცულია",
-      location_sync: "სატელიტური კავშირი"
+      location_sync: "სატელიტური კავშირი",
+      workspace: "ლოკალური სივრცე",
+      local_mount: "ფაილური სისტემა",
+      total_files: "სულ ფაილი",
+      restriction: "ბრაუზერის ფაილურ სისტემაზე წვდომა შეზღუდულია",
+      no_mount: "საქაღალდე არ არის არჩეული",
+      scanning: "მიმდინარეობს სკანირება...",
+      mount_btn: "საქაღალდის არჩევა"
     },
     systems: {
       title: "სისტემის არქიტექტურა",

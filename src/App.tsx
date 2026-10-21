@@ -7328,18 +7328,7 @@ export default function App() {
                     )
                   )}
                   {activeView === 'device' && (
-                    isAdmin ? (
-                      <HardwareView language={userProfile.language} />
-                    ) : (
-                      <div className="p-12 text-center text-proton-muted font-mono space-y-2">
-                        <p className="font-bold uppercase tracking-widest text-sm text-amber-400">
-                          {userProfile.language === 'ka' ? 'წვდომა შეზღუდულია' : 'Access Restricted'}
-                        </p>
-                        <p className="text-xs">
-                          {userProfile.language === 'ka' ? 'ეს გვერდი განკუთვნილია მხოლოდ დეველოპერისთვის.' : 'This view is reserved for system developers only.'}
-                        </p>
-                      </div>
-                    )
+                    <HardwareView language={userProfile.language} />
                   )}
                   {activeView === 'profile' && (
                     <Suspense fallback={

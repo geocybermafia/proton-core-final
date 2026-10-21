@@ -13,7 +13,8 @@ import {
   Compass,
   CornerDownRight,
   Calendar,
-  Target
+  Target,
+  Cpu
 } from 'lucide-react';
 import { safeStorage } from '../lib/safeStorage';
 import { View, Task } from '../types';
@@ -408,7 +409,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
           {/* ======================================================================= */}
           {/* 3. REFINED DIRECT DOORWAYS (QUIET INGRESS INTO PROTON)                  */}
           {/* ======================================================================= */}
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 max-w-5xl">
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4 max-w-6xl">
             
             {/* Create Doorway */}
             <button
@@ -533,6 +534,31 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
                 </div>
               </div>
               <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-amber-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            </button>
+
+            {/* Hardware Diagnostics Doorway */}
+            <button
+              type="button"
+              onClick={() => {
+                setUiMode('business', 'device');
+                setActiveView('device');
+              }}
+              className="group p-4 sm:p-5 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-cyan-500/40 transition-all duration-200 text-left flex items-start justify-between focus:outline-none focus:ring-1 focus:ring-cyan-400"
+            >
+              <div className="space-y-2">
+                <div className="p-2 rounded-md bg-cyan-500/10 text-cyan-400 inline-block">
+                  <Cpu size={18} />
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">
+                    HardwareView
+                  </div>
+                  <div className="text-xs text-zinc-400 font-mono">
+                    {isKa ? 'ტექნიკური დიაგნოსტიკა' : 'Hardware Diagnostics'}
+                  </div>
+                </div>
+              </div>
+              <ArrowUpRight size={16} className="text-zinc-600 group-hover:text-cyan-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
             </button>
 
           </div>
