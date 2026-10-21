@@ -130,23 +130,23 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
   };
 
   return (
-    <div className="bg-black/50 backdrop-blur-md border border-white/10 rounded-[32px] p-8 h-full flex flex-col gap-6 relative overflow-hidden group">
+    <div aria-live="polite" className="bg-proton-card border border-proton-border rounded-[32px] md:rounded-[40px] p-6 md:p-8 h-full flex flex-col gap-6 relative overflow-hidden group shadow-sm">
       {/* Decorative gradient */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/5 blur-[80px] -mr-32 -mt-32 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-proton-accent/5 blur-[80px] -mr-32 -mt-32 pointer-events-none" />
       
       <div className="flex items-center justify-between relative z-10">
         <div className="space-y-1">
-          <h3 className="text-xl font-black tracking-tighter text-white uppercase flex items-center gap-3">
-            <HardDrive className="text-cyan-400" size={24} />
+          <h3 className="text-xl font-black tracking-tighter text-proton-text uppercase flex items-center gap-3">
+            <HardDrive className="text-proton-accent" size={24} />
             {t.workspace}
           </h3>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t.local_mount}</p>
+          <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{t.local_mount}</p>
         </div>
         
         {files.length > 0 && (
-          <div className="px-4 py-2 bg-cyan-400/10 border border-cyan-400/20 rounded-2xl flex items-center gap-3 animate-in fade-in zoom-in duration-500">
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">
+          <div className="px-3.5 py-1.5 bg-proton-accent/10 border border-proton-accent/20 rounded-2xl flex items-center gap-2.5 animate-in fade-in zoom-in duration-300">
+            <div className="w-2 h-2 rounded-full bg-proton-accent animate-pulse" />
+            <span className="text-[10px] font-black text-proton-accent uppercase tracking-widest">
               {t.total_files}: {files.length}
             </span>
           </div>
@@ -162,7 +162,7 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
             </p>
           </div>
           {isIframe && (
-            <p className="text-[9px] font-medium text-amber-500/70 border-t border-amber-500/10 pt-2">
+            <p className="text-[9px] font-medium text-amber-500/80 border-t border-amber-500/10 pt-2">
               {t.frame_note || 'Note: Preview frames block directory pickers. Open the application in a new tab for native OS file system interaction.'}
             </p>
           )}
@@ -188,27 +188,27 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
             >
               {files.map((file, i) => (
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -6 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.01 }}
+                  transition={{ delay: Math.min(i * 0.005, 0.15), duration: 0.2 }}
                   key={`${file.name}-${i}`}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-cyan-400/30 transition-all group/item"
+                  className="flex items-center justify-between p-3.5 md:p-4 rounded-2xl bg-proton-bg/60 border border-proton-border hover:border-proton-accent/40 hover:bg-proton-bg transition-all group/item"
                 >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-black border border-white/10 flex items-center justify-center shrink-0 group-hover/item:border-cyan-400/50 transition-colors">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-proton-card border border-proton-border flex items-center justify-center shrink-0 group-hover/item:border-proton-accent/50 transition-colors">
                       {getFileIcon(file.name)}
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-bold text-gray-200 truncate group-hover/item:text-cyan-400 transition-colors">
+                      <span className="text-xs font-bold text-proton-text truncate group-hover/item:text-proton-accent transition-colors">
                         {file.name}
                       </span>
-                      <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                      <span className="text-[9px] font-bold text-proton-muted uppercase tracking-widest">
                           {file.kind === 'directory' ? (t.folder || 'Folder') : `${t.type || 'Type'}: ${file.type.split('/')[1] || t.unknown || 'Unknown'}`}
                       </span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-[10px] font-mono text-gray-400 group-hover/item:text-white transition-colors">
+                    <span className="text-[10px] font-mono text-proton-muted group-hover/item:text-proton-text transition-colors">
                       {file.kind === 'directory' ? '--' : formatBytes(file.size)}
                     </span>
                   </div>
@@ -221,10 +221,10 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-white/10 rounded-[40px] bg-white/[0.02]"
+                className="flex-1 flex flex-col items-center justify-center p-8 border-2 border-dashed border-proton-border rounded-[28px] md:rounded-[36px] bg-proton-bg/40"
             >
-              <FolderOpen className="text-gray-600 mb-4 animate-pulse" size={64} />
-              <p className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] text-center">
+              <FolderOpen className="text-proton-muted mb-4 opacity-50" size={56} />
+              <p className="text-xs font-black text-proton-muted uppercase tracking-[0.2em] text-center">
                 {t.no_mount}
               </p>
             </motion.div>
@@ -232,7 +232,7 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
         </AnimatePresence>
       </div>
 
-      <div className="pt-4 border-t border-white/5 relative z-10">
+      <div className="pt-4 border-t border-proton-border/40 relative z-10">
         <input 
             type="file" 
             ref={fileInputRef} 
@@ -244,7 +244,8 @@ export const LocalFileScanner: React.FC<{ t: any }> = ({ t }) => {
         <button
           onClick={isSupported ? scanDirectory : () => fileInputRef.current?.click()}
           disabled={isScanning}
-          className="w-full py-5 bg-cyan-400 text-black rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl shadow-cyan-400/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 group/btn relative overflow-hidden"
+          aria-label={isScanning ? (t.scanning || 'Scanning...') : (t.mount_btn || 'Select Directory')}
+          className="w-full min-h-[48px] py-4 md:py-5 bg-proton-accent text-proton-on-accent rounded-[20px] md:rounded-[24px] font-black text-xs uppercase tracking-[0.15em] shadow-lg shadow-proton-accent/20 hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3 group/btn relative overflow-hidden cursor-pointer focus-visible:ring-2 focus-visible:ring-proton-accent focus-visible:ring-offset-2 focus-visible:ring-offset-proton-bg focus-visible:outline-none"
         >
           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />
           <div className="relative z-10 flex items-center gap-3">

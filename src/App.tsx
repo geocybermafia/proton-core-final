@@ -1894,20 +1894,20 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         {geoState === 'idle' ? (
           <button 
             onClick={requestLocationAccess}
-            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base cursor-pointer"
+            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent"
           >
             <MapPin size={20} />
             {t.get_location}
           </button>
         ) : geoState === 'pending' ? (
-          <div className="flex items-center gap-2.5 px-6 py-4 bg-proton-card text-proton-text rounded-[2rem] border border-proton-border text-sm font-bold shadow-sm">
+          <div className="flex items-center gap-2.5 px-6 py-4 bg-proton-card text-proton-text rounded-[2rem] border border-proton-border text-sm font-bold shadow-sm" aria-live="polite">
             <RefreshCw size={18} className="animate-spin text-proton-accent" />
             <span>{t.location_requesting}</span>
           </div>
         ) : geoState === 'granted' ? (
           <button
             onClick={requestLocationAccess}
-            className="flex items-center gap-2.5 px-6 py-3.5 bg-proton-card hover:bg-proton-bg text-proton-text rounded-full font-bold border border-proton-border transition-all text-xs cursor-pointer shadow-sm"
+            className="flex items-center gap-2.5 px-6 py-3.5 bg-proton-card hover:bg-proton-bg text-proton-text rounded-full font-bold border border-proton-border transition-all text-xs cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent"
             title={t.location_acquired}
           >
             <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
@@ -1917,7 +1917,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         ) : (
           <button
             onClick={requestLocationAccess}
-            className="flex items-center gap-2 px-6 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full font-bold border border-red-500/20 transition-all text-xs cursor-pointer"
+            className="flex items-center gap-2 px-6 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full font-bold border border-red-500/20 transition-all text-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
             title={geoErrorMessage || t.location_error}
           >
             <RefreshCw size={14} className="text-red-400" />
@@ -1926,7 +1926,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Battery / Power Engine */}
         <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
@@ -1941,7 +1941,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                 {supported.battery && battery?.charging ? <Zap size={20} className="animate-pulse fill-cyan-400" /> : <Zap size={20} />}
               </div>
               <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", supported.battery && battery ? "bg-cyan-400 animate-pulse" : "bg-gray-600")} />
+                <div className={cn("w-2 h-2 rounded-full", supported.battery && battery ? "bg-cyan-400 animate-pulse" : "bg-proton-muted/40")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
                   {supported.battery ? (battery ? (battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal) : t.status_syncing) : t.status_unavailable}
                 </span>
@@ -1981,7 +1981,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                 </div>
               </div>
               <div className="min-w-0">
-                <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1 truncate">{t.battery}</h4>
+                <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1 truncate">{t.battery}</h4>
                 <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-tight">
                   {supported.battery ? (battery?.charging ? t.charging : t.discharging) : t.status_unavailable}
                 </p>
@@ -2005,13 +2005,13 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <Cpu size={20} />
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.compute}</h4>
+              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.compute}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
                 <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? t.threads : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
-                {language === 'ka' ? 'დატვირთვა: მიუწვდომელია' : 'Load: Not Measured'}
+                {t.cpu_load_unsupported || (language === 'ka' ? 'დატვირთვა: მიუწვდომელია' : 'Load: Not Measured')}
               </p>
               <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
                 {language === 'ka' ? 'ლოგიკური ნაკადები ბრაუზერიდან' : 'Logical threads from runtime'}
@@ -2030,15 +2030,15 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <Database size={20} />
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.memory}</h4>
+              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.memory}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">
                   {hardware.memory ? `~${hardware.memory}` : 'N/A'}
                 </span>
-                <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? (language === 'ka' ? 'GB (შეფასება)' : 'GB (Est.)') : ''}</span>
+                <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? t.memory_est : ''}</span>
               </div>
               <p className="mt-2 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
-                {language === 'ka' ? 'მოხმარება: მიუწვდომელია' : 'Usage: Unavailable'}
+                {t.memory_isolated || (language === 'ka' ? 'მოხმარება: მიუწვდომელია' : 'Usage: Unavailable')}
               </p>
               <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
                 {language === 'ka' ? 'სისტემური RAM დაცულია ბრაუზერით' : 'OS memory isolated by sandbox'}
@@ -2061,7 +2061,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                 <Wifi size={20} />
               </div>
               <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", supported.network && network ? "bg-green-400 animate-pulse" : "bg-gray-600")} />
+                <div className={cn("w-2 h-2 rounded-full", supported.network && network ? "bg-green-400 animate-pulse" : "bg-proton-muted/40")} />
                 <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
                   {supported.network 
                     ? (network ? (network.type && network.type !== 'unknown' ? network.type : t.effective_type) : t.status_syncing) 
@@ -2070,7 +2070,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               </div>
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.network}</h4>
+              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.network}</h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">
                   {supported.network ? (network?.effectiveType || 'N/A') : '--'}
@@ -2102,7 +2102,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <CameraIcon size={20} />
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.camera}</h4>
+              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.camera}</h4>
               <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
                 {supported.camera ? t.api_supported : t.api_unsupported}
               </p>
@@ -2126,7 +2126,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               <MicIcon size={20} />
             </div>
             <div>
-              <h4 className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t.mic}</h4>
+              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.mic}</h4>
               <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
                 {supported.mic ? t.api_supported : t.api_unsupported}
               </p>
@@ -2164,20 +2164,20 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
               <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lat}</p>
-                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter truncate">
+                <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.lat}</p>
+                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter break-all tabular-nums">
                   {geoState === 'granted' && location ? location.lat.toFixed(6) : '--'}
                 </div>
               </div>
               <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.lng}</p>
-                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter truncate">
+                <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.lng}</p>
+                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter break-all tabular-nums">
                   {geoState === 'granted' && location ? location.lng.toFixed(6) : '--'}
                 </div>
               </div>
               <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{t.accuracy}</p>
-                <div className="text-lg md:text-2xl font-mono text-cyan-400 tracking-tighter truncate">
+                <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.accuracy}</p>
+                <div className="text-lg md:text-2xl font-mono text-cyan-400 tracking-tighter break-all tabular-nums">
                   {geoState === 'granted' && location && typeof location.accuracy === 'number' && !isNaN(location.accuracy)
                     ? `± ${Math.round(location.accuracy)} m`
                     : '--'}
@@ -2185,14 +2185,17 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
               </div>
             </div>
 
-            <div className={cn(
-              "p-4 md:p-6 rounded-2xl border flex items-center gap-4 transition-colors",
-              geoState === 'granted'
-                ? "bg-cyan-400/5 border-cyan-400/10"
-                : geoState === 'denied' || geoState === 'error'
-                ? "bg-red-500/5 border-red-500/15"
-                : "bg-proton-bg border-proton-border"
-            )}>
+            <div 
+              aria-live="polite"
+              className={cn(
+                "p-4 md:p-6 rounded-2xl border flex items-center gap-4 transition-colors",
+                geoState === 'granted'
+                  ? "bg-cyan-400/5 border-cyan-400/10"
+                  : geoState === 'denied' || geoState === 'error'
+                  ? "bg-red-500/5 border-red-500/15"
+                  : "bg-proton-bg border-proton-border"
+              )}
+            >
               <div className={cn(
                 "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
                 geoState === 'granted'
@@ -2226,7 +2229,7 @@ const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
                     ? (geoErrorMessage || t.location_error)
                     : t.location_idle_desc}
                 </p>
-                <p className="text-[9px] font-medium text-proton-muted uppercase">
+                <p className="text-[9px] font-medium text-proton-muted uppercase leading-relaxed break-words">
                   {geoState === 'granted'
                     ? t.location_acquired_desc
                     : geoState === 'denied'
