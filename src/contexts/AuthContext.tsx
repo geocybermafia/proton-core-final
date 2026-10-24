@@ -30,10 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('proton_market_hub_ledger');
       localStorage.removeItem('proton_tasks');
       localStorage.removeItem('organizer_scratchpad');
-      localStorage.removeItem('organizer_habits');
-      localStorage.removeItem('organizer_daily_mood');
       localStorage.removeItem('organizer_daily_focus');
-      localStorage.removeItem('organizer_water_glasses');
       localStorage.removeItem('proton_notifications');
       localStorage.removeItem('proton_markethub_draft_form_data');
       localStorage.removeItem('proton_image_history');

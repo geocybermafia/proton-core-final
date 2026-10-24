@@ -4540,6 +4540,20 @@ export default function App() {
       if (isMobileControlOpen) setIsMobileControlOpen(false);
     }
   }, [viewportWidth, isMobileNavDrawerOpen, isMobileControlOpen]);
+
+  // Prevent competing document-level vertical scrollbar when in the app shell (Organizer & workspace views)
+  useEffect(() => {
+    if (activeView !== 'landing') {
+      const prevHtmlOverflow = document.documentElement.style.overflow;
+      const prevBodyOverflow = document.body.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.documentElement.style.overflow = prevHtmlOverflow;
+        document.body.style.overflow = prevBodyOverflow;
+      };
+    }
+  }, [activeView]);
   
   // Accessibility Focus Trap & Escape key handling (FINDING-MOB-03)
   const mobileNavDrawerRef = useFocusTrap<HTMLDivElement>({
@@ -5932,7 +5946,7 @@ export default function App() {
 
   return (
     <div className={cn(
-      "flex h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
+      "flex h-full h-[100dvh] overflow-hidden theme-bg-main text-proton-text font-sans relative transition-all duration-700 selection:bg-proton-accent selection:text-proton-bg",
       uiMode === 'creative' ? "ui-creative" : "ui-business"
     )}>
       {/* HEADLESS BACKGROUND AUTOMATION ENGINE (Active across all application routes) */}
@@ -6943,7 +6957,7 @@ export default function App() {
         handleViewChange={handleViewChange}
       />
 
-      <main className="flex-1 min-w-0 flex flex-col relative bg-proton-bg w-full">
+      <main className="flex-1 min-w-0 min-h-0 h-full flex flex-col relative bg-proton-bg w-full overflow-hidden">
         {/* Dynamic Header */}
         <header className="h-14 md:h-16 shrink-0 border-b border-proton-border flex items-center justify-between px-2.5 sm:px-4 md:px-3 lg:px-8 gap-x-2 md:gap-x-2.5 lg:gap-x-6 flex-nowrap z-40 bg-proton-card/90 sticky top-0 backdrop-blur-md overflow-hidden lg:overflow-visible">
           {isMobileSearchOpen ? (

@@ -16,7 +16,6 @@ import {
   Search, 
   Layers, 
   Repeat, 
-  Zap, 
   Plus, 
   ChevronDown, 
   Info,
@@ -28,8 +27,6 @@ import {
   Grid,
   AlertTriangle,
   Flame,
-  Droplets,
-  Smile,
   PenTool,
   Sparkles,
   Loader2,
@@ -122,31 +119,12 @@ export const OrganizerView = ({
   const [taskCategory, setTaskCategory] = useState('');
   const [taskProjectId, setTaskProjectId] = useState<string>('');
 
-  // Daily Vitality and Habits states
+  // Daily Anchor & Scratchpad states
   const [dailyAnchorTaskId, setDailyAnchorTaskId] = useState<string | null>(() => {
     return safeStorage.get('organizer_daily_anchor_task_id') || null;
   });
-  const [waterGlasses, setWaterGlasses] = useState(() => {
-    const val = parseInt(safeStorage.get('organizer_water_glasses') || '0', 10);
-    return isNaN(val) ? 0 : val;
-  });
-  const [mood, setMood] = useState(() => {
-    return safeStorage.get('organizer_daily_mood') || '';
-  });
   const [scratchpad, setScratchpad] = useState(() => {
     return safeStorage.get('organizer_scratchpad') || '';
-  });
-  const [habits, setHabits] = useState<{ id: string, labelEn: string, labelKa: string, completed: boolean }[]>(() => {
-    return safeStorage.getJSON('organizer_habits', [
-      { id: 'meditation', labelEn: 'Meditation & Peace', labelKa: '🧘 მედიტაცია და სიმშვიდე', completed: false },
-      { id: 'reading', labelEn: 'Reading & Growth', labelKa: '📚 კითხვა და განვითარება', completed: false },
-      { id: 'workout', labelEn: 'Workout & Fitness', labelKa: '🏃 ვარჯიში და ფიტნესი', completed: false },
-      { id: 'nutrition', labelEn: 'Healthy Eating', labelKa: '🥗 ჯანსაღი კვება', completed: false }
-    ]);
-  });
-  const [habitStreak, setHabitStreak] = useState(() => {
-    const val = parseInt(safeStorage.get('organizer_habit_streak') || '0', 10);
-    return isNaN(val) ? 0 : val;
   });
 
   // Daily reset check on mount
@@ -154,25 +132,9 @@ export const OrganizerView = ({
     const todayStr = new Date().toDateString();
     const lastActiveDate = localStorage.getItem('organizer_last_active_date');
     if (lastActiveDate !== todayStr) {
-      // It is a new day! Reset daily values.
-      setWaterGlasses(0);
-      setHabits(prev => prev.map(h => ({ ...h, completed: false })));
-      setMood('');
+      // It is a new day! Reset daily anchor.
       setDailyAnchorTaskId(null);
       localStorage.removeItem('organizer_daily_anchor_task_id');
-      
-      if (lastActiveDate) {
-        const lastDate = new Date(lastActiveDate);
-        const todayDate = new Date();
-        lastDate.setHours(0,0,0,0);
-        todayDate.setHours(0,0,0,0);
-        const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays > 1) {
-          // Streak broken
-          setHabitStreak(0);
-          localStorage.setItem('organizer_habit_streak', '0');
-        }
-      }
       localStorage.setItem('organizer_last_active_date', todayStr);
     }
   }, []);
@@ -216,33 +178,8 @@ export const OrganizerView = ({
   }, [tasks, dailyAnchorTaskId]);
 
   useEffect(() => {
-    localStorage.setItem('organizer_water_glasses', String(waterGlasses));
-  }, [waterGlasses]);
-
-  useEffect(() => {
-    localStorage.setItem('organizer_daily_mood', mood);
-  }, [mood]);
-
-  useEffect(() => {
     localStorage.setItem('organizer_scratchpad', scratchpad);
   }, [scratchpad]);
-
-  useEffect(() => {
-    localStorage.setItem('organizer_habits', JSON.stringify(habits));
-    // Check if all habits are completed to increment streak
-    const allCompleted = habits.length > 0 && habits.every(h => h.completed);
-    const lastStreakDate = localStorage.getItem('organizer_last_streak_date');
-    const todayStr = new Date().toDateString();
-    
-    if (allCompleted && lastStreakDate !== todayStr) {
-      localStorage.setItem('organizer_last_streak_date', todayStr);
-      setHabitStreak(prev => {
-        const next = prev + 1;
-        localStorage.setItem('organizer_habit_streak', String(next));
-        return next;
-      });
-    }
-  }, [habits]);
 
   // UI Toggles & Filter states
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
@@ -785,50 +722,7 @@ export const OrganizerView = ({
     setShowAdvancedAdd(false);
   };
 
-  // Pre-configured offline business templates
-  const offlineTemplates = [
-    {
-      titleEn: "Draft Local Marketing Strategy",
-      titleKa: "ლოკალური მარკეტინგის დაგეგმვა",
-      category: "Marketing",
-      priority: "medium",
-      est: 45
-    },
-    {
-      titleEn: "Reconcile Budget & Cash Flow Sheet",
-      titleKa: "ბიუჯეტისა და ხარჯების მონიტორინგი",
-      category: "Finance",
-      priority: "high",
-      est: 60
-    },
-    {
-      titleEn: "Design Social Media Promo Visuals",
-      titleKa: "საინფორმაციო ფლაერის დიზაინი",
-      category: "Design",
-      priority: "low",
-      est: 90
-    },
-    {
-      titleEn: "Setup standard workspace checklists",
-      titleKa: "სამუშაო ინსტრუქციების გაწერა",
-      category: "Operations",
-      priority: "medium",
-      est: 30
-    }
-  ];
 
-  const handleAddOfflineTemplate = (tpl: typeof offlineTemplates[0]) => {
-    onAddTask(
-      language === 'ka' ? tpl.titleKa : tpl.titleEn,
-      tpl.priority as 'low' | 'medium' | 'high',
-      tpl.category,
-      language === 'ka' ? "ინტუიციური, ლოკალური შაბლონით შექმნილი საქმე" : "Quickly spawned local workspace task",
-      undefined,
-      'none',
-      'medium',
-      tpl.est
-    );
-  };
 
   const startEditMode = (task: Task) => {
     setEditingTaskId(task.id);
@@ -1761,22 +1655,16 @@ export const OrganizerView = ({
           </div>
         </div>
 
-        {/* Right Column: Calendar + Templates Pool */}
+        {/* Right Column: Focus & Planning Tools */}
         <div className="space-y-8 min-w-0">
           
-          {/* Daily Vitality & Habits Dashboard */}
+          {/* Workspace Focus Dashboard */}
           <div className={cn("p-4 sm:p-6 rounded-2xl shadow-sm transition-all duration-500 min-w-0", currentTheme.card)}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-black text-lg flex items-center gap-3 uppercase tracking-tighter">
-                <Sparkles size={20} className="text-amber-400" />
-                {language === 'ka' ? 'დღიური ბალანსი' : 'Daily Vitality'}
+                <Target size={20} className="text-proton-accent" />
+                {language === 'ka' ? 'სამუშაო ფოკუსი' : 'Workspace Focus'}
               </h3>
-              {habitStreak > 0 && (
-                <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider animate-bounce">
-                  <Flame size={12} className="fill-current" />
-                  <span>{habitStreak} {language === 'ka' ? 'დღე' : 'Days'}</span>
-                </div>
-              )}
             </div>
 
             <div className="space-y-6">
@@ -1912,137 +1800,7 @@ export const OrganizerView = ({
                 />
               </div>
 
-              {/* Mood Meter */}
-              <div className="space-y-2 min-w-0">
-                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
-                  {language === 'ka' ? 'როგორი განწყობა გაქვს დღეს?' : 'How is your energy/mood today?'}
-                </label>
-                <div className="grid grid-cols-2 min-[420px]:grid-cols-5 lg:grid-cols-2 min-[1280px]:grid-cols-3 min-[1440px]:grid-cols-5 gap-1.5 select-none">
-                  {[
-                    { val: 'superb', emoji: '🤩', labelEn: 'Superb', labelKa: 'საუკეთესო' },
-                    { val: 'focused', emoji: '😎', labelEn: 'Focused', labelKa: 'აქტიური' },
-                    { val: 'calm', emoji: '😌', labelEn: 'Calm', labelKa: 'მშვიდი' },
-                    { val: 'tired', emoji: '🥱', labelEn: 'Tired', labelKa: 'დაღლილი' },
-                    { val: 'stressed', emoji: '😓', labelEn: 'Stressed', labelKa: 'სტრესული' },
-                  ].map((m) => {
-                    const isSelected = mood === m.val;
-                    return (
-                      <button
-                        key={m.val}
-                        type="button"
-                        onClick={() => setMood(mood === m.val ? '' : m.val)}
-                        className={cn(
-                          "py-2 px-1 sm:px-1.5 rounded-xl text-center border transition-all hover:scale-105 flex flex-col items-center justify-center gap-1 min-h-[52px] min-w-0",
-                          "last:col-span-2 min-[420px]:last:col-span-1 lg:last:col-span-2 min-[1280px]:last:col-span-1",
-                          isSelected 
-                            ? "bg-proton-accent/20 border-proton-accent text-proton-text shadow-sm" 
-                            : "border-proton-border/30 opacity-60 hover:opacity-100"
-                        )}
-                        title={language === 'ka' ? m.labelKa : m.labelEn}
-                      >
-                        <span className="text-base leading-none">{m.emoji}</span>
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-tight text-center leading-tight break-words max-w-full">
-                          {language === 'ka' ? m.labelKa : m.labelEn}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
-              {/* Water Hydration */}
-              <div className="space-y-2.5">
-                <div className="flex justify-between items-center select-none">
-                  <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
-                    {language === 'ka' ? 'წყლის ბალანსი' : 'Hydration Tracker'}
-                  </label>
-                  <span className="text-[10px] font-black text-cyan-400">
-                    {waterGlasses} / 8 {language === 'ka' ? 'ჭიქა' : 'Glasses'} ({Math.round(waterGlasses * 250)}ml)
-                  </span>
-                </div>
-                
-                {/* 8 Glass slots */}
-                <div className="flex items-center justify-between bg-proton-secondary/5 border border-proton-border/15 rounded-2xl p-2.5 px-3 gap-1">
-                  <div className="flex items-center gap-1.5 flex-1 justify-center">
-                    {Array.from({ length: 8 }).map((_, i) => {
-                      const glassNum = i + 1;
-                      const active = waterGlasses >= glassNum;
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setWaterGlasses(waterGlasses === glassNum ? glassNum - 1 : glassNum)}
-                          className={cn(
-                            "w-5.5 h-6.5 rounded-lg flex items-end justify-center pb-1 transition-all hover:scale-125 hover:-translate-y-1 relative group overflow-hidden border",
-                            active 
-                              ? "bg-cyan-500/20 border-cyan-400 text-cyan-400" 
-                              : "border-proton-border/30 text-proton-muted opacity-40 hover:opacity-100"
-                          )}
-                        >
-                          <Droplets size={10} className={cn("transition-transform duration-300", active && "scale-110 animate-bounce text-cyan-400")} />
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Plus and Minus Buttons */}
-                  <div className="flex items-center gap-1 ml-2">
-                    <button
-                      type="button"
-                      disabled={waterGlasses === 0}
-                      onClick={() => setWaterGlasses(prev => Math.max(0, prev - 1))}
-                      className="w-5 h-5 rounded-md bg-proton-secondary/20 hover:bg-proton-secondary/40 flex items-center justify-center text-xs font-black select-none transition-all disabled:opacity-30 text-proton-text"
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      disabled={waterGlasses >= 8}
-                      onClick={() => setWaterGlasses(prev => Math.min(8, prev + 1))}
-                      className="w-5 h-5 rounded-md bg-cyan-400 text-black font-black flex items-center justify-center text-xs select-none transition-all hover:scale-105"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Core Habits Checklist */}
-              <div className="space-y-3">
-                <label className={cn("text-[9px] uppercase tracking-[0.1em] block ml-1", currentTheme.label)}>
-                  {language === 'ka' ? 'ყოველდღიური ჯანსაღი ჩვევები' : 'Core Daily Habits'}
-                </label>
-                
-                <div className="space-y-2">
-                  {habits.map((habit) => (
-                    <button
-                      key={habit.id}
-                      type="button"
-                      onClick={() => {
-                        setHabits(prev => prev.map(h => h.id === habit.id ? { ...h, completed: !h.completed } : h));
-                      }}
-                      className={cn(
-                        "w-full flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all hover:bg-proton-secondary/5 group",
-                        habit.completed 
-                          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
-                          : "border-proton-border/20 text-proton-text"
-                      )}
-                    >
-                      <span className="text-xs font-semibold">
-                        {language === 'ka' ? habit.labelKa : habit.labelEn}
-                      </span>
-                      <div className={cn(
-                        "w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all shrink-0",
-                        habit.completed 
-                          ? "bg-emerald-500 border-emerald-500 text-white" 
-                          : "border-proton-border/30 group-hover:border-proton-accent"
-                      )}>
-                        {habit.completed && <Check size={12} strokeWidth={4} />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Minimalist Scratchpad */}
               <div className="space-y-2.5">
@@ -2064,51 +1822,7 @@ export const OrganizerView = ({
             </div>
           </div>
 
-          {/* Quick Task Templates Pool */}
-          <div className={cn("p-5 sm:p-6 rounded-2xl shadow-sm transition-all duration-500 border border-transparent", currentTheme.card)}>
-            <div className="mb-6">
-              <h4 className="font-black text-sm uppercase tracking-wider flex items-center gap-2">
-                <Zap size={16} className="text-amber-500 animate-pulse" />
-                {language === 'ka' ? 'სწრაფი საქმის შაბლონები' : 'Quick Task Templates'}
-              </h4>
-              <p className={cn("text-[9px] font-black uppercase tracking-wider mt-1.5 leading-relaxed", currentTheme.muted)}>
-                {language === 'ka' 
-                  ? 'დაამატეთ წინასწარ მომზადებული საქმის იდეები ინტერნეტთან დაკავშირების გარეშე.' 
-                  : 'Add pre-set task ideas instantly without using internet requests.'}
-              </p>
-            </div>
 
-            <div className="space-y-3">
-              {offlineTemplates.map((tpl, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-center justify-between p-4 bg-proton-secondary/5 rounded-2xl border border-proton-border/20 group hover:border-proton-accent/40 hover:bg-proton-accent/5 transition-all"
-                >
-                  <div className="space-y-1 pr-4 min-w-0">
-                    <p className="text-[11px] font-bold text-proton-text truncate">
-                      {language === 'ka' ? tpl.titleKa : tpl.titleEn}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[8px] font-black uppercase bg-proton-secondary/20 px-1.5 py-0.5 rounded-md text-proton-muted">
-                        {tpl.category}
-                      </span>
-                      <span className="text-[8px] font-bold text-proton-muted">
-                        ⏰ {tpl.est}m
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAddOfflineTemplate(tpl)}
-                    className="p-2 bg-proton-text text-proton-bg hover:scale-110 active:scale-95 transition-all text-[8px] font-black rounded-lg shrink-0"
-                    title={language === 'ka' ? 'საქმის დამატება' : 'Insert Task'}
-                  >
-                    <Plus size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
         </div>
