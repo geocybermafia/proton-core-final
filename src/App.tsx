@@ -43,6 +43,7 @@ import { PullToRefreshIndicator } from './components/PullToRefreshIndicator';
 import { AuthFlow } from './components/AuthFlow';
 import { DashboardView } from './components/DashboardView';
 import { useSystemHealth } from './hooks/useSystemHealth';
+import { useFocusTimer } from './hooks/useFocusTimer';
 import { SystemStatusBadge } from './components/SystemStatusBadge';
 import { DebugPanel } from './components/debug/DebugPanel';
 const OrganizerView = lazyWithRetry(() => import('./components/OrganizerView').then(module => ({ default: module.OrganizerView })), 'OrganizerView');
@@ -5826,10 +5827,19 @@ export default function App() {
     }
   }, [user, updateOrderStatus, tasks, sellerOrders, language, showToast]);
 
+  const focusTimer = useFocusTimer({
+    tasks,
+    onEditTask: handleEditTask,
+    language: userProfile.language
+  });
+
   const handleDeleteTask = useCallback((id: string) => {
+    if (focusTimer.activeTimerTaskId === id) {
+      focusTimer.setActiveTimerTaskId(null);
+    }
     setTasks(prev => prev.filter(t => t.id !== id));
     taskSyncService.queueTaskDelete(user?.uid, id);
-  }, [user]);
+  }, [user, focusTimer]);
 
   const handleAiSuggestTasks = async () => {
     if (!isCreativeMode) return;
@@ -7416,6 +7426,7 @@ export default function App() {
                         onNavigateView={handleViewChange}
                         initialViewMode={organizerInitialViewMode}
                         onConsumeInitialViewMode={() => setOrganizerInitialViewMode(undefined)}
+                        focusTimer={focusTimer}
                       />
                     </Suspense>
                   )}
