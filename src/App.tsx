@@ -7089,7 +7089,7 @@ export default function App() {
                           : activeView === 'personas'
                             ? (language === 'ka' ? 'ასისტენტები' : 'PERSONAS')
                             : activeView === 'organizer'
-                              ? (language === 'ka' ? 'ორგანაიზერი' : 'ORGANIZER')
+                              ? (language === 'ka' ? 'სამუშაო სივრცის ორგანიზატორი' : 'WORKSPACE ORGANIZER')
                               : activeView === 'creative-studio'
                                 ? (language === 'ka' ? 'კრეატივი' : 'CREATIVE STUDIO')
                                 : activeView === 'business-hub'
@@ -7418,7 +7418,7 @@ export default function App() {
                     <Suspense fallback={
                       <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
                         <Loader2 className="animate-spin text-proton-accent" size={24} />
-                        <span className="uppercase tracking-widest">Loading Organizer...</span>
+                        <span className="uppercase tracking-widest">{userProfile.language === 'ka' ? 'სამუშაო სივრცის ორგანიზატორი იტვირთება...' : 'Loading Workspace Organizer...'}</span>
                       </div>
                     }>
                       <OrganizerView 

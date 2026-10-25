@@ -92,10 +92,10 @@ export const COMMAND_ROUTES: CommandRoute[] = [
   },
   {
     id: 'organizer',
-    keywords: ['organizer', 'task', 'tasks', 'todo', 'calendar', 'schedule', 'plan', 'დავალებები', 'ორგანიზატორი', 'კალენდარი', 'გეგმა'],
+    keywords: ['organizer', 'workspace organizer', 'task', 'tasks', 'todo', 'calendar', 'schedule', 'plan', 'დავალებები', 'ორგანიზატორი', 'სამუშაო სივრცის ორგანიზატორი', 'კალენდარი', 'გეგმა'],
     view: 'organizer',
-    titleEn: 'Organizer',
-    titleKa: 'ორგანიზატორი',
+    titleEn: 'Workspace Organizer',
+    titleKa: 'სამუშაო სივრცის ორგანიზატორი',
     descriptionEn: 'Task tracking, interactive calendar, and productivity planning',
     descriptionKa: 'დავალებების მართვა და კალენდარი',
     category: 'core'

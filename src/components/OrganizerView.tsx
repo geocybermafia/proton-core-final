@@ -1053,7 +1053,7 @@ export const OrganizerView = ({
       <div className="flex flex-col xl:flex-row items-center justify-between gap-6 pb-2">
         <div className="text-center xl:text-left">
           <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">
-            {language === 'ka' ? 'საქმეების ორგანიზატორი' : 'Workspace Organizer'}
+            {language === 'ka' ? 'სამუშაო სივრცის ორგანიზატორი' : 'Workspace Organizer'}
           </h2>
           <div className="flex flex-wrap items-center gap-3 mt-1.5">
             <p className={cn("font-medium text-xs md:text-sm uppercase tracking-wider", currentTheme.muted)}>

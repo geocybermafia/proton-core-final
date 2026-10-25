@@ -15,7 +15,7 @@ export const translations = {
       main: "Tools",
       dashboard: "Home",
       agents: "AI Assistants",
-      organizer: "Organizer",
+      organizer: "Workspace Organizer",
       creative: "Extra Tools",
       image: "Art Studio",
       translator: "Translator",
@@ -529,7 +529,7 @@ export const translations = {
       main: "ხელსაწყოები",
       dashboard: "მთავარი",
       agents: "AI ასისტენტები",
-      organizer: "ორგანიზატორი",
+      organizer: "სამუშაო სივრცის ორგანიზატორი",
       creative: "დამატებითი",
       image: "სტუდია",
       translator: "თარჯიმანი",
@@ -597,7 +597,7 @@ export const translations = {
       }
     },
     organizer: {
-      title: "სამუშაო ორგანიზატორი",
+      title: "სამუშაო სივრცის ორგანიზატორი",
       subtitle: "დაგეგმეთ თქვენი დღე მარტივად",
       no_tasks: "აქტიური დავალებები არ მოიძებნა.",
       workspace_theme: "აირჩიეთ ფერი",

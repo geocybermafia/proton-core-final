@@ -65,7 +65,7 @@ export default function BusinessHubView({
     },
     {
       id: 'organizer',
-      title: isKa ? 'ამოცანების მმართველი' : 'Task Organizer',
+      title: isKa ? 'სამუშაო სივრცის ორგანიზატორი' : 'Workspace Organizer',
       desc: isKa 
         ? 'ყოველდღიური დაგეგმარება, პრიორიტეტები, ენერგიის კონტროლი და კალენდარული განრიგი.'
         : 'Coordinate daily tasks, map personal schedules, set priorities, and manage your calendar.',
