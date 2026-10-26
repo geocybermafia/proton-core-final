@@ -1243,7 +1243,7 @@ export const OrganizerView = ({
                 {language === 'ka' ? 'პროგრესის ინდიკატორი' : 'Efficiency Buffer'}
               </p>
               <h4 className="text-base font-black uppercase tracking-tight">
-                {language === 'ka' ? 'სამუშაოს შესრულების ტემპი' : 'Completed Tasks Percent'}
+                {language === 'ka' ? 'შესრულების პროგრესი' : 'Completed Tasks Percent'}
               </h4>
             </div>
             <div className="flex items-center gap-3">
@@ -1277,7 +1277,7 @@ export const OrganizerView = ({
               )}
             >
               <Layers size={14} />
-              {language === 'ka' ? 'სპეციალური განლაგება (Deadlines)' : 'Grouped (Deadlines)'}
+              {language === 'ka' ? 'ვადების მიხედვით დაჯგუფება' : 'Grouped (Deadlines)'}
             </button>
             <button
               onClick={() => setViewLayout('list')}
@@ -2659,7 +2659,7 @@ export const OrganizerView = ({
                   </div>
                 ) : (
                   <p className="text-xs font-semibold text-proton-text bg-proton-secondary/10 p-4 rounded-xl border border-proton-border/20">
-                    {language === 'ka' ? 'დღის ანკორი ჯერ არ არის არჩეული. აირჩიეთ Today ხედიდან.' : 'No daily anchor selected yet. Select a task as your anchor in Today view.'}
+                    {language === 'ka' ? 'დღის ანკორი ჯერ არ არის არჩეული. აირჩიეთ „დღეს“ ხედიდან.' : 'No daily anchor selected yet. Select a task as your anchor in Today view.'}
                   </p>
                 )}
 

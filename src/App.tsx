@@ -2962,12 +2962,12 @@ const ImageView = ({ uiMode, isCreativeMode = true, language, isAdmin, checkAndI
       });
       setLastCreatedListingId(newListing.id);
       showToast(
-        isKa ? 'ნამუშევრის დრაფტი შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
+        isKa ? 'ნამუშევრის მონახაზი შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
         'success'
       );
     } catch (err) {
       console.error("Failed to export artwork to market:", err);
-      showToast(isKa ? 'შეცდომა დრაფტის შექმნისას' : 'Failed to create listing draft', 'error');
+      showToast(isKa ? 'შეცდომა მონახაზის შექმნისას' : 'Failed to create listing draft', 'error');
     } finally {
       setExportingDraft(false);
     }
@@ -3292,7 +3292,7 @@ Return ONLY the enhanced prompt string. Do NOT include markdown blocks, quotes, 
                         onClick={handleExportToMarket}
                         disabled={exportingDraft}
                         className="px-3 py-2.5 rounded-xl bg-purple-600/90 border border-purple-400/30 text-white font-bold text-xs hover:bg-purple-600 transition-all hover:scale-105 shadow-lg backdrop-blur-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                        title={isKa ? 'ექსპორტი მარკეტზე (დრაფტის შექმნა)' : 'Export to Market as Listing Draft'}
+                        title={isKa ? 'ექსპორტი მარკეტზე (მონახაზის შექმნა)' : 'Export to Market as Listing Draft'}
                       >
                         {exportingDraft ? <Loader2 size={14} className="animate-spin" /> : <Store size={14} />}
                         <span className="text-[11px] uppercase tracking-wider">{isKa ? 'ექსპორტი მარკეტზე' : 'Export to Market'}</span>

@@ -650,8 +650,8 @@ Guidelines:
                             ? "bg-blue-500 border-blue-400 text-white animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.5)] scale-105"
                             : "bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20"
                         )}
-                        title="Read translation aloud (Speech Synthesis)"
-                        aria-label="Play audio translation"
+                        title={language === 'ka' ? 'თარგმანის გახმოვანება (ხმოვანი სინთეზი)' : 'Read translation aloud (Speech Synthesis)'}
+                        aria-label={language === 'ka' ? 'აუდიო თარგმანის მოსმენა' : 'Play audio translation'}
                       >
                         <Volume2 size={15} className={cn(isSpeaking && speakingId === messages[0].id && "animate-bounce")} />
                         <span className="text-[10px] font-black uppercase tracking-wider">
@@ -916,8 +916,8 @@ Guidelines:
                             ? "bg-amber-500 border-amber-400 text-black font-bold animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.5)] scale-105"
                             : "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20"
                         )}
-                        title="Read translation aloud (Speech Synthesis)"
-                        aria-label="Play audio translation"
+                        title={language === 'ka' ? 'თარგმანის გახმოვანება (ხმოვანი სინთეზი)' : 'Read translation aloud (Speech Synthesis)'}
+                        aria-label={language === 'ka' ? 'აუდიო თარგმანის მოსმენა' : 'Play audio translation'}
                       >
                         <Volume2 size={15} className={cn(isSpeaking && speakingId === messages[0].id && "animate-bounce")} />
                         <span className="text-[10px] font-black uppercase tracking-wider">
@@ -1130,7 +1130,7 @@ Guidelines:
                                 ? "bg-amber-500 text-black border-amber-400 animate-pulse font-bold"
                                 : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white"
                             )}
-                            title="Read aloud"
+                            title={language === 'ka' ? 'ხმამაღლა წაკითხვა' : 'Read aloud'}
                           >
                             <Volume2 size={16} className={cn(isItemSpeaking && "animate-bounce")} />
                             <span className="text-[10px] uppercase font-mono">

@@ -356,7 +356,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                     : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
               )}
               title={effectiveTimerMode === 'stopwatch'
-                ? (language === 'ka' ? 'წამმზომი (დროის ზრდადი აღრიცხვა)' : 'Stopwatch (Count Up)')
+                ? (language === 'ka' ? 'წამზომი (დროის ზრდადი აღრიცხვა)' : 'Stopwatch (Count Up)')
                 : (language === 'ka' ? 'დააკლიკეთ რეჟიმის შესაცვლელად (ფოკუსი / შესვენება)' : 'Click to toggle Work / Break')}
             >
               {effectiveTimerMode === 'stopwatch' ? (
@@ -403,9 +403,11 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                     type="button"
                     onClick={() => onToggleTimerMode(effectiveTimerMode === 'pomodoro' ? 'stopwatch' : 'pomodoro')}
                     className="ml-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-zinc-800 hover:border-zinc-700 bg-zinc-900/80 text-zinc-400 hover:text-amber-400 transition-all cursor-pointer shrink-0"
-                    title={language === 'ka' ? 'რეჟიმის შეცვლა (პომოდორო / წამმზომი)' : 'Toggle Pomodoro / Stopwatch'}
+                    title={language === 'ka' ? 'რეჟიმის შეცვლა (პომოდორო / წამზომი)' : 'Toggle Pomodoro / Stopwatch'}
                   >
-                    {effectiveTimerMode === 'pomodoro' ? '⏱️ Stopwatch' : '⏳ Pomodoro'}
+                    {effectiveTimerMode === 'pomodoro'
+                      ? (language === 'ka' ? '⏱️ წამზომი' : '⏱️ Stopwatch')
+                      : (language === 'ka' ? '⏳ პომოდორო' : '⏳ Pomodoro')}
                   </button>
                 )}
               </div>
@@ -546,7 +548,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                   type="button"
                   onClick={() => setIsSettingsOpen(false)}
                   className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition-colors cursor-pointer"
-                  title="Close"
+                  title={language === 'ka' ? 'დახურვა' : 'Close'}
                 >
                   <X size={20} />
                 </button>
@@ -763,7 +765,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                 type="button"
                 onClick={handleToggleSound}
                 className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
-                title={effectiveSoundEnabled ? 'Mute Sound' : 'Enable Sound'}
+                title={effectiveSoundEnabled ? (language === 'ka' ? 'ხმის გათიშვა' : 'Mute Sound') : (language === 'ka' ? 'ხმის ჩართვა' : 'Enable Sound')}
               >
                 {effectiveSoundEnabled ? <Volume2 size={16} className="text-amber-400" /> : <VolumeX size={16} />}
               </button>
@@ -772,7 +774,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                 type="button"
                 onClick={() => setIsZenOpen(false)}
                 className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
-                title="Exit Fullscreen"
+                title={language === 'ka' ? 'სრული ეკრანიდან გამოსვლა' : 'Exit Fullscreen'}
               >
                 <X size={18} />
               </button>
@@ -850,7 +852,7 @@ export const FocusTimerWidget: React.FC<FocusTimerWidgetProps> = ({
                 type="button"
                 onClick={handleReset}
                 className="p-4 sm:p-5 rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                title="Reset"
+                title={language === 'ka' ? 'განულება' : 'Reset'}
               >
                 <RotateCcw size={18} />
               </button>

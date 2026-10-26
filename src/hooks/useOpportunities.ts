@@ -138,7 +138,7 @@ export function useOpportunities(language: 'en' | 'ka' = 'en'): Opportunity[] {
               ? 'Creative Studio-ში შექმნილი ახალი სარეკლამო ტექსტი ჯერ Market-ში არ გამოგიყენებია.'
               : 'You created new product copy in Creative Studio, but it has not been used in Market yet.',
             ctaLabel: isKa
-              ? 'დრაფტის გამოქვეყნება'
+              ? 'მონახაზის გამოქვეყნება'
               : 'Publish Draft',
             listingTitle: creativeRecord.title || creativeRecord.hook || (isKa ? 'სარეკლამო კოპი' : 'Ad Copy')
           };

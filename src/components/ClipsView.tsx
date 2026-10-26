@@ -579,7 +579,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     } else {
       navigator.clipboard.writeText(url);
       showToast(
-        language === 'ka' ? 'ბმული დაკოპირდა ბუფერში!' : 'Clip link copied to clipboard!',
+        language === 'ka' ? 'ბმული დაკოპირებულია!' : 'Clip link copied to clipboard!',
         'success'
       );
     }
@@ -1483,7 +1483,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
                 <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
                   <CheckCircle2 size={16} />
                   <span>
-                    {language === 'ka' ? 'შენახული მოქმედება / დრაფტი' : 'Saved Action & Draft Safe'}
+                    {language === 'ka' ? 'შენახული მოქმედება / მონახაზი' : 'Saved Action & Draft Safe'}
                   </span>
                 </div>
                 <p className="text-xs text-white/80 leading-relaxed font-sans">

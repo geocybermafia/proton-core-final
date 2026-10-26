@@ -226,7 +226,7 @@ export const SecurityVerificationModal: React.FC<SecurityVerificationModalProps>
               <Lock size={16} className="text-proton-accent shrink-0" />
               <div>
                 <span className="text-[10px] font-black text-proton-accent uppercase tracking-widest block">
-                  {actionTitle || (language === 'ka' ? 'სენსიტიური ოპერაცია' : 'Sensitive Operation')}
+                  {actionTitle || (language === 'ka' ? 'მნიშვნელოვანი მოქმედება' : 'Sensitive Operation')}
                 </span>
                 <span className="text-[10px] text-proton-muted font-semibold block mt-0.5">
                   {language === 'ka' ? 'გააგრძელეთ იდენტობის დადასტურება' : 'Proceed with identity confirmation'}

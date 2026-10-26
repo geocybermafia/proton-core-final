@@ -866,8 +866,8 @@ ${
              <div className="flex gap-2 items-center">
                 {showConfirmClear ? (
                   <div className="flex items-center gap-1.5 bg-red-950/70 border border-red-500/50 px-2 py-1 rounded-xl h-9 animate-in fade-in zoom-in-95 duration-200">
-                    <span className="text-[10px] font-mono font-bold uppercase text-red-300 tracking-wider">
-                      {language === 'ka' ? 'წავშალო?' : 'Clear?'}
+                    <span className="text-[10px] font-mono font-bold uppercase text-red-300 tracking-wider whitespace-nowrap">
+                      {language === 'ka' ? 'გსურთ ჩატის ისტორიის გასუფთავება?' : 'Clear chat history?'}
                     </span>
                     <button
                       onClick={handleClearChat}
@@ -1446,7 +1446,9 @@ ${
         description={
           decomTarget ? (
             <span className="text-rose-400 font-mono font-bold">
-              Permanent deletion: {language === 'ka' ? decomTarget.nameGe : decomTarget.name}
+              {language === 'ka' 
+                ? `სამუდამო წაშლა: ${decomTarget.nameGe || decomTarget.name}` 
+                : `Permanent deletion: ${decomTarget.name}`}
             </span>
           ) : undefined
         }

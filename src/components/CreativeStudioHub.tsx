@@ -267,12 +267,12 @@ export const CopywritingView: React.FC<{
       }
 
       showToast(
-        isKa ? 'დრაფტი წარმატებით შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
+        isKa ? 'მონახაზი წარმატებით შეიქმნა მარკეტის მართვის ცენტრში!' : 'Draft listing created in Seller Control Center',
         'success'
       );
     } catch (err) {
       console.error("Failed to export listing draft:", err);
-      showToast(isKa ? 'შეცდომა დრაფტის შექმნისას' : 'Failed to create listing draft', 'error');
+      showToast(isKa ? 'შეცდომა მონახაზის შექმნისას' : 'Failed to create listing draft', 'error');
     } finally {
       setExportingDraft(false);
     }
@@ -562,7 +562,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                       onClick={handleExportToMarket}
                       disabled={exportingDraft}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-300 font-bold text-xs hover:bg-purple-500 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                      title={isKa ? 'ექსპორტი მარკეტზე (დრაფტის შექმნა)' : 'Export to Market as Listing Draft'}
+                      title={isKa ? 'ექსპორტი მარკეტზე (მონახაზის შექმნა)' : 'Export to Market as Listing Draft'}
                     >
                       {exportingDraft ? <Loader2 size={13} className="animate-spin" /> : <Store size={13} />}
                       <span>{isKa ? 'ექსპორტი მარკეტზე' : 'Export to Market'}</span>
@@ -574,7 +574,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                           if (setActiveView) setActiveView('market-hub');
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs hover:bg-emerald-500 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer animate-in fade-in slide-in-from-right-2"
-                        title={isKa ? 'გადავლა მარკეტის მართვის ცენტრში' : 'View in Market Control Center'}
+                        title={isKa ? 'გადასვლა მარკეტის მართვის ცენტრში' : 'View in Market Control Center'}
                       >
                         <ShoppingBag size={13} />
                         <span>{isKa ? 'ნახვა მარკეტზე →' : 'View in Market →'}</span>

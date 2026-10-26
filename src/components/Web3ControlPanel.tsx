@@ -64,9 +64,9 @@ const translations = {
     statusStandalone: "სტატუსი: მოლოდინი",
     requiresValidation: "დასაწყებად დაუკავშირეთ თქვენი Web3 საფულე, რათა ჩატვირთოთ აქტიური ბალანსის მონაცემები და მოახდინოთ ტრანზაქციების ისტორიის სინქრონიზაცია.",
     initHandshake: "საფულის დაკავშირება",
-    evmBadge: "ციფრული საფულე",
+    evmBadge: "EVM-თავსებადი",
     shieldBadge: "დაცული კავშირი",
-    activeLedgerBadge: "ციფრული საფულე",
+    activeLedgerBadge: "აქტიური ჟურნალი",
     
     features: {
       f1_title: "EVM ინტეგრაცია",
