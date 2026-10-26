@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, X, Star, Trash2, Loader2 } from 'lucide-react';
+import { ShieldCheck, X, Star, Trash2, Loader2, Info, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { MarketTheme } from './MarketConstants';
 
@@ -11,12 +11,22 @@ export interface VendorReviewItem {
   buyerName: string;
   rating: number;
   text: string;
+  orderId?: string;
+  listingId?: string;
   createdAt?: { seconds?: number };
 }
 
 export interface SelectedVendorInfo {
   id: string;
   name: string;
+}
+
+export interface VendorReviewOrderOption {
+  id: string;
+  itemTitle: string;
+  amount: number;
+  currency: string;
+  createdAt?: any;
 }
 
 export interface VendorReviewsModalProps {
@@ -30,6 +40,11 @@ export interface VendorReviewsModalProps {
   selectedVendorRatingBreakdown: { counts: Record<number, number>; total: number };
   selectedVendorReviews: VendorReviewItem[];
   vendorBuyerOrderKeys: Set<string>;
+  eligibleCompletedOrders?: VendorReviewOrderOption[];
+  unreviewedCompletedOrders?: VendorReviewOrderOption[];
+  hasPendingOrInTransitOrder?: boolean;
+  selectedOrderId?: string;
+  onSelectOrderId?: (orderId: string) => void;
   onDeleteReview: (reviewId: string) => void;
   reviewRating: number;
   onChangeReviewRating: (rating: number) => void;
@@ -50,6 +65,11 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
   selectedVendorRatingBreakdown,
   selectedVendorReviews,
   vendorBuyerOrderKeys,
+  eligibleCompletedOrders = [],
+  unreviewedCompletedOrders = [],
+  hasPendingOrInTransitOrder = false,
+  selectedOrderId,
+  onSelectOrderId,
   onDeleteReview,
   reviewRating,
   onChangeReviewRating,
@@ -172,7 +192,7 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
                   ) : (
                     selectedVendorReviews.map((rev) => {
                       const isOwnReview = user?.uid === rev.buyerId;
-                      const hasOrder = vendorBuyerOrderKeys.has(rev.buyerId);
+                      const hasOrder = Boolean(rev.orderId) || vendorBuyerOrderKeys.has(rev.buyerId);
                       
                       return (
                         <div key={rev.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-2">
@@ -226,9 +246,98 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
                 </div>
               </div>
 
-              {/* Write Review Form */}
-              {user?.uid !== selectedVendor.id ? (
+              {/* Review Gating & Verification Section */}
+              {user?.uid === selectedVendor.id ? (
+                <div className="border-t border-white/5 pt-4 text-center text-[10px] text-white/35 font-bold uppercase tracking-widest">
+                  {language === 'ka' ? 'თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება.' : 'You cannot submit a review for yourself.'}
+                </div>
+              ) : !user ? (
+                <div className="border-t border-white/5 pt-4 text-center text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                  {language === 'ka' ? 'შეფასების დასაწერად გთხოვთ გაიაროთ ავტორიზაცია.' : 'Please sign in to write a review.'}
+                </div>
+              ) : eligibleCompletedOrders.length === 0 ? (
+                <div className="border-t border-white/5 pt-5">
+                  {hasPendingOrInTransitOrder ? (
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                      <Clock size={18} className="shrink-0 mt-0.5" />
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold uppercase tracking-wider">
+                          {language === 'ka' ? 'შეკვეთა მიმდინარეობს' : 'Order In Progress'}
+                        </h5>
+                        <p className="text-[11px] opacity-90 leading-relaxed font-medium">
+                          {language === 'ka' 
+                            ? 'თქვენი შეკვეთა დამუშავების ან მიწოდების პროცესშია. გამყიდველის შეფასებას შეძლებთ შეკვეთის დასრულების (ჩაბარების) შემდეგ.' 
+                            : 'Your order is currently being processed or shipped. You can review this seller once the order is completed.'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-3 p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-white/80">
+                      <ShieldCheck size={18} className="shrink-0 mt-0.5 text-[#2e5bff]" />
+                      <div className="space-y-1">
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-white">
+                          {language === 'ka' ? 'ვერიფიცირებული შეფასებები' : 'Verified Reviews Only'}
+                        </h5>
+                        <p className="text-[11px] opacity-80 leading-relaxed font-medium">
+                          {language === 'ka' 
+                            ? 'შეფასების დაწერა შეუძლიათ მხოლოდ იმ მყიდველებს, რომელთაც აქვთ დასრულებული შეკვეთა ამ გამყიდველთან. ეს იცავს სისტემას ყალბი შეფასებებისგან.' 
+                            : 'Only buyers who have completed a verified order with this vendor can leave a review. This protects our marketplace from unverified reviews.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : unreviewedCompletedOrders.length === 0 ? (
+                <div className="border-t border-white/5 pt-5">
+                  <div className="flex items-start gap-3 p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-300">
+                    <CheckCircle size={18} className="shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h5 className="text-xs font-bold uppercase tracking-wider">
+                        {language === 'ka' ? 'ყველა შეკვეთა შეფასებულია' : 'All Orders Reviewed'}
+                      </h5>
+                      <p className="text-[11px] opacity-90 leading-relaxed font-medium">
+                        {language === 'ka' 
+                          ? 'თქვენ უკვე შეაფასეთ ყველა დასრულებული შეკვეთა ამ გამყიდველთან. მადლობა გამოხმაურებისთვის!' 
+                          : 'You have already reviewed all completed orders for this vendor. Thank you for your feedback!'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <form onSubmit={onSubmitReview} className="border-t border-white/5 pt-6 space-y-4">
+                  {/* Order Selector (if multiple unreviewed completed orders) */}
+                  {unreviewedCompletedOrders.length > 1 ? (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-white/70">
+                        {language === 'ka' ? 'აირჩიეთ შეკვეთა შესაფასებლად:' : 'Select order to review:'}
+                      </label>
+                      <select
+                        value={selectedOrderId || unreviewedCompletedOrders[0].id}
+                        onChange={(e) => onSelectOrderId?.(e.target.value)}
+                        className={cn(
+                          "w-full px-4 py-2.5 rounded-xl border text-xs font-semibold text-white focus:outline-none",
+                          currentTheme.input
+                        )}
+                      >
+                        {unreviewedCompletedOrders.map((ord) => (
+                          <option key={ord.id} value={ord.id} className="bg-zinc-900 text-white">
+                            {ord.itemTitle} — {ord.currency} {ord.amount}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-xs">
+                      <span className="text-[10px] font-bold text-white/80 uppercase tracking-wider truncate mr-2">
+                        {language === 'ka' ? 'შეკვეთა:' : 'Order:'} {unreviewedCompletedOrders[0].itemTitle}
+                      </span>
+                      <span className="text-[9px] font-mono text-green-400 font-bold flex items-center gap-1 shrink-0">
+                        <ShieldCheck size={12} />
+                        {language === 'ka' ? 'ვერიფიცირებული' : 'Verified'}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-black uppercase tracking-widest text-[#2e5bff]">
                       {language === 'ka' ? 'შეაფასეთ გამყიდველი' : 'Write a Review'}
@@ -261,12 +370,16 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
                       onChange={(e) => onChangeReviewText(e.target.value)}
                       placeholder={language === 'ka' ? 'გაგვიზიარეთ თქვენი გამოცდილება ამ გამყიდველთან...' : 'Tell others about your experience trading with this vendor...'}
                       rows={3}
+                      maxLength={2000}
                       className={cn(
                         "w-full px-5 py-4 rounded-2xl border text-xs font-medium text-white focus:outline-none placeholder-white/20 bg-white/5 focus:border-[#2e5bff]/40",
                         currentTheme.input
                       )}
                       required
                     />
+                    <div className="text-[9px] font-mono text-white/30 text-right mt-1">
+                      {reviewText.length}/2000
+                    </div>
                   </div>
 
                   <button
@@ -289,10 +402,6 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
                     )}
                   </button>
                 </form>
-              ) : (
-                <div className="border-t border-white/5 pt-4 text-center text-[10px] text-white/35 font-bold uppercase tracking-widest">
-                  {language === 'ka' ? 'თქვენ არ შეგიძლიათ საკუთარი თავის შეფასება.' : 'You cannot submit a review for yourself.'}
-                </div>
               )}
             </div>
           </motion.div>

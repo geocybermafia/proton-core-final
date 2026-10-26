@@ -1074,9 +1074,45 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return { counts, total: selectedVendorReviews.length };
   }, [selectedVendor, selectedVendorReviews]);
 
+  const [selectedReviewOrderId, setSelectedReviewOrderId] = useState<string>('');
+
+  const eligibleCompletedOrders = useMemo(() => {
+    if (!user || !selectedVendor) return [];
+    return buyerOrders.filter(o => o.sellerId === selectedVendor.id && o.status === 'completed');
+  }, [user, selectedVendor, buyerOrders]);
+
+  const hasPendingOrInTransitOrder = useMemo(() => {
+    if (!user || !selectedVendor) return false;
+    return buyerOrders.some(o => 
+      o.sellerId === selectedVendor.id && 
+      ['pending', 'processing', 'shipped', 'booked', 'in_progress'].includes(o.status)
+    );
+  }, [user, selectedVendor, buyerOrders]);
+
+  const unreviewedCompletedOrders = useMemo(() => {
+    if (!user || !selectedVendor) return [];
+    const reviewedOrderIds = new Set(
+      reviews
+        .filter(r => r.buyerId === user.uid && r.sellerId === selectedVendor.id)
+        .map(r => r.orderId || (r.id.startsWith('rev_') ? r.id.replace('rev_', '') : ''))
+        .filter(Boolean)
+    );
+    return eligibleCompletedOrders.filter(o => !reviewedOrderIds.has(o.id) && !reviews.some(r => r.id === `rev_${o.id}`));
+  }, [user, selectedVendor, eligibleCompletedOrders, reviews]);
+
+  useEffect(() => {
+    if (unreviewedCompletedOrders.length > 0) {
+      if (!selectedReviewOrderId || !unreviewedCompletedOrders.some(o => o.id === selectedReviewOrderId)) {
+        setSelectedReviewOrderId(unreviewedCompletedOrders[0].id);
+      }
+    } else {
+      setSelectedReviewOrderId('');
+    }
+  }, [unreviewedCompletedOrders, selectedReviewOrderId]);
+
   const vendorBuyerOrderKeys = useMemo(() => {
     if (!selectedVendor) return new Set<string>();
-    return new Set(orders.filter(o => o.sellerId === selectedVendor.id).map(o => o.buyerId));
+    return new Set(orders.filter(o => o.sellerId === selectedVendor.id && o.status === 'completed').map(o => o.buyerId));
   }, [orders, selectedVendor]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
@@ -1094,31 +1130,54 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       showToast(language === 'ka' ? "გთხოვთ აირჩიოთ რეიტინგი 1-დან 5-მდე." : "Please select a rating between 1 and 5.", 'warning');
       return;
     }
-    if (!reviewText.trim()) {
+    const cleanText = reviewText.trim();
+    if (!cleanText) {
       showToast(language === 'ka' ? "გთხოვთ დაწეროთ შეფასების ტექსტი." : "Please write a review comment.", 'warning');
+      return;
+    }
+    if (cleanText.length > 2000) {
+      showToast(language === 'ka' ? "შეფასების ტექსტი არ უნდა აღემატებოდეს 2000 სიმბოლოს." : "Review comment must not exceed 2,000 characters.", 'warning');
+      return;
+    }
+
+    const targetOrder = eligibleCompletedOrders.find(o => o.id === selectedReviewOrderId) || unreviewedCompletedOrders[0];
+    if (!targetOrder) {
+      showToast(
+        language === 'ka' 
+          ? "შეფასების დასაწერად აუცილებელია დასრულებული შეკვეთის არსებობა." 
+          : "A completed order with this vendor is required to submit a review.", 
+        'warning'
+      );
       return;
     }
 
     setIsSubmittingReview(true);
     try {
-      const docId = `rev_${user.uid}_${selectedVendor.id}`;
+      const docId = `rev_${targetOrder.id}`;
       const reviewDocRef = doc(db, 'seller_reviews', docId);
       
       await setDoc(reviewDocRef, {
+        orderId: targetOrder.id,
+        listingId: targetOrder.listingId || '',
         buyerId: user.uid,
         buyerName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
         sellerId: selectedVendor.id,
         rating: reviewRating,
-        text: reviewText.trim(),
+        text: cleanText,
         createdAt: serverTimestamp()
       });
       
       setReviewText('');
       setReviewRating(5);
       showToast(language === 'ka' ? "შეფასება წარმატებით დაემატა!" : "Review added successfully!", 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error creating review:", err);
-      showToast(language === 'ka' ? "შეფასების დამატება ვერ მოხერხდა." : "Could not add your review.", 'error');
+      showToast(
+        language === 'ka' 
+          ? `შეფასების დამატება ვერ მოხერხდა: ${err?.message || ''}` 
+          : `Could not add your review: ${err?.message || ''}`, 
+        'error'
+      );
     } finally {
       setIsSubmittingReview(false);
     }
@@ -4940,6 +4999,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         selectedVendorRatingBreakdown={selectedVendorRatingBreakdown}
         selectedVendorReviews={selectedVendorReviews}
         vendorBuyerOrderKeys={vendorBuyerOrderKeys}
+        eligibleCompletedOrders={eligibleCompletedOrders}
+        unreviewedCompletedOrders={unreviewedCompletedOrders}
+        hasPendingOrInTransitOrder={hasPendingOrInTransitOrder}
+        selectedOrderId={selectedReviewOrderId}
+        onSelectOrderId={setSelectedReviewOrderId}
         onDeleteReview={handleDeleteReview}
         reviewRating={reviewRating}
         onChangeReviewRating={setReviewRating}

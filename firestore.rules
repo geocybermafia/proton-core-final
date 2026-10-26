@@ -326,23 +326,44 @@ service cloud.firestore {
     // ======================================================
     // 5. SELLER REVIEWS & RATINGS
     // ======================================================
+    function isValidReview(data) {
+      return data.keys().hasAll(['orderId', 'buyerId', 'sellerId', 'rating', 'text', 'createdAt'])
+        && data.keys().size() >= 6 && data.keys().size() <= 10
+        && data.orderId is string && isValidId(data.orderId)
+        && data.buyerId is string && isValidId(data.buyerId)
+        && data.sellerId is string && isValidId(data.sellerId)
+        && data.buyerId == request.auth.uid
+        && data.sellerId != request.auth.uid
+        && data.rating is number && data.rating >= 1 && data.rating <= 5
+        && data.text is string && data.text.size() <= 2000
+        && (!('listingId' in data) || (data.listingId is string && isValidId(data.listingId)))
+        && (!('buyerName' in data) || (data.buyerName is string && data.buyerName.size() <= 100));
+    }
+
     match /seller_reviews/{reviewId} {
       allow read: if true;
       allow create: if isVerified() && isValidId(reviewId) 
-        && incoming().buyerId == request.auth.uid 
-        && incoming().sellerId != request.auth.uid 
-        && incoming().rating is number 
-        && incoming().rating >= 1 && incoming().rating <= 5 
-        && incoming().text is string && incoming().text.size() <= 2000
-        && incoming().createdAt == request.time;
+        && reviewId == 'rev_' + incoming().orderId
+        && isValidReview(incoming())
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/orders/$(incoming().orderId))
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.buyerId == request.auth.uid
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.sellerId == incoming().sellerId
+        && get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.status == 'completed'
+        && (!('listingId' in incoming()) || incoming().listingId == get(/databases/$(database)/documents/orders/$(incoming().orderId)).data.listingId);
+
       allow update: if isVerified() && isValidId(reviewId) 
         && existing().buyerId == request.auth.uid 
-        && incoming().buyerId == request.auth.uid 
+        && incoming().buyerId == existing().buyerId 
         && incoming().sellerId == existing().sellerId 
+        && (!('orderId' in existing()) || incoming().orderId == existing().orderId)
+        && (!('listingId' in existing()) || incoming().listingId == existing().listingId)
+        && incoming().createdAt == existing().createdAt
         && incoming().rating is number 
         && incoming().rating >= 1 && incoming().rating <= 5 
         && incoming().text is string && incoming().text.size() <= 2000
-        && incoming().createdAt == existing().createdAt;
+        && (!('buyerName' in incoming()) || (incoming().buyerName is string && incoming().buyerName.size() <= 100));
+
       allow delete: if isVerified() && isValidId(reviewId) 
         && existing().buyerId == request.auth.uid;
     }

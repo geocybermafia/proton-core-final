@@ -152,10 +152,12 @@
     },
     "seller_reviews": {
       "title": "Seller Review",
-      "description": "Ratings and reviews left by buyers for sellers",
+      "description": "Ratings and reviews left by buyers for sellers with verified completed orders",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "listingId": { "type": "string" },
         "sellerId": { "type": "string" },
         "buyerId": { "type": "string" },
         "buyerName": { "type": "string" },
@@ -163,7 +165,7 @@
         "text": { "type": "string" },
         "createdAt": { "type": "number" }
       },
-      "required": ["sellerId", "buyerId", "rating", "text"]
+      "required": ["orderId", "sellerId", "buyerId", "rating", "text"]
     },
     "SharedSpec": {
       "title": "Shared Spec",
