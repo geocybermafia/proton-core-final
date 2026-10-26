@@ -46,6 +46,21 @@ service cloud.firestore {
       return (key in data && data[key] is number) ? data[key] : defVal;
     }
 
+    // Authoritative listing type helpers
+    function isServiceOrProjectListing(data) {
+      return getStr(data, 'listingType', '') in ['service', 'project']
+        || getStr(data, 'category', '') in ['service', 'project'];
+    }
+
+    function isDigitalListing(data) {
+      return getStr(data, 'listingType', '') == 'digital'
+        || getStr(data, 'category', '') == 'digital';
+    }
+
+    function isPhysicalListing(data) {
+      return !isServiceOrProjectListing(data) && !isDigitalListing(data);
+    }
+
     // ======================================================
     // ZERO-TRUST SECURITY GUARDS
     // ======================================================
@@ -267,7 +282,30 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
         && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'active'
         && incoming().amount == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price
-        && incoming().sellerId == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId;
+        && incoming().sellerId == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId
+        && (
+          // 1. Service or Project listings MUST start as 'booked' (cannot be 'pending' or 'completed')
+          (
+            isServiceOrProjectListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
+            && incoming().status == 'booked'
+          )
+          ||
+          // 2. Physical product listings MUST start as 'pending' (cannot be 'booked' or 'completed')
+          (
+            isPhysicalListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
+            && incoming().status == 'pending'
+          )
+          ||
+          // 3. Digital product listings can start as 'completed' ONLY IF explicitly digital
+          // AND the listing is atomically transitioned to 'sold' referencing this activeOrderId
+          (
+            isDigitalListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
+            && incoming().status == 'completed'
+            && existsAfter(/databases/$(database)/documents/listings/$(incoming().listingId))
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'sold'
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == orderId
+          )
+        );
         
       allow update: if isVerified() && (existing().buyerId == request.auth.uid || existing().sellerId == request.auth.uid)
         && incoming().buyerId == existing().buyerId

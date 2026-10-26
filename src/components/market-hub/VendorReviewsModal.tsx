@@ -45,6 +45,9 @@ export interface VendorReviewsModalProps {
   hasPendingOrInTransitOrder?: boolean;
   selectedOrderId?: string;
   onSelectOrderId?: (orderId: string) => void;
+  isCheckingEligibility?: boolean;
+  eligibilityError?: string | null;
+  onRetryEligibility?: () => void;
   onDeleteReview: (reviewId: string) => void;
   reviewRating: number;
   onChangeReviewRating: (rating: number) => void;
@@ -70,6 +73,9 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
   hasPendingOrInTransitOrder = false,
   selectedOrderId,
   onSelectOrderId,
+  isCheckingEligibility = false,
+  eligibilityError = null,
+  onRetryEligibility,
   onDeleteReview,
   reviewRating,
   onChangeReviewRating,
@@ -286,6 +292,38 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
                       </div>
                     </div>
                   )}
+                </div>
+              ) : isCheckingEligibility ? (
+                <div className="border-t border-white/5 pt-5 text-center p-6 rounded-2xl bg-white/[0.02] border border-white/5">
+                  <Loader2 size={18} className="animate-spin text-[#2e5bff] mx-auto mb-2" />
+                  <p className="text-[11px] text-white/60 font-medium">
+                    {language === 'ka' ? 'მოწმდება შეფასების სტატუსი...' : 'Verifying review eligibility...'}
+                  </p>
+                </div>
+              ) : eligibilityError ? (
+                <div className="border-t border-white/5 pt-5">
+                  <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-300 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Info size={16} className="shrink-0 text-red-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-red-200">
+                        {language === 'ka' ? 'შეცდომა სტატუსის შემოწმებისას' : 'Status Check Failed'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] opacity-90 leading-relaxed font-medium">
+                      {language === 'ka' 
+                        ? 'შეფასების სტატუსის გადამოწმება ვერ მოხერხდა. გთხოვთ შეამოწმოთ ინტერნეტთან კავშირი და სცადოთ თავიდან.' 
+                        : 'Could not verify review eligibility. Please check your network connection and try again.'}
+                    </p>
+                    {onRetryEligibility && (
+                      <button
+                        type="button"
+                        onClick={onRetryEligibility}
+                        className="px-3.5 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-white text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        {language === 'ka' ? 'თავიდან ცდა' : 'Retry'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : unreviewedCompletedOrders.length === 0 ? (
                 <div className="border-t border-white/5 pt-5">

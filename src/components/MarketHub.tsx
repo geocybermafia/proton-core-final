@@ -1057,10 +1057,35 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     return map;
   }, [reviews]);
 
+  const [vendorReviews, setVendorReviews] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!selectedVendor) {
+      setVendorReviews([]);
+      return;
+    }
+    const qVendorReviews = query(
+      collection(db, 'seller_reviews'),
+      where('sellerId', '==', selectedVendor.id),
+      limit(50)
+    );
+    const unsubscribe = onSnapshot(qVendorReviews, (snapshot) => {
+      const list = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      setVendorReviews(list);
+    }, (err) => {
+      console.warn("Firestore vendor reviews fallback:", err);
+    });
+    return () => unsubscribe();
+  }, [selectedVendor?.id]);
+
   const selectedVendorReviews = useMemo(() => {
     if (!selectedVendor) return [];
+    if (vendorReviews.length > 0) return vendorReviews;
     return reviews.filter(r => r.sellerId === selectedVendor.id);
-  }, [selectedVendor, reviews]);
+  }, [selectedVendor, vendorReviews, reviews]);
 
   const selectedVendorRatingBreakdown = useMemo(() => {
     const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
@@ -1075,6 +1100,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }, [selectedVendor, selectedVendorReviews]);
 
   const [selectedReviewOrderId, setSelectedReviewOrderId] = useState<string>('');
+  const [reviewedOrderIds, setReviewedOrderIds] = useState<Set<string>>(new Set());
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState<boolean>(false);
+  const [eligibilityError, setEligibilityError] = useState<string | null>(null);
+  const [eligibilityRetryCount, setEligibilityRetryCount] = useState<number>(0);
 
   const eligibleCompletedOrders = useMemo(() => {
     if (!user || !selectedVendor) return [];
@@ -1089,16 +1118,58 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     );
   }, [user, selectedVendor, buyerOrders]);
 
+  // Direct deterministic point-lookup for each eligible completed order (independent of global 20-review limit)
+  useEffect(() => {
+    let active = true;
+    if (!user || !selectedVendor || eligibleCompletedOrders.length === 0) {
+      setReviewedOrderIds(new Set());
+      setIsCheckingEligibility(false);
+      setEligibilityError(null);
+      return;
+    }
+
+    const verifyReviewStatuses = async () => {
+      setIsCheckingEligibility(true);
+      setEligibilityError(null);
+      try {
+        const results = await Promise.all(
+          eligibleCompletedOrders.map(async (order) => {
+            const docRef = doc(db, 'seller_reviews', `rev_${order.id}`);
+            const snap = await getDoc(docRef);
+            return { orderId: order.id, exists: snap.exists() };
+          })
+        );
+        if (!active) return;
+        const setOfReviewed = new Set<string>();
+        for (const res of results) {
+          if (res.exists) {
+            setOfReviewed.add(res.orderId);
+          }
+        }
+        setReviewedOrderIds(setOfReviewed);
+      } catch (err: any) {
+        if (!active) return;
+        console.warn("[MarketHub] Direct review eligibility lookup failed:", err);
+        // Honestly set error state; never treat a failure as unreviewed
+        setEligibilityError(err?.message || "Failed to check review status");
+      } finally {
+        if (active) {
+          setIsCheckingEligibility(false);
+        }
+      }
+    };
+
+    verifyReviewStatuses();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.uid, selectedVendor?.id, eligibleCompletedOrders, eligibilityRetryCount]);
+
   const unreviewedCompletedOrders = useMemo(() => {
-    if (!user || !selectedVendor) return [];
-    const reviewedOrderIds = new Set(
-      reviews
-        .filter(r => r.buyerId === user.uid && r.sellerId === selectedVendor.id)
-        .map(r => r.orderId || (r.id.startsWith('rev_') ? r.id.replace('rev_', '') : ''))
-        .filter(Boolean)
-    );
-    return eligibleCompletedOrders.filter(o => !reviewedOrderIds.has(o.id) && !reviews.some(r => r.id === `rev_${o.id}`));
-  }, [user, selectedVendor, eligibleCompletedOrders, reviews]);
+    if (!user || !selectedVendor || isCheckingEligibility || eligibilityError) return [];
+    return eligibleCompletedOrders.filter(o => !reviewedOrderIds.has(o.id));
+  }, [user, selectedVendor, eligibleCompletedOrders, reviewedOrderIds, isCheckingEligibility, eligibilityError]);
 
   useEffect(() => {
     if (unreviewedCompletedOrders.length > 0) {
@@ -1155,6 +1226,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     try {
       const docId = `rev_${targetOrder.id}`;
       const reviewDocRef = doc(db, 'seller_reviews', docId);
+
+      // Pre-check for duplicate review
+      const existingDocSnap = await getDoc(reviewDocRef);
+      if (existingDocSnap.exists()) {
+        showToast(
+          language === 'ka' 
+            ? "ამ შეკვეთაზე შეფასება უკვე არსებობს. განმეორებითი შეფასება შეუძლებელია." 
+            : "A review already exists for this order. Duplicate reviews are not allowed.", 
+          'warning'
+        );
+        setReviewedOrderIds(prev => new Set([...prev, targetOrder.id]));
+        setIsSubmittingReview(false);
+        return;
+      }
       
       await setDoc(reviewDocRef, {
         orderId: targetOrder.id,
@@ -1167,6 +1252,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         createdAt: serverTimestamp()
       });
       
+      setReviewedOrderIds(prev => new Set([...prev, targetOrder.id]));
       setReviewText('');
       setReviewRating(5);
       showToast(language === 'ka' ? "შეფასება წარმატებით დაემატა!" : "Review added successfully!", 'success');
@@ -5011,6 +5097,9 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         onChangeReviewText={setReviewText}
         onSubmitReview={handleSubmitReview}
         isSubmittingReview={isSubmittingReview}
+        isCheckingEligibility={isCheckingEligibility}
+        eligibilityError={eligibilityError}
+        onRetryEligibility={() => setEligibilityRetryCount(c => c + 1)}
       />
 
       {/* Safe Order Cancellation Confirmation Modal */}
