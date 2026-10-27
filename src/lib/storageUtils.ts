@@ -759,6 +759,56 @@ export function extractAndValidateListingPath(
 }
 
 /**
+ * Validates whether an image URL is safe to be stored in a marketplace listing.
+ * Safe images are:
+ * 1. Legitimate Firebase Storage images owned by the user under listings/${userId}/ -> isAllowed: true
+ * 2. External web images (Unsplash, external CDNs) -> isAllowed: true
+ *
+ * Prohibited images:
+ * - Images in Firebase Storage belonging to other users -> isAllowed: false (ownership_mismatch)
+ * - Images in Firebase Storage in other internal directories (avatars/, clips/) -> isAllowed: false (not_a_listing_path)
+ * - Path traversal attempts -> isAllowed: false (path_traversal_or_malformed)
+ * - Unrecognized/spoofed storage buckets -> isAllowed: false (unrecognized_storage_bucket)
+ */
+export function validateListingImageUrl(
+  urlOrPath: string,
+  currentUserId: string,
+  configuredBuckets?: string[]
+): { isAllowed: boolean; reason?: string } {
+  if (!urlOrPath || typeof urlOrPath !== 'string') {
+    return { isAllowed: false, reason: 'empty_or_invalid_url' };
+  }
+
+  const trimmed = urlOrPath.trim();
+  if (!trimmed) {
+    return { isAllowed: false, reason: 'empty_url' };
+  }
+
+  // Data URIs are not final URLs; they must be uploaded to Storage first
+  if (trimmed.startsWith('data:')) {
+    return { isAllowed: false, reason: 'unprocessed_data_uri' };
+  }
+
+  const check = extractAndValidateListingPath(trimmed, currentUserId, configuredBuckets);
+
+  // 1. If it's the user's own listing image in Firebase Storage -> ALLOWED
+  if (check.isValidListingPath) {
+    return { isAllowed: true };
+  }
+
+  // 2. If it's an external web host (e.g. Unsplash, external CDN) -> ALLOWED
+  if (check.reason === 'external_host') {
+    return { isAllowed: true, reason: 'external_host' };
+  }
+
+  // 3. Any other reason means it targeted our storage bucket or internal paths illegally -> PROHIBITED
+  return {
+    isAllowed: false,
+    reason: check.reason || 'unauthorized_image_source',
+  };
+}
+
+/**
  * Safely deletes verified, owner-controlled listing images from Firebase Storage.
  *
  * Requirements enforced:

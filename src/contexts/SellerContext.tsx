@@ -16,7 +16,7 @@ import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { executeSecureTransaction } from '../services/cloudFunctionsService';
-import { uploadProductImage } from '../lib/storageUtils';
+import { uploadProductImage, validateListingImageUrl } from '../lib/storageUtils';
 
 export interface CreateListingPayload {
   title: string;
@@ -491,6 +491,24 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       );
     }
 
+    if (user?.uid) {
+      for (const img of processedImages) {
+        if (typeof img === 'string' && img.trim()) {
+          const check = validateListingImageUrl(img, user.uid);
+          if (!check.isAllowed) {
+            const err = new Error(
+              check.reason === 'ownership_mismatch'
+                ? 'Using images belonging to other users is not permitted'
+                : 'Invalid or unauthorized image URL'
+            );
+            console.error('[SellerContext] Draft listing image validation error:', err);
+            setError(err.message);
+            throw err;
+          }
+        }
+      }
+    }
+
     const price = typeof payload.price === 'number' ? payload.price : 0;
     const status = payload.status || 'draft';
 
@@ -567,6 +585,22 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return img;
         })
       );
+    }
+
+    for (const img of processedImages) {
+      if (typeof img === 'string' && img.trim()) {
+        const check = validateListingImageUrl(img, user.uid);
+        if (!check.isAllowed) {
+          const err = new Error(
+            check.reason === 'ownership_mismatch'
+              ? 'Using images belonging to other users is not permitted'
+              : 'Invalid or unauthorized image URL'
+          );
+          console.error('[SellerContext] Publish listing image validation error:', err);
+          setError(err.message);
+          throw err;
+        }
+      }
     }
 
     const title = payload.title?.trim() || 'Untitled Listing';

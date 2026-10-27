@@ -67,7 +67,7 @@ import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
-import { uploadProductImage, deleteListingImagesFromStorage } from '../lib/storageUtils';
+import { uploadProductImage, deleteListingImagesFromStorage, validateListingImageUrl } from '../lib/storageUtils';
 import { translations } from '../translations';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import 'leaflet/dist/leaflet.css';
@@ -3034,6 +3034,29 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           );
           setIsSubmitting(false);
           return;
+        }
+
+        // Security guard: verify that all image URLs are safe (either owned by the seller or legitimate external URLs)
+        for (const img of finalImages) {
+          if (typeof img === 'string' && img.trim()) {
+            const check = validateListingImageUrl(img, user.uid);
+            if (!check.isAllowed) {
+              const errorMessage = check.reason === 'ownership_mismatch'
+                ? (language === 'ka' 
+                    ? "სხვა მომხმარებლის პირადი სურათის გამოყენება დაუშვებელია." 
+                    : "Using images belonging to other users is not permitted.")
+                : check.reason === 'not_a_listing_path'
+                ? (language === 'ka'
+                    ? "ავატარის ან ვიდეოს მისამართის გამოყენება განცხადების სურათად დაუშვებელია."
+                    : "Using avatar or video storage paths as listing images is not permitted.")
+                : (language === 'ka'
+                    ? "სურათის მისამართი დაუშვებელია ან არასწორია."
+                    : "Invalid or unauthorized image URL.");
+              showToast(errorMessage, 'error');
+              setIsSubmitting(false);
+              return;
+            }
+          }
         }
       }
 
