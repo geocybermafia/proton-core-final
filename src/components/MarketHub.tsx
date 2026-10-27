@@ -67,7 +67,7 @@ import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
 import { MapPicker } from './MapPicker';
-import { uploadProductImage } from '../lib/storageUtils';
+import { uploadProductImage, deleteListingImagesFromStorage } from '../lib/storageUtils';
 import { translations } from '../translations';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import 'leaflet/dist/leaflet.css';
@@ -3067,9 +3067,59 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       const isEdit = viewMode === 'edit' && Boolean(editingListing);
 
       if (isEdit && editingListing) {
+        // Collect original images before update to detect removed images
+        const originalImages = Array.from(new Set([
+          ...(editingListing.image ? [editingListing.image] : []),
+          ...(Array.isArray(editingListing.images) ? editingListing.images : [])
+        ].filter((img): img is string => typeof img === 'string' && Boolean(img.trim()))));
+
+        // Images retained or newly added in this edit
+        const currentImages = Array.from(new Set([
+          ...(listingData.image ? [listingData.image] : []),
+          ...(Array.isArray(listingData.images) ? listingData.images : [])
+        ].filter((img): img is string => typeof img === 'string' && Boolean(img.trim()))));
+
+        // Identify images explicitly removed from this listing
+        const removedImages = originalImages.filter(orig => !currentImages.includes(orig));
+
         // Remove createdAt from updates to keep it immutable
         const { createdAt, ...updateData } = listingData;
         await updateDoc(doc(db, 'listings', editingListing.id), updateData);
+
+        // If updateDoc succeeds, clean up removed images if they are not referenced by other listings
+        if (removedImages.length > 0 && user?.uid) {
+          try {
+            // Verify if any removed image is still referenced by another listing owned by this seller
+            const otherListingsQuery = query(
+              collection(db, 'listings'),
+              where('sellerId', '==', user.uid)
+            );
+            const otherSnap = await getDocs(otherListingsQuery);
+            const otherReferencedUrls = new Set<string>();
+            otherSnap.forEach(d => {
+              if (d.id !== editingListing.id) {
+                const otherData = d.data();
+                if (typeof otherData?.image === 'string' && otherData.image) {
+                  otherReferencedUrls.add(otherData.image.trim());
+                }
+                if (Array.isArray(otherData?.images)) {
+                  for (const img of otherData.images) {
+                    if (typeof img === 'string' && img) {
+                      otherReferencedUrls.add(img.trim());
+                    }
+                  }
+                }
+              }
+            });
+
+            const safeRemovedImages = removedImages.filter(img => !otherReferencedUrls.has(img.trim()));
+            if (safeRemovedImages.length > 0) {
+              await deleteListingImagesFromStorage(safeRemovedImages, user.uid);
+            }
+          } catch (storageCleanupErr) {
+            console.warn("[MarketHub] Non-blocking storage cleanup notice during image replacement:", storageCleanupErr);
+          }
+        }
       } else {
         await addDoc(collection(db, 'listings'), listingData);
       }
@@ -3092,13 +3142,97 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleDeleteListing = async (id: string) => {
     if (window.confirm(t.market.delete_confirm)) {
       try {
-        await deleteDoc(doc(db, 'listings', id));
-        showToast(
-          language === 'ka' 
-            ? 'განცხადება წარმატებით წაიშალა.' 
-            : 'Listing deleted successfully.', 
-          'success'
-        );
+        // Step 1: Read authoritative listing data before deleting its Firestore document
+        const listingDocRef = doc(db, 'listings', id);
+        const listingSnap = await getDoc(listingDocRef);
+
+        let candidateImages: string[] = [];
+        let sellerId = user?.uid;
+
+        if (listingSnap.exists()) {
+          const data = listingSnap.data();
+          sellerId = data?.sellerId || sellerId;
+          const imgList: string[] = [];
+          if (typeof data?.image === 'string' && data.image) {
+            imgList.push(data.image.trim());
+          }
+          if (Array.isArray(data?.images)) {
+            for (const img of data.images) {
+              if (typeof img === 'string' && img) {
+                imgList.push(img.trim());
+              }
+            }
+          }
+          candidateImages = Array.from(new Set(imgList.filter(Boolean)));
+        }
+
+        // Step 2: Check whether any candidate image is still referenced by another listing of this seller
+        let safeImagesToDelete: string[] = [];
+        if (candidateImages.length > 0 && sellerId) {
+          try {
+            const otherListingsQuery = query(
+              collection(db, 'listings'),
+              where('sellerId', '==', sellerId)
+            );
+            const otherSnap = await getDocs(otherListingsQuery);
+            const otherReferencedUrls = new Set<string>();
+            otherSnap.forEach(d => {
+              if (d.id !== id) {
+                const otherData = d.data();
+                if (typeof otherData?.image === 'string' && otherData.image) {
+                  otherReferencedUrls.add(otherData.image.trim());
+                }
+                if (Array.isArray(otherData?.images)) {
+                  for (const img of otherData.images) {
+                    if (typeof img === 'string' && img) {
+                      otherReferencedUrls.add(img.trim());
+                    }
+                  }
+                }
+              }
+            });
+
+            // Filter out any image that is still referenced by another listing
+            safeImagesToDelete = candidateImages.filter(img => !otherReferencedUrls.has(img.trim()));
+          } catch (queryErr) {
+            console.warn("[MarketHub] Could not verify cross-listing references, preserving images:", queryErr);
+            // Safety guard: Prefer preserving potentially orphaned files over deleting an image active listings still need
+            safeImagesToDelete = [];
+          }
+        }
+
+        // Step 3: Delete the Firestore listing document first
+        await deleteDoc(listingDocRef);
+
+        // Step 4: Delete confirmed safe Storage objects
+        let cleanupNotice: string | null = null;
+        if (safeImagesToDelete.length > 0 && user?.uid && user.uid === sellerId) {
+          try {
+            const cleanupResult = await deleteListingImagesFromStorage(safeImagesToDelete, user.uid);
+            if (cleanupResult.failed > 0) {
+              cleanupNotice = language === 'ka'
+                ? 'განცხადება წაიშალა, მაგრამ ზოგიერთი ფოტოს მეხსიერებიდან წაშლა ვერ მოხერხდა.'
+                : 'Listing deleted, but some images could not be cleaned up from storage.';
+            }
+          } catch (storageErr) {
+            console.warn("[MarketHub] Non-blocking storage cleanup notice:", storageErr);
+            cleanupNotice = language === 'ka'
+              ? 'განცხადება წაიშალა, მაგრამ ფოტოების მეხსიერებიდან გასუფთავება ვერ მოხერხდა.'
+              : 'Listing deleted, but image cleanup encountered an error.';
+          }
+        }
+
+        // Step 5: Truthful UI feedback
+        if (cleanupNotice) {
+          showToast(cleanupNotice, 'warning');
+        } else {
+          showToast(
+            language === 'ka' 
+              ? 'განცხადება წარმატებით წაიშალა.' 
+              : 'Listing deleted successfully.', 
+            'success'
+          );
+        }
       } catch (error) {
         console.error("Error deleting listing:", error);
         showToast(
