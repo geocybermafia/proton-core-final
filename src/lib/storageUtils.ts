@@ -548,3 +548,422 @@ function base64ToBlob(base64Data: string): { blob: Blob; contentType: string } {
   const blob = new Blob(byteArrays as BlobPart[], { type: contentType });
   return { blob, contentType };
 }
+
+/**
+ * Result details for an individual image deletion attempt.
+ */
+export interface ListingImageDeletionDetail {
+  /** Sanitized URL or path with sensitive query parameters (e.g. auth tokens) removed */
+  urlOrPath: string;
+  /** Decoded Firebase Storage object path within the bucket (if valid) */
+  path?: string;
+  /** Status of the deletion attempt */
+  status: 'deleted' | 'skipped' | 'failed';
+  /** Reason for skip or failure (e.g., 'external_host', 'ownership_mismatch', 'already_deleted') */
+  reason?: string;
+}
+
+/**
+ * Summary result returned by deleteListingImagesFromStorage.
+ */
+export interface ListingImageDeletionResult {
+  total: number;
+  deleted: number;
+  skipped: number;
+  failed: number;
+  details: ListingImageDeletionDetail[];
+}
+
+/**
+ * Allowed input types for listing images:
+ * Single string, array of strings, or listing object with image/images properties.
+ */
+export type ListingImageInput =
+  | string
+  | (string | null | undefined)[]
+  | { image?: string | null; images?: (string | null | undefined)[] | null }
+  | null
+  | undefined;
+
+/**
+ * Sanitizes a storage URL or path by removing sensitive query parameters (such as `token=...`)
+ * and fragments to prevent sensitive download token leakage in logs and return structures.
+ */
+export function sanitizeStorageUrlForLogging(urlOrPath: string): string {
+  if (!urlOrPath || typeof urlOrPath !== 'string') return '';
+  try {
+    if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+      const parsed = new URL(urlOrPath);
+      return `${parsed.origin}${parsed.pathname}`;
+    }
+    return urlOrPath.split('?')[0].split('#')[0];
+  } catch {
+    return urlOrPath.split('?')[0].split('#')[0];
+  }
+}
+
+/**
+ * Retrieves the recognized bucket names configured for this Firebase app instance.
+ */
+function getConfiguredStorageBuckets(): string[] {
+  const buckets = new Set<string>();
+  try {
+    const appBucket = storage?.app?.options?.storageBucket;
+    if (appBucket && typeof appBucket === 'string') {
+      const trimmed = appBucket.trim().toLowerCase();
+      if (trimmed) {
+        buckets.add(trimmed);
+        if (trimmed.endsWith('.firebasestorage.app')) {
+          buckets.add(trimmed.replace('.firebasestorage.app', '.appspot.com'));
+        } else if (trimmed.endsWith('.appspot.com')) {
+          buckets.add(trimmed.replace('.appspot.com', '.firebasestorage.app'));
+        }
+      }
+    }
+    const projectId = storage?.app?.options?.projectId;
+    if (projectId && typeof projectId === 'string') {
+      const trimmedId = projectId.trim().toLowerCase();
+      if (trimmedId) {
+        buckets.add(`${trimmedId}.firebasestorage.app`);
+        buckets.add(`${trimmedId}.appspot.com`);
+      }
+    }
+  } catch {
+    // Non-blocking fallback
+  }
+  return Array.from(buckets);
+}
+
+/**
+ * Safely parses and validates whether an image URL or path belongs to the configured Firebase Storage
+ * bucket and is owned by the current authenticated user under `listings/${currentUserId}/`.
+ */
+export function extractAndValidateListingPath(
+  urlOrPath: string,
+  currentUserId: string,
+  configuredBuckets?: string[]
+): { isValidListingPath: boolean; path?: string; reason?: string } {
+  if (!urlOrPath || typeof urlOrPath !== 'string') {
+    return { isValidListingPath: false, reason: 'invalid_input' };
+  }
+
+  const trimmed = urlOrPath.trim();
+  if (!trimmed) {
+    return { isValidListingPath: false, reason: 'empty_input' };
+  }
+
+  if (trimmed.startsWith('data:')) {
+    return { isValidListingPath: false, reason: 'data_uri_skipped' };
+  }
+
+  if (!currentUserId || typeof currentUserId !== 'string' || !currentUserId.trim()) {
+    return { isValidListingPath: false, reason: 'missing_user_id' };
+  }
+
+  const buckets = (configuredBuckets && configuredBuckets.length > 0)
+    ? configuredBuckets
+    : getConfiguredStorageBuckets();
+
+  let rawPath = '';
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      return { isValidListingPath: false, reason: 'malformed_url' };
+    }
+
+    const hostname = parsed.hostname.toLowerCase();
+
+    // Firebase Storage default endpoint:
+    // https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<encodedPath>
+    if (hostname === 'firebasestorage.googleapis.com') {
+      const match = parsed.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
+      if (!match) {
+        return { isValidListingPath: false, reason: 'invalid_firebase_storage_url_format' };
+      }
+      const urlBucket = decodeURIComponent(match[1]).toLowerCase();
+      if (buckets.length > 0 && !buckets.includes(urlBucket)) {
+        return { isValidListingPath: false, reason: 'unrecognized_storage_bucket' };
+      }
+      try {
+        rawPath = decodeURIComponent(match[2]);
+      } catch {
+        return { isValidListingPath: false, reason: 'uri_decode_failed' };
+      }
+    } else if (hostname === 'storage.googleapis.com') {
+      // Direct GCS endpoint: https://storage.googleapis.com/<bucket>/<path>
+      const match = parsed.pathname.match(/^\/([^/]+)\/(.+)$/);
+      if (!match) {
+        return { isValidListingPath: false, reason: 'invalid_gcs_url_format' };
+      }
+      const urlBucket = decodeURIComponent(match[1]).toLowerCase();
+      if (buckets.length > 0 && !buckets.includes(urlBucket)) {
+        return { isValidListingPath: false, reason: 'unrecognized_storage_bucket' };
+      }
+      try {
+        rawPath = decodeURIComponent(match[2]);
+      } catch {
+        return { isValidListingPath: false, reason: 'uri_decode_failed' };
+      }
+    } else {
+      // External host (e.g., Unsplash, Cloudinary, CDN) - safe to skip
+      return { isValidListingPath: false, reason: 'external_host' };
+    }
+  } else if (trimmed.startsWith('gs://')) {
+    // gs://bucket/path
+    const withoutGs = trimmed.slice(5);
+    const slashIdx = withoutGs.indexOf('/');
+    if (slashIdx === -1) {
+      return { isValidListingPath: false, reason: 'invalid_gs_path' };
+    }
+    const gsBucket = withoutGs.substring(0, slashIdx).toLowerCase();
+    if (buckets.length > 0 && !buckets.includes(gsBucket)) {
+      return { isValidListingPath: false, reason: 'unrecognized_storage_bucket' };
+    }
+    rawPath = withoutGs.substring(slashIdx + 1);
+  } else {
+    // Raw relative path
+    rawPath = trimmed;
+  }
+
+  // Strip any lingering query params or fragment
+  rawPath = rawPath.split('?')[0].split('#')[0];
+
+  // Strip leading slashes
+  rawPath = rawPath.replace(/^\/+/, '');
+
+  // Prevent path traversal and malformed segments
+  const segments = rawPath.split('/');
+  if (segments.some(s => s === '..' || s === '.' || s === '')) {
+    return { isValidListingPath: false, reason: 'path_traversal_or_malformed' };
+  }
+
+  // Must strictly start with listings/${currentUserId}/
+  const requiredPrefix = `listings/${currentUserId.trim()}/`;
+  if (!rawPath.startsWith(requiredPrefix)) {
+    if (rawPath.startsWith('listings/')) {
+      return { isValidListingPath: false, reason: 'ownership_mismatch' };
+    }
+    return { isValidListingPath: false, reason: 'not_a_listing_path' };
+  }
+
+  // Must have a filename after the prefix
+  const fileName = rawPath.substring(requiredPrefix.length);
+  if (!fileName || fileName.trim().length === 0) {
+    return { isValidListingPath: false, reason: 'missing_filename' };
+  }
+
+  return { isValidListingPath: true, path: rawPath };
+}
+
+/**
+ * Safely deletes verified, owner-controlled listing images from Firebase Storage.
+ *
+ * Requirements enforced:
+ * 1. Safely filters and deduplicates input URLs (handles single string, string[], or listing objects).
+ * 2. Verifies URL belongs to the project's configured Firebase Storage bucket.
+ * 3. Decodes and verifies storage path strictly begins with `listings/${currentUserId}/`.
+ * 4. Rejects other users' paths, paths outside `listings/`, directory traversals, and ignores external URLs without throwing.
+ * 5. Uses Promise.allSettled so individual failures do not interrupt others.
+ * 6. Treats `storage/object-not-found` as success (already cleaned up / idempotent).
+ * 7. Never leaks auth tokens in return details or logs.
+ */
+export async function deleteListingImagesFromStorage(
+  imagesInput: ListingImageInput,
+  currentUserId: string
+): Promise<ListingImageDeletionResult> {
+  // 1. Flatten and extract non-empty candidate strings
+  const rawCandidates: string[] = [];
+
+  if (typeof imagesInput === 'string') {
+    rawCandidates.push(imagesInput);
+  } else if (Array.isArray(imagesInput)) {
+    for (const item of imagesInput) {
+      if (typeof item === 'string') {
+        rawCandidates.push(item);
+      }
+    }
+  } else if (imagesInput && typeof imagesInput === 'object') {
+    if (typeof (imagesInput as any).image === 'string') {
+      rawCandidates.push((imagesInput as any).image);
+    }
+    if (Array.isArray((imagesInput as any).images)) {
+      for (const item of (imagesInput as any).images) {
+        if (typeof item === 'string') {
+          rawCandidates.push(item);
+        }
+      }
+    }
+  }
+
+  // Deduplicate and filter empty/whitespace
+  const uniqueUrls: string[] = [];
+  const seen = new Set<string>();
+  for (const item of rawCandidates) {
+    const trimmed = item.trim();
+    if (trimmed && !seen.has(trimmed)) {
+      seen.add(trimmed);
+      uniqueUrls.push(trimmed);
+    }
+  }
+
+  if (uniqueUrls.length === 0) {
+    return {
+      total: 0,
+      deleted: 0,
+      skipped: 0,
+      failed: 0,
+      details: [],
+    };
+  }
+
+  // 2. Validate user identity
+  const sanitizedUserId = typeof currentUserId === 'string' ? currentUserId.trim() : '';
+  if (!sanitizedUserId) {
+    const details: ListingImageDeletionDetail[] = uniqueUrls.map(url => ({
+      urlOrPath: sanitizeStorageUrlForLogging(url),
+      status: 'skipped',
+      reason: 'unauthenticated_or_invalid_user_id',
+    }));
+
+    dispatchProtonDebugEvent({
+      type: 'storage-warning',
+      action: 'deleteListingImages',
+      message: 'Aborted listing image deletion: missing or invalid authenticated UID',
+      details,
+    });
+
+    return {
+      total: details.length,
+      deleted: 0,
+      skipped: details.length,
+      failed: 0,
+      details,
+    };
+  }
+
+  // 3. Check storage initialization
+  if (!storage) {
+    const details: ListingImageDeletionDetail[] = uniqueUrls.map(url => {
+      const sanitized = sanitizeStorageUrlForLogging(url);
+      const validation = extractAndValidateListingPath(url, sanitizedUserId);
+      if (validation.isValidListingPath) {
+        return {
+          urlOrPath: sanitized,
+          path: validation.path,
+          status: 'failed',
+          reason: 'storage_uninitialized',
+        };
+      }
+      return {
+        urlOrPath: sanitized,
+        status: 'skipped',
+        reason: validation.reason,
+      };
+    });
+
+    const failed = details.filter(d => d.status === 'failed').length;
+    const skipped = details.filter(d => d.status === 'skipped').length;
+
+    dispatchProtonDebugEvent({
+      type: 'storage-error',
+      action: 'deleteListingImages',
+      message: 'Firebase Storage is not initialized, cannot delete listing images.',
+      details,
+    });
+
+    return {
+      total: details.length,
+      deleted: 0,
+      skipped,
+      failed,
+      details,
+    };
+  }
+
+  const configuredBuckets = getConfiguredStorageBuckets();
+
+  // 4. Process each URL/path independently with Promise.allSettled
+  const deletionPromises = uniqueUrls.map(async (urlOrPath): Promise<ListingImageDeletionDetail> => {
+    const sanitizedUrl = sanitizeStorageUrlForLogging(urlOrPath);
+    const validation = extractAndValidateListingPath(urlOrPath, sanitizedUserId, configuredBuckets);
+
+    if (!validation.isValidListingPath || !validation.path) {
+      return {
+        urlOrPath: sanitizedUrl,
+        status: 'skipped',
+        reason: validation.reason || 'skipped',
+      };
+    }
+
+    const objectPath = validation.path;
+
+    try {
+      const storageRef = ref(storage, objectPath);
+      await deleteObject(storageRef);
+      return {
+        urlOrPath: sanitizedUrl,
+        path: objectPath,
+        status: 'deleted',
+      };
+    } catch (err: any) {
+      const errorCode = err?.code || '';
+      // Object not found means it is already removed, which satisfies desired end-state (idempotent success)
+      if (errorCode === 'storage/object-not-found') {
+        return {
+          urlOrPath: sanitizedUrl,
+          path: objectPath,
+          status: 'deleted',
+          reason: 'already_deleted',
+        };
+      }
+
+      console.warn(`[StorageUtils] Failed to delete listing image at ${objectPath}:`, err);
+      return {
+        urlOrPath: sanitizedUrl,
+        path: objectPath,
+        status: 'failed',
+        reason: errorCode || err?.message || 'unknown_deletion_error',
+      };
+    }
+  });
+
+  const settledResults = await Promise.allSettled(deletionPromises);
+
+  const details: ListingImageDeletionDetail[] = settledResults.map((result, idx) => {
+    if (result.status === 'fulfilled') {
+      return result.value;
+    }
+    const sanitized = sanitizeStorageUrlForLogging(uniqueUrls[idx]);
+    return {
+      urlOrPath: sanitized,
+      status: 'failed',
+      reason: result.reason?.message || 'promise_rejection',
+    };
+  });
+
+  const deleted = details.filter(d => d.status === 'deleted').length;
+  const skipped = details.filter(d => d.status === 'skipped').length;
+  const failed = details.filter(d => d.status === 'failed').length;
+
+  dispatchProtonDebugEvent({
+    type: 'listing-images-deletion',
+    userId: sanitizedUserId,
+    total: details.length,
+    deleted,
+    skipped,
+    failed,
+    details,
+  });
+
+  return {
+    total: details.length,
+    deleted,
+    skipped,
+    failed,
+    details,
+  };
+}
+
