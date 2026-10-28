@@ -140,4 +140,8 @@ describe('Vercel API Adapter & Shared ServerApp Suite', () => {
     assert.strictEqual(res.status, 401);
     assert.match(res.body.error, /Missing or invalid Authorization/);
   });
+
+  it('8. api/index.js bundle exists and is directly loadable by pure Node.js runtime', () => {
+    assert.strictEqual(typeof vercelHandler, 'function', 'vercelHandler must export a function or express app');
+  });
 });

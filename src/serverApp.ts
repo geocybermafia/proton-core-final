@@ -25,11 +25,17 @@ import {
   detectClipIssues
 } from "./lib/gemini-server.js";
 
-// Initialize Firebase Admin for server-side token authentication
-const adminApp = !getAdminApps().length
-  ? initAdminApp({ projectId: "proton-core-ai" })
-  : getAdminApps()[0];
-const adminAuth = getAdminAuth(adminApp);
+// Lazy initialization of Firebase Admin for server-side token authentication
+let _adminAuth: ReturnType<typeof getAdminAuth> | null = null;
+function getVerifiedAdminAuth() {
+  if (!_adminAuth) {
+    const adminApp = !getAdminApps().length
+      ? initAdminApp({ projectId: "proton-core-ai" })
+      : getAdminApps()[0];
+    _adminAuth = getAdminAuth(adminApp);
+  }
+  return _adminAuth;
+}
 
 export function createApiApp(): express.Express {
   const app = express();
@@ -109,7 +115,8 @@ export function createApiApp(): express.Express {
 
     let decodedToken;
     try {
-      decodedToken = await adminAuth.verifyIdToken(idToken);
+      const authInstance = getVerifiedAdminAuth();
+      decodedToken = await authInstance.verifyIdToken(idToken);
     } catch (authErr: any) {
       console.error("[StorageServer] Token verification failed:", authErr?.message);
       return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });

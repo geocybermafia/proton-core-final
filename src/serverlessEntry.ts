@@ -1,4 +1,4 @@
-import app from "../src/serverApp.js";
+import app from "./serverApp.js";
 
 export default function handler(req: any, res: any) {
   // If Vercel rewrites /api/(.*) to /api, restore the original URL path from Vercel's headers
