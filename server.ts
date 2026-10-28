@@ -27,6 +27,17 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import crypto from "crypto";
+import { initializeApp as initAdminApp, getApps as getAdminApps } from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize Firebase Admin for server-side token authentication
+const adminApp = !getAdminApps().length
+  ? initAdminApp({ projectId: "proton-core-ai" })
+  : getAdminApps()[0];
+const adminAuth = getAdminAuth(adminApp);
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -60,7 +71,8 @@ async function startServer() {
 
   app.use("/api/gemini", apiLimiter);
 
-  app.use(express.json({ limit: '2mb' }));
+  // Accept up to 10 MB payload for base64 image uploads (max 5 MB binary file)
+  app.use(express.json({ limit: '10mb' }));
 
   // Middleware to disable caching for all API routes & ensure dynamic rendering
   app.use("/api", (req, res, next) => {
@@ -73,6 +85,122 @@ async function startServer() {
   // Health check or other dynamic API routes can go here
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Secure Server-side Market Hub Listing Image Upload
+  app.post("/api/storage/upload-listing-image", async (req, res) => {
+    // 1. Authenticate user via Firebase ID Token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+    }
+    const idToken = authHeader.split("Bearer ")[1]?.trim();
+    if (!idToken) {
+      return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = await adminAuth.verifyIdToken(idToken);
+    } catch (authErr: any) {
+      console.error("[StorageServer] Token verification failed:", authErr?.message);
+      return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+    }
+
+    const verifiedUid = decodedToken.uid;
+    if (!verifiedUid) {
+      return res.status(401).json({ error: "Unauthorized: User UID not found in verified token" });
+    }
+
+    // 2. Validate payload and image format
+    const { image, productId } = req.body || {};
+    if (!image || typeof image !== 'string') {
+      return res.status(400).json({ error: "Bad Request: Image data is required" });
+    }
+
+    const matches = image.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: "Bad Request: Invalid image format. Must be a valid Base64 data URI." });
+    }
+
+    const mimeType = matches[1].toLowerCase();
+    const base64Data = matches[2];
+
+    const ALLOWED_MIME_TYPES: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
+
+    if (!ALLOWED_MIME_TYPES[mimeType]) {
+      return res.status(400).json({ 
+        error: `Bad Request: Unsupported image format (${mimeType}). Allowed formats are JPEG, PNG, and WebP.` 
+      });
+    }
+
+    const ext = ALLOWED_MIME_TYPES[mimeType];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // 5 MB max file size limit
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (buffer.length > MAX_FILE_SIZE) {
+      return res.status(400).json({ 
+        error: `Bad Request: Image exceeds 5 MB limit. Received size: ${(buffer.length / (1024 * 1024)).toFixed(2)} MB.` 
+      });
+    }
+
+    // 3. Supabase client with server-only service role key
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ntndwrpruyrttlpjptzf.supabase.co';
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+    if (!serviceRoleKey) {
+      console.error("[StorageServer] Upload aborted: SUPABASE_SERVICE_ROLE_KEY is not configured in server environment.");
+      return res.status(503).json({ 
+        error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server." 
+      });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false }
+    });
+
+    // 4. Generate safe unique path strictly under verified user's folder
+    const timestamp = Date.now();
+    const randomSuffix = crypto.randomUUID().replace(/-/g, '').substring(0, 10);
+    const cleanProdId = typeof productId === 'string'
+      ? productId.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 32)
+      : 'prod';
+    const storagePath = `${verifiedUid}/${cleanProdId}_${timestamp}_${randomSuffix}.${ext}`;
+
+    try {
+      const { data, error: uploadErr } = await supabaseAdmin.storage
+        .from('listings')
+        .upload(storagePath, buffer, {
+          contentType: mimeType,
+          upsert: true,
+        });
+
+      if (uploadErr) {
+        console.error("[StorageServer] Supabase storage upload failed:", uploadErr.message);
+        return res.status(502).json({ 
+          error: `Storage service error: ${uploadErr.message}` 
+        });
+      }
+
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from('listings')
+        .getPublicUrl(storagePath);
+
+      return res.status(200).json({
+        success: true,
+        publicUrl: publicUrlData.publicUrl,
+        path: storagePath,
+      });
+    } catch (err: any) {
+      console.error("[StorageServer] Unexpected error during upload:", err);
+      return res.status(500).json({ error: "Internal server error during image storage" });
+    }
   });
 
   // Gemini API Proxy
@@ -196,6 +324,8 @@ async function startServer() {
     console.log("[CONFIG SECURE CHECK] Security environment state on startup:");
     console.log("  - GEMINI_API_KEY:", gk ? `Present (starts with ${gk.substring(0, 6)}..., Length: ${gk.length})` : "Missing");
     console.log("  - VITE_GEMINI_API_KEY:", vgk ? `Present (starts with ${vgk.substring(0, 6)}..., Length: ${vgk.length})` : "Missing");
+    const ssk = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+    console.log("  - SUPABASE_SERVICE_ROLE_KEY:", ssk ? `Configured (Length: ${ssk.length})` : "Missing (required for secure listing image uploads)");
     if (gk && vgk && gk !== vgk) {
       console.warn("  - Warning: Both keys are present but different! VITE_GEMINI_API_KEY takes precedence.");
     }

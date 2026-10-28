@@ -3011,14 +3011,30 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             return img;
           });
           finalImages = await Promise.all(uploadPromises);
-        } catch (uploadErr) {
+        } catch (uploadErr: any) {
           console.error("[MarketHub] Storage upload error:", uploadErr);
-          showToast(
-            language === 'ka'
-              ? "ფოტოს ატვირთვა ვერ მოხერხდა. გთხოვთ შეამოწმოთ კავშირი და სცადოთ თავიდან."
-              : "Failed to upload images. Please check your connection and try again.",
-            'error'
-          );
+          const rawMessage = uploadErr?.message || '';
+          let userMessage = language === 'ka'
+            ? "ფოტოს ატვირთვა ვერ მოხერხდა."
+            : "Failed to upload images.";
+            
+          if (rawMessage.toLowerCase().includes('supabase_service_role_key') || uploadErr?.statusCode === 503) {
+            userMessage = language === 'ka'
+              ? "სერვერის კონფიგურაციის შეცდომა: სერვერზე SUPABASE_SERVICE_ROLE_KEY არ არის მითითებული."
+              : "Server configuration notice: SUPABASE_SERVICE_ROLE_KEY is required on the server.";
+          } else if (rawMessage.toLowerCase().includes('unauthorized') || uploadErr?.statusCode === 401) {
+            userMessage = language === 'ka'
+              ? "ავტორიზაციის შეცდომა: გთხოვთ ხელახლა შეხვიდეთ სისტემაში."
+              : "Authentication error: Please sign in again.";
+          } else if (rawMessage.toLowerCase().includes('timed out')) {
+            userMessage = language === 'ka'
+              ? "ფოტოს ატვირთვას ძალიან დიდი დრო დასჭირდა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან."
+              : "Image upload timed out. Please check your connection and try again.";
+          } else if (rawMessage) {
+            userMessage += ` (${rawMessage})`;
+          }
+
+          showToast(userMessage, 'error');
           setIsSubmitting(false);
           return;
         }

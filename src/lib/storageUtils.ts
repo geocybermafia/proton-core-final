@@ -1,5 +1,5 @@
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../firebase';
+import { storage, auth } from '../firebase';
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 
 export interface UploadOptions {
@@ -429,7 +429,8 @@ export async function deleteClipVideoFromStorage(
 }
 
 /**
- * Helper specifically for uploading product images to Firebase Storage.
+ * Helper specifically for uploading product images securely via Proton's server route
+ * to Supabase Storage ('listings' bucket) authenticated with Firebase ID token.
  * Accepts File, Blob, or Base64 string and returns the HTTPS download URL.
  */
 export async function uploadProductImage(
@@ -437,42 +438,92 @@ export async function uploadProductImage(
   image: File | Blob | string,
   productId?: string
 ): Promise<string> {
+  if (!userId || typeof userId !== 'string' || !userId.trim()) {
+    throw new Error('A valid user UID is required to upload listing images.');
+  }
+
+  // If already an HTTP/HTTPS URL, return as-is
   if (typeof image === 'string') {
     if (image.startsWith('http://') || image.startsWith('https://')) {
       return image;
     }
-    const { blob, contentType } = base64ToBlob(image);
-    const timestamp = Date.now();
-    const path = `listings/${userId}/${productId || 'prod'}_${timestamp}.png`;
-    const result = await uploadFileToStorage({
-      path,
-      file: blob,
-      metadata: {
-        contentType,
-        customMetadata: {
-          uploadedBy: userId,
-          type: 'listing-image',
-        },
-      },
-    });
-    return result.downloadUrl;
-  } else {
-    const contentType = image.type || 'image/png';
-    const timestamp = Date.now();
-    const path = `listings/${userId}/${productId || 'prod'}_${timestamp}.png`;
-    const result = await uploadFileToStorage({
-      path,
-      file: image,
-      metadata: {
-        contentType,
-        customMetadata: {
-          uploadedBy: userId,
-          type: 'listing-image',
-        },
-      },
-    });
-    return result.downloadUrl;
   }
+
+  // Convert File/Blob to Base64 data URI string if needed
+  let dataUri: string;
+  if (typeof image === 'string') {
+    dataUri = image;
+  } else {
+    dataUri = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(image);
+    });
+  }
+
+  // Ensure user is authenticated with Firebase and fetch a fresh ID token
+  const currentUser = auth?.currentUser;
+  let idToken = '';
+  if (currentUser) {
+    idToken = await currentUser.getIdToken();
+  } else {
+    throw new Error('User must be authenticated with Firebase to upload listing images.');
+  }
+
+  dispatchProtonDebugEvent({
+    type: 'storage-start',
+    provider: 'supabase-server',
+    bucket: 'listings',
+    productId,
+  });
+
+  const response = await fetch('/api/storage/upload-listing-image', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: JSON.stringify({
+      image: dataUri,
+      productId: productId || 'prod',
+    }),
+  });
+
+  if (!response.ok) {
+    let errorData: any = null;
+    try {
+      errorData = await response.json();
+    } catch {}
+    const errorMessage = errorData?.error || errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
+
+    dispatchProtonDebugEvent({
+      type: 'storage-error',
+      provider: 'supabase-server',
+      bucket: 'listings',
+      code: `HTTP_${response.status}`,
+      message: errorMessage,
+    });
+
+    const error: any = new Error(errorMessage);
+    error.statusCode = response.status;
+    throw error;
+  }
+
+  const result = await response.json();
+  if (!result.publicUrl) {
+    throw new Error('Invalid response from upload service: missing publicUrl.');
+  }
+
+  dispatchProtonDebugEvent({
+    type: 'storage-success',
+    provider: 'supabase-server',
+    bucket: 'listings',
+    path: result.path,
+    downloadUrl: result.publicUrl,
+  });
+
+  return result.publicUrl;
 }
 
 /**
@@ -642,7 +693,13 @@ export function extractAndValidateListingPath(
   urlOrPath: string,
   currentUserId: string,
   configuredBuckets?: string[]
-): { isValidListingPath: boolean; path?: string; reason?: string } {
+): { 
+  isValidListingPath: boolean; 
+  path?: string; 
+  reason?: string;
+  provider?: 'supabase' | 'firebase';
+  storagePath?: string;
+} {
   if (!urlOrPath || typeof urlOrPath !== 'string') {
     return { isValidListingPath: false, reason: 'invalid_input' };
   }
@@ -665,6 +722,15 @@ export function extractAndValidateListingPath(
     : getConfiguredStorageBuckets();
 
   let rawPath = '';
+  let provider: 'supabase' | 'firebase' = 'firebase';
+  let storagePath: string | undefined = undefined;
+
+  let supabaseHost = '';
+  try {
+    if (SUPABASE_URL) {
+      supabaseHost = new URL(SUPABASE_URL).hostname.toLowerCase();
+    }
+  } catch {}
 
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
     let parsed: URL;
@@ -676,9 +742,31 @@ export function extractAndValidateListingPath(
 
     const hostname = parsed.hostname.toLowerCase();
 
-    // Firebase Storage default endpoint:
-    // https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<encodedPath>
-    if (hostname === 'firebasestorage.googleapis.com') {
+    // 1. Check Supabase Storage URL
+    if (supabaseHost && hostname === supabaseHost) {
+      // Matches /storage/v1/object/public/<bucket>/<path> or /storage/v1/object/<bucket>/<path>
+      const match = parsed.pathname.match(/^\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+      if (!match) {
+        return { isValidListingPath: false, reason: 'invalid_supabase_storage_url_format' };
+      }
+      const urlBucket = decodeURIComponent(match[1]).toLowerCase();
+      if (urlBucket !== 'listings') {
+        return { isValidListingPath: false, reason: 'not_a_listing_path' };
+      }
+      try {
+        const decodedInnerPath = decodeURIComponent(match[2]);
+        rawPath = `listings/${decodedInnerPath}`;
+        provider = 'supabase';
+        storagePath = decodedInnerPath;
+      } catch {
+        return { isValidListingPath: false, reason: 'uri_decode_failed' };
+      }
+    } else if (hostname.endsWith('.supabase.co')) {
+      // Unrecognized/foreign Supabase project attempting to spoof our bucket
+      return { isValidListingPath: false, reason: 'unrecognized_storage_bucket' };
+    } else if (hostname === 'firebasestorage.googleapis.com') {
+      // Firebase Storage default endpoint:
+      // https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<encodedPath>
       const match = parsed.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
       if (!match) {
         return { isValidListingPath: false, reason: 'invalid_firebase_storage_url_format' };
@@ -689,6 +777,8 @@ export function extractAndValidateListingPath(
       }
       try {
         rawPath = decodeURIComponent(match[2]);
+        provider = 'firebase';
+        storagePath = rawPath;
       } catch {
         return { isValidListingPath: false, reason: 'uri_decode_failed' };
       }
@@ -704,6 +794,8 @@ export function extractAndValidateListingPath(
       }
       try {
         rawPath = decodeURIComponent(match[2]);
+        provider = 'firebase';
+        storagePath = rawPath;
       } catch {
         return { isValidListingPath: false, reason: 'uri_decode_failed' };
       }
@@ -723,16 +815,25 @@ export function extractAndValidateListingPath(
       return { isValidListingPath: false, reason: 'unrecognized_storage_bucket' };
     }
     rawPath = withoutGs.substring(slashIdx + 1);
+    provider = 'firebase';
+    storagePath = rawPath;
   } else {
     // Raw relative path
     rawPath = trimmed;
+    storagePath = rawPath;
   }
 
   // Strip any lingering query params or fragment
   rawPath = rawPath.split('?')[0].split('#')[0];
+  if (storagePath) {
+    storagePath = storagePath.split('?')[0].split('#')[0];
+  }
 
   // Strip leading slashes
   rawPath = rawPath.replace(/^\/+/, '');
+  if (storagePath) {
+    storagePath = storagePath.replace(/^\/+/, '');
+  }
 
   // Prevent path traversal and malformed segments
   const segments = rawPath.split('/');
@@ -755,18 +856,24 @@ export function extractAndValidateListingPath(
     return { isValidListingPath: false, reason: 'missing_filename' };
   }
 
-  return { isValidListingPath: true, path: rawPath };
+  return { 
+    isValidListingPath: true, 
+    path: rawPath,
+    provider,
+    storagePath: storagePath || fileName
+  };
 }
 
 /**
  * Validates whether an image URL is safe to be stored in a marketplace listing.
  * Safe images are:
- * 1. Legitimate Firebase Storage images owned by the user under listings/${userId}/ -> isAllowed: true
- * 2. External web images (Unsplash, external CDNs) -> isAllowed: true
+ * 1. Legitimate Supabase Storage images owned by the user under listings/${userId}/ -> isAllowed: true
+ * 2. Legitimate Firebase Storage images owned by the user under listings/${userId}/ -> isAllowed: true
+ * 3. External web images (Unsplash, external CDNs) -> isAllowed: true
  *
  * Prohibited images:
- * - Images in Firebase Storage belonging to other users -> isAllowed: false (ownership_mismatch)
- * - Images in Firebase Storage in other internal directories (avatars/, clips/) -> isAllowed: false (not_a_listing_path)
+ * - Images in storage belonging to other users -> isAllowed: false (ownership_mismatch)
+ * - Images in storage in other internal directories (avatars/, clips/) -> isAllowed: false (not_a_listing_path)
  * - Path traversal attempts -> isAllowed: false (path_traversal_or_malformed)
  * - Unrecognized/spoofed storage buckets -> isAllowed: false (unrecognized_storage_bucket)
  */
@@ -791,7 +898,7 @@ export function validateListingImageUrl(
 
   const check = extractAndValidateListingPath(trimmed, currentUserId, configuredBuckets);
 
-  // 1. If it's the user's own listing image in Firebase Storage -> ALLOWED
+  // 1. If it's the user's own listing image in Storage -> ALLOWED
   if (check.isValidListingPath) {
     return { isAllowed: true };
   }
@@ -809,11 +916,12 @@ export function validateListingImageUrl(
 }
 
 /**
- * Safely deletes verified, owner-controlled listing images from Firebase Storage.
+ * Safely deletes verified, owner-controlled listing images from Storage.
+ * Supports both Supabase Storage ('listings' bucket) and fallback Firebase Storage.
  *
  * Requirements enforced:
  * 1. Safely filters and deduplicates input URLs (handles single string, string[], or listing objects).
- * 2. Verifies URL belongs to the project's configured Firebase Storage bucket.
+ * 2. Verifies URL belongs to the project's configured Storage bucket.
  * 3. Decodes and verifies storage path strictly begins with `listings/${currentUserId}/`.
  * 4. Rejects other users' paths, paths outside `listings/`, directory traversals, and ignores external URLs without throwing.
  * 5. Uses Promise.allSettled so individual failures do not interrupt others.
@@ -894,48 +1002,9 @@ export async function deleteListingImagesFromStorage(
     };
   }
 
-  // 3. Check storage initialization
-  if (!storage) {
-    const details: ListingImageDeletionDetail[] = uniqueUrls.map(url => {
-      const sanitized = sanitizeStorageUrlForLogging(url);
-      const validation = extractAndValidateListingPath(url, sanitizedUserId);
-      if (validation.isValidListingPath) {
-        return {
-          urlOrPath: sanitized,
-          path: validation.path,
-          status: 'failed',
-          reason: 'storage_uninitialized',
-        };
-      }
-      return {
-        urlOrPath: sanitized,
-        status: 'skipped',
-        reason: validation.reason,
-      };
-    });
-
-    const failed = details.filter(d => d.status === 'failed').length;
-    const skipped = details.filter(d => d.status === 'skipped').length;
-
-    dispatchProtonDebugEvent({
-      type: 'storage-error',
-      action: 'deleteListingImages',
-      message: 'Firebase Storage is not initialized, cannot delete listing images.',
-      details,
-    });
-
-    return {
-      total: details.length,
-      deleted: 0,
-      skipped,
-      failed,
-      details,
-    };
-  }
-
   const configuredBuckets = getConfiguredStorageBuckets();
 
-  // 4. Process each URL/path independently with Promise.allSettled
+  // 3. Process each URL/path independently with Promise.allSettled
   const deletionPromises = uniqueUrls.map(async (urlOrPath): Promise<ListingImageDeletionDetail> => {
     const sanitizedUrl = sanitizeStorageUrlForLogging(urlOrPath);
     const validation = extractAndValidateListingPath(urlOrPath, sanitizedUserId, configuredBuckets);
@@ -949,6 +1018,52 @@ export async function deleteListingImagesFromStorage(
     }
 
     const objectPath = validation.path;
+    const isSupabase = validation.provider === 'supabase' ||
+      urlOrPath.includes('supabase.co/storage/v1/object/public/listings/') ||
+      urlOrPath.includes('supabase.co/storage/v1/object/listings/');
+
+    if (isSupabase) {
+      // In Supabase 'listings' bucket, path is `${userId}/${fileName}`
+      const storagePath = objectPath.startsWith('listings/')
+        ? objectPath.substring('listings/'.length)
+        : objectPath;
+
+      try {
+        const { error: supErr } = await supabase.storage.from('listings').remove([storagePath]);
+        if (supErr) {
+          console.warn(`[StorageUtils] Supabase deletion notice for ${storagePath}:`, supErr.message);
+          return {
+            urlOrPath: sanitizedUrl,
+            path: objectPath,
+            status: 'failed',
+            reason: supErr.message || 'supabase_deletion_error',
+          };
+        }
+        return {
+          urlOrPath: sanitizedUrl,
+          path: objectPath,
+          status: 'deleted',
+        };
+      } catch (err: any) {
+        console.warn(`[StorageUtils] Supabase deletion error for ${storagePath}:`, err);
+        return {
+          urlOrPath: sanitizedUrl,
+          path: objectPath,
+          status: 'failed',
+          reason: err?.message || 'supabase_deletion_exception',
+        };
+      }
+    }
+
+    // Fallback: Legacy Firebase Storage URL
+    if (!storage) {
+      return {
+        urlOrPath: sanitizedUrl,
+        path: objectPath,
+        status: 'failed',
+        reason: 'storage_uninitialized',
+      };
+    }
 
     try {
       const storageRef = ref(storage, objectPath);
