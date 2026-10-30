@@ -50,4 +50,9 @@ async function startServer() {
   });
 }
 
-startServer();
+// Only start listening server when running as a dedicated Node server, not on Vercel Serverless
+if (!process.env.VERCEL && process.env.NODE_ENV !== "test") {
+  startServer();
+}
+
+export default app;

@@ -4,9 +4,6 @@ import express from "express";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import crypto from "crypto";
-import { initializeApp as initAdminApp, getApps as getAdminApps } from "firebase-admin/app";
-import { getAuth as getAdminAuth } from "firebase-admin/auth";
-import { createClient } from "@supabase/supabase-js";
 
 // src/lib/gemini-server.ts
 import { GoogleGenAI, Type, Modality } from "@google/genai";
@@ -742,8 +739,10 @@ async function detectClipIssues(caption, duration, sampledBrightness, appLanguag
 // src/serverApp.ts
 dotenv.config();
 var _adminAuth = null;
-function getVerifiedAdminAuth() {
+async function getVerifiedAdminAuth() {
   if (!_adminAuth) {
+    const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
+    const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
     const adminApp = !getAdminApps().length ? initAdminApp({ projectId: "proton-core-ai" }) : getAdminApps()[0];
     _adminAuth = getAdminAuth(adminApp);
   }
@@ -809,7 +808,7 @@ function createApiApp() {
     }
     let decodedToken;
     try {
-      const authInstance = getVerifiedAdminAuth();
+      const authInstance = await getVerifiedAdminAuth();
       decodedToken = await authInstance.verifyIdToken(idToken);
     } catch (authErr) {
       console.error("[StorageServer] Token verification failed:", authErr?.message);
@@ -856,6 +855,7 @@ function createApiApp() {
         error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server."
       });
     }
+    const { createClient } = await import("@supabase/supabase-js");
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -974,6 +974,15 @@ function createApiApp() {
   apiRouter.post("/gemini", geminiHandler);
   app2.use("/api", apiRouter);
   app2.use(apiRouter);
+  app2.use((err, req, res, next) => {
+    console.error("[ServerError]:", err);
+    if (!res.headersSent) {
+      res.status(err.status || 500).json({
+        error: "Server Error",
+        message: err?.message || "An unexpected error occurred"
+      });
+    }
+  });
   return app2;
 }
 var app = createApiApp();
@@ -981,14 +990,28 @@ var serverApp_default = app;
 
 // src/serverlessEntry.ts
 function handler(req, res) {
-  if (req.url === "/api" || req.url === "/api/" || req.url === "/" || req.url === "") {
-    const matchedPath = req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-original-url"];
-    if (typeof matchedPath === "string" && (matchedPath.startsWith("/api") || matchedPath.startsWith("/"))) {
-      req.url = matchedPath;
+  try {
+    if (req.url === "/api" || req.url === "/api/" || req.url === "/" || req.url === "" || req.url === "/api/index" || req.url === "/api/index.js") {
+      const matchedPath = req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-original-url"] || req.headers["x-vercel-matched-path"];
+      if (typeof matchedPath === "string" && (matchedPath.startsWith("/api") || matchedPath.startsWith("/")) && matchedPath !== "/api" && matchedPath !== "/api/" && matchedPath !== "/api/index" && matchedPath !== "/api/index.js") {
+        req.url = matchedPath;
+      } else {
+        req.url = "/api/health";
+      }
+    }
+    return serverApp_default(req, res);
+  } catch (err) {
+    console.error("[Vercel Serverless Invocation Caught Error]:", err);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: "Internal Server Error in Serverless Handler",
+        message: err?.message || String(err)
+      });
     }
   }
-  return serverApp_default(req, res);
 }
 export {
-  handler as default
+  serverApp_default as app,
+  handler as default,
+  handler
 };

@@ -5,9 +5,6 @@ import express from "express";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import crypto from "crypto";
-import { initializeApp as initAdminApp, getApps as getAdminApps } from "firebase-admin/app";
-import { getAuth as getAdminAuth } from "firebase-admin/auth";
-import { createClient } from "@supabase/supabase-js";
 import { 
   chatWithPersona, 
   generateNewPersona, 
@@ -25,10 +22,12 @@ import {
   detectClipIssues
 } from "./lib/gemini-server.js";
 
-// Lazy initialization of Firebase Admin for server-side token authentication
-let _adminAuth: ReturnType<typeof getAdminAuth> | null = null;
-function getVerifiedAdminAuth() {
+// Lazy dynamic initialization of Firebase Admin for server-side token authentication
+let _adminAuth: any = null;
+async function getVerifiedAdminAuth() {
   if (!_adminAuth) {
+    const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
+    const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
     const adminApp = !getAdminApps().length
       ? initAdminApp({ projectId: "proton-core-ai" })
       : getAdminApps()[0];
@@ -115,7 +114,7 @@ export function createApiApp(): express.Express {
 
     let decodedToken;
     try {
-      const authInstance = getVerifiedAdminAuth();
+      const authInstance = await getVerifiedAdminAuth();
       decodedToken = await authInstance.verifyIdToken(idToken);
     } catch (authErr: any) {
       console.error("[StorageServer] Token verification failed:", authErr?.message);
@@ -176,6 +175,7 @@ export function createApiApp(): express.Express {
       });
     }
 
+    const { createClient } = await import("@supabase/supabase-js");
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -306,6 +306,17 @@ export function createApiApp(): express.Express {
   // whether called as /api/xxx or rewritten directly to /xxx
   app.use("/api", apiRouter);
   app.use(apiRouter);
+
+  // Global Express error handler preventing unhandled process crashes
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("[ServerError]:", err);
+    if (!res.headersSent) {
+      res.status(err.status || 500).json({
+        error: "Server Error",
+        message: err?.message || "An unexpected error occurred"
+      });
+    }
+  });
 
   return app;
 }
