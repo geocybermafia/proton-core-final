@@ -462,12 +462,8 @@ export async function uploadProductImage(
     });
   }
 
-  // Ensure user is authenticated with Firebase and fetch a fresh ID token
-  const currentUser = auth?.currentUser;
-  let idToken = '';
-  if (currentUser) {
-    idToken = await currentUser.getIdToken();
-  } else {
+  // Ensure user is authenticated with Firebase
+  if (!auth?.currentUser) {
     throw new Error('User must be authenticated with Firebase to upload listing images.');
   }
 
@@ -478,52 +474,84 @@ export async function uploadProductImage(
     productId,
   });
 
-  const response = await fetch('/api/storage/upload-listing-image', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({
-      image: dataUri,
-      productId: productId || 'prod',
-    }),
+  const requestPayload = JSON.stringify({
+    image: dataUri,
+    productId: productId || 'prod',
   });
 
-  if (!response.ok) {
+  const MAX_ATTEMPTS = 2;
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const activeUser = auth?.currentUser;
+    if (!activeUser) {
+      throw new Error('User must be authenticated with Firebase to upload listing images.');
+    }
+
+    // Force-refresh token before request to guarantee freshness and prevent expired token rejections
+    const idToken = await activeUser.getIdToken(true);
+
+    const response = await fetch('/api/storage/upload-listing-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: requestPayload,
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (!result.publicUrl) {
+        throw new Error('Invalid response from upload service: missing publicUrl.');
+      }
+
+      dispatchProtonDebugEvent({
+        type: 'storage-success',
+        provider: 'supabase-server',
+        bucket: 'listings',
+        path: result.path,
+        downloadUrl: result.publicUrl,
+      });
+
+      return result.publicUrl;
+    }
+
     let errorData: any = null;
     try {
       errorData = await response.json();
     } catch {}
     const errorMessage = errorData?.error || errorData?.message || `HTTP ${response.status}: ${response.statusText}`;
 
-    dispatchProtonDebugEvent({
-      type: 'storage-error',
-      provider: 'supabase-server',
-      bucket: 'listings',
-      code: `HTTP_${response.status}`,
-      message: errorMessage,
-    });
-
     const error: any = new Error(errorMessage);
     error.statusCode = response.status;
-    throw error;
-  }
+    lastError = error;
 
-  const result = await response.json();
-  if (!result.publicUrl) {
-    throw new Error('Invalid response from upload service: missing publicUrl.');
+    // Retry once if and only if HTTP 401 is encountered
+    if (response.status === 401 && attempt < MAX_ATTEMPTS) {
+      dispatchProtonDebugEvent({
+        type: 'storage-retry',
+        provider: 'supabase-server',
+        bucket: 'listings',
+        attempt,
+        code: `HTTP_${response.status}`,
+      });
+      continue;
+    }
+
+    // Do not retry on other status codes (e.g. 400, 403, 500) or if max attempts reached
+    break;
   }
 
   dispatchProtonDebugEvent({
-    type: 'storage-success',
+    type: 'storage-error',
     provider: 'supabase-server',
     bucket: 'listings',
-    path: result.path,
-    downloadUrl: result.publicUrl,
+    code: `HTTP_${lastError?.statusCode || 'UNKNOWN'}`,
+    message: lastError?.message || 'Upload failed',
   });
 
-  return result.publicUrl;
+  throw lastError;
 }
 
 /**

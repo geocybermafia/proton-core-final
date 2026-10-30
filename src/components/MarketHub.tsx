@@ -3024,8 +3024,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               : "Server configuration notice: SUPABASE_SERVICE_ROLE_KEY is required on the server.";
           } else if (rawMessage.toLowerCase().includes('unauthorized') || uploadErr?.statusCode === 401) {
             userMessage = language === 'ka'
-              ? "ავტორიზაციის შეცდომა: გთხოვთ ხელახლა შეხვიდეთ სისტემაში."
-              : "Authentication error: Please sign in again.";
+              ? "სესიის დადასტურება ვერ მოხერხდა. სცადეთ გვერდის განახლება ან ხელახლა შესვლა."
+              : "Could not verify your session. Try refreshing the page or signing in again.";
           } else if (rawMessage.toLowerCase().includes('timed out')) {
             userMessage = language === 'ka'
               ? "ფოტოს ატვირთვას ძალიან დიდი დრო დასჭირდა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან."
