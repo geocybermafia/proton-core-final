@@ -800,56 +800,74 @@ function createApiApp() {
   };
   apiRouter.get("/health", healthHandler);
   const uploadHandler = async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const authHeader = req.headers.authorization || req.headers["Authorization"];
+    const bearerMatch = typeof authHeader === "string" ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
+    if (!bearerMatch) {
       return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
     }
-    const idToken = authHeader.split("Bearer ")[1]?.trim();
+    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, "");
     if (!idToken) {
       return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
     }
     const tokenParts = idToken.split(".");
     if (tokenParts.length !== 3) {
       console.warn("[StorageServer] Token rejected: malformed JWT structure (expected 3 dot-separated segments)");
-      return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+      return res.status(401).json({
+        error: "Unauthorized: Invalid or expired Firebase authentication token",
+        reason: "Malformed JWT structure. Expected 3 segments."
+      });
     }
-    let targetProjectId = "proton-core-ai";
+    let tokenAudience;
     try {
-      const payloadJson = Buffer.from(tokenParts[1], "base64url").toString("utf8");
+      const unpadded = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padLength = (4 - unpadded.length % 4) % 4;
+      const base64 = unpadded + "=".repeat(padLength);
+      const payloadJson = Buffer.from(base64, "base64").toString("utf8");
       const parsedPayload = JSON.parse(payloadJson);
-      const tokenAudience = parsedPayload.aud;
-      const recognizedProjects = new Set([
-        "proton-core-ai",
-        "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-        process.env.VITE_FIREBASE_PROJECT_ID,
-        process.env.FIREBASE_PROJECT_ID,
-        process.env.GCLOUD_PROJECT
-      ].filter(Boolean));
-      if (tokenAudience && recognizedProjects.has(tokenAudience)) {
-        targetProjectId = tokenAudience;
-      }
-    } catch {
+      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === "string" ? parsedPayload.iss.replace("https://securetoken.google.com/", "") : void 0);
+    } catch (e) {
+      console.warn("[StorageServer] Could not parse token payload:", e);
     }
-    let decodedToken;
-    try {
-      const authInstance = await getVerifiedAdminAuth(targetProjectId);
-      decodedToken = await authInstance.verifyIdToken(idToken);
-    } catch (authErr) {
-      let verified = false;
-      const otherProjects = ["proton-core-ai", "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51"].filter((p) => p !== targetProjectId);
-      for (const altProjectId of otherProjects) {
-        try {
-          const altAuth = await getVerifiedAdminAuth(altProjectId);
-          decodedToken = await altAuth.verifyIdToken(idToken);
-          verified = true;
+    const candidateProjects = [];
+    if (tokenAudience && typeof tokenAudience === "string" && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
+      candidateProjects.push(tokenAudience);
+    }
+    const standardProjects = [
+      "proton-core-ai",
+      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
+      process.env.VITE_FIREBASE_PROJECT_ID,
+      process.env.FIREBASE_PROJECT_ID,
+      process.env.GCLOUD_PROJECT
+    ].filter(Boolean);
+    for (const proj of standardProjects) {
+      if (!candidateProjects.includes(proj)) {
+        candidateProjects.push(proj);
+      }
+    }
+    if (candidateProjects.length === 0) {
+      candidateProjects.push("proton-core-ai");
+    }
+    let decodedToken = null;
+    let lastAuthError = null;
+    for (const projId of candidateProjects) {
+      try {
+        const authInstance = await getVerifiedAdminAuth(projId);
+        decodedToken = await authInstance.verifyIdToken(idToken);
+        if (decodedToken && decodedToken.uid) {
           break;
-        } catch {
         }
+      } catch (authErr) {
+        lastAuthError = authErr;
       }
-      if (!verified) {
-        console.warn("[StorageServer] Token verification rejected (401):", authErr?.message);
-        return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
-      }
+    }
+    if (!decodedToken || !decodedToken.uid) {
+      const errDetail = lastAuthError?.message || "Token verification rejected";
+      console.warn("[StorageServer] Token verification rejected (401):", errDetail, "Candidates tried:", candidateProjects);
+      return res.status(401).json({
+        error: "Unauthorized: Invalid or expired Firebase authentication token",
+        reason: errDetail,
+        code: lastAuthError?.code || "auth/invalid-id-token"
+      });
     }
     const verifiedUid = decodedToken.uid;
     if (!verifiedUid) {

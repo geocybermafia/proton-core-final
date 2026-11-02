@@ -3028,9 +3028,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               ? "სერვერის კონფიგურაციის შეცდომა: სერვერზე SUPABASE_SERVICE_ROLE_KEY არ არის მითითებული."
               : "Server configuration notice: SUPABASE_SERVICE_ROLE_KEY is required on the server.";
           } else if (rawMessage.toLowerCase().includes('unauthorized') || uploadErr?.statusCode === 401) {
+            const serverDetail = uploadErr?.reason || uploadErr?.details || '';
+            const detailSuffix = serverDetail ? ` (${serverDetail})` : '';
             userMessage = language === 'ka'
-              ? "სესიის დადასტურება ვერ მოხერხდა. სცადეთ გვერდის განახლება ან ხელახლა შესვლა."
-              : "Could not verify your session. Try refreshing the page or signing in again.";
+              ? `სესიის დადასტურება ვერ მოხერხდა${detailSuffix}. სცადეთ გვერდის განახლება ან ხელახლა შესვლა.`
+              : `Could not verify your session${detailSuffix}. Try refreshing the page or signing in again.`;
           } else if (rawMessage.toLowerCase().includes('html document') || rawMessage.toLowerCase().includes('not valid json')) {
             userMessage = language === 'ka'
               ? "სერვერთან კავშირის შეცდომა. გთხოვთ სცადოთ თავიდან."

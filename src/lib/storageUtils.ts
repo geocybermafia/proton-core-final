@@ -572,6 +572,7 @@ export async function uploadProductImage(
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${idToken}`,
         },
+        credentials: 'include',
         body: requestPayload,
       });
     } catch (networkErr: any) {
@@ -645,6 +646,8 @@ export async function uploadProductImage(
     const errorMessage = parsedJson?.error || parsedJson?.message || `HTTP ${response.status}: ${response.statusText}`;
     const error: any = new Error(errorMessage);
     error.statusCode = response.status;
+    error.reason = parsedJson?.reason || parsedJson?.details;
+    error.code = parsedJson?.code;
     lastError = error;
 
     // Retry once if and only if HTTP 401 is encountered
