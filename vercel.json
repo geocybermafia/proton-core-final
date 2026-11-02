@@ -22,7 +22,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api?1=$1"
     },
     {
       "source": "/((?!assets/|api/|.*\\.[\\w]+$).*)",

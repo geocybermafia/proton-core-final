@@ -9,25 +9,55 @@ export default function handler(req: any, res: any) {
       req.url === '/' || 
       req.url === '' ||
       req.url === '/api/index' ||
-      req.url === '/api/index.js'
+      req.url === '/api/index.js' ||
+      req.url?.startsWith('/api?') ||
+      req.url?.startsWith('/api/?')
     ) {
-      const matchedPath = 
+      let resolvedPath: string | null = null;
+
+      // 1. Check known Vercel/proxy headers
+      const headerCandidate = 
+        req.headers['x-forwarded-uri'] ||
+        req.headers['x-invoke-path'] ||
         req.headers['x-matched-path'] || 
         req.headers['x-forwarded-url'] || 
         req.headers['x-original-url'] ||
         req.headers['x-vercel-matched-path'];
 
       if (
-        typeof matchedPath === 'string' && 
-        (matchedPath.startsWith('/api') || matchedPath.startsWith('/')) &&
-        matchedPath !== '/api' &&
-        matchedPath !== '/api/' &&
-        matchedPath !== '/api/index' &&
-        matchedPath !== '/api/index.js'
+        typeof headerCandidate === 'string' && 
+        (headerCandidate.startsWith('/api/') || headerCandidate.startsWith('/')) &&
+        headerCandidate !== '/api' &&
+        headerCandidate !== '/api/' &&
+        headerCandidate !== '/api/index' &&
+        headerCandidate !== '/api/index.js'
       ) {
-        req.url = matchedPath;
-      } else {
-        // Safe default: if route was stripped by rewrite or hit root /api, serve health check
+        resolvedPath = headerCandidate.startsWith('/api') ? headerCandidate : `/api${headerCandidate}`;
+      }
+
+      // 2. Check x-now-route-matches header (format: "1=storage%2Fupload-listing-image")
+      if (!resolvedPath && typeof req.headers['x-now-route-matches'] === 'string') {
+        const match = req.headers['x-now-route-matches'].match(/(?:^|&)1=([^&]+)/);
+        if (match && match[1]) {
+          const subPath = decodeURIComponent(match[1]);
+          resolvedPath = `/api/${subPath.replace(/^\/+/, '')}`;
+        }
+      }
+
+      // 3. Check URL query parameters (e.g. rewrite ?1=$1 or ?path=...)
+      if (!resolvedPath && typeof req.url === 'string' && req.url.includes('?')) {
+        try {
+          const urlObj = new URL(req.url, 'http://localhost');
+          const pathParam = urlObj.searchParams.get('path') || urlObj.searchParams.get('1');
+          if (pathParam) {
+            resolvedPath = `/api/${pathParam.replace(/^\/+/, '')}`;
+          }
+        } catch {}
+      }
+
+      if (resolvedPath) {
+        req.url = resolvedPath;
+      } else if (req.method === 'GET' || req.method === 'HEAD') {
         req.url = '/api/health';
       }
     }

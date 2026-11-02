@@ -23,17 +23,19 @@ import {
 } from "./lib/gemini-server.js";
 
 // Lazy dynamic initialization of Firebase Admin for server-side token authentication
-let _adminAuth: any = null;
-async function getVerifiedAdminAuth() {
-  if (!_adminAuth) {
-    const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
-    const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
-    const adminApp = !getAdminApps().length
-      ? initAdminApp({ projectId: "proton-core-ai" })
-      : getAdminApps()[0];
-    _adminAuth = getAdminAuth(adminApp);
+const _adminAuthMap = new Map<string, any>();
+
+async function getVerifiedAdminAuth(targetProjectId?: string) {
+  const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
+  const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
+  
+  const projectId = targetProjectId || "proton-core-ai";
+  if (!_adminAuthMap.has(projectId)) {
+    const existing = getAdminApps().find((a: any) => a.name === projectId || (a.name === '[DEFAULT]' && a.options?.projectId === projectId));
+    const adminApp = existing || initAdminApp({ projectId }, projectId);
+    _adminAuthMap.set(projectId, getAdminAuth(adminApp));
   }
-  return _adminAuth;
+  return _adminAuthMap.get(projectId);
 }
 
 export function createApiApp(): express.Express {
@@ -112,13 +114,54 @@ export function createApiApp(): express.Express {
       return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
     }
 
+    // Basic structure check: Firebase ID token is a standard JWT with 3 dot-separated base64url segments
+    const tokenParts = idToken.split(".");
+    if (tokenParts.length !== 3) {
+      console.warn("[StorageServer] Token rejected: malformed JWT structure (expected 3 dot-separated segments)");
+      return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+    }
+
+    // Inspect token audience claim to identify the issuing Firebase Project
+    let targetProjectId = "proton-core-ai";
+    try {
+      const payloadJson = Buffer.from(tokenParts[1], "base64url").toString("utf8");
+      const parsedPayload = JSON.parse(payloadJson);
+      const tokenAudience = parsedPayload.aud;
+      
+      const recognizedProjects = new Set([
+        "proton-core-ai",
+        "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
+        process.env.VITE_FIREBASE_PROJECT_ID,
+        process.env.FIREBASE_PROJECT_ID,
+        process.env.GCLOUD_PROJECT,
+      ].filter(Boolean));
+
+      if (tokenAudience && recognizedProjects.has(tokenAudience)) {
+        targetProjectId = tokenAudience;
+      }
+    } catch {}
+
     let decodedToken;
     try {
-      const authInstance = await getVerifiedAdminAuth();
+      const authInstance = await getVerifiedAdminAuth(targetProjectId);
       decodedToken = await authInstance.verifyIdToken(idToken);
     } catch (authErr: any) {
-      console.error("[StorageServer] Token verification failed:", authErr?.message);
-      return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+      // Fallback verification across alternative recognized projects if audience differs
+      let verified = false;
+      const otherProjects = ["proton-core-ai", "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51"].filter(p => p !== targetProjectId);
+      for (const altProjectId of otherProjects) {
+        try {
+          const altAuth = await getVerifiedAdminAuth(altProjectId);
+          decodedToken = await altAuth.verifyIdToken(idToken);
+          verified = true;
+          break;
+        } catch {}
+      }
+
+      if (!verified) {
+        console.warn("[StorageServer] Token verification rejected (401):", authErr?.message);
+        return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+      }
     }
 
     const verifiedUid = decodedToken.uid;
@@ -306,6 +349,15 @@ export function createApiApp(): express.Express {
   // whether called as /api/xxx or rewritten directly to /xxx
   app.use("/api", apiRouter);
   app.use(apiRouter);
+
+  // Explicit JSON 404 catch-all for /api routes to prevent falling through to SPA index.html
+  app.use("/api", (req, res) => {
+    res.status(404).json({
+      error: "Not Found",
+      message: `API endpoint not found: ${req.method} /api${req.path}`,
+      path: `/api${req.path}`
+    });
+  });
 
   // Global Express error handler preventing unhandled process crashes
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

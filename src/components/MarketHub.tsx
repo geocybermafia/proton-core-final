@@ -2720,9 +2720,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    const targetInput = e.target;
     if (file) {
       if (!file.type.startsWith('image/')) {
         showToast(language === 'ka' ? "გთხოვთ აირჩიოთ ფოტოს ფაილი." : "Please select an image file.", 'warning');
+        if (targetInput) targetInput.value = '';
         return;
       }
 
@@ -2761,15 +2763,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
           setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
           setIsResizing(false);
+          if (targetInput) targetInput.value = '';
         };
         img.onerror = () => {
           setIsResizing(false);
+          if (targetInput) targetInput.value = '';
           showToast(language === 'ka' ? "ფოტოს დამუშავებისას მოხდა შეცდომა." : "Error processing image.", 'error');
         };
         img.src = event.target?.result as string;
       };
       reader.onerror = () => {
         setIsResizing(false);
+        if (targetInput) targetInput.value = '';
         showToast(language === 'ka' ? "ფაილის წაკითხვისას მოხდა შეცდომა." : "Error reading file.", 'error');
       };
       reader.readAsDataURL(file);
@@ -3026,6 +3031,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             userMessage = language === 'ka'
               ? "სესიის დადასტურება ვერ მოხერხდა. სცადეთ გვერდის განახლება ან ხელახლა შესვლა."
               : "Could not verify your session. Try refreshing the page or signing in again.";
+          } else if (rawMessage.toLowerCase().includes('html document') || rawMessage.toLowerCase().includes('not valid json')) {
+            userMessage = language === 'ka'
+              ? "სერვერთან კავშირის შეცდომა. გთხოვთ სცადოთ თავიდან."
+              : "Server connection error. Please try again.";
           } else if (rawMessage.toLowerCase().includes('timed out')) {
             userMessage = language === 'ka'
               ? "ფოტოს ატვირთვას ძალიან დიდი დრო დასჭირდა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან."

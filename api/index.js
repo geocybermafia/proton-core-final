@@ -738,15 +738,17 @@ async function detectClipIssues(caption, duration, sampledBrightness, appLanguag
 
 // src/serverApp.ts
 dotenv.config();
-var _adminAuth = null;
-async function getVerifiedAdminAuth() {
-  if (!_adminAuth) {
-    const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
-    const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
-    const adminApp = !getAdminApps().length ? initAdminApp({ projectId: "proton-core-ai" }) : getAdminApps()[0];
-    _adminAuth = getAdminAuth(adminApp);
+var _adminAuthMap = /* @__PURE__ */ new Map();
+async function getVerifiedAdminAuth(targetProjectId) {
+  const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
+  const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
+  const projectId = targetProjectId || "proton-core-ai";
+  if (!_adminAuthMap.has(projectId)) {
+    const existing = getAdminApps().find((a) => a.name === projectId || a.name === "[DEFAULT]" && a.options?.projectId === projectId);
+    const adminApp = existing || initAdminApp({ projectId }, projectId);
+    _adminAuthMap.set(projectId, getAdminAuth(adminApp));
   }
-  return _adminAuth;
+  return _adminAuthMap.get(projectId);
 }
 function createApiApp() {
   const app2 = express();
@@ -806,13 +808,48 @@ function createApiApp() {
     if (!idToken) {
       return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
     }
+    const tokenParts = idToken.split(".");
+    if (tokenParts.length !== 3) {
+      console.warn("[StorageServer] Token rejected: malformed JWT structure (expected 3 dot-separated segments)");
+      return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+    }
+    let targetProjectId = "proton-core-ai";
+    try {
+      const payloadJson = Buffer.from(tokenParts[1], "base64url").toString("utf8");
+      const parsedPayload = JSON.parse(payloadJson);
+      const tokenAudience = parsedPayload.aud;
+      const recognizedProjects = new Set([
+        "proton-core-ai",
+        "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
+        process.env.VITE_FIREBASE_PROJECT_ID,
+        process.env.FIREBASE_PROJECT_ID,
+        process.env.GCLOUD_PROJECT
+      ].filter(Boolean));
+      if (tokenAudience && recognizedProjects.has(tokenAudience)) {
+        targetProjectId = tokenAudience;
+      }
+    } catch {
+    }
     let decodedToken;
     try {
-      const authInstance = await getVerifiedAdminAuth();
+      const authInstance = await getVerifiedAdminAuth(targetProjectId);
       decodedToken = await authInstance.verifyIdToken(idToken);
     } catch (authErr) {
-      console.error("[StorageServer] Token verification failed:", authErr?.message);
-      return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+      let verified = false;
+      const otherProjects = ["proton-core-ai", "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51"].filter((p) => p !== targetProjectId);
+      for (const altProjectId of otherProjects) {
+        try {
+          const altAuth = await getVerifiedAdminAuth(altProjectId);
+          decodedToken = await altAuth.verifyIdToken(idToken);
+          verified = true;
+          break;
+        } catch {
+        }
+      }
+      if (!verified) {
+        console.warn("[StorageServer] Token verification rejected (401):", authErr?.message);
+        return res.status(401).json({ error: "Unauthorized: Invalid or expired Firebase authentication token" });
+      }
     }
     const verifiedUid = decodedToken.uid;
     if (!verifiedUid) {
@@ -974,6 +1011,13 @@ function createApiApp() {
   apiRouter.post("/gemini", geminiHandler);
   app2.use("/api", apiRouter);
   app2.use(apiRouter);
+  app2.use("/api", (req, res) => {
+    res.status(404).json({
+      error: "Not Found",
+      message: `API endpoint not found: ${req.method} /api${req.path}`,
+      path: `/api${req.path}`
+    });
+  });
   app2.use((err, req, res, next) => {
     console.error("[ServerError]:", err);
     if (!res.headersSent) {
@@ -991,11 +1035,32 @@ var serverApp_default = app;
 // src/serverlessEntry.ts
 function handler(req, res) {
   try {
-    if (req.url === "/api" || req.url === "/api/" || req.url === "/" || req.url === "" || req.url === "/api/index" || req.url === "/api/index.js") {
-      const matchedPath = req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-original-url"] || req.headers["x-vercel-matched-path"];
-      if (typeof matchedPath === "string" && (matchedPath.startsWith("/api") || matchedPath.startsWith("/")) && matchedPath !== "/api" && matchedPath !== "/api/" && matchedPath !== "/api/index" && matchedPath !== "/api/index.js") {
-        req.url = matchedPath;
-      } else {
+    if (req.url === "/api" || req.url === "/api/" || req.url === "/" || req.url === "" || req.url === "/api/index" || req.url === "/api/index.js" || req.url?.startsWith("/api?") || req.url?.startsWith("/api/?")) {
+      let resolvedPath = null;
+      const headerCandidate = req.headers["x-forwarded-uri"] || req.headers["x-invoke-path"] || req.headers["x-matched-path"] || req.headers["x-forwarded-url"] || req.headers["x-original-url"] || req.headers["x-vercel-matched-path"];
+      if (typeof headerCandidate === "string" && (headerCandidate.startsWith("/api/") || headerCandidate.startsWith("/")) && headerCandidate !== "/api" && headerCandidate !== "/api/" && headerCandidate !== "/api/index" && headerCandidate !== "/api/index.js") {
+        resolvedPath = headerCandidate.startsWith("/api") ? headerCandidate : `/api${headerCandidate}`;
+      }
+      if (!resolvedPath && typeof req.headers["x-now-route-matches"] === "string") {
+        const match = req.headers["x-now-route-matches"].match(/(?:^|&)1=([^&]+)/);
+        if (match && match[1]) {
+          const subPath = decodeURIComponent(match[1]);
+          resolvedPath = `/api/${subPath.replace(/^\/+/, "")}`;
+        }
+      }
+      if (!resolvedPath && typeof req.url === "string" && req.url.includes("?")) {
+        try {
+          const urlObj = new URL(req.url, "http://localhost");
+          const pathParam = urlObj.searchParams.get("path") || urlObj.searchParams.get("1");
+          if (pathParam) {
+            resolvedPath = `/api/${pathParam.replace(/^\/+/, "")}`;
+          }
+        } catch {
+        }
+      }
+      if (resolvedPath) {
+        req.url = resolvedPath;
+      } else if (req.method === "GET" || req.method === "HEAD") {
         req.url = "/api/health";
       }
     }
