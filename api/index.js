@@ -790,7 +790,19 @@ async function verifyFirebaseTokenDirectly(idToken, candidateProjects) {
     return null;
   }
 }
-var _localImageStore = /* @__PURE__ */ new Map();
+function detectImageMimeType(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+  if (buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255) {
+    return "image/jpeg";
+  }
+  if (buffer[0] === 137 && buffer[1] === 80 && buffer[2] === 78 && buffer[3] === 71 && buffer[4] === 13 && buffer[5] === 10 && buffer[6] === 26 && buffer[7] === 10) {
+    return "image/png";
+  }
+  if (buffer[0] === 82 && buffer[1] === 73 && buffer[2] === 70 && buffer[3] === 70 && buffer[8] === 87 && buffer[9] === 69 && buffer[10] === 66 && buffer[11] === 80) {
+    return "image/webp";
+  }
+  return null;
+}
 async function getVerifiedAdminAuth(targetProjectId) {
   const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
   const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
@@ -958,7 +970,6 @@ function createApiApp() {
         error: `Bad Request: Unsupported image format (${mimeType}). Allowed formats are JPEG, PNG, and WebP.`
       });
     }
-    const ext = ALLOWED_MIME_TYPES[mimeType];
     const buffer = Buffer.from(base64Data, "base64");
     const MAX_FILE_SIZE = 5 * 1024 * 1024;
     if (buffer.length > MAX_FILE_SIZE) {
@@ -966,6 +977,14 @@ function createApiApp() {
         error: `Bad Request: Image exceeds 5 MB limit. Received size: ${(buffer.length / (1024 * 1024)).toFixed(2)} MB.`
       });
     }
+    const detectedMimeType = detectImageMimeType(buffer);
+    if (!detectedMimeType) {
+      return res.status(400).json({
+        error: "Bad Request: Invalid image content. Magic bytes do not match an allowed image type (JPEG, PNG, WebP).",
+        code: "storage/invalid-magic-bytes"
+      });
+    }
+    const ext = detectedMimeType === "image/jpeg" ? "jpg" : detectedMimeType === "image/png" ? "png" : "webp";
     const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://ntndwrpruyrttlpjptzf.supabase.co";
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
     const timestamp = Date.now();
@@ -973,21 +992,10 @@ function createApiApp() {
     const cleanProdId = typeof productId === "string" ? productId.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 32) : "prod";
     const storagePath = `${verifiedUid}/${cleanProdId}_${timestamp}_${randomSuffix}.${ext}`;
     if (!serviceRoleKey) {
-      if (process.env.NODE_ENV === "test") {
-        console.error("[StorageServer] Upload aborted: SUPABASE_SERVICE_ROLE_KEY is not configured in server environment.");
-        return res.status(503).json({
-          error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server."
-        });
-      }
-      _localImageStore.set(storagePath, { buffer, mimeType });
-      const host = req.get("host") || "localhost:3000";
-      const protocol = req.protocol === "https" || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
-      const publicUrl = `${protocol}://${host}/api/storage/file/${storagePath}`;
-      console.info(`[StorageServer] Image stored locally under ${storagePath} -> ${publicUrl}`);
-      return res.status(200).json({
-        success: true,
-        publicUrl,
-        path: storagePath
+      console.error("[StorageServer] Upload aborted: SUPABASE_SERVICE_ROLE_KEY is not configured in server environment.");
+      return res.status(503).json({
+        error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server.",
+        code: "storage/configuration-missing"
       });
     }
     const { createClient } = await import("@supabase/supabase-js");
@@ -996,13 +1004,14 @@ function createApiApp() {
     });
     try {
       const { data, error: uploadErr } = await supabaseAdmin.storage.from("listings").upload(storagePath, buffer, {
-        contentType: mimeType,
+        contentType: detectedMimeType,
         upsert: true
       });
       if (uploadErr) {
         console.error("[StorageServer] Supabase storage upload failed:", uploadErr.message);
         return res.status(502).json({
-          error: `Storage service error: ${uploadErr.message}`
+          error: `Storage service error: ${uploadErr.message}`,
+          code: "storage/upload-failed"
         });
       }
       const { data: publicUrlData } = supabaseAdmin.storage.from("listings").getPublicUrl(storagePath);
@@ -1016,17 +1025,206 @@ function createApiApp() {
       return res.status(500).json({ error: "Internal server error during image storage" });
     }
   };
-  apiRouter.get("/storage/file/:uid/:filename", (req, res) => {
-    const fileKey = `${req.params.uid}/${req.params.filename}`;
-    const stored = _localImageStore.get(fileKey);
-    if (!stored) {
-      return res.status(404).json({ error: "Not Found: Image not found in server storage" });
+  apiRouter.get("/storage/file/:uid/:filename", async (req, res) => {
+    const { uid, filename } = req.params;
+    const uidRegex = /^[a-zA-Z0-9_-]{1,128}$/;
+    const filenameRegex = /^[a-zA-Z0-9_.-]{1,128}$/;
+    if (!uid || !filename || !uidRegex.test(uid) || !filenameRegex.test(filename) || uid.includes("..") || filename.includes("..")) {
+      return res.status(400).json({ error: "Bad Request: Invalid path parameters", code: "storage/invalid-path" });
     }
-    res.setHeader("Content-Type", stored.mimeType);
-    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-    res.send(stored.buffer);
+    const storagePath = `${uid}/${filename}`;
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://ntndwrpruyrttlpjptzf.supabase.co";
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+    try {
+      if (serviceRoleKey) {
+        const { createClient } = await import("@supabase/supabase-js");
+        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+          auth: { persistSession: false, autoRefreshToken: false }
+        });
+        const { data, error } = await supabaseAdmin.storage.from("listings").download(storagePath);
+        if (error || !data) {
+          return res.status(404).json({ error: "Not Found: Image not found in storage", code: "storage/object-not-found" });
+        }
+        const arrayBuffer = await data.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const mimeType = detectImageMimeType(buffer) || (data.type || "application/octet-stream");
+        res.setHeader("Content-Type", mimeType);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(buffer);
+      } else {
+        const publicFetchUrl = `${supabaseUrl}/storage/v1/object/public/listings/${storagePath}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6e3);
+        let supRes;
+        try {
+          supRes = await fetch(publicFetchUrl, { signal: controller.signal });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+        if (!supRes.ok) {
+          let isNotFound = supRes.status === 404;
+          try {
+            const errJson = await supRes.json();
+            if (errJson.statusCode === "404" || errJson.statusCode === 404 || errJson.error === "not_found" || errJson.code === "NoSuchKey" || typeof errJson.message === "string" && errJson.message.toLowerCase().includes("not found")) {
+              isNotFound = true;
+            }
+          } catch {
+          }
+          return res.status(isNotFound ? 404 : 503).json({
+            error: isNotFound ? "Not Found: Image not found in storage" : "Storage service unavailable",
+            code: isNotFound ? "storage/object-not-found" : "storage/service-unavailable"
+          });
+        }
+        const arrayBuffer = await supRes.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const mimeType = detectImageMimeType(buffer) || (supRes.headers.get("content-type") || "application/octet-stream");
+        res.setHeader("Content-Type", mimeType);
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        return res.send(buffer);
+      }
+    } catch (err) {
+      console.warn(`[StorageServer] File retrieval notice for ${storagePath}:`, err?.message);
+      return res.status(404).json({ error: "Not Found: Image not found in storage", code: "storage/object-not-found" });
+    }
   });
+  const deleteHandler = async (req, res) => {
+    const authHeader = req.headers.authorization || req.headers["Authorization"];
+    const bearerMatch = typeof authHeader === "string" ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
+    if (!bearerMatch) {
+      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
+    }
+    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, "");
+    if (!idToken) {
+      return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
+    }
+    const tokenParts = idToken.split(".");
+    if (tokenParts.length !== 3) {
+      return res.status(401).json({
+        error: "Unauthorized: Invalid or expired Firebase authentication token",
+        reason: "Malformed JWT structure"
+      });
+    }
+    let tokenAudience;
+    try {
+      const unpadded = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const padLength = (4 - unpadded.length % 4) % 4;
+      const base64 = unpadded + "=".repeat(padLength);
+      const payloadJson = Buffer.from(base64, "base64").toString("utf8");
+      const parsedPayload = JSON.parse(payloadJson);
+      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === "string" ? parsedPayload.iss.replace("https://securetoken.google.com/", "") : void 0);
+    } catch {
+    }
+    const candidateProjects = [];
+    if (tokenAudience && typeof tokenAudience === "string" && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
+      candidateProjects.push(tokenAudience);
+    }
+    const standardProjects = [
+      "proton-core-ai",
+      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
+      process.env.VITE_FIREBASE_PROJECT_ID,
+      process.env.FIREBASE_PROJECT_ID,
+      process.env.GCLOUD_PROJECT
+    ].filter(Boolean);
+    for (const proj of standardProjects) {
+      if (!candidateProjects.includes(proj)) candidateProjects.push(proj);
+    }
+    if (candidateProjects.length === 0) candidateProjects.push("proton-core-ai");
+    let decodedToken = null;
+    try {
+      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
+      if (directResult && directResult.uid) decodedToken = directResult;
+    } catch {
+    }
+    if (!decodedToken || !decodedToken.uid) {
+      for (const projId of candidateProjects) {
+        try {
+          const authInstance = await getVerifiedAdminAuth(projId);
+          decodedToken = await authInstance.verifyIdToken(idToken);
+          if (decodedToken && decodedToken.uid) break;
+        } catch {
+        }
+      }
+    }
+    if (!decodedToken || !decodedToken.uid) {
+      return res.status(401).json({
+        error: "Unauthorized: Invalid or expired Firebase authentication token",
+        code: "auth/invalid-id-token"
+      });
+    }
+    const verifiedUid = decodedToken.uid;
+    const { path, url } = req.body || {};
+    const target = path || url;
+    if (!target || typeof target !== "string") {
+      return res.status(400).json({ error: "Bad Request: 'path' or 'url' is required" });
+    }
+    let normalizedPath = target.trim();
+    if (normalizedPath.startsWith("http://") || normalizedPath.startsWith("https://")) {
+      try {
+        const parsed = new URL(normalizedPath);
+        const match = parsed.pathname.match(/\/storage\/(?:v1\/object\/(?:public\/)?)?listings\/(.+)$/);
+        if (match) {
+          normalizedPath = decodeURIComponent(match[1]);
+        } else {
+          const fileMatch = parsed.pathname.match(/\/api\/storage\/file\/(.+)$/);
+          if (fileMatch) {
+            normalizedPath = decodeURIComponent(fileMatch[1]);
+          }
+        }
+      } catch {
+        return res.status(400).json({ error: "Bad Request: Malformed URL" });
+      }
+    }
+    normalizedPath = normalizedPath.replace(/^\/+/, "");
+    if (normalizedPath.startsWith("listings/")) {
+      normalizedPath = normalizedPath.substring("listings/".length);
+    }
+    normalizedPath = normalizedPath.split("?")[0].split("#")[0];
+    const segments = normalizedPath.split("/");
+    if (segments.some((s) => s === ".." || s === "." || s === "")) {
+      return res.status(400).json({ error: "Bad Request: Path traversal or invalid path segments" });
+    }
+    if (!normalizedPath.startsWith(`${verifiedUid}/`)) {
+      return res.status(403).json({
+        error: "Forbidden: You are not authorized to delete images belonging to other users",
+        code: "storage/ownership-mismatch"
+      });
+    }
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://ntndwrpruyrttlpjptzf.supabase.co";
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+    if (!serviceRoleKey) {
+      return res.status(503).json({
+        error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server.",
+        code: "storage/configuration-missing"
+      });
+    }
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+      const { data, error: delErr } = await supabaseAdmin.storage.from("listings").remove([normalizedPath]);
+      if (delErr) {
+        console.warn(`[StorageServer] Supabase deletion notice for ${normalizedPath}:`, delErr.message);
+        return res.status(502).json({
+          error: `Storage service error: ${delErr.message}`,
+          code: "storage/deletion-failed"
+        });
+      }
+      return res.status(200).json({
+        success: true,
+        deletedPath: normalizedPath
+      });
+    } catch (err) {
+      console.error("[StorageServer] Unexpected error during deletion:", err);
+      return res.status(500).json({ error: "Internal server error during image deletion" });
+    }
+  };
   apiRouter.post("/storage/upload-listing-image", uploadHandler);
+  apiRouter.post("/storage/delete-listing-image", deleteHandler);
+  apiRouter.delete("/storage/file/:uid/:filename", (req, res, next) => {
+    req.body = { path: `${req.params.uid}/${req.params.filename}` };
+    return deleteHandler(req, res, next);
+  });
   const geminiHandler = async (req, res) => {
     const { action, args } = req.body || {};
     const customApiKey = req.headers["x-custom-api-key"];

@@ -970,6 +970,17 @@ export function extractAndValidateListingPath(
       } catch {
         return { isValidListingPath: false, reason: 'uri_decode_failed' };
       }
+    } else if (parsed.pathname.match(/^\/(?:api\/)?storage\/file\/([^/]+)\/(.+)$/)) {
+      const match = parsed.pathname.match(/^\/(?:api\/)?storage\/file\/([^/]+)\/(.+)$/)!;
+      try {
+        const decodedUid = decodeURIComponent(match[1]);
+        const decodedFilename = decodeURIComponent(match[2]);
+        rawPath = `listings/${decodedUid}/${decodedFilename}`;
+        provider = 'supabase';
+        storagePath = `${decodedUid}/${decodedFilename}`;
+      } catch {
+        return { isValidListingPath: false, reason: 'uri_decode_failed' };
+      }
     } else if (hostname.endsWith('.supabase.co')) {
       // Unrecognized/foreign Supabase project attempting to spoof our bucket
       return { isValidListingPath: false, reason: 'unrecognized_storage_bucket' };
@@ -1011,6 +1022,19 @@ export function extractAndValidateListingPath(
     } else {
       // External host (e.g., Unsplash, Cloudinary, CDN) - safe to skip
       return { isValidListingPath: false, reason: 'external_host' };
+    }
+  } else if (trimmed.startsWith('/api/storage/file/') || trimmed.startsWith('api/storage/file/') || trimmed.startsWith('/storage/file/') || trimmed.startsWith('storage/file/')) {
+    const clean = trimmed.replace(/^\/?(?:api\/)?storage\/file\//, '');
+    const slashIdx = clean.indexOf('/');
+    if (slashIdx !== -1) {
+      const pUid = clean.substring(0, slashIdx);
+      const pFile = clean.substring(slashIdx + 1);
+      rawPath = `listings/${pUid}/${pFile}`;
+      provider = 'supabase';
+      storagePath = `${pUid}/${pFile}`;
+    } else {
+      rawPath = trimmed;
+      storagePath = rawPath;
     }
   } else if (trimmed.startsWith('gs://')) {
     // gs://bucket/path
@@ -1238,6 +1262,29 @@ export async function deleteListingImagesFromStorage(
         : objectPath;
 
       try {
+        if (typeof window !== 'undefined' && auth?.currentUser) {
+          try {
+            const token = await auth.currentUser.getIdToken();
+            const serverRes = await fetch('/api/storage/delete-listing-image', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ path: storagePath }),
+            });
+            if (serverRes.ok) {
+              return {
+                urlOrPath: sanitizedUrl,
+                path: objectPath,
+                status: 'deleted',
+              };
+            }
+          } catch (servErr) {
+            console.warn('[StorageUtils] Server deletion notice, attempting direct client Supabase deletion:', servErr);
+          }
+        }
+
         const { error: supErr } = await supabase.storage.from('listings').remove([storagePath]);
         if (supErr) {
           console.warn(`[StorageUtils] Supabase deletion notice for ${storagePath}:`, supErr.message);
