@@ -40,7 +40,7 @@ export default defineConfig(({ mode }) => ({
     reportCompressedSize: false,
     modulePreload: { polyfill: true },
     minify: 'esbuild',
-    target: 'esnext',
+    target: 'es2020',
     rollupOptions: {
       output: {
         entryFileNames: 'assets/[name]-[hash].js',

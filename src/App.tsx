@@ -5909,8 +5909,16 @@ export default function App() {
 
   if (!authInitialized) {
     return (
-      <div className="h-[100dvh] flex items-center justify-center bg-proton-bg">
-        <Loader2 className="w-8 h-8 text-proton-accent animate-spin" />
+      <div className="h-[100dvh] flex flex-col items-center justify-center bg-proton-bg px-4 select-none">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-proton-card border border-proton-border flex items-center justify-center shadow-lg">
+            <Loader2 className="w-5 h-5 text-proton-accent animate-spin" />
+          </div>
+          <span className="font-mono text-sm tracking-widest uppercase font-semibold text-proton-text">PROTON</span>
+        </div>
+        <p className="text-xs text-proton-muted font-mono animate-pulse">
+          {language === 'ka' ? 'სისტემის ინიციალიზაცია...' : 'Initializing Proton...'}
+        </p>
       </div>
     );
   }

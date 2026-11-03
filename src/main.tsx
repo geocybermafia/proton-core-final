@@ -20,17 +20,43 @@ import { injected } from 'wagmi/connectors';
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
 const queryClient = new QueryClient();
-const config = createConfig({
-  chains: [mainnet, polygon, optimism, arbitrum, base],
-  connectors: [injected()],
-  transports: {
-    [mainnet.id]: http(),
-    [polygon.id]: http(),
-    [optimism.id]: http(),
-    [arbitrum.id]: http(),
-    [base.id]: http(),
-  },
-});
+
+// Safely initialize Wagmi configuration with connector fallback to prevent module-level crashes on mobile WebKit/browsers
+function createSafeWagmiConfig() {
+  try {
+    return createConfig({
+      chains: [mainnet, polygon, optimism, arbitrum, base],
+      connectors: [injected()],
+      transports: {
+        [mainnet.id]: http(),
+        [polygon.id]: http(),
+        [optimism.id]: http(),
+        [arbitrum.id]: http(),
+        [base.id]: http(),
+      },
+    });
+  } catch (err) {
+    console.warn('[Wagmi] Injected connector init failed, falling back to core chains configuration:', err);
+    try {
+      return createConfig({
+        chains: [mainnet, polygon, optimism, arbitrum, base],
+        connectors: [],
+        transports: {
+          [mainnet.id]: http(),
+          [polygon.id]: http(),
+          [optimism.id]: http(),
+          [arbitrum.id]: http(),
+          [base.id]: http(),
+        },
+      });
+    } catch (criticalErr) {
+      console.error('[Wagmi] Critical Wagmi creation error:', criticalErr);
+      throw criticalErr;
+    }
+  }
+}
+
+const config = createSafeWagmiConfig();
 
 import { isChunkLoadError, clearAllChunkRetryFlags } from './lib/lazyWithRetry';
 
@@ -41,23 +67,25 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 
   static getDerivedStateFromError(error: Error) {
-    const errMsg = error?.message || String(error);
-    if (
-      errMsg.includes("reading 'emit'") ||
-      errMsg.includes("reading 'addListener'") ||
-      errMsg.includes("reading 'runtime'") ||
-      errMsg.includes("Extension context invalidated")
-    ) {
-      return { hasError: false, error: null };
-    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    console.error("Proton caught an uncaught render error:", error, errorInfo);
   }
 
   handleReload = () => {
+    clearAllChunkRetryFlags();
+    window.location.reload();
+  };
+
+  handleResetAndReload = () => {
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem('proton_last_route');
+    } catch (e) {
+      console.warn('Storage clear error:', e);
+    }
     clearAllChunkRetryFlags();
     window.location.reload();
   };
@@ -77,13 +105,13 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
                 Proton Update Detected
               </h1>
               <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: '1.6', marginBottom: '24px' }}>
-                A new version of the Proton platform has been deployed. Please reload the application to fetch the latest assets and continue seamlessly.
+                აპლიკაციის ახალი ვერსია ხელმისაწვდომია. გთხოვთ გადატვირთოთ გვერდი განახლებული რესურსების ჩასატვირთად.
               </p>
               <button 
                 onClick={this.handleReload} 
                 style={{ width: '100%', padding: '12px 24px', backgroundColor: '#0284c7', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 4px 14px 0 rgba(2, 132, 199, 0.39)' }}
               >
-                Reload & Update Application
+                აპლიკაციის განახლება / Reload
               </button>
             </div>
           </div>
@@ -91,12 +119,45 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
       }
 
       return (
-        <div style={{ padding: '20px', backgroundColor: '#010409', color: '#ff4444', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
-          <div style={{ maxWidth: '600px', width: '100%' }}>
-            <h1 style={{ fontSize: '18px', borderBottom: '1px solid #ff4444', paddingBottom: '10px', marginBottom: '10px' }}>Application Error</h1>
-            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', opacity: 0.8 }}>{this.state.error?.toString()}</pre>
-            <p style={{ marginTop: '20px', fontSize: '10px', color: '#888' }}>Check browser console for more details.</p>
-            <button onClick={this.handleReload} style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#333', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Reload App</button>
+        <div style={{ padding: '24px', backgroundColor: '#0b0f17', color: '#f9fafb', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <div style={{ maxWidth: '520px', width: '100%', background: '#111827', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '16px', padding: '28px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                !
+              </div>
+              <div>
+                <h1 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#f9fafb' }}>აპლიკაციის ჩატვირთვის შეფერხება</h1>
+                <p style={{ fontSize: '12px', color: '#9ca3af', margin: '4px 0 0 0' }}>Application load interruption</p>
+              </div>
+            </div>
+            
+            <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.6', marginBottom: '20px' }}>
+              დაფიქსირდა მოულოდნელი შეფერხება. შეგიძლიათ გადატვირთოთ გვერდი ან გაასუფთავოთ დროებითი ქეში.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button 
+                onClick={this.handleReload} 
+                style={{ width: '100%', padding: '12px', backgroundColor: '#6366f1', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                ხელახლა ჩატვირთვა / Reload App
+              </button>
+              <button 
+                onClick={this.handleResetAndReload} 
+                style={{ width: '100%', padding: '10px', backgroundColor: 'transparent', color: '#9ca3af', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '10px', fontSize: '12px', cursor: 'pointer' }}
+              >
+                ქეშის გასუფთავება და ჩატვირთვა / Reset Session Cache
+              </button>
+            </div>
+
+            {this.state.error && (
+              <details style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '12px' }}>
+                <summary style={{ fontSize: '11px', color: '#6b7280', cursor: 'pointer', fontFamily: 'monospace' }}>დეტალური ინფორმაცია / Error Details</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', fontSize: '11px', color: '#ef4444', background: '#0b0f17', padding: '10px', borderRadius: '8px', marginTop: '8px', overflowX: 'auto', maxHeight: '140px' }}>
+                  {this.state.error.toString()}
+                </pre>
+              </details>
+            )}
           </div>
         </div>
       );

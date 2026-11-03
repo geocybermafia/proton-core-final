@@ -1,5 +1,12 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  setPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence, 
+  inMemoryPersistence 
+} from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
@@ -35,7 +42,35 @@ export const storage = getStorage(app);
 // Initialize Firebase Functions
 export const functions = getFunctions(app);
 
-// Set persistence explicitly to LOCAL (default, but good to be explicit for "secure session management")
-setPersistence(auth, browserLocalPersistence);
+/**
+ * Robust progressive persistence configuration.
+ * Mobile WebViews, iOS Safari (Private Browsing / sandboxed iframes) often restrict or throw
+ * SecurityError on IndexedDB access used by browserLocalPersistence.
+ * We try browserLocalPersistence -> browserSessionPersistence -> inMemoryPersistence with full error isolation.
+ * This runs non-blocking so synchronous exports and listeners are immediately available.
+ */
+export const initAuthPersistence = async (): Promise<void> => {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+  } catch (localErr) {
+    console.warn('[Firebase Auth] browserLocalPersistence failed (IndexedDB restricted), trying session persistence:', localErr);
+    try {
+      await setPersistence(auth, browserSessionPersistence);
+    } catch (sessionErr) {
+      console.warn('[Firebase Auth] browserSessionPersistence failed, trying in-memory persistence:', sessionErr);
+      try {
+        await setPersistence(auth, inMemoryPersistence);
+      } catch (memErr) {
+        console.warn('[Firebase Auth] All explicit persistence configurations failed, proceeding with default:', memErr);
+      }
+    }
+  }
+};
+
+// Execute persistence setup without blocking runtime exports
+initAuthPersistence().catch((err) => {
+  console.warn('[Firebase Auth] Unhandled persistence error handled safely:', err);
+});
 
 export const googleProvider = new GoogleAuthProvider();
+

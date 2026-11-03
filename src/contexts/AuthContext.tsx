@@ -57,21 +57,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    // onAuthStateChanged handles the initial session and subsequent sign-in/sign-out
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        // Backup clearance on unauthenticated state transitions for security coverage
-        try {
-          localStorage.removeItem('proton_market_cart');
-          localStorage.removeItem('proton_market_hub_ledger');
-        } catch (e) {
-          console.warn(e);
-        }
+    let authSettled = false;
+
+    // Safety timeout: If Firebase Auth takes longer than 3500ms (e.g. mobile cellular latency,
+    // captive portal, or sandboxed IndexedDB restrictions), unblock the app in Guest mode.
+    // The listener remains subscribed, so when Firebase later resolves the actual user,
+    // the state will cleanly elevate without reloading.
+    const fallbackTimer = setTimeout(() => {
+      if (!authSettled) {
+        console.warn('[AuthContext] Firebase Auth resolution took longer than 3500ms. Transitioning to Guest mode while listener continues in background.');
+        setLoading(false);
+        setInitialized(true);
       }
-      setUser(u);
-      setLoading(false);
-      setInitialized(true);
-    });
+    }, 3500);
+
+    // onAuthStateChanged handles the initial session and subsequent sign-in/sign-out
+    const unsubscribeAuth = onAuthStateChanged(
+      auth,
+      (u) => {
+        authSettled = true;
+        clearTimeout(fallbackTimer);
+        setUser(u);
+        setLoading(false);
+        setInitialized(true);
+      },
+      (error) => {
+        console.warn('[AuthContext] onAuthStateChanged encountered an error:', error);
+        authSettled = true;
+        clearTimeout(fallbackTimer);
+        setUser(null);
+        setLoading(false);
+        setInitialized(true);
+      }
+    );
 
     // onIdTokenChanged handles token refreshes (important for long-lived sessions)
     const unsubscribeToken = onIdTokenChanged(auth, (u) => {
@@ -81,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
+      clearTimeout(fallbackTimer);
       unsubscribeAuth();
       unsubscribeToken();
     };
