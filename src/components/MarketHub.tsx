@@ -967,12 +967,18 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       const timer = setTimeout(() => {
         const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || (formData.images && formData.images.length > 0);
         if (hasContent) {
+          // Preserve safe HTTP/HTTPS uploaded URLs in localStorage draft;
+          // strictly strip raw base64 data URIs to prevent QuotaExceededError and main thread lag
+          const safeImageUrls = (formData.images || []).filter(
+            (img): img is string => typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))
+          );
+
           localStorage.setItem('proton_markethub_draft_form_data', JSON.stringify({
             mode: viewMode,
             editingId: editingListing?.id || null,
             data: {
               ...formData,
-              images: [] // Strip base64 images from localStorage draft to prevent QuotaExceededError and main thread lag
+              images: safeImageUrls
             }
           }));
         } else {
@@ -994,10 +1000,20 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           if (parsed && parsed.data) {
             if (parsed.mode === viewMode) {
               if (viewMode === 'create' || (viewMode === 'edit' && editingListing && parsed.editingId === editingListing.id)) {
-                setFormData(prev => ({
-                  ...prev,
-                  ...parsed.data
-                }));
+                setFormData(prev => {
+                  const restoredImages = Array.isArray(parsed.data.images)
+                    ? parsed.data.images.filter((img: any): img is string => typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://')))
+                    : [];
+
+                  return {
+                    ...prev,
+                    ...parsed.data,
+                    // If the draft contains saved safe image URLs, restore them;
+                    // if draft images array is explicitly empty, restore empty array;
+                    // preserve prev.images only if parsed.data has no images field defined
+                    images: Array.isArray(parsed.data.images) ? restoredImages : prev.images
+                  };
+                });
               }
             }
           }
@@ -2732,7 +2748,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
           // Canvas resizing logic
           const canvas = document.createElement('canvas');
           let width = img.width;
@@ -2761,7 +2777,23 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
           // Get base64 with quality reduction
           const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-          setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
+
+          // If user is authenticated, upload directly to permanent storage so draft retains the HTTPS URL
+          if (user?.uid) {
+            try {
+              const uploadedUrl = await uploadProductImage(user.uid, dataUrl, `prod_${Date.now()}_0`);
+              setFormData(prev => ({
+                ...prev,
+                images: [uploadedUrl, ...(prev.images || []).filter(u => u !== uploadedUrl && !u.startsWith('data:'))]
+              }));
+            } catch (uploadErr) {
+              console.warn('[MarketHub] Direct draft image upload failed, falling back to local session preview:', uploadErr);
+              setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
+            }
+          } else {
+            setFormData(prev => ({ ...prev, images: [dataUrl, ...(prev.images || [])] }));
+          }
+
           setIsResizing(false);
           if (targetInput) targetInput.value = '';
         };
