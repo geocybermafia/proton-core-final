@@ -439,6 +439,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   <FastInput 
                     required
                     type="number"
+                    min="0"
+                    step="any"
                     value={formData.price}
                     onCommit={val => setFormData(p => ({ ...p, price: val }))}
                     placeholder="0.00"
