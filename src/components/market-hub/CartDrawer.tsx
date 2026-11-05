@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Trash2, ShoppingBag, Loader2, ShieldCheck, Truck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Listing, ShippingDetails } from '../../types';
-import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing } from './MarketConstants';
+import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing, getListingTitle } from './MarketConstants';
 
 export interface CartItemThumbnailProps {
   src?: string;
@@ -183,7 +183,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                         <div className="flex items-center gap-4 relative">
                           <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5 relative">
                             {item.image ? (
-                              <CartItemThumbnail src={item.image} alt={item.title} />
+                              <CartItemThumbnail src={item.image} alt={getListingTitle(item, language)} />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-white/20">
                                 <ShoppingBag size={20} />
@@ -203,7 +203,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                                 : (language === 'ka' ? 'ნივთი' : 'Product')}
                             </span>
                             <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">
-                              {language === 'ka' ? (item.titleGe || item.title) : item.title}
+                              {getListingTitle(item, language)}
                             </h4>
                             <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
                               {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}

@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useSeller, isRealListing } from '../contexts/SellerContext';
-import { safeParseDate } from '../components/market-hub/MarketConstants';
+import { safeParseDate, getListingTitle } from '../components/market-hub/MarketConstants';
 import { safeStorage } from '../lib/safeStorage';
 import { Listing, Order } from '../types';
 
@@ -102,7 +102,7 @@ export function useOpportunities(language: 'en' | 'ka' = 'en'): Opportunity[] {
         reasoning,
         ctaLabel,
         listingId: listing.id,
-        listingTitle: isKa ? (listing.titleGe || listing.title) : listing.title,
+        listingTitle: getListingTitle(listing, isKa ? 'ka' : 'en'),
         stock: stockVal,
         _latestOrderTime: latestOrderTime
       });

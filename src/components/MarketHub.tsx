@@ -97,7 +97,8 @@ import {
   isPhysicalOrder,
   isServiceOrder,
   isSellerActionRequired,
-  canCancelOrder
+  canCancelOrder,
+  getListingTitle
 } from './market-hub/MarketConstants';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
@@ -711,7 +712,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     let originalMetaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
 
     if (checkoutItem) {
-      const activeTitle = language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title;
+      const activeTitle = getListingTitle(checkoutItem, language);
       const activeDesc = language === 'ka' ? (checkoutItem.descriptionGe || checkoutItem.description) : checkoutItem.description;
       document.title = `${activeTitle} | ${language === 'ka' ? 'მარკეტი' : 'Market'} — PROTON`;
       
@@ -896,6 +897,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setFormData({
       title: '',
       titleGe: '',
+      primaryLanguage: language === 'ka' ? 'ka' : 'en',
       description: '',
       descriptionGe: '',
       price: '',
@@ -924,6 +926,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [formData, setFormData] = useState<{
     title: string;
     titleGe: string;
+    primaryLanguage?: 'ka' | 'en';
     description: string;
     descriptionGe: string;
     price: string;
@@ -943,6 +946,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   }>({
     title: '',
     titleGe: '',
+    primaryLanguage: language === 'ka' ? 'ka' : 'en',
     description: '',
     descriptionGe: '',
     price: '',
@@ -2364,6 +2368,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         const matchesSearch = 
           (l.title && l.title.toLowerCase().includes(searchLower)) ||
           (l.titleGe && l.titleGe.toLowerCase().includes(searchLower)) ||
+          (Boolean((l as any).titleEn) && (l as any).titleEn.toLowerCase().includes(searchLower)) ||
           (l.description && l.description.toLowerCase().includes(searchLower)) ||
           (l.descriptionGe && l.descriptionGe.toLowerCase().includes(searchLower)) ||
           (l.sellerName && l.sellerName.toLowerCase().includes(searchLower)) ||
@@ -2473,7 +2478,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
           sellerId: freshData.sellerId || checkoutItem.sellerId,
           amount: freshData.price,
           currency: freshData.currency || checkoutItem.currency || 'USD',
-          itemTitle: freshData.title || checkoutItem.title,
+          itemTitle: getListingTitle(freshData || checkoutItem, language),
           status: isService ? 'booked' : (isPhysical ? 'pending' : 'completed'),
           orderType: isService ? 'service' : 'product',
           buyerInstructions: isService ? buyerInstructions.trim() : '',
@@ -2502,7 +2507,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }
       });
       
-      const purchasedTitle = checkoutItem.title;
+      const purchasedTitle = getListingTitle(checkoutItem, language);
       setCheckoutItem(null);
       setBuyerInstructions('');
       showToast(
@@ -2516,10 +2521,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     } catch (error: any) {
       console.error("Error creating order:", error);
       if (error && (error.message === 'This item has already been sold.' || error.message?.includes('sold'))) {
+        const itemSoldTitle = getListingTitle(checkoutItem, language);
         showToast(
           language === 'ka' 
-            ? `პროდუქტი "${checkoutItem.title}" უკვე გაყიდულია სხვა მომხმარებლის მიერ.` 
-            : `Item "${checkoutItem.title}" has already been sold to another user.`,
+            ? `პროდუქტი "${itemSoldTitle}" უკვე გაყიდულია სხვა მომხმარებლის მიერ.` 
+            : `Item "${itemSoldTitle}" has already been sold to another user.`,
           'error',
           6000
         );
@@ -2976,14 +2982,15 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         }
       }
 
-      // Step 1 validation: Title (Allow either English or Georgian title)
-      const titleEn = (formData.title || '').trim();
-      const titleGe = (formData.titleGe || '').trim();
-      if (!titleEn && !titleGe) {
+      // Step 1 validation: Multilingual Title Logic
+      const rawTitleEn = (formData.title || '').trim();
+      const rawTitleGe = (formData.titleGe || '').trim();
+
+      if (!rawTitleEn && !rawTitleGe) {
         showToast(
           language === 'ka' 
-            ? "გთხოვთ შეავსოთ ნივთის სათაური (ქართულად ან ინგლისურად)." 
-            : "Please fill in the product title (English or Georgian).", 
+            ? "გთხოვთ შეავსოთ განცხადების სათაური." 
+            : "Please enter a listing title.", 
           'warning'
         );
         setFormStep(1);
@@ -2991,10 +2998,32 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         return;
       }
 
-      // Safe fallback: if primary title is empty, provide titleGe; if titleGe is empty, provide primary title.
-      // If both are filled, preserve the original values entered by the seller.
-      const resolvedPrimaryTitle = titleEn || titleGe;
-      const resolvedTitleGe = titleGe || titleEn;
+      // Determine active primary language
+      let effectivePrimaryLang: 'ka' | 'en' = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+      if (effectivePrimaryLang === 'ka' && !rawTitleGe && rawTitleEn) {
+        effectivePrimaryLang = 'en';
+      } else if (effectivePrimaryLang === 'en' && !rawTitleEn && rawTitleGe) {
+        effectivePrimaryLang = 'ka';
+      }
+
+      const primaryTitle = effectivePrimaryLang === 'ka' ? rawTitleGe : rawTitleEn;
+      if (!primaryTitle) {
+        showToast(
+          language === 'ka'
+            ? `გთხოვთ შეავსოთ სათაური ძირითად ენაზე (${effectivePrimaryLang === 'ka' ? 'ქართულად' : 'ინგლისურად'}).`
+            : `Please enter a title in the primary language (${effectivePrimaryLang === 'ka' ? 'Georgian' : 'English'}).`,
+          'warning'
+        );
+        setFormStep(1);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Preserve authentic seller inputs without auto-generating fake translations.
+      // Firestore requires `title` in hasAll(['title', ...]). Set `title` to authoritative primaryTitle.
+      const finalTitleGe = rawTitleGe;
+      const finalTitleEn = rawTitleEn;
+      const resolvedFirestoreTitle = primaryTitle;
 
       // Step 2 validation: Price & Currency
       const priceStr = String(formData.price || '').trim().replace(',', '.');
@@ -3120,8 +3149,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
       }
 
       const listingData = {
-        title: resolvedPrimaryTitle,
-        titleGe: resolvedTitleGe,
+        title: resolvedFirestoreTitle,
+        titleGe: finalTitleGe,
+        titleEn: finalTitleEn,
+        primaryLanguage: effectivePrimaryLang,
         description: formData.description.trim(),
         descriptionGe: (formData.descriptionGe || formData.description).trim(),
         price: parsedPrice,
@@ -3145,7 +3176,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
         serviceTerms: formData.serviceTerms || ''
       };
 
-      const savedTitle = resolvedPrimaryTitle;
+      const savedTitle = primaryTitle;
       const isEdit = viewMode === 'edit' && Boolean(editingListing);
 
       if (isEdit && editingListing) {
@@ -3329,9 +3360,53 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
 
   const startEdit = (listing: Listing) => {
     setEditingListing(listing);
+
+    // Detect primary language and preserve genuine title inputs
+    const isGeorgianText = (str: string) => /[\u10A0-\u10FF]/.test(str);
+    const rawTitle = (listing.title || '').trim();
+    const rawTitleGe = (listing.titleGe || '').trim();
+    const rawTitleEn = ((listing as any).titleEn || '').trim();
+
+    let primaryLang: 'ka' | 'en' = listing.primaryLanguage === 'ka' || listing.primaryLanguage === 'en'
+      ? listing.primaryLanguage
+      : (rawTitleGe && !rawTitle && !rawTitleEn ? 'ka' : isGeorgianText(rawTitle) ? 'ka' : 'en');
+
+    // Handle legacy listings where title and titleGe were duplicated:
+    let editTitleEn = rawTitleEn;
+    let editTitleGe = rawTitleGe;
+
+    if (!editTitleEn && !editTitleGe) {
+      if (primaryLang === 'ka') {
+        editTitleGe = rawTitle;
+        editTitleEn = '';
+      } else {
+        editTitleEn = rawTitle;
+        editTitleGe = '';
+      }
+    } else if (rawTitle && rawTitle === rawTitleGe && !rawTitleEn) {
+      // Legacy duplication: only one language was entered originally
+      if (isGeorgianText(rawTitle)) {
+        editTitleGe = rawTitle;
+        editTitleEn = '';
+        primaryLang = 'ka';
+      } else {
+        editTitleEn = rawTitle;
+        editTitleGe = '';
+        primaryLang = 'en';
+      }
+    } else {
+      if (!editTitleEn && primaryLang === 'en' && rawTitle && rawTitle !== rawTitleGe) {
+        editTitleEn = rawTitle;
+      }
+      if (!editTitleGe && primaryLang === 'ka' && rawTitle && rawTitle !== rawTitleEn) {
+        editTitleGe = rawTitle;
+      }
+    }
+
     setFormData({
-      title: listing.title,
-      titleGe: listing.titleGe || '',
+      title: editTitleEn,
+      titleGe: editTitleGe,
+      primaryLanguage: primaryLang,
       description: listing.description,
       descriptionGe: listing.descriptionGe || '',
       price: listing.price.toString(),
@@ -4207,7 +4282,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                                 {language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Inquiry thread:'}
                               </span>
                               <h4 className="text-sm font-black text-white uppercase tracking-wider">
-                                {activeChatListing.title}
+                                {getListingTitle(activeChatListing, language)}
                               </h4>
                               <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
                                 {user?.uid === activeChatContext?.sellerId ? (
@@ -5581,7 +5656,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         ? (language === 'ka' ? `მყიდველი: ${activeChatContext?.buyerName || 'Buyer'}` : `Buyer: ${activeChatContext?.buyerName || 'Buyer'}`)
                         : (language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Chatting about:')}
                     </span>
-                    <h4 className="text-xs font-black text-white truncate">{activeChatListing.title}</h4>
+                    <h4 className="text-xs font-black text-white truncate">{getListingTitle(activeChatListing, language)}</h4>
                   </div>
                 </div>
 
@@ -5595,7 +5670,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                           {language === 'ka' ? 'შეკვეთის შესახებ' : 'Regarding Order'} #{activeChatOrder.id.slice(-6).toUpperCase()}
                         </span>
                         <p className="text-[9px] text-white/60 truncate">
-                          {activeChatOrder.itemTitle || activeChatListing.title}
+                          {activeChatOrder.itemTitle || getListingTitle(activeChatListing, language)}
                         </p>
                       </div>
                     </div>

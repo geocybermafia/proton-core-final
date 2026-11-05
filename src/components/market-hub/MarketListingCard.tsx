@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Listing } from '../../types';
 import { cn } from '../../lib/utils';
-import { MarketTheme, CATEGORY_EMOJIS, WORLD_COUNTRIES } from './MarketConstants';
+import { MarketTheme, CATEGORY_EMOJIS, WORLD_COUNTRIES, getListingTitle } from './MarketConstants';
 
 export interface ListingCardImageProps {
   src?: string;
@@ -129,7 +129,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   const isOwnListing = !!user && listing.sellerId === user.uid;
   const canManageListing = isOwnListing;
   const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
-  const displayTitle = language === 'ka' ? (listing.titleGe || listing.title) : listing.title;
+  const displayTitle = getListingTitle(listing, language);
   const imageUrl = (listing.images && listing.images.length > 0) ? listing.images[0] : listing.image;
   const rawPrice = priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency);
   const formattedPrice = rawPrice.toLocaleString(undefined, { maximumFractionDigits: 0 });

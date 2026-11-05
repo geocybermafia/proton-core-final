@@ -3,6 +3,7 @@ import { Listing } from '../types';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LayoutGrid, Navigation, Loader2, AlertTriangle, RotateCcw, X } from 'lucide-react';
+import { getListingTitle } from './market-hub/MarketConstants';
 
 interface ListingMapProps {
   listings: Listing[];
@@ -194,7 +195,7 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
           popupAnchor: [0, -32]
         });
 
-        const localizedTitle = language === 'ka' ? (listing.titleGe || listing.title) : listing.title;
+        const localizedTitle = getListingTitle(listing, language);
         const localizedDesc = language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description;
         
         // Premium popup HTML structured standardly

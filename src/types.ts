@@ -140,6 +140,8 @@ export type Listing = {
   id: string;
   title: string;
   titleGe?: string;
+  titleEn?: string;
+  primaryLanguage?: 'ka' | 'en';
   description: string;
   descriptionGe?: string;
   price: number;

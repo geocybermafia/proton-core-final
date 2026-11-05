@@ -112,8 +112,9 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
             mode: 'create',
             editingId: null,
             data: {
-              title,
-              titleGe: title,
+              title: isKa ? '' : title,
+              titleGe: isKa ? title : '',
+              primaryLanguage: isKa ? 'ka' : 'en',
               description: fullDesc,
               descriptionGe: fullDesc,
               price: '',

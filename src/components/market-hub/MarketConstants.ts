@@ -348,3 +348,60 @@ export const canCancelOrder = (order: any): boolean => {
   return order.status === 'pending' || order.status === 'booked';
 };
 
+/**
+ * Universal Multilingual Title Resolver for Market Hub.
+ *
+ * Rules:
+ * 1. If viewer is in Georgian ('ka'), prioritize genuine Georgian title (`titleGe`).
+ *    If Georgian title is not provided, gracefully fall back to the listing's primary title.
+ * 2. If viewer is in English ('en' or others), prioritize English title (`titleEn` or `title` when primary is 'en').
+ *    If English title is not provided, gracefully fall back to the listing's primary title.
+ * 3. Never displays blank or throws an error.
+ * 4. Backward compatible with legacy listings (where only `title` or `titleGe` is stored).
+ */
+export const getListingTitle = (
+  item?: {
+    title?: string;
+    titleGe?: string;
+    titleEn?: string;
+    primaryLanguage?: 'ka' | 'en' | string;
+    itemTitle?: string;
+  } | null,
+  lang: string = 'en'
+): string => {
+  if (!item) return '';
+
+  const rawTitle = (item.title || item.itemTitle || '').trim();
+  const rawTitleGe = (item.titleGe || '').trim();
+  const rawTitleEn = (item.titleEn || '').trim();
+
+  // Determine effective primary language:
+  const primaryLang = item.primaryLanguage === 'ka' || item.primaryLanguage === 'en'
+    ? item.primaryLanguage
+    : (rawTitleGe && !rawTitle && !rawTitleEn ? 'ka' : 'en');
+
+  // The primary title is whichever field corresponds to the declared or detected primary language:
+  const primaryTitle = primaryLang === 'ka'
+    ? (rawTitleGe || rawTitleEn || rawTitle)
+    : (rawTitleEn || rawTitle || rawTitleGe);
+
+  if (lang === 'ka') {
+    // 1. Genuine Georgian title if provided
+    if (rawTitleGe) return rawTitleGe;
+    // 2. Fall back to primary language title
+    if (primaryTitle) return primaryTitle;
+    // 3. Fall back to any available title
+    return rawTitleEn || rawTitle || 'უსათაურო';
+  } else {
+    // 1. Genuine English title if explicitly provided
+    if (rawTitleEn) return rawTitleEn;
+    // If primary was English and rawTitle is present (standard legacy and new English listings)
+    if (primaryLang === 'en' && rawTitle) return rawTitle;
+    // 2. Fall back to primary language title (e.g. Georgian primary title when no English translation exists)
+    if (primaryTitle) return primaryTitle;
+    // 3. Fall back to any available title
+    return rawTitleGe || rawTitle || 'Untitled';
+  }
+};
+
+

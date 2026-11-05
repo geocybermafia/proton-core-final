@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, ShoppingBag, ShieldCheck, MapPin, Loader2, Truck, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Listing, ShippingDetails } from '../../types';
-import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing } from './MarketConstants';
+import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing, getListingTitle } from './MarketConstants';
 import { CartItemThumbnail } from './CartDrawer';
 
 export interface CheckoutModalProps {
@@ -166,7 +166,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                   {checkoutItem.image ? (
                     <CartItemThumbnail 
                       src={checkoutItem.image} 
-                      alt={language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title} 
+                      alt={getListingTitle(checkoutItem, language)} 
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -184,7 +184,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                     {t.market.categories[checkoutItem.category as keyof typeof t.market.categories] || checkoutItem.category}
                   </span>
                   <h4 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight line-clamp-1">
-                    {language === 'ka' ? (checkoutItem.titleGe || checkoutItem.title) : checkoutItem.title}
+                    {getListingTitle(checkoutItem, language)}
                   </h4>
                   <p className="text-lg sm:text-xl font-black text-[#10b981] font-mono mt-1">
                     {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}

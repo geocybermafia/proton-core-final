@@ -16,10 +16,11 @@ import {
   Trash2,
   Eye,
   Edit3,
-  ShoppingBag
+  ShoppingBag,
+  Languages
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { MarketTheme, CURRENCIES, WORLD_COUNTRIES, CATEGORY_EMOJIS } from './MarketConstants';
+import { MarketTheme, CURRENCIES, WORLD_COUNTRIES, CATEGORY_EMOJIS, getListingTitle } from './MarketConstants';
 import { FastInput } from './FastInputs';
 import { MapPicker } from '../MapPicker';
 import { useToast } from '../Toast';
@@ -29,6 +30,7 @@ const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL
 export interface ListingFormData {
   title: string;
   titleGe: string;
+  primaryLanguage?: 'ka' | 'en';
   description: string;
   descriptionGe: string;
   price: string;
@@ -183,14 +185,24 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     key={step}
                     type="button"
                     onClick={() => {
-                      if (step > 1 && !(formData.title || '').trim() && !(formData.titleGe || '').trim()) {
-                        showToast(
-                          language === 'ka' 
-                            ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური (ქართულად ან ინგლისურად) გასაგრძელებლად" 
-                            : "Please enter a listing title (English or Georgian) on Step 1 to continue.", 
-                          'warning'
-                        );
-                        return;
+                      if (step > 1) {
+                        const currentPrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+                        const tEn = (formData.title || '').trim();
+                        const tGe = (formData.titleGe || '').trim();
+
+                        if (currentPrimary === 'ka' && !tGe && tEn) {
+                          setFormData(p => ({ ...p, primaryLanguage: 'en' }));
+                        } else if (currentPrimary === 'en' && !tEn && tGe) {
+                          setFormData(p => ({ ...p, primaryLanguage: 'ka' }));
+                        } else if (!tEn && !tGe) {
+                          showToast(
+                            language === 'ka' 
+                              ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.` 
+                              : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`, 
+                            'warning'
+                          );
+                          return;
+                        }
                       }
                       if (step > 2) {
                         const priceStr = String(formData.price || '').trim().replace(',', '.');
@@ -362,58 +374,149 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               </div>
             </div>
 
-            {/* Title in EN & GE */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">🇬🇧</span>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t.market.form.title} (EN)</label>
-                  </div>
-                  <span className="text-[8px] font-mono text-zinc-500">
-                    {language === 'ka' ? 'სავალდებულოა ერთ-ერთი სათაური' : 'At least one title required'}
-                  </span>
-                </div>
-                <div className="relative">
-                  <FastInput 
-                    type="text"
-                    value={formData.title}
-                    onCommit={val => setFormData(p => ({ ...p, title: val }))}
-                    placeholder={language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა' : 'e.g. iPhone 14 Pro or Wooden Desk'}
-                    className={cn(
-                      "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
-                      "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-500",
-                      currentTheme.input
-                    )}
-                  />
-                </div>
-              </div>
+            {/* Primary Language Selection & Multilingual Titles */}
+            {(() => {
+              const activePrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+              const isKaPrimary = activePrimary === 'ka';
 
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">🇬🇪</span>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]">{t.market.form.title} (GE)</label>
+              return (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-zinc-950/70 border border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Languages size={15} className="text-[#dfb257]" />
+                        <span className="text-[11px] font-black uppercase tracking-wider text-white">
+                          {language === 'ka' ? 'განცხადების ძირითადი ენა' : 'Primary Listing Language'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 font-medium">
+                        {language === 'ka'
+                          ? 'ძირითად ენაზე სათაური სავალდებულოა. დამატებითი ენა არასავალდებულოა.'
+                          : 'Title in primary language is required. Secondary language title is optional.'}
+                      </p>
+                    </div>
+
+                    <div className="inline-flex p-1 rounded-xl bg-zinc-900 border border-zinc-800 self-start sm:self-auto shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, primaryLanguage: 'ka' }))}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                          isKaPrimary
+                            ? "bg-[#dfb257] text-zinc-950 shadow-sm font-black"
+                            : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                        )}
+                      >
+                        <span>🇬🇪</span>
+                        <span>ქართული</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(p => ({ ...p, primaryLanguage: 'en' }))}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer",
+                          !isKaPrimary
+                            ? "bg-[#dfb257] text-zinc-950 shadow-sm font-black"
+                            : "text-zinc-400 hover:text-white hover:bg-zinc-800/50"
+                        )}
+                      >
+                        <span>🇬🇧</span>
+                        <span>English</span>
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[8px] font-mono text-zinc-500">
-                    {language === 'ka' ? 'ქართული სათაური' : 'Georgian title'}
-                  </span>
+
+                  {/* Title inputs in GE & EN */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Georgian Title Field */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">🇬🇪</span>
+                          <label className={cn(
+                            "text-[10px] font-black uppercase tracking-widest",
+                            isKaPrimary ? "text-[#dfb257]" : "text-zinc-400"
+                          )}>
+                            {t.market.form.title} (GE)
+                          </label>
+                        </div>
+                        <span className={cn(
+                          "text-[8px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold",
+                          isKaPrimary 
+                            ? "bg-[#dfb257]/15 text-[#dfb257] border border-[#dfb257]/30" 
+                            : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+                        )}>
+                          {isKaPrimary
+                            ? (language === 'ka' ? 'ძირითადი • სავალდებულო' : 'Primary • Required')
+                            : (language === 'ka' ? 'დამატებითი • არასავალდებულო' : 'Secondary • Optional')}
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <FastInput 
+                          type="text"
+                          value={formData.titleGe}
+                          onCommit={val => setFormData(p => ({ ...p, titleGe: val }))}
+                          placeholder={isKaPrimary
+                            ? (language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა (სავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Required)')
+                            : (language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა (არასავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Optional)')
+                          }
+                          className={cn(
+                            "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
+                            isKaPrimary 
+                              ? "bg-[#09090b]/90 border-zinc-800 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-500"
+                              : "bg-[#09090b]/60 border-zinc-900 focus:outline-none focus:border-zinc-700 focus:ring-2 focus:ring-zinc-700/20 placeholder-zinc-600",
+                            currentTheme.input
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* English Title Field */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">🇬🇧</span>
+                          <label className={cn(
+                            "text-[10px] font-black uppercase tracking-widest",
+                            !isKaPrimary ? "text-[#dfb257]" : "text-zinc-400"
+                          )}>
+                            {t.market.form.title} (EN)
+                          </label>
+                        </div>
+                        <span className={cn(
+                          "text-[8px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold",
+                          !isKaPrimary 
+                            ? "bg-[#dfb257]/15 text-[#dfb257] border border-[#dfb257]/30" 
+                            : "bg-zinc-900 text-zinc-500 border border-zinc-800"
+                        )}>
+                          {!isKaPrimary
+                            ? (language === 'ka' ? 'ძირითადი • სავალდებულო' : 'Primary • Required')
+                            : (language === 'ka' ? 'დამატებითი • არასავალდებულო' : 'Secondary • Optional')}
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <FastInput 
+                          type="text"
+                          value={formData.title}
+                          onCommit={val => setFormData(p => ({ ...p, title: val }))}
+                          placeholder={!isKaPrimary
+                            ? (language === 'ka' ? 'e.g. iPhone 14 Pro or Wooden Desk (სავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Required)')
+                            : (language === 'ka' ? 'e.g. iPhone 14 Pro or Wooden Desk (არასავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Optional)')
+                          }
+                          className={cn(
+                            "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
+                            !isKaPrimary 
+                              ? "bg-[#09090b]/90 border-zinc-800 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-500"
+                              : "bg-[#09090b]/60 border-zinc-900 focus:outline-none focus:border-zinc-700 focus:ring-2 focus:ring-zinc-700/20 placeholder-zinc-600",
+                            currentTheme.input
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="relative">
-                  <FastInput 
-                    type="text"
-                    value={formData.titleGe}
-                    onCommit={val => setFormData(p => ({ ...p, titleGe: val }))}
-                    placeholder={language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა' : 'e.g. iPhone 14 Pro or Wooden Desk'}
-                    className={cn(
-                      "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
-                      "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-600",
-                      currentTheme.input
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </motion.div>
         )}
 
@@ -939,9 +1042,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <div className="p-4 space-y-3">
                   <div>
                     <h4 className="text-sm font-black text-white line-clamp-1">
-                      {language === 'ka' 
-                        ? (formData.titleGe || formData.title || '—') 
-                        : (formData.title || formData.titleGe || '—')}
+                      {getListingTitle(formData, language) || '—'}
                     </h4>
                     {formData.titleGe && formData.title && formData.titleGe !== formData.title && (
                       <p className="text-[10px] text-zinc-500 font-semibold line-clamp-1 mt-0.5">
@@ -1008,7 +1109,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
                       </button>
                     </div>
-                    <p className="text-xs font-bold text-white line-clamp-1">{formData.title || formData.titleGe || '—'}</p>
+                    <p className="text-xs font-bold text-white line-clamp-1">{getListingTitle(formData, language) || '—'}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-400">
                         {formData.listingType?.toUpperCase()}
@@ -1138,11 +1239,19 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 type="button"
                 onClick={() => {
                   if (formStep === 1) {
-                    if (!(formData.title || '').trim() && !(formData.titleGe || '').trim()) {
+                    const currentPrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+                    const tEn = (formData.title || '').trim();
+                    const tGe = (formData.titleGe || '').trim();
+
+                    if (currentPrimary === 'ka' && !tGe && tEn) {
+                      setFormData(p => ({ ...p, primaryLanguage: 'en' }));
+                    } else if (currentPrimary === 'en' && !tEn && tGe) {
+                      setFormData(p => ({ ...p, primaryLanguage: 'ka' }));
+                    } else if (!tEn && !tGe) {
                       showToast(
                         language === 'ka' 
-                          ? "გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური (ქართულად ან ინგლისურად) გასაგრძელებლად" 
-                          : "Please enter a title (English or Georgian) on Step 1 to continue.", 
+                          ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.` 
+                          : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`, 
                         'warning'
                       );
                       return;
