@@ -410,7 +410,7 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
                       rows={3}
                       maxLength={2000}
                       className={cn(
-                        "w-full px-5 py-4 rounded-2xl border text-xs font-medium text-white focus:outline-none placeholder-white/20 bg-white/5 focus:border-[#2e5bff]/40",
+                        "w-full px-5 py-4 rounded-2xl border text-xs font-medium text-white focus:outline-none placeholder:text-zinc-400 bg-white/5 focus:border-[#2e5bff]/40",
                         currentTheme.input
                       )}
                       required

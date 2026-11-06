@@ -234,7 +234,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                         value={shippingDetails.recipientName}
                         onChange={e => onChangeShippingDetails({ ...shippingDetails, recipientName: e.target.value })}
                         placeholder={language === 'ka' ? 'მიმღების სახელი და გვარი' : 'Full name / Contact Person'}
-                        className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                        className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40", currentTheme.input)}
                       />
                     </div>
 
@@ -249,7 +249,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                           value={shippingDetails.phone}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, phone: e.target.value })}
                           placeholder={language === 'ka' ? 'მაგ: 599 123 456' : 'e.g. +995 599 123 456'}
-                          className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40 font-mono", currentTheme.input)}
+                          className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40 font-mono", currentTheme.input)}
                         />
                       </div>
 
@@ -263,7 +263,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                           value={shippingDetails.city}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, city: e.target.value })}
                           placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi, Batumi...'}
-                          className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                          className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40", currentTheme.input)}
                         />
                       </div>
                     </div>
@@ -278,7 +278,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                         value={shippingDetails.address}
                         onChange={e => onChangeShippingDetails({ ...shippingDetails, address: e.target.value })}
                         placeholder={language === 'ka' ? 'მაგ: ჭავჭავაძის გამზ. 25, სადარბაზო 1, ბინა 14' : 'e.g. 25 Chavchavadze Ave, Entrance 1, Apt 14'}
-                        className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-white/20 bg-black/40", currentTheme.input)}
+                        className={cn("w-full px-3.5 py-2.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40", currentTheme.input)}
                       />
                     </div>
 
@@ -292,7 +292,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                         value={shippingDetails.notes || ''}
                         onChange={e => onChangeShippingDetails({ ...shippingDetails, notes: e.target.value })}
                         placeholder={language === 'ka' ? 'მაგ: ნაღდი ანგარიშსწორება ადგილზე, სადარბაზოს კოდი, სასურველი საათი...' : 'e.g. Cash on delivery, gate code, preferred delivery time...'}
-                        className={cn("w-full h-16 p-3 rounded-xl border text-base md:text-xs font-normal text-white focus:outline-none placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
+                        className={cn("w-full h-16 p-3 rounded-xl border text-base md:text-xs font-normal text-white focus:outline-none placeholder:text-zinc-400 bg-black/40 resize-none", currentTheme.input)}
                       />
                     </div>
                   </div>
@@ -331,7 +331,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                       maxLength={500}
                       onChange={e => onChangeBuyerInstructions(e.target.value)}
                       placeholder={language === 'ka' ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." : "Enter your specific task instructions, links, or requirements..."}
-                      className={cn("w-full h-24 p-3 rounded-2xl border text-base md:text-xs font-normal text-white focus:outline-none transition-all placeholder:text-white/20 bg-black/40 resize-none", currentTheme.input)}
+                      className={cn("w-full h-24 p-3 rounded-2xl border text-base md:text-xs font-normal text-white focus:outline-none transition-all placeholder:text-zinc-400 bg-black/40 resize-none", currentTheme.input)}
                     />
                   </div>
                 </div>

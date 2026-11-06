@@ -216,7 +216,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                   value={chatMessageText}
                   onChange={(e) => onChangeChatMessageText(e.target.value)}
                   placeholder={language === 'ka' ? 'დაწერეთ შეთავაზება...' : 'Propose price or ask a question...'}
-                  className="flex-1 px-5 py-4 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:border-[#2e5bff] text-xs font-bold text-white placeholder-white/30"
+                  className="flex-1 px-5 py-4 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:border-[#2e5bff] text-xs font-bold text-white placeholder:text-zinc-400"
                 />
                 <button 
                   type="submit"

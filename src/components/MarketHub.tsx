@@ -3490,7 +3490,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
-                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner"
+                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner"
               />
               {searchRaw && (
                 <button 
@@ -3602,7 +3602,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               value={searchRaw}
               onChange={(e) => setSearchRaw(e.target.value)}
               placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search...'}
-              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-base md:text-xs transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-base md:text-xs transition-colors"
             />
             {searchRaw && (
               <button 
@@ -4364,7 +4364,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                               value={chatMessageText}
                               onChange={(e) => setChatMessageText(e.target.value)}
                               placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 text-base md:text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
+                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 text-base md:text-xs text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#dfb257]/50"
                             />
                             <button 
                               type="submit"
@@ -5728,7 +5728,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     value={chatMessageText}
                     onChange={(e) => setChatMessageText(e.target.value)}
                     placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                    className="flex-1 bg-zinc-900 border border-zinc-800/70 rounded-xl px-4 py-2 text-base md:text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#dfb257]/50"
+                    className="flex-1 bg-zinc-900 border border-zinc-800/70 rounded-xl px-4 py-2 text-base md:text-xs text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#dfb257]/50"
                   />
                   <button 
                     type="submit"

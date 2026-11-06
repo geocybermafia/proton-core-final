@@ -211,7 +211,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               value={activeCity}
               onChange={(e) => setActiveCity(e.target.value)}
               placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
-              className="w-full pl-10 pr-9 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-600 text-white"
+              className="w-full pl-10 pr-9 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-400 text-white"
             />
             {activeCity && (
               <button
@@ -237,7 +237,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
                 placeholder="0"
-                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-700 text-white"
+                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-400 text-white"
               />
             </div>
             <div className="relative">
@@ -247,7 +247,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
                 placeholder="∞"
-                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-700 text-white"
+                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-400 text-white"
               />
             </div>
           </div>

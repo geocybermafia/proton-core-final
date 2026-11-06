@@ -34,7 +34,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   proton: {
     card: "bg-[#141414] border-white/5 shadow-2xl text-white",
-    input: "bg-[#0a0a0a] border-white/5 focus:border-[#2e5bff]/50 text-white placeholder:text-white/25",
+    input: "bg-[#0a0a0a] border-white/5 focus:border-[#2e5bff]/50 text-white placeholder:text-zinc-400",
     accent: "text-[#2e5bff]",
     accentBg: "bg-[#2e5bff]",
     border: "border-white/5",
@@ -49,7 +49,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   titanium: {
     card: "bg-[#141414] border-white/10 shadow-2xl text-white",
-    input: "bg-[#0a0a0a] border-white/10 focus:border-slate-400 text-white placeholder:text-white/25",
+    input: "bg-[#0a0a0a] border-white/10 focus:border-slate-400 text-white placeholder:text-zinc-400",
     accent: "text-slate-300",
     accentBg: "bg-slate-600",
     border: "border-white/10",
@@ -64,7 +64,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   forest: {
     card: "bg-[#022c22]/80 border-emerald-500/20 backdrop-blur-xl shadow-2xl shadow-emerald-900/20 text-white",
-    input: "bg-black/40 border-emerald-500/20 focus:border-emerald-500/50 text-white placeholder:text-white/25",
+    input: "bg-black/40 border-emerald-500/20 focus:border-emerald-500/50 text-white placeholder:text-zinc-400",
     accent: "text-emerald-400",
     accentBg: "bg-emerald-600",
     border: "border-emerald-500/20",
@@ -79,7 +79,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   sunset: {
     card: "bg-[#431407]/80 border-orange-500/20 backdrop-blur-xl shadow-2xl shadow-orange-900/20 text-white",
-    input: "bg-black/40 border-orange-500/20 focus:border-orange-500/50 text-white placeholder:text-white/25",
+    input: "bg-black/40 border-orange-500/20 focus:border-orange-500/50 text-white placeholder:text-zinc-400",
     accent: "text-orange-400",
     accentBg: "bg-orange-600",
     border: "border-orange-500/20",
@@ -94,7 +94,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   rose: {
     card: "bg-[#2d0611]/80 border-rose-500/20 backdrop-blur-xl shadow-2xl shadow-rose-900/20 text-white",
-    input: "bg-black/40 border-rose-500/20 focus:border-rose-500/50 text-white placeholder:text-white/25",
+    input: "bg-black/40 border-rose-500/20 focus:border-rose-500/50 text-white placeholder:text-zinc-400",
     accent: "text-rose-400",
     accentBg: "bg-rose-600",
     border: "border-rose-500/20",
@@ -109,7 +109,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   vibrant: {
     card: "bg-[#1e1b4b]/80 border-purple-500/20 backdrop-blur-xl shadow-2xl shadow-purple-900/20 text-white",
-    input: "bg-black/40 border-purple-500/20 focus:border-purple-500/50 text-white placeholder:text-white/25",
+    input: "bg-black/40 border-purple-500/20 focus:border-purple-500/50 text-white placeholder:text-zinc-400",
     accent: "text-purple-400",
     accentBg: "bg-purple-600",
     border: "border-purple-500/20",
@@ -124,7 +124,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   midnight: {
     card: "bg-[#0a0a0a] border-white/5 shadow-2xl text-white",
-    input: "bg-black border-white/10 focus:border-white/30 text-white placeholder:text-white/25",
+    input: "bg-black border-white/10 focus:border-white/30 text-white placeholder:text-zinc-400",
     accent: "text-white",
     accentBg: "bg-zinc-800",
     border: "border-white/5",
@@ -139,7 +139,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
   },
   industrial: {
     card: "bg-[#0d0d0d] border-white/10 shadow-2xl text-white",
-    input: "bg-[#080808] border-white/10 focus:border-[#3b82f6]/50 text-white placeholder:text-white/25",
+    input: "bg-[#080808] border-white/10 focus:border-[#3b82f6]/50 text-white placeholder:text-zinc-400",
     accent: "text-[#3b82f6]",
     accentBg: "bg-[#3b82f6]",
     border: "border-white/10",
@@ -156,7 +156,7 @@ export const MARKET_THEMES: Record<string, MarketTheme> = {
 
 export const PREMIUM_INDUSTRIAL: MarketTheme = {
   card: "bg-zinc-900 border border-zinc-800 shadow-[0_12px_45px_rgba(0,0,0,0.85)] text-zinc-100 backdrop-blur-2xl transition-all duration-305 hover:shadow-[#dfb257]/10 hover:border-zinc-700/80",
-  input: "bg-zinc-950 border border-zinc-800 focus:border-[#dfb257]/80 text-zinc-100 placeholder:text-zinc-550 transition-all font-sans",
+  input: "bg-zinc-950 border border-zinc-800 focus:border-[#dfb257]/80 text-zinc-100 placeholder:text-zinc-400 transition-all font-sans",
   accent: "text-[#dfb257]",
   accentBg: "bg-gradient-to-b from-[#dfb257] to-[#b8860b] hover:from-[#ebd083] hover:to-[#dfb257]",
   border: "border-zinc-800/80",

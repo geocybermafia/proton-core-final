@@ -463,8 +463,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           className={cn(
                             "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
                             isKaPrimary 
-                              ? "bg-[#09090b]/90 border-zinc-800 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-500"
-                              : "bg-[#09090b]/60 border-zinc-900 focus:outline-none focus:border-zinc-700 focus:ring-2 focus:ring-zinc-700/20 placeholder-zinc-600",
+                              ? "bg-[#09090b]/90 border-zinc-800 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder:text-zinc-400"
+                              : "bg-[#09090b]/60 border-zinc-900 focus:outline-none focus:border-zinc-700 focus:ring-2 focus:ring-zinc-700/20 placeholder:text-zinc-400",
                             currentTheme.input
                           )}
                         />
@@ -506,8 +506,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           className={cn(
                             "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
                             !isKaPrimary 
-                              ? "bg-[#09090b]/90 border-zinc-800 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-500"
-                              : "bg-[#09090b]/60 border-zinc-900 focus:outline-none focus:border-zinc-700 focus:ring-2 focus:ring-zinc-700/20 placeholder-zinc-600",
+                              ? "bg-[#09090b]/90 border-zinc-800 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder:text-zinc-400"
+                              : "bg-[#09090b]/60 border-zinc-900 focus:outline-none focus:border-zinc-700 focus:ring-2 focus:ring-zinc-700/20 placeholder:text-zinc-400",
                             currentTheme.input
                           )}
                         />
@@ -549,7 +549,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     placeholder="0.00"
                     className={cn(
                       "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all",
-                      "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-600",
+                      "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder:text-zinc-400",
                       currentTheme.input
                     )}
                   />
@@ -660,7 +660,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     onCommit={val => setFormData(p => ({ ...p, serviceDuration: val }))}
                     placeholder={language === 'ka' ? "მაგ: 3 დღე" : "e.g. 3 business days"}
                     className={cn(
-                      "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder-zinc-600",
+                      "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder:text-zinc-400",
                       "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257]",
                       currentTheme.input
                     )}
@@ -677,7 +677,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     onCommit={val => setFormData(p => ({ ...p, serviceTerms: val }))}
                     placeholder={language === 'ka' ? "მაგ: შეთანხმების მიხედვით" : "e.g. As agreed with client"}
                     className={cn(
-                      "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder-zinc-600",
+                      "w-full px-4 py-3 rounded-xl border text-xs font-bold text-white transition-all placeholder:text-zinc-400",
                       "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257]",
                       currentTheme.input
                     )}
@@ -735,7 +735,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     onCommit={val => setFormData(p => ({ ...p, city: val }))}
                     placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
                     className={cn(
-                      "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder-zinc-500",
+                      "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder:text-zinc-400",
                       "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10",
                       currentTheme.input
                     )}
@@ -757,7 +757,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   onCommit={val => setFormData(p => ({ ...p, location: val }))}
                   placeholder={language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...'}
                   className={cn(
-                    "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder-zinc-500",
+                    "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold text-white shadow-inner transition-all placeholder:text-zinc-400",
                     "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10",
                     currentTheme.input
                   )}
@@ -828,7 +828,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 placeholder={language === 'ka' ? 'აღწერეთ თქვენი ნივთი ან მომსახურება დეტალურად...' : 'Describe your item or service in detail...'}
                 className={cn(
                   "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-semibold h-36 resize-none text-white shadow-inner transition-all",
-                  "bg-[#09090b]/95 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder-zinc-600",
+                  "bg-[#09090b]/95 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10 placeholder:text-zinc-400",
                   currentTheme.input
                 )}
               />
@@ -950,7 +950,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   onChange={e => setFormData({...formData, images: [e.target.value]})}
                   placeholder={language === 'ka' ? '...ან ჩასვით სურათის გარე ბმული (URL)' : '...or paste external image link URL'}
                   className={cn(
-                    "w-full pl-10.5 pr-4 py-3 rounded-2xl border text-[11px] font-bold text-white shadow-inner transition-all placeholder-zinc-600",
+                    "w-full pl-10.5 pr-4 py-3 rounded-2xl border text-[11px] font-bold text-white shadow-inner transition-all placeholder:text-zinc-400",
                     "bg-[#09090b]/90 border-zinc-800/80 focus:outline-none focus:border-[#dfb257] focus:ring-4 focus:ring-[#dfb257]/10",
                     currentTheme.input
                   )}
