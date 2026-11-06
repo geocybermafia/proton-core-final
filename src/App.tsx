@@ -5987,6 +5987,7 @@ export default function App() {
                   setUiMode('business');
                   setActiveView('dashboard');
                 }}
+                onOpenAuthModal={() => setShowAuth(true)}
               />
             </Suspense>
           </ViewErrorBoundary>

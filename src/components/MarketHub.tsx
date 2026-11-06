@@ -77,6 +77,7 @@ interface MarketHubProps {
   t?: any;
   themeId?: string;
   onBack?: () => void;
+  onOpenAuthModal?: () => void;
 }
 
 import {
@@ -126,7 +127,7 @@ export interface ActiveChatContext {
   orderId?: string | null;
 }
 
-export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack }: MarketHubProps) {
+export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack, onOpenAuthModal }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
@@ -520,6 +521,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleAddToCart = (listing: Listing) => {
     if (!user) {
       showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კალათაში დასამატებლად." : "Please sign in to add items to your cart.", 'warning');
+      onOpenAuthModal?.();
       return;
     }
 
@@ -562,6 +564,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleCartCheckout = async () => {
     if (!user) {
       showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შესყიდვისთვის." : "Please sign in to make a purchase.", 'warning');
+      onOpenAuthModal?.();
       return;
     }
     if (cart.length === 0) return;
@@ -1625,6 +1628,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleStartChat = useCallback((listing: Listing) => {
     if (!user) {
       showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინების გასაგზავნად." : "Please sign in to message the seller.", 'warning');
+      onOpenAuthModal?.();
       return;
     }
     const isSeller = listing.sellerId === user.uid;
@@ -1644,7 +1648,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
     setActiveChatContext(ctx);
     setActiveChatListing(listing);
     setActiveChatOrder(null);
-  }, [user, language, showToast]);
+  }, [user, language, showToast, onOpenAuthModal]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2437,6 +2441,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const handleBuyNow = async (listing: Listing) => {
     if (!user) {
       showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შესყიდვისთვის." : "Please sign in to make a purchase.", 'warning');
+      onOpenAuthModal?.();
       return;
     }
 
@@ -3510,6 +3515,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               onClick={() => {
                 if (!user) {
                   showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                  onOpenAuthModal?.();
                   return;
                 }
                 resetListingForm();
@@ -3655,6 +3661,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             onClick={() => {
               if (!user) {
                 showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                onOpenAuthModal?.();
                 return;
               }
               resetListingForm();
@@ -5147,6 +5154,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                     onClick={() => {
                       if (!user) {
                         showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                        onOpenAuthModal?.();
                         return;
                       }
                       resetListingForm();
