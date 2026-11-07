@@ -136,6 +136,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'ai' | 'preferences' | 'security' | 'seo' | 'cost_control'>('preferences');
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [tokenClaims, setTokenClaims] = useState<Record<string, any> | null>(null);
+  const [isRefreshingClaims, setIsRefreshingClaims] = useState(false);
+  const [copiedUid, setCopiedUid] = useState(false);
+
+  const fetchTokenClaims = useCallback(async (force = false) => {
+    if (!user) return;
+    setIsRefreshingClaims(true);
+    try {
+      const res = await user.getIdTokenResult(force);
+      setTokenClaims(res.claims);
+      if (force) {
+        showToast(
+          language === 'ka' 
+            ? 'Firebase ტოკენი განახლდა Google-ის სერვერიდან' 
+            : 'Firebase token refreshed from Google servers',
+          'success'
+        );
+      }
+    } catch (e: any) {
+      console.warn("Failed to read token claims:", e);
+      if (force) {
+        showToast(
+          language === 'ka' 
+            ? 'ტოკენის განახლება ვერ მოხერხდა: ' + (e?.message || '') 
+            : 'Token refresh failed: ' + (e?.message || ''),
+          'error'
+        );
+      }
+    } finally {
+      setIsRefreshingClaims(false);
+    }
+  }, [user, language, showToast]);
+
+  useEffect(() => {
+    if (user && activeTab === 'security') {
+      fetchTokenClaims(false);
+    }
+  }, [user, activeTab, fetchTokenClaims]);
 
   // Horizontal scroll indicator state for mobile settings sidebar
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -2199,6 +2237,97 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </header>
 
                   <div className="space-y-6">
+                    {/* Admin Verification & Activation Panel for devdarianib@gmail.com */}
+                    {(isDevUser || user?.email === 'devdarianib@gmail.com' || tokenClaims?.admin) && (
+                      <div className="p-6 bg-proton-secondary/5 border border-proton-accent/30 rounded-2xl space-y-5 text-left">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-proton-border/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-proton-accent/15 border border-proton-accent/30 flex items-center justify-center text-proton-accent">
+                              <ShieldCheck size={20} />
+                            </div>
+                            <div>
+                              <span className="text-xs font-black uppercase tracking-wider text-proton-text block">
+                                {language === 'ka' ? 'ადმინისტრატორის სტატუსი და Custom Claims' : 'Administrator Status & Custom Claims'}
+                              </span>
+                              <span className="text-[10px] text-proton-muted font-bold block">
+                                {language === 'ka' ? 'Firebase Auth & Firestore Rules ABAC ვალიდაცია' : 'Firebase Auth & Firestore Rules ABAC validation'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => fetchTokenClaims(true)}
+                            disabled={isRefreshingClaims}
+                            className="px-3.5 py-2 rounded-xl bg-proton-secondary/20 hover:bg-proton-secondary/40 border border-proton-border/50 text-xs font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer text-proton-text"
+                            title={language === 'ka' ? 'ტოკენის ხელახალი მოთხოვნა' : 'Refresh Token'}
+                          >
+                            <RefreshCw size={14} className={cn(isRefreshingClaims && "animate-spin text-proton-accent")} />
+                            <span>{language === 'ka' ? 'ტოკენის განახლება' : 'Refresh ID Token'}</span>
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                          <div className="p-3 bg-proton-bg/60 border border-proton-border/40 rounded-xl">
+                            <span className="text-[9px] text-proton-muted font-black uppercase tracking-wider block mb-1">
+                              {language === 'ka' ? 'ელფოსტა' : 'Account Email'}
+                            </span>
+                            <span className="font-mono text-proton-text font-bold select-all">
+                              {user?.email || 'devdarianib@gmail.com'}
+                            </span>
+                          </div>
+
+                          <div className="p-3 bg-proton-bg/60 border border-proton-border/40 rounded-xl flex items-center justify-between">
+                            <div className="min-w-0 pr-2">
+                              <span className="text-[9px] text-proton-muted font-black uppercase tracking-wider block mb-1">
+                                {language === 'ka' ? 'Firebase Auth UID' : 'Firebase Auth UID'}
+                              </span>
+                              <span className="font-mono text-proton-text text-[11px] truncate block select-all">
+                                {user?.uid || (language === 'ka' ? 'ავტორიზაცია საჭიროა UID-ს სანახავად' : 'Sign in required to view UID')}
+                              </span>
+                            </div>
+                            {user?.uid && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(user.uid);
+                                  setCopiedUid(true);
+                                  setTimeout(() => setCopiedUid(false), 2000);
+                                  showToast(language === 'ka' ? 'UID დაკოპირდა' : 'UID copied to clipboard', 'info');
+                                }}
+                                className="p-2 rounded-lg bg-proton-secondary/30 hover:bg-proton-secondary/60 text-proton-muted hover:text-proton-text transition-all shrink-0 cursor-pointer"
+                                title="Copy UID"
+                              >
+                                {copiedUid ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div 
+                          className="p-4 rounded-xl border flex items-center justify-between gap-4 transition-all"
+                          style={{
+                            backgroundColor: (tokenClaims?.admin || tokenClaims?.role === 'admin') ? 'rgba(34,197,94,0.08)' : 'rgba(234,179,8,0.08)',
+                            borderColor: (tokenClaims?.admin || tokenClaims?.role === 'admin') ? 'rgba(34,197,94,0.3)' : 'rgba(234,179,8,0.3)'
+                          }}
+                        >
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-proton-muted">
+                              {language === 'ka' ? 'Custom Claim { admin: true } სტატუსი:' : 'Custom Claim { admin: true } Status:'}
+                            </p>
+                            <p className={cn("text-xs font-black mt-0.5", (tokenClaims?.admin || tokenClaims?.role === 'admin') ? "text-green-400" : "text-amber-400")}>
+                              {(tokenClaims?.admin || tokenClaims?.role === 'admin') 
+                                ? (language === 'ka' ? 'აქტიურია (admin: true) — სრული მოდერაციის უფლება' : 'Active (admin: true) — Full moderation access') 
+                                : (language === 'ka' ? 'მოლოდინის რეჟიმში (Custom Claim ჯერ არ არის გააქტიურებული)' : 'Pending (Custom Claim not yet active)')}
+                            </p>
+                          </div>
+                          <span className={cn("px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase", (tokenClaims?.admin || tokenClaims?.role === 'admin') ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300")}>
+                            {(tokenClaims?.admin || tokenClaims?.role === 'admin') ? 'VERIFIED' : 'PENDING'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Status card */}
                     <div className="p-6 bg-green-500/5 border border-green-500/20 rounded-2xl flex items-center justify-between group">
                        <div className="flex items-center gap-5">

@@ -5983,6 +5983,7 @@ export default function App() {
                 language={userProfile.language} 
                 t={t}
                 themeId={theme}
+                isAdmin={isAdmin}
                 onBack={() => {
                   setUiMode('business');
                   setActiveView('dashboard');

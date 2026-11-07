@@ -24,6 +24,15 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Administrator check via cryptographically signed Firebase Custom Claims or trusted admin document
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -268,7 +277,7 @@ service cloud.firestore {
             )
           )
         );
-      allow delete: if isVerified() && isValidId(listingId) && isOwner(existing().sellerId);
+      allow delete: if isVerified() && isValidId(listingId) && (isOwner(existing().sellerId) || isAdmin());
     }
 
     // ======================================================

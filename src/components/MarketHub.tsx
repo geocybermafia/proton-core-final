@@ -78,6 +78,7 @@ interface MarketHubProps {
   themeId?: string;
   onBack?: () => void;
   onOpenAuthModal?: () => void;
+  isAdmin?: boolean;
 }
 
 import {
@@ -127,11 +128,27 @@ export interface ActiveChatContext {
   orderId?: string | null;
 }
 
-export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack, onOpenAuthModal }: MarketHubProps) {
+export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, isAdmin: propIsAdmin }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
   const { showToast } = useToast();
+  const [hasAdminClaim, setHasAdminClaim] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setHasAdminClaim(false);
+      return;
+    }
+    user.getIdTokenResult().then((tokenResult) => {
+      const claims = tokenResult.claims;
+      setHasAdminClaim(claims.admin === true || claims.role === 'admin');
+    }).catch(() => {
+      setHasAdminClaim(false);
+    });
+  }, [user]);
+
+  const isAdminUser = Boolean(propIsAdmin || hasAdminClaim);
   const aiAbortControllerRef = useRef<AbortController | null>(null);
   const isGeneratingRef = useRef<boolean>(false);
 
@@ -5065,6 +5082,7 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                         isFavorite={favoritesSet.has(listing.id)}
                         toggleFavorite={toggleFavorite}
                         sellerRating={sellerRatings[listing.sellerId]}
+                        isAdmin={isAdminUser}
                         onSelectListing={setCheckoutItem}
                         onSelectVendor={setSelectedVendor}
                         onStartChat={handleStartChat}

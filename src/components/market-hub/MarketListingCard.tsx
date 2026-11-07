@@ -87,6 +87,7 @@ export interface MarketListingCardProps {
   listing: Listing;
   idx: number;
   user: any;
+  isAdmin?: boolean;
   language: string;
   t: any;
   currentTheme: MarketTheme;
@@ -109,6 +110,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   listing,
   idx,
   user,
+  isAdmin,
   language,
   t,
   currentTheme,
@@ -378,14 +380,31 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                 </button>
               </div>
             ) : isItemSold ? (
-              <button 
-                type="button"
-                disabled
-                className="w-full min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-zinc-900/80 text-zinc-500 border border-zinc-800 flex items-center justify-center gap-2 cursor-not-allowed select-none"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
-                {language === 'ka' ? 'გაყიდულია' : 'SOLD'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button"
+                  disabled
+                  className="flex-1 min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-zinc-900/80 text-zinc-500 border border-zinc-800 flex items-center justify-center gap-2 cursor-not-allowed select-none"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                  {language === 'ka' ? 'გაყიდულია' : 'SOLD'}
+                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onDeleteListing(listing.id);
+                    }}
+                    className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
+                    title={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
+                    aria-label={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <button 
@@ -430,6 +449,21 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                 >
                   <ShoppingCart size={16} />
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onDeleteListing(listing.id);
+                    }}
+                    className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
+                    title={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
+                    aria-label={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
               </div>
             )}
           </div>
