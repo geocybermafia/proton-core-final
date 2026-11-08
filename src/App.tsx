@@ -9,7 +9,6 @@ import { AutomationEngine } from './components/AutomationEngine';
 
 const EnterpriseWorkflowBuilder = lazyWithRetry(() => import('./components/EnterpriseWorkflowBuilder').then(module => ({ default: module.EnterpriseWorkflowBuilder })), 'EnterpriseWorkflowBuilder');
 // Removed unused/unreferenced heavy component WorkflowFlowEditor for bundle optimization
-const LocalFileScanner = lazyWithRetry(() => import('./components/LocalFileScanner').then(module => ({ default: module.LocalFileScanner })), 'LocalFileScanner');
 import { auth, db, googleProvider } from './firebase';
 import { useAuth } from './contexts/AuthContext';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
@@ -147,7 +146,6 @@ import {
   ShieldAlert,
   Search,
   Bell,
-  Wifi,
   Palette,
   Grid,
   Download,
@@ -159,8 +157,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Repeat,
-  Camera as CameraIcon,
-  Mic as MicIcon,
   Play,
   Pause,
   Tag,
@@ -1735,515 +1731,6 @@ const SystemsView = ({
                  </div>
               </div>
            </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-type GeoState = 'idle' | 'pending' | 'granted' | 'denied' | 'unavailable' | 'error';
-
-const HardwareView = ({ language = 'en' }: { language?: 'en' | 'ka' }) => {
-  const t = translations[language].hardware;
-  const [geoState, setGeoState] = useState<GeoState>('idle');
-  const [location, setLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
-  const [geoErrorMessage, setGeoErrorMessage] = useState<string | null>(null);
-  const locationRequestIdRef = useRef<number>(0);
-
-  const [battery, setBattery] = useState<{ level: number; charging: boolean } | null>(null);
-  const [network, setNetwork] = useState<{ downlink: number; rtt: number; effectiveType: string; type?: string } | null>(null);
-  const [hardware] = useState<{ cores: number; memory: number }>({
-    cores: typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency || 0) : 0,
-    memory: typeof navigator !== 'undefined' ? ((navigator as any).deviceMemory || 0) : 0
-  });
-  
-  const [supported, setSupported] = useState<Record<string, boolean>>({
-    geolocation: typeof navigator !== 'undefined' && 'geolocation' in navigator,
-    battery: typeof navigator !== 'undefined' && 'getBattery' in navigator,
-    network: typeof navigator !== 'undefined' && 'connection' in navigator && !!(navigator as any).connection,
-    camera: typeof navigator !== 'undefined' && 'mediaDevices' in navigator,
-    mic: typeof navigator !== 'undefined' && 'mediaDevices' in navigator
-  });
-
-  const requestLocationAccess = () => {
-    if (!('geolocation' in navigator)) {
-      setGeoState('unavailable');
-      setGeoErrorMessage(t.location_unavailable);
-      return;
-    }
-
-    const currentRequestId = ++locationRequestIdRef.current;
-    setGeoState('pending');
-    setGeoErrorMessage(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        if (locationRequestIdRef.current !== currentRequestId) return;
-        setLocation({ 
-          lat: pos.coords.latitude, 
-          lng: pos.coords.longitude, 
-          accuracy: pos.coords.accuracy 
-        });
-        setGeoState('granted');
-        setGeoErrorMessage(null);
-      },
-      (err) => {
-        if (locationRequestIdRef.current !== currentRequestId) return;
-        if (err.code === 1 /* PERMISSION_DENIED */) {
-          setGeoState('denied');
-          setGeoErrorMessage(t.location_denied);
-        } else if (err.code === 2 /* POSITION_UNAVAILABLE */) {
-          setGeoState('unavailable');
-          setGeoErrorMessage(t.location_unavailable);
-        } else if (err.code === 3 /* TIMEOUT */) {
-          setGeoState('error');
-          setGeoErrorMessage(t.location_timeout);
-        } else {
-          setGeoState('error');
-          setGeoErrorMessage(t.location_error);
-        }
-      },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-    );
-  };
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    const hasGeoloc = typeof navigator !== 'undefined' && 'geolocation' in navigator;
-    const hasBattery = typeof navigator !== 'undefined' && 'getBattery' in navigator && typeof (navigator as any).getBattery === 'function';
-    const hasNetwork = typeof navigator !== 'undefined' && 'connection' in navigator && !!(navigator as any).connection;
-    const hasMedia = typeof navigator !== 'undefined' && 'mediaDevices' in navigator;
-
-    setSupported({
-      geolocation: hasGeoloc,
-      battery: hasBattery,
-      network: hasNetwork,
-      camera: hasMedia,
-      mic: hasMedia
-    });
-
-    let batteryInstance: any = null;
-    const onBatteryChange = () => {
-      if (isMounted && batteryInstance) {
-        setBattery({ level: batteryInstance.level, charging: batteryInstance.charging });
-      }
-    };
-
-    if (hasBattery) {
-      (navigator as any).getBattery().then((bat: any) => {
-        if (!isMounted) return;
-        batteryInstance = bat;
-        setBattery({ level: bat.level, charging: bat.charging });
-        bat.addEventListener('levelchange', onBatteryChange);
-        bat.addEventListener('chargingchange', onBatteryChange);
-      }).catch(() => {
-        if (isMounted) {
-          setSupported(s => ({ ...s, battery: false }));
-        }
-      });
-    }
-
-    let conn: any = null;
-    const onNetworkChange = () => {
-      if (isMounted && conn) {
-        setNetwork({ 
-          downlink: conn.downlink, 
-          rtt: conn.rtt, 
-          effectiveType: conn.effectiveType || 'N/A',
-          type: conn.type 
-        });
-      }
-    };
-
-    if (hasNetwork) {
-      conn = (navigator as any).connection;
-      if (conn) {
-        setNetwork({ 
-          downlink: conn.downlink, 
-          rtt: conn.rtt, 
-          effectiveType: conn.effectiveType || 'N/A',
-          type: conn.type 
-        });
-        conn.addEventListener('change', onNetworkChange);
-      }
-    }
-
-    return () => {
-      isMounted = false;
-      if (batteryInstance) {
-        batteryInstance.removeEventListener('levelchange', onBatteryChange);
-        batteryInstance.removeEventListener('chargingchange', onBatteryChange);
-      }
-      if (conn) {
-        conn.removeEventListener('change', onNetworkChange);
-      }
-    };
-  }, []);
-
-  return (
-    <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20 px-4 md:px-0">
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-4">
-        <div className="space-y-2 text-center md:text-left">
-          <h1 className="text-3xl md:text-6xl font-black tracking-tighter text-proton-text uppercase">
-            {t.title}
-          </h1>
-          <p className="text-proton-muted text-base md:text-lg font-medium max-w-xl">
-            {t.description}
-          </p>
-        </div>
-        {geoState === 'idle' ? (
-          <button 
-            onClick={requestLocationAccess}
-            className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-5 bg-proton-accent text-proton-on-accent rounded-[2rem] font-bold shadow-xl shadow-proton-accent/20 hover:scale-105 active:scale-95 transition-all text-sm md:text-base cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent"
-          >
-            <MapPin size={20} />
-            {t.get_location}
-          </button>
-        ) : geoState === 'pending' ? (
-          <div className="flex items-center gap-2.5 px-6 py-4 bg-proton-card text-proton-text rounded-[2rem] border border-proton-border text-sm font-bold shadow-sm" aria-live="polite">
-            <RefreshCw size={18} className="animate-spin text-proton-accent" />
-            <span>{t.location_requesting}</span>
-          </div>
-        ) : geoState === 'granted' ? (
-          <button
-            onClick={requestLocationAccess}
-            className="flex items-center gap-2.5 px-6 py-3.5 bg-proton-card hover:bg-proton-bg text-proton-text rounded-full font-bold border border-proton-border transition-all text-xs cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent"
-            title={t.location_acquired}
-          >
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span>{t.location_acquired}</span>
-            <RefreshCw size={14} className="text-proton-muted ml-1" />
-          </button>
-        ) : (
-          <button
-            onClick={requestLocationAccess}
-            className="flex items-center gap-2 px-6 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-full font-bold border border-red-500/20 transition-all text-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
-            title={geoErrorMessage || t.location_error}
-          >
-            <RefreshCw size={14} className="text-red-400" />
-            <span>{geoState === 'denied' ? t.location_denied : t.location_error}</span>
-          </button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Battery / Power Engine */}
-        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Zap size={60} />
-          </div>
-          <div className="space-y-4 md:space-y-6 relative z-10">
-            <div className="flex items-center justify-between">
-              <div className={cn(
-                "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
-                supported.battery && battery ? "bg-cyan-400/10 text-cyan-400" : "bg-proton-bg text-proton-muted"
-              )}>
-                {supported.battery && battery?.charging ? <Zap size={20} className="animate-pulse fill-cyan-400" /> : <Zap size={20} />}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", supported.battery && battery ? "bg-cyan-400 animate-pulse" : "bg-proton-muted/40")} />
-                <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {supported.battery ? (battery ? (battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal) : t.status_syncing) : t.status_unavailable}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 md:gap-6">
-              <div className="relative w-16 h-16 md:w-24 md:h-24 shrink-0">
-                <svg className="w-full h-full -rotate-90 transform">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="40%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="transparent"
-                    className="text-proton-bg"
-                  />
-                  <motion.circle
-                    initial={{ strokeDasharray: "0, 100" }}
-                    animate={{ strokeDasharray: `${(supported.battery && battery?.level ? battery.level : 0) * 100}, 100` }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    cx="50%"
-                    cy="50%"
-                    r="40%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    fill="transparent"
-                    className="text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.3)]"
-                    pathLength="100"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-sm md:text-xl font-black text-proton-text tabular-nums leading-none">
-                    {supported.battery ? (battery ? Math.round(battery.level * 100) : '...') : '--'}
-                  </span>
-                </div>
-              </div>
-              <div className="min-w-0">
-                <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1 truncate">{t.battery}</h4>
-                <p className="text-[10px] font-bold text-cyan-400 uppercase tracking-tight">
-                  {supported.battery ? (battery?.charging ? t.charging : t.discharging) : t.status_unavailable}
-                </p>
-                <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase leading-tight">
-                  {supported.battery 
-                    ? (battery ? `${language === 'ka' ? 'მუხტის დონე' : 'Charge Level'}: ${battery.level <= 0.2 ? t.charge_low : battery.level > 0.8 ? t.charge_high : t.charge_normal}` : t.awaiting) 
-                    : t.battery_unsupported}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Compute Units (CPU) */}
-        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Cpu size={60} />
-          </div>
-          <div className="space-y-4 md:space-y-6 relative z-10">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-purple-400/10 flex items-center justify-center text-purple-400">
-              <Cpu size={20} />
-            </div>
-            <div>
-              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.compute}</h4>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">{hardware.cores || 'N/A'}</span>
-                <span className="text-xs font-black text-purple-400 opacity-50">{hardware.cores ? t.threads : ''}</span>
-              </div>
-              <p className="mt-2 text-[10px] font-bold text-purple-400 uppercase tracking-tight">
-                {t.cpu_load_unsupported || (language === 'ka' ? 'დატვირთვა: მიუწვდომელია' : 'Load: Not Measured')}
-              </p>
-              <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
-                {language === 'ka' ? 'ლოგიკური ნაკადები ბრაუზერიდან' : 'Logical threads from runtime'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Memory Allocation (RAM) */}
-        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Database size={60} />
-          </div>
-          <div className="space-y-4 md:space-y-6 relative z-10">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-blue-400/10 flex items-center justify-center text-blue-400">
-              <Database size={20} />
-            </div>
-            <div>
-              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.memory}</h4>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter">
-                  {hardware.memory ? `~${hardware.memory}` : 'N/A'}
-                </span>
-                <span className="text-xs font-black text-blue-400 opacity-50">{hardware.memory ? t.memory_est : ''}</span>
-              </div>
-              <p className="mt-2 text-[10px] font-bold text-blue-400 uppercase tracking-tight">
-                {t.memory_isolated || (language === 'ka' ? 'მოხმარება: მიუწვდომელია' : 'Usage: Unavailable')}
-              </p>
-              <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
-                {language === 'ka' ? 'სისტემური RAM დაცულია ბრაუზერით' : 'OS memory isolated by sandbox'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Network Uplink */}
-        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <Globe size={60} />
-          </div>
-          <div className="space-y-4 md:space-y-6 relative z-10">
-            <div className="flex items-center justify-between">
-              <div className={cn(
-                "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
-                supported.network && network ? "bg-green-400/10 text-green-400" : "bg-proton-bg text-proton-muted"
-              )}>
-                <Wifi size={20} />
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full", supported.network && network ? "bg-green-400 animate-pulse" : "bg-proton-muted/40")} />
-                <span className="text-[9px] font-black text-proton-muted uppercase tracking-[0.1em]">
-                  {supported.network 
-                    ? (network ? (network.type && network.type !== 'unknown' ? network.type : t.effective_type) : t.status_syncing) 
-                    : t.status_unavailable}
-                </span>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.network}</h4>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl md:text-4xl font-black text-proton-text tracking-tighter uppercase">
-                  {supported.network ? (network?.effectiveType || 'N/A') : '--'}
-                </span>
-                <span className="text-xs font-black text-green-400 opacity-50">{supported.network && network ? t.effective_type : ''}</span>
-              </div>
-              <p className="mt-2 text-[10px] font-bold text-green-400 uppercase tracking-tight">
-                {supported.network 
-                  ? (network?.downlink ? `${network.downlink} Mbps ${t.downlink}` : t.awaiting) 
-                  : t.network_unsupported}
-              </p>
-              <p className="mt-1 text-[8px] font-medium text-proton-muted uppercase">
-                {t.rtt}: {supported.network && network?.rtt ? `${network.rtt}ms` : '--'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Visual Input (Camera) */}
-        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <CameraIcon size={60} />
-          </div>
-          <div className="space-y-4 md:space-y-6 relative z-10">
-            <div className={cn(
-              "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
-              supported.camera ? "bg-amber-400/10 text-amber-400" : "bg-proton-bg text-proton-muted"
-            )}>
-              <CameraIcon size={20} />
-            </div>
-            <div>
-              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.camera}</h4>
-              <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
-                {supported.camera ? t.api_supported : t.api_unsupported}
-              </p>
-              <p className="mt-2 text-[10px] font-bold text-amber-400 uppercase tracking-tight">
-                {supported.camera ? t.api_available : t.api_unavailable}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Acoustic sensor (Mic) */}
-        <div className="bg-proton-card p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm group relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
-            <MicIcon size={60} />
-          </div>
-          <div className="space-y-4 md:space-y-6 relative z-10">
-            <div className={cn(
-              "w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center transition-colors",
-              supported.mic ? "bg-red-400/10 text-red-400" : "bg-proton-bg text-proton-muted"
-            )}>
-              <MicIcon size={20} />
-            </div>
-            <div>
-              <h4 className="text-[9px] font-black text-proton-muted uppercase tracking-widest mb-1">{t.mic}</h4>
-              <p className="text-xl md:text-2xl font-black text-proton-text tracking-tighter uppercase tabular-nums">
-                {supported.mic ? t.api_supported : t.api_unsupported}
-              </p>
-              <p className="mt-2 text-[10px] font-bold text-red-400 uppercase tracking-tight">
-                {supported.mic ? t.api_available : t.api_unavailable}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Suspense fallback={
-          <div className="bg-proton-card p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm flex items-center justify-center min-h-[300px]">
-            <Loader2 className="animate-spin text-proton-accent" size={24} />
-          </div>
-        }>
-          <LocalFileScanner t={t} />
-        </Suspense>
-        
-        <div className="bg-proton-card p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-proton-border shadow-sm overflow-hidden relative group">
-           <div className="absolute top-0 right-0 p-6 md:p-10 opacity-[0.02] pointer-events-none group-hover:scale-95 transition-transform duration-1000">
-            <MapPin size={240} />
-          </div>
-          <div className="relative z-10 space-y-6 md:space-y-8">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h3 className="text-xl md:text-2xl font-black tracking-tighter text-proton-text uppercase flex items-center gap-3">
-                  <MapPin className="text-cyan-400" size={24} />
-                  {t.geo_title}
-                </h3>
-                <p className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">{t.geo_subtitle}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-              <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
-                <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.lat}</p>
-                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter break-all tabular-nums">
-                  {geoState === 'granted' && location ? location.lat.toFixed(6) : '--'}
-                </div>
-              </div>
-              <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
-                <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.lng}</p>
-                <div className="text-lg md:text-2xl font-mono text-proton-text tracking-tighter break-all tabular-nums">
-                  {geoState === 'granted' && location ? location.lng.toFixed(6) : '--'}
-                </div>
-              </div>
-              <div className="p-4 md:p-6 rounded-[24px] md:rounded-[28px] bg-proton-bg border border-proton-border space-y-2">
-                <p className="text-[10px] font-black text-proton-muted uppercase tracking-widest">{t.accuracy}</p>
-                <div className="text-lg md:text-2xl font-mono text-cyan-400 tracking-tighter break-all tabular-nums">
-                  {geoState === 'granted' && location && typeof location.accuracy === 'number' && !isNaN(location.accuracy)
-                    ? `± ${Math.round(location.accuracy)} m`
-                    : '--'}
-                </div>
-              </div>
-            </div>
-
-            <div 
-              aria-live="polite"
-              className={cn(
-                "p-4 md:p-6 rounded-2xl border flex items-center gap-4 transition-colors",
-                geoState === 'granted'
-                  ? "bg-cyan-400/5 border-cyan-400/10"
-                  : geoState === 'denied' || geoState === 'error'
-                  ? "bg-red-500/5 border-red-500/15"
-                  : "bg-proton-bg border-proton-border"
-              )}
-            >
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                geoState === 'granted'
-                  ? "bg-cyan-400/10 text-cyan-400"
-                  : geoState === 'denied' || geoState === 'error'
-                  ? "bg-red-500/10 text-red-400"
-                  : "bg-proton-card text-proton-muted"
-              )}>
-                {geoState === 'granted' ? (
-                  <ShieldCheck size={20} />
-                ) : geoState === 'pending' ? (
-                  <RefreshCw size={20} className="animate-spin text-proton-accent" />
-                ) : (
-                  <MapPin size={20} />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className={cn(
-                  "text-[10px] font-black uppercase tracking-widest",
-                  geoState === 'granted' ? "text-cyan-400" : geoState === 'denied' || geoState === 'error' ? "text-red-400" : "text-proton-text"
-                )}>
-                  {geoState === 'granted'
-                    ? t.location_acquired
-                    : geoState === 'pending'
-                    ? t.location_requesting
-                    : geoState === 'denied'
-                    ? t.location_denied
-                    : geoState === 'unavailable'
-                    ? t.location_unavailable
-                    : geoState === 'error'
-                    ? (geoErrorMessage || t.location_error)
-                    : t.location_idle_desc}
-                </p>
-                <p className="text-[9px] font-medium text-proton-muted uppercase leading-relaxed break-words">
-                  {geoState === 'granted'
-                    ? t.location_acquired_desc
-                    : geoState === 'denied'
-                    ? t.location_denied_desc
-                    : geoState === 'unavailable'
-                    ? t.location_unavailable_desc
-                    : geoState === 'pending'
-                    ? t.location_requesting
-                    : t.geo_subtitle}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -4053,8 +3540,8 @@ const MobileBottomNav = React.memo(({
       ['/creative-studio', '/studio', '/copywriting', '/translator', '/personas', '/blueprints', '/clips', '/reels'].some(path => currentPath.startsWith(path)),
     'market-hub': ['market-hub', 'market', 'commercial'].includes(activeView) ||
       ['/market-hub', '/market', '/commercial'].some(path => currentPath.startsWith(path)),
-    'control-hub': isMobileControlOpen || ['profile', 'settings', 'organizer', 'finance', 'business-hub', 'compute', 'device', 'documentation'].includes(activeView) ||
-      ['/profile', '/settings', '/organizer', '/finance', '/business-hub', '/business', '/compute', '/device', '/documentation'].some(path => currentPath.startsWith(path)),
+    'control-hub': isMobileControlOpen || ['profile', 'settings', 'organizer', 'finance', 'business-hub', 'compute', 'documentation'].includes(activeView) ||
+      ['/profile', '/settings', '/organizer', '/finance', '/business-hub', '/business', '/compute', '/documentation'].some(path => currentPath.startsWith(path)),
   }), [activeView, currentPath, isMobileControlOpen]);
 
   const handleItemClick = useCallback((id: string) => {
@@ -4173,7 +3660,6 @@ export default function App() {
         case 'finance': return '/finance';
         case 'business-hub': return '/business-hub';
         case 'compute': return '/compute';
-        case 'device': return '/device';
         case 'profile': return '/profile';
         case 'settings': return '/settings';
         case 'documentation': return '/documentation';
@@ -4234,7 +3720,6 @@ export default function App() {
     if (pathname.startsWith('/business-hub')) return 'business-hub';
     if (pathname.startsWith('/business')) return 'business-hub';
     if (pathname.startsWith('/compute')) return 'compute';
-    if (pathname.startsWith('/device')) return 'device';
     if (pathname.startsWith('/profile')) return 'profile';
     if (pathname.startsWith('/settings')) return 'settings';
     if (pathname.startsWith('/documentation')) return 'documentation';
@@ -4261,7 +3746,6 @@ export default function App() {
       case 'finance': return '/finance';
       case 'business-hub': return '/business-hub';
       case 'compute': return '/compute';
-      case 'device': return '/device';
       case 'profile': return '/profile';
       case 'settings': return '/settings';
       case 'documentation': return '/documentation';
@@ -4710,7 +4194,6 @@ export default function App() {
       view === 'commercial' || 
       view === 'finance' || 
       view === 'compute' || 
-      view === 'device' ||
       view === 'business-hub'
     ) {
       setUiMode('business');
@@ -6313,7 +5796,7 @@ export default function App() {
                     <SidebarItem 
                       icon={Settings} 
                       label={language === 'ka' ? 'პარამეტრები' : 'Settings'} 
-                      active={activeView === 'profile' || activeView === 'settings' || activeView === 'device'} 
+                      active={activeView === 'profile' || activeView === 'settings'} 
                       onClick={() => {
                         if (!isSidebarExpanded) {
                           handleViewChange('settings');
@@ -6363,21 +5846,6 @@ export default function App() {
                               <span>{language === 'ka' ? 'სისტემა და AI' : 'System & AI'}</span>
                             </div>
                             <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">CFG</span>
-                          </button>
-                          <button
-                            onClick={() => handleViewChange('device')}
-                            className={cn(
-                              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 hover:bg-proton-accent/5 cursor-pointer",
-                              activeView === 'device'
-                                ? "bg-proton-accent/10 border border-proton-accent/20 text-proton-accent"
-                                : "text-proton-muted hover:text-proton-text-light border border-transparent"
-                            )}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <Cpu size={14} className={activeView === 'device' ? "text-proton-accent font-bold" : "text-proton-muted"} />
-                              <span>{language === 'ka' ? 'ტექნიკური დიაგნოსტიკა' : 'Hardware Diagnostics'}</span>
-                            </div>
-                            <span className="text-[8px] px-1 py-0.5 rounded bg-proton-accent/10 text-proton-accent">DEV</span>
                           </button>
                         </motion.div>
                       )}
@@ -6892,25 +6360,6 @@ export default function App() {
                       <div className="flex items-center gap-3">
                         <Settings size={15} className={activeView === 'settings' ? "text-proton-accent" : "text-proton-muted"} />
                         <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'სისტემის პარამეტრები' : 'System Settings'}</span>
-                      </div>
-                      <ChevronRight size={14} className="text-proton-muted opacity-40" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        handleViewChange('device');
-                        setIsMobileNavDrawerOpen(false);
-                      }}
-                      className={cn(
-                        "w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all text-left cursor-pointer",
-                        activeView === 'device'
-                          ? "bg-proton-accent/15 border-proton-accent/40 text-proton-accent font-bold"
-                          : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Cpu size={15} className={activeView === 'device' ? "text-proton-accent" : "text-proton-muted"} />
-                        <span className="text-xs font-bold uppercase tracking-wide">{language === 'ka' ? 'ტექნიკური დიაგნოსტიკა' : 'Hardware Diagnostics'}</span>
                       </div>
                       <ChevronRight size={14} className="text-proton-muted opacity-40" />
                     </button>
@@ -7474,9 +6923,6 @@ export default function App() {
                         </p>
                       </div>
                     )
-                  )}
-                  {activeView === 'device' && (
-                    <HardwareView language={userProfile.language} />
                   )}
                   {activeView === 'profile' && (
                     <Suspense fallback={
