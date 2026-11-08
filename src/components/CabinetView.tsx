@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { UserProfile } from '../types';
 import { User as UserIcon, Camera, Mail, Globe, Bell, Shield, Wallet, Save, RefreshCw, Layers, Settings, Palette, Sun, Moon, Zap, Sparkles, Circle, Trees, Sunrise, Heart, CreditCard, Star, ExternalLink, ZapOff, Gift, TrendingUp, ShoppingBag, CheckCircle, Package, Clock, ArrowUpRight, ShieldCheck, LogIn } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +7,7 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useSeller } from '../contexts/SellerContext';
+import { useSellerStats } from '../hooks/useSellerStats';
 import { executeSecureTransaction } from '../services/cloudFunctionsService';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
@@ -20,6 +21,7 @@ interface CabinetViewProps {
 export default function CabinetView({ profile, onUpdateProfile }: CabinetViewProps) {
   const { user } = useAuth();
   const { sellerListings, sellerOrders, loading, updateOrderStatus } = useSeller();
+  const { completedOrders } = useSellerStats();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   // Secure Cloud Function Transaction States
@@ -110,7 +112,9 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
     }
   };
 
-  const totalRevenue = sellerOrders.reduce((sum, order) => sum + (Number(order.amount || (order as any).price) || 0), 0);
+  const totalRevenue = useMemo(() => {
+    return completedOrders.reduce((sum, order) => sum + (Number(order.amount || (order as any).price) || 0), 0);
+  }, [completedOrders]);
   
   const isUrl = (str: string) => str.startsWith('http') || str.startsWith('data:image');
 
@@ -438,29 +442,90 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                               "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border",
                               order.status === 'completed' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : 
                               order.status === 'shipped' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                              order.status === 'processing' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" :
+                              order.status === 'in_progress' ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" :
+                              order.status === 'booked' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                              order.status === 'cancelled' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
                               "bg-amber-500/10 text-amber-400 border-amber-500/20"
                             )}>
-                              {order.status || 'pending'}
+                              {order.status === 'booked' ? (lang === 'ka' ? 'დაჯავშნილი' : 'Booked') :
+                               order.status === 'processing' ? (lang === 'ka' ? 'მუშავდება' : 'Processing') :
+                               order.status === 'in_progress' ? (lang === 'ka' ? 'მიმდინარე' : 'In Progress') :
+                               order.status === 'shipped' ? (lang === 'ka' ? 'გაგზავნილი' : 'Shipped') :
+                               order.status === 'completed' ? (lang === 'ka' ? 'დასრულებული' : 'Completed') :
+                               order.status === 'cancelled' ? (lang === 'ka' ? 'გაუქმებული' : 'Cancelled') :
+                               (order.status || 'pending')}
                             </span>
                           </td>
                           <td className="px-5 py-3.5 text-right">
                             <div className="flex justify-end gap-2">
-                               {order.status !== 'shipped' && order.status !== 'completed' && (
-                                 <button 
-                                   onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
-                                   className="px-2.5 py-1.5 bg-proton-accent text-proton-bg rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px]"
-                                 >
-                                   {(t as any).ship_order}
-                                 </button>
-                               )}
-                               {order.status === 'shipped' && (
-                                 <button 
-                                   onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                                   className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px]"
-                                 >
-                                   {(t as any).complete_order}
-                                 </button>
-                               )}
+                              {(() => {
+                                const isService = order.orderType === 'service' || order.orderType === 'project' || order.status === 'booked' || order.status === 'in_progress';
+                                const status = order.status || (isService ? 'booked' : 'pending');
+
+                                if (isService) {
+                                  // Service order lifecycle: booked -> in_progress -> completed
+                                  if (status === 'booked') {
+                                    return (
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
+                                        className="px-2.5 py-1.5 bg-indigo-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                      >
+                                        {lang === 'ka' ? 'დაწყება' : 'Start'}
+                                      </button>
+                                    );
+                                  }
+                                  if (status === 'in_progress') {
+                                    return (
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                        className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                      >
+                                        {(t as any).complete_order || (lang === 'ka' ? 'დასრულება' : 'Complete')}
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                }
+
+                                // Physical product lifecycle: pending -> processing -> shipped -> completed
+                                if (status === 'pending') {
+                                  return (
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
+                                      className="px-2.5 py-1.5 bg-amber-500 text-black font-black rounded-md text-[9px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                    >
+                                      {lang === 'ka' ? 'დამუშავება' : 'Process'}
+                                    </button>
+                                  );
+                                }
+                                if (status === 'processing') {
+                                  return (
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
+                                      className="px-2.5 py-1.5 bg-proton-accent text-proton-bg rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                    >
+                                      {(t as any).ship_order || (lang === 'ka' ? 'გაგზავნა' : 'Ship')}
+                                    </button>
+                                  );
+                                }
+                                if (status === 'shipped') {
+                                  return (
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                      className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                    >
+                                      {(t as any).complete_order || (lang === 'ka' ? 'დასრულება' : 'Complete')}
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                           </td>
                         </tr>
