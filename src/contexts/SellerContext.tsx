@@ -14,7 +14,6 @@ import {
 } from 'firebase/firestore';
 import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { executeSecureTransaction } from '../services/cloudFunctionsService';
 import { uploadProductImage, validateListingImageUrl } from '../lib/storageUtils';
 
@@ -124,6 +123,16 @@ export const isRealLedgerItem = (item: LedgerItem | null | undefined): boolean =
 };
 
 const defaultSampleOrders: Order[] = [];
+
+const getOrderTimestamp = (createdAt: any): number => {
+  if (!createdAt) return 0;
+  if (typeof createdAt === 'number') return createdAt;
+  if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
+  if (typeof createdAt.toDate === 'function') return createdAt.toDate().getTime();
+  if (typeof createdAt.seconds === 'number') return createdAt.seconds * 1000;
+  const parsed = new Date(createdAt).getTime();
+  return isNaN(parsed) ? 0 : parsed;
+};
 
 const generateTxId = (): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -242,7 +251,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [user?.uid]);
 
-  // 2. Real-time Orders Listener (Seller & Buyer)
+  // 2. Real-time Orders Listener (Seller & Buyer) from Firestore /orders
   useEffect(() => {
     if (!user) {
       setSellerOrders(defaultSampleOrders);
@@ -252,37 +261,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     let active = true;
 
-    if (isSupabaseConfigured()) {
-      const fetchSupabaseOrders = async () => {
-        const { data: sData } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('sellerId', user.uid);
-        if (active && sData) {
-          setSellerOrders(sData.length > 0 ? (sData as Order[]) : defaultSampleOrders);
-        }
-
-        const { data: bData } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('buyerId', user.uid);
-        if (active && bData) setBuyerOrders(bData as Order[]);
-      };
-
-      fetchSupabaseOrders();
-
-      const channel = supabase
-        .channel('seller-orders-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
-          if (active) fetchSupabaseOrders();
-        })
-        .subscribe();
-
-      return () => {
-        active = false;
-        supabase.removeChannel(channel);
-      };
-    } else {
+    try {
       const qSellerOrders = query(
         collection(db, 'orders'),
         where('sellerId', '==', user.uid)
@@ -293,9 +272,10 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           id: doc.id,
           ...doc.data()
         })) as Order[];
+        data.sort((a, b) => getOrderTimestamp(b.createdAt) - getOrderTimestamp(a.createdAt));
         setSellerOrders(data.length > 0 ? data : defaultSampleOrders);
       }, (err) => {
-        console.warn("[SellerContext] Seller orders warning:", err);
+        console.warn("[SellerContext] Firestore seller orders subscription warning:", err);
       });
 
       const qBuyerOrders = query(
@@ -308,9 +288,10 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           id: doc.id,
           ...doc.data()
         })) as Order[];
+        data.sort((a, b) => getOrderTimestamp(b.createdAt) - getOrderTimestamp(a.createdAt));
         setBuyerOrders(data);
       }, (err) => {
-        console.warn("[SellerContext] Buyer orders warning:", err);
+        console.warn("[SellerContext] Firestore buyer orders subscription warning:", err);
       });
 
       return () => {
@@ -318,8 +299,10 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         unsubSellerOrders();
         unsubBuyerOrders();
       };
+    } catch (e: any) {
+      console.warn("[SellerContext] Orders query initialization error:", e);
     }
-  }, [user]);
+  }, [user?.uid]);
 
   // 3. Real-time Ledger Listener (Read-only subscription)
   useEffect(() => {
