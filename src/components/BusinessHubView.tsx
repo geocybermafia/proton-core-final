@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Users, Workflow, Calendar, Wallet, ArrowRight, Sparkles, 
+  Users, Workflow, Calendar, ArrowRight, Sparkles, 
   Clock, Activity, CheckSquare, Layers, Shield, Briefcase, Target
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -75,19 +75,6 @@ export default function BusinessHubView({
       glowClass: 'border-purple-500/20 hover:border-purple-500/80 shadow-purple-500/5 hover:shadow-purple-500/20',
       badgeClass: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
       iconClass: 'bg-purple-500/10 text-purple-400 group-hover:bg-purple-500 group-hover:text-black',
-    },
-    {
-      id: 'finance',
-      title: isKa ? 'ფინანსების მართვა' : 'Finance Tracker',
-      desc: isKa 
-        ? 'ბიუჯეტირება, Web3 ინტეგრაცია, ტრანზაქციების ისტორია და ბალანსის სიმულაციები.'
-        : 'Track global budgets, monitor real-time transaction ledgers, simulate flows, and link Web3 wallets.',
-      badge: isKa ? 'EVM საფულე და რეესტრი' : 'EVM Wallet & Ledger',
-      icon: Wallet,
-      color: 'amber',
-      glowClass: 'border-amber-500/20 hover:border-amber-500/80 shadow-amber-500/5 hover:shadow-amber-500/20',
-      badgeClass: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-      iconClass: 'bg-amber-500/10 text-amber-500 group-hover:bg-amber-500 group-hover:text-black',
     }
   ];
 

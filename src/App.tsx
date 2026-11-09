@@ -28,7 +28,6 @@ import { useLanguage } from './contexts/LanguageContext';
 import { useSeller } from './contexts/SellerContext';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 const CabinetView = lazyWithRetry(() => import('./components/CabinetView').then(module => ({ default: module.default })), 'CabinetView');
-const Web3ControlPanel = lazyWithRetry(() => import('./components/Web3ControlPanel').then(module => ({ default: module.Web3ControlPanel })), 'Web3ControlPanel');
 import { LandingPage } from './components/LandingPage';
 const TranslatorView = lazyWithRetry(() => import('./components/TranslatorView').then(module => ({ default: module.TranslatorView || module.default })), 'TranslatorView');
 const CreativeStudioHub = lazyWithRetry(() => import('./components/CreativeStudioHub').then(module => ({ default: module.CreativeStudioHub })), 'CreativeStudioHub');
@@ -119,7 +118,6 @@ import {
   Fingerprint,
   PlusCircle,
   CreditCard,
-  Wallet,
   Briefcase,
   BarChart3,
   User as UserIcon,
@@ -3540,8 +3538,8 @@ const MobileBottomNav = React.memo(({
       ['/creative-studio', '/studio', '/copywriting', '/translator', '/personas', '/blueprints', '/clips', '/reels'].some(path => currentPath.startsWith(path)),
     'market-hub': ['market-hub', 'market', 'commercial'].includes(activeView) ||
       ['/market-hub', '/market', '/commercial'].some(path => currentPath.startsWith(path)),
-    'control-hub': isMobileControlOpen || ['profile', 'settings', 'organizer', 'finance', 'business-hub', 'compute', 'documentation'].includes(activeView) ||
-      ['/profile', '/settings', '/organizer', '/finance', '/business-hub', '/business', '/compute', '/documentation'].some(path => currentPath.startsWith(path)),
+    'control-hub': isMobileControlOpen || ['profile', 'settings', 'organizer', 'business-hub', 'compute', 'documentation'].includes(activeView) ||
+      ['/profile', '/settings', '/organizer', '/business-hub', '/business', '/compute', '/documentation'].some(path => currentPath.startsWith(path)),
   }), [activeView, currentPath, isMobileControlOpen]);
 
   const handleItemClick = useCallback((id: string) => {
@@ -3655,9 +3653,8 @@ export default function App() {
         case 'market': return '/market-hub';
         case 'personas': return '/personas';
         case 'blueprints': return '/blueprints';
-        case 'image': return '/studio';
         case 'organizer': return '/organizer';
-        case 'finance': return '/finance';
+        case 'finance': return '/dashboard';
         case 'business-hub': return '/business-hub';
         case 'compute': return '/compute';
         case 'profile': return '/profile';
@@ -3714,9 +3711,8 @@ export default function App() {
     if (pathname.startsWith('/market')) return 'market-hub';
     if (pathname.startsWith('/personas')) return 'dashboard';
     if (pathname.startsWith('/blueprints')) return 'blueprints';
-    if (pathname.startsWith('/studio')) return 'image';
     if (pathname.startsWith('/organizer')) return 'organizer';
-    if (pathname.startsWith('/finance')) return 'finance';
+    if (pathname.startsWith('/finance')) return 'dashboard';
     if (pathname.startsWith('/business-hub')) return 'business-hub';
     if (pathname.startsWith('/business')) return 'business-hub';
     if (pathname.startsWith('/compute')) return 'compute';
@@ -3741,9 +3737,8 @@ export default function App() {
       case 'market': return '/market-hub';
       case 'personas': return '/dashboard';
       case 'blueprints': return '/blueprints';
-      case 'image': return '/studio';
       case 'organizer': return '/organizer';
-      case 'finance': return '/finance';
+      case 'finance': return '/dashboard';
       case 'business-hub': return '/business-hub';
       case 'compute': return '/compute';
       case 'profile': return '/profile';
@@ -3766,9 +3761,9 @@ export default function App() {
     setActiveView('organizer');
   }, [handleModeChange, setActiveView]);
 
-  // Synchronize persona ID from deep-linking URL (/personas/:id) & auto-redirect disabled personas route
+  // Synchronize persona ID from deep-linking URL (/personas/:id) & auto-redirect disabled routes (/personas, /finance)
   useEffect(() => {
-    if (location.pathname.startsWith('/personas')) {
+    if (location.pathname.startsWith('/personas') || location.pathname.startsWith('/finance')) {
       navigate('/dashboard', { replace: true });
     }
   }, [location.pathname, navigate]);
@@ -4184,6 +4179,11 @@ export default function App() {
   }, [sidebarDisplayMode, viewportWidth]);
 
   const handleViewChange = React.useCallback((view: View, personaId?: string) => {
+    if (view === 'finance') {
+      setActiveView('dashboard');
+      return;
+    }
+
     if (view === 'market-hub' || view === 'market') {
       setUiMode('market');
     } else if (view === 'image' || view === 'translator' || view === 'creative-studio' || view === 'copywriting') {
@@ -4192,7 +4192,6 @@ export default function App() {
       view === 'organizer' || 
       view === 'blueprints' || 
       view === 'commercial' || 
-      view === 'finance' || 
       view === 'compute' || 
       view === 'business-hub'
     ) {
@@ -5671,14 +5670,6 @@ export default function App() {
                       expanded={isSidebarExpanded}
                       uiMode={uiMode}
                     />
-                    <SidebarItem 
-                      icon={Wallet} 
-                      label={t.sidebar.finance} 
-                      active={activeView === 'finance'} 
-                      onClick={() => handleViewChange('finance')} 
-                      expanded={isSidebarExpanded}
-                      uiMode={uiMode}
-                    />
                     {userProfile.showCommercialHub && (
                       <SidebarItem 
                         icon={TrendingUp} 
@@ -6290,7 +6281,6 @@ export default function App() {
                       { id: 'translator', label: t.sidebar.translator, icon: Languages },
                       { id: 'copywriting', label: language === 'ka' ? 'კოპირაიტინგი' : 'Copywriting', icon: FileText },
                       { id: 'organizer', label: t.sidebar.organizer, icon: CalendarIcon },
-                      { id: 'finance', label: t.sidebar.finance, icon: Wallet },
                       ...(userProfile.showCommercialHub ? [{ id: 'commercial', label: t.sidebar.commercial, icon: TrendingUp }] : []),
                     ].map((item) => (
                       <button
@@ -6862,16 +6852,7 @@ export default function App() {
                   )}
 
                   {activeView === 'finance' && (
-                    <div className="space-y-6 max-w-7xl mx-auto pb-20">
-                      <Suspense fallback={
-                        <div className="min-h-[400px] flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
-                          <Loader2 className="animate-spin text-proton-accent" size={24} />
-                          <span className="uppercase tracking-widest">Loading Web3 Panel...</span>
-                        </div>
-                      }>
-                        <Web3ControlPanel language={userProfile.language} />
-                      </Suspense>
-                    </div>
+                    <Navigate to="/dashboard" replace />
                   )}
                   {activeView === 'organizer' && (
                     <Suspense fallback={

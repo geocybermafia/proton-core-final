@@ -143,16 +143,6 @@ export const COMMAND_ROUTES: CommandRoute[] = [
     category: 'core'
   },
   {
-    id: 'finance',
-    keywords: ['finance', 'web3', 'crypto', 'wallet', 'money', 'payment', ' balances', 'ფინანსები', 'საფულე', 'კრიპტო'],
-    view: 'finance',
-    titleEn: 'Web3 Finance Panel',
-    titleKa: 'ფინანსური პანელი',
-    descriptionEn: 'Crypto wallet balance, transactions, and Web3 panel',
-    descriptionKa: 'კრიპტო საფულე და ტრანზაქციები',
-    category: 'business'
-  },
-  {
     id: 'documentation',
     keywords: ['documentation', 'docs', 'guide', 'help', 'info', 'faq', 'დოკუმენტაცია', 'ინსტრუქცია', 'დახმარება'],
     view: 'documentation',
