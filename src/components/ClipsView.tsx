@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClipPlayback } from '../hooks/useClipPlayback';
 import { 
@@ -429,6 +429,19 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     const fallbackIdx = (index !== undefined ? index : 0) % PRESET_LOOPS.length;
     return PRESET_LOOPS[fallbackIdx].url;
   };
+
+  const handleRetryVideo = useCallback((id: string) => {
+    setFailedVideoIds(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setFallbackOverrideUrls(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
 
   // Like Action
   const handleLike = async (clip: Clip) => {
@@ -1225,6 +1238,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               onVideoPlayStateChange={(playing) => setIsPlaying(playing)}
               onVideoBufferingStateChange={() => {}}
               onVideoLoadSuccess={(id) => setLoadedVideoIds(prev => ({ ...prev, [id]: true }))}
+              onRetryVideo={(id) => handleRetryVideo(id)}
               onVideoFallback={(id, url) => {
                 if (url) {
                   setFallbackOverrideUrls(prev => ({ ...prev, [id]: url }));

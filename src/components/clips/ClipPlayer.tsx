@@ -18,6 +18,7 @@ import {
   VolumeX, 
   Play, 
   AlertCircle, 
+  RotateCcw,
   Plus,
   Scissors,
   MoreVertical,
@@ -25,7 +26,6 @@ import {
 } from 'lucide-react';
 import { Clip } from '../../types';
 import { cn } from '../../lib/utils';
-import { PRESET_LOOPS } from './types';
 
 interface ReelProgressBarProps {
   videoElement: HTMLVideoElement | null;
@@ -262,7 +262,8 @@ export interface ClipPlayerProps {
   onVideoPlayStateChange: (isPlaying: boolean) => void;
   onVideoBufferingStateChange: (isBuffering: boolean) => void;
   onVideoLoadSuccess: (clipId: string) => void;
-  onVideoFallback: (clipId: string, fallbackUrl: string) => void;
+  onVideoFallback?: (clipId: string, fallbackUrl?: string) => void;
+  onRetryVideo?: (clipId: string) => void;
 }
 
 export function ClipPlayer({
@@ -308,7 +309,8 @@ export function ClipPlayer({
   onVideoPlayStateChange,
   onVideoBufferingStateChange,
   onVideoLoadSuccess,
-  onVideoFallback
+  onVideoFallback,
+  onRetryVideo
 }: ClipPlayerProps) {
   const isLikedByMe = clip.likes?.includes(currentUser?.uid || '');
   const hasProduct = !!clip.productId;
@@ -490,8 +492,9 @@ export function ClipPlayer({
               onLoadedData={() => { onVideoLoadSuccess(clip.id); }}
               onError={() => {
                 console.warn("Video play/decode error for ID", clip.id);
-                const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
-                onVideoFallback(clip.id, fallbackUrl);
+                if (onVideoFallback) {
+                  onVideoFallback(clip.id, '');
+                }
               }}
               onLoadedMetadata={(e) => onVideoMetadataLoad(clip.id, e)}
               onTimeUpdate={(e) => {
@@ -588,29 +591,40 @@ export function ClipPlayer({
             </div>
           )}
           
-          {/* Fallback player overlay */}
+          {/* Fallback error overlay */}
           {failedVideoIds[clip.id] && (
-            <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center p-6 text-center gap-4 pointer-events-auto">
-              <div className="p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full animate-pulse">
+            <div className="absolute inset-0 z-20 bg-black/90 flex flex-col items-center justify-center p-6 text-center gap-4 pointer-events-auto overflow-hidden">
+              {clip.thumbnailUrl && (
+                <img
+                  src={clip.thumbnailUrl}
+                  alt={clip.caption || 'Clip thumbnail'}
+                  className="absolute inset-0 w-full h-full object-cover opacity-20 filter blur-sm pointer-events-none"
+                />
+              )}
+              <div className="relative z-10 p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-full animate-pulse">
                 <AlertCircle size={28} />
               </div>
-              <h4 className="text-xs font-black uppercase text-red-400 tracking-wider">
-                {language === 'ka' ? 'შეცდომა კლიპის ჩართვისას' : 'Decoder Error / Format Unsupported'}
-              </h4>
-              <p className="text-[10px] sm:text-[11px] text-proton-muted max-w-[280px] leading-relaxed">
+              <p className="relative z-10 text-[11px] sm:text-xs text-proton-text font-medium max-w-[290px] leading-relaxed">
                 {language === 'ka' 
-                  ? 'ბრაუზერს არ აქვს ამ ვიდეოს კოდეკის (მაგ. HEVC) მხარდაჭერა. გთხოვთ გამოიყენოთ MP4.' 
-                  : 'This specific video codec (e.g. HEVC/QuickTime) is not supported by your browser.'}
+                  ? 'კლიპის ჩატვირთვა ვერ მოხერხდა. შესაძლოა, ვიდეოს ფორმატი ბრაუზერის მიერ არ იყოს მხარდაჭერილი.' 
+                  : 'Unable to load this clip. The video format may not be supported by your browser.'}
               </p>
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const fallbackUrl = PRESET_LOOPS[idx % PRESET_LOOPS.length].url;
-                  onVideoFallback(clip.id, fallbackUrl);
+                  if (onRetryVideo) {
+                    onRetryVideo(clip.id);
+                  }
+                  if (localVideoEl) {
+                    localVideoEl.load();
+                    localVideoEl.play().catch(() => {});
+                  }
                 }}
-                className="px-3.5 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[10px] font-bold hover:bg-purple-500/30 transition-all cursor-pointer"
+                className="relative z-10 px-4 py-2 rounded-xl bg-proton-accent/15 hover:bg-proton-accent/25 text-proton-accent border border-proton-accent/30 text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95"
               >
-                {language === 'ka' ? 'დემო ვიდეოს ჩართვა' : 'Play standard demo loop'}
+                <RotateCcw size={14} />
+                <span>{language === 'ka' ? 'თავიდან სცადე' : 'Retry'}</span>
               </button>
             </div>
           )}
