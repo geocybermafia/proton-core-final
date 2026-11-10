@@ -215,6 +215,7 @@ export async function uploadFileToStorage(
 
 /**
  * Helper specifically for uploading Proton Clips videos to Supabase Storage ('clips' bucket)
+ * Phase 2 Migration: Uses backend-issued Signed Upload URLs for secure authorization while maintaining direct-to-storage upload and progress reporting.
  */
 export async function uploadClipVideo(
   userId: string,
@@ -223,8 +224,7 @@ export async function uploadClipVideo(
   onProgress?: (progress: number) => void,
   timeoutMs?: number
 ): Promise<string> {
-  const fileExt = file instanceof File && file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
-  const filePath = `${userId}/${clipId}.${fileExt}`;
+  const fileExt = file instanceof File && file.name.includes('.') ? file.name.split('.').pop() || 'mp4' : 'mp4';
 
   // File-size-aware timeout for mobile resilience:
   // - small videos (<=5MB): at least 60 seconds
@@ -244,14 +244,71 @@ export async function uploadClipVideo(
 
   const effectiveTimeoutMs = timeoutMs ?? computedTimeout;
 
+  // 1. Authenticate with Firebase and obtain fresh ID Token
+  const activeUser = auth?.currentUser;
+  if (!activeUser) {
+    throw new Error('User must be authenticated with Firebase to upload clips.');
+  }
+  const idToken = await activeUser.getIdToken(true);
+
   dispatchProtonDebugEvent({
     type: 'storage-start',
-    provider: 'supabase',
+    provider: 'supabase-signed-url',
     bucket: 'clips',
-    path: filePath,
+    userId,
+    clipId,
     size: (file as any).size,
   });
 
+  // 2. Request signed upload URL and secure storage path from server endpoint
+  let signedData: {
+    signedUrl: string;
+    token: string;
+    path: string;
+    publicUrl: string;
+  };
+
+  try {
+    const response = await fetch('/api/storage/create-clip-upload-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
+        fileExt,
+        mimeType: file.type || 'video/mp4',
+        filename: file instanceof File ? file.name : undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      let errJson: any = null;
+      try {
+        errJson = await response.json();
+      } catch {}
+      const errMsg = errJson?.error || errJson?.reason || `Server error during signed URL creation (HTTP ${response.status})`;
+      const err: any = new Error(errMsg);
+      err.statusCode = errJson?.statusCode || response.status;
+      err.code = errJson?.code || `HTTP_${response.status}`;
+      throw err;
+    }
+
+    signedData = await response.json();
+  } catch (err: any) {
+    console.error('[StorageUtils] Failed to acquire signed upload URL from server:', err);
+    dispatchProtonDebugEvent({
+      type: 'storage-error',
+      provider: 'backend',
+      code: err?.code || 'SIGNED_URL_FAILED',
+      message: err?.message || String(err),
+    });
+    throw err;
+  }
+
+  const { signedUrl, token, path: storagePath, publicUrl } = signedData;
+
+  // 3. Upload video directly to Supabase Storage (never routed through Express)
   return new Promise((resolve, reject) => {
     let isSettled = false;
     let xhr: XMLHttpRequest | null = null;
@@ -266,7 +323,7 @@ export async function uploadClipVideo(
         dispatchProtonDebugEvent({
           type: 'storage-error',
           provider: 'supabase',
-          path: filePath,
+          path: storagePath,
           code: 'storage/timeout',
           message: timeoutError.message,
         });
@@ -283,7 +340,7 @@ export async function uploadClipVideo(
         type: 'storage-success',
         provider: 'supabase',
         bucket: 'clips',
-        path: filePath,
+        path: storagePath,
         downloadUrl,
       });
       resolve(downloadUrl);
@@ -293,32 +350,26 @@ export async function uploadClipVideo(
       if (isSettled) return;
       isSettled = true;
       clearTimeout(timeoutId);
-      console.error(`[StorageUtils] Supabase upload failed for path "${filePath}":`, error);
+      console.error(`[StorageUtils] Supabase signed upload failed for path "${storagePath}":`, error);
       dispatchProtonDebugEvent({
         type: 'storage-error',
         provider: 'supabase',
         bucket: 'clips',
-        path: filePath,
+        path: storagePath,
         code: error?.code || error?.statusCode || 'STORAGE_ERROR',
         message: error?.message || String(error),
       });
       reject(error);
     };
 
-    // In browser environment with XMLHttpRequest, use XHR for accurate upload progress
-    if (typeof window !== 'undefined' && typeof XMLHttpRequest !== 'undefined') {
+    // Use XHR in browser for accurate upload progress reporting (0% -> 100%)
+    if (typeof window !== 'undefined' && typeof XMLHttpRequest !== 'undefined' && typeof FormData !== 'undefined') {
       try {
         xhr = new XMLHttpRequest();
-        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/clips/${filePath}`;
-        xhr.open('POST', uploadUrl, true);
+        xhr.open('PUT', signedUrl, true);
         xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
         xhr.setRequestHeader('Authorization', `Bearer ${SUPABASE_ANON_KEY}`);
         xhr.setRequestHeader('x-upsert', 'true');
-        if (file.type) {
-          xhr.setRequestHeader('Content-Type', file.type);
-        } else {
-          xhr.setRequestHeader('Content-Type', 'video/mp4');
-        }
 
         if (xhr.upload && onProgress) {
           xhr.upload.onprogress = (e) => {
@@ -328,7 +379,7 @@ export async function uploadClipVideo(
               dispatchProtonDebugEvent({
                 type: 'storage-progress',
                 provider: 'supabase',
-                path: filePath,
+                path: storagePath,
                 progress: pct,
               });
             }
@@ -337,8 +388,7 @@ export async function uploadClipVideo(
 
         xhr.onload = () => {
           if (xhr!.status >= 200 && xhr!.status < 300) {
-            const { data } = supabase.storage.from('clips').getPublicUrl(filePath);
-            handleSuccess(data.publicUrl);
+            handleSuccess(publicUrl);
           } else {
             let errorJson: any = null;
             try {
@@ -356,31 +406,36 @@ export async function uploadClipVideo(
           handleError(new Error('Network error during Supabase upload. Check your internet connection.'));
         };
 
-        xhr.send(file);
+        // Standard Supabase signed upload payload format:
+        // FormData with cacheControl and file attached as empty key
+        const formData = new FormData();
+        formData.append('cacheControl', '3600');
+        formData.append('', file);
+        xhr.send(formData);
         return;
       } catch (xhrErr) {
-        console.warn('[StorageUtils] XHR failed, falling back to Supabase client SDK:', xhrErr);
+        console.warn('[StorageUtils] XHR signed upload failed, falling back to uploadToSignedUrl SDK:', xhrErr);
       }
     }
 
-    // Fallback: Supabase JS Client SDK upload
+    // Fallback: Official Supabase JS SDK uploadToSignedUrl
     (async () => {
       try {
         if (onProgress) onProgress(20);
-        const { error } = await supabase.storage.from('clips').upload(filePath, file, {
-          contentType: file.type || 'video/mp4',
-          cacheControl: '3600',
-          upsert: true,
-        });
+        const { error: uploadError } = await supabase.storage
+          .from('clips')
+          .uploadToSignedUrl(storagePath, token, file, {
+            cacheControl: '3600',
+            upsert: true,
+          });
 
-        if (error) {
-          handleError(error);
+        if (uploadError) {
+          handleError(uploadError);
           return;
         }
 
         if (onProgress) onProgress(90);
-        const { data: publicData } = supabase.storage.from('clips').getPublicUrl(filePath);
-        handleSuccess(publicData.publicUrl);
+        handleSuccess(publicUrl);
       } catch (err) {
         handleError(err);
       }
@@ -391,7 +446,7 @@ export async function uploadClipVideo(
 /**
  * Safely deletes a clip's video file from cloud storage.
  * Supports:
- * 1. Supabase Storage ('clips' bucket) - Extracts file path from Supabase URL and deletes via Supabase SDK.
+ * 1. Supabase Storage ('clips' bucket) - Delegated to secure backend (/api/storage/delete-clip-video) with Firebase token verification and strict ownership check.
  * 2. Firebase Storage - Fallback for legacy clips stored in Firebase Storage.
  * 3. External / preset loops - Safely ignores without throwing.
  */
@@ -403,49 +458,85 @@ export async function deleteClipVideoFromStorage(
     return false;
   }
 
-  // 1. Check for Supabase Storage URL
+  // 1. Check for Supabase Storage URL or path
   const isSupabaseStorageUrl = 
     videoUrlOrPath.includes('supabase.co/storage/v1/object/public/clips/') ||
     videoUrlOrPath.includes('supabase.co/storage/v1/object/clips/') ||
-    (videoUrlOrPath.includes('supabase.co') && videoUrlOrPath.includes('/clips/'));
+    (videoUrlOrPath.includes('supabase.co') && videoUrlOrPath.includes('/clips/')) ||
+    (videoUrlOrPath.includes('/') && !videoUrlOrPath.includes('firebasestorage.googleapis.com') && !videoUrlOrPath.startsWith('http'));
 
   if (isSupabaseStorageUrl) {
     try {
-      let storagePath = '';
+      let relativePath = '';
       if (videoUrlOrPath.includes('/storage/v1/object/public/clips/')) {
-        storagePath = videoUrlOrPath.split('/storage/v1/object/public/clips/')[1];
+        relativePath = videoUrlOrPath.split('/storage/v1/object/public/clips/')[1];
       } else if (videoUrlOrPath.includes('/storage/v1/object/clips/')) {
-        storagePath = videoUrlOrPath.split('/storage/v1/object/clips/')[1];
-      } else {
+        relativePath = videoUrlOrPath.split('/storage/v1/object/clips/')[1];
+      } else if (videoUrlOrPath.includes('/clips/')) {
         const parts = videoUrlOrPath.split('/clips/');
-        storagePath = parts[1] || '';
+        relativePath = parts[1] || '';
+      } else {
+        relativePath = videoUrlOrPath;
       }
 
-      // Remove query parameters if present
-      if (storagePath.includes('?')) {
-        storagePath = storagePath.split('?')[0];
+      // Remove query parameters or hash if present
+      if (relativePath.includes('?')) {
+        relativePath = relativePath.split('?')[0];
+      }
+      if (relativePath.includes('#')) {
+        relativePath = relativePath.split('#')[0];
+      }
+      relativePath = relativePath.replace(/^\/+/, '');
+      if (relativePath.startsWith('clips/')) {
+        relativePath = relativePath.substring('clips/'.length);
       }
 
-      if (storagePath) {
-        const { error } = await supabase.storage.from('clips').remove([storagePath]);
-        if (error) {
-          console.warn('[StorageUtils] Supabase storage deletion notice:', error);
-          dispatchProtonDebugEvent({
-            type: 'storage-warning',
-            provider: 'supabase',
-            action: 'deleteClipVideo',
-            path: storagePath,
-            message: error.message,
-          });
-        } else {
-          dispatchProtonDebugEvent({
-            type: 'storage-success',
-            provider: 'supabase',
-            action: 'deleteClipVideo',
-            path: storagePath,
-          });
-        }
+      if (!relativePath) {
+        return false;
       }
+
+      // Secure Server-side deletion with Firebase Token
+      const activeUser = auth?.currentUser;
+      if (!activeUser) {
+        console.warn('[StorageUtils] Cannot delete clip: user not authenticated with Firebase');
+        return false;
+      }
+
+      const idToken = await activeUser.getIdToken(true);
+      const response = await fetch('/api/storage/delete-clip-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          path: relativePath,
+        }),
+      });
+
+      if (!response.ok) {
+        let errJson: any = null;
+        try {
+          errJson = await response.json();
+        } catch {}
+        const errorMsg = errJson?.error || errJson?.reason || `Server deletion failed (HTTP ${response.status})`;
+        console.warn('[StorageUtils] Supabase storage deletion notice:', errorMsg);
+        dispatchProtonDebugEvent({
+          type: 'storage-warning',
+          provider: 'supabase-backend',
+          action: 'deleteClipVideo',
+          path: relativePath,
+          message: errorMsg,
+        });
+        return false;
+      }
+
+      dispatchProtonDebugEvent({
+        type: 'storage-success',
+        provider: 'supabase-backend',
+        action: 'deleteClipVideo',
+        path: relativePath,
+      });
       return true;
     } catch (err: any) {
       console.warn('[StorageUtils] Supabase deletion error:', err);
