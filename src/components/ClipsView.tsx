@@ -286,6 +286,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   const [soundOverlay, setSoundOverlay] = useState<{ visible: boolean; muted: boolean }>({ visible: false, muted: false });
   const [doubleTapHearts, setDoubleTapHearts] = useState<{ [clipId: string]: boolean }>({});
   const [loadedVideoIds, setLoadedVideoIds] = useState<{ [clipId: string]: boolean }>({});
+  const [bufferingVideoIds, setBufferingVideoIds] = useState<{ [clipId: string]: boolean }>({});
   const [failedVideoIds, setFailedVideoIds] = useState<{ [clipId: string]: boolean }>({});
   const [fallbackOverrideUrls, setFallbackOverrideUrls] = useState<{ [clipId: string]: string }>({});
   const [dynamicPlaceholderThumbnails, setDynamicPlaceholderThumbnails] = useState<{ [clipId: string]: string }>({});
@@ -431,6 +432,11 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   };
 
   const handleRetryVideo = useCallback((id: string) => {
+    setBufferingVideoIds(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     setFailedVideoIds(prev => {
       const next = { ...prev };
       delete next[id];
@@ -1180,7 +1186,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               totalClips={filteredClips.length}
               isPlaying={isPlaying}
               isMuted={isMuted}
-              isBuffering={false}
+              isBuffering={!!bufferingVideoIds[clip.id]}
               isMounted={Math.abs(idx - currentIndex) <= 1}
               activeFilter={activeFilter}
               showFiltersPanel={showFiltersPanel}
@@ -1238,10 +1244,29 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
                 }
               }}
               onVideoPlayStateChange={(playing) => setIsPlaying(playing)}
-              onVideoBufferingStateChange={() => {}}
-              onVideoLoadSuccess={(id) => setLoadedVideoIds(prev => ({ ...prev, [id]: true }))}
+              onVideoBufferingStateChange={(buffering) => {
+                setBufferingVideoIds(prev => {
+                  if (prev[clip.id] === buffering) return prev;
+                  return { ...prev, [clip.id]: buffering };
+                });
+              }}
+              onVideoLoadSuccess={(id) => {
+                setLoadedVideoIds(prev => ({ ...prev, [id]: true }));
+                setBufferingVideoIds(prev => {
+                  if (!prev[id]) return prev;
+                  const next = { ...prev };
+                  delete next[id];
+                  return next;
+                });
+              }}
               onRetryVideo={(id) => handleRetryVideo(id)}
               onVideoFallback={(id, url) => {
+                setBufferingVideoIds(prev => {
+                  if (!prev[id]) return prev;
+                  const next = { ...prev };
+                  delete next[id];
+                  return next;
+                });
                 if (url) {
                   setFallbackOverrideUrls(prev => ({ ...prev, [id]: url }));
                   setFailedVideoIds(prev => {

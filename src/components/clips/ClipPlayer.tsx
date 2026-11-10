@@ -22,10 +22,13 @@ import {
   Plus,
   Scissors,
   MoreVertical,
-  X
+  X,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Clip } from '../../types';
 import { cn } from '../../lib/utils';
+import { formatTimecode } from './types';
 
 interface ReelProgressBarProps {
   videoElement: HTMLVideoElement | null;
@@ -318,6 +321,58 @@ export function ClipPlayer({
   const isCurrentActive = idx === currentIndex;
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
   const [localVideoEl, setLocalVideoEl] = useState<HTMLVideoElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number>(clip.trimStart || 0);
+  const [duration, setDuration] = useState<number>(clip.duration || 0);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fullscreen change listener to sync state across browser vendor events
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const activeEl = document.fullscreenElement || (document as any).webkitFullscreenElement;
+      setIsFullscreen(Boolean(activeEl && (activeEl === playerContainerRef.current || activeEl === localVideoEl)));
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, [localVideoEl]);
+
+  const toggleFullscreen = async () => {
+    try {
+      const container = playerContainerRef.current;
+      const isCurrentlyFs = Boolean(
+        document.fullscreenElement || 
+        (document as any).webkitFullscreenElement
+      );
+
+      if (isCurrentlyFs) {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        }
+        setIsFullscreen(false);
+      } else {
+        if (container?.requestFullscreen) {
+          await container.requestFullscreen();
+          setIsFullscreen(true);
+        } else if ((container as any)?.webkitRequestFullscreen) {
+          await (container as any).webkitRequestFullscreen();
+          setIsFullscreen(true);
+        } else if (localVideoEl && (localVideoEl as any).webkitEnterFullscreen) {
+          // iOS Safari fallback: fullscreens the native video element directly
+          (localVideoEl as any).webkitEnterFullscreen();
+          setIsFullscreen(true);
+        }
+      }
+    } catch (err) {
+      console.warn("Fullscreen toggle error:", err);
+    }
+  };
 
   const isTrimmed = Boolean(
     (clip.trimStart && clip.trimStart > 0) || 
@@ -453,7 +508,13 @@ export function ClipPlayer({
       className="w-full h-full min-h-full flex-shrink-0 snap-start snap-always relative flex items-center justify-center p-1.5 sm:p-3 md:p-4"
     >
       {/* VIEWPORT-CENTRIC 9:16 REELS PLAYER CONTAINER */}
-      <div className="relative h-full max-h-full w-auto aspect-[9/16] max-w-[min(100%,440px)] rounded-[22px] sm:rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none">
+      <div 
+        ref={playerContainerRef}
+        className={cn(
+          "relative h-full max-h-full w-auto aspect-[9/16] max-w-[min(100%,440px)] rounded-[22px] sm:rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none",
+          isFullscreen && "w-full max-w-none aspect-auto h-screen rounded-none border-none shadow-none z-50 fixed inset-0"
+        )}
+      >
         
         {/* VIDEO PLAYER ELEMENT */}
         <div 
@@ -489,14 +550,25 @@ export function ClipPlayer({
               onStalled={() => { if (isCurrentActive) onVideoBufferingStateChange(true); }}
               onPlaying={() => { if (isCurrentActive) onVideoBufferingStateChange(false); }}
               onCanPlay={() => { if (isCurrentActive) onVideoBufferingStateChange(false); }}
-              onLoadedData={() => { onVideoLoadSuccess(clip.id); }}
+              onLoadedData={() => { 
+                onVideoLoadSuccess(clip.id); 
+                if (isCurrentActive) onVideoBufferingStateChange(false);
+              }}
               onError={() => {
                 console.warn("Video play/decode error for ID", clip.id);
+                if (isCurrentActive) onVideoBufferingStateChange(false);
                 if (onVideoFallback) {
                   onVideoFallback(clip.id, '');
                 }
               }}
-              onLoadedMetadata={(e) => onVideoMetadataLoad(clip.id, e)}
+              onLoadedMetadata={(e) => {
+                const video = e.currentTarget;
+                const vDuration = video.duration;
+                if (Number.isFinite(vDuration) && vDuration > 0) {
+                  setDuration(vDuration);
+                }
+                onVideoMetadataLoad(clip.id, e);
+              }}
               onTimeUpdate={(e) => {
                 const video = e.currentTarget;
                 const tStart = clip.trimStart || 0;
@@ -508,6 +580,11 @@ export function ClipPlayer({
                 if (video.currentTime > tEnd) {
                   video.currentTime = tStart;
                   video.play().catch(() => {});
+                }
+
+                setCurrentTime(video.currentTime);
+                if (Number.isFinite(video.duration) && video.duration > 0 && duration === 0) {
+                  setDuration(video.duration);
                 }
               }}
             />
@@ -674,24 +751,56 @@ export function ClipPlayer({
           )}
         </div>
 
-        {/* TOP OVERLAYS (RATIO INDICATOR & VOLUME TOGGLE) */}
+        {/* TOP OVERLAYS (INDEX, TIMECODE & ACTIONS: VOLUME / FULLSCREEN) */}
         <div className="absolute top-2.5 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
-          <div className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-black/60 backdrop-blur-md text-[9px] sm:text-[10px] font-mono font-bold text-white/90 border border-white/15 shadow-lg flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span>{idx + 1} / {totalClips}</span>
+          {/* Left badge cluster: clip index + timecode */}
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            <div className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-black/60 backdrop-blur-md text-[9px] sm:text-[10px] font-mono font-bold text-white/90 border border-white/15 shadow-lg flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+              <span>{idx + 1} / {totalClips}</span>
+            </div>
+            
+            {/* Live Timecode Display: Current / Total */}
+            <div 
+              className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-black/60 backdrop-blur-md text-[9px] sm:text-[10px] font-mono font-medium text-white/80 border border-white/15 shadow-lg flex items-center gap-1"
+              title={language === 'ka' ? 'ვიდეოს ხანგრძლივობა' : 'Video Timecode'}
+            >
+              <span>{formatTimecode(currentTime)}</span>
+              <span className="text-white/40">/</span>
+              <span>{formatTimecode(duration || clip.duration)}</span>
+            </div>
           </div>
           
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleMute();
-            }}
-            className="p-2 sm:p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white hover:bg-black/85 hover:scale-105 transition-all pointer-events-auto cursor-pointer shadow-lg"
-            title={isMuted ? "Unmute" : "Mute"}
-            aria-label={isMuted ? (language === 'ka' ? 'ხმის ჩართვა' : 'Unmute') : (language === 'ka' ? 'ხმის გათიშვა' : 'Mute')}
-          >
-            {isMuted ? <VolumeX size={14} className="sm:w-[15px] sm:h-[15px]" /> : <Volume2 size={14} className="sm:w-[15px] sm:h-[15px]" />}
-          </button>
+          {/* Right action cluster: Fullscreen + Mute */}
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFullscreen();
+              }}
+              className="p-2 sm:p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white hover:bg-black/85 hover:scale-105 transition-all cursor-pointer shadow-lg"
+              title={isFullscreen ? (language === 'ka' ? 'სრული ეკრანიდან გამოსვლა' : 'Exit Fullscreen') : (language === 'ka' ? 'სრული ეკრანი' : 'Fullscreen')}
+              aria-label={isFullscreen ? (language === 'ka' ? 'სრული ეკრანიდან გამოსვლა' : 'Exit Fullscreen') : (language === 'ka' ? 'სრული ეკრანი' : 'Fullscreen')}
+            >
+              {isFullscreen ? (
+                <Minimize2 size={14} className="sm:w-[15px] sm:h-[15px]" />
+              ) : (
+                <Maximize2 size={14} className="sm:w-[15px] sm:h-[15px]" />
+              )}
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMute();
+              }}
+              className="p-2 sm:p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white hover:bg-black/85 hover:scale-105 transition-all cursor-pointer shadow-lg"
+              title={isMuted ? "Unmute" : "Mute"}
+              aria-label={isMuted ? (language === 'ka' ? 'ხმის ჩართვა' : 'Unmute') : (language === 'ka' ? 'ხმის გათიშვა' : 'Mute')}
+            >
+              {isMuted ? <VolumeX size={14} className="sm:w-[15px] sm:h-[15px]" /> : <Volume2 size={14} className="sm:w-[15px] sm:h-[15px]" />}
+            </button>
+          </div>
         </div>
 
         {/* RIGHT-SIDE OVERLAY ACTION BAR */}
