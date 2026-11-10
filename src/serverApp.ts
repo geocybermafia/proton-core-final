@@ -637,6 +637,314 @@ export function createApiApp(): express.Express {
     return deleteHandler(req, res, next);
   });
 
+  // Reusable Firebase Authentication helper for Storage endpoints
+  const authenticateFirebaseUser = async (req: express.Request): Promise<{ uid: string; email?: string } | { error: string; statusCode: number; code?: string; reason?: string }> => {
+    const authHeader = req.headers.authorization || (req.headers as any)['Authorization'];
+    const bearerMatch = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
+    if (!bearerMatch) {
+      return { error: "Unauthorized: Missing or invalid Authorization header", statusCode: 401 };
+    }
+    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, '');
+    if (!idToken) {
+      return { error: "Unauthorized: Empty authentication token", statusCode: 401 };
+    }
+
+    const tokenParts = idToken.split(".");
+    if (tokenParts.length !== 3) {
+      return { 
+        error: "Unauthorized: Invalid or expired Firebase authentication token", 
+        statusCode: 401, 
+        reason: "Malformed JWT structure. Expected 3 segments." 
+      };
+    }
+
+    let tokenAudience: string | undefined;
+    try {
+      const unpadded = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padLength = (4 - (unpadded.length % 4)) % 4;
+      const base64 = unpadded + '='.repeat(padLength);
+      const payloadJson = Buffer.from(base64, 'base64').toString('utf8');
+      const parsedPayload = JSON.parse(payloadJson);
+      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === 'string' ? parsedPayload.iss.replace('https://securetoken.google.com/', '') : undefined);
+    } catch (e) {
+      console.warn("[StorageServer] Could not parse token payload:", e);
+    }
+
+    const candidateProjects: string[] = [];
+    if (tokenAudience && typeof tokenAudience === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
+      candidateProjects.push(tokenAudience);
+    }
+    const standardProjects = [
+      "proton-core-ai",
+      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
+      process.env.VITE_FIREBASE_PROJECT_ID,
+      process.env.FIREBASE_PROJECT_ID,
+      process.env.GCLOUD_PROJECT,
+    ].filter(Boolean) as string[];
+
+    for (const proj of standardProjects) {
+      if (!candidateProjects.includes(proj)) {
+        candidateProjects.push(proj);
+      }
+    }
+    if (candidateProjects.length === 0) {
+      candidateProjects.push("proton-core-ai");
+    }
+
+    let decodedToken: any = null;
+    let lastAuthError: any = null;
+
+    try {
+      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
+      if (directResult && directResult.uid) {
+        decodedToken = directResult;
+      }
+    } catch (e: any) {
+      console.warn("[StorageServer] Direct public cert verification attempt notice:", e?.message);
+    }
+
+    if (!decodedToken || !decodedToken.uid) {
+      for (const projId of candidateProjects) {
+        try {
+          const authInstance = await getVerifiedAdminAuth(projId);
+          decodedToken = await authInstance.verifyIdToken(idToken);
+          if (decodedToken && decodedToken.uid) {
+            break;
+          }
+        } catch (authErr: any) {
+          lastAuthError = authErr;
+        }
+      }
+    }
+
+    if (!decodedToken || !decodedToken.uid) {
+      const errDetail = lastAuthError?.message || "Token verification rejected";
+      return { 
+        error: "Unauthorized: Invalid or expired Firebase authentication token", 
+        statusCode: 401, 
+        reason: errDetail,
+        code: lastAuthError?.code || "auth/invalid-id-token"
+      };
+    }
+
+    return { uid: decodedToken.uid, email: decodedToken.email };
+  };
+
+  // Secure Server-side Clips Video Signed Upload URL Generator
+  const createClipUploadUrlHandler: express.RequestHandler = async (req, res) => {
+    // 1. Authenticate user strictly via Firebase ID Token
+    const authResult = await authenticateFirebaseUser(req);
+    if ('error' in authResult) {
+      return res.status(authResult.statusCode).json({
+        error: authResult.error,
+        reason: authResult.reason,
+        code: authResult.code
+      });
+    }
+
+    const verifiedUid = authResult.uid;
+    if (!verifiedUid) {
+      return res.status(401).json({ error: "Unauthorized: User UID not found in verified token" });
+    }
+
+    // 2. Validate requested file extension (mp4, mov, webm)
+    const { fileExt, extension, mimeType, filename } = req.body || {};
+    let ext = 'mp4';
+    const candidateExt = (fileExt || extension || (filename ? String(filename).split('.').pop() : ''))?.toLowerCase().replace(/^\./, '').trim();
+
+    if (candidateExt === 'mov' || candidateExt === 'quicktime') {
+      ext = 'mov';
+    } else if (candidateExt === 'webm') {
+      ext = 'webm';
+    } else if (candidateExt === 'mp4') {
+      ext = 'mp4';
+    } else if (typeof mimeType === 'string') {
+      const mt = mimeType.toLowerCase();
+      if (mt.includes('webm')) ext = 'webm';
+      else if (mt.includes('quicktime') || mt.includes('mov')) ext = 'mov';
+      else if (mt.includes('mp4')) ext = 'mp4';
+      else {
+        return res.status(400).json({
+          error: "Bad Request: Unsupported video format. Allowed formats are mp4, mov, webm.",
+          code: "storage/unsupported-video-format"
+        });
+      }
+    } else if (candidateExt && !['mp4', 'mov', 'webm'].includes(candidateExt)) {
+      return res.status(400).json({
+        error: `Bad Request: Unsupported video extension (.${candidateExt}). Allowed formats are mp4, mov, webm.`,
+        code: "storage/unsupported-video-format"
+      });
+    }
+
+    // 3. Generate safe unique Storage path strictly on server under verified user's UID folder
+    const timestamp = Date.now();
+    const uniqueSuffix = crypto.randomUUID().replace(/-/g, '').substring(0, 8);
+    const storagePath = `${verifiedUid}/clip_${timestamp}_${uniqueSuffix}.${ext}`;
+
+    // 4. Verify Supabase Service Role Key configuration
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ntndwrpruyrttlpjptzf.supabase.co';
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+    if (!serviceRoleKey) {
+      console.error("[StorageServer] Signed upload URL aborted: SUPABASE_SERVICE_ROLE_KEY is not configured in server environment.");
+      return res.status(503).json({
+        error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server.",
+        code: "storage/configuration-missing"
+      });
+    }
+
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+
+      // 5. Generate signed upload URL on 'clips' bucket using official Supabase Storage SDK
+      const { data, error: signError } = await supabaseAdmin.storage
+        .from('clips')
+        .createSignedUploadUrl(storagePath);
+
+      if (signError || !data?.signedUrl) {
+        console.error("[StorageServer] Failed to create signed upload URL:", signError?.message);
+        return res.status(502).json({
+          error: "Storage service error: Failed to create signed upload URL",
+          code: "storage/signed-url-failed"
+        });
+      }
+
+      // 6. Generate public URL for playback
+      const { data: publicData } = supabaseAdmin.storage
+        .from('clips')
+        .getPublicUrl(storagePath);
+
+      return res.status(200).json({
+        success: true,
+        signedUrl: data.signedUrl,
+        token: data.token,
+        path: storagePath,
+        publicUrl: publicData.publicUrl
+      });
+    } catch (err: any) {
+      console.error("[StorageServer] Unexpected error generating signed upload URL:", err);
+      return res.status(500).json({ error: "Internal server error during upload URL generation" });
+    }
+  };
+
+  // Secure Server-side Clips Video Deletion Endpoint
+  const deleteClipVideoHandler: express.RequestHandler = async (req, res) => {
+    // 1. Authenticate user strictly via Firebase ID Token
+    const authResult = await authenticateFirebaseUser(req);
+    if ('error' in authResult) {
+      return res.status(authResult.statusCode).json({
+        error: authResult.error,
+        reason: authResult.reason,
+        code: authResult.code
+      });
+    }
+
+    const verifiedUid = authResult.uid;
+    if (!verifiedUid) {
+      return res.status(401).json({ error: "Unauthorized: User UID not found in verified token" });
+    }
+
+    // 2. Validate target path or URL
+    const { path, url } = req.body || {};
+    const target = path || url;
+
+    if (!target || typeof target !== 'string') {
+      return res.status(400).json({ error: "Bad Request: 'path' or 'url' is required" });
+    }
+
+    // Normalize path (handle full URL or relative path)
+    let normalizedPath = target.trim();
+    if (normalizedPath.startsWith("http://") || normalizedPath.startsWith("https://")) {
+      try {
+        const parsed = new URL(normalizedPath);
+        const match = parsed.pathname.match(/\/storage\/(?:v1\/object\/(?:public\/)?)?clips\/(.+)$/);
+        if (match) {
+          normalizedPath = decodeURIComponent(match[1]);
+        }
+      } catch {
+        return res.status(400).json({ error: "Bad Request: Malformed URL" });
+      }
+    }
+
+    normalizedPath = normalizedPath.replace(/^\/+/, '');
+    if (normalizedPath.startsWith("clips/")) {
+      normalizedPath = normalizedPath.substring("clips/".length);
+    }
+    normalizedPath = normalizedPath.split('?')[0].split('#')[0];
+
+    // 3. Strict path structure: exactly {folder}/{filename} (no subfolders, no traversal)
+    const segments = normalizedPath.split('/');
+    if (segments.length !== 2 || segments.some(s => s === '..' || s === '.' || !s.trim())) {
+      return res.status(400).json({
+        error: "Bad Request: Path traversal or invalid path format. Expected format: '{userId}/{filename}'",
+        code: "storage/invalid-path"
+      });
+    }
+
+    const [folderUid, filename] = segments;
+
+    // 4. Strict user ownership check: folder must match verified UID
+    if (folderUid !== verifiedUid) {
+      return res.status(403).json({
+        error: "Forbidden: You are not authorized to delete clips belonging to other users",
+        code: "storage/ownership-mismatch"
+      });
+    }
+
+    if (!/^[a-zA-Z0-9_.-]{1,128}$/.test(filename)) {
+      return res.status(400).json({
+        error: "Bad Request: Invalid filename in path",
+        code: "storage/invalid-filename"
+      });
+    }
+
+    // 5. Verify Supabase Service Role Key configuration
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://ntndwrpruyrttlpjptzf.supabase.co';
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+    if (!serviceRoleKey) {
+      return res.status(503).json({
+        error: "Server storage configuration incomplete: SUPABASE_SERVICE_ROLE_KEY is required on the server.",
+        code: "storage/configuration-missing"
+      });
+    }
+
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+        auth: { persistSession: false, autoRefreshToken: false }
+      });
+
+      // 6. Delete file strictly from 'clips' bucket
+      const { data, error: delErr } = await supabaseAdmin.storage
+        .from('clips')
+        .remove([normalizedPath]);
+
+      if (delErr) {
+        console.warn(`[StorageServer] Supabase clip deletion notice for ${normalizedPath}:`, delErr.message);
+        return res.status(502).json({
+          error: "Storage service error: Failed to delete clip",
+          code: "storage/deletion-failed"
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        deletedPath: normalizedPath
+      });
+    } catch (err: any) {
+      console.error("[StorageServer] Unexpected error during clip deletion:", err);
+      return res.status(500).json({ error: "Internal server error during clip deletion" });
+    }
+  };
+
+  // Clips Video Storage Endpoints (Server-side signed URL & ownership-verified deletion)
+  apiRouter.post("/storage/create-clip-upload-url", createClipUploadUrlHandler);
+  apiRouter.post("/storage/delete-clip-video", deleteClipVideoHandler);
+
   // Gemini API Proxy
   const geminiHandler: express.RequestHandler = async (req, res) => {
     const { action, args } = req.body || {};
