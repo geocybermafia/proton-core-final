@@ -450,10 +450,10 @@ export function ClipPlayer({
 
   return (
     <div 
-      className="w-full h-full min-h-full flex-shrink-0 snap-start snap-always relative flex items-center justify-center p-2 sm:p-4"
+      className="w-full h-full min-h-full flex-shrink-0 snap-start snap-always relative flex items-center justify-center p-1.5 sm:p-3 md:p-4"
     >
       {/* VIEWPORT-CENTRIC 9:16 REELS PLAYER CONTAINER */}
-      <div className="relative w-full max-w-[420px] sm:max-w-[440px] aspect-[9/16] h-[calc(100dvh-5rem)] md:h-full max-h-[calc(100dvh-5rem)] md:max-h-[calc(100vh-120px)] rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none">
+      <div className="relative h-full max-h-full w-auto aspect-[9/16] max-w-[min(100%,440px)] rounded-[22px] sm:rounded-[28px] border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] bg-black overflow-hidden flex flex-col justify-between group pointer-events-auto select-none">
         
         {/* VIDEO PLAYER ELEMENT */}
         <div 
@@ -675,8 +675,8 @@ export function ClipPlayer({
         </div>
 
         {/* TOP OVERLAYS (RATIO INDICATOR & VOLUME TOGGLE) */}
-        <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-          <div className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-mono font-bold text-white/90 border border-white/15 shadow-lg flex items-center gap-1.5">
+        <div className="absolute top-2.5 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
+          <div className="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-black/60 backdrop-blur-md text-[9px] sm:text-[10px] font-mono font-bold text-white/90 border border-white/15 shadow-lg flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
             <span>{idx + 1} / {totalClips}</span>
           </div>
@@ -686,88 +686,94 @@ export function ClipPlayer({
               e.stopPropagation();
               onToggleMute();
             }}
-            className="p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white hover:bg-black/85 hover:scale-105 transition-all pointer-events-auto cursor-pointer shadow-lg"
+            className="p-2 sm:p-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-white hover:bg-black/85 hover:scale-105 transition-all pointer-events-auto cursor-pointer shadow-lg"
             title={isMuted ? "Unmute" : "Mute"}
+            aria-label={isMuted ? (language === 'ka' ? 'ხმის ჩართვა' : 'Unmute') : (language === 'ka' ? 'ხმის გათიშვა' : 'Mute')}
           >
-            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {isMuted ? <VolumeX size={14} className="sm:w-[15px] sm:h-[15px]" /> : <Volume2 size={14} className="sm:w-[15px] sm:h-[15px]" />}
           </button>
         </div>
 
         {/* RIGHT-SIDE OVERLAY ACTION BAR */}
-        <div className="absolute right-3.5 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] md:bottom-6 z-20 flex flex-col items-center gap-2.5 sm:gap-3.5 md:gap-4.5 pointer-events-none">
+        <div className="absolute right-2 sm:right-3.5 bottom-3.5 sm:bottom-4 md:bottom-6 z-20 flex flex-col items-center gap-2 sm:gap-2.5 md:gap-3.5 pointer-events-none">
           
           {/* Creator avatar bubble */}
           <div className="relative group pointer-events-auto">
             <button
               onClick={() => onOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
-              className="w-11 h-11 rounded-full border-2 border-purple-500 overflow-hidden bg-zinc-900 hover:scale-105 transition-all shadow-xl flex items-center justify-center text-white cursor-pointer"
+              aria-label={language === 'ka' ? `ავტორი: @${clip.creatorName}` : `Creator: @${clip.creatorName}`}
+              className="w-9 h-9 sm:w-11 sm:h-11 rounded-full border-2 border-purple-500 overflow-hidden bg-zinc-900 hover:scale-105 transition-all shadow-xl flex items-center justify-center text-white cursor-pointer"
             >
               {clip.creatorAvatar ? (
                 <img referrerPolicy="no-referrer" src={clip.creatorAvatar} alt={clip.creatorName} className="w-full h-full object-cover" />
               ) : (
-                <UserIcon size={18} />
+                <UserIcon size={16} className="sm:w-[18px] sm:h-[18px]" />
               )}
             </button>
             <button 
               onClick={() => onOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
+              aria-label={language === 'ka' ? 'ავტორის პროფილი' : 'Creator profile'}
               className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-purple-500 hover:bg-purple-400 text-white rounded-full p-0.5 hover:scale-110 transition-all shadow-md cursor-pointer"
             >
-              <Plus size={10} className="stroke-[3]" />
+              <Plus size={9} className="sm:w-2.5 sm:h-2.5 stroke-[3]" />
             </button>
           </div>
 
           {/* Like button */}
-          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          <div className="flex flex-col items-center gap-0.5 sm:gap-1 pointer-events-auto">
             <motion.button
               whileTap={{ scale: 0.75 }}
               onClick={() => onLikeToggle(clip)}
+              aria-label={isLikedByMe ? (language === 'ka' ? 'მოწონების გაუქმება' : 'Unlike reel') : (language === 'ka' ? 'კლიპის მოწონება' : 'Like reel')}
               className={cn(
-                "min-w-[44px] min-h-[44px] p-3 rounded-full bg-black/50 backdrop-blur-md border transition-all shadow-xl cursor-pointer hover:scale-110 flex items-center justify-center",
+                "min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] p-2.5 sm:p-3 rounded-full bg-black/50 backdrop-blur-md border transition-all shadow-xl cursor-pointer hover:scale-110 flex items-center justify-center",
                 isLikedByMe 
                   ? "border-red-500/50 text-red-500 bg-red-500/20 shadow-red-500/20" 
                   : "border-white/15 text-white hover:bg-black/75"
               )}
             >
-              <Heart className={cn("h-5 w-5", isLikedByMe && "fill-red-500")} />
+              <Heart className={cn("h-4 w-4 sm:h-5 sm:w-5", isLikedByMe && "fill-red-500")} />
             </motion.button>
-            <span className="text-[11px] font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+            <span className="text-[10px] sm:text-[11px] font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
               {clip.likesCount || 0}
             </span>
           </div>
 
           {/* Comments button */}
-          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          <div className="flex flex-col items-center gap-0.5 sm:gap-1 pointer-events-auto">
             <button
               onClick={onOpenComments}
-              className="min-w-[44px] min-h-[44px] p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer flex items-center justify-center"
+              aria-label={language === 'ka' ? `კომენტარები (${commentsCount})` : `Comments (${commentsCount})`}
+              className="min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] p-2.5 sm:p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer flex items-center justify-center"
             >
-              <MessageSquare className="h-5 w-5" />
+              <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
-            <span className="text-[11px] font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+            <span className="text-[10px] sm:text-[11px] font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
               {commentsCount}
             </span>
           </div>
 
           {/* Share button */}
-          <div className="flex flex-col items-center gap-1 pointer-events-auto">
+          <div className="flex flex-col items-center gap-0.5 sm:gap-1 pointer-events-auto">
             <button
               onClick={() => onShareClip(clip)}
-              className="min-w-[44px] min-h-[44px] p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer flex items-center justify-center"
+              aria-label={language === 'ka' ? 'კლიპის გაზიარება' : 'Share reel'}
+              className="min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] p-2.5 sm:p-3 rounded-full bg-black/50 backdrop-blur-md border border-white/15 text-white hover:bg-black/75 hover:scale-110 transition-all shadow-xl cursor-pointer flex items-center justify-center"
               title="Share Reel"
             >
-              <Share2 className="h-5 w-5" />
+              <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
 
-          {/* Mobile "More Tools" button (compact toggle for small screens) */}
-          <div className="flex md:hidden flex-col items-center gap-1 pointer-events-auto">
+          {/* Mobile "More Tools" button (compact toggle for screens < lg) */}
+          <div className="flex lg:hidden flex-col items-center gap-0.5 sm:gap-1 pointer-events-auto">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setIsMobileMoreOpen((prev) => !prev);
               }}
               className={cn(
-                "min-w-[44px] min-h-[44px] p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110 active:scale-95 flex items-center justify-center relative",
+                "min-w-[40px] min-h-[40px] sm:min-w-[44px] sm:min-h-[44px] p-2.5 sm:p-3 rounded-full border backdrop-blur-md transition-all shadow-xl cursor-pointer hover:scale-110 active:scale-95 flex items-center justify-center relative",
                 isMobileMoreOpen 
                   ? "bg-purple-600/60 border-purple-400 text-white shadow-purple-500/30" 
                   : "bg-black/50 border-white/15 text-white hover:bg-black/75"
@@ -776,7 +782,7 @@ export function ClipPlayer({
               aria-label="More actions"
               aria-expanded={isMobileMoreOpen}
             >
-              <MoreVertical className="h-5 w-5" />
+              <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
               {/* Active indicator dot if secondary feature is currently engaged */}
               {(showFiltersPanel || isTrimmed || clip.productId) && !isMobileMoreOpen && (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-purple-400 border border-black" />
@@ -787,8 +793,8 @@ export function ClipPlayer({
             </span>
           </div>
 
-          {/* Filters toggle button (Desktop only - in rail) */}
-          <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
+          {/* Filters toggle button (Desktop only >= lg - in rail) */}
+          <div className="hidden lg:flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={onToggleFiltersPanel}
               className={cn(
@@ -798,13 +804,14 @@ export function ClipPlayer({
                   : "bg-black/50 border-white/15 text-white hover:bg-black/75"
               )}
               title="Filters"
+              aria-label="Filters"
             >
               <Sparkles className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Video Trim & Precision Controls button (Desktop only - in rail) */}
-          <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
+          {/* Video Trim & Precision Controls button (Desktop only >= lg - in rail) */}
+          <div className="hidden lg:flex flex-col items-center gap-1 pointer-events-auto">
             <button
               onClick={() => onRunAutoFix(clip)}
               className={cn(
@@ -823,9 +830,9 @@ export function ClipPlayer({
             </span>
           </div>
 
-          {/* Tag Product Button (Creator / Merchant) (Desktop only - in rail) */}
+          {/* Tag Product Button (Creator / Merchant) (Desktop only >= lg - in rail) */}
           {(clip.creatorId === currentUser?.uid || (currentUser && hasSellerListings)) && (
-            <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
+            <div className="hidden lg:flex flex-col items-center gap-1 pointer-events-auto">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -838,6 +845,7 @@ export function ClipPlayer({
                     : "bg-black/50 border-white/15 text-white hover:bg-black/75"
                 )}
                 title={language === 'ka' ? 'პროდუქტის მიბმა' : 'Tag Product'}
+                aria-label="Tag Product"
               >
                 <Tag className="h-5 w-5 text-pink-300" />
               </button>
@@ -847,13 +855,14 @@ export function ClipPlayer({
             </div>
           )}
 
-          {/* Delete button (owner only) (Desktop only - in rail) */}
+          {/* Delete button (owner only) (Desktop only >= lg - in rail) */}
           {clip.creatorId === currentUser?.uid && (
-            <div className="hidden md:flex flex-col items-center gap-1 pointer-events-auto">
+            <div className="hidden lg:flex flex-col items-center gap-1 pointer-events-auto">
               <button
                 onClick={() => onDeleteClip(clip)}
                 className="p-3 rounded-full bg-red-500/20 backdrop-blur-md border border-red-500/40 text-red-400 hover:bg-red-500/40 hover:scale-110 transition-all shadow-xl cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Delete Clip"
+                aria-label="Delete Clip"
               >
                 <Trash2 className="h-5 w-5" />
               </button>
@@ -861,13 +870,13 @@ export function ClipPlayer({
           )}
 
           {/* Spinning Audio Track Vinyl/Disc Icon */}
-          <div className="mt-1 pointer-events-auto">
+          <div className="mt-0.5 sm:mt-1 pointer-events-auto">
             <div className={cn(
-              "w-9 h-9 rounded-full bg-gradient-to-tr from-zinc-900 via-zinc-800 to-black border-2 border-white/20 p-1 flex items-center justify-center shadow-2xl overflow-hidden",
+              "w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-zinc-900 via-zinc-800 to-black border-2 border-white/20 p-1 flex items-center justify-center shadow-2xl overflow-hidden",
               isPlaying && idx === currentIndex && "animate-spin [animation-duration:5s]"
             )}>
               <div className="w-full h-full rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center">
-                <div className="w-2.5 h-2.5 rounded-full bg-black border border-white/30" />
+                <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-black border border-white/30" />
               </div>
             </div>
           </div>
@@ -892,7 +901,7 @@ export function ClipPlayer({
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.9, x: 10 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-16 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-40 w-48 max-w-[calc(100vw-5rem)] rounded-2xl bg-zinc-950/95 border border-white/20 shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-1 pointer-events-auto select-none"
+                className="absolute right-14 sm:right-16 bottom-12 sm:bottom-16 z-40 w-44 sm:w-48 max-w-[calc(100%-4rem)] rounded-2xl bg-zinc-950/95 border border-white/20 shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-1 pointer-events-auto select-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
@@ -1001,20 +1010,21 @@ export function ClipPlayer({
         </AnimatePresence>
 
         {/* BOTTOM-LEFT OVERLAY: CREATOR PROFILE, CAPTION, TAGS & AUDIO TRACK */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 sm:p-5 pr-16 md:pr-20 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-5 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col gap-2.5 text-left">
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-3 sm:p-4 md:p-5 pr-14 sm:pr-16 md:pr-20 pb-3.5 sm:pb-4 md:pb-5 bg-gradient-to-t from-black/95 via-black/80 to-transparent pointer-events-none flex flex-col gap-1.5 sm:gap-2.5 text-left">
           
           {/* Creator Row */}
-          <div className="flex items-center gap-2 pointer-events-auto min-w-0 max-w-[calc(100%-4rem)]">
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto min-w-0 max-w-[calc(100%-3rem)] sm:max-w-[calc(100%-4rem)]">
             <button
               onClick={() => onOpenCreatorProfile(clip.creatorId, clip.creatorName, clip.creatorAvatar)}
-              className="font-black text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline flex items-center gap-1.5 cursor-pointer truncate shrink min-w-0"
+              aria-label={language === 'ka' ? `ავტორი: @${clip.creatorName}` : `Creator: @${clip.creatorName}`}
+              className="font-black text-xs sm:text-sm text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] hover:underline flex items-center gap-1 sm:gap-1.5 cursor-pointer truncate shrink min-w-0"
             >
               <span className="truncate">@{clip.creatorName}</span>
               {clip.creatorId.startsWith('proton-system') && (
-                <CheckCircle2 size={14} className="text-purple-400 fill-white stroke-[2.5] shrink-0" />
+                <CheckCircle2 size={13} className="text-purple-400 fill-white stroke-[2.5] shrink-0 sm:w-3.5 sm:h-3.5" />
               )}
             </button>
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold uppercase tracking-wider shrink-0">
+            <span className="text-[8px] sm:text-[9px] px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold uppercase tracking-wider shrink-0">
               {clip.creatorId.startsWith('proton-system') ? 'Official' : 'Creator'}
             </span>
           </div>
@@ -1030,12 +1040,12 @@ export function ClipPlayer({
                 <div className={cn(
                   "transition-all duration-300",
                   isExpanded 
-                    ? "max-h-40 overflow-y-auto pr-2 bg-black/60 backdrop-blur-xs p-2.5 rounded-xl border border-white/10 shadow-xl custom-scrollbar" 
+                    ? "max-h-32 sm:max-h-40 overflow-y-auto pr-2 bg-black/60 backdrop-blur-xs p-2 sm:p-2.5 rounded-xl border border-white/10 shadow-xl custom-scrollbar" 
                     : "max-h-none overflow-hidden"
                 )}>
                   <p className={cn(
-                    "text-xs font-normal text-white/95 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-text",
-                    !isExpanded && "line-clamp-3"
+                    "text-[11px] sm:text-xs font-normal text-white/95 leading-relaxed drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] select-text",
+                    !isExpanded && "line-clamp-2 sm:line-clamp-3"
                   )}>
                     {rawCaption.split(' ').map((word: string, i: number) => {
                       if (word.startsWith('#')) {
@@ -1063,7 +1073,7 @@ export function ClipPlayer({
                       e.stopPropagation();
                       onToggleExpandCaption(clip.id);
                     }}
-                    className="mt-1 text-[11px] font-bold text-purple-300 hover:text-purple-200 hover:underline cursor-pointer flex items-center gap-1 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
+                    className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] font-bold text-purple-300 hover:text-purple-200 hover:underline cursor-pointer flex items-center gap-1 focus:outline-none drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"
                   >
                     <span>
                       {isExpanded 
@@ -1084,18 +1094,18 @@ export function ClipPlayer({
             if (isSoldOut) {
               return (
                 <div 
-                  className="bg-black/80 border border-gray-600/40 rounded-xl p-2 max-w-xs pointer-events-auto flex items-center justify-between gap-2.5 shadow-xl backdrop-blur-md opacity-80"
+                  className="bg-black/80 border border-gray-600/40 rounded-xl p-1.5 sm:p-2 w-full max-w-[220px] xs:max-w-[260px] sm:max-w-xs pointer-events-auto flex items-center justify-between gap-1.5 sm:gap-2 shadow-xl backdrop-blur-md opacity-80"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-gray-500/10 border border-gray-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gray-500/10 border border-gray-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center">
                       {clip.productInfo.image ? (
                         <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover grayscale" alt="" />
                       ) : (
-                        <ShoppingBag size={13} className="text-gray-400" />
+                        <ShoppingBag size={12} className="text-gray-400" />
                       )}
                     </div>
                     <div className="min-w-0 leading-tight">
-                      <h4 className="text-[10px] font-bold text-gray-300 truncate max-w-[120px]">
+                      <h4 className="text-[10px] font-bold text-gray-300 truncate max-w-[85px] xs:max-w-[110px] sm:max-w-[120px]">
                         {clip.productInfo.title}
                       </h4>
                       <p className="text-[9px] font-mono text-gray-400 line-through font-bold">
@@ -1103,7 +1113,7 @@ export function ClipPlayer({
                       </p>
                     </div>
                   </div>
-                  <div className="px-2 py-1 rounded-lg bg-gray-700 text-[9px] font-bold text-gray-300 flex items-center gap-0.5">
+                  <div className="px-2 py-1 rounded-lg bg-gray-700 text-[8px] sm:text-[9px] font-bold text-gray-300 flex items-center gap-0.5 shrink-0">
                     <span>{language === 'ka' ? 'ამოსყიდულია' : 'Sold Out'}</span>
                   </div>
                 </div>
@@ -1116,30 +1126,30 @@ export function ClipPlayer({
                   e.stopPropagation();
                   onOpenCheckout(clip);
                 }}
-                className="bg-black/85 hover:bg-black border border-pink-500/50 rounded-xl p-2 max-w-xs pointer-events-auto flex items-center justify-between gap-2.5 shadow-2xl shadow-pink-500/10 backdrop-blur-md transition-all cursor-pointer group hover:scale-[1.02]"
+                className="bg-black/85 hover:bg-black border border-pink-500/50 rounded-xl p-1.5 sm:p-2 w-full max-w-[220px] xs:max-w-[260px] sm:max-w-xs pointer-events-auto flex items-center justify-between gap-1.5 sm:gap-2 shadow-2xl shadow-pink-500/10 backdrop-blur-md transition-all cursor-pointer group hover:scale-[1.02]"
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-pink-500/10 border border-pink-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center relative">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-pink-500/10 border border-pink-500/30 overflow-hidden flex-shrink-0 flex items-center justify-center relative">
                     {clip.productInfo.image ? (
                       <img referrerPolicy="no-referrer" src={clip.productInfo.image} className="w-full h-full object-cover" alt="" />
                     ) : (
-                      <ShoppingBag size={13} className="text-pink-400" />
+                      <ShoppingBag size={12} className="text-pink-400" />
                     )}
-                    <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-black animate-ping" />
+                    <div className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-emerald-400 border border-black animate-ping" />
                   </div>
                   <div className="min-w-0 leading-tight">
-                    <h4 className="text-[10px] font-bold text-white truncate max-w-[125px]">
+                    <h4 className="text-[10px] font-bold text-white truncate max-w-[85px] xs:max-w-[110px] sm:max-w-[125px]">
                       {clip.productInfo.title}
                     </h4>
                     <p className="text-[9px] font-mono text-emerald-400 font-bold flex items-center gap-1">
                       ${clip.productInfo.price}
-                      <span className="text-[7px] text-pink-300 font-sans uppercase font-extrabold bg-pink-500/20 px-1 rounded">
+                      <span className="text-[7px] text-pink-300 font-sans uppercase font-extrabold bg-pink-500/20 px-1 rounded shrink-0">
                         {language === 'ka' ? 'კლიპიდან' : 'Clip Tag'}
                       </span>
                     </p>
                   </div>
                 </div>
-                <div className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 group-hover:from-pink-500 group-hover:to-purple-500 text-[9px] font-extrabold text-white flex items-center gap-1 shadow-md transition-all">
+                <div className="px-2 sm:px-2.5 py-1 rounded-lg bg-gradient-to-r from-pink-600 to-purple-600 group-hover:from-pink-500 group-hover:to-purple-500 text-[8px] sm:text-[9px] font-extrabold text-white flex items-center gap-0.5 sm:gap-1 shadow-md transition-all shrink-0">
                   <ShoppingBag size={10} />
                   <span>{language === 'ka' ? 'ყიდვა' : 'Buy Now'}</span>
                   <ChevronRight size={10} />
@@ -1149,11 +1159,11 @@ export function ClipPlayer({
           })()}
 
           {/* Sound track info marquee */}
-          <div className="flex items-center gap-2 pt-0.5 text-gray-200 pointer-events-auto">
-            <div className="p-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
-              <Music size={12} className="text-purple-300 animate-pulse" />
+          <div className="flex items-center gap-1.5 sm:gap-2 pt-0.5 text-gray-200 pointer-events-auto">
+            <div className="p-1 sm:p-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 shrink-0">
+              <Music size={11} className="text-purple-300 animate-pulse sm:w-3 sm:h-3" />
             </div>
-            <div className="text-[10px] font-medium overflow-hidden max-w-[180px] relative h-4 flex items-center">
+            <div className="text-[9px] sm:text-[10px] font-medium overflow-hidden max-w-[120px] xs:max-w-[150px] sm:max-w-[180px] relative h-4 flex items-center">
               <div className="whitespace-nowrap animate-[marquee_12s_linear_infinite] font-mono text-white/90 drop-shadow">
                 {clip.soundName || `Original Audio - @${clip.creatorName}`}
               </div>

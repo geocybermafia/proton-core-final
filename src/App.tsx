@@ -6722,7 +6722,7 @@ export default function App() {
             className={cn(
               "w-full flex-1 min-h-0 flex flex-col",
               (activeView === 'personas' || activeView === 'clips')
-                ? "h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0" 
+                ? "h-full w-full flex-1 flex flex-col min-h-0 overflow-hidden max-w-none p-0 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0" 
                 : "max-w-7xl mx-auto px-4 sm:px-6 md:px-10 pt-6 md:pt-10 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-12"
             )}
           >

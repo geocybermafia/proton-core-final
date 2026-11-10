@@ -1054,47 +1054,48 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100dvh-4rem)] md:h-[calc(100vh-4rem)] bg-zinc-950 flex flex-col items-center justify-center overflow-hidden select-none">
+    <div className="relative w-full h-full flex-1 bg-zinc-950 flex flex-col items-center justify-center overflow-hidden select-none">
       
       {/* TOP HEADER CONTROLS */}
-      <div className="absolute top-3 left-4 right-4 z-40 flex items-center justify-between pointer-events-none">
+      <div className="absolute top-2 sm:top-3 left-2.5 sm:left-4 right-2.5 sm:right-4 z-40 flex items-center justify-between pointer-events-none gap-1.5 sm:gap-2">
         
         {/* Search / Tag Chips */}
-        <div className="flex items-center gap-2 pointer-events-auto overflow-x-auto custom-scrollbar py-1">
-          <div className="relative flex items-center">
-            <Search size={14} className="absolute left-3 text-proton-muted" />
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto min-w-0 max-w-[58%] xs:max-w-[65%] sm:max-w-none overflow-x-auto custom-scrollbar py-1">
+          <div className="relative flex items-center shrink min-w-0">
+            <Search size={13} className="absolute left-2.5 sm:left-3 text-proton-muted shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={language === 'ka' ? 'ძიება ჰეშთეგით, ავტორით...' : 'Search clips, tags...'}
-              className="bg-black/60 backdrop-blur-md border border-white/10 rounded-full pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-proton-muted focus:border-purple-500/50 outline-none w-36 sm:w-48 transition-all"
+              placeholder={language === 'ka' ? 'ძიება...' : 'Search...'}
+              className="bg-black/60 backdrop-blur-md border border-white/10 rounded-full pl-7 sm:pl-8 pr-6 sm:pr-3 py-1 sm:py-1.5 text-[11px] sm:text-xs text-white placeholder:text-proton-muted focus:border-purple-500/50 outline-none w-24 xs:w-36 sm:w-48 transition-all"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-2.5 text-gray-400 hover:text-white">
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 text-gray-400 hover:text-white cursor-pointer" aria-label="Clear search">
                 <X size={12} />
               </button>
             )}
           </div>
 
           {selectedTag && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-600 text-white text-xs font-bold shadow-lg shadow-purple-600/30">
-              <span>{selectedTag}</span>
-              <button onClick={() => setSelectedTag(null)} className="hover:text-purple-200">
-                <X size={12} />
+            <div className="flex items-center gap-1 px-2 py-0.5 sm:px-3 sm:py-1 rounded-full bg-purple-600 text-white text-[10px] sm:text-xs font-bold shadow-lg shadow-purple-600/30 shrink-0">
+              <span className="truncate max-w-[70px] xs:max-w-[100px] sm:max-w-none">{selectedTag}</span>
+              <button onClick={() => setSelectedTag(null)} className="hover:text-purple-200 cursor-pointer" aria-label="Clear tag">
+                <X size={11} />
               </button>
             </div>
           )}
         </div>
 
         {/* Action Controls: Features & Create Clip */}
-        <div className="flex items-center gap-2 pointer-events-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto shrink-0">
           <button
             onClick={() => setShowFeaturesModal(true)}
-            className="p-2 sm:px-3 sm:py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-proton-muted hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 shadow-lg cursor-pointer"
+            className="p-1.5 sm:px-3 sm:py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 text-proton-muted hover:text-white transition-all text-xs font-bold flex items-center gap-1.5 shadow-lg cursor-pointer"
             title="Clips Info"
+            aria-label={language === 'ka' ? 'გიდი' : 'Guide'}
           >
-            <HelpCircle size={15} className="text-purple-400" />
+            <HelpCircle size={14} className="text-purple-400 shrink-0" />
             <span className="hidden sm:inline">{language === 'ka' ? 'გიდი' : 'Guide'}</span>
           </button>
 
@@ -1106,10 +1107,11 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
               }
               setIsCreateOpen(true);
             }}
-            className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:opacity-90 text-white text-xs font-black tracking-wide shadow-lg shadow-purple-600/30 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+            className="px-2.5 sm:px-3.5 py-1.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:opacity-90 text-white text-[11px] sm:text-xs font-black tracking-wide shadow-lg shadow-purple-600/30 flex items-center gap-1 sm:gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
+            aria-label={language === 'ka' ? 'კლიპის შექმნა' : 'Create clip'}
           >
-            <Plus size={15} className="stroke-[3]" />
-            <span>{language === 'ka' ? 'შექმნა' : 'Create'}</span>
+            <Plus size={14} className="stroke-[3] shrink-0" />
+            <span className="hidden xs:inline">{language === 'ka' ? 'შექმნა' : 'Create'}</span>
           </button>
         </div>
 
