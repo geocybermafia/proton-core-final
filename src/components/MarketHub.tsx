@@ -3393,6 +3393,36 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               <span className="sm:hidden">{language === 'ka' ? 'დამატება' : 'Add'}</span>
             </button>
 
+            {/* Direct My Orders Button */}
+            <button 
+              onClick={() => {
+                if (!user) {
+                  showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეკვეთების სანახავად." : "Please sign in to view your orders.", 'warning');
+                  onOpenAuthModal?.();
+                  return;
+                }
+                setViewMode('my-listings');
+                setProfileSubMode('buying');
+                setActiveBottomTab('home');
+              }}
+              className={cn(
+                "px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl transition-all relative flex items-center gap-1.5 border cursor-pointer font-bold text-[10px] sm:text-xs uppercase tracking-wider shrink-0",
+                viewMode === 'my-listings' && profileSubMode === 'buying' 
+                  ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm font-black" 
+                  : "bg-zinc-900/80 text-zinc-300 hover:text-white border-zinc-800 hover:bg-zinc-800"
+              )}
+              title={language === 'ka' ? 'ჩემი შეკვეთები' : 'My Orders'}
+            >
+              <Package size={15} className="text-[#dfb257]" />
+              <span className="hidden sm:inline">{language === 'ka' ? 'ჩემი შეკვეთები' : 'My Orders'}</span>
+              <span className="sm:hidden">{language === 'ka' ? 'შეკვეთები' : 'Orders'}</span>
+              {buyerOrders.length > 0 && (
+                <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[9px] font-black leading-none text-zinc-950 bg-[#dfb257] rounded-full border border-zinc-900">
+                  {buyerOrders.length}
+                </span>
+              )}
+            </button>
+
             {/* Messages tab */}
             <button 
               onClick={() => {
@@ -3549,6 +3579,34 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             type="button"
             onClick={() => {
               if (!user) {
+                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეკვეთების სანახავად." : "Please sign in to view your orders.", 'warning');
+                onOpenAuthModal?.();
+                return;
+              }
+              setActiveBottomTab('home');
+              setViewMode('my-listings');
+              setProfileSubMode('buying');
+            }}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 relative cursor-pointer",
+              viewMode === 'my-listings' && profileSubMode === 'buying'
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
+            )}
+          >
+            <Package size={13} />
+            <span>{language === 'ka' ? 'შეკვეთები' : 'Orders'}</span>
+            {buyerOrders.length > 0 && (
+              <span className="inline-flex items-center justify-center h-3.5 px-1 text-[8px] font-black leading-none text-zinc-950 bg-[#dfb257] rounded-full border border-zinc-900">
+                {buyerOrders.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!user) {
                 showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინებების სანახავად." : "Please sign in to view your messages.", 'warning');
                 return;
               }
@@ -3582,8 +3640,8 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
             }}
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
-              viewMode === 'my-listings'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+              viewMode === 'my-listings' && profileSubMode !== 'buying'
+                ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-sm font-black"
                 : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
           >
