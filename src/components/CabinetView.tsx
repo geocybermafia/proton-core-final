@@ -62,6 +62,14 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
   const totalRevenue = useMemo(() => {
     return completedOrders.reduce((sum, order) => sum + (Number(order.amount || (order as any).price) || 0), 0);
   }, [completedOrders]);
+
+  const completedSalesCount = useMemo(() => {
+    return sellerOrders.filter(o => o && o.status === 'completed').length;
+  }, [sellerOrders]);
+
+  const activeListingsCount = useMemo(() => {
+    return sellerListings.filter(l => l && (l.status === 'active' || !l.status) && !l.isSold).length;
+  }, [sellerListings]);
   
   const isUrl = (str: string) => str.startsWith('http') || str.startsWith('data:image');
 
@@ -210,7 +218,7 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                 {(t as any).total_sales}
               </p>
               <div className="flex items-end justify-between">
-                <p className="text-2xl sm:text-3xl font-black text-proton-text">{sellerOrders.length}</p>
+                <p className="text-2xl sm:text-3xl font-black text-proton-text">{completedSalesCount}</p>
                 <span className="text-[10px] font-bold text-proton-muted uppercase bg-proton-bg/60 px-2 py-0.5 rounded border border-proton-border">
                   Orders
                 </span>
@@ -223,7 +231,7 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                 {(t as any).active_listings}
               </p>
               <div className="flex items-end justify-between">
-                <p className="text-2xl sm:text-3xl font-black text-proton-text">{sellerListings.length}</p>
+                <p className="text-2xl sm:text-3xl font-black text-proton-text">{activeListingsCount}</p>
                 <span className="text-[10px] font-bold text-proton-muted uppercase bg-proton-bg/60 px-2 py-0.5 rounded border border-proton-border">
                   Items
                 </span>
