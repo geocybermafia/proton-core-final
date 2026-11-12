@@ -144,6 +144,35 @@
               enumerable: true
             });
           }
+        // Safe Performance.measure & Performance.mark guard (prevents DataCloneError from React DOM Profiler / DevTools)
+        try {
+          if (typeof window !== 'undefined' && window.performance && typeof window.performance.measure === 'function') {
+            const origMeasure = window.performance.measure.bind(window.performance);
+            window.performance.measure = function(measureName, startOrOptions, endMark) {
+              try {
+                if (startOrOptions && typeof startOrOptions === 'object') {
+                  const safeOptions = { ...startOrOptions };
+                  if ('detail' in safeOptions) {
+                    try {
+                      if (typeof structuredClone === 'function') {
+                        structuredClone(safeOptions.detail);
+                      }
+                    } catch (_) {
+                      delete safeOptions.detail;
+                    }
+                  }
+                  return origMeasure(measureName, safeOptions, endMark);
+                }
+                return origMeasure(measureName, startOrOptions, endMark);
+              } catch (err) {
+                try {
+                  return origMeasure(measureName);
+                } catch (_) {
+                  return null;
+                }
+              }
+            };
+          }
         } catch (e) {
           // ignore
         }

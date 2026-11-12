@@ -14,8 +14,10 @@ import {
 } from 'firebase/firestore';
 import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
-import { executeSecureTransaction } from '../services/cloudFunctionsService';
 import { uploadProductImage, validateListingImageUrl } from '../lib/storageUtils';
+import { executeSecureTransaction } from '../services/cloudFunctionsService';
+import { isRealListing } from '../components/market-hub/MarketConstants';
+export { isRealListing };
 
 export interface CreateListingPayload {
   title: string;
@@ -58,40 +60,6 @@ export interface SellerContextType {
   updateOrderStatus?: (orderId: string, status: string) => Promise<void>;
 }
 
-export const isRealListing = (listing: any): boolean => {
-  if (!listing || !listing.id) return false;
-  const id = String(listing.id).toLowerCase();
-  const title = (listing.title || '').toLowerCase();
-  const desc = (listing.description || '').toLowerCase();
-  
-  if (
-    id.startsWith('demo') ||
-    id.startsWith('seed') ||
-    id.startsWith('mock') ||
-    id.startsWith('sample') ||
-    id.startsWith('test') ||
-    listing.isDemo === true ||
-    listing.isSeed === true ||
-    listing.isMock === true
-  ) {
-    return false;
-  }
-  
-  if (
-    title.includes('hydroponic smart garden') ||
-    title.includes('ჰიდროპონიკური') ||
-    title.includes('kutaisi logistics hangar') ||
-    title.includes('ქუთაისის ლოჯისტიკური ანგარი') ||
-    title.includes('web3 დეცენტრალიზებული') ||
-    title.includes('sample listing') ||
-    title.includes('demo listing') ||
-    desc.includes('seed data')
-  ) {
-    return false;
-  }
-  
-  return true;
-};
 
 export const isRealLedgerItem = (item: LedgerItem | null | undefined): boolean => {
   if (!item || !item.id) return false;

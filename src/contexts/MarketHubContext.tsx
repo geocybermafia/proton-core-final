@@ -37,18 +37,7 @@ const generateTxId = (): string => {
   return `TX-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 9)}`;
 };
 
-// Helper to validate listings; does not reject legitimate listings or titles
-export const isRealListing = (listing: any): boolean => {
-  if (!listing || !listing.id) return false;
-  if (
-    listing.isDemo === true ||
-    listing.isSeed === true ||
-    listing.isMock === true
-  ) {
-    return false;
-  }
-  return true;
-};
+export { isRealListing } from '../components/market-hub/MarketConstants';
 
 export const isRealLedgerItem = (item: LedgerItem | null | undefined): boolean => {
   if (!item || !item.id) return false;

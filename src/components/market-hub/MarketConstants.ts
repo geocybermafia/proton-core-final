@@ -404,4 +404,24 @@ export const getListingTitle = (
   }
 };
 
+/**
+ * Single Centralized Listing Validation Helper
+ * Returns true if listing exists, has an ID, and is not explicitly marked as demo, seed, or mock data.
+ * Does NOT filter based on title text, description, or ID string prefixes.
+ */
+export const isRealListing = (listing: any): boolean => {
+  if (!listing || !listing.id) return false;
+
+  if (
+    listing.isDemo === true ||
+    listing.isSeed === true ||
+    listing.isMock === true
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
+
 
