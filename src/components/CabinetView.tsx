@@ -59,8 +59,17 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
     }
   };
 
-  const totalRevenue = useMemo(() => {
-    return completedOrders.reduce((sum, order) => sum + (Number(order.amount || (order as any).price) || 0), 0);
+  const revenueByCurrency = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (let i = 0; i < completedOrders.length; i++) {
+      const order = completedOrders[i];
+      const amt = Number(order.amount ?? (order as any).price) || 0;
+      const cur = (order.currency || 'USD').toUpperCase().trim();
+      if (amt > 0) {
+        map[cur] = (map[cur] || 0) + amt;
+      }
+    }
+    return map;
   }, [completedOrders]);
 
   const completedSalesCount = useMemo(() => {
@@ -203,12 +212,27 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
               <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
               <p className="text-[10px] font-black uppercase text-emerald-400/90 tracking-widest mb-1.5 flex items-center justify-between">
                 <span>{(t as any).revenue}</span>
-                <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[8px] font-mono">USDT</span>
+                <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[8px] font-mono">
+                  {Object.keys(revenueByCurrency).length > 0 ? Object.keys(revenueByCurrency).join(' / ') : 'FIAT'}
+                </span>
               </p>
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 tracking-tight">
-                  ${totalRevenue.toLocaleString()}
-                </p>
+              <div className="flex flex-col gap-1">
+                {Object.keys(revenueByCurrency).length === 0 ? (
+                  <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 tracking-tight font-mono">
+                    0
+                  </p>
+                ) : (
+                  Object.entries(revenueByCurrency).map(([curr, total]) => (
+                    <div key={curr} className="flex items-baseline gap-2">
+                      <p className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-teal-200 to-cyan-300 tracking-tight font-mono">
+                        {total % 1 === 0 ? total.toLocaleString() : total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </p>
+                      <span className="text-sm font-black font-mono text-emerald-400/80 uppercase">
+                        {curr}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 
@@ -288,7 +312,7 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                               </div>
                               <div>
                                 <p className="font-black text-proton-text truncate max-w-[160px] sm:max-w-xs">{order.itemTitle || (order as any).title || 'Order Item'}</p>
-                                <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">${order.amount ?? (order as any).price ?? 0}</p>
+                                <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">{order.amount ?? (order as any).price ?? 0} {order.currency || 'USD'}</p>
                               </div>
                             </div>
                           </td>
