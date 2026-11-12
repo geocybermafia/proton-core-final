@@ -3384,10 +3384,12 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
                 resetListingForm();
                 setViewMode('create');
               }}
-              className="hidden md:flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-3.5 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+              className="flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1 sm:gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              title={language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}
             >
-              <Plus size={13} className="stroke-[3]" />
-              <span>{language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}</span>
+              <Plus size={14} className="stroke-[3]" />
+              <span className="hidden sm:inline">{language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}</span>
+              <span className="sm:hidden">{language === 'ka' ? 'დამატება' : 'Add'}</span>
             </button>
 
             {/* Messages tab */}
@@ -3532,13 +3534,13 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               setActiveBottomTab('home');
             }}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
+              "px-3.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer shadow-md",
               viewMode === 'create'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] ring-2 ring-[#dfb257]/50"
+                : "bg-[#dfb257] text-zinc-950 border-[#dfb257] hover:bg-[#dfb257]/90"
             )}
           >
-            <Plus size={13} className="stroke-[2.5]" />
+            <Plus size={13} className="stroke-[3]" />
             <span>{language === 'ka' ? 'დამატება' : 'Add Listing'}</span>
           </button>
 
