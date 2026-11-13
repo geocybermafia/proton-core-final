@@ -3,13 +3,21 @@ import { Listing } from '../types';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LayoutGrid, Navigation, Loader2, AlertTriangle, RotateCcw, X } from 'lucide-react';
-import { getListingTitle } from './market-hub/MarketConstants';
+import {
+  getListingTitle,
+  convertPrice as defaultConvertPrice,
+  formatOriginalCurrencyPrice,
+  formatApproxCurrencyEquivalent
+} from './market-hub/MarketConstants';
 
 interface ListingMapProps {
   listings: Listing[];
   onSelectListing: (listing: Listing) => void;
   language: 'en' | 'ka';
   currentTheme: any;
+  displayCurrency?: string;
+  priceMap?: Map<string, number>;
+  convertPrice?: (price: number, from: string, to: string) => number;
   onClose?: () => void;
 }
 
@@ -24,7 +32,16 @@ const markerStyle = `
 
 const DEFAULT_CENTER: [number, number] = [41.7151, 44.8271];
 
-export function ListingMap({ listings, onSelectListing, language, currentTheme, onClose }: ListingMapProps) {
+export function ListingMap({
+  listings,
+  onSelectListing,
+  language,
+  currentTheme,
+  displayCurrency = 'USD',
+  priceMap,
+  convertPrice = defaultConvertPrice,
+  onClose
+}: ListingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
@@ -197,6 +214,12 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
 
         const localizedTitle = getListingTitle(listing, language);
         const localizedDesc = language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description;
+        const origCurrency = (listing.currency || 'USD').trim().toUpperCase();
+        const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
+        const isSameCurrency = origCurrency === targetCurrency;
+        const convertedVal = priceMap?.get(listing.id) ?? convertPrice(listing.price || 0, origCurrency, targetCurrency);
+        const formattedOriginal = formatOriginalCurrencyPrice(listing.price || 0, origCurrency);
+        const formattedApprox = formatApproxCurrencyEquivalent(convertedVal, targetCurrency);
         
         // Premium popup HTML structured standardly
         const popupHtml = `
@@ -213,13 +236,17 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
               <h4 class="text-sm font-black uppercase tracking-tight text-white leading-tight line-clamp-1">${localizedTitle}</h4>
               <p class="text-[10px] text-gray-400 leading-relaxed line-clamp-2">${localizedDesc}</p>
               
-              <div class="flex items-center justify-between pt-1 border-t border-white/5">
-                <span class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
-                  ${language === 'ka' ? 'ფასი:' : 'Price:'}
+              <div class="flex items-start justify-between gap-2 pt-1 border-t border-white/5">
+                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                  ${isSameCurrency ? (language === 'ka' ? 'ფასი:' : 'Price:') : (language === 'ka' ? 'სავარაუდო:' : 'Est.:')}
                 </span>
-                <span class="text-xs font-black text-[#2e5bff]">
-                  ${listing.price.toLocaleString()} ${listing.currency}
-                </span>
+                <div class="text-right">
+                  ${isSameCurrency
+                    ? `<span class="text-xs font-black text-[#2e5bff] font-mono">${formattedOriginal}</span>`
+                    : `<div class="text-xs font-black text-[#2e5bff] font-mono">${formattedApprox}</div>
+                       <div class="text-[10px] font-semibold text-gray-300 font-mono">${language === 'ka' ? 'ორიგინალი:' : 'Original:'} ${formattedOriginal}</div>`
+                  }
+                </div>
               </div>
               
               <button 
@@ -279,7 +306,7 @@ export function ListingMap({ listings, onSelectListing, language, currentTheme, 
       map.invalidateSize();
     }, 200);
 
-  }, [listings, language]);
+  }, [listings, language, displayCurrency, priceMap, convertPrice]);
 
   // Geolocation detector with graceful error fallback handling
   const handleLocateUser = () => {

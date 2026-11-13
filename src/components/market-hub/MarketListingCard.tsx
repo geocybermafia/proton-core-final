@@ -12,7 +12,15 @@ import {
 } from 'lucide-react';
 import { Listing } from '../../types';
 import { cn } from '../../lib/utils';
-import { MarketTheme, CATEGORY_EMOJIS, WORLD_COUNTRIES, getListingTitle } from './MarketConstants';
+import {
+  MarketTheme,
+  CATEGORY_EMOJIS,
+  WORLD_COUNTRIES,
+  getListingTitle,
+  formatCurrencyAmount,
+  formatOriginalCurrencyPrice,
+  formatApproxCurrencyEquivalent
+} from './MarketConstants';
 
 export interface ListingCardImageProps {
   src?: string;
@@ -133,9 +141,16 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
   const displayTitle = getListingTitle(listing, language);
   const imageUrl = (listing.images && listing.images.length > 0) ? listing.images[0] : listing.image;
-  const rawPrice = priceMap.get(listing.id) ?? convertPrice(listing.price, listing.currency || 'USD', displayCurrency);
-  const formattedPrice = rawPrice.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  const isLargePrice = formattedPrice.length >= 6;
+  const originalCurrency = (listing.currency || 'USD').trim().toUpperCase();
+  const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
+  const isSameCurrency = originalCurrency === targetCurrency;
+  const convertedPrice = priceMap.get(listing.id) ?? convertPrice(listing.price, originalCurrency, targetCurrency);
+  const formattedOriginal = formatOriginalCurrencyPrice(listing.price, originalCurrency);
+  const formattedApprox = formatApproxCurrencyEquivalent(convertedPrice, targetCurrency);
+  const primaryPriceDisplay = isSameCurrency
+    ? formatCurrencyAmount(listing.price, originalCurrency)
+    : formattedApprox;
+  const isLargePrice = primaryPriceDisplay.length >= 8;
 
   return (
     <motion.article 
@@ -262,19 +277,37 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           <div className="flex items-end justify-between gap-2 mb-3 min-w-0">
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold mb-0.5 block font-mono">
-                {t.market.price}
+                {isSameCurrency
+                  ? t.market.price
+                  : (language === 'ka' ? 'სავარაუდო ფასი' : 'Est. Price')}
               </span>
-              <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
-                <span className={cn(
-                  "font-black tracking-tight text-[#dfb257] font-mono leading-none truncate",
-                  isLargePrice ? "text-base sm:text-lg" : "text-lg sm:text-xl md:text-2xl"
-                )}>
-                  {formattedPrice}
-                </span>
-                <span className="text-xs font-bold text-zinc-400 font-mono ml-0.5 shrink-0 whitespace-nowrap">
-                  {displayCurrency}
-                </span>
-              </div>
+              {isSameCurrency ? (
+                <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
+                  <span className={cn(
+                    "font-black tracking-tight text-[#dfb257] font-mono tabular-nums leading-none truncate",
+                    isLargePrice ? "text-base sm:text-lg" : "text-lg sm:text-xl md:text-2xl"
+                  )}>
+                    {formatCurrencyAmount(listing.price, originalCurrency)}
+                  </span>
+                  <span className="text-xs font-bold text-zinc-400 font-mono ml-0.5 shrink-0 whitespace-nowrap">
+                    {originalCurrency}
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
+                    <span className={cn(
+                      "font-black tracking-tight text-[#dfb257] font-mono tabular-nums leading-none truncate",
+                      isLargePrice ? "text-base sm:text-lg" : "text-lg sm:text-xl"
+                    )}>
+                      {formattedApprox}
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-semibold text-zinc-300 font-mono tabular-nums truncate">
+                    {language === 'ka' ? 'ორიგინალი ფასი:' : 'Original price:'} {formattedOriginal}
+                  </p>
+                </div>
+              )}
             </div>
 
             {listing.isNegotiable ? (

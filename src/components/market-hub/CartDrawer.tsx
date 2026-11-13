@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, X, Trash2, ShoppingBag, Loader2, ShieldCheck, Truck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Listing, ShippingDetails } from '../../types';
-import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing, getListingTitle } from './MarketConstants';
+import {
+  MarketTheme,
+  isPhysicalListing,
+  isServiceListing,
+  isProjectListing,
+  getListingTitle,
+  formatOriginalCurrencyPrice,
+  formatApproxCurrencyEquivalent
+} from './MarketConstants';
 
 export interface CartItemThumbnailProps {
   src?: string;
@@ -95,6 +103,22 @@ export const CartDrawer = React.memo(function CartDrawer({
     shippingDetails.address.trim().length >= 3
   );
   const canCheckout = !isPlacingCartOrders && isCartShippingValid;
+  const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
+
+  const currencyTotals = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const item of cart) {
+      const code = (item.currency || 'USD').trim().toUpperCase();
+      const amount = typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0;
+      totals.set(code, (totals.get(code) || 0) + amount);
+    }
+    return Array.from(totals.entries());
+  }, [cart]);
+
+  const hasCurrencyMismatch = useMemo(
+    () => cart.some(item => (item.currency || 'USD').trim().toUpperCase() !== targetCurrency),
+    [cart, targetCurrency]
+  );
 
   return (
     <AnimatePresence>
@@ -205,9 +229,23 @@ export const CartDrawer = React.memo(function CartDrawer({
                             <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">
                               {getListingTitle(item, language)}
                             </h4>
-                            <p className="text-[11px] font-black text-[#10b981] font-mono mt-0.5">
-                              {(priceMap.get(item.id) ?? convertPrice(item.price, item.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
-                            </p>
+                            {(() => {
+                              const origCur = (item.currency || 'USD').trim().toUpperCase();
+                              const isSameCur = origCur === targetCurrency;
+                              const convertedAmt = priceMap.get(item.id) ?? convertPrice(item.price, origCur, targetCurrency);
+                              return (
+                                <div className="mt-0.5 space-y-0.5">
+                                  <p className="text-xs font-black text-[#10b981] font-mono tabular-nums">
+                                    {formatOriginalCurrencyPrice(item.price, origCur)}
+                                  </p>
+                                  {!isSameCur && (
+                                    <p className="text-[11px] font-medium text-zinc-300 font-mono tabular-nums">
+                                      {language === 'ka' ? 'სავარაუდო:' : 'Est.:'} {formatApproxCurrencyEquivalent(convertedAmt, targetCurrency)}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
 
                           <button 
@@ -316,14 +354,34 @@ export const CartDrawer = React.memo(function CartDrawer({
             {/* Action buttons at bottom */}
             {cart.length > 0 && (
               <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 space-y-4 shrink-0 bg-zinc-950/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
-                <div className="flex items-center justify-between">
-                  <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
-                    {language === 'ka' ? 'ჯამური ღირებულება' : 'Total Price'}
-                  </span>
-                  <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap">
-                    {cartTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                    <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
-                  </span>
+                <div className="space-y-1.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={cn("text-[10px] font-black uppercase tracking-wider shrink-0 pt-1", currentTheme.muted)}>
+                      {currencyTotals.length > 1
+                        ? (language === 'ka' ? 'ჯამი ვალუტების მიხედვით' : 'Totals by Currency')
+                        : (language === 'ka' ? 'ჯამური ღირებულება' : 'Total Price')}
+                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      {currencyTotals.map(([curCode, curAmount]) => (
+                        <span
+                          key={curCode}
+                          className="text-base sm:text-lg font-black text-[#10b981] font-mono tabular-nums whitespace-nowrap"
+                        >
+                          {formatOriginalCurrencyPrice(curAmount, curCode)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {hasCurrencyMismatch && (
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5 text-xs">
+                      <span className="text-zinc-400">
+                        {language === 'ka' ? 'სავარაუდო ეკვივალენტი (საორიენტაციო)' : 'Indicative est. equivalent'}
+                      </span>
+                      <span className="font-bold text-zinc-200 font-mono tabular-nums whitespace-nowrap">
+                        {formatApproxCurrencyEquivalent(cartTotal, targetCurrency)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {hasPhysicalItems && !isCartShippingValid && (

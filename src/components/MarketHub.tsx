@@ -4102,6 +4102,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     onClose={() => setDisplayMode('grid')}
                     language={language}
                     currentTheme={currentTheme}
+                    displayCurrency={displayCurrency}
+                    priceMap={priceMap}
+                    convertPrice={convertPrice}
                   />
                 </div>
               )}

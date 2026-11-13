@@ -3,7 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingCart, ShoppingBag, ShieldCheck, MapPin, Loader2, Truck, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Listing, ShippingDetails } from '../../types';
-import { MarketTheme, isPhysicalListing, isServiceListing, isProjectListing, getListingTitle } from './MarketConstants';
+import {
+  MarketTheme,
+  isPhysicalListing,
+  isServiceListing,
+  isProjectListing,
+  getListingTitle,
+  formatCurrencyAmount,
+  formatOriginalCurrencyPrice,
+  formatApproxCurrencyEquivalent
+} from './MarketConstants';
 import { CartItemThumbnail } from './CartDrawer';
 
 export interface CheckoutModalProps {
@@ -56,6 +65,17 @@ export const CheckoutModal = React.memo(function CheckoutModal({
     shippingDetails.address.trim().length >= 3
   );
   const canConfirm = !isCheckingOut && isShippingComplete;
+
+  const originalCurrency = (checkoutItem?.currency || 'USD').trim().toUpperCase();
+  const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
+  const isSameCurrency = originalCurrency === targetCurrency;
+  const convertedPrice = checkoutItem
+    ? (priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, originalCurrency, targetCurrency))
+    : 0;
+  const formattedOriginal = checkoutItem
+    ? formatOriginalCurrencyPrice(checkoutItem.price, originalCurrency)
+    : '';
+  const formattedApprox = formatApproxCurrencyEquivalent(convertedPrice, targetCurrency);
 
   return (
     <AnimatePresence>
@@ -186,9 +206,14 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                   <h4 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight line-clamp-1">
                     {getListingTitle(checkoutItem, language)}
                   </h4>
-                  <p className="text-lg sm:text-xl font-black text-[#10b981] font-mono mt-1">
-                    {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })} {displayCurrency}
+                  <p className="text-lg sm:text-xl font-black text-[#10b981] font-mono tabular-nums mt-1">
+                    {formattedOriginal}
                   </p>
+                  {!isSameCurrency && (
+                    <p className="text-xs font-semibold text-zinc-300 font-mono tabular-nums mt-0.5">
+                      {language === 'ka' ? 'სავარაუდო ეკვივალენტი:' : 'Est. equivalent:'} {formattedApprox}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -340,13 +365,20 @@ export const CheckoutModal = React.memo(function CheckoutModal({
 
             {/* Sticky Bottom Action Footer with safe-area spacing */}
             <div className="p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 shrink-0 bg-zinc-950/95 backdrop-blur-md space-y-4">
-              <div className="flex items-center justify-between">
-                <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
-                  {language === 'ka' ? 'ღირებულება (პირდაპირი ანგარიშსწორება)' : 'Amount (Direct Settlement)'}
-                </span>
-                <span className="text-xl font-black text-[#10b981] font-mono drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap">
-                  {(priceMap.get(checkoutItem.id) ?? convertPrice(checkoutItem.price, checkoutItem.currency || 'USD', displayCurrency)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  <span className="text-[10px] font-black opacity-50 ml-1">{displayCurrency}</span>
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest block", currentTheme.muted)}>
+                    {language === 'ka' ? 'ფასი (პირდაპირი შეთანხმება)' : 'Price (Direct Agreement)'}
+                  </span>
+                  {!isSameCurrency && (
+                    <span className="text-[11px] font-medium text-zinc-300 block font-mono tabular-nums">
+                      {language === 'ka' ? 'სავარაუდო ეკვივალენტი:' : 'Est. equivalent:'} {formattedApprox}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xl font-black text-[#10b981] font-mono tabular-nums drop-shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap text-right">
+                  {formatCurrencyAmount(checkoutItem.price, originalCurrency)}
+                  <span className="text-xs font-black opacity-75 ml-1">{originalCurrency}</span>
                 </span>
               </div>
 

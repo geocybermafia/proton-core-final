@@ -266,10 +266,50 @@ export const CATEGORY_EMOJIS: Record<string, string> = {
   crypto: "🪙"
 };
 
+export const getCurrencySymbol = (currency?: string): string => {
+  const code = (currency || 'USD').trim().toUpperCase();
+  const found = CURRENCIES.find(c => c.code === code);
+  return found ? found.symbol : code;
+};
+
+export const formatCurrencyAmount = (amount: number, currency?: string): string => {
+  const code = (currency || 'USD').trim().toUpperCase();
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  if (code === 'JPY') {
+    return Math.round(safeAmount).toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    });
+  }
+  const rounded = Math.round((safeAmount + Number.EPSILON) * 100) / 100;
+  const hasDecimals = Math.abs(rounded - Math.trunc(rounded)) > 0.001;
+  return rounded.toLocaleString('en-US', {
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: 2
+  });
+};
+
+export const formatOriginalCurrencyPrice = (amount: number, currency?: string): string => {
+  const code = (currency || 'USD').trim().toUpperCase();
+  return `${formatCurrencyAmount(amount, code)} ${code}`;
+};
+
+export const formatApproxCurrencyEquivalent = (convertedAmount: number, targetCurrency?: string): string => {
+  const code = (targetCurrency || 'USD').trim().toUpperCase();
+  const symbol = getCurrencySymbol(code);
+  const formatted = formatCurrencyAmount(convertedAmount, code);
+  if (code === 'JPY' || code === 'CNY') {
+    return `~ ${symbol}${formatted} ${code}`;
+  }
+  return `~ ${symbol}${formatted}`;
+};
+
 export const convertPrice = (price: number, from: string, to: string) => {
-  if (from === to) return price;
-  const inUSD = price / (EXCHANGE_RATES[from] || 1);
-  return inUSD * (EXCHANGE_RATES[to] || 1);
+  const normFrom = (from || 'USD').trim().toUpperCase();
+  const normTo = (to || 'USD').trim().toUpperCase();
+  if (normFrom === normTo) return price;
+  const inUSD = price / (EXCHANGE_RATES[normFrom] || 1);
+  return inUSD * (EXCHANGE_RATES[normTo] || 1);
 };
 
 export const safeParseDate = (dateVal: any): number => {

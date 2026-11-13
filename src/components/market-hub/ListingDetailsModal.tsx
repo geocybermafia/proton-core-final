@@ -21,7 +21,10 @@ import { cn } from '../../lib/utils';
 import {
   MarketTheme,
   WORLD_COUNTRIES,
-  getListingTitle
+  getListingTitle,
+  formatCurrencyAmount,
+  formatOriginalCurrencyPrice,
+  formatApproxCurrencyEquivalent
 } from './MarketConstants';
 
 export interface ListingDetailsModalProps {
@@ -119,12 +122,15 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
       ? listing.descriptionGe || listing.description
       : listing.description || listing.descriptionGe;
 
+  const originalCurrency = (listing.currency || 'USD').trim().toUpperCase();
+  const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
+  const isSameCurrency = originalCurrency === targetCurrency;
+
   const resolvedPrice =
     priceMap.get(listing.id) ??
-    convertPrice(listing.price, listing.currency || 'USD', displayCurrency);
-  const formattedPrice = resolvedPrice.toLocaleString(undefined, {
-    maximumFractionDigits: 2
-  });
+    convertPrice(listing.price, originalCurrency, targetCurrency);
+  const formattedOriginal = formatOriginalCurrencyPrice(listing.price, originalCurrency);
+  const formattedApprox = formatApproxCurrencyEquivalent(resolvedPrice, targetCurrency);
 
   const categoryLabel =
     (t?.market?.categories && t.market.categories[listing.category]) ||
@@ -417,30 +423,60 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       </p>
                     )}
 
-                    <div className="pt-2 flex flex-wrap items-baseline justify-between gap-2">
-                      <div className="flex items-baseline gap-1.5">
-                        <span
-                          className={cn(
-                            'text-2xl sm:text-3xl font-black font-mono tabular-nums',
-                            currentTheme.accent
-                          )}
-                        >
-                          {formattedPrice}
-                        </span>
-                        <span className={cn('text-sm font-bold font-mono', currentTheme.muted)}>
-                          {displayCurrency}
+                    <div className="pt-2 space-y-1.5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        {isSameCurrency ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span
+                              className={cn(
+                                'text-2xl sm:text-3xl font-black font-mono tabular-nums',
+                                currentTheme.accent
+                              )}
+                            >
+                              {formatCurrencyAmount(listing.price, originalCurrency)}
+                            </span>
+                            <span className={cn('text-sm font-bold font-mono', currentTheme.muted)}>
+                              {originalCurrency}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-baseline gap-2">
+                              <span
+                                className={cn(
+                                  'text-2xl sm:text-3xl font-black font-mono tabular-nums',
+                                  currentTheme.accent
+                                )}
+                              >
+                                {formattedApprox}
+                              </span>
+                              <span className={cn('text-xs font-medium', currentTheme.muted)}>
+                                ({language === 'ka' ? 'სავარაუდო ეკვივალენტი' : 'Est. equivalent'})
+                              </span>
+                            </div>
+                            <div className={cn('text-sm font-bold font-mono tabular-nums', currentTheme.text)}>
+                              {language === 'ka' ? 'ორიგინალი ფასი:' : 'Original price:'} {formattedOriginal}
+                            </div>
+                          </div>
+                        )}
+
+                        <span className={cn('text-xs font-medium', currentTheme.muted)}>
+                          {listing.isNegotiable
+                            ? language === 'ka'
+                              ? 'ფასზე მოლაპარაკება შესაძლებელია'
+                              : 'Negotiable price'
+                            : language === 'ka'
+                            ? 'ფიქსირებული ფასი'
+                            : 'Fixed price'}
                         </span>
                       </div>
-
-                      <span className={cn('text-xs font-medium', currentTheme.muted)}>
-                        {listing.isNegotiable
-                          ? language === 'ka'
-                            ? 'ფასზე მოლაპარაკება შესაძლებელია'
-                            : 'Negotiable price'
-                          : language === 'ka'
-                          ? 'ფიქსირებული ფასი'
-                          : 'Fixed price'}
-                      </span>
+                      {!isSameCurrency && (
+                        <p className={cn('text-xs', currentTheme.muted)}>
+                          {language === 'ka'
+                            ? `კონვერტირებული თანხა მხოლოდ საორიენტაციოა. შეკვეთა ფორმდება ორიგინალ ვალუტაში (${originalCurrency}).`
+                            : `Converted amount is an indicative estimate only. Orders are placed in the listing's original currency (${originalCurrency}).`}
+                        </p>
+                      )}
                     </div>
                   </div>
 
