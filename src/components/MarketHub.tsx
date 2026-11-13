@@ -34,7 +34,8 @@ import {
   Inbox,
   Clock,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  Store
 } from 'lucide-react';
 import { 
   collection, 
@@ -3374,9 +3375,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   return (
     <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       {/* Main Black Proton Header (PROTON // მარკეტი) */}
-      <div className="w-full bg-[#080c14]/95 border-b border-zinc-800/80 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3 sm:pt-[max(1rem,env(safe-area-inset-top,0px))] sm:pb-4 px-4 sm:px-8 flex flex-col gap-3 sticky top-0 z-50 backdrop-blur-md">
+      <div className="w-full bg-[#080c14]/95 border-b border-zinc-800/80 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 md:pt-[max(0.875rem,env(safe-area-inset-top,0px))] md:pb-3.5 px-3 sm:px-6 lg:px-8 flex flex-col gap-2 md:gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
-        <div className="w-full flex items-center justify-between gap-4">
+        <div className="w-full flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
           
           {/* Logo element */}
           <div 
@@ -3390,64 +3391,79 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className="flex items-center gap-2 cursor-pointer select-none grow-0 shrink-0"
           >
             <div className="flex items-center">
-              <div className="bg-zinc-900 border border-zinc-800 text-white font-black px-3 py-1.5 rounded-l-xl text-xs sm:text-sm tracking-tighter uppercase whitespace-nowrap flex items-center gap-1.5">
+              <div className="bg-zinc-900 border border-zinc-800 text-white font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-l-xl text-[11px] sm:text-sm tracking-tighter uppercase whitespace-nowrap flex items-center gap-1 sm:gap-1.5">
                 <span className="text-[#dfb257]">PROTON</span>
-                <span className="text-zinc-600 font-mono text-[11px]">//</span>
+                <span className="text-zinc-600 font-mono text-[10px] sm:text-[11px]">//</span>
               </div>
-              <div className="bg-[#12161f] text-[#dfb257] border border-zinc-800 border-l-0 font-bold px-3 py-1.5 rounded-r-xl text-xs sm:text-sm tracking-tighter uppercase whitespace-nowrap">
+              <div className="bg-[#12161f] text-[#dfb257] border border-zinc-800 border-l-0 font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-r-xl text-[11px] sm:text-sm tracking-tighter uppercase whitespace-nowrap">
                 {language === 'ka' ? 'მარკეტი' : 'market'}
               </div>
             </div>
           </div>
 
-          {/* Desktop Search Bar Grouping */}
-          <div className="hidden md:flex flex-1 max-w-xl items-center gap-3">
-            {/* Input search */}
-            <div className="flex-1 relative">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
-              <input 
-                type="text"
-                value={searchRaw}
-                onChange={(e) => setSearchRaw(e.target.value)}
-                placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
-                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-4 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner"
-              />
-              {searchRaw && (
-                <button 
-                  onClick={() => { setSearch(''); setSearchRaw(''); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Action buttons list */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Create Listing Button */}
+          {/* Desktop Primary Navigation: Browse | Seller Cabinet | My Orders */}
+          <nav
+            aria-label={language === 'ka' ? 'მარკეტის მთავარი ნავიგაცია' : 'Marketplace primary navigation'}
+            className="hidden md:flex items-center bg-zinc-900/80 border border-zinc-800/90 p-1 rounded-xl gap-1 shrink-0"
+          >
             <button
+              type="button"
+              onClick={() => {
+                if (activeBottomTab === 'messages') closeInlineMessages();
+                else setActiveBottomTab('home');
+                setShowOnlyFavorites(false);
+                setViewMode('browse');
+              }}
+              className={cn(
+                "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap",
+                viewMode === 'browse' && activeBottomTab !== 'messages' && !showOnlyFavorites
+                  ? "bg-[#dfb257] text-zinc-950 font-black shadow-sm"
+                  : "text-zinc-300 hover:text-white hover:bg-zinc-800/80"
+              )}
+              title={language === 'ka' ? 'განცხადებების დათვალიერება' : 'Browse Marketplace'}
+            >
+              <LayoutGrid size={13} />
+              <span>{language === 'ka' ? 'ბაზარი' : 'Browse'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 if (!user) {
-                  showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                  showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია გამყიდველის კაბინეტის სანახავად." : "Please sign in to open Seller Cabinet.", 'warning');
                   onOpenAuthModal?.();
                   return;
                 }
                 if (activeBottomTab === 'messages') closeInlineMessages();
                 else setActiveBottomTab('home');
-                resetListingForm();
-                setViewMode('create');
+                setViewMode('my-listings');
+                setProfileSubMode('selling');
               }}
-              className="flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-3 sm:px-4 py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1 sm:gap-1.5 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0"
-              title={language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}
+              className={cn(
+                "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap relative",
+                viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
+                  ? "bg-[#dfb257] text-zinc-950 font-black shadow-sm"
+                  : "text-zinc-300 hover:text-white hover:bg-zinc-800/80"
+              )}
+              title={language === 'ka' ? 'გამყიდველის კაბინეტი' : 'Seller Cabinet'}
             >
-              <Plus size={14} className="stroke-[3]" />
-              <span className="hidden sm:inline">{language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}</span>
-              <span className="sm:hidden">{language === 'ka' ? 'დამატება' : 'Add'}</span>
+              <Store size={13} />
+              <span className="xl:hidden">{language === 'ka' ? 'გაყიდვები' : 'Selling'}</span>
+              <span className="hidden xl:inline">{language === 'ka' ? 'გამყიდველის კაბინეტი' : 'Seller Cabinet'}</span>
+              {sellerOrderCounts.actionRequired > 0 && (
+                <span className={cn(
+                  "inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[9px] font-black leading-none rounded-full",
+                  viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
+                    ? "bg-zinc-950 text-[#dfb257]"
+                    : "bg-amber-500 text-zinc-950"
+                )}>
+                  {sellerOrderCounts.actionRequired}
+                </span>
+              )}
             </button>
 
-            {/* Direct My Orders Button */}
-            <button 
+            <button
+              type="button"
               onClick={() => {
                 if (!user) {
                   showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეკვეთების სანახავად." : "Please sign in to view your orders.", 'warning');
@@ -3460,24 +3476,77 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setProfileSubMode('buying');
               }}
               className={cn(
-                "px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl transition-all relative flex items-center gap-1.5 border cursor-pointer font-bold text-[10px] sm:text-xs uppercase tracking-wider shrink-0",
+                "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap relative",
                 viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
-                  ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm font-black" 
-                  : "bg-zinc-900/80 text-zinc-300 hover:text-white border-zinc-800 hover:bg-zinc-800"
+                  ? "bg-[#dfb257] text-zinc-950 font-black shadow-sm"
+                  : "text-zinc-300 hover:text-white hover:bg-zinc-800/80"
               )}
               title={language === 'ka' ? 'ჩემი შეკვეთები' : 'My Orders'}
             >
-              <Package size={15} className="text-[#dfb257]" />
-              <span className="hidden sm:inline">{language === 'ka' ? 'ჩემი შეკვეთები' : 'My Orders'}</span>
-              <span className="sm:hidden">{language === 'ka' ? 'შეკვეთები' : 'Orders'}</span>
+              <Package size={13} />
+              <span className="xl:hidden">{language === 'ka' ? 'შეკვეთები' : 'Orders'}</span>
+              <span className="hidden xl:inline">{language === 'ka' ? 'ჩემი შეკვეთები' : 'My Orders'}</span>
               {buyerOrders.length > 0 && (
-                <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[9px] font-black leading-none text-zinc-950 bg-[#dfb257] rounded-full border border-zinc-900">
+                <span className={cn(
+                  "inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[9px] font-black leading-none rounded-full",
+                  viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
+                    ? "bg-zinc-950 text-[#dfb257]"
+                    : "bg-[#dfb257] text-zinc-950"
+                )}>
                   {buyerOrders.length}
                 </span>
               )}
             </button>
+          </nav>
 
-            {/* Messages tab */}
+          {/* Desktop Search Bar Grouping */}
+          <div className="hidden md:flex flex-1 min-w-[120px] max-w-md items-center gap-3">
+            {/* Input search */}
+            <div className="flex-1 relative">
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
+              <input 
+                type="text"
+                value={searchRaw}
+                onChange={(e) => setSearchRaw(e.target.value)}
+                placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
+                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-9 pr-7 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner"
+              />
+              {searchRaw && (
+                <button 
+                  onClick={() => { setSearch(''); setSearchRaw(''); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Action buttons list (Utilities + Single Add Listing CTA) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Create Listing Button (Single canonical location on both Mobile & Desktop) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!user) {
+                  showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                  onOpenAuthModal?.();
+                  return;
+                }
+                if (activeBottomTab === 'messages') closeInlineMessages();
+                else setActiveBottomTab('home');
+                resetListingForm();
+                setViewMode('create');
+              }}
+              className="flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              title={language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}
+            >
+              <Plus size={14} className="stroke-[3]" />
+              <span className="md:hidden lg:inline">{language === 'ka' ? 'დამატება' : 'Add'}</span>
+              <span className="hidden xl:inline">{language === 'ka' ? ' განცხადება' : ' Listing'}</span>
+            </button>
+
+            {/* Desktop Messages Button (Mobile accesses Messages via the unified 4-tab bar below) */}
             <button 
               type="button"
               onClick={() => {
@@ -3496,7 +3565,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setActiveBottomTab('messages');
               }}
               className={cn(
-                "p-2 sm:p-2.5 rounded-xl transition-all relative border cursor-pointer",
+                "hidden md:flex p-2 sm:p-2.5 rounded-xl transition-all relative border cursor-pointer",
                 activeBottomTab === 'messages'
                   ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm"
                   : "text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 border-transparent"
@@ -3514,6 +3583,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
             {/* Favorites tab */}
             <button 
+              type="button"
               onClick={() => {
                 if (activeBottomTab === 'messages') closeInlineMessages();
                 else setActiveBottomTab('home');
@@ -3521,7 +3591,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setViewMode('browse');
               }}
               className={cn(
-                "p-2 sm:p-2.5 rounded-xl transition-all relative",
+                "p-2 sm:p-2.5 rounded-xl transition-all relative cursor-pointer",
                 showOnlyFavorites 
                   ? "text-red-500 bg-red-500/10 border border-red-500/20" 
                   : "text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900"
@@ -3530,7 +3600,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             >
               <Heart size={16} fill={showOnlyFavorites ? "currentColor" : "none"} />
               {favorites.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#dfb257] rounded-full text-[8px] font-black text-zinc-950 flex items-center justify-center scale-90 border border-[#080c14]">
+                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-[#dfb257] rounded-full text-[8px] font-black text-zinc-950 flex items-center justify-center scale-90 border border-[#080c14]">
                   {favorites.length}
                 </span>
               )}
@@ -3538,13 +3608,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
             {/* Shopping Cart button */}
             <button 
+              type="button"
               onClick={() => setIsCartOpen(true)}
-              className="p-2 sm:p-2.5 text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 rounded-xl transition-all relative"
+              className="p-2 sm:p-2.5 text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 rounded-xl transition-all relative cursor-pointer"
               title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
             >
               <ShoppingBag size={16} />
               {cart.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#dfb257] text-zinc-950 rounded-full text-[8px] font-black flex items-center justify-center scale-90 border border-[#080c14]">
+                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-[#dfb257] text-zinc-950 rounded-full text-[8px] font-black flex items-center justify-center scale-90 border border-[#080c14]">
                   {cart.length}
                 </span>
               )}
@@ -3553,95 +3624,112 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             {/* Return Home escape button */}
             {onBack && (
               <button 
+                type="button"
                 onClick={onBack}
-                className="px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 hover:text-[#dfb257] font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                className="p-2 md:px-3 md:py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 hover:text-[#dfb257] font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-[1.02] active:scale-[0.98]"
                 title={language === 'ka' ? 'მთავარზე დაბრუნება' : 'Return to Dashboard'}
               >
-                <LayoutDashboard size={13} className="text-[#dfb257]" />
-                <span className="hidden sm:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
+                <LayoutDashboard size={14} className="text-[#dfb257]" />
+                <span className="hidden lg:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Mobile Search Row (Shown only on mobile) */}
-        <div className="w-full flex md:hidden items-center">
+        {/* Mobile Search & Categories Row (Shown only on mobile — single integrated bar) */}
+        <div className="w-full flex md:hidden items-center gap-2">
           <div className="flex-1 relative">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
             <input 
               type="text"
               value={searchRaw}
               onChange={(e) => setSearchRaw(e.target.value)}
-              placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search...'}
-              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-10 pr-9 py-2.5 rounded-xl text-base md:text-xs transition-colors"
+              placeholder={language === 'ka' ? 'ძებნა მარკეტში...' : 'Search marketplace...'}
+              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-9 pr-8 py-2 rounded-xl text-base md:text-xs transition-colors"
             />
             {searchRaw && (
               <button 
+                type="button"
                 onClick={() => { setSearch(''); setSearchRaw(''); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
               >
                 ✕
               </button>
             )}
           </div>
-        </div>
-
-        {/* Mobile Navigation Sub-bar (Explicitly visible only on mobile screens: md:hidden) */}
-        <div className="w-full flex md:hidden items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 pt-2 border-t border-zinc-800/60">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveBottomTab('home');
-              setViewMode('browse');
-            }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
-              activeBottomTab === 'home' && viewMode === 'browse'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
-            )}
-          >
-            <LayoutGrid size={13} />
-            <span>{language === 'ka' ? 'მთავარი' : 'Home'}</span>
-          </button>
 
           <button
             type="button"
-            onClick={() => {
-              setActiveBottomTab('categories');
-            }}
+            onClick={() => setActiveBottomTab('categories')}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
-              activeBottomTab === 'categories'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
+              "px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
+              activeBottomTab === 'categories' || activeCategory !== 'all'
+                ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm"
+                : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
             )}
+            title={language === 'ka' ? 'კატეგორიები' : 'Categories'}
           >
             <Tag size={13} />
             <span>{language === 'ka' ? 'კატეგორია' : 'Category'}</span>
+          </button>
+        </div>
+
+        {/* Unified Mobile Navigation Bar (Single non-duplicated 4-tab switcher, md:hidden) */}
+        <nav
+          aria-label={language === 'ka' ? 'მობილური მარკეტის ნავიგაცია' : 'Mobile marketplace navigation'}
+          className="w-full grid grid-cols-4 gap-1.5 md:hidden pt-1.5 border-t border-zinc-800/60"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (activeBottomTab === 'messages') closeInlineMessages();
+              else setActiveBottomTab('home');
+              setShowOnlyFavorites(false);
+              setViewMode('browse');
+            }}
+            className={cn(
+              "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
+              activeBottomTab === 'home' && viewMode === 'browse' && !showOnlyFavorites
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
+            )}
+          >
+            <LayoutGrid size={13} />
+            <span className="truncate max-w-full">{language === 'ka' ? 'ბაზარი' : 'Browse'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => {
               if (!user) {
-                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად." : "Please sign in to create a listing.", 'warning');
+                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია კაბინეტის სანახავად." : "Please sign in to open Seller Cabinet.", 'warning');
                 onOpenAuthModal?.();
                 return;
               }
-              resetListingForm();
-              setViewMode('create');
-              setActiveBottomTab('home');
+              if (activeBottomTab === 'messages') closeInlineMessages();
+              else setActiveBottomTab('home');
+              setViewMode('my-listings');
+              setProfileSubMode('selling');
             }}
             className={cn(
-              "px-3.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer shadow-md",
-              viewMode === 'create'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] ring-2 ring-[#dfb257]/50"
-                : "bg-[#dfb257] text-zinc-950 border-[#dfb257] hover:bg-[#dfb257]/90"
+              "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
+              viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
+                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
             )}
           >
-            <Plus size={13} className="stroke-[3]" />
-            <span>{language === 'ka' ? 'დამატება' : 'Add Listing'}</span>
+            <Store size={13} />
+            <span className="truncate max-w-full">{language === 'ka' ? 'კაბინეტი' : 'Selling'}</span>
+            {sellerOrderCounts.actionRequired > 0 && (
+              <span className={cn(
+                "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
+                viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
+                  ? "bg-zinc-950 text-[#dfb257]"
+                  : "bg-amber-500 text-zinc-950"
+              )}>
+                {sellerOrderCounts.actionRequired}
+              </span>
+            )}
           </button>
 
           <button
@@ -3652,21 +3740,27 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 onOpenAuthModal?.();
                 return;
               }
-              setActiveBottomTab('home');
+              if (activeBottomTab === 'messages') closeInlineMessages();
+              else setActiveBottomTab('home');
               setViewMode('my-listings');
               setProfileSubMode('buying');
             }}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 relative cursor-pointer",
-              viewMode === 'my-listings' && profileSubMode === 'buying'
+              "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
+              viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
                 ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
             )}
           >
             <Package size={13} />
-            <span>{language === 'ka' ? 'შეკვეთები' : 'Orders'}</span>
+            <span className="truncate max-w-full">{language === 'ka' ? 'შეკვეთები' : 'Orders'}</span>
             {buyerOrders.length > 0 && (
-              <span className="inline-flex items-center justify-center h-3.5 px-1 text-[8px] font-black leading-none text-zinc-950 bg-[#dfb257] rounded-full border border-zinc-900">
+              <span className={cn(
+                "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
+                viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
+                  ? "bg-zinc-950 text-[#dfb257]"
+                  : "bg-[#dfb257] text-zinc-950"
+              )}>
                 {buyerOrders.length}
               </span>
             )}
@@ -3680,60 +3774,47 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 onOpenAuthModal?.();
                 return;
               }
+              if (activeBottomTab === 'messages') {
+                closeInlineMessages();
+                setViewMode('browse');
+                return;
+              }
               setViewMode('my-listings');
               setActiveBottomTab('messages');
             }}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 relative cursor-pointer",
+              "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
               activeBottomTab === 'messages'
                 ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
+                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
             )}
           >
-            <MessageCircle size={13} />
-            <span>{language === 'ka' ? 'ჩატი' : 'Chat'}</span>
+            <Mail size={13} />
+            <span className="truncate max-w-full">{language === 'ka' ? 'ჩატი' : 'Messages'}</span>
             {groupedChats.length > 0 && (
-              <span className="inline-flex items-center justify-center h-3.5 px-1 text-[8px] font-black leading-none text-zinc-950 bg-[#dfb257] rounded-full border border-zinc-900">
+              <span className={cn(
+                "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
+                activeBottomTab === 'messages'
+                  ? "bg-zinc-950 text-[#dfb257]"
+                  : "bg-red-500 text-white"
+              )}>
                 {groupedChats.length}
               </span>
             )}
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (!user) {
-                showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია პროფილის სანახავად." : "Please sign in to view your profile.", 'warning');
-                onOpenAuthModal?.();
-                return;
-              }
-              if (activeBottomTab === 'messages') closeInlineMessages();
-              else setActiveBottomTab('home');
-              setViewMode('my-listings');
-            }}
-            className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
-              viewMode === 'my-listings' && profileSubMode !== 'buying' && activeBottomTab !== 'messages'
-                ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
-            )}
-          >
-            <User size={13} />
-            <span>{language === 'ka' ? 'კაბინეტი' : 'Profile'}</span>
-          </button>
-        </div>
+        </nav>
       </div>
 
-      <div className="p-6 lg:p-10 grow relative">
+      <div className="px-4 py-4 sm:p-6 lg:p-10 grow relative">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-12 bg-transparent pb-40 relative"
+          className="space-y-5 md:space-y-12 bg-transparent pb-40 relative"
         >
       {/* Market Hub Header / Banner Section */}
-      <div className="flex flex-col gap-6 pb-6 border-b border-zinc-900/40">
-        {/* Row 1: Title & Status on left, Search / Mode / Currency on right */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 w-full">
+      <div className={cn("flex flex-col gap-3 md:gap-6 border-b border-zinc-900/40", viewMode === 'browse' ? "pb-3 md:pb-6" : "pb-4 md:pb-6")}>
+        {/* Row 1: Title & Status on left, Grid / Map Mode on right */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-6 w-full">
           <div className="flex items-center gap-4">
             {viewMode !== 'browse' && (
               <button 
@@ -3743,17 +3824,21 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   else setActiveBottomTab('home');
                   setViewMode('browse');
                 }}
-                className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white cursor-pointer"
+                className="p-2.5 md:p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white cursor-pointer"
                 title={language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}
               >
                 <ArrowLeft size={18} />
               </button>
             )}
             <div>
-              <h1 className={cn("text-3xl md:text-4xl font-black mb-1.5 tracking-tighter uppercase leading-none", currentTheme.text)}>
+              <h1 className={cn(
+                "font-black tracking-tighter uppercase leading-none",
+                viewMode === 'browse' ? "hidden md:block text-3xl md:text-4xl mb-1.5" : "text-xl sm:text-3xl md:text-4xl mb-1.5",
+                currentTheme.text
+              )}>
                 <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
               </h1>
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80", currentTheme.muted)}>
