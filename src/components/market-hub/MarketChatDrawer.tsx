@@ -85,7 +85,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.95 }}
             className={cn(
-              "relative w-full max-w-lg sm:rounded-[40px] border border-white/10 overflow-hidden z-10",
+              "relative w-full max-w-lg sm:rounded-[40px] border border-proton-border overflow-hidden z-10",
               currentTheme.card
             )}
           >
@@ -93,23 +93,23 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
               {/* Main Chat Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#2e5bff]/10 border border-[#2e5bff]/20 flex items-center justify-center font-black text-xs text-[#2e5bff]">
+                  <div className="w-10 h-10 rounded-xl bg-proton-accent/15 border border-proton-accent/30 flex items-center justify-center font-black text-xs text-proton-accent">
                     {((isSellerViewing ? buyerName : activeChatListing.sellerName) || 'User').substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                    <h3 className="text-sm font-black uppercase tracking-wider text-proton-text">
                       {isSellerViewing
                         ? (language === 'ka' ? 'კავშირი მყიდველთან' : 'Chat with Buyer')
                         : (language === 'ka' ? 'კავშირი გამყიდველთან' : 'Chat with Seller')}
                     </h3>
-                    <p className="text-[10px] text-white/50">
+                    <p className="text-[10px] text-proton-muted">
                       {isSellerViewing ? (buyerName || 'Buyer') : activeChatListing.sellerName} • {activeChatListing.title}
                     </p>
                   </div>
                 </div>
                 <button 
                   onClick={onClose}
-                  className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors text-white"
+                  className="p-3 bg-proton-bg border border-proton-border rounded-2xl hover:bg-proton-accent/10 transition-colors text-proton-text"
                   aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
                 >
                   <X size={20} />
@@ -120,24 +120,24 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
               {activeChatOrder && (
                 <div 
                   id="chat-order-context-banner"
-                  className="bg-[#dfb257]/10 border border-[#dfb257]/25 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs"
+                  className="bg-proton-accent/10 border border-proton-accent/25 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-[#dfb257]/20 border border-[#dfb257]/30 flex items-center justify-center text-[#dfb257] shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-proton-accent/20 border border-proton-accent/30 flex items-center justify-center text-proton-accent shrink-0">
                       <Package size={15} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-[#dfb257]">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent">
                           {language === 'ka' ? 'შეკვეთის შესახებ' : 'Regarding Order'} #{activeChatOrder.orderId.slice(-6).toUpperCase()}
                         </span>
                         {activeChatOrder.status && (
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-white/10 text-white/80 border border-white/10 font-mono">
+                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-proton-card text-proton-text border border-proton-border font-mono">
                             {activeChatOrder.status}
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-white/70 truncate mt-0.5">
+                      <p className="text-[10px] text-proton-muted truncate mt-0.5">
                         {activeChatOrder.itemTitle || activeChatListing.title}
                         {activeChatOrder.amount !== undefined ? ` • ${activeChatOrder.amount} ${activeChatOrder.currency || ''}` : ''}
                       </p>
@@ -149,9 +149,9 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                       type="button"
                       id="chat-view-order-btn"
                       onClick={() => onViewOrder(activeChatOrder.orderId)}
-                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[10px] font-black uppercase tracking-wider transition-all border border-white/15 shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                      className="px-3 py-1.5 rounded-xl bg-proton-card hover:bg-proton-accent/10 text-proton-text text-[10px] font-black uppercase tracking-wider transition-all border border-proton-border shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
                     >
-                      <ExternalLink size={11} className="text-[#dfb257]" />
+                      <ExternalLink size={11} className="text-proton-accent" />
                       <span>{language === 'ka' ? 'შეკვეთის ნახვა' : 'View Order'}</span>
                     </button>
                   )}
@@ -160,9 +160,9 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
 
               {/* Subsystem status/Product terms (Only when not in direct order mode to keep UI clean) */}
               {!activeChatOrder && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-3 flex items-start gap-2.5">
+                <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3 flex items-start gap-2.5">
                   <span className="text-sm">💬</span>
-                  <div className="text-[9px] font-bold text-yellow-500/80 leading-relaxed uppercase">
+                  <div className="text-[9px] font-bold text-amber-500 leading-relaxed uppercase">
                     {language === 'ka' 
                       ? `შეთანხმება: პროდუქტის მდგომარეობა - "${activeChatListing.condition === 'new' ? 'ახალი' : activeChatListing.condition === 'used' ? 'მეორადი' : 'განახლებული'}". ${activeChatListing.isNegotiable ? 'ფასზე შეგიძლიათ ვაჭრობა!' : 'ფასი ფიქსირებულია.'}`
                       : `Inquiry terms: item condition is "${activeChatListing.condition || 'new'}". ${activeChatListing.isNegotiable ? 'Custom offers are welcome!' : 'Fixed pricing matches apply.'}`}
@@ -171,14 +171,14 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
               )}
 
               {/* Messages Body */}
-              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-black/20 rounded-2xl p-4 border border-white/5">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-none bg-proton-bg/60 rounded-2xl p-4 border border-proton-border">
                 {messagesList.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
-                    <span className="text-2xl opacity-40">🤝</span>
-                    <p className="text-xs font-bold text-white uppercase tracking-wider">
+                    <span className="text-2xl opacity-50">🤝</span>
+                    <p className="text-xs font-bold text-proton-text uppercase tracking-wider">
                       {language === 'ka' ? 'მიწერეთ გამყიდველს' : 'No messages yet'}
                     </p>
-                    <p className="text-[9px] text-white/40 max-w-xs">
+                    <p className="text-[9px] text-proton-muted max-w-xs">
                       {language === 'ka' 
                         ? 'ჰკითხეთ მდგომარეობის ან საბოლოო ფასის შესახებ და დაიწყეთ პირდაპირი მოლაპარაკება.'
                         : 'Inquire about item availability, delivery, or state custom quotes.'}
@@ -191,11 +191,11 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                       className={cn(
                         "flex flex-col max-w-[85%] rounded-xl p-4 text-xs font-medium space-y-1",
                         msg.senderId === user?.uid 
-                          ? "bg-[#2e5bff] text-white ml-auto rounded-tr-none shadow-[0_4px_10px_rgba(46,91,255,0.2)]" 
-                          : "bg-white/10 text-white mr-auto rounded-tl-none"
+                          ? "bg-proton-accent text-proton-on-accent ml-auto rounded-tr-none shadow-md" 
+                          : "bg-proton-card text-proton-text border border-proton-border mr-auto rounded-tl-none shadow-sm"
                       )}
                     >
-                      <div className="flex items-center justify-between gap-4 text-[9px] font-black uppercase tracking-wider opacity-65">
+                      <div className="flex items-center justify-between gap-4 text-[9px] font-black uppercase tracking-wider opacity-75">
                         <span>{msg.senderName}</span>
                         <span>
                           {msg.createdAt?.seconds 
@@ -216,11 +216,11 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                   value={chatMessageText}
                   onChange={(e) => onChangeChatMessageText(e.target.value)}
                   placeholder={language === 'ka' ? 'დაწერეთ შეთავაზება...' : 'Propose price or ask a question...'}
-                  className="flex-1 px-5 py-4 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:border-[#2e5bff] text-xs font-bold text-white placeholder:text-zinc-400"
+                  className={cn("flex-1 px-5 py-4 rounded-xl border text-xs font-bold focus:outline-none", currentTheme.input)}
                 />
                 <button 
                   type="submit"
-                  className="px-5 py-4 bg-[#2e5bff] text-white font-black text-xs uppercase tracking-wider rounded-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-[0_4px_12px_rgba(46,91,255,0.3)]"
+                  className={cn("px-5 py-4 font-black text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-all flex items-center gap-2 shadow-md cursor-pointer", currentTheme.accentBg)}
                 >
                   <span>{language === 'ka' ? 'გაგზავნა' : 'Send'}</span>
                 </button>

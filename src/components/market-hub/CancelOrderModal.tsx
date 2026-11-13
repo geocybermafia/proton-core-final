@@ -72,26 +72,26 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className={cn(
-            "relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-white/10 flex flex-col overflow-hidden z-10 shadow-2xl",
+            "relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-proton-border bg-proton-card flex flex-col overflow-hidden z-10 shadow-2xl",
             currentTheme.card
           )}
         >
           {/* Header */}
-          <div className="p-5 sm:p-6 border-b border-white/10 flex items-start justify-between shrink-0 bg-zinc-950/60 backdrop-blur-md">
+          <div className="p-5 sm:p-6 border-b border-proton-border flex items-start justify-between shrink-0 bg-proton-bg/60 backdrop-blur-md">
             <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
                 <AlertTriangle size={20} />
               </div>
               <div>
                 <h3 
                   id="cancel-order-dialog-title" 
-                  className="text-lg sm:text-xl font-black uppercase tracking-tight text-white leading-tight"
+                  className={cn("text-lg sm:text-xl font-black uppercase tracking-tight leading-tight", currentTheme.text)}
                 >
                   {language === 'ka' ? 'შეკვეთის გაუქმება?' : 'Cancel this order?'}
                 </h3>
                 <p 
                   id="cancel-order-dialog-desc" 
-                  className="text-[11px] font-bold text-red-400/90 tracking-wide mt-0.5"
+                  className="text-[11px] font-bold text-rose-500 tracking-wide mt-0.5"
                 >
                   {language === 'ka' ? 'ეს მოქმედება შეუქცევადია.' : 'This action cannot be undone.'}
                 </p>
@@ -102,7 +102,7 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
               type="button"
               onClick={onClose}
               disabled={isCancelling}
-              className="p-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl transition-colors disabled:opacity-40"
+              className="p-2.5 bg-proton-card hover:bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text rounded-xl transition-colors disabled:opacity-40 cursor-pointer"
               aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
             >
               <X size={16} />
@@ -111,34 +111,34 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
 
           {/* Body with Order Details */}
           <div className="p-5 sm:p-6 space-y-4 text-left">
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 space-y-2.5">
+            <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border space-y-2.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[9px] font-black uppercase tracking-widest text-white/40">
+                <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                   {language === 'ka' ? 'შეკვეთილი ნივთი' : 'Order Item'}
                 </span>
-                <span className="text-[9px] font-mono font-bold text-white/50">
+                <span className={cn("text-[9px] font-mono font-bold", currentTheme.muted)}>
                   #{order.id.substring(0, 10).toUpperCase()}
                 </span>
               </div>
 
-              <h4 className="text-sm sm:text-base font-black text-white uppercase tracking-tight leading-snug">
+              <h4 className={cn("text-sm sm:text-base font-black uppercase tracking-tight leading-snug", currentTheme.text)}>
                 {order.itemTitle}
               </h4>
 
-              <div className="flex items-center justify-between pt-1 border-t border-white/5 text-xs">
-                <span className="font-mono font-bold text-[#dfb257]">
+              <div className="flex items-center justify-between pt-1 border-t border-proton-border text-xs">
+                <span className={cn("font-mono font-bold", currentTheme.accent)}>
                   {order.amount} {order.currency}
                 </span>
 
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-white/60 uppercase">
+                <span className={cn("inline-flex items-center gap-1 text-[9px] font-bold uppercase", currentTheme.muted)}>
                   {isPhysical ? (
                     <>
-                      <Package size={12} className="text-cyan-400" />
+                      <Package size={12} className="text-cyan-500" />
                       {language === 'ka' ? 'ფიზიკური მიწოდება' : 'Physical Order'}
                     </>
                   ) : isService ? (
                     <>
-                      <Wrench size={12} className="text-amber-400" />
+                      <Wrench size={12} className="text-amber-500" />
                       {language === 'ka' ? 'სერვისი / ჯავშანი' : 'Service Booking'}
                     </>
                   ) : (
@@ -149,9 +149,9 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
             </div>
 
             {/* Explanatory Note */}
-            <div className="p-3.5 rounded-xl bg-red-500/[0.06] border border-red-500/15 flex items-start gap-2.5">
-              <ShieldAlert size={16} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-zinc-300 font-medium leading-relaxed">
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-start gap-2.5">
+              <ShieldAlert size={16} className="text-rose-500 shrink-0 mt-0.5" />
+              <p className={cn("text-[11px] font-medium leading-relaxed", currentTheme.subtext)}>
                 {isSeller
                   ? (language === 'ka'
                     ? (isPhysical 
@@ -172,12 +172,12 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="p-5 sm:p-6 border-t border-white/10 bg-zinc-950/40 flex items-center justify-end gap-3 shrink-0">
+          <div className="p-5 sm:p-6 border-t border-proton-border bg-proton-bg/60 flex items-center justify-end gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={isCancelling}
-              className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white/80 hover:text-white bg-white/10 hover:bg-white/15 transition-all disabled:opacity-50"
+              className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-proton-text bg-proton-card hover:bg-proton-bg border border-proton-border transition-all disabled:opacity-50 cursor-pointer"
             >
               {language === 'ka' ? 'შეკვეთის შენარჩუნება' : 'Keep Order'}
             </button>
@@ -186,7 +186,7 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
               type="button"
               onClick={onConfirmCancel}
               disabled={isCancelling}
-              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-red-200 hover:text-white bg-red-600/80 hover:bg-red-600 border border-red-500/40 shadow-lg shadow-red-900/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95"
+              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-rose-600 hover:bg-rose-500 border border-rose-500/40 shadow-lg shadow-rose-900/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
             >
               {isCancelling ? (
                 <>

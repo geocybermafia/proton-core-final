@@ -46,11 +46,11 @@ export const ListingCardImage = React.memo(function ListingCardImage({
   }, [src]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-zinc-950">
+    <div className="w-full h-full relative overflow-hidden bg-proton-bg">
       {/* Skeleton placeholder while loading image */}
       {!isLoaded && !hasError && src && (
-        <div className="absolute inset-0 z-0 animate-pulse bg-zinc-800/60 flex items-center justify-center">
-          <div className="w-7 h-7 rounded-full border-2 border-white/10 border-t-[#dfb257]/40 animate-spin opacity-40" />
+        <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/40 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full border-2 border-proton-border border-t-proton-accent animate-spin opacity-60" />
         </div>
       )}
 
@@ -71,17 +71,17 @@ export const ListingCardImage = React.memo(function ListingCardImage({
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-zinc-900/90">
-          <ShoppingBag size={24} className={cn("opacity-15", themeAccent)} />
+        <div className="w-full h-full flex items-center justify-center bg-proton-bg/80">
+          <ShoppingBag size={24} className={cn("opacity-25", themeAccent)} />
         </div>
       )}
 
       {/* Sold Item Visual Overlay */}
       {isSold && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-[2px] bg-black/60 pointer-events-none select-none">
-          <div className="px-3.5 py-1.5 rounded-xl bg-zinc-950/95 border border-red-500/30 shadow-[0_8px_30px_rgba(0,0,0,0.8)] flex items-center gap-2 transform -rotate-3">
-            <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 animate-pulse" />
-            <span className="text-[11px] font-black tracking-widest text-zinc-100 uppercase font-mono">
+        <div className="absolute inset-0 z-20 flex items-center justify-center backdrop-blur-[2px] bg-black/55 pointer-events-none select-none">
+          <div className="px-3.5 py-1.5 rounded-xl bg-proton-card/95 border border-rose-500/40 shadow-xl flex items-center gap-2 transform -rotate-3">
+            <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+            <span className="text-[11px] font-black tracking-widest text-proton-text uppercase font-mono">
               {language === 'ka' ? 'გაყიდულია' : 'SOLD OUT'}
             </span>
           </div>
@@ -161,11 +161,11 @@ export const MarketListingCard = React.memo(function MarketListingCard({
       key={listing.id}
       transition={{ delay: idx * 0.03 }}
       className={cn(
-        "group rounded-xl overflow-hidden transition-all duration-300 flex flex-col relative border bg-zinc-950/40 hover:shadow-[0_8px_30px_rgba(223,178,87,0.05)] hover:-translate-y-1 hover:bg-zinc-950/60",
+        "group rounded-xl overflow-hidden transition-all duration-300 flex flex-col relative border hover:shadow-xl hover:-translate-y-1",
+        currentTheme.card,
         isItemSold 
-          ? "border-zinc-800/50 opacity-85" 
-          : "border-zinc-900/40 hover:border-[#dfb257]/30",
-        currentTheme.card
+          ? "opacity-85" 
+          : "hover:border-proton-accent/45"
       )}
     >
       <div 
@@ -173,7 +173,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           if ((e.target as HTMLElement).closest('button, [role="button"], a, input')) return;
           onSelectListing(listing);
         }}
-        className="w-full aspect-[4/3] bg-zinc-900/80 overflow-hidden relative cursor-pointer"
+        className="w-full aspect-[4/3] bg-proton-bg overflow-hidden relative cursor-pointer"
       >
         <ListingCardImage
           src={imageUrl}
@@ -185,16 +185,16 @@ export const MarketListingCard = React.memo(function MarketListingCard({
         
         {/* Badge Overlay: Max 2 clean badges with explicit max width and text truncation */}
         <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 max-w-[calc(100%-105px)] overflow-hidden pointer-events-none">
-          <div className="px-2 py-1 bg-black/85 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[130px]">
+          <div className="px-2 py-1 bg-proton-card/90 backdrop-blur-md rounded-lg border border-proton-border flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[130px]">
             <span className="text-[10px] leading-none shrink-0">{CATEGORY_EMOJIS[listing.category] || '🏷️'}</span>
-            <span className="text-[9px] font-black text-[#dfb257] uppercase tracking-wider truncate block">
+            <span className="text-[9px] font-black text-proton-accent uppercase tracking-wider truncate block">
               {t.market.categories[listing.category] || listing.category}
             </span>
           </div>
           {(listing.city || listing.country) && (
-            <div className="px-2 py-1 bg-black/85 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[100px]">
+            <div className="px-2 py-1 bg-proton-card/90 backdrop-blur-md rounded-lg border border-proton-border flex items-center gap-1 shadow-sm shrink min-w-0 max-w-[100px]">
               <span className="text-[10px] leading-none shrink-0">{WORLD_COUNTRIES.find(c => c.code === listing.country)?.flag || '🌐'}</span>
-              <span className="text-[9px] font-black text-white/90 uppercase tracking-widest truncate block">
+              <span className="text-[9px] font-black text-proton-text uppercase tracking-widest truncate block">
                 {listing.city || listing.country}
               </span>
             </div>
@@ -213,8 +213,8 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             className={cn(
               "min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center backdrop-blur-md rounded-xl border transition-all active:scale-90 shadow-md",
               isFavorite
-                ? "bg-red-500/20 border-red-500/30 text-red-500"
-                : "bg-black/80 border-white/10 text-zinc-400 hover:text-red-500 hover:border-white/20"
+                ? "bg-rose-500/90 border-rose-500 text-white"
+                : "bg-proton-card/90 border-proton-border text-proton-muted hover:text-rose-500 hover:border-rose-500/40"
             )}
             title={language === 'ka' ? 'რჩეულებში დამატება' : 'Add to Favorites'}
             aria-label={language === 'ka' ? 'რჩეულებში დამატება' : 'Add to Favorites'}
@@ -230,7 +230,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                   e.preventDefault();
                   onStartEdit(listing);
                 }}
-                className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-xl border border-white/10 text-white transition-all hover:bg-white hover:text-black active:scale-90 shadow-md"
+                className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center bg-proton-card/90 backdrop-blur-md rounded-xl border border-proton-border text-proton-text transition-all hover:bg-proton-accent hover:text-proton-on-accent hover:border-proton-accent active:scale-90 shadow-md"
                 title={language === 'ka' ? 'რედაქტირება' : 'Edit'}
                 aria-label={language === 'ka' ? 'რედაქტირება' : 'Edit'}
               >
@@ -243,7 +243,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                   e.preventDefault();
                   onDeleteListing(listing.id);
                 }}
-                className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center bg-black/80 backdrop-blur-md rounded-xl border border-white/10 text-white transition-all hover:bg-rose-500 hover:border-rose-500/30 active:scale-90 shadow-md"
+                className="min-w-[44px] min-h-[44px] w-11 h-11 flex items-center justify-center bg-proton-card/90 backdrop-blur-md rounded-xl border border-proton-border text-rose-500 transition-all hover:bg-rose-500 hover:text-white hover:border-rose-500 active:scale-90 shadow-md"
                 title={language === 'ka' ? 'წაშლა' : 'Delete'}
                 aria-label={language === 'ka' ? 'წაშლა' : 'Delete'}
               >
@@ -263,11 +263,11 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               e.stopPropagation();
               onSelectListing(listing);
             }}
-            className="text-sm sm:text-base font-bold tracking-tight text-white hover:text-[#dfb257] cursor-pointer transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] leading-normal pb-0.5 mb-1"
+            className="text-sm sm:text-base font-bold tracking-tight text-proton-text hover:text-proton-accent cursor-pointer transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.75rem] leading-normal pb-0.5 mb-1"
           >
             {displayTitle}
           </h2>
-          <p className="text-xs font-sans text-zinc-400 font-normal leading-relaxed line-clamp-2 min-h-[2.25rem]">
+          <p className="text-xs font-sans text-proton-muted font-normal leading-relaxed line-clamp-2 min-h-[2.25rem]">
             {language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description}
           </p>
         </div>
@@ -276,7 +276,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           {/* Price Section: Scannable, prominent, flex-shrink controlled with no line wraps */}
           <div className="flex items-end justify-between gap-2 mb-3 min-w-0">
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold mb-0.5 block font-mono">
+              <span className="text-[9px] uppercase tracking-wider text-proton-muted font-bold mb-0.5 block font-mono">
                 {isSameCurrency
                   ? t.market.price
                   : (language === 'ka' ? 'სავარაუდო ფასი' : 'Est. Price')}
@@ -284,12 +284,12 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               {isSameCurrency ? (
                 <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
                   <span className={cn(
-                    "font-black tracking-tight text-[#dfb257] font-mono tabular-nums leading-none truncate",
+                    "font-black tracking-tight text-proton-accent font-mono tabular-nums leading-none truncate",
                     isLargePrice ? "text-base sm:text-lg" : "text-lg sm:text-xl md:text-2xl"
                   )}>
                     {formatCurrencyAmount(listing.price, originalCurrency)}
                   </span>
-                  <span className="text-xs font-bold text-zinc-400 font-mono ml-0.5 shrink-0 whitespace-nowrap">
+                  <span className="text-xs font-bold text-proton-muted font-mono ml-0.5 shrink-0 whitespace-nowrap">
                     {originalCurrency}
                   </span>
                 </div>
@@ -297,13 +297,13 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                 <div className="space-y-0.5 min-w-0">
                   <div className="flex items-baseline gap-1 whitespace-nowrap min-w-0 overflow-hidden">
                     <span className={cn(
-                      "font-black tracking-tight text-[#dfb257] font-mono tabular-nums leading-none truncate",
+                      "font-black tracking-tight text-proton-accent font-mono tabular-nums leading-none truncate",
                       isLargePrice ? "text-base sm:text-lg" : "text-lg sm:text-xl"
                     )}>
                       {formattedApprox}
                     </span>
                   </div>
-                  <p className="text-[11px] font-semibold text-zinc-300 font-mono tabular-nums truncate">
+                  <p className="text-[11px] font-semibold text-proton-text/80 font-mono tabular-nums truncate">
                     {language === 'ka' ? 'ორიგინალი ფასი:' : 'Original price:'} {formattedOriginal}
                   </p>
                 </div>
@@ -311,11 +311,11 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             </div>
 
             {listing.isNegotiable ? (
-              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+              <span className="text-[9px] font-bold text-proton-muted uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                 {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
               </span>
             ) : listing.listingType === 'service' || listing.category === 'service' ? (
-              <span className="text-[9px] font-bold text-[#dfb257] uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+              <span className="text-[9px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                 {language === 'ka' ? 'სერვისი' : 'Service'}
               </span>
             ) : null}
@@ -333,27 +333,27 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               className="flex items-center gap-2 flex-1 min-w-0 group/vendor cursor-pointer"
               title={language === 'ka' ? 'გამყიდველის პროფილი და შეფასებები' : 'Vendor Profile & Reviews'}
             >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative shrink-0 bg-zinc-900 text-white border border-zinc-800 group-hover/vendor:border-[#dfb257]/50 transition-all">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] relative shrink-0 bg-proton-bg text-proton-text border border-proton-border group-hover/vendor:border-proton-accent/50 transition-all">
                 {(listing.sellerName || 'Seller').substring(0, 2).toUpperCase()}
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border-2 border-zinc-950" />
+                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border-2 border-proton-card" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1 min-w-0">
-                  <span className="text-xs font-bold tracking-wide truncate block text-zinc-200 group-hover/vendor:text-[#dfb257] transition-colors">
+                  <span className="text-xs font-bold tracking-wide truncate block text-proton-text group-hover/vendor:text-proton-accent transition-colors">
                     {listing.sellerName}
                   </span>
-                  <ShieldCheck size={12} className="shrink-0 text-[#dfb257]" />
+                  <ShieldCheck size={12} className="shrink-0 text-proton-accent" />
                 </div>
                 <div className="flex items-center mt-0.5 min-w-0">
                   {sellerRating && sellerRating.count > 0 ? (
                     <div className="flex items-center gap-0.5">
-                      <Star size={10} className="fill-[#dfb257] text-[#dfb257]" />
-                      <span className="text-[10px] font-black text-[#dfb257]">
+                      <Star size={10} className="fill-amber-400 text-amber-500" />
+                      <span className="text-[10px] font-black text-proton-accent">
                         {sellerRating.avg.toFixed(1)}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
+                    <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest font-mono">
                       {language === 'ka' ? 'ახალი' : 'New'}
                     </span>
                   )}
@@ -370,7 +370,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                   e.preventDefault();
                   onStartChat(listing);
                 }}
-                className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-white/5 border border-white/10 text-white/70 hover:text-[#dfb257] hover:bg-white/10 transition-all flex items-center justify-center shrink-0 active:scale-95"
+                className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl bg-proton-bg/70 border border-proton-border text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 hover:border-proton-accent/40 transition-all flex items-center justify-center shrink-0 active:scale-95"
                 title={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
                 aria-label={language === 'ka' ? 'კონტაქტი გამყიდველთან' : 'Contact Vendor'}
               >
@@ -391,7 +391,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     onStartEdit(listing);
                   }}
                   className={cn(
-                    "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-white/10 hover:bg-white/10 text-white active:scale-[0.98]",
+                    "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]",
                     currentTheme.accentBg
                   )}
                 >
@@ -405,7 +405,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     e.preventDefault();
                     onDeleteListing(listing.id);
                   }}
-                  className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
+                  className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/30 text-rose-500 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
                   title={language === 'ka' ? 'წაშლა' : 'Delete'}
                   aria-label={language === 'ka' ? 'წაშლა' : 'Delete'}
                 >
@@ -417,9 +417,9 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                 <button 
                   type="button"
                   disabled
-                  className="flex-1 min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-zinc-900/80 text-zinc-500 border border-zinc-800 flex items-center justify-center gap-2 cursor-not-allowed select-none"
+                  className="flex-1 min-h-[44px] py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-proton-bg text-proton-muted border border-proton-border flex items-center justify-center gap-2 cursor-not-allowed select-none"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70" />
                   {language === 'ka' ? 'გაყიდულია' : 'SOLD'}
                 </button>
                 {isAdmin && (
@@ -430,7 +430,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                       e.preventDefault();
                       onDeleteListing(listing.id);
                     }}
-                    className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
+                    className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/30 text-rose-500 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
                     title={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
                     aria-label={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
                   >
@@ -448,9 +448,8 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     onStartChat(listing);
                   }}
                   className={cn(
-                    "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-[#dfb257]/20 active:scale-[0.98]",
-                    currentTheme.accentBg, 
-                    currentTheme.accentBg?.includes('#dfb257') ? "text-zinc-950 font-black" : "text-white"
+                    "flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-[0.98]",
+                    currentTheme.accentBg
                   )}
                 >
                   <MessageCircle size={15} />
@@ -463,7 +462,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     e.preventDefault();
                     onBuyNow(listing);
                   }}
-                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-white/10 hover:bg-white/20 text-white border border-white/15 focus:outline-none flex items-center justify-center shrink-0 cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-sm active:scale-90 hover:scale-105 bg-proton-bg hover:bg-proton-accent/15 text-proton-text hover:text-proton-accent border border-proton-border hover:border-proton-accent/40 focus:outline-none flex items-center justify-center shrink-0 cursor-pointer"
                   title={language === 'ka' ? 'შეკვეთის შეთანხმება' : 'Order Agreement'}
                   aria-label={language === 'ka' ? 'შეკვეთის შეთანხმება' : 'Order Agreement'}
                 >
@@ -476,7 +475,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                     e.preventDefault();
                     onAddToCart(listing);
                   }}
-                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-md active:scale-90 hover:scale-105 bg-[#dfb257] text-[#070708] hover:bg-[#ebd083] focus:outline-none flex items-center justify-center border border-[#dfb257]/30 shrink-0 cursor-pointer"
+                  className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl transition-all shadow-sm active:scale-90 hover:scale-105 bg-proton-accent/15 hover:bg-proton-accent text-proton-accent hover:text-proton-on-accent focus:outline-none flex items-center justify-center border border-proton-accent/35 shrink-0 cursor-pointer"
                   title={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                   aria-label={language === 'ka' ? 'კალათაში დამატება' : 'Add to Cart'}
                 >
@@ -490,7 +489,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                       e.preventDefault();
                       onDeleteListing(listing.id);
                     }}
-                    className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
+                    className="min-w-[44px] min-h-[44px] w-11 h-11 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/30 text-rose-500 rounded-xl transition-all flex items-center justify-center shrink-0 active:scale-90"
                     title={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
                     aria-label={language === 'ka' ? 'მოდერაცია: წაშლა' : 'Moderate: Delete Listing'}
                   >

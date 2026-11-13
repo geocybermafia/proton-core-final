@@ -30,25 +30,25 @@ export function LegalView({ type, language, t, currentTheme, onBack }: LegalView
 
       <div className={cn("p-12 md:p-20 rounded-[48px] border", currentTheme.card)}>
         <div className="flex items-center gap-6 mb-12">
-          <div className={cn("p-5 rounded-3xl bg-white/5", currentTheme.accent)}>
+          <div className={cn("p-5 rounded-3xl bg-proton-bg border border-proton-border", currentTheme.accent)}>
             {type === 'privacy' ? <Shield size={32} /> : <FileText size={32} />}
           </div>
           <div>
-            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter text-white">
+            <h1 className={cn("text-3xl md:text-5xl font-black uppercase tracking-tighter", currentTheme.text)}>
               {title}
             </h1>
-            <p className={cn("text-[10px] font-black uppercase tracking-[0.3em] opacity-50 mt-2", currentTheme.muted)}>
+            <p className={cn("text-[10px] font-black uppercase tracking-[0.3em] opacity-70 mt-2", currentTheme.muted)}>
               {language === 'ka' ? 'ოფიციალური დოკუმენტაცია' : 'Official Documentation'}
             </p>
           </div>
         </div>
 
         <div className="space-y-8 leading-relaxed">
-          <p className={cn("text-lg font-medium opacity-80", currentTheme.muted)}>
+          <p className={cn("text-lg font-medium opacity-90", currentTheme.muted)}>
             {content}
           </p>
-          <div className="pt-8 border-t border-white/5">
-            <h3 className="text-white font-black uppercase text-xs mb-4 tracking-widest">
+          <div className="pt-8 border-t border-proton-border">
+            <h3 className={cn("font-black uppercase text-xs mb-4 tracking-widest", currentTheme.text)}>
               {language === 'ka' ? 'ბოლო განახლება' : 'Last Updated'}
             </h3>
             <p className={cn("text-xs font-bold", currentTheme.muted)}>

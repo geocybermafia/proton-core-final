@@ -198,22 +198,22 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
         timestamp: shippedTimestamp, // Actual timestamp from trackingInfo.shippedAt if present
         icon: <Truck size={16} />,
         metadata: hasTrackingData && (isShippedCurrent || isShippedCompleted) ? (
-          <div className="mt-2 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[11px] space-y-1">
+          <div className="mt-2 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-500 text-[11px] space-y-1">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <span className="text-white/60 font-medium">
+              <span className={cn("font-medium", currentTheme.muted)}>
                 {order.trackingInfo?.carrier || (language === 'ka' ? 'გადამზიდი' : 'Carrier')}:
               </span>
               {order.trackingInfo?.trackingNumber && (
-                <div className="flex items-center gap-1.5 font-mono text-white">
+                <div className={cn("flex items-center gap-1.5 font-mono", currentTheme.text)}>
                   <span className="font-bold">{order.trackingInfo.trackingNumber}</span>
                   <button
                     type="button"
                     onClick={() => handleCopy(order.trackingInfo!.trackingNumber!, language === 'ka' ? 'თრექინგ კოდი' : 'Tracking Number')}
-                    className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+                    className="p-1 rounded hover:bg-proton-bg text-proton-muted hover:text-proton-text transition-colors cursor-pointer"
                     title="Copy tracking code"
                   >
                     {copiedId === (language === 'ka' ? 'თრექინგ კოდი' : 'Tracking Number') ? (
-                      <Check size={12} className="text-green-400" />
+                      <Check size={12} className="text-emerald-500" />
                     ) : (
                       <Copy size={12} />
                     )}
@@ -332,7 +332,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
     const s = order.status;
     if (s === 'completed') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
           <CheckCircle2 size={12} />
           {language === 'ka' ? 'დასრულებული' : 'Completed'}
         </span>
@@ -340,7 +340,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
     }
     if (s === 'cancelled') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/30">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/30">
           <XCircle size={12} />
           {language === 'ka' ? 'გაუქმებული' : 'Cancelled'}
         </span>
@@ -348,7 +348,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
     }
     if (s === 'shipped') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/35 shadow-sm shadow-indigo-900/30">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/15 text-indigo-500 border border-indigo-500/35">
           <Truck size={12} className="animate-bounce" />
           {language === 'ka' ? 'გაგზავნილია' : 'Shipped'}
         </span>
@@ -356,7 +356,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
     }
     if (s === 'processing') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">
           <Package size={12} />
           {language === 'ka' ? 'დამუშავებაში' : 'Processing'}
         </span>
@@ -364,7 +364,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
     }
     if (s === 'in_progress') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-300 border border-blue-500/30">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-500 border border-blue-500/30">
           <Wrench size={12} className="animate-pulse" />
           {language === 'ka' ? 'მიმდინარე' : 'In Progress'}
         </span>
@@ -372,14 +372,14 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
     }
     if (s === 'booked') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30">
           <Clock size={12} />
           {language === 'ka' ? 'დაჯავშნილია' : 'Booked'}
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30">
         <Clock size={12} className="animate-pulse" />
         {language === 'ka' ? 'დამუშავების მოლოდინში' : 'Pending'}
       </span>
@@ -413,37 +413,37 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
           className={cn(
-            "relative w-full max-w-3xl my-auto rounded-[24px] sm:rounded-[32px] border border-white/10 flex flex-col max-h-[92vh] overflow-hidden z-10 shadow-2xl bg-zinc-950/95",
+            "relative w-full max-w-3xl my-auto rounded-[24px] sm:rounded-[32px] border border-proton-border flex flex-col max-h-[92vh] overflow-hidden z-10 shadow-2xl bg-proton-card",
             currentTheme.card
           )}
         >
           {/* Header Bar */}
-          <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between shrink-0 bg-zinc-950/80 backdrop-blur-lg">
+          <div className="p-4 sm:p-6 border-b border-proton-border flex items-center justify-between shrink-0 bg-proton-bg/60 backdrop-blur-lg">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/80 shrink-0">
+              <div className={cn("w-10 h-10 rounded-2xl bg-proton-card border border-proton-border flex items-center justify-center shrink-0", currentTheme.text)}>
                 {isPhysical ? (
-                  <Truck size={20} className="text-cyan-400" />
+                  <Truck size={20} className="text-cyan-500" />
                 ) : isService ? (
-                  <Wrench size={20} className="text-amber-400" />
+                  <Wrench size={20} className="text-amber-500" />
                 ) : (
-                  <Package size={20} className="text-[#dfb257]" />
+                  <Package size={20} className={currentTheme.accent} />
                 )}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h2 
                     id="order-details-title"
-                    className="text-base sm:text-lg font-black uppercase tracking-tight text-white truncate"
+                    className={cn("text-base sm:text-lg font-black uppercase tracking-tight truncate", currentTheme.text)}
                   >
                     {language === 'ka' ? 'შეკვეთის დეტალები' : 'Order Details'}
                   </h2>
-                  <span className="hidden sm:inline-block font-mono text-[10px] text-white/40">
+                  <span className={cn("hidden sm:inline-block font-mono text-[10px]", currentTheme.muted)}>
                     #{order.id.substring(0, 10)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10px] font-mono text-white/50 flex items-center gap-1">
-                    <Calendar size={11} className="text-white/40" />
+                  <span className={cn("text-[10px] font-mono flex items-center gap-1", currentTheme.muted)}>
+                    <Calendar size={11} />
                     {orderCreatedTimestamp || 'N/A'}
                   </span>
                 </div>
@@ -455,7 +455,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                 type="button"
                 onClick={onClose}
                 disabled={isConfirmingDelivery || isUpdatingStatus}
-                className="p-2 sm:p-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl transition-colors cursor-pointer disabled:opacity-40"
+                className="p-2 sm:p-2.5 bg-proton-card hover:bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text rounded-xl transition-colors cursor-pointer disabled:opacity-40"
                 aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
               >
                 <X size={18} />
@@ -464,16 +464,16 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
           </div>
 
           {/* Scrollable Content Body */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 text-left scrollbar-thin scrollbar-thumb-white/10">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 text-left">
             
             {/* 1. Primary Order Summary Card */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-4">
+            <div className="p-4 sm:p-5 rounded-2xl bg-proton-bg/60 border border-proton-border space-y-4">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="space-y-1.5 max-w-xl">
                   <div className="flex items-center gap-2 flex-wrap">
                     {getStatusBadge()}
 
-                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-white/60">
+                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-proton-card border border-proton-border text-proton-muted">
                       {isPhysical 
                         ? (language === 'ka' ? 'ფიზიკური პროდუქტი' : 'Physical Product')
                         : isService 
@@ -482,17 +482,17 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                     </span>
                   </div>
 
-                  <h3 className="text-lg sm:text-xl font-black text-white leading-snug">
+                  <h3 className={cn("text-lg sm:text-xl font-black leading-snug", currentTheme.text)}>
                     {order.itemTitle}
                   </h3>
                 </div>
 
                 <div className="text-right sm:self-center">
-                  <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-[#dfb257]">
+                  <div className={cn("text-2xl sm:text-3xl font-black font-mono tracking-tight", currentTheme.accent)}>
                     {order.amount} {order.currency}
                   </div>
                   {order.quantity && order.quantity > 0 && (
-                    <div className="text-[10px] font-mono text-white/50 font-bold">
+                    <div className={cn("text-[10px] font-mono font-bold", currentTheme.muted)}>
                       {language === 'ka' ? 'რაოდენობა:' : 'Quantity:'} {order.quantity}
                     </div>
                   )}
@@ -500,25 +500,25 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
               </div>
 
               {/* Order Metadata Strip */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-white/5 text-[11px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-3 border-t border-proton-border text-[11px]">
                 {/* Order ID with Copy */}
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-proton-card border border-proton-border">
                   <div className="flex flex-col min-w-0 pr-2">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                       {language === 'ka' ? 'შეკვეთის ID' : 'Order ID'}
                     </span>
-                    <span className="font-mono text-white/80 font-bold truncate">
+                    <span className={cn("font-mono font-bold truncate", currentTheme.text)}>
                       {order.id}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopy(order.id, language === 'ka' ? 'შეკვეთის ID' : 'Order ID')}
-                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors shrink-0"
+                    className="p-1.5 rounded-lg bg-proton-bg hover:bg-proton-accent/10 text-proton-muted hover:text-proton-text border border-proton-border transition-colors shrink-0 cursor-pointer"
                     title="Copy Order ID"
                   >
                     {copiedId === (language === 'ka' ? 'შეკვეთის ID' : 'Order ID') ? (
-                      <Check size={13} className="text-emerald-400" />
+                      <Check size={13} className="text-emerald-500" />
                     ) : (
                       <Copy size={13} />
                     )}
@@ -526,13 +526,13 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                 </div>
 
                 {/* Seller Info */}
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-proton-card border border-proton-border">
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                       {language === 'ka' ? 'გამყიდველი' : 'Merchant / Seller'}
                     </span>
-                    <span className="text-white/80 font-bold truncate flex items-center gap-1.5">
-                      <Store size={12} className="text-white/40 shrink-0" />
+                    <span className={cn("font-bold truncate flex items-center gap-1.5", currentTheme.text)}>
+                      <Store size={12} className="text-proton-muted shrink-0" />
                       {sellerDisplayName || (language === 'ka' ? 'ავტორიზებული გამყიდველი' : 'Marketplace Seller')}
                     </span>
                   </div>
@@ -542,26 +542,26 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                         type="button"
                         id={`card-seller-message-btn-${order.id}`}
                         onClick={() => onMessageSeller(order)}
-                        className="px-2.5 py-1 rounded-lg bg-[#dfb257]/15 hover:bg-[#dfb257]/25 text-[#dfb257] border border-[#dfb257]/30 text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg bg-proton-accent/15 hover:bg-proton-accent/25 text-proton-accent border border-proton-accent/30 text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                         title={language === 'ka' ? 'მიწერეთ გამყიდველს' : 'Message Seller'}
                       >
                         <MessageSquare size={11} />
                         <span>{language === 'ka' ? 'მიწერა' : 'Message'}</span>
                       </button>
                     )}
-                    <span className="font-mono text-[9px] text-white/30">
+                    <span className={cn("font-mono text-[9px]", currentTheme.muted)}>
                       #{order.sellerId.substring(0, 6)}
                     </span>
                   </div>
                 </div>
 
                 {/* Order Date */}
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/40 border border-white/5 sm:col-span-2 md:col-span-1">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-proton-card border border-proton-border sm:col-span-2 md:col-span-1">
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-white/40">
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                       {language === 'ka' ? 'გაფორმების თარიღი' : 'Order Date'}
                     </span>
-                    <span className="font-mono text-white/80 font-medium">
+                    <span className={cn("font-mono font-medium", currentTheme.text)}>
                       {orderCreatedTimestamp || 'N/A'}
                     </span>
                   </div>
@@ -570,15 +570,15 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
             </div>
 
             {/* 2. Visual Chronological Fulfillment Timeline */}
-            <div className="p-4 sm:p-6 rounded-2xl bg-zinc-950/60 border border-white/10 space-y-4">
+            <div className="p-4 sm:p-6 rounded-2xl bg-proton-bg/60 border border-proton-border space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-[#dfb257]" />
-                  <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-white">
+                  <div className="w-2 h-2 rounded-full bg-proton-accent" />
+                  <h4 className={cn("text-xs sm:text-sm font-black uppercase tracking-wider", currentTheme.text)}>
                     {language === 'ka' ? 'შესრულების ქრონოლოგიური ხაზი' : 'Fulfillment Timeline'}
                   </h4>
                 </div>
-                <span className="text-[9px] font-mono text-white/40">
+                <span className={cn("text-[9px] font-mono", currentTheme.muted)}>
                   {isCancelled 
                     ? (language === 'ka' ? 'შეწყვეტილია' : 'Terminated') 
                     : (order.status === 'completed' ? (language === 'ka' ? 'დასრულებული' : 'Completed') : (language === 'ka' ? 'აქტიური' : 'In Progress'))}
@@ -601,7 +601,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                         <div 
                           className={cn(
                             "absolute left-4 top-8 -bottom-6 w-0.5 -translate-x-1/2 transition-colors",
-                            isCompleted ? "bg-emerald-500/40" : "bg-white/10"
+                            isCompleted ? "bg-emerald-500/40" : "bg-proton-border"
                           )} 
                         />
                       )}
@@ -610,10 +610,10 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       <div 
                         className={cn(
                           "relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border transition-all",
-                          isCompleted && "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-md shadow-emerald-950/30",
-                          isCurrent && "bg-cyan-500/20 border-cyan-400 text-cyan-300 ring-4 ring-cyan-500/15 animate-pulse",
-                          isTerminalCancelled && "bg-red-500/20 border-red-500/40 text-red-400 ring-4 ring-red-500/15",
-                          isUpcoming && "bg-white/5 border-white/10 text-white/30"
+                          isCompleted && "bg-emerald-500/15 border-emerald-500/40 text-emerald-500",
+                          isCurrent && "bg-cyan-500/20 border-cyan-500 text-cyan-500 ring-4 ring-cyan-500/15 animate-pulse",
+                          isTerminalCancelled && "bg-rose-500/20 border-rose-500/40 text-rose-500 ring-4 ring-rose-500/15",
+                          isUpcoming && "bg-proton-card border-proton-border text-proton-muted opacity-60"
                         )}
                       >
                         {isCompleted ? (
@@ -630,17 +630,17 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                         <div className="flex items-baseline justify-between gap-2 flex-wrap">
                           <h5 className={cn(
                             "text-xs sm:text-sm font-bold tracking-tight",
-                            isCompleted && "text-white",
-                            isCurrent && "text-cyan-300 font-black",
-                            isTerminalCancelled && "text-red-400 font-black",
-                            isUpcoming && "text-white/40"
+                            isCompleted && currentTheme.text,
+                            isCurrent && "text-cyan-500 font-black",
+                            isTerminalCancelled && "text-rose-500 font-black",
+                            isUpcoming && cn(currentTheme.muted, "opacity-65")
                           )}>
                             {step.title}
                           </h5>
 
                           {/* Render Actual Timestamp ONLY when database contains it */}
                           {step.timestamp && (
-                            <span className="font-mono text-[10px] text-white/50 font-medium">
+                            <span className={cn("font-mono text-[10px] font-medium", currentTheme.muted)}>
                               {step.timestamp}
                             </span>
                           )}
@@ -648,7 +648,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
 
                         <p className={cn(
                           "text-[11px] leading-relaxed mt-0.5",
-                          isCurrent ? "text-zinc-200" : isUpcoming ? "text-white/30" : "text-zinc-400"
+                          isCurrent ? currentTheme.text : isUpcoming ? cn(currentTheme.muted, "opacity-65") : currentTheme.muted
                         )}>
                           {step.description}
                         </p>
@@ -663,11 +663,11 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
 
             {/* 3. Physical Shipping & Tracking Details (for physical products) */}
             {isPhysical && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-3">
+              <div className="p-4 sm:p-5 rounded-2xl bg-proton-bg/60 border border-proton-border space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Truck size={14} className="text-cyan-400" />
-                    <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                    <Truck size={14} className="text-cyan-500" />
+                    <h4 className={cn("text-xs font-black uppercase tracking-wider", currentTheme.text)}>
                       {language === 'ka' ? 'მიწოდების და გადაზიდვის დეტალები' : 'Shipping & Delivery Details'}
                     </h4>
                   </div>
@@ -675,7 +675,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                   <button
                     type="button"
                     onClick={() => setShowShippingDetails(!showShippingDetails)}
-                    className="text-[10px] font-bold text-white/50 hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
+                    className="text-[10px] font-bold text-proton-muted hover:text-proton-text flex items-center gap-1 cursor-pointer transition-colors"
                   >
                     <span>{showShippingDetails ? (language === 'ka' ? 'დამალვა' : 'Hide') : (language === 'ka' ? 'ჩვენება' : 'Show')}</span>
                     {showShippingDetails ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -694,11 +694,11 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       {order.trackingInfo && (order.trackingInfo.carrier || order.trackingInfo.trackingNumber) && (
                         <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/25 space-y-2">
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-300">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500">
                               {language === 'ka' ? 'საკურიერო გზავნილი' : 'Courier Tracking'}
                             </span>
                             {shippedTimestamp && (
-                              <span className="font-mono text-[10px] text-white/60">
+                              <span className={cn("font-mono text-[10px]", currentTheme.muted)}>
                                 {language === 'ka' ? 'გაიგზავნა:' : 'Shipped:'} {shippedTimestamp}
                               </span>
                             )}
@@ -706,25 +706,25 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             {order.trackingInfo.carrier && (
-                              <div className="text-zinc-200">
-                                <span className="text-white/40 block text-[9px] uppercase font-bold">{language === 'ka' ? 'გადამზიდი კომპანია' : 'Carrier'}</span>
-                                <span className="font-bold text-white">{order.trackingInfo.carrier}</span>
+                              <div className={currentTheme.subtext}>
+                                <span className={cn("block text-[9px] uppercase font-bold", currentTheme.muted)}>{language === 'ka' ? 'გადამზიდი კომპანია' : 'Carrier'}</span>
+                                <span className={cn("font-bold", currentTheme.text)}>{order.trackingInfo.carrier}</span>
                               </div>
                             )}
 
                             {order.trackingInfo.trackingNumber && (
                               <div>
-                                <span className="text-white/40 block text-[9px] uppercase font-bold">{language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Number'}</span>
+                                <span className={cn("block text-[9px] uppercase font-bold", currentTheme.muted)}>{language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Number'}</span>
                                 <div className="flex items-center gap-2">
-                                  <span className="font-mono font-bold text-cyan-300 break-all">{order.trackingInfo.trackingNumber}</span>
+                                  <span className="font-mono font-bold text-cyan-500 break-all">{order.trackingInfo.trackingNumber}</span>
                                   <button
                                     type="button"
                                     onClick={() => handleCopy(order.trackingInfo!.trackingNumber!, language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Number')}
-                                    className="p-1 rounded hover:bg-white/10 text-white/50 hover:text-white"
+                                    className="p-1 rounded hover:bg-proton-bg text-proton-muted hover:text-proton-text cursor-pointer"
                                     title="Copy tracking number"
                                   >
                                     {copiedId === (language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Number') ? (
-                                      <Check size={12} className="text-green-400" />
+                                      <Check size={12} className="text-emerald-500" />
                                     ) : (
                                       <Copy size={12} />
                                     )}
@@ -738,46 +738,46 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
 
                       {/* Recipient and Shipping Address */}
                       {order.shippingDetails ? (
-                        <div className="p-3.5 rounded-xl bg-black/40 border border-white/5 space-y-2.5">
+                        <div className="p-3.5 rounded-xl bg-proton-card border border-proton-border space-y-2.5">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-[11px]">
                             {order.shippingDetails.recipientName && (
-                              <div className="flex items-center gap-2 text-zinc-300">
-                                <UserIcon size={13} className="text-white/40 shrink-0" />
-                                <span className="text-white font-medium">{order.shippingDetails.recipientName}</span>
+                              <div className={cn("flex items-center gap-2", currentTheme.subtext)}>
+                                <UserIcon size={13} className="text-proton-muted shrink-0" />
+                                <span className={cn("font-medium", currentTheme.text)}>{order.shippingDetails.recipientName}</span>
                               </div>
                             )}
 
                             {order.shippingDetails.phone && (
-                              <div className="flex items-center gap-2 text-zinc-300 font-mono">
-                                <Phone size={13} className="text-white/40 shrink-0" />
-                                <span className="text-white">{order.shippingDetails.phone}</span>
+                              <div className={cn("flex items-center gap-2 font-mono", currentTheme.subtext)}>
+                                <Phone size={13} className="text-proton-muted shrink-0" />
+                                <span className={currentTheme.text}>{order.shippingDetails.phone}</span>
                               </div>
                             )}
 
                             {order.shippingDetails.city && (
-                              <div className="flex items-center gap-2 text-zinc-300">
-                                <MapPin size={13} className="text-white/40 shrink-0" />
+                              <div className={cn("flex items-center gap-2", currentTheme.subtext)}>
+                                <MapPin size={13} className="text-proton-muted shrink-0" />
                                 <span>{order.shippingDetails.city}</span>
                               </div>
                             )}
 
                             {order.shippingDetails.address && (
-                              <div className="flex items-start gap-2 text-zinc-300 sm:col-span-2">
-                                <MapPin size={13} className="text-white/40 shrink-0 mt-0.5" />
+                              <div className={cn("flex items-start gap-2 sm:col-span-2", currentTheme.subtext)}>
+                                <MapPin size={13} className="text-proton-muted shrink-0 mt-0.5" />
                                 <span className="break-words leading-relaxed">{order.shippingDetails.address}</span>
                               </div>
                             )}
                           </div>
 
                           {order.shippingDetails.notes && (
-                            <div className="pt-2 border-t border-white/5 text-[11px] text-zinc-400">
-                              <span className="font-bold text-white/50">{language === 'ka' ? 'მითითება კურიერს:' : 'Delivery Instructions:'}</span>{' '}
-                              <span className="text-zinc-300">{order.shippingDetails.notes}</span>
+                            <div className="pt-2 border-t border-proton-border text-[11px] text-proton-muted">
+                              <span className="font-bold text-proton-text">{language === 'ka' ? 'მითითება კურიერს:' : 'Delivery Instructions:'}</span>{' '}
+                              <span className={currentTheme.subtext}>{order.shippingDetails.notes}</span>
                             </div>
                           )}
                         </div>
                       ) : (
-                        <div className="text-[11px] text-zinc-500 italic p-3">
+                        <div className={cn("text-[11px] italic p-3", currentTheme.muted)}>
                           {language === 'ka' ? 'მიწოდების მისამართი არ არის მითითებული.' : 'No shipping address provided.'}
                         </div>
                       )}
@@ -789,14 +789,14 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
 
             {/* 4. Buyer Instructions (if present for service or custom project) */}
             {order.buyerInstructions && (
-              <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2 text-xs">
-                <div className="flex items-center gap-2 text-white/50">
+              <div className="p-4 sm:p-5 rounded-2xl bg-proton-bg/60 border border-proton-border space-y-2 text-xs">
+                <div className={cn("flex items-center gap-2", currentTheme.muted)}>
                   <FileText size={13} />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-white/40">
+                  <span className="text-[9px] font-black uppercase tracking-widest">
                     {language === 'ka' ? 'მყიდველის მოთხოვნები / ინსტრუქცია' : 'Buyer Requirements / Instructions'}
                   </span>
                 </div>
-                <p className="text-zinc-300 text-[11px] leading-relaxed pl-5 whitespace-pre-wrap">
+                <p className={cn("text-[11px] leading-relaxed pl-5 whitespace-pre-wrap", currentTheme.subtext)}>
                   {order.buyerInstructions}
                 </p>
               </div>
@@ -804,12 +804,12 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
           </div>
 
           {/* Modal Action Footer */}
-          <div className="p-4 sm:p-5 border-t border-white/10 bg-zinc-950/90 backdrop-blur-md flex items-center justify-between gap-3 flex-wrap">
+          <div className="p-4 sm:p-5 border-t border-proton-border bg-proton-bg/70 backdrop-blur-md flex items-center justify-between gap-3 flex-wrap">
             <button
               type="button"
               onClick={onClose}
               disabled={isConfirmingDelivery || isUpdatingStatus}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-white/60 hover:text-white bg-white/5 hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-40"
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-proton-text bg-proton-card hover:bg-proton-bg border border-proton-border transition-colors cursor-pointer disabled:opacity-40"
             >
               {language === 'ka' ? 'დახურვა' : 'Close'}
             </button>
@@ -826,9 +826,9 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       onClick={() => {
                         onMessageSeller(order);
                       }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm"
+                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-proton-text bg-proton-card hover:bg-proton-bg border border-proton-border transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm"
                     >
-                      <MessageSquare size={14} className="text-[#dfb257]" />
+                      <MessageSquare size={14} className={currentTheme.accent} />
                       <span>{language === 'ka' ? 'მიწერეთ გამყიდველს' : 'Message Seller'}</span>
                     </button>
                   )}
@@ -842,7 +842,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                         onClose();
                         onCancelOrder(order);
                       }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-red-300 hover:text-white bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-rose-500 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <XCircle size={14} />
                       <span>{language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}</span>
@@ -856,7 +856,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       id={`modal-confirm-delivery-${order.id}`}
                       onClick={handleConfirmDeliveryClick}
                       disabled={isConfirmingDelivery}
-                      className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-400 hover:bg-emerald-300 text-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isConfirmingDelivery ? (
                         <>
@@ -885,9 +885,9 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       onClick={() => {
                         onMessageBuyer(order);
                       }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm"
+                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-proton-text bg-proton-card hover:bg-proton-bg border border-proton-border transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-sm"
                     >
-                      <MessageSquare size={14} className="text-[#dfb257]" />
+                      <MessageSquare size={14} className={currentTheme.accent} />
                       <span>{language === 'ka' ? 'მიწერეთ მყიდველს' : 'Message Buyer'}</span>
                     </button>
                   )}
@@ -899,7 +899,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                         onClose();
                         onCancelOrder(order);
                       }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-rose-500 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 transition-all cursor-pointer flex items-center gap-1.5"
                     >
                       <XCircle size={14} />
                       <span>{language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}</span>
@@ -911,7 +911,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       type="button"
                       onClick={() => handleSellerStatusChange('processing')}
                       disabled={isUpdatingStatus}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-black bg-white hover:bg-zinc-200 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                      className={cn("px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer", currentTheme.accentBg)}
                     >
                       <Package size={14} />
                       <span>{language === 'ka' ? 'დამუშავების დაწყება' : 'Start Processing'}</span>
@@ -925,7 +925,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                         onClose();
                         onOpenShipmentModal(order);
                       }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-black bg-cyan-400 hover:bg-cyan-300 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                      className={cn("px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer", currentTheme.accentBg)}
                     >
                       <Truck size={14} />
                       <span>{language === 'ka' ? 'ამანათის გაგზავნა & თრექინგი' : 'Ship Parcel & Add Tracking'}</span>
@@ -937,7 +937,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       type="button"
                       onClick={() => handleSellerStatusChange('in_progress')}
                       disabled={isUpdatingStatus}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-black bg-white hover:bg-zinc-200 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                      className={cn("px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer", currentTheme.accentBg)}
                     >
                       <Wrench size={14} />
                       <span>{language === 'ka' ? 'მუშაობის დაწყება' : 'Begin Work'}</span>
@@ -949,7 +949,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                       type="button"
                       onClick={() => handleSellerStatusChange('completed')}
                       disabled={isUpdatingStatus}
-                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-black bg-emerald-400 hover:bg-emerald-300 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer"
                     >
                       <CheckCircle2 size={14} />
                       <span>{language === 'ka' ? 'დასრულებულად მონიშვნა' : 'Mark Completed'}</span>

@@ -255,7 +255,7 @@ html.theme-transitioning *::after {
   width: 100% !important;
   height: 100% !important;
   min-height: 200px;
-  background-color: #0a0a0a !important;
+  background-color: var(--proton-bg) !important;
   outline: none;
 }
 

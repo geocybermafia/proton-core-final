@@ -28,9 +28,9 @@ export const CartItemThumbnail = React.memo(function CartItemThumbnail({ src, al
   }, [src]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-black/40">
+    <div className="w-full h-full relative overflow-hidden bg-proton-bg">
       {!isLoaded && !hasError && src && (
-        <div className="absolute inset-0 z-0 animate-pulse bg-zinc-800/60" />
+        <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/40" />
       )}
       {src && !hasError ? (
         <img 
@@ -48,7 +48,7 @@ export const CartItemThumbnail = React.memo(function CartItemThumbnail({ src, al
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-white/20">
+        <div className="w-full h-full flex items-center justify-center text-proton-muted/50">
           <ShoppingBag size={20} />
         </div>
       )}
@@ -144,17 +144,17 @@ export const CartDrawer = React.memo(function CartDrawer({
             exit={{ opacity: 0, x: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className={cn(
-              "relative w-full max-w-md h-full sm:h-[calc(100vh-32px)] sm:rounded-[40px] border border-white/5 flex flex-col overflow-hidden shadow-2xl z-10",
+              "relative w-full max-w-md h-full sm:h-[calc(100vh-32px)] sm:rounded-[40px] border border-proton-border flex flex-col overflow-hidden shadow-2xl z-10",
               currentTheme.card
             )}
           >
-            <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0">
+            <div className="p-6 border-b border-proton-border flex items-center justify-between shrink-0 bg-proton-card/95 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
-                <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-500">
+                <div className="p-2.5 bg-proton-accent/15 rounded-xl text-proton-accent">
                   <ShoppingCart size={18} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black uppercase tracking-tight text-white">
+                  <h3 className="text-lg font-black uppercase tracking-tight text-proton-text">
                     {language === 'ka' ? 'კალათა' : 'Shopping Cart'}
                   </h3>
                   <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-none mt-1", currentTheme.muted)}>
@@ -167,7 +167,7 @@ export const CartDrawer = React.memo(function CartDrawer({
               <button 
                 onClick={onClose}
                 disabled={isPlacingCartOrders}
-                className="p-3 bg-white/5 rounded-2xl hover:bg-white/10 transition-colors disabled:opacity-50 text-white"
+                className="p-3 bg-proton-bg border border-proton-border rounded-2xl hover:bg-proton-accent/10 transition-colors disabled:opacity-50 text-proton-text"
               >
                 <X size={16} />
               </button>
@@ -177,11 +177,11 @@ export const CartDrawer = React.memo(function CartDrawer({
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20">
-                  <div className="p-5 bg-white/5 rounded-[30px] border border-white/5 text-white/20">
+                  <div className="p-5 bg-proton-bg rounded-[30px] border border-proton-border text-proton-muted">
                     <ShoppingCart size={32} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-black uppercase tracking-wider text-white">
+                    <h4 className="text-sm font-black uppercase tracking-wider text-proton-text">
                       {language === 'ka' ? 'კალათა ცარიელია' : 'Cart is Empty'}
                     </h4>
                     <p className={cn("text-[10px] font-medium leading-relaxed max-w-xs mt-1.5", currentTheme.muted)}>
@@ -202,14 +202,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         key={item.id}
-                        className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3"
+                        className="p-4 rounded-3xl bg-proton-bg/60 border border-proton-border space-y-3"
                       >
                         <div className="flex items-center gap-4 relative">
-                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-black/40 shrink-0 border border-white/5 relative">
+                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-proton-bg shrink-0 border border-proton-border relative">
                             {item.image ? (
                               <CartItemThumbnail src={item.image} alt={getListingTitle(item, language)} />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-white/20">
+                              <div className="w-full h-full flex items-center justify-center text-proton-muted/50">
                                 <ShoppingBag size={20} />
                               </div>
                             )}
@@ -219,14 +219,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                             <span className={cn(
                               "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1",
                               isService 
-                                ? "bg-amber-500/10 border border-amber-500/20 text-amber-400"
-                                : "bg-emerald-500/10 border border-emerald-500/20 text-[#10b981]"
+                                ? "bg-amber-500/15 border border-amber-500/30 text-amber-500"
+                                : "bg-emerald-500/15 border border-emerald-500/30 text-emerald-500"
                             )}>
                               {isService
                                 ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
                                 : (language === 'ka' ? 'ნივთი' : 'Product')}
                             </span>
-                            <h4 className="text-xs font-black text-white uppercase truncate tracking-tight">
+                            <h4 className="text-xs font-black text-proton-text uppercase truncate tracking-tight">
                               {getListingTitle(item, language)}
                             </h4>
                             {(() => {
@@ -235,11 +235,11 @@ export const CartDrawer = React.memo(function CartDrawer({
                               const convertedAmt = priceMap.get(item.id) ?? convertPrice(item.price, origCur, targetCurrency);
                               return (
                                 <div className="mt-0.5 space-y-0.5">
-                                  <p className="text-xs font-black text-[#10b981] font-mono tabular-nums">
+                                  <p className="text-xs font-black text-proton-accent font-mono tabular-nums">
                                     {formatOriginalCurrencyPrice(item.price, origCur)}
                                   </p>
                                   {!isSameCur && (
-                                    <p className="text-[11px] font-medium text-zinc-300 font-mono tabular-nums">
+                                    <p className="text-[11px] font-medium text-proton-muted font-mono tabular-nums">
                                       {language === 'ka' ? 'სავარაუდო:' : 'Est.:'} {formatApproxCurrencyEquivalent(convertedAmt, targetCurrency)}
                                     </p>
                                   )}
@@ -251,7 +251,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                           <button 
                             type="button"
                             onClick={() => onRemoveFromCart(item.id)}
-                            className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                            className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 rounded-xl text-rose-500 hover:bg-rose-500/15 transition-colors"
                             title={language === 'ka' ? 'წაშლა' : 'Remove'}
                             aria-label={language === 'ka' ? 'კალათიდან წაშლა' : 'Remove from cart'}
                           >
@@ -261,15 +261,15 @@ export const CartDrawer = React.memo(function CartDrawer({
 
                         {/* Service Task Instructions Field */}
                         {isService && (
-                          <div className="pt-2 border-t border-white/5 space-y-1.5">
+                          <div className="pt-2 border-t border-proton-border space-y-1.5">
                             <div className="flex items-center justify-between text-[9px] font-bold">
-                              <label htmlFor={`cart-instructions-${item.id}`} className="text-amber-400/90 flex items-center gap-1 uppercase tracking-wider">
+                              <label htmlFor={`cart-instructions-${item.id}`} className="text-amber-500 flex items-center gap-1 uppercase tracking-wider">
                                 <span>⚡</span>
                                 <span>{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Service Instructions'}</span>
                               </label>
                               <span className={cn(
                                 "font-mono text-[9px]",
-                                (cartServiceInstructions[item.id] || '').length >= 480 ? "text-amber-400 font-bold" : "text-white/40"
+                                (cartServiceInstructions[item.id] || '').length >= 480 ? "text-amber-500 font-bold" : "text-proton-muted"
                               )}>
                                 {(cartServiceInstructions[item.id] || '').length}/500
                               </span>
@@ -283,7 +283,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                                 ? "ჩაწერეთ სამუშაოს სპეციფიკაცია, ბმულები ან ინსტრუქცია..." 
                                 : "Enter requirements, project brief, links or specifics..."}
                               className={cn(
-                                "w-full h-18 p-2.5 rounded-xl border text-base md:text-xs font-normal text-white focus:outline-none transition-all placeholder:text-zinc-400 bg-black/40 resize-none",
+                                "w-full h-18 p-2.5 rounded-xl border text-base md:text-xs font-normal focus:outline-none transition-all resize-none",
                                 currentTheme.input
                               )}
                             />
@@ -295,13 +295,13 @@ export const CartDrawer = React.memo(function CartDrawer({
 
                   {/* Physical Items Shipping Form in Cart */}
                   {hasPhysicalItems && shippingDetails && onChangeShippingDetails && (
-                    <div className="p-4 rounded-3xl bg-white/5 border border-white/5 space-y-3 mt-4 text-left">
+                    <div className="p-4 rounded-3xl bg-proton-bg/60 border border-proton-border space-y-3 mt-4 text-left">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                          <Truck size={13} className="text-[#2e5bff]" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-text flex items-center gap-1.5">
+                          <Truck size={13} className="text-proton-accent" />
                           <span>{language === 'ka' ? 'მიწოდების მისამართი' : 'Shipping Destination'}</span>
                         </span>
-                        <span className="text-[8px] font-bold text-amber-400/80 uppercase tracking-widest">
+                        <span className="text-[8px] font-bold text-amber-500 uppercase tracking-widest">
                           {language === 'ka' ? '* აუცილებელია' : '* Required for delivery'}
                         </span>
                       </div>
@@ -312,7 +312,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                           value={shippingDetails.recipientName}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, recipientName: e.target.value })}
                           placeholder={language === 'ka' ? 'მიმღების სახელი, გვარი' : 'Recipient Name'}
-                          className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40", currentTheme.input)}
+                          className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs focus:outline-none", currentTheme.input)}
                         />
                         <div className="grid grid-cols-2 gap-2">
                           <input
@@ -320,14 +320,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                             value={shippingDetails.phone}
                             onChange={e => onChangeShippingDetails({ ...shippingDetails, phone: e.target.value })}
                             placeholder={language === 'ka' ? 'ტელეფონი *' : 'Phone *'}
-                            className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40 font-mono", currentTheme.input)}
+                            className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs focus:outline-none font-mono", currentTheme.input)}
                           />
                           <input
                             type="text"
                             value={shippingDetails.city}
                             onChange={e => onChangeShippingDetails({ ...shippingDetails, city: e.target.value })}
                             placeholder={language === 'ka' ? 'ქალაქი *' : 'City *'}
-                            className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40", currentTheme.input)}
+                            className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs focus:outline-none", currentTheme.input)}
                           />
                         </div>
                         <input
@@ -335,14 +335,14 @@ export const CartDrawer = React.memo(function CartDrawer({
                           value={shippingDetails.address}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, address: e.target.value })}
                           placeholder={language === 'ka' ? 'ზუსტი მისამართი (ქუჩა, ბინა) *' : 'Full Address (Street, Apt / Suite) *'}
-                          className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40", currentTheme.input)}
+                          className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs focus:outline-none", currentTheme.input)}
                         />
                         <textarea
                           value={shippingDetails.notes || ''}
                           maxLength={200}
                           onChange={e => onChangeShippingDetails({ ...shippingDetails, notes: e.target.value })}
                           placeholder={language === 'ka' ? 'კურიერის შენიშვნა (სურვილისამებრ)' : 'Delivery notes (optional)'}
-                          className={cn("w-full h-14 px-3 py-1.5 rounded-xl border text-base md:text-xs text-white focus:outline-none placeholder:text-zinc-400 bg-black/40 resize-none", currentTheme.input)}
+                          className={cn("w-full h-14 px-3 py-1.5 rounded-xl border text-base md:text-xs focus:outline-none resize-none", currentTheme.input)}
                         />
                       </div>
                     </div>
@@ -353,7 +353,7 @@ export const CartDrawer = React.memo(function CartDrawer({
 
             {/* Action buttons at bottom */}
             {cart.length > 0 && (
-              <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-white/10 space-y-4 shrink-0 bg-zinc-950/95 backdrop-blur-xl shadow-[0_-8px_30px_rgba(0,0,0,0.6)]">
+              <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-proton-border space-y-4 shrink-0 bg-proton-card/95 backdrop-blur-xl shadow-2xl">
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-3">
                     <span className={cn("text-[10px] font-black uppercase tracking-wider shrink-0 pt-1", currentTheme.muted)}>
@@ -365,7 +365,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                       {currencyTotals.map(([curCode, curAmount]) => (
                         <span
                           key={curCode}
-                          className="text-base sm:text-lg font-black text-[#10b981] font-mono tabular-nums whitespace-nowrap"
+                          className="text-base sm:text-lg font-black text-proton-accent font-mono tabular-nums whitespace-nowrap"
                         >
                           {formatOriginalCurrencyPrice(curAmount, curCode)}
                         </span>
@@ -373,11 +373,11 @@ export const CartDrawer = React.memo(function CartDrawer({
                     </div>
                   </div>
                   {hasCurrencyMismatch && (
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5 text-xs">
-                      <span className="text-zinc-400">
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-proton-border text-xs">
+                      <span className="text-proton-muted">
                         {language === 'ka' ? 'სავარაუდო ეკვივალენტი (საორიენტაციო)' : 'Indicative est. equivalent'}
                       </span>
-                      <span className="font-bold text-zinc-200 font-mono tabular-nums whitespace-nowrap">
+                      <span className="font-bold text-proton-text font-mono tabular-nums whitespace-nowrap">
                         {formatApproxCurrencyEquivalent(cartTotal, targetCurrency)}
                       </span>
                     </div>
@@ -385,15 +385,15 @@ export const CartDrawer = React.memo(function CartDrawer({
                 </div>
 
                 {hasPhysicalItems && !isCartShippingValid && (
-                  <p className="text-[10px] font-bold text-amber-400 text-center bg-amber-500/10 py-1.5 px-3 rounded-xl border border-amber-500/20">
+                  <p className="text-[10px] font-bold text-amber-500 text-center bg-amber-500/10 py-1.5 px-3 rounded-xl border border-amber-500/25">
                     {language === 'ka' 
                       ? '⚠️ შეავსეთ მიწოდების ტელეფონი, ქალაქი და მისამართი' 
                       : '⚠️ Provide phone number, city, and delivery address'}
                   </p>
                 )}
 
-                <div className="p-3 rounded-xl bg-[#dfb257]/10 border border-[#dfb257]/20 text-left">
-                  <p className="text-[10px] text-zinc-300 leading-relaxed font-normal">
+                <div className="p-3 rounded-xl bg-proton-accent/10 border border-proton-accent/25 text-left">
+                  <p className="text-[10px] text-proton-text/85 leading-relaxed font-normal">
                     {language === 'ka' 
                       ? 'ℹ️ Proton არ ამუშავებს ონლაინ გადახდებს. თითოეულ გამყიდველთან ანგარიშსწორება და მიწოდება ხდება პირდაპირ.' 
                       : 'ℹ️ Proton does not process payments. Settlement and delivery are arranged directly with each seller.'}
@@ -404,7 +404,8 @@ export const CartDrawer = React.memo(function CartDrawer({
                   onClick={onCheckout}
                   disabled={!canCheckout}
                   className={cn(
-                    "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg drop-shadow-[0_0_12px_rgba(16,185,129,0.2)] text-black bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
+                    currentTheme.accentBg
                   )}
                 >
                   {isPlacingCartOrders ? (

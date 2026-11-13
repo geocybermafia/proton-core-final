@@ -217,42 +217,42 @@ export const BuyerOrders = React.memo(function BuyerOrders({
       switch (status) {
         case 'pending':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
               <Clock size={11} className="animate-pulse" />
               {language === 'ka' ? 'დამუშავების მოლოდინში' : 'Awaiting seller processing'}
             </span>
           );
         case 'processing':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-cyan-500/15 text-cyan-500 border border-cyan-500/25">
               <Package size={11} />
               {language === 'ka' ? 'მზადდება / მუშავდება' : 'Being prepared'}
             </span>
           );
         case 'shipped':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 shadow-sm shadow-indigo-900/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/15 text-indigo-500 border border-indigo-500/30">
               <Truck size={11} className="animate-bounce" />
               {language === 'ka' ? 'გაგზავნილია' : 'Shipped'}
             </span>
           );
         case 'completed':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/25">
               <CheckCircle2 size={11} />
               {language === 'ka' ? 'მიღება დადასტურებულია' : 'Delivery confirmed'}
             </span>
           );
         case 'cancelled':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/25">
               <XCircle size={11} />
               {language === 'ka' ? 'გაუქმებული' : 'Cancelled'}
             </span>
           );
         default:
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-800 text-zinc-300 border border-zinc-700">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-proton-bg text-proton-muted border border-proton-border">
               {status}
             </span>
           );
@@ -263,35 +263,35 @@ export const BuyerOrders = React.memo(function BuyerOrders({
       switch (status) {
         case 'booked':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
               <Clock size={11} />
               {language === 'ka' ? 'დაჯავშნილია' : 'Booked'}
             </span>
           );
         case 'in_progress':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-300 border border-blue-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-500 border border-blue-500/25">
               <Wrench size={11} className="animate-pulse" />
               {language === 'ka' ? 'მიმდინარე' : 'In progress'}
             </span>
           );
         case 'completed':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/25">
               <CheckCircle2 size={11} />
               {language === 'ka' ? 'დასრულებული' : 'Completed'}
             </span>
           );
         case 'cancelled':
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/25">
               <XCircle size={11} />
               {language === 'ka' ? 'გაუქმებული' : 'Cancelled'}
             </span>
           );
         default:
           return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-zinc-800 text-zinc-300 border border-zinc-700">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-proton-bg text-proton-muted border border-proton-border">
               {status}
             </span>
           );
@@ -302,21 +302,21 @@ export const BuyerOrders = React.memo(function BuyerOrders({
     switch (status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/25">
             <CheckCircle2 size={11} />
             {language === 'ka' ? 'დასრულებული' : 'Completed'}
           </span>
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/25">
             <XCircle size={11} />
             {language === 'ka' ? 'გაუქმებული' : 'Cancelled'}
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-300 border border-amber-500/20">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
             <Clock size={11} />
             {language === 'ka' ? 'მუშავდება' : 'Processing'}
           </span>
@@ -336,13 +336,13 @@ export const BuyerOrders = React.memo(function BuyerOrders({
   return (
     <div id="buyer-orders-container" className="space-y-6 w-full animate-in fade-in duration-300">
       {/* Header & Sub-Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-proton-border">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2.5">
-            <ShoppingBag className="text-[#dfb257]" size={22} />
+          <h2 className={cn("text-xl sm:text-2xl font-black uppercase tracking-tight flex items-center gap-2.5", currentTheme.text)}>
+            <ShoppingBag className={currentTheme.accent} size={22} />
             <span>{language === 'ka' ? 'ჩემი შეკვეთები' : 'My Purchases & Orders'}</span>
           </h2>
-          <p className="text-xs text-white/50 font-medium mt-1">
+          <p className={cn("text-xs font-medium mt-1", currentTheme.muted)}>
             {language === 'ka' 
               ? 'თვალყური ადევნეთ თქვენი შეკვეთების მიწოდების პროცესს და სტატუსებს'
               : 'Track fulfillment progress, shipments, and confirm deliveries'}
@@ -350,7 +350,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         </div>
 
         {filterCounts.actionRequired > 0 && (
-          <div className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center gap-2 text-amber-300 text-xs font-bold animate-pulse">
+          <div className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center gap-2 text-amber-500 text-xs font-bold animate-pulse">
             <AlertCircle size={14} />
             <span>
               {language === 'ka'
@@ -377,24 +377,24 @@ export const BuyerOrders = React.memo(function BuyerOrders({
               id={`buyer-filter-${tab.id}-btn`}
               onClick={() => setActiveFilter(tab.id)}
               className={cn(
-                "px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all shrink-0 cursor-pointer",
+                "px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 whitespace-nowrap transition-all shrink-0 cursor-pointer border",
                 isActive 
-                  ? "bg-white/15 text-white shadow-md border border-white/20" 
-                  : "bg-white/[0.03] text-white/50 hover:text-white/80 hover:bg-white/[0.06] border border-white/5"
+                  ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md" 
+                  : "bg-proton-card text-proton-muted hover:text-proton-text hover:bg-proton-bg border-proton-border"
               )}
             >
               <Icon size={12} className={cn(
-                isActive ? "text-[#dfb257]" : "text-white/40",
-                isActionTab && tab.count > 0 && !isActive && "text-amber-400 animate-pulse"
+                isActive ? "text-proton-on-accent" : "text-proton-muted",
+                isActionTab && tab.count > 0 && !isActive && "text-amber-500 animate-pulse"
               )} />
               <span>{language === 'ka' ? tab.labelKa : tab.labelEn}</span>
               <span className={cn(
                 "px-1.5 py-0.5 rounded-md text-[8px] font-mono font-black ml-0.5",
                 isActive 
-                  ? "bg-white/20 text-white" 
+                  ? "bg-black/20 text-proton-on-accent" 
                   : isActionTab && tab.count > 0 
                     ? "bg-amber-500 text-black font-black animate-pulse" 
-                    : "bg-white/5 text-white/40"
+                    : "bg-proton-bg text-proton-muted"
               )}>
                 {tab.count}
               </span>
@@ -408,16 +408,16 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         /* Global Empty State: Buyer has no orders at all */
         <div 
           id="buyer-orders-empty-state"
-          className="p-10 sm:p-14 rounded-3xl border border-white/5 bg-zinc-950/40 text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-4 shadow-xl"
+          className={cn("p-10 sm:p-14 rounded-3xl border text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-4 shadow-xl", currentTheme.card)}
         >
-          <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/30">
+          <div className="w-16 h-16 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
             <ShoppingBag size={28} />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-black uppercase tracking-tight text-white">
+            <h3 className={cn("text-base sm:text-lg font-black uppercase tracking-tight", currentTheme.text)}>
               {language === 'ka' ? 'თქვენი შეკვეთები გამოჩნდება აქ.' : 'Your orders will appear here.'}
             </h3>
-            <p className="text-xs text-white/50 max-w-sm mt-1 leading-relaxed">
+            <p className={cn("text-xs max-w-sm mt-1 leading-relaxed", currentTheme.muted)}>
               {language === 'ka' 
                 ? 'პროდუქტის შეძენის ან სერვისის დაჯავშნის შემდეგ, შეკვეთის დეტალები და სტატუსი გამოჩნდება ამ განყოფილებაში.'
                 : 'When you purchase products or book services from the marketplace, your order records and tracking will be displayed here.'}
@@ -426,7 +426,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
           <button
             type="button"
             onClick={onExploreMarket}
-            className="mt-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-[#dfb257] hover:bg-[#ebd083] text-black transition-all shadow-lg shadow-[#dfb257]/10 active:scale-95 flex items-center gap-2 cursor-pointer"
+            className={cn("mt-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer", currentTheme.accentBg)}
           >
             <Sparkles size={14} />
             <span>{language === 'ka' ? 'მარკეტის დათვალიერება' : 'Explore Marketplace'}</span>
@@ -436,16 +436,16 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         /* Filter Empty State: No orders match this filter */
         <div 
           id="buyer-orders-filtered-empty"
-          className="p-8 sm:p-12 rounded-3xl border border-white/5 bg-zinc-950/40 text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-xl"
+          className={cn("p-8 sm:p-12 rounded-3xl border text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-xl", currentTheme.card)}
         >
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/30">
+          <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
             <Package size={24} />
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-black uppercase tracking-tight text-white">
+            <h3 className={cn("text-sm sm:text-base font-black uppercase tracking-tight", currentTheme.text)}>
               {language === 'ka' ? 'ამ ფილტრით შეკვეთები არ მოიძებნა.' : 'No orders match this filter.'}
             </h3>
-            <p className="text-xs text-white/45 mt-1">
+            <p className={cn("text-xs mt-1", currentTheme.muted)}>
               {language === 'ka' 
                 ? 'არცერთი შეკვეთა არ შეესაბამება არჩეულ კატეგორიას.'
                 : 'There are no orders in your history currently matching this filter.'}
@@ -454,7 +454,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
           <button
             type="button"
             onClick={() => setActiveFilter('all')}
-            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-white/10 hover:bg-white/15 text-white transition-all border border-white/10 cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-proton-bg hover:bg-proton-accent/10 text-proton-text transition-all border border-proton-border cursor-pointer"
           >
             {language === 'ka' ? 'ყველა შეკვეთის ნახვა' : 'View All Orders'}
           </button>
@@ -484,27 +484,27 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                 className={cn(
                   "relative rounded-2xl border p-4 sm:p-5 flex flex-col justify-between transition-all backdrop-blur-md shadow-xl",
                   currentTheme.card,
-                  isDeliveryConfirmable && "border-indigo-500/40 bg-gradient-to-b from-indigo-950/20 to-transparent"
+                  isDeliveryConfirmable && "border-indigo-500/45 ring-1 ring-indigo-500/20"
                 )}
               >
                 {/* Card Top: Order Date & Status */}
                 <div>
-                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/5">
+                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-proton-border">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/60 shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted shrink-0">
                         {isPhysical ? (
-                          <Truck size={14} className="text-cyan-400" />
+                          <Truck size={14} className="text-cyan-500" />
                         ) : isService ? (
-                          <Wrench size={14} className="text-amber-400" />
+                          <Wrench size={14} className="text-amber-500" />
                         ) : (
-                          <ShoppingBag size={14} className="text-[#dfb257]" />
+                          <ShoppingBag size={14} className={currentTheme.accent} />
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-mono text-white/50 tracking-wider">
+                        <span className={cn("text-[10px] font-mono tracking-wider", currentTheme.muted)}>
                           {orderDateStr}
                         </span>
-                        <span className="text-[8px] font-black uppercase tracking-widest text-white/30">
+                        <span className={cn("text-[8px] font-black uppercase tracking-widest", currentTheme.tagMuted)}>
                           {isPhysical 
                             ? (language === 'ka' ? 'ფიზიკური მიწოდება' : 'Physical Order')
                             : isService 
@@ -521,7 +521,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                   <div className="py-3.5 space-y-2">
                     <h3 
                       onClick={() => setSelectedOrder(order)}
-                      className="text-sm sm:text-base font-black text-white leading-snug tracking-tight hover:text-[#dfb257] cursor-pointer transition-colors"
+                      className={cn("text-sm sm:text-base font-black leading-snug tracking-tight hover:text-proton-accent cursor-pointer transition-colors", currentTheme.text)}
                       title={language === 'ka' ? 'დეტალებისა და თაიმლაინის ნახვა' : 'Click to view details & timeline'}
                     >
                       {order.itemTitle}
@@ -529,24 +529,24 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                     <div className="flex items-baseline justify-between flex-wrap gap-2 pt-0.5">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-lg sm:text-xl font-black font-mono tracking-tight text-[#dfb257]">
+                        <span className={cn("text-lg sm:text-xl font-black font-mono tracking-tight", currentTheme.accent)}>
                           {order.amount} {order.currency}
                         </span>
 
                         {order.quantity && order.quantity > 0 && (
-                          <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] font-mono font-bold text-white/70">
+                          <span className="px-2 py-0.5 rounded-md bg-proton-bg border border-proton-border text-[9px] font-mono font-bold text-proton-text">
                             {language === 'ka' ? 'რაოდენობა:' : 'Qty:'} {order.quantity}
                           </span>
                         )}
                       </div>
 
                       {/* Seller Information */}
-                      <div className="flex items-center gap-1.5 text-[10px] text-white/50">
-                        <Store size={11} className="text-white/40" />
-                        <span className="font-bold text-white/70">
+                      <div className={cn("flex items-center gap-1.5 text-[10px]", currentTheme.muted)}>
+                        <Store size={11} className="text-proton-muted" />
+                        <span className={cn("font-bold", currentTheme.text)}>
                           {sellerInfo.name || (language === 'ka' ? 'გამყიდველი' : 'Seller')}
                         </span>
-                        <span className="font-mono text-white/30 text-[9px]">
+                        <span className={cn("font-mono text-[9px]", currentTheme.tagMuted)}>
                           #{sellerInfo.id.substring(0, 6)}
                         </span>
                       </div>
@@ -555,12 +555,12 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                   {/* Quick Tracking Banner if shipped */}
                   {order.status === 'shipped' && order.trackingInfo && (
-                    <div className="mb-3 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between gap-2 text-indigo-300">
+                    <div className="mb-3 p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-between gap-2 text-indigo-500">
                       <div className="flex items-center gap-2 text-[10px] font-bold">
-                        <Truck size={13} className="text-indigo-400 shrink-0" />
+                        <Truck size={13} className="text-indigo-500 shrink-0" />
                         <span>
                           {order.trackingInfo.carrier ? `${order.trackingInfo.carrier}: ` : ''}
-                          <span className="font-mono text-white">{order.trackingInfo.trackingNumber || 'Tracked'}</span>
+                          <span className={cn("font-mono", currentTheme.text)}>{order.trackingInfo.trackingNumber || 'Tracked'}</span>
                         </span>
                       </div>
                       {order.trackingInfo.trackingNumber && (
@@ -570,7 +570,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                             e.stopPropagation();
                             copyToClipboard(order.trackingInfo!.trackingNumber!, `track-${order.id}`);
                           }}
-                          className="p-1 rounded bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 transition-colors"
+                          className="p-1 rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-500 transition-colors cursor-pointer"
                           title="Copy tracking code"
                         >
                           {copiedId === `track-${order.id}` ? <Check size={11} /> : <Copy size={11} />}
@@ -586,48 +586,48 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="space-y-3 pt-3 border-t border-white/5 overflow-hidden text-left"
+                        className="space-y-3 pt-3 border-t border-proton-border overflow-hidden text-left"
                       >
                         {/* Physical Shipping Details Block */}
                         {hasShipping && order.shippingDetails && (
-                          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-2 text-xs">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-[#dfb257]/80 block">
+                          <div className="p-3 rounded-xl bg-proton-bg/60 border border-proton-border space-y-2 text-xs">
+                            <span className={cn("text-[8px] font-black uppercase tracking-widest block", currentTheme.accent)}>
                               {language === 'ka' ? 'მიწოდების მონაცემები' : 'Shipping Information'}
                             </span>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                               {order.shippingDetails.recipientName && (
-                                <div className="flex items-center gap-1.5 text-zinc-300">
-                                  <UserIcon size={12} className="text-white/40 shrink-0" />
+                                <div className={cn("flex items-center gap-1.5", currentTheme.subtext)}>
+                                  <UserIcon size={12} className="text-proton-muted shrink-0" />
                                   <span className="truncate">{order.shippingDetails.recipientName}</span>
                                 </div>
                               )}
 
                               {order.shippingDetails.phone && (
-                                <div className="flex items-center gap-1.5 text-zinc-300 font-mono">
-                                  <Phone size={12} className="text-white/40 shrink-0" />
+                                <div className={cn("flex items-center gap-1.5 font-mono", currentTheme.subtext)}>
+                                  <Phone size={12} className="text-proton-muted shrink-0" />
                                   <span>{order.shippingDetails.phone}</span>
                                 </div>
                               )}
 
                               {order.shippingDetails.city && (
-                                <div className="flex items-center gap-1.5 text-zinc-300">
-                                  <MapPin size={12} className="text-white/40 shrink-0" />
+                                <div className={cn("flex items-center gap-1.5", currentTheme.subtext)}>
+                                  <MapPin size={12} className="text-proton-muted shrink-0" />
                                   <span>{order.shippingDetails.city}</span>
                                 </div>
                               )}
 
                               {order.shippingDetails.address && (
-                                <div className="flex items-start gap-1.5 text-zinc-300 sm:col-span-2">
-                                  <MapPin size={12} className="text-white/40 shrink-0 mt-0.5" />
+                                <div className={cn("flex items-start gap-1.5 sm:col-span-2", currentTheme.subtext)}>
+                                  <MapPin size={12} className="text-proton-muted shrink-0 mt-0.5" />
                                   <span className="break-words">{order.shippingDetails.address}</span>
                                 </div>
                               )}
                             </div>
 
                             {order.shippingDetails.notes && (
-                              <div className="mt-1 pt-1.5 border-t border-white/5 text-[10px] text-zinc-400">
-                                <span className="font-bold text-white/50">{language === 'ka' ? 'მითითება:' : 'Note:'}</span>{' '}
+                              <div className="mt-1 pt-1.5 border-t border-proton-border text-[10px] text-proton-muted">
+                                <span className="font-bold text-proton-text">{language === 'ka' ? 'მითითება:' : 'Note:'}</span>{' '}
                                 {order.shippingDetails.notes}
                               </div>
                             )}
@@ -636,39 +636,39 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                         {/* Shipment Tracking Details Block (When Shipped) */}
                         {hasTracking && order.trackingInfo && (
-                          <div className="p-3 rounded-xl bg-indigo-500/[0.04] border border-indigo-500/15 space-y-1.5 text-xs">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-indigo-300 block">
+                          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 space-y-1.5 text-xs">
+                            <span className="text-[8px] font-black uppercase tracking-widest text-indigo-500 block">
                               {language === 'ka' ? 'გზავნილის თრექინგი' : 'Shipment Tracking'}
                             </span>
 
                             <div className="space-y-1 text-[11px]">
                               {order.trackingInfo.carrier && (
-                                <div className="flex items-center justify-between text-zinc-300">
-                                  <span className="text-white/50">{language === 'ka' ? 'გადამზიდი:' : 'Carrier:'}</span>
-                                  <span className="font-bold text-white">{order.trackingInfo.carrier}</span>
+                                <div className="flex items-center justify-between text-proton-muted">
+                                  <span>{language === 'ka' ? 'გადამზიდი:' : 'Carrier:'}</span>
+                                  <span className={cn("font-bold", currentTheme.text)}>{order.trackingInfo.carrier}</span>
                                 </div>
                               )}
 
                               {order.trackingInfo.trackingNumber && (
-                                <div className="flex items-center justify-between text-zinc-300">
-                                  <span className="text-white/50">{language === 'ka' ? 'თრექინგ კოდი:' : 'Tracking Number:'}</span>
+                                <div className="flex items-center justify-between text-proton-muted">
+                                  <span>{language === 'ka' ? 'თრექინგ კოდი:' : 'Tracking Number:'}</span>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="font-mono font-bold text-cyan-300">{order.trackingInfo.trackingNumber}</span>
+                                    <span className="font-mono font-bold text-cyan-500">{order.trackingInfo.trackingNumber}</span>
                                     <button
                                       type="button"
                                       onClick={() => copyToClipboard(order.trackingInfo!.trackingNumber!, `track-full-${order.id}`)}
-                                      className="p-1 rounded bg-white/5 hover:bg-white/10 text-white/60 transition-colors"
+                                      className="p-1 rounded bg-proton-card hover:bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-colors cursor-pointer"
                                       title="Copy tracking number"
                                     >
-                                      {copiedId === `track-full-${order.id}` ? <Check size={10} /> : <Copy size={10} />}
+                                      {copiedId === `track-full-${order.id}` ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                                     </button>
                                   </div>
                                 </div>
                               )}
 
                               {order.trackingInfo.shippedAt && (
-                                <div className="flex items-center justify-between text-zinc-400 text-[10px]">
-                                  <span className="text-white/40">{language === 'ka' ? 'გაგზავნის თარიღი:' : 'Shipped At:'}</span>
+                                <div className="flex items-center justify-between text-proton-muted text-[10px]">
+                                  <span>{language === 'ka' ? 'გაგზავნის თარიღი:' : 'Shipped At:'}</span>
                                   <span className="font-mono">{formatShortDate(order.trackingInfo.shippedAt)}</span>
                                 </div>
                               )}
@@ -678,26 +678,26 @@ export const BuyerOrders = React.memo(function BuyerOrders({
 
                         {/* Buyer Instructions / Project notes */}
                         {order.buyerInstructions && (
-                          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 text-[11px] text-zinc-300 space-y-1">
-                            <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block">
+                          <div className="p-3 rounded-xl bg-proton-bg/60 border border-proton-border text-[11px] space-y-1">
+                            <span className={cn("text-[8px] font-black uppercase tracking-widest block", currentTheme.muted)}>
                               {language === 'ka' ? 'თქვენი მოთხოვნები / ინსტრუქცია' : 'Your Requirements / Instructions'}
                             </span>
-                            <p className="text-zinc-300 leading-relaxed">{order.buyerInstructions}</p>
+                            <p className={cn("leading-relaxed", currentTheme.subtext)}>{order.buyerInstructions}</p>
                           </div>
                         )}
 
                         {/* Technical Metadata & Order ID */}
-                        <div className="pt-2 flex items-center justify-between text-[9px] font-mono text-white/40 border-t border-white/5">
+                        <div className="pt-2 flex items-center justify-between text-[9px] font-mono text-proton-muted border-t border-proton-border">
                           <div className="flex items-center gap-1">
                             <span>ID:</span>
-                            <span className="text-white/60 font-bold">{order.id}</span>
+                            <span className={cn("font-bold", currentTheme.text)}>{order.id}</span>
                             <button
                               type="button"
                               onClick={() => copyToClipboard(order.id, `order-id-${order.id}`)}
-                              className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                              className="p-1 rounded hover:bg-proton-bg text-proton-muted hover:text-proton-text transition-colors cursor-pointer"
                               title="Copy Order ID"
                             >
-                              {copiedId === `order-id-${order.id}` ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                              {copiedId === `order-id-${order.id}` ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} />}
                             </button>
                           </div>
 
@@ -709,15 +709,15 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                 </div>
 
                 {/* Card Footer: Toggle Details Button & Action Handlers */}
-                <div className="pt-3 mt-3 border-t border-white/5 flex items-center justify-between gap-2 flex-wrap">
+                <div className="pt-3 mt-3 border-t border-proton-border flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       type="button"
                       id={`view-timeline-btn-${order.id}`}
                       onClick={() => setSelectedOrder(order)}
-                      className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-xl bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-[10px] font-bold text-proton-text flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                     >
-                      <Clock size={12} className="text-[#dfb257]" />
+                      <Clock size={12} className={currentTheme.accent} />
                       <span>{language === 'ka' ? 'თაიმლაინი & დეტალები' : 'Timeline & Details'}</span>
                     </button>
 
@@ -726,10 +726,10 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                         type="button"
                         id={`card-message-seller-btn-${order.id}`}
                         onClick={() => onMessageSeller(order)}
-                        className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-xl bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-[10px] font-bold text-proton-text flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                         title={language === 'ka' ? 'მიწერეთ გამყიდველს' : 'Message Seller'}
                       >
-                        <MessageSquare size={12} className="text-[#dfb257]" />
+                        <MessageSquare size={12} className={currentTheme.accent} />
                         <span>{language === 'ka' ? 'მიწერეთ' : 'Message Seller'}</span>
                       </button>
                     )}
@@ -737,7 +737,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                     <button
                       type="button"
                       onClick={() => toggleExpand(order.id)}
-                      className="text-[10px] font-bold text-white/60 hover:text-white flex items-center gap-1 transition-colors py-1 cursor-pointer"
+                      className="text-[10px] font-bold text-proton-muted hover:text-proton-text flex items-center gap-1 transition-colors py-1 cursor-pointer"
                     >
                       <span>{isExpanded ? (language === 'ka' ? 'დახურვა' : 'Hide Details') : (language === 'ka' ? 'სწრაფი ხედი' : 'Quick Details')}</span>
                       {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -752,7 +752,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                         id={`confirm-delivery-btn-${order.id}`}
                         onClick={() => handleConfirmDelivery(order)}
                         disabled={confirmingOrderId === order.id}
-                        className="px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-green-400 hover:bg-green-300 text-black shadow-lg shadow-green-500/20 transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                        className="px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                       >
                         {confirmingOrderId === order.id ? (
                           <>
@@ -774,7 +774,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                         type="button"
                         id={`cancel-order-btn-${order.id}`}
                         onClick={() => onCancelOrder(order)}
-                        className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider text-red-300 hover:text-white bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                        className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-white bg-rose-500/10 hover:bg-rose-600 border border-rose-500/30 transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
                       >
                         <XCircle size={12} />
                         <span>{language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}</span>

@@ -223,7 +223,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     <span aria-hidden="true" className={currentTheme.muted}>
                       ·
                     </span>
-                    <span className="font-bold text-red-400 shrink-0">
+                    <span className="font-bold text-rose-500 shrink-0">
                       {language === 'ka' ? 'გაყიდულია' : 'Sold'}
                     </span>
                   </>
@@ -238,8 +238,8 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     'min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border transition-colors cursor-pointer',
                     currentTheme.border,
                     isFavorite
-                      ? 'bg-red-500/15 border-red-500/30 text-red-400'
-                      : 'hover:bg-white/5 text-zinc-400 hover:text-red-400'
+                      ? 'bg-rose-500/15 border-rose-500/35 text-rose-500'
+                      : 'hover:bg-proton-bg text-proton-muted hover:text-rose-500'
                   )}
                   aria-label={
                     isFavorite
@@ -261,7 +261,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                   type="button"
                   onClick={onClose}
                   className={cn(
-                    'min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border transition-colors cursor-pointer hover:bg-white/10',
+                    'min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl border transition-colors cursor-pointer hover:bg-proton-bg',
                     currentTheme.border,
                     currentTheme.text
                   )}
@@ -279,7 +279,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                 <div className="md:col-span-6 space-y-3">
                   <div
                     className={cn(
-                      'relative w-full aspect-[4/3] rounded-2xl overflow-hidden border bg-zinc-950/70 flex items-center justify-center',
+                      'relative w-full aspect-[4/3] rounded-2xl overflow-hidden border bg-proton-bg flex items-center justify-center',
                       currentTheme.border
                     )}
                   >
@@ -312,7 +312,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
                     {isItemSold && (
                       <div className="absolute inset-0 bg-black/55 flex items-center justify-center pointer-events-none">
-                        <span className="px-4 py-2 rounded-xl bg-zinc-950/90 border border-red-500/40 text-sm font-bold text-red-400">
+                        <span className="px-4 py-2 rounded-xl bg-proton-card/95 border border-rose-500/40 text-sm font-bold text-rose-500">
                           {language === 'ka' ? 'გაყიდულია' : 'Sold Out'}
                         </span>
                       </div>
@@ -371,9 +371,9 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                             type="button"
                             onClick={() => setActiveImageIndex(idx)}
                             className={cn(
-                              'w-16 h-12 min-h-[44px] rounded-xl overflow-hidden border shrink-0 transition-all cursor-pointer bg-zinc-950/60 flex items-center justify-center',
+                              'w-16 h-12 min-h-[44px] rounded-xl overflow-hidden border shrink-0 transition-all cursor-pointer bg-proton-bg flex items-center justify-center',
                               isSelected
-                                ? 'border-[#dfb257] ring-2 ring-[#dfb257]/30 opacity-100'
+                                ? 'border-proton-accent ring-2 ring-proton-accent/30 opacity-100'
                                 : cn(currentTheme.border, 'opacity-65 hover:opacity-100')
                             )}
                             aria-label={`${
@@ -593,7 +593,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                           <div className="flex items-center gap-1.5 text-xs mt-0.5">
                             {sellerRating && sellerRating.count > 0 ? (
                               <>
-                                <Star size={12} className="fill-[#dfb257] text-[#dfb257] shrink-0" />
+                                <Star size={12} className="fill-amber-400 text-amber-500 shrink-0" />
                                 <span className={cn('font-bold tabular-nums', currentTheme.accent)}>
                                   {sellerRating.avg.toFixed(1)}
                                 </span>
@@ -659,7 +659,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                         onClose();
                         onDeleteListing(listing.id);
                       }}
-                      className="min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-bold bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-400 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-bold bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 flex items-center justify-center gap-2 transition-colors cursor-pointer"
                     >
                       <Trash2 size={16} />
                       <span>{language === 'ka' ? 'წაშლა' : 'Delete'}</span>
@@ -668,7 +668,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                 </div>
               ) : isItemSold ? (
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                  <span className="text-sm font-bold text-red-400">
+                  <span className="text-sm font-bold text-rose-500">
                     {language === 'ka'
                       ? 'ეს განცხადება უკვე გაყიდულია.'
                       : 'This listing is already sold.'}
@@ -677,7 +677,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     type="button"
                     onClick={onClose}
                     className={cn(
-                      'min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-bold border transition-colors cursor-pointer',
+                      'min-h-[44px] px-5 py-2.5 rounded-xl text-sm font-bold border transition-colors cursor-pointer hover:bg-proton-bg',
                       currentTheme.border,
                       currentTheme.text
                     )}
@@ -694,7 +694,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       onStartChat(listing);
                     }}
                     className={cn(
-                      'min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border flex items-center justify-center gap-2 transition-colors cursor-pointer hover:bg-white/10',
+                      'min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border flex items-center justify-center gap-2 transition-colors cursor-pointer hover:bg-proton-bg',
                       currentTheme.border,
                       currentTheme.text
                     )}
@@ -711,8 +711,8 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     className={cn(
                       'min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border flex items-center justify-center gap-2 transition-colors cursor-pointer',
                       isInCart
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : cn(currentTheme.border, currentTheme.text, 'hover:bg-white/10')
+                        ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-500'
+                        : cn(currentTheme.border, currentTheme.text, 'hover:bg-proton-bg')
                     )}
                   >
                     {isInCart ? <Check size={17} /> : <ShoppingCart size={17} />}

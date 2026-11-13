@@ -88,8 +88,6 @@ interface MarketHubProps {
 
 import {
   MarketTheme,
-  MARKET_THEMES,
-  PREMIUM_INDUSTRIAL,
   WORLD_COUNTRIES,
   CURRENCIES,
   EXCHANGE_RATES,
@@ -1846,19 +1844,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   // Dynamically resolve theme from design system.
   // Strips hardcoded hex values to support full color-variable harmony of Light, Forest, Titanium, Rose, Sunset, etc.
   const currentTheme = {
-    card: "bg-proton-card border border-proton-border/30 shadow-2xl text-proton-text",
-    input: "bg-proton-bg/40 border border-proton-border/50 focus:border-proton-accent/50 text-proton-text placeholder:text-proton-muted/55 focus:outline-none focus:ring-1 focus:ring-proton-accent/20",
+    card: "bg-proton-card border border-proton-border shadow-xl text-proton-text",
+    input: "bg-proton-bg border border-proton-border focus:border-proton-accent text-proton-text placeholder:text-proton-muted/65 focus:outline-none focus:ring-1 focus:ring-proton-accent/30",
     accent: "text-proton-accent",
-    accentBg: "bg-proton-accent text-proton-on-accent hover:bg-proton-accent/90 focus:ring-1 focus:ring-proton-accent/20",
-    border: "border-proton-border/40",
+    accentBg: "bg-proton-accent text-proton-on-accent hover:bg-proton-accent-hover focus:ring-1 focus:ring-proton-accent/30",
+    border: "border-proton-border",
     muted: "text-proton-muted",
     text: "text-proton-text",
-    subtext: "text-proton-text/75",
-    tagMuted: "text-proton-muted/60",
-    cardAlt: "bg-proton-bg/40 border border-proton-border/30 text-proton-text",
-    badgeBg: "bg-proton-accent/10 text-proton-accent border border-proton-accent/25",
-    bgHover: "hover:bg-proton-accent/10 hover:text-proton-accent hover:border-proton-accent/30",
-    overlay: "bg-proton-bg/95 backdrop-blur-xl border border-proton-border/50"
+    subtext: "text-proton-text/80",
+    tagMuted: "text-proton-muted/75",
+    cardAlt: "bg-proton-bg/70 border border-proton-border text-proton-text",
+    badgeBg: "bg-proton-accent/15 text-proton-accent border border-proton-accent/30",
+    bgHover: "hover:bg-proton-accent/10 hover:text-proton-accent hover:border-proton-accent/35",
+    overlay: "bg-proton-card/95 backdrop-blur-xl border border-proton-border"
   };
 
   const getBaseQuery = useCallback((category: string, mode: string, uid?: string) => {
@@ -3360,11 +3358,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
   if (authLoading) {
     return (
-      <div className={cn("min-h-[600px] rounded-xl border border-white/5 flex flex-col items-center justify-center p-12 shadow-2xl relative overflow-hidden", currentTheme.card)}>
-        <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-[#dfb257]/[0.02] blur-[120px] pointer-events-none rounded-full" />
+      <div className={cn("min-h-[600px] rounded-xl border border-proton-border flex flex-col items-center justify-center p-12 shadow-xl relative overflow-hidden", currentTheme.card)}>
+        <div className="absolute top-0 left-1/4 w-[300px] h-[300px] bg-proton-accent/[0.06] blur-[120px] pointer-events-none rounded-full" />
         <div className="flex flex-col items-center gap-5 relative z-10">
-          <Loader2 className="w-12 h-12 animate-spin text-[#dfb257] opacity-80" />
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#dfb257]/90 animate-pulse">
+          <Loader2 className="w-12 h-12 animate-spin text-proton-accent opacity-85" />
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-proton-accent animate-pulse">
             {language === 'ka' ? 'ავტორიზაცია მოწმდება...' : 'Verifying Identity...'}
           </p>
         </div>
@@ -3374,8 +3372,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
   return (
     <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
-      {/* Main Black Proton Header (PROTON // მარკეტი) */}
-      <div className="w-full bg-[#080c14]/95 border-b border-zinc-800/80 pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 md:pt-[max(0.875rem,env(safe-area-inset-top,0px))] md:pb-3.5 px-3 sm:px-6 lg:px-8 flex flex-col gap-2 md:gap-3 sticky top-0 z-50 backdrop-blur-md">
+      {/* Main Proton Header (PROTON // მარკეტი) */}
+      <div className="w-full bg-proton-card/95 border-b border-proton-border pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 md:pt-[max(0.875rem,env(safe-area-inset-top,0px))] md:pb-3.5 px-3 sm:px-6 lg:px-8 flex flex-col gap-2 md:gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
         <div className="w-full flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
           
@@ -3391,11 +3389,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className="flex items-center gap-2 cursor-pointer select-none grow-0 shrink-0"
           >
             <div className="flex items-center">
-              <div className="bg-zinc-900 border border-zinc-800 text-white font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-l-xl text-[11px] sm:text-sm tracking-tighter uppercase whitespace-nowrap flex items-center gap-1 sm:gap-1.5">
-                <span className="text-[#dfb257]">PROTON</span>
-                <span className="text-zinc-600 font-mono text-[10px] sm:text-[11px]">//</span>
+              <div className="bg-proton-bg border border-proton-border text-proton-text font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-l-xl text-[11px] sm:text-sm tracking-tighter uppercase whitespace-nowrap flex items-center gap-1 sm:gap-1.5">
+                <span className="text-proton-accent">PROTON</span>
+                <span className="text-proton-muted/60 font-mono text-[10px] sm:text-[11px]">//</span>
               </div>
-              <div className="bg-[#12161f] text-[#dfb257] border border-zinc-800 border-l-0 font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-r-xl text-[11px] sm:text-sm tracking-tighter uppercase whitespace-nowrap">
+              <div className="bg-proton-card text-proton-accent border border-proton-border border-l-0 font-bold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-r-xl text-[11px] sm:text-sm tracking-tighter uppercase whitespace-nowrap">
                 {language === 'ka' ? 'მარკეტი' : 'market'}
               </div>
             </div>
@@ -3404,7 +3402,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           {/* Desktop Primary Navigation: Browse | Seller Cabinet | My Orders */}
           <nav
             aria-label={language === 'ka' ? 'მარკეტის მთავარი ნავიგაცია' : 'Marketplace primary navigation'}
-            className="hidden md:flex items-center bg-zinc-900/80 border border-zinc-800/90 p-1 rounded-xl gap-1 shrink-0"
+            className="hidden md:flex items-center bg-proton-bg border border-proton-border p-1 rounded-xl gap-1 shrink-0"
           >
             <button
               type="button"
@@ -3417,8 +3415,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               className={cn(
                 "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap",
                 viewMode === 'browse' && activeBottomTab !== 'messages' && !showOnlyFavorites
-                  ? "bg-[#dfb257] text-zinc-950 font-black shadow-sm"
-                  : "text-zinc-300 hover:text-white hover:bg-zinc-800/80"
+                  ? "bg-proton-accent text-proton-on-accent font-black shadow-sm"
+                  : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
               )}
               title={language === 'ka' ? 'განცხადებების დათვალიერება' : 'Browse Marketplace'}
             >
@@ -3442,8 +3440,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               className={cn(
                 "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap relative",
                 viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
-                  ? "bg-[#dfb257] text-zinc-950 font-black shadow-sm"
-                  : "text-zinc-300 hover:text-white hover:bg-zinc-800/80"
+                  ? "bg-proton-accent text-proton-on-accent font-black shadow-sm"
+                  : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
               )}
               title={language === 'ka' ? 'გამყიდველის კაბინეტი' : 'Seller Cabinet'}
             >
@@ -3454,7 +3452,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <span className={cn(
                   "inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[9px] font-black leading-none rounded-full",
                   viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
-                    ? "bg-zinc-950 text-[#dfb257]"
+                    ? "bg-black/20 text-proton-on-accent"
                     : "bg-amber-500 text-zinc-950"
                 )}>
                   {sellerOrderCounts.actionRequired}
@@ -3478,8 +3476,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               className={cn(
                 "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap relative",
                 viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
-                  ? "bg-[#dfb257] text-zinc-950 font-black shadow-sm"
-                  : "text-zinc-300 hover:text-white hover:bg-zinc-800/80"
+                  ? "bg-proton-accent text-proton-on-accent font-black shadow-sm"
+                  : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
               )}
               title={language === 'ka' ? 'ჩემი შეკვეთები' : 'My Orders'}
             >
@@ -3490,8 +3488,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <span className={cn(
                   "inline-flex items-center justify-center h-4 min-w-[16px] px-1 text-[9px] font-black leading-none rounded-full",
                   viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
-                    ? "bg-zinc-950 text-[#dfb257]"
-                    : "bg-[#dfb257] text-zinc-950"
+                    ? "bg-black/20 text-proton-on-accent"
+                    : "bg-proton-accent text-proton-on-accent"
                 )}>
                   {buyerOrders.length}
                 </span>
@@ -3503,18 +3501,18 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           <div className="hidden md:flex flex-1 min-w-[120px] max-w-md items-center gap-3">
             {/* Input search */}
             <div className="flex-1 relative">
-              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
+              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-70 text-proton-accent" />
               <input 
                 type="text"
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder={language === 'ka' ? 'ჩაწერე საძიებო სიტყვა...' : 'Search listings, tags, vendors...'}
-                className="w-full bg-zinc-900/90 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-9 pr-7 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner"
+                className={cn("w-full font-bold tracking-wide pl-9 pr-7 py-2 rounded-xl text-base md:text-xs transition-all shadow-inner", currentTheme.input)}
               />
               {searchRaw && (
                 <button 
                   onClick={() => { setSearch(''); setSearchRaw(''); }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs cursor-pointer"
                 >
                   ✕
                 </button>
@@ -3538,7 +3536,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 resetListingForm();
                 setViewMode('create');
               }}
-              className="flex bg-[#dfb257] hover:bg-[#dfb257]/90 text-zinc-950 font-black px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0"
+              className={cn("flex font-black px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0", currentTheme.accentBg)}
               title={language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}
             >
               <Plus size={14} className="stroke-[3]" />
@@ -3567,15 +3565,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               className={cn(
                 "hidden md:flex p-2 sm:p-2.5 rounded-xl transition-all relative border cursor-pointer",
                 activeBottomTab === 'messages'
-                  ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm"
-                  : "text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 border-transparent"
+                  ? "bg-proton-accent/15 text-proton-accent border-proton-accent/40 shadow-sm"
+                  : "text-proton-muted hover:text-proton-accent hover:bg-proton-bg border-transparent"
               )}
               title={language === 'ka' ? 'შეტყობინებები' : 'Messages'}
               aria-pressed={activeBottomTab === 'messages'}
             >
               <Mail size={16} />
               {allUserMessages.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] font-black flex items-center justify-center text-white scale-90 border border-[#080c14]">
+                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[8px] font-black flex items-center justify-center text-white scale-90 border border-proton-card">
                   {allUserMessages.length}
                 </span>
               )}
@@ -3591,16 +3589,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setViewMode('browse');
               }}
               className={cn(
-                "p-2 sm:p-2.5 rounded-xl transition-all relative cursor-pointer",
+                "p-2 sm:p-2.5 rounded-xl transition-all relative cursor-pointer border",
                 showOnlyFavorites 
-                  ? "text-red-500 bg-red-500/10 border border-red-500/20" 
-                  : "text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900"
+                  ? "text-rose-500 bg-rose-500/10 border-rose-500/30" 
+                  : "text-proton-muted hover:text-proton-accent hover:bg-proton-bg border-transparent"
               )}
               title={language === 'ka' ? 'რჩეულები' : 'Favorites'}
             >
               <Heart size={16} fill={showOnlyFavorites ? "currentColor" : "none"} />
               {favorites.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-[#dfb257] rounded-full text-[8px] font-black text-zinc-950 flex items-center justify-center scale-90 border border-[#080c14]">
+                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-proton-accent rounded-full text-[8px] font-black text-proton-on-accent flex items-center justify-center scale-90 border border-proton-card">
                   {favorites.length}
                 </span>
               )}
@@ -3610,12 +3608,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             <button 
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="p-2 sm:p-2.5 text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 rounded-xl transition-all relative cursor-pointer"
+              className="p-2 sm:p-2.5 text-proton-muted hover:text-proton-accent hover:bg-proton-bg rounded-xl transition-all relative cursor-pointer"
               title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
             >
               <ShoppingBag size={16} />
               {cart.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-[#dfb257] text-zinc-950 rounded-full text-[8px] font-black flex items-center justify-center scale-90 border border-[#080c14]">
+                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-proton-accent text-proton-on-accent rounded-full text-[8px] font-black flex items-center justify-center scale-90 border border-proton-card">
                   {cart.length}
                 </span>
               )}
@@ -3626,10 +3624,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <button 
                 type="button"
                 onClick={onBack}
-                className="p-2 md:px-3 md:py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 hover:text-[#dfb257] font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                className="p-2 md:px-3 md:py-2 bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-proton-text hover:text-proton-accent font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
                 title={language === 'ka' ? 'მთავარზე დაბრუნება' : 'Return to Dashboard'}
               >
-                <LayoutDashboard size={14} className="text-[#dfb257]" />
+                <LayoutDashboard size={14} className="text-proton-accent" />
                 <span className="hidden lg:inline">{language === 'ka' ? 'მთავარი' : 'Home'}</span>
               </button>
             )}
@@ -3639,19 +3637,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         {/* Mobile Search & Categories Row (Shown only on mobile — single integrated bar) */}
         <div className="w-full flex md:hidden items-center gap-2">
           <div className="flex-1 relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-45 text-[#dfb257]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70 text-proton-accent" />
             <input 
               type="text"
               value={searchRaw}
               onChange={(e) => setSearchRaw(e.target.value)}
               placeholder={language === 'ka' ? 'ძებნა მარკეტში...' : 'Search marketplace...'}
-              className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder:text-zinc-400 font-bold tracking-wide focus:outline-none focus:border-[#dfb257]/60 pl-9 pr-8 py-2 rounded-xl text-base md:text-xs transition-colors"
+              className={cn("w-full font-bold tracking-wide pl-9 pr-8 py-2 rounded-xl text-base md:text-xs transition-colors", currentTheme.input)}
             />
             {searchRaw && (
               <button 
                 type="button"
                 onClick={() => { setSearch(''); setSearchRaw(''); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs cursor-pointer"
               >
                 ✕
               </button>
@@ -3664,8 +3662,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className={cn(
               "px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
               activeBottomTab === 'categories' || activeCategory !== 'all'
-                ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm"
-                : "bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white"
+                ? "bg-proton-accent/15 text-proton-accent border-proton-accent/40 shadow-sm"
+                : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text"
             )}
             title={language === 'ka' ? 'კატეგორიები' : 'Categories'}
           >
@@ -3677,7 +3675,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         {/* Unified Mobile Navigation Bar (Single non-duplicated 4-tab switcher, md:hidden) */}
         <nav
           aria-label={language === 'ka' ? 'მობილური მარკეტის ნავიგაცია' : 'Mobile marketplace navigation'}
-          className="w-full grid grid-cols-4 gap-1.5 md:hidden pt-1.5 border-t border-zinc-800/60"
+          className="w-full grid grid-cols-4 gap-1.5 md:hidden pt-1.5 border-t border-proton-border"
         >
           <button
             type="button"
@@ -3690,8 +3688,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className={cn(
               "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
               activeBottomTab === 'home' && viewMode === 'browse' && !showOnlyFavorites
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-bg text-proton-muted hover:text-proton-text border-proton-border hover:bg-proton-accent/10"
             )}
           >
             <LayoutGrid size={13} />
@@ -3714,8 +3712,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className={cn(
               "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
               viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-bg text-proton-muted hover:text-proton-text border-proton-border hover:bg-proton-accent/10"
             )}
           >
             <Store size={13} />
@@ -3724,7 +3722,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <span className={cn(
                 "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
                 viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages'
-                  ? "bg-zinc-950 text-[#dfb257]"
+                  ? "bg-black/20 text-proton-on-accent"
                   : "bg-amber-500 text-zinc-950"
               )}>
                 {sellerOrderCounts.actionRequired}
@@ -3748,8 +3746,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className={cn(
               "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
               viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-bg text-proton-muted hover:text-proton-text border-proton-border hover:bg-proton-accent/10"
             )}
           >
             <Package size={13} />
@@ -3758,8 +3756,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <span className={cn(
                 "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
                 viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
-                  ? "bg-zinc-950 text-[#dfb257]"
-                  : "bg-[#dfb257] text-zinc-950"
+                  ? "bg-black/20 text-proton-on-accent"
+                  : "bg-proton-accent text-proton-on-accent"
               )}>
                 {buyerOrders.length}
               </span>
@@ -3785,8 +3783,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             className={cn(
               "px-1.5 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
               activeBottomTab === 'messages'
-                ? "bg-[#dfb257] text-zinc-950 border-[#dfb257] shadow-sm font-black"
-                : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800/80 hover:bg-zinc-800"
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-bg text-proton-muted hover:text-proton-text border-proton-border hover:bg-proton-accent/10"
             )}
           >
             <Mail size={13} />
@@ -3795,8 +3793,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <span className={cn(
                 "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
                 activeBottomTab === 'messages'
-                  ? "bg-zinc-950 text-[#dfb257]"
-                  : "bg-red-500 text-white"
+                  ? "bg-black/20 text-proton-on-accent"
+                  : "bg-rose-500 text-white"
               )}>
                 {groupedChats.length}
               </span>
@@ -3812,7 +3810,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           className="space-y-5 md:space-y-12 bg-transparent pb-40 relative"
         >
       {/* Market Hub Header / Banner Section */}
-      <div className={cn("flex flex-col gap-3 md:gap-6 border-b border-zinc-900/40", viewMode === 'browse' ? "pb-3 md:pb-6" : "pb-4 md:pb-6")}>
+      <div className={cn("flex flex-col gap-3 md:gap-6 border-b border-proton-border", viewMode === 'browse' ? "pb-3 md:pb-6" : "pb-4 md:pb-6")}>
         {/* Row 1: Title & Status on left, Grid / Map Mode on right */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-6 w-full">
           <div className="flex items-center gap-4">
@@ -3824,7 +3822,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   else setActiveBottomTab('home');
                   setViewMode('browse');
                 }}
-                className="p-2.5 md:p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white cursor-pointer"
+                className="p-2.5 md:p-3 bg-proton-card rounded-xl hover:bg-proton-accent/10 transition-colors border border-proton-border hover:border-proton-accent/40 text-proton-muted hover:text-proton-text cursor-pointer"
                 title={language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}
               >
                 <ArrowLeft size={18} />
@@ -3840,8 +3838,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               </h1>
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                  <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80", currentTheme.muted)}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className={cn("font-black tracking-widest uppercase text-[8px]", currentTheme.muted)}>
                     {viewMode === 'browse' ? (language === 'ka' ? 'ონლაინ' : 'LIVE') : 
                      viewMode === 'my-listings' && activeBottomTab === 'messages' ? (language === 'ka' ? 'შეტყობინებები' : 'Messages') :
                      viewMode === 'my-listings' ? t.market.my_listings :
@@ -3852,8 +3850,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 </div>
                 {viewMode === 'browse' && (
                   <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80 font-mono", currentTheme.muted)}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className={cn("font-black tracking-widest uppercase text-[8px] font-mono", currentTheme.muted)}>
                       {language === 'ka' ? `აქტიური განცხადებები: ${activeListingsCount}` : `Active Listings: ${activeListingsCount}`}
                     </span>
                   </div>
@@ -3863,8 +3861,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     <button 
                       onClick={() => setProfileSubMode('selling')}
                       className={cn(
-                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
-                        profileSubMode === 'selling' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                        profileSubMode === 'selling' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:text-proton-text")
                       )}
                     >
                       {t.market.selling_mode}
@@ -3872,8 +3870,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     <button 
                       onClick={() => setProfileSubMode('buying')}
                       className={cn(
-                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all",
-                        profileSubMode === 'buying' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:opacity-85")
+                        "px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer",
+                        profileSubMode === 'buying' ? cn(currentTheme.badgeBg, "shadow-sm") : cn(currentTheme.muted, "hover:text-proton-text")
                       )}
                     >
                       {t.market.buying_mode}
@@ -3887,7 +3885,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       closeInlineMessages();
                       setViewMode('browse');
                     }}
-                    className={cn("hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer hover:bg-white/10", currentTheme.cardAlt, currentTheme.muted)}
+                    className={cn("hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer hover:bg-proton-accent/10 hover:text-proton-text", currentTheme.cardAlt, currentTheme.muted)}
                   >
                     <ArrowLeft size={10} />
                     <span>{language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}</span>
@@ -3905,8 +3903,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   type="button"
                   onClick={() => setDisplayMode('grid')}
                   className={cn(
-                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
-                    displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-sm") : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    displayMode === 'grid' ? cn(currentTheme.badgeBg, "shadow-sm") : cn("border border-transparent", currentTheme.muted, "hover:text-proton-text")
                   )}
                   title={language === 'ka' ? 'ბადისებრი ხედი' : 'Grid View'}
                 >
@@ -3917,8 +3915,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   type="button"
                   onClick={() => setDisplayMode('map')}
                   className={cn(
-                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5",
-                    displayMode === 'map' ? "bg-gradient-to-b from-[#e5af37] to-[#b8860b] text-[#070708] shadow-sm border border-zinc-700/80" : cn("border border-transparent", currentTheme.muted, "hover:opacity-85")
+                    "h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                    displayMode === 'map' ? "bg-proton-accent text-proton-on-accent shadow-sm border border-proton-accent font-black" : cn("border border-transparent", currentTheme.muted, "hover:text-proton-text")
                   )}
                   title={language === 'ka' ? 'რუკის ხედი' : 'Map View'}
                 >
@@ -3942,10 +3940,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   )}
                 >
                   {CURRENCIES.map(curr => (
-                    <option key={curr.code} value={curr.code}>{curr.code}</option>
+                    <option key={curr.code} value={curr.code} className="bg-proton-card text-proton-text">{curr.code}</option>
                   ))}
                 </select>
-                <ChevronRight size={12} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 opacity-20 pointer-events-none" />
+                <ChevronRight size={12} className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-proton-muted pointer-events-none" />
               </div>
             </div>
           )}
@@ -3964,12 +3962,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 theme={currentTheme}
               />
 
-              {/* SPACE SAVING: Beautiful Category Dropdown integrated right here! */}
+              {/* SPACE SAVING: Category Dropdown */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                  className="flex items-center gap-2 px-3.5 py-2 h-[38px] rounded-xl bg-zinc-950 border border-zinc-800 hover:border-zinc-700 hover:text-white transition-all text-[10px] font-black uppercase tracking-wider text-zinc-300 cursor-pointer active:scale-95 shadow-md shrink-0"
+                  className="flex items-center gap-2 px-3.5 py-2 h-[38px] rounded-xl bg-proton-card border border-proton-border hover:border-proton-accent/40 hover:text-proton-text transition-all text-[10px] font-black uppercase tracking-wider text-proton-text cursor-pointer active:scale-95 shadow-sm shrink-0"
                 >
                   <span className="text-sm shrink-0">
                     {activeCategory === 'all' ? '📊' : (CATEGORY_EMOJIS[activeCategory] || '🏷️')}
@@ -3979,7 +3977,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       ? (language === 'ka' ? 'ყველა კატეგორია' : 'All Categories') 
                       : (t.market.categories[activeCategory] || activeCategory)}
                   </span>
-                  <ChevronDown size={11} className={cn("opacity-40 transition-transform duration-200", isCategoryDropdownOpen && "rotate-180")} />
+                  <ChevronDown size={11} className={cn("text-proton-muted transition-transform duration-200", isCategoryDropdownOpen && "rotate-180")} />
                 </button>
 
                 {isCategoryDropdownOpen && (
@@ -3988,10 +3986,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       className="fixed inset-0 z-[60]" 
                       onClick={() => setIsCategoryDropdownOpen(false)} 
                     />
-                    <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-900 w-full flex justify-between items-center mb-1.5">
+                    <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-proton-card border border-proton-border rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="text-[9px] font-black tracking-wider text-proton-muted uppercase px-3 py-1.5 border-b border-proton-border w-full flex justify-between items-center mb-1.5">
                         <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
-                        <span className="text-[#dfb257] text-[8px] tracking-widest">★ PROTON</span>
+                        <span className="text-proton-accent text-[8px] tracking-widest">★ PROTON</span>
                       </div>
                       <div className="max-h-60 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
                         <button
@@ -4001,17 +3999,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             setIsCategoryDropdownOpen(false);
                           }}
                           className={cn(
-                            "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left",
+                            "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
                             activeCategory === 'all'
-                              ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
-                              : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                              ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
+                              : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
                           )}
                         >
                           <div className="flex items-center gap-2">
                             <span>🌍</span>
                             <span>{t.market.all_categories}</span>
                           </div>
-                          {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                          {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                         </button>
                         
                         {Object.entries(t.market.categories).map(([key, label]) => {
@@ -4025,17 +4023,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 setIsCategoryDropdownOpen(false);
                               }}
                               className={cn(
-                                "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left",
+                                "w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
                                 isSelected
-                                  ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
-                                  : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                                  ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
+                                  : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
                               )}
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="text-xs shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
                                 <span className="truncate">{label as string}</span>
                               </div>
-                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                             </button>
                           );
                         })}
@@ -4049,7 +4047,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             <div className="flex flex-wrap items-center gap-4 sm:gap-6">
               {/* Sorting Filter */}
               <div className="flex items-center gap-2">
-                <span className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-widest opacity-40 shrink-0", currentTheme.muted)}>
+                <span className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-widest shrink-0", currentTheme.muted)}>
                   {language === 'ka' ? 'სორტირება:' : 'SORT BY:'}
                 </span>
                 <div className="relative">
@@ -4061,16 +4059,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       currentTheme.input
                     )}
                   >
-                    <option value="rating">{language === 'ka' ? '★ რეიტინგი' : '★ RATING'}</option>
-                    <option value="newest">{language === 'ka' ? '📅 უახლესი' : '📅 NEWEST'}</option>
-                    <option value="priceAsc">{language === 'ka' ? '📉 ფასი (ზრდადი)' : '📉 PRICE (LOW)'}</option>
-                    <option value="priceDesc">{language === 'ka' ? '📈 ფასი (კლებადი)' : '📈 PRICE (HIGH)'}</option>
+                    <option value="rating" className="bg-proton-card text-proton-text">{language === 'ka' ? '★ რეიტინგი' : '★ RATING'}</option>
+                    <option value="newest" className="bg-proton-card text-proton-text">{language === 'ka' ? '📅 უახლესი' : '📅 NEWEST'}</option>
+                    <option value="priceAsc" className="bg-proton-card text-proton-text">{language === 'ka' ? '📉 ფასი (ზრდადი)' : '📉 PRICE (LOW)'}</option>
+                    <option value="priceDesc" className="bg-proton-card text-proton-text">{language === 'ka' ? '📈 ფასი (კლებადი)' : '📈 PRICE (HIGH)'}</option>
                   </select>
-                  <ChevronRight size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 rotate-90 opacity-25 pointer-events-none" />
+                  <ChevronRight size={10} className="absolute right-2.5 top-1/2 -translate-y-1/2 rotate-90 text-proton-muted pointer-events-none" />
                 </div>
               </div>
 
-              <div className="text-[10px] font-black uppercase tracking-widest opacity-45">
+              <div className="text-[10px] font-black uppercase tracking-widest text-proton-muted">
                 {language === 'ka' 
                   ? `ნაპოვნია ${filteredListings.length} განცხადება` 
                   : `${filteredListings.length} listings found`}
@@ -4092,7 +4090,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         <div className="space-y-10 w-full">
           {/* SPACE-SAVING MOBILE TOOLBAR - Only for Browse View */}
           {viewMode === 'browse' && (
-            <div className="block md:hidden bg-zinc-950/45 border border-zinc-900 rounded-xl p-4 mb-3.5 space-y-3.5 transition-all">
+            <div className="block md:hidden bg-proton-card/95 border border-proton-border rounded-xl p-4 mb-3.5 space-y-3.5 transition-all shadow-sm">
               {/* Listing Type Select tabs (scrollable with horizontal scroll indicator) */}
               <div className="relative group/typescroll">
                 <div className="flex items-center overflow-x-auto scrollbar-none py-0.5 pr-6">
@@ -4103,8 +4101,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     theme={currentTheme}
                   />
                 </div>
-                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-zinc-950/90 via-zinc-950/40 to-transparent flex items-center justify-end pr-1 text-zinc-500">
-                  <ChevronRight size={12} className="opacity-60" />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-proton-card via-proton-card/50 to-transparent flex items-center justify-end pr-1 text-proton-muted">
+                  <ChevronRight size={12} className="opacity-70" />
                 </div>
               </div>
 
@@ -4115,7 +4113,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   <button
                     type="button"
                     onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
-                    className="w-full flex items-center justify-between px-3 h-11 rounded-xl bg-zinc-950/90 border border-zinc-900 text-left text-[10px] font-black uppercase tracking-wider text-zinc-300 active:scale-95 transition-all cursor-pointer"
+                    className="w-full flex items-center justify-between px-3 h-11 rounded-xl bg-proton-bg border border-proton-border text-left text-[10px] font-black uppercase tracking-wider text-proton-text active:scale-95 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-1.5 min-w-0 pr-1">
                       <span className="text-xs shrink-0">
@@ -4127,7 +4125,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           : (t.market.categories[activeCategory] || activeCategory)}
                       </span>
                     </div>
-                    <ChevronDown size={11} className={cn("opacity-40 transition-transform duration-200 shrink-0", isCategoryDropdownOpen && "rotate-180")} />
+                    <ChevronDown size={11} className={cn("text-proton-muted transition-transform duration-200 shrink-0", isCategoryDropdownOpen && "rotate-180")} />
                   </button>
 
                   {isCategoryDropdownOpen && (
@@ -4136,8 +4134,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         className="fixed inset-0 z-[60]" 
                         onClick={() => setIsCategoryDropdownOpen(false)} 
                       />
-                      <div className="absolute left-0 top-12 w-[calc(200%+0.5rem)] sm:w-64 max-w-[calc(100vw-2.5rem)] bg-zinc-950 border-2 border-[#dfb257]/30 rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-900 w-full flex justify-between items-center mb-1.5">
+                      <div className="absolute left-0 top-12 w-[calc(200%+0.5rem)] sm:w-64 max-w-[calc(100vw-2.5rem)] bg-proton-card border-2 border-proton-accent/40 rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="text-[9px] font-black tracking-wider text-proton-muted uppercase px-3 py-1.5 border-b border-proton-border w-full flex justify-between items-center mb-1.5">
                           <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         </div>
                         <div className="max-h-60 overflow-y-auto pr-1 space-y-0.5 custom-scrollbar">
@@ -4150,15 +4148,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             className={cn(
                               "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
                               activeCategory === 'all'
-                                ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
-                                : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                                ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
+                                : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
                             )}
                           >
                             <div className="flex items-center gap-2">
                               <span>🌍</span>
                               <span>{t.market.all_categories}</span>
                             </div>
-                            {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                            {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                           </button>
                           
                           {Object.entries(t.market.categories).map(([key, label]) => {
@@ -4174,15 +4172,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 className={cn(
                                   "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all border text-left cursor-pointer",
                                   isSelected
-                                    ? "bg-[#dfb257]/15 border-[#dfb257]/30 text-[#dfb257]"
-                                    : "bg-transparent border-transparent text-zinc-400 hover:bg-zinc-900 hover:text-white"
+                                    ? "bg-proton-accent/15 border-proton-accent/35 text-proton-accent"
+                                    : "bg-transparent border-transparent text-proton-muted hover:bg-proton-bg hover:text-proton-text"
                                 )}
                               >
                                 <div className="flex items-center gap-2 min-w-0 font-bold">
                                   <span className="text-xs shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
                                   <span className="truncate">{label as string}</span>
                                 </div>
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#dfb257]" />}
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                               </button>
                             );
                           })}
@@ -4196,7 +4194,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <button
                   type="button"
                   onClick={() => setIsFiltersOpen(true)}
-                  className="col-span-3 h-11 rounded-xl text-[10px] uppercase font-black tracking-widest bg-zinc-950/90 border border-zinc-900 text-zinc-300 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  className="col-span-3 h-11 rounded-xl text-[10px] uppercase font-black tracking-widest bg-proton-bg border border-proton-border text-proton-text hover:border-proton-accent/40 active:scale-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
                 >
                   ⚙️ <span>{language === 'ka' ? 'ფილტრი' : 'Filter'}</span>
                 </button>
@@ -4205,16 +4203,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <button
                   type="button"
                   onClick={() => setDisplayMode(displayMode === 'grid' ? 'map' : 'grid')}
-                  className="col-span-3 h-11 bg-zinc-950/90 border border-zinc-900 rounded-xl text-zinc-300 hover:text-white flex items-center justify-center active:scale-95 transition-all text-[10px] uppercase font-black tracking-widest gap-1 cursor-pointer"
+                  className="col-span-3 h-11 bg-proton-bg border border-proton-border hover:border-proton-accent/40 rounded-xl text-proton-text flex items-center justify-center active:scale-95 transition-all text-[10px] uppercase font-black tracking-widest gap-1 cursor-pointer"
                 >
                   {displayMode === 'grid' ? (
                     <>
-                      <MapPin size={11} className="text-[#dfb257]" />
+                      <MapPin size={11} className="text-proton-accent" />
                       <span>{language === 'ka' ? 'რუკა' : 'Map'}</span>
                     </>
                   ) : (
                     <>
-                      <LayoutGrid size={11} className="text-[#dfb257]" />
+                      <LayoutGrid size={11} className="text-proton-accent" />
                       <span>{language === 'ka' ? 'ბადე' : 'Grid'}</span>
                     </>
                   )}
@@ -4227,7 +4225,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             {/* Desktop Left Sidebar: Categories/Filters */}
             {viewMode === 'browse' && (
               <aside className="hidden md:block w-72 shrink-0 space-y-6 sticky top-20 animate-in fade-in slide-in-from-left duration-300">
-                <div className={cn("p-6 rounded-xl border border-zinc-800/60 backdrop-blur-xl", currentTheme.card)}>
+                <div className={cn("p-6 rounded-xl backdrop-blur-xl", currentTheme.card)}>
                   <MarketFilterPanel
                     language={language}
                     t={t}
@@ -4275,14 +4273,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <div className="space-y-8">
                 {(viewMode === 'my-listings' || viewMode === 'browse') && activeBottomTab === 'messages' && (
                   /* Dedicated Desktop Inbox / Direct Messages layout */
-                  <div className="hidden md:grid grid-cols-12 gap-6 bg-zinc-950/20 border border-zinc-900/60 rounded-xl p-6 h-[calc(100vh-270px)] min-h-[480px] max-h-[660px] animate-in fade-in duration-300">
+                  <div className="hidden md:grid grid-cols-12 gap-6 bg-proton-card border border-proton-border rounded-xl p-6 h-[calc(100vh-270px)] min-h-[480px] max-h-[660px] animate-in fade-in duration-300 shadow-lg">
                     {/* Left Column: Conversational threads */}
-                    <div className="col-span-4 border-r border-zinc-900/60 pr-6 flex flex-col h-full overflow-hidden">
-                      <div className="pb-4 border-b border-zinc-900/40">
-                        <h3 className="text-xs font-black uppercase tracking-[0.15em] text-[#dfb257] mb-1">
+                    <div className="col-span-4 border-r border-proton-border pr-6 flex flex-col h-full overflow-hidden">
+                      <div className="pb-4 border-b border-proton-border">
+                        <h3 className="text-xs font-black uppercase tracking-[0.15em] text-proton-accent mb-1">
                           {language === 'ka' ? 'ჩატების სია' : 'Direct Messages'}
                         </h3>
-                        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">
+                        <p className="text-[10px] text-proton-muted font-bold uppercase tracking-wider">
                           {language === 'ka' ? 'აქტიური საუბრები' : 'Active Conversations'}
                         </p>
                       </div>
@@ -4290,7 +4288,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       <div className="flex-1 overflow-y-auto space-y-2 pr-1 mt-4 scrollbar-none">
                         {groupedChats.length === 0 ? (
                           <div className="text-center py-12">
-                            <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                            <p className="text-[10px] uppercase font-bold tracking-wider text-proton-muted">
                               {language === 'ka' ? 'აქტიური საუბრები არ არის' : 'No active chats found'}
                             </p>
                           </div>
@@ -4350,34 +4348,34 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                   }
                                 }}
                                 className={cn(
-                                  "w-full text-left p-3.5 rounded-2xl flex items-center justify-between transition-all border",
+                                  "w-full text-left p-3.5 rounded-2xl flex items-center justify-between transition-all border cursor-pointer",
                                   isActive 
-                                    ? "bg-zinc-900 border-[#dfb257]/30 shadow-[0_4px_20px_rgba(223,178,87,0.05)]" 
-                                    : "bg-zinc-950/40 hover:bg-zinc-900 border-zinc-800/60"
+                                    ? "bg-proton-bg border-proton-accent/45 shadow-sm" 
+                                    : "bg-proton-bg/60 hover:bg-proton-bg border-proton-border"
                                 )}
                               >
                                 <div className="truncate flex-1 pr-3">
                                   <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                    <span className={cn("text-[10px] font-black truncate", isActive ? "text-[#dfb257]" : "text-zinc-300")}>
+                                    <span className={cn("text-[10px] font-black truncate", isActive ? "text-proton-accent" : "text-proton-text")}>
                                       {isSeller ? (chat.buyerName || 'Buyer') : chat.listingTitle}
                                     </span>
                                     {isSeller && (
-                                      <span className="text-[9px] text-zinc-500 truncate max-w-[140px]">
+                                      <span className="text-[9px] text-proton-muted truncate max-w-[140px]">
                                         • {chat.listingTitle}
                                       </span>
                                     )}
                                     {chat.orderId && (
-                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#dfb257]/15 text-[#dfb257] border border-[#dfb257]/30 text-[8px] font-mono font-bold shrink-0">
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-proton-accent/15 text-proton-accent border border-proton-accent/30 text-[8px] font-mono font-bold shrink-0">
                                         <Package size={9} />
                                         <span>#{chat.orderId.slice(-6).toUpperCase()}</span>
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[11px] text-zinc-500 truncate font-medium">
+                                  <p className="text-[11px] text-proton-muted truncate font-medium">
                                     {chat.lastMessage}
                                   </p>
                                 </div>
-                                <span className="text-[8px] font-bold text-zinc-600 font-mono shrink-0 uppercase">
+                                <span className="text-[8px] font-bold text-proton-muted/75 font-mono shrink-0 uppercase">
                                   {chat.lastTime ? new Date(safeParseDate(chat.lastTime)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                 </span>
                               </button>
@@ -4392,24 +4390,24 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       {activeChatListing ? (
                         <div className="flex flex-col h-full justify-between">
                           {/* Chat header */}
-                          <div className="pb-4 border-b border-zinc-900/60 flex items-center justify-between gap-3 flex-wrap">
+                          <div className="pb-4 border-b border-proton-border flex items-center justify-between gap-3 flex-wrap">
                             <div>
-                              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block font-mono">
+                              <span className="text-[9px] font-bold text-proton-muted uppercase tracking-widest block font-mono">
                                 {language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Inquiry thread:'}
                               </span>
-                              <h4 className="text-sm font-black text-white uppercase tracking-wider">
+                              <h4 className="text-sm font-black text-proton-text uppercase tracking-wider">
                                 {getListingTitle(activeChatListing, language)}
                               </h4>
-                              <p className="text-[10px] text-zinc-400 font-medium mt-0.5">
+                              <p className="text-[10px] text-proton-muted font-medium mt-0.5">
                                 {user?.uid === activeChatContext?.sellerId ? (
                                   <>
-                                    <span className="text-zinc-500">{language === 'ka' ? 'მყიდველი:' : 'Buyer:'}</span>{' '}
-                                    <span className="text-[#dfb257] font-bold">{activeChatContext?.buyerName || 'Buyer'}</span>
+                                    <span className="text-proton-muted">{language === 'ka' ? 'მყიდველი:' : 'Buyer:'}</span>{' '}
+                                    <span className="text-proton-accent font-bold">{activeChatContext?.buyerName || 'Buyer'}</span>
                                   </>
                                 ) : (
                                   <>
-                                    <span className="text-zinc-500">{language === 'ka' ? 'გამყიდველი:' : 'Vendor:'}</span>{' '}
-                                    <span className="text-zinc-300 font-bold">{activeChatListing.sellerName || 'Vendor'}</span>
+                                    <span className="text-proton-muted">{language === 'ka' ? 'გამყიდველი:' : 'Vendor:'}</span>{' '}
+                                    <span className="text-proton-text font-bold">{activeChatListing.sellerName || 'Vendor'}</span>
                                   </>
                                 )}
                               </p>
@@ -4417,24 +4415,24 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             <div className="flex items-center gap-2">
                               {activeChatOrder && (
                                 <div className="flex items-center gap-2">
-                                  <div className="px-2.5 py-1 bg-[#dfb257]/15 border border-[#dfb257]/30 rounded-xl flex items-center gap-1.5">
-                                    <Package size={11} className="text-[#dfb257]" />
-                                    <span className="text-[9px] font-black text-[#dfb257] uppercase font-mono">
+                                  <div className="px-2.5 py-1 bg-proton-accent/15 border border-proton-accent/30 rounded-xl flex items-center gap-1.5">
+                                    <Package size={11} className="text-proton-accent" />
+                                    <span className="text-[9px] font-black text-proton-accent uppercase font-mono">
                                       #{activeChatOrder.id.slice(-6).toUpperCase()}
                                     </span>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => handleViewOrderFromChat(activeChatOrder.id)}
-                                    className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold uppercase tracking-wider transition-all border border-white/15 flex items-center gap-1 cursor-pointer active:scale-95"
+                                    className="px-2.5 py-1 rounded-xl bg-proton-bg hover:bg-proton-accent/10 text-proton-text text-[9px] font-bold uppercase tracking-wider transition-all border border-proton-border hover:border-proton-accent/40 flex items-center gap-1 cursor-pointer active:scale-95"
                                     title={language === 'ka' ? 'შეკვეთის დეტალები' : 'View Order Details'}
                                   >
-                                    <ExternalLink size={10} className="text-[#dfb257]" />
+                                    <ExternalLink size={10} className="text-proton-accent" />
                                     <span>{language === 'ka' ? 'შეკვეთა' : 'View Order'}</span>
                                   </button>
                                 </div>
                               )}
-                              <div className="px-3 py-1 bg-[#dfb257]/10 border border-[#dfb257]/20 rounded-xl text-[9px] font-bold text-[#dfb257] uppercase tracking-wider">
+                              <div className="px-3 py-1 bg-proton-accent/10 border border-proton-accent/25 rounded-xl text-[9px] font-bold text-proton-accent uppercase tracking-wider">
                                 {activeChatListing.condition === 'new' ? (language === 'ka' ? 'ახალი' : 'New') : (language === 'ka' ? 'მეორადი' : 'Used')}
                               </div>
                               <button
@@ -4444,7 +4442,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                   setActiveChatContext(null);
                                   setActiveChatOrder(null);
                                 }}
-                                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/10 cursor-pointer"
+                                className="p-1.5 rounded-xl bg-proton-bg hover:bg-proton-accent/10 text-proton-muted hover:text-proton-text transition-colors border border-proton-border cursor-pointer"
                                 title={language === 'ka' ? 'ჩატის დახურვა' : 'Close thread'}
                                 aria-label={language === 'ka' ? 'ჩატის დახურვა' : 'Close thread'}
                               >
@@ -4454,10 +4452,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           </div>
 
                           {/* Chat messages body */}
-                          <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-1 scrollbar-none bg-black/20 rounded-3xl p-4 border border-zinc-900/30 flex flex-col">
+                          <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-1 scrollbar-none bg-proton-bg rounded-3xl p-4 border border-proton-border flex flex-col">
                             {messagesList.length === 0 ? (
                               <div className="text-center my-auto py-12">
-                                <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">
+                                <p className="text-[10px] uppercase font-black tracking-widest text-proton-muted">
                                   {language === 'ka' ? 'შეტყობინებები არ არის' : 'No messages yet'}
                                 </p>
                               </div>
@@ -4470,12 +4468,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                     className={cn(
                                       "max-w-[75%] p-3.5 rounded-2xl text-xs flex flex-col gap-1 shadow-sm",
                                       isMe 
-                                        ? "bg-[#dfb257] text-[#070708] self-end rounded-tr-none font-bold" 
-                                        : "bg-zinc-900 text-zinc-100 self-start rounded-tl-none font-medium border border-zinc-800"
+                                        ? "bg-proton-accent text-proton-on-accent self-end rounded-tr-none font-bold" 
+                                        : "bg-proton-card text-proton-text self-start rounded-tl-none font-medium border border-proton-border"
                                     )}
                                   >
                                     <div className="flex items-center gap-1.5 justify-between">
-                                      <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-[#070708]/70" : "text-zinc-500")}>
+                                      <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-proton-on-accent/75" : "text-proton-muted")}>
                                         {msg.senderName}
                                       </span>
                                     </div>
@@ -4493,24 +4491,24 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                               value={chatMessageText}
                               onChange={(e) => setChatMessageText(e.target.value)}
                               placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl px-5 py-3 text-base md:text-xs text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#dfb257]/50"
+                              className={cn("flex-1 rounded-2xl px-5 py-3 text-base md:text-xs", currentTheme.input)}
                             />
                             <button 
                               type="submit"
                               disabled={!chatMessageText.trim()}
-                              className="px-6 py-3 bg-[#dfb257] hover:bg-opacity-90 disabled:opacity-40 transition-all rounded-2xl text-xs font-black text-[#070708] uppercase tracking-widest"
+                              className={cn("px-6 py-3 disabled:opacity-40 transition-all rounded-2xl text-xs font-black uppercase tracking-widest cursor-pointer", currentTheme.accentBg)}
                             >
                               {language === 'ka' ? 'გაგზავნა' : 'Send'}
                             </button>
                           </form>
                         </div>
                       ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center text-zinc-500">
-                          <span className="text-3xl opacity-40 mb-3">💬</span>
-                          <p className="text-xs font-black uppercase tracking-widest text-zinc-400">
+                        <div className="h-full flex flex-col items-center justify-center text-center text-proton-muted">
+                          <span className="text-3xl opacity-50 mb-3">💬</span>
+                          <p className="text-xs font-black uppercase tracking-widest text-proton-text">
                             {language === 'ka' ? 'აირჩიეთ საუბარი' : 'Select a Conversation'}
                           </p>
-                          <p className="text-[10px] text-zinc-600 max-w-xs mt-1">
+                          <p className="text-[10px] text-proton-muted max-w-xs mt-1">
                             {language === 'ka' ? 'დააწკაპუნეთ საუბარზე მარცხენა პანელში ჩეთის გასახსნელად.' : 'Click any conversation on the left list to view thread details.'}
                           </p>
                         </div>
@@ -4521,16 +4519,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                 {viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages' && (
                   <div className="space-y-3 w-full">
-                    <div className="flex bg-white/5 p-1 rounded-2xl border border-white/5 shadow-inner self-start max-w-md animate-in fade-in duration-300">
+                    <div className="flex bg-proton-bg p-1 rounded-2xl border border-proton-border shadow-inner self-start max-w-md animate-in fade-in duration-300">
                       <button
                         type="button"
                         id="seller-tab-postings-btn"
                         onClick={() => setActiveSellingTab('listings')}
                         className={cn(
-                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center cursor-pointer",
+                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center cursor-pointer border",
                           activeSellingTab === 'listings' 
-                            ? "bg-white/10 text-white shadow-md border border-white/10" 
-                            : "text-white/40 hover:text-white/60"
+                            ? "bg-proton-card text-proton-text shadow-sm border-proton-border" 
+                            : "text-proton-muted hover:text-proton-text border-transparent"
                         )}
                       >
                         <span>📦</span>
@@ -4541,10 +4539,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         id="seller-tab-incoming-orders-btn"
                         onClick={() => setActiveSellingTab('incoming-orders')}
                         className={cn(
-                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative cursor-pointer",
+                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative cursor-pointer border",
                           activeSellingTab === 'incoming-orders' 
-                            ? "bg-white/10 text-white shadow-md border border-white/10" 
-                            : "text-white/40 hover:text-white/60"
+                            ? "bg-proton-card text-proton-text shadow-sm border-proton-border" 
+                            : "text-proton-muted hover:text-proton-text border-transparent"
                         )}
                       >
                         <span>⚡</span>
@@ -4553,8 +4551,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-[8px] font-black ml-1 transition-colors",
                             sellerOrderCounts.actionRequired > 0 
-                              ? "bg-amber-500 text-black font-black animate-pulse" 
-                              : "bg-white/20 text-white"
+                              ? "bg-amber-500 text-zinc-950 font-black animate-pulse" 
+                              : "bg-proton-accent/15 text-proton-accent"
                           )}>
                             {sellerOrderCounts.actionRequired > 0 ? sellerOrderCounts.actionRequired : sellerOrders.length}
                           </span>
@@ -4570,16 +4568,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           id="seller-sales-revenue-summary"
                           className={cn(
                             "grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-2xl border backdrop-blur-md",
-                            currentTheme.cardAlt
+                            currentTheme.card
                           )}
                         >
                           {/* Metric 1: Total Revenue */}
-                          <div id="seller-metric-revenue" className="flex flex-col justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                          <div id="seller-metric-revenue" className="flex flex-col justify-between p-3 rounded-xl bg-proton-bg/70 border border-proton-border">
                             <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider", currentTheme.muted)}>
                               {language === 'ka' ? 'შემოსავალი' : 'Revenue'}
                             </span>
                             <div className="mt-1 flex items-baseline gap-1.5 flex-wrap">
-                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-white">
+                              <span className={cn("text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight", currentTheme.text)}>
                                 {sellerSalesSummary.formattedRevenue}
                               </span>
                               {sellerSalesSummary.revenueBreakdown && (
@@ -4591,24 +4589,24 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           </div>
 
                           {/* Metric 2: Completed Orders */}
-                          <div id="seller-metric-completed" className="flex flex-col justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                          <div id="seller-metric-completed" className="flex flex-col justify-between p-3 rounded-xl bg-proton-bg/70 border border-proton-border">
                             <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider", currentTheme.muted)}>
                               {language === 'ka' ? 'დასრულებული' : 'Completed'}
                             </span>
                             <div className="mt-1 flex items-baseline gap-1.5">
-                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-green-400">
+                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-emerald-500">
                                 {sellerSalesSummary.completedOrders}
                               </span>
                             </div>
                           </div>
 
                           {/* Metric 3: Total Orders */}
-                          <div id="seller-metric-total-orders" className="flex flex-col justify-between p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                          <div id="seller-metric-total-orders" className="flex flex-col justify-between p-3 rounded-xl bg-proton-bg/70 border border-proton-border">
                             <span className={cn("text-[9px] sm:text-[10px] font-black uppercase tracking-wider", currentTheme.muted)}>
                               {language === 'ka' ? 'სულ შეკვეთები' : 'Total Orders'}
                             </span>
                             <div className="mt-1 flex items-baseline gap-1.5">
-                              <span className="text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight text-white">
+                              <span className={cn("text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight", currentTheme.text)}>
                                 {sellerSalesSummary.totalOrders}
                               </span>
                             </div>
@@ -4618,24 +4616,24 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           <div id="seller-metric-action-required" className={cn(
                             "flex flex-col justify-between p-3 rounded-xl border transition-colors",
                             sellerSalesSummary.actionRequired > 0 
-                              ? "bg-amber-500/10 border-amber-500/30 text-amber-300" 
-                              : "bg-white/[0.03] border-white/5"
+                              ? "bg-amber-500/15 border-amber-500/35 text-amber-500" 
+                              : "bg-proton-bg/70 border-proton-border"
                           )}>
                             <div className="flex items-center justify-between gap-1">
                               <span className={cn(
                                 "text-[9px] sm:text-[10px] font-black uppercase tracking-wider",
-                                sellerSalesSummary.actionRequired > 0 ? "text-amber-300" : currentTheme.muted
+                                sellerSalesSummary.actionRequired > 0 ? "text-amber-500" : currentTheme.muted
                               )}>
                                 {language === 'ka' ? 'მოქმედებაა საჭირო' : 'Action Required'}
                               </span>
                               {sellerSalesSummary.actionRequired > 0 && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                               )}
                             </div>
                             <div className="mt-1 flex items-baseline gap-1.5">
                               <span className={cn(
                                 "text-base sm:text-lg lg:text-xl font-black font-mono tracking-tight",
-                                sellerSalesSummary.actionRequired > 0 ? "text-amber-400 font-black" : "text-white"
+                                sellerSalesSummary.actionRequired > 0 ? "text-amber-500 font-black" : currentTheme.text
                               )}>
                                 {sellerSalesSummary.actionRequired}
                               </span>
@@ -4654,14 +4652,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             className={cn(
                               "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
                               sellerOrderFilter === 'all'
-                                ? "bg-white/15 text-white border-white/20 shadow-sm"
-                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm"
+                                : "bg-proton-card text-proton-muted border-proton-border hover:text-proton-text hover:border-proton-accent/40"
                             )}
                           >
                             <span>{language === 'ka' ? 'ყველა' : 'All'}</span>
                             <span className={cn(
                               "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
-                              sellerOrderFilter === 'all' ? "bg-white/20 text-white font-bold" : "bg-white/5 text-white/40"
+                              sellerOrderFilter === 'all' ? "bg-black/20 text-proton-on-accent font-bold" : "bg-proton-bg text-proton-muted"
                             )}>
                               {sellerOrderCounts.all}
                             </span>
@@ -4675,17 +4673,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             className={cn(
                               "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
                               sellerOrderFilter === 'action-required'
-                                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm font-black"
-                                : "bg-white/5 text-white/40 border-white/5 hover:text-amber-300/80 hover:bg-white/10"
+                                ? "bg-amber-500/15 text-amber-500 border-amber-500/40 shadow-sm font-black"
+                                : "bg-proton-card text-proton-muted border-proton-border hover:text-amber-500 hover:border-amber-500/35"
                             )}
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             <span>{language === 'ka' ? 'მოქმედებაა საჭირო' : 'Action Required'}</span>
                             <span className={cn(
                               "px-1.5 py-0.5 rounded-md text-[8px] font-mono font-black",
                               sellerOrderCounts.actionRequired > 0 
-                                ? "bg-amber-500 text-black font-black" 
-                                : (sellerOrderFilter === 'action-required' ? "bg-amber-500/30 text-amber-200" : "bg-white/5 text-white/40")
+                                ? "bg-amber-500 text-zinc-950 font-black" 
+                                : (sellerOrderFilter === 'action-required' ? "bg-amber-500/25 text-amber-500" : "bg-proton-bg text-proton-muted")
                             )}>
                               {sellerOrderCounts.actionRequired}
                             </span>
@@ -4699,14 +4697,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             className={cn(
                               "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
                               sellerOrderFilter === 'processing'
-                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40 shadow-sm font-black"
-                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                                ? "bg-indigo-500/15 text-indigo-500 border-indigo-500/40 shadow-sm font-black"
+                                : "bg-proton-card text-proton-muted border-proton-border hover:text-indigo-500 hover:border-indigo-500/35"
                             )}
                           >
                             <span>{language === 'ka' ? 'მუშავდება' : 'Processing'}</span>
                             <span className={cn(
                               "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
-                              sellerOrderFilter === 'processing' ? "bg-indigo-500/30 text-indigo-200 font-bold" : "bg-white/5 text-white/40"
+                              sellerOrderFilter === 'processing' ? "bg-indigo-500/20 text-indigo-500 font-bold" : "bg-proton-bg text-proton-muted"
                             )}>
                               {sellerOrderCounts.processing}
                             </span>
@@ -4720,14 +4718,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             className={cn(
                               "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
                               sellerOrderFilter === 'shipped'
-                                ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm font-black"
-                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                                ? "bg-cyan-500/15 text-cyan-500 border-cyan-500/40 shadow-sm font-black"
+                                : "bg-proton-card text-proton-muted border-proton-border hover:text-cyan-500 hover:border-cyan-500/35"
                             )}
                           >
                             <span>{language === 'ka' ? 'გაგზავნილი' : 'Shipped'}</span>
                             <span className={cn(
                               "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
-                              sellerOrderFilter === 'shipped' ? "bg-cyan-500/30 text-cyan-200 font-bold" : "bg-white/5 text-white/40"
+                              sellerOrderFilter === 'shipped' ? "bg-cyan-500/20 text-cyan-500 font-bold" : "bg-proton-bg text-proton-muted"
                             )}>
                               {sellerOrderCounts.shipped}
                             </span>
@@ -4741,14 +4739,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             className={cn(
                               "px-3.5 sm:px-4 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-wider whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 border active:scale-95 cursor-pointer",
                               sellerOrderFilter === 'completed'
-                                ? "bg-green-500/20 text-green-300 border-green-500/40 shadow-sm font-black"
-                                : "bg-white/5 text-white/40 border-white/5 hover:text-white/70 hover:bg-white/10"
+                                ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/40 shadow-sm font-black"
+                                : "bg-proton-card text-proton-muted border-proton-border hover:text-emerald-500 hover:border-emerald-500/35"
                             )}
                           >
                             <span>{language === 'ka' ? 'დასრულებული' : 'Completed'}</span>
                             <span className={cn(
                               "px-1.5 py-0.5 rounded-md text-[8px] font-mono",
-                              sellerOrderFilter === 'completed' ? "bg-green-500/30 text-green-200 font-bold" : "bg-white/5 text-white/40"
+                              sellerOrderFilter === 'completed' ? "bg-emerald-500/20 text-emerald-500 font-bold" : "bg-proton-bg text-proton-muted"
                             )}>
                               {sellerOrderCounts.completed}
                             </span>
@@ -4791,23 +4789,23 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           key={order.id}
-                          className={cn("p-8 rounded-xl border border-white/5 group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
+                          className={cn("p-8 rounded-xl border border-proton-border group relative overflow-hidden flex flex-col justify-between", currentTheme.card)}
                         >
                           <div>
                             <div className="absolute top-0 right-0 w-32 h-32 bg-proton-accent/5 blur-3xl rounded-full -mr-16 -mt-16" />
                             <div className="flex items-center justify-between mb-6 relative">
                               <div className={cn(
-                                "p-4 rounded-lg border border-white/5",
+                                "p-4 rounded-lg border border-proton-border",
                                 isService 
-                                  ? "bg-amber-500/10 text-amber-300" 
+                                  ? "bg-amber-500/15 text-amber-500" 
                                   : isPhysical 
-                                  ? "bg-cyan-500/10 text-cyan-300" 
-                                  : "bg-white/5 text-white"
+                                  ? "bg-cyan-500/15 text-cyan-500" 
+                                  : "bg-proton-bg text-proton-text"
                               )}>
                                 {isService ? <Zap size={20} /> : isPhysical ? <Truck size={20} /> : <ShoppingBag size={20} />}
                               </div>
                               <div className="text-right flex flex-col items-end gap-1.5">
-                                <span className={cn("text-[9px] font-black uppercase tracking-widest opacity-40 block", currentTheme.muted)}>
+                                <span className={cn("text-[9px] font-black uppercase tracking-widest block", currentTheme.muted)}>
                                   {order.createdAt?.seconds 
                                     ? new Date(order.createdAt.seconds * 1000).toLocaleDateString()
                                     : order.createdAt instanceof Date 
@@ -4818,16 +4816,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 <span className={cn(
                                   "inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-[0.1em] rounded-lg border",
                                   order.status === 'completed' 
-                                    ? "bg-green-500/10 border-green-500/20 text-green-400"
+                                    ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-500"
                                     : order.status === 'shipped'
-                                    ? "bg-cyan-500/10 border-cyan-500/20 text-cyan-400"
+                                    ? "bg-cyan-500/15 border-cyan-500/30 text-cyan-500"
                                     : order.status === 'processing'
-                                    ? "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
+                                    ? "bg-indigo-500/15 border-indigo-500/30 text-indigo-500"
                                     : order.status === 'in_progress'
-                                    ? "bg-blue-500/10 border-blue-500/20 text-blue-400"
+                                    ? "bg-blue-500/15 border-blue-500/30 text-blue-500"
                                     : order.status === 'cancelled'
-                                    ? "bg-red-500/10 border-red-500/20 text-red-400"
-                                    : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+                                    ? "bg-rose-500/15 border-rose-500/30 text-rose-500"
+                                    : "bg-amber-500/15 border-amber-500/30 text-amber-500"
                                 )}>
                                   {order.status === 'booked' 
                                     ? (language === 'ka' ? '🚀 შეკვეთილია' : '🚀 Booked')
@@ -4850,7 +4848,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             
                             <h4 
                               onClick={() => setSellerSelectedOrder(order)}
-                              className="text-lg font-black text-white mb-2 uppercase tracking-tight leading-tight hover:text-[#dfb257] cursor-pointer transition-colors"
+                              className="text-lg font-black text-proton-text mb-2 uppercase tracking-tight leading-tight hover:text-proton-accent cursor-pointer transition-colors"
                               title={language === 'ka' ? 'დეტალებისა და თაიმლაინის ნახვა' : 'Click to view details & timeline'}
                             >
                               {order.itemTitle}
@@ -4860,23 +4858,23 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             </p>
 
                             {isService && (
-                              <div className="mt-4 bg-white/5 rounded-2xl p-4 border border-white/5 text-xs text-left">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-white/40 block mb-1">
+                              <div className="mt-4 bg-proton-bg/70 rounded-2xl p-4 border border-proton-border text-xs text-left">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-proton-muted block mb-1">
                                   {language === 'ka' ? 'ტიპი' : 'Service Booking'}
                                 </span>
-                                <p className="text-white/80 font-bold">
+                                <p className="text-proton-text font-bold">
                                   {language === 'ka' ? 'Professional Freelance სერვისი' : 'Professional Service Booking'}
                                 </p>
                               </div>
                             )}
 
                             {isPhysical && (
-                              <div className="mt-4 bg-white/5 rounded-2xl p-4 border border-white/5 text-xs text-left">
-                                <span className="text-[8px] font-black uppercase tracking-wider text-white/40 block mb-1">
+                              <div className="mt-4 bg-proton-bg/70 rounded-2xl p-4 border border-proton-border text-xs text-left">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-proton-muted block mb-1">
                                   {language === 'ka' ? 'მიწოდების ტიპი' : 'Fulfillment Type'}
                                 </span>
-                                <p className="text-white/80 font-bold flex items-center gap-1.5">
-                                  <Truck size={14} className="text-cyan-400" />
+                                <p className="text-proton-text font-bold flex items-center gap-1.5">
+                                  <Truck size={14} className="text-cyan-500" />
                                   {language === 'ka' ? 'ფიზიკური მიწოდება / ამანათი' : 'Physical Shipping / Courier'}
                                 </p>
                               </div>
@@ -4886,41 +4884,41 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                               <motion.div 
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
-                                className="mt-6 pt-6 border-t border-white/5 text-left space-y-4"
+                                className="mt-6 pt-6 border-t border-proton-border text-left space-y-4"
                               >
                                 {isService && order.buyerInstructions && (
                                   <div className="space-y-1">
-                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/40 block">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-proton-muted block">
                                       {language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Client Requirements'}
                                     </span>
-                                    <p className="text-[11px] font-medium text-white bg-black/45 p-3.5 rounded-xl border border-white/5 whitespace-pre-line leading-relaxed shadow-inner">
+                                    <p className="text-[11px] font-medium text-proton-text bg-proton-bg p-3.5 rounded-xl border border-proton-border whitespace-pre-line leading-relaxed shadow-inner">
                                       {order.buyerInstructions}
                                     </p>
                                   </div>
                                 )}
 
                                 {isPhysical && order.shippingDetails && (
-                                  <div className="space-y-2 bg-black/45 p-4 rounded-2xl border border-white/5 text-left">
-                                    <span className="text-[8px] font-black uppercase tracking-widest text-cyan-400/80 block">
+                                  <div className="space-y-2 bg-proton-bg p-4 rounded-2xl border border-proton-border text-left">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-cyan-500 block">
                                       {language === 'ka' ? '📦 მიწოდების მონაცემები' : '📦 Shipping Information'}
                                     </span>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                                       <div>
-                                        <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'მიმღები' : 'Recipient'}:</span>
-                                        <span className="text-white font-bold">{order.shippingDetails.recipientName}</span>
+                                        <span className="text-[9px] text-proton-muted block">{language === 'ka' ? 'მიმღები' : 'Recipient'}:</span>
+                                        <span className="text-proton-text font-bold">{order.shippingDetails.recipientName}</span>
                                       </div>
                                       <div>
-                                        <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'ტელეფონი' : 'Phone'}:</span>
-                                        <span className="text-white font-mono">{order.shippingDetails.phone}</span>
+                                        <span className="text-[9px] text-proton-muted block">{language === 'ka' ? 'ტელეფონი' : 'Phone'}:</span>
+                                        <span className="text-proton-text font-mono">{order.shippingDetails.phone}</span>
                                       </div>
                                       <div className="sm:col-span-2">
-                                        <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'ქალაქი და მისამართი' : 'City & Address'}:</span>
-                                        <span className="text-white">{order.shippingDetails.city}, {order.shippingDetails.address}</span>
+                                        <span className="text-[9px] text-proton-muted block">{language === 'ka' ? 'ქალაქი და მისამართი' : 'City & Address'}:</span>
+                                        <span className="text-proton-text">{order.shippingDetails.city}, {order.shippingDetails.address}</span>
                                       </div>
                                       {order.shippingDetails.notes && (
-                                        <div className="sm:col-span-2 pt-1 border-t border-white/5">
-                                          <span className="text-[9px] text-white/40 block">{language === 'ka' ? 'კომენტარი კურიერისთვის' : 'Courier Notes'}:</span>
-                                          <span className="text-white/70 italic">{order.shippingDetails.notes}</span>
+                                        <div className="sm:col-span-2 pt-1 border-t border-proton-border">
+                                          <span className="text-[9px] text-proton-muted block">{language === 'ka' ? 'კომენტარი კურიერისთვის' : 'Courier Notes'}:</span>
+                                          <span className="text-proton-text/80 italic">{order.shippingDetails.notes}</span>
                                         </div>
                                       )}
                                     </div>
@@ -4928,23 +4926,23 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 )}
 
                                 {isPhysical && order.trackingInfo && (
-                                  <div className="bg-cyan-500/10 border border-cyan-500/20 p-4 rounded-2xl text-left space-y-1">
-                                    <span className="text-[8px] font-black uppercase tracking-widest text-cyan-400 block">
+                                  <div className="bg-cyan-500/10 border border-cyan-500/30 p-4 rounded-2xl text-left space-y-1">
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-cyan-500 block">
                                       {language === 'ka' ? '🚚 გზავნილის თრექინგი' : '🚚 Tracking Information'}
                                     </span>
                                     <div className="flex items-center justify-between text-xs">
-                                      <span className="text-white/60">{order.trackingInfo.carrier || (language === 'ka' ? 'საკურიერო' : 'Courier')}</span>
-                                      <span className="text-white font-mono font-bold bg-black/40 px-2 py-0.5 rounded border border-white/10">{order.trackingInfo.trackingNumber}</span>
+                                      <span className="text-proton-muted">{order.trackingInfo.carrier || (language === 'ka' ? 'საკურიერო' : 'Courier')}</span>
+                                      <span className="text-proton-text font-mono font-bold bg-proton-card px-2 py-0.5 rounded border border-proton-border">{order.trackingInfo.trackingNumber}</span>
                                     </div>
                                     {order.trackingInfo.shippedAt && (
-                                      <span className="text-[9px] text-white/40 block font-mono">
+                                      <span className="text-[9px] text-proton-muted block font-mono">
                                         {language === 'ka' ? 'გაგზავნის დრო' : 'Shipped'}: {new Date(order.trackingInfo.shippedAt).toLocaleString()}
                                       </span>
                                     )}
                                   </div>
                                 )}
 
-                                <div className="space-y-1 font-mono text-[9px] text-white/45">
+                                <div className="space-y-1 font-mono text-[9px] text-proton-muted">
                                   <p>ID: #{order.id}</p>
                                   <p>Role: {isSeller ? (isService ? 'Service Provider' : 'Merchant / Seller') : 'Customer'}</p>
                                 </div>
@@ -4956,14 +4954,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
-                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95")}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer", currentTheme.accentBg)}
                                         >
                                           🛠️ {language === 'ka' ? 'მუშაობის დაწყება' : 'Begin Work'}
                                         </button>
                                         <button
                                           type="button"
                                           onClick={() => setOrderToCancel(order)}
-                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
+                                          className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-white bg-rose-500/10 border border-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 cursor-pointer"
                                         >
                                           ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
                                         </button>
@@ -4973,7 +4971,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-green-400 hover:bg-green-500 transition-all shadow-md active:scale-95")}
+                                        className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md active:scale-95 cursor-pointer"
                                       >
                                         🎯 {language === 'ka' ? 'მზადაა / დასრულება' : 'Mark Completed'}
                                       </button>
@@ -4988,14 +4986,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                         <button
                                           type="button"
                                           onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
-                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-white hover:brightness-95 transition-all shadow-md active:scale-95 text-left")}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 text-left cursor-pointer", currentTheme.accentBg)}
                                         >
                                           📦 {language === 'ka' ? 'შეკვეთის დამუშავების დაწყება' : 'Start Processing Order'}
                                         </button>
                                         <button
                                           type="button"
                                           onClick={() => setOrderToCancel(order)}
-                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
+                                          className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-white bg-rose-500/10 border border-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 cursor-pointer"
                                         >
                                           ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
                                         </button>
@@ -5004,23 +5002,23 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                                     {order.status === 'processing' && (
                                       shipmentTrackingInput?.orderId === order.id ? (
-                                        <div className="bg-black/50 p-3.5 rounded-2xl border border-white/10 space-y-2">
-                                          <span className="text-[8px] font-black uppercase tracking-wider text-white/50 block">
+                                        <div className="bg-proton-bg p-3.5 rounded-2xl border border-proton-border space-y-2">
+                                          <span className="text-[8px] font-black uppercase tracking-wider text-proton-muted block">
                                             {language === 'ka' ? 'გზავნილის დეტალები' : 'Shipment Tracking'}
                                           </span>
-                                           <input
+                                          <input
                                             type="text"
                                             value={shipmentTrackingInput?.carrier || ''}
                                             onChange={(e) => setShipmentTrackingInput(prev => prev ? ({ ...prev, carrier: e.target.value }) : null)}
                                             placeholder={language === 'ka' ? 'გადამზიდი (მაგ. Georgian Post, DHL)' : 'Carrier (e.g. Courier, Post)'}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-base md:text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400"
+                                            className={cn("w-full rounded-xl px-3 py-2 text-base md:text-[10px]", currentTheme.input)}
                                           />
                                           <input
                                             type="text"
                                             value={shipmentTrackingInput?.trackingNumber || ''}
                                             onChange={(e) => setShipmentTrackingInput(prev => prev ? ({ ...prev, trackingNumber: e.target.value }) : null)}
                                             placeholder={language === 'ka' ? 'თრექინგ ნომერი' : 'Tracking Code / Number'}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-base md:text-[10px] text-white placeholder-white/30 focus:outline-none focus:border-cyan-400 font-mono"
+                                            className={cn("w-full rounded-xl px-3 py-2 text-base md:text-[10px] font-mono", currentTheme.input)}
                                           />
                                           <div className="flex gap-2 pt-1">
                                             <button
@@ -5031,14 +5029,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                                   trackingNumber: shipmentTrackingInput?.trackingNumber || ''
                                                 });
                                               }}
-                                              className="px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-cyan-400 hover:bg-cyan-300 text-black transition-all"
+                                              className={cn("px-3.5 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer", currentTheme.accentBg)}
                                             >
                                               🚚 {language === 'ka' ? 'გაგზავნის დადასტურება' : 'Confirm Shipped'}
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => setShipmentTrackingInput(null)}
-                                              className="px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-white/10 text-white/70 hover:text-white transition-all"
+                                              className="px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-proton-card border border-proton-border text-proton-muted hover:text-proton-text transition-all cursor-pointer"
                                             >
                                               {language === 'ka' ? 'გაუქმება' : 'Cancel'}
                                             </button>
@@ -5048,7 +5046,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                         <button
                                           type="button"
                                           onClick={() => setShipmentTrackingInput({ orderId: order.id, carrier: '', trackingNumber: '' })}
-                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-cyan-400 hover:bg-cyan-300 transition-all shadow-md active:scale-95 text-left")}
+                                          className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all shadow-md active:scale-95 text-left cursor-pointer", currentTheme.accentBg)}
                                         >
                                           🚚 {language === 'ka' ? 'ამანათის გაგზავნა' : 'Mark as Shipped'}
                                         </button>
@@ -5063,7 +5061,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-black bg-green-400 hover:bg-green-500 transition-all shadow-md active:scale-95")}
+                                        className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md active:scale-95 cursor-pointer"
                                       >
                                         🎯 {language === 'ka' ? 'ჩაბარების დადასტურება' : 'Confirm Delivery Received'}
                                       </button>
@@ -5072,7 +5070,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                       <button
                                         type="button"
                                         onClick={() => setOrderToCancel(order)}
-                                        className={cn("px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-white bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 transition-all active:scale-95")}
+                                        className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-white bg-rose-500/10 border border-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 cursor-pointer"
                                       >
                                         ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
                                       </button>
@@ -5083,33 +5081,33 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             )}
                           </div>
 
-                          <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between relative flex-wrap gap-2">
+                          <div className="mt-8 pt-6 border-t border-proton-border flex items-center justify-between relative flex-wrap gap-2">
                              <div className="flex items-center gap-2">
-                               <span className={cn("text-[9px] font-bold opacity-30 font-mono", currentTheme.muted)}>#{order.id.substring(0, 8).toUpperCase()}</span>
+                               <span className={cn("text-[9px] font-bold font-mono", currentTheme.muted)}>#{order.id.substring(0, 8).toUpperCase()}</span>
                                <button
                                  type="button"
                                  id={`seller-view-timeline-btn-${order.id}`}
                                  onClick={() => setSellerSelectedOrder(order)}
-                                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                                 className="px-2.5 py-1 rounded-lg bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-[9px] font-bold text-proton-text flex items-center gap-1.5 transition-all cursor-pointer"
                                >
-                                 <Clock size={11} className="text-[#dfb257]" />
+                                 <Clock size={11} className="text-proton-accent" />
                                  <span>{language === 'ka' ? 'თაიმლაინი' : 'Timeline'}</span>
                                </button>
                                <button
                                  type="button"
                                  id={`seller-message-buyer-btn-${order.id}`}
                                  onClick={() => handleStartOrderChat(order)}
-                                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-bold text-white/90 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+                                 className="px-2.5 py-1 rounded-lg bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-[9px] font-bold text-proton-text flex items-center gap-1.5 transition-all cursor-pointer"
                                  title={language === 'ka' ? 'მიწერეთ მყიდველს' : 'Message Buyer'}
                                >
-                                 <MessageSquare size={11} className="text-[#dfb257]" />
+                                 <MessageSquare size={11} className="text-proton-accent" />
                                  <span>{language === 'ka' ? 'მიწერა' : 'Message'}</span>
                                </button>
                              </div>
                              <button 
                                type="button"
                                onClick={() => setExpandedOrderId(isExpanded ? null : order.id)}
-                               className="flex items-center gap-2 text-[10px] font-black uppercase text-[#2e5bff] hover:opacity-80 transition-opacity cursor-pointer"
+                               className="flex items-center gap-2 text-[10px] font-black uppercase text-proton-accent hover:opacity-80 transition-opacity cursor-pointer"
                              >
                                {isExpanded 
                                  ? (language === 'ka' ? 'დახურვა' : 'Close Details') 
@@ -5121,22 +5119,22 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       );
                     })
                   ) : (
-                    <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-zinc-950/40 border border-zinc-900/80 rounded-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300">
-                      <div className="w-14 h-14 bg-white/5 rounded-xl flex items-center justify-center mx-auto border border-white/10 text-white">
+                    <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-proton-card border border-proton-border rounded-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300 shadow-lg">
+                      <div className="w-14 h-14 bg-proton-bg rounded-xl flex items-center justify-center mx-auto border border-proton-border text-proton-text">
                         {sellerOrderFilter === 'action-required' ? (
-                          <CheckCircle2 size={24} className="text-emerald-400" />
+                          <CheckCircle2 size={24} className="text-emerald-500" />
                         ) : sellerOrderFilter === 'processing' ? (
-                          <Package size={24} className="text-indigo-400" />
+                          <Package size={24} className="text-indigo-500" />
                         ) : sellerOrderFilter === 'shipped' ? (
-                          <Truck size={24} className="text-cyan-400" />
+                          <Truck size={24} className="text-cyan-500" />
                         ) : sellerOrderFilter === 'completed' ? (
-                          <CheckCircle2 size={24} className="text-green-400" />
+                          <CheckCircle2 size={24} className="text-emerald-500" />
                         ) : (
-                          <Inbox size={24} className="text-white/50" />
+                          <Inbox size={24} className="text-proton-muted" />
                         )}
                       </div>
                       <div className="space-y-1.5">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                        <h3 className="text-xs font-black uppercase tracking-widest text-proton-text">
                           {sellerOrderFilter === 'action-required'
                             ? (language === 'ka' ? 'მოქმედება არცერთ შეკვეთაზე არ არის საჭირო' : 'No orders need your attention right now')
                             : sellerOrderFilter === 'processing'
@@ -5147,7 +5145,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             ? (language === 'ka' ? 'დასრულებული შეკვეთები ჯერ არ არის' : 'No completed orders yet')
                             : (language === 'ka' ? 'შემოსული შეკვეთები არ არის' : 'No incoming orders yet')}
                         </h3>
-                        <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                        <p className="text-[11px] text-proton-muted font-medium leading-relaxed">
                           {sellerOrderFilter === 'action-required'
                             ? (language === 'ka' ? 'ყველა შემოსული შეკვეთა დამუშავებულია ან გაგზავნილია.' : 'All incoming orders have been handled or are already in transit.')
                             : sellerOrderFilter === 'processing'
@@ -5164,7 +5162,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           type="button"
                           id="seller-order-reset-filter-btn"
                           onClick={() => setSellerOrderFilter('all')}
-                          className="mt-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-[9px] font-black uppercase tracking-wider text-white/80 hover:text-white transition-all active:scale-95 cursor-pointer"
+                          className="mt-2 px-4 py-2 rounded-xl bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-[9px] font-black uppercase tracking-wider text-proton-text transition-all active:scale-95 cursor-pointer"
                         >
                           {language === 'ka' ? 'ყველა შეკვეთის ნახვა' : 'View All Orders'} ({sellerOrders.length})
                         </button>
@@ -5208,7 +5206,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           <div className="mt-8 flex flex-col justify-center items-center gap-3 pb-8">
             {/* Filter / Search Match Count Notice */}
             {isFilteredMode && (
-              <p className="text-[10px] font-bold text-zinc-400 bg-zinc-900/70 px-4 py-1.5 rounded-full border border-zinc-800/80">
+              <p className="text-[10px] font-bold text-proton-muted bg-proton-card px-4 py-1.5 rounded-full border border-proton-border">
                 {language === 'ka' 
                   ? `ნაპოვნია ${filteredListings.length} განცხადება` 
                   : `Found ${filteredListings.length} matching listings`}
@@ -5220,26 +5218,26 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 type="button"
                 onClick={handleLoadMore}
                 disabled={isLoadingMore}
-                className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-[#dfb257]/40 text-zinc-300 hover:text-white transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
+                className={cn("px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:border-proton-accent/45 transition-all flex items-center gap-2 shadow-lg active:scale-95 cursor-pointer disabled:opacity-50", currentTheme.card)}
               >
                 {isLoadingMore ? (
-                  <Loader2 size={14} className="text-[#dfb257] animate-spin" />
+                  <Loader2 size={14} className={cn("animate-spin", currentTheme.accent)} />
                 ) : (
-                  <ChevronDown size={14} className="text-[#dfb257]" />
+                  <ChevronDown size={14} className={currentTheme.accent} />
                 )}
                 <span>
                   {isLoadingMore
                     ? (language === 'ka' ? 'იტვირთება...' : 'Loading More...')
                     : (language === 'ka' ? 'მეტის ჩატვირთვა' : 'Load More Listings')}
                 </span>
-                <span className="text-[10px] text-zinc-500 font-mono">
+                <span className="text-[10px] text-proton-muted font-mono">
                   {isFilteredMode 
                     ? `(${displayedListings.length} / ${filteredListings.length})` 
                     : `(${listings.length} loaded)`}
                 </span>
               </button>
             ) : (
-              <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-zinc-500 bg-zinc-950/60 px-4 py-2 rounded-xl border border-zinc-900">
+              <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-widest text-proton-muted bg-proton-card px-4 py-2 rounded-xl border border-proton-border">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>
                   {isFilteredMode
@@ -5257,15 +5255,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       </div>
 
             {!loading && !isSearchingBackend && listings.length === 0 && !isFilteredMode && (
-              <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-zinc-950/40 border border-zinc-900 rounded-xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
-                <div className="w-16 h-16 bg-[#dfb257]/10 rounded-xl flex items-center justify-center mx-auto border border-[#dfb257]/20">
-                  <LayoutGrid size={28} className="text-[#dfb257]" />
+              <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-proton-card border border-proton-border rounded-xl backdrop-blur-md animate-in fade-in zoom-in duration-500 shadow-lg">
+                <div className="w-16 h-16 bg-proton-accent/10 rounded-xl flex items-center justify-center mx-auto border border-proton-accent/25">
+                  <LayoutGrid size={28} className="text-proton-accent" />
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-lg font-black uppercase tracking-widest text-white">
+                  <h3 className="text-lg font-black uppercase tracking-widest text-proton-text">
                     {language === 'ka' ? 'განცხადებები არ მოიძებნა' : 'No Listings Available'}
                   </h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+                  <p className="text-xs text-proton-muted leading-relaxed font-medium">
                     {language === 'ka' 
                       ? 'მარკეტში ჯერ არ არის განთავსებული პროდუქტები ან მომსახურება. იყავით პირველი და განათავსეთ თქვენი განცხადება.'
                       : 'There are currently no products or services listed in the marketplace. Be the first to publish a new listing.'}
@@ -5283,7 +5281,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       resetListingForm();
                       setViewMode('create');
                     }}
-                    className="w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest bg-[#dfb257] text-[#070708] hover:brightness-110 active:scale-95 transition-all shadow-md shadow-[#dfb257]/10 flex items-center justify-center gap-2"
+                    className={cn("w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-widest active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer", currentTheme.accentBg)}
                   >
                     <Plus size={16} />
                     {language === 'ka' ? 'განცხადების დამატება' : 'CREATE LISTING'}
@@ -5293,13 +5291,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             )}
 
             {!loading && !isSearchingBackend && isFilteredMode && filteredListings.length === 0 && (
-              <div className="py-24 text-center space-y-6 max-w-sm mx-auto bg-zinc-950/20 border border-zinc-900/60 p-8 rounded-2xl">
-                <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10">
-                  <Search size={24} className="text-zinc-600" />
+              <div className="py-24 text-center space-y-6 max-w-sm mx-auto bg-proton-card border border-proton-border p-8 rounded-2xl shadow-lg">
+                <div className="w-16 h-16 bg-proton-bg rounded-2xl flex items-center justify-center mx-auto border border-proton-border">
+                  <Search size={24} className="text-proton-muted" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-black uppercase tracking-widest text-[#dfb257]">{t.market.no_results}</p>
-                  <p className="text-[11px] text-zinc-500 leading-relaxed font-semibold">
+                  <p className="text-xs font-black uppercase tracking-widest text-proton-accent">{t.market.no_results}</p>
+                  <p className="text-[11px] text-proton-muted leading-relaxed font-semibold">
                     {language === 'ka' ? 'სცადეთ საძიებო სიტყვის შეცვლა ან სხვა ფილტრების მონიშვნა.' : 'Try adjusting your search keywords, category tags, or location filters.'}
                   </p>
                 </div>
@@ -5307,7 +5305,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="px-5 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] uppercase font-black tracking-widest text-zinc-300 hover:text-white hover:border-zinc-700 transition-all active:scale-95 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-proton-bg border border-proton-border text-[10px] uppercase font-black tracking-widest text-proton-text hover:border-proton-accent/40 hover:text-proton-accent transition-all active:scale-95 cursor-pointer"
                   >
                     {language === 'ka' ? 'ფილტრების გასუფთავება' : 'Reset Filters'}
                   </button>
@@ -5347,14 +5345,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         />
       )}
       {/* Footer */}
-      <footer className="border-t border-white/5 py-20 mt-24">
+      <footer className="border-t border-proton-border py-20 mt-24">
         <div className="max-w-[1600px] mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-12">
             <div className="flex flex-col items-center md:items-start gap-4">
-              <h3 className="text-white font-black uppercase tracking-tighter text-3xl">
+              <h3 className="text-proton-text font-black uppercase tracking-tighter text-3xl">
                 <span className={currentTheme.accent}>PROTON</span> MARKET
               </h3>
-              <p className={cn("text-[10px] font-black uppercase tracking-[0.4em] opacity-40", currentTheme.muted)}>
+              <p className={cn("text-[10px] font-black uppercase tracking-[0.4em]", currentTheme.muted)}>
                 © {new Date().getFullYear()} PROTON INDUSTRIAL SYSTEMS GROUP
               </p>
             </div>
@@ -5364,7 +5362,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   if (activeBottomTab === 'messages') closeInlineMessages();
                   setViewMode('privacy');
                 }}
-                className={cn("transition-all hover:text-white pb-1 border-b border-transparent hover:border-white/20", viewMode === 'privacy' ? "text-white border-white/20" : "text-white/40")}
+                className={cn("transition-all hover:text-proton-text pb-1 border-b border-transparent hover:border-proton-accent cursor-pointer", viewMode === 'privacy' ? "text-proton-text border-proton-accent" : "text-proton-muted")}
               >
                 {t.market.legal.privacy_policy}
               </button>
@@ -5373,12 +5371,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   if (activeBottomTab === 'messages') closeInlineMessages();
                   setViewMode('terms');
                 }}
-                className={cn("transition-all hover:text-white pb-1 border-b border-transparent hover:border-white/20", viewMode === 'terms' ? "text-white border-white/20" : "text-white/40")}
+                className={cn("transition-all hover:text-proton-text pb-1 border-b border-transparent hover:border-proton-accent cursor-pointer", viewMode === 'terms' ? "text-proton-text border-proton-accent" : "text-proton-muted")}
               >
                 {t.market.legal.terms_of_service}
               </button>
-              <a href="#" className="text-white/40 hover:text-white transition-all pb-1 border-b border-transparent hover:border-white/20">Security Protocol</a>
-              <a href="#" className="text-white/40 hover:text-white transition-all pb-1 border-b border-transparent hover:border-white/20">System Support</a>
+              <a href="#" className="text-proton-muted hover:text-proton-text transition-all pb-1 border-b border-transparent hover:border-proton-accent">Security Protocol</a>
+              <a href="#" className="text-proton-muted hover:text-proton-text transition-all pb-1 border-b border-transparent hover:border-proton-accent">System Support</a>
             </div>
           </div>
         </div>
@@ -5619,7 +5617,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setPublishSuccessModal(null)}
-          className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          className="absolute inset-0 bg-black/75 backdrop-blur-md"
         />
 
         {/* Modal Dialog Card */}
@@ -5628,30 +5626,30 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 16 }}
           transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-[#dfb257]/30 bg-zinc-950/95 p-6 sm:p-8 flex flex-col items-center text-center shadow-[0_24px_50px_-12px_rgba(0,0,0,0.85)] overflow-hidden z-10"
+          className="relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-proton-accent/35 bg-proton-card p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl overflow-hidden z-10"
         >
           {/* Radial glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#dfb257]/15 rounded-full blur-[80px] pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-proton-accent/15 rounded-full blur-[80px] pointer-events-none" />
 
           {/* Close Button */}
           <button 
             type="button"
             onClick={() => setPublishSuccessModal(null)}
-            className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-xl transition-colors cursor-pointer"
+            className="absolute top-4 right-4 p-2 text-proton-muted hover:text-proton-text rounded-xl transition-colors cursor-pointer"
             aria-label="Close"
           >
             <X size={18} />
           </button>
 
           {/* Success Icon */}
-          <div className="w-16 h-16 rounded-2xl bg-[#dfb257]/10 border border-[#dfb257]/30 flex items-center justify-center text-[#dfb257] shadow-[0_0_25px_rgba(223,178,87,0.2)] mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-proton-accent/15 border border-proton-accent/35 flex items-center justify-center text-proton-accent shadow-sm mb-4">
             <CheckCircle2 size={32} className="stroke-[2.5]" />
           </div>
 
           {/* Title */}
           <h3 
             id="publish-success-dialog-title"
-            className="text-lg sm:text-xl font-black uppercase tracking-wider text-white"
+            className="text-lg sm:text-xl font-black uppercase tracking-wider text-proton-text"
           >
             {language === 'ka' 
               ? (publishSuccessModal.isEdit ? 'განცხადება განახლდა!' : 'განცხადება გამოქვეყნდა!') 
@@ -5659,14 +5657,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           </h3>
 
           {/* Description */}
-          <p className="text-xs font-semibold text-zinc-400 mt-2 max-w-xs leading-relaxed">
+          <p className="text-xs font-semibold text-proton-muted mt-2 max-w-xs leading-relaxed">
             {language === 'ka' ? (
               <>
-                თქვენი განცხადება <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> წარმატებით შეინახა და უკვე ხელმისაწვდომია მყიდველებისთვის.
+                თქვენი განცხადება <span className="text-proton-accent font-bold">"{publishSuccessModal.title}"</span> წარმატებით შეინახა და უკვე ხელმისაწვდომია მყიდველებისთვის.
               </>
             ) : (
               <>
-                Your listing <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> was saved successfully and is now live on Proton Market.
+                Your listing <span className="text-proton-accent font-bold">"{publishSuccessModal.title}"</span> was saved successfully and is now live on Proton Market.
               </>
             )}
           </p>
@@ -5680,7 +5678,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setProfileSubMode('selling');
                 setViewMode('my-listings');
               }}
-              className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#dfb257] text-zinc-950 hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_15px_rgba(223,178,87,0.25)] flex items-center justify-center gap-2 cursor-pointer font-sans"
+              className={cn("w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer font-sans", currentTheme.accentBg)}
             >
               <Package size={14} />
               <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Listings'}</span>
@@ -5692,7 +5690,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setPublishSuccessModal(null);
                 setViewMode('browse');
               }}
-              className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+              className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-proton-bg hover:bg-proton-accent/10 text-proton-muted hover:text-proton-text border border-proton-border hover:border-proton-accent/40 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
             >
               <LayoutGrid size={14} />
               <span>{language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}</span>
@@ -5711,17 +5709,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-0 bg-[#0a0a0c]/98 backdrop-blur-lg z-[120] overflow-y-auto px-6 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))]"
+        className="fixed inset-0 bg-proton-bg/98 backdrop-blur-lg z-[120] overflow-y-auto px-6 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))]"
       >
         <div className="max-w-md mx-auto space-y-8">
-          <div className="flex items-center justify-between border-b border-zinc-900/40 pb-4">
-            <h2 className="text-sm font-black uppercase tracking-wider text-[#dfb257] flex items-center gap-2 font-sans">
+          <div className="flex items-center justify-between border-b border-proton-border pb-4">
+            <h2 className="text-sm font-black uppercase tracking-wider text-proton-accent flex items-center gap-2 font-sans">
               <span>📂</span> {language === 'ka' ? 'კატეგორიები' : 'Browse Categories'}
             </h2>
             <button 
               type="button"
               onClick={() => setActiveBottomTab('home')}
-              className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-300 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-proton-card border border-proton-border text-[10px] font-black text-proton-muted hover:text-proton-text uppercase tracking-widest transition-colors cursor-pointer"
             >
               {language === 'ka' ? 'დახურვა' : 'Close'}
             </button>
@@ -5736,15 +5734,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setViewMode('browse');
               }}
               className={cn(
-                "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat",
+                "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat cursor-pointer",
                 activeCategory === 'all'
-                  ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-lg shadow-[#dfb257]/20"
-                  : "bg-zinc-900/30 text-white border-zinc-800/60 hover:border-[#dfb257]/30 hover:bg-zinc-900/60"
+                  ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
+                  : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
               )}
             >
               <span className="text-xl">🌍</span>
               <span className="mt-2 text-[9px] font-bold tracking-wider leading-none">{language === 'ka' ? 'ყველა' : 'All Goods'}</span>
-              {activeCategory === 'all' && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-zinc-950" />}
+              {activeCategory === 'all' && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
             </button>
             {Object.entries(t.market.categories).map(([key, label]) => (
               <button
@@ -5756,15 +5754,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   setViewMode('browse');
                 }}
                 className={cn(
-                  "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat",
+                  "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat cursor-pointer",
                   activeCategory === key
-                    ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-lg shadow-[#dfb257]/20"
-                    : "bg-zinc-900/30 text-white border-zinc-800/60 hover:border-[#dfb257]/30 hover:bg-zinc-900/60"
+                    ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
+                    : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
                 )}
               >
                 <span className="text-xl shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
                 <span className="mt-2 text-[9px] font-bold tracking-wider leading-none truncate w-full" title={label as string}>{label as string}</span>
-                {activeCategory === key && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-zinc-950" />}
+                {activeCategory === key && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
               </button>
             ))}
           </div>
@@ -5781,18 +5779,18 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-0 bg-[#0a0a0c] z-[120] overflow-y-auto px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))] md:hidden"
+        className="fixed inset-0 bg-proton-bg z-[120] overflow-y-auto px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))] md:hidden"
       >
         <div className="max-w-md mx-auto space-y-6">
           {/* Top Selector Panel: Chats vs. Orders */}
-          <div className="flex items-center justify-between border-b border-zinc-900/70 pb-3">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-[#dfb257] flex items-center gap-2 font-sans">
+          <div className="flex items-center justify-between border-b border-proton-border pb-3">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-proton-accent flex items-center gap-2 font-sans">
               <span>💬</span> {language === 'ka' ? 'კავშირი' : 'Communications'}
             </h2>
             <button 
               type="button"
               onClick={closeInlineMessages}
-              className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[9px] font-black text-zinc-300 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-proton-card border border-proton-border text-[9px] font-black text-proton-muted hover:text-proton-text uppercase tracking-widest transition-colors cursor-pointer"
             >
               {language === 'ka' ? 'დახურვა' : 'Close'}
             </button>
@@ -5803,37 +5801,37 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             {activeChatListing ? (
               // Active Chat Thread
               <div className="space-y-4">
-                <div className="flex items-center gap-3 bg-zinc-950/40 p-3 rounded-xl border border-zinc-900">
+                <div className="flex items-center gap-3 bg-proton-card p-3 rounded-xl border border-proton-border">
                   <button 
                     onClick={() => {
                       setActiveChatListing(null);
                       setActiveChatContext(null);
                       setActiveChatOrder(null);
                     }}
-                    className="p-1 px-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[10px] font-black uppercase text-zinc-300 hover:text-white cursor-pointer"
+                    className="p-1 px-2.5 rounded-lg bg-proton-bg border border-proton-border text-[10px] font-black uppercase text-proton-muted hover:text-proton-text cursor-pointer"
                   >
                     ← {language === 'ka' ? 'უკან' : 'Back'}
                   </button>
                   <div className="truncate flex-1">
-                    <span className="text-[9px] font-bold text-zinc-500 block uppercase font-mono tracking-wider">
+                    <span className="text-[9px] font-bold text-proton-muted block uppercase font-mono tracking-wider">
                       {user?.uid === activeChatContext?.sellerId
                         ? (language === 'ka' ? `მყიდველი: ${activeChatContext?.buyerName || 'Buyer'}` : `Buyer: ${activeChatContext?.buyerName || 'Buyer'}`)
                         : (language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Chatting about:')}
                     </span>
-                    <h4 className="text-xs font-black text-white truncate">{getListingTitle(activeChatListing, language)}</h4>
+                    <h4 className="text-xs font-black text-proton-text truncate">{getListingTitle(activeChatListing, language)}</h4>
                   </div>
                 </div>
 
                 {/* Order Context Banner if activeChatOrder exists */}
                 {activeChatOrder && (
-                  <div className="bg-[#dfb257]/10 border border-[#dfb257]/25 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
+                  <div className="bg-proton-accent/10 border border-proton-accent/30 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Package size={14} className="text-[#dfb257] shrink-0" />
+                      <Package size={14} className="text-proton-accent shrink-0" />
                       <div className="min-w-0">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-[#dfb257] block truncate">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent block truncate">
                           {language === 'ka' ? 'შეკვეთის შესახებ' : 'Regarding Order'} #{activeChatOrder.id.slice(-6).toUpperCase()}
                         </span>
-                        <p className="text-[9px] text-white/60 truncate">
+                        <p className="text-[9px] text-proton-muted truncate">
                           {activeChatOrder.itemTitle || getListingTitle(activeChatListing, language)}
                         </p>
                       </div>
@@ -5841,22 +5839,22 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     <button
                       type="button"
                       onClick={() => handleViewOrderFromChat(activeChatOrder.id)}
-                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[9px] font-black uppercase tracking-wider transition-all border border-white/15 shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                      className="px-2.5 py-1 rounded-lg bg-proton-card hover:bg-proton-accent/10 text-proton-text text-[9px] font-black uppercase tracking-wider transition-all border border-proton-border hover:border-proton-accent/40 shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
                     >
-                      <ExternalLink size={10} className="text-[#dfb257]" />
+                      <ExternalLink size={10} className="text-proton-accent" />
                       <span>{language === 'ka' ? 'ნახვა' : 'View Order'}</span>
                     </button>
                   </div>
                 )}
 
                 {/* Chat Messages Log */}
-                <div className="bg-zinc-950/20 rounded-2xl p-4 border border-zinc-900/60 h-[280px] overflow-y-auto space-y-3 flex flex-col">
+                <div className="bg-proton-card rounded-2xl p-4 border border-proton-border h-[280px] overflow-y-auto space-y-3 flex flex-col">
                   {messagesList.length === 0 ? (
                     <div className="text-center my-auto py-8">
-                      <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">
+                      <p className="text-[10px] uppercase font-black tracking-widest text-proton-muted">
                         {language === 'ka' ? 'შეტყობინებები არ არის' : 'No messages yet'}
                       </p>
-                      <span className="text-[9px] text-zinc-500 mt-1 block font-semibold">
+                      <span className="text-[9px] text-proton-muted/80 mt-1 block font-semibold">
                         {language === 'ka' ? 'მისწერეთ შეკითხვა გამყიდველს.' : 'Send a friendly query.'}
                       </span>
                     </div>
@@ -5867,14 +5865,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         <div 
                           key={msg.id}
                           className={cn(
-                            "max-w-[85%] p-3 rounded-2xl text-xs flex flex-col gap-1",
+                            "max-w-[85%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm",
                             isMe 
-                              ? "bg-[#dfb257] text-[#070708] self-end rounded-tr-none font-bold" 
-                              : "bg-zinc-900 text-zinc-100 self-start rounded-tl-none font-medium border border-zinc-800"
+                              ? "bg-proton-accent text-proton-on-accent self-end rounded-tr-none font-bold" 
+                              : "bg-proton-bg text-proton-text self-start rounded-tl-none font-medium border border-proton-border"
                           )}
                         >
                           <div className="flex items-center gap-1.5 justify-between">
-                            <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-[#070708]/70" : "text-zinc-500")}>
+                            <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-proton-on-accent/75" : "text-proton-muted")}>
                               {msg.senderName}
                             </span>
                           </div>
@@ -5892,12 +5890,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     value={chatMessageText}
                     onChange={(e) => setChatMessageText(e.target.value)}
                     placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                    className="flex-1 bg-zinc-900 border border-zinc-800/70 rounded-xl px-4 py-2 text-base md:text-xs text-white placeholder:text-zinc-400 focus:outline-none focus:border-[#dfb257]/50"
+                    className={cn("flex-1 rounded-xl px-4 py-2 text-base md:text-xs", currentTheme.input)}
                   />
                   <button 
                     type="submit"
                     disabled={!chatMessageText.trim()}
-                    className="px-4 py-2 bg-[#dfb257] hover:bg-opacity-90 disabled:opacity-40 transition-all rounded-xl text-xs font-black text-[#070708] uppercase tracking-wider"
+                    className={cn("px-4 py-2 disabled:opacity-40 transition-all rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer", currentTheme.accentBg)}
                   >
                     {language === 'ka' ? 'გაგზავნა' : 'Send'}
                   </button>
@@ -5908,12 +5906,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <div className="space-y-6">
                 {/* Conversations */}
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]/70">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-accent">
                     {language === 'ka' ? 'ჩატების სია' : 'Direct Messages'}
                   </h3>
                   {groupedChats.length === 0 ? (
-                    <div className="bg-zinc-900/40 border border-zinc-800/40 p-6 rounded-xl text-center">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                    <div className="bg-proton-card border border-proton-border p-6 rounded-xl text-center">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-proton-muted">
                         {language === 'ka' ? 'აქტიური საუბრები არ არის' : 'No active chats found'}
                       </p>
                     </div>
@@ -5972,30 +5970,30 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 setActiveChatOrder(null);
                               }
                             }}
-                            className="w-full text-left bg-zinc-950/40 hover:bg-zinc-900 border border-zinc-800/70 p-3 rounded-xl flex items-center justify-between transition-all"
+                            className="w-full text-left bg-proton-card hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 p-3 rounded-xl flex items-center justify-between transition-all cursor-pointer"
                           >
                             <div className="truncate flex-1 pr-3">
                               <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                                <span className="text-[10px] font-black text-[#dfb257] truncate">
+                                <span className="text-[10px] font-black text-proton-accent truncate">
                                   {isSeller ? (chat.buyerName || 'Buyer') : chat.listingTitle}
                                 </span>
                                 {isSeller && (
-                                  <span className="text-[9px] text-zinc-500 truncate max-w-[120px]">
+                                  <span className="text-[9px] text-proton-muted truncate max-w-[120px]">
                                     • {chat.listingTitle}
                                   </span>
                                 )}
                                 {chat.orderId && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#dfb257]/15 text-[#dfb257] border border-[#dfb257]/30 text-[8px] font-mono font-bold shrink-0">
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-proton-accent/15 text-proton-accent border border-proton-accent/30 text-[8px] font-mono font-bold shrink-0">
                                     <Package size={9} />
                                     <span>#{chat.orderId.slice(-6).toUpperCase()}</span>
                                   </span>
                                 )}
                               </div>
-                              <p className="text-xs text-zinc-300 truncate font-semibold mt-0.5">
+                              <p className="text-xs text-proton-text truncate font-semibold mt-0.5">
                                 {chat.lastMessage}
                               </p>
                             </div>
-                            <ChevronRight size={14} className="text-zinc-500 block shrink-0" />
+                            <ChevronRight size={14} className="text-proton-muted block shrink-0" />
                           </button>
                         );
                       })}
@@ -6005,13 +6003,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                 {/* Orders Status */}
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-[#dfb257]/70 flex items-center gap-1.5">
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-accent flex items-center gap-1.5">
                     <span>📦</span> {language === 'ka' ? 'თქვენი შეკვეთები' : 'Transactions & Orders'}
                   </h3>
 
                   {buyerOrders.length === 0 && sellerOrders.length === 0 ? (
-                    <div className="bg-zinc-900/40 border border-zinc-800/40 p-6 rounded-xl text-center">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500">
+                    <div className="bg-proton-card border border-proton-border p-6 rounded-xl text-center">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-proton-muted">
                         {language === 'ka' ? 'შეკვეთები არ ფიქსირდება' : 'No purchase orders yet'}
                       </p>
                     </div>
@@ -6019,19 +6017,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     <div className="space-y-2.5">
                       {/* Purchases */}
                       {buyerOrders.map((order, idx) => (
-                        <div key={order.id || idx} className="bg-zinc-950/40 border border-zinc-800/70 p-3 rounded-2xl flex flex-col gap-2">
+                        <div key={order.id || idx} className="bg-proton-card border border-proton-border p-3 rounded-2xl flex flex-col gap-2">
                           <div className="flex items-center justify-between">
-                            <span className="px-2 py-0.5 rounded bg-zinc-900 text-[8px] font-black text-[#dfb257] border border-zinc-800/70 font-mono uppercase">
+                            <span className="px-2 py-0.5 rounded bg-proton-bg text-[8px] font-black text-proton-accent border border-proton-border font-mono uppercase">
                               {language === 'ka' ? 'შესყიდვა' : 'PURCHASE'}
                             </span>
-                            <span className="text-[9px] font-bold text-green-400 uppercase font-mono tracking-widest">
+                            <span className="text-[9px] font-bold text-emerald-500 uppercase font-mono tracking-widest">
                               {order.status || 'Success'}
                             </span>
                           </div>
                           <div>
-                            <h5 className="text-xs font-black text-white">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
-                            <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
-                              Total: <span className="text-white font-black">{order.amount ?? (order as any).price} {order.currency}</span>
+                            <h5 className="text-xs font-black text-proton-text">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
+                            <p className="text-[10px] text-proton-muted font-semibold mt-0.5">
+                              Total: <span className="text-proton-text font-black">{order.amount ?? (order as any).price} {order.currency}</span>
                             </p>
                           </div>
                         </div>
@@ -6039,19 +6037,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                       {/* Sales */}
                       {sellerOrders.map((order, idx) => (
-                        <div key={order.id || idx} className="bg-zinc-950/40 border border-zinc-800/70 p-3 rounded-2xl flex flex-col gap-2">
+                        <div key={order.id || idx} className="bg-proton-card border border-proton-border p-3 rounded-2xl flex flex-col gap-2">
                           <div className="flex items-center justify-between">
-                            <span className="px-2 py-0.5 rounded bg-[#dfb257]/10 text-[8px] font-black text-[#dfb257] border border-[#dfb257]/20 font-mono uppercase">
+                            <span className="px-2 py-0.5 rounded bg-proton-accent/15 text-[8px] font-black text-proton-accent border border-proton-accent/30 font-mono uppercase">
                               {language === 'ka' ? 'გაყიდვა' : 'SALE'}
                             </span>
-                            <span className="text-[9px] font-bold text-green-400 uppercase font-mono tracking-widest">
+                            <span className="text-[9px] font-bold text-emerald-500 uppercase font-mono tracking-widest">
                               {order.status || 'Received'}
                             </span>
                           </div>
                           <div>
-                            <h5 className="text-xs font-black text-white">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
-                            <p className="text-[10px] text-zinc-400 font-semibold mt-0.5">
-                              Incoming: <span className="text-[#dfb257] font-black">{order.amount ?? (order as any).price} {order.currency}</span>
+                            <h5 className="text-xs font-black text-proton-text">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
+                            <p className="text-[10px] text-proton-muted font-semibold mt-0.5">
+                              Incoming: <span className="text-proton-accent font-black">{order.amount ?? (order as any).price} {order.currency}</span>
                             </p>
                           </div>
                         </div>

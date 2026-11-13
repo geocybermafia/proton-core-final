@@ -43,6 +43,7 @@ export interface MarketFilterPanelProps {
 export const MarketFilterPanel = React.memo(function MarketFilterPanel({
   language,
   t,
+  currentTheme,
   activeFiltersCount,
   activeListingType,
   setActiveListingType,
@@ -62,17 +63,19 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
   sortBy,
   setSortBy
 }: MarketFilterPanelProps) {
+  const inputSurface = currentTheme?.input || "bg-proton-bg border border-proton-border focus:border-proton-accent/60 text-proton-text placeholder:text-proton-muted focus:outline-none focus:ring-1 focus:ring-proton-accent/25";
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
+      <div className="flex items-center justify-between pb-3 border-b border-proton-border">
         <div className="flex items-center gap-2">
-          <LayoutGrid size={16} className="text-[#dfb257]" />
-          <h3 className="text-xs font-black uppercase tracking-[0.25em] text-[#dfb257]">
+          <LayoutGrid size={16} className="text-proton-accent" />
+          <h3 className="text-xs font-black uppercase tracking-[0.25em] text-proton-accent">
             {language === 'ka' ? 'ფილტრაცია' : 'Refine Search'}
           </h3>
           {activeFiltersCount > 0 && (
-            <span className="flex items-center justify-center bg-[#dfb257] text-[#070708] font-black text-[10px] w-5 h-5 rounded-full scale-90">
+            <span className="flex items-center justify-center bg-proton-accent text-proton-on-accent font-black text-[10px] w-5 h-5 rounded-full scale-90">
               {activeFiltersCount}
             </span>
           )}
@@ -82,7 +85,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
           <button 
             type="button"
             onClick={onCloseMobile} 
-            className="lg:hidden p-2 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 hover:text-white transition-all text-zinc-400 cursor-pointer"
+            className="lg:hidden p-2 bg-proton-bg border border-proton-border rounded-lg hover:bg-proton-accent/10 hover:text-proton-text transition-all text-proton-muted cursor-pointer"
             aria-label="Close filters"
           >
             <X size={16} />
@@ -93,7 +96,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
       {/* Active Filter Badges */}
       {activeFiltersCount > 0 && (
         <div className="space-y-2">
-          <span className="text-[9px] font-black tracking-wider text-zinc-500 uppercase">
+          <span className="text-[9px] font-black tracking-wider text-proton-muted uppercase">
             {language === 'ka' ? 'აქტიური ფილტრები:' : 'Active Filters:'}
           </span>
           <div className="flex flex-wrap gap-1.5">
@@ -101,7 +104,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <button
                 type="button"
                 onClick={() => setActiveListingType('all')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
                 <span>Type: {activeListingType}</span>
                 <X size={10} className="shrink-0" />
@@ -111,7 +114,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <button
                 type="button"
                 onClick={() => setActiveCategory('all')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
                 <span>{CATEGORY_EMOJIS[activeCategory] || ''} {t.market.categories[activeCategory] || activeCategory}</span>
                 <X size={10} className="shrink-0" />
@@ -121,7 +124,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <button
                 type="button"
                 onClick={() => setActiveCountry('GLOBAL')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
                 <span>{WORLD_COUNTRIES.find(c => c.code === activeCountry)?.flag || '🌐'} {WORLD_COUNTRIES.find(c => c.code === activeCountry)?.name}</span>
                 <X size={10} className="shrink-0" />
@@ -131,7 +134,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <button
                 type="button"
                 onClick={() => setActiveCity('')}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
                 <span>📍 {activeCity}</span>
                 <X size={10} className="shrink-0" />
@@ -141,7 +144,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <button
                 type="button"
                 onClick={() => { setMinPrice(''); setMaxPrice(''); }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dfb257]/10 border border-[#dfb257]/20 text-[10px] font-bold text-[#dfb257] hover:bg-[#dfb257]/20 transition-all cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
                 <span>
                   {minPrice ? `${minPrice}` : '0'} - {maxPrice ? `${maxPrice}` : '∞'} {displayCurrency}
@@ -157,67 +160,67 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
         {/* Sorting Dropdown */}
         {sortBy && setSortBy && (
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+            <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
               {language === 'ka' ? 'სორტირება' : 'Sort By'}
             </label>
             <div className="relative group">
-              <ArrowUpDown size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60 pointer-events-none" />
+              <ArrowUpDown size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent opacity-75 pointer-events-none" />
               <select 
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full pl-10 pr-10 py-3 bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700/85 rounded-xl text-xs font-bold focus:border-[#dfb257] focus:outline-none transition-all text-white appearance-none cursor-pointer"
+                className={cn("w-full pl-10 pr-10 py-3 rounded-xl text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
               >
-                <option value="rating">{language === 'ka' ? '★ რეიტინგი' : '★ RATING'}</option>
-                <option value="newest">{language === 'ka' ? '📅 უახლესი' : '📅 NEWEST'}</option>
-                <option value="priceAsc">{language === 'ka' ? '📉 ფასი (ზრდადი)' : '📉 PRICE (LOW)'}</option>
-                <option value="priceDesc">{language === 'ka' ? '📈 ფასი (კლებადი)' : '📈 PRICE (HIGH)'}</option>
+                <option value="rating" className="bg-proton-card text-proton-text">{language === 'ka' ? '★ რეიტინგი' : '★ RATING'}</option>
+                <option value="newest" className="bg-proton-card text-proton-text">{language === 'ka' ? '📅 უახლესი' : '📅 NEWEST'}</option>
+                <option value="priceAsc" className="bg-proton-card text-proton-text">{language === 'ka' ? '📉 ფასი (ზრდადი)' : '📉 PRICE (LOW)'}</option>
+                <option value="priceDesc" className="bg-proton-card text-proton-text">{language === 'ka' ? '📈 ფასი (კლებადი)' : '📈 PRICE (HIGH)'}</option>
               </select>
-              <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-40 pointer-events-none text-zinc-400" />
+              <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-60 pointer-events-none text-proton-muted" />
             </div>
           </div>
         )}
 
         {/* Location Dropdown */}
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+          <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
             {t.market.filters.country}
           </label>
           <div className="relative group">
-            <Globe size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60 pointer-events-none" />
+            <Globe size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent opacity-75 pointer-events-none" />
             <select 
               value={activeCountry}
               onChange={(e) => setActiveCountry(e.target.value)}
-              className="w-full pl-10 pr-10 py-3 bg-zinc-950 border-2 border-zinc-800 hover:border-zinc-700/85 rounded-xl text-xs font-bold focus:border-[#dfb257] focus:outline-none transition-all text-white appearance-none cursor-pointer"
+              className={cn("w-full pl-10 pr-10 py-3 rounded-xl text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
             >
               {WORLD_COUNTRIES.map(country => (
-                <option key={country.code} value={country.code} className="bg-zinc-950 text-white">
+                <option key={country.code} value={country.code} className="bg-proton-card text-proton-text">
                   {country.flag} &nbsp; {country.name}
                 </option>
               ))}
             </select>
-            <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-40 pointer-events-none text-zinc-400" />
+            <ChevronRight size={14} className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 opacity-60 pointer-events-none text-proton-muted" />
           </div>
         </div>
 
         {/* City Filter */}
         <div className="space-y-2">
-          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+          <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
             {t.market.filters.city}
           </label>
           <div className="relative group">
-            <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#dfb257] opacity-60" />
+            <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-accent opacity-75" />
             <input 
               type="text"
               value={activeCity}
               onChange={(e) => setActiveCity(e.target.value)}
               placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
-              className="w-full pl-10 pr-9 py-3 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-400 text-white"
+              className={cn("w-full pl-10 pr-9 py-3 rounded-xl text-xs font-bold transition-all", inputSurface)}
             />
             {activeCity && (
               <button
                 type="button"
                 onClick={() => setActiveCity('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white font-bold text-xs cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs cursor-pointer"
               >
                 ✕
               </button>
@@ -226,28 +229,28 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
         </div>
         {/* Price Filter with presets */}
         <div className="space-y-3">
-          <label className="text-xs font-black uppercase tracking-widest text-[#dfb257] ml-1 block">
+          <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
             {t.market.price} ({displayCurrency})
           </label>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500">MIN</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-proton-muted">MIN</span>
               <input 
                 type="number"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
                 placeholder="0"
-                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-400 text-white"
+                className={cn("w-full pl-10 pr-3 py-2.5 rounded-xl text-xs font-bold transition-all", inputSurface)}
               />
             </div>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500">MAX</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-proton-muted">MAX</span>
               <input 
                 type="number"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
                 placeholder="∞"
-                className="w-full pl-10 pr-3 py-2.5 bg-zinc-950 border-2 border-zinc-800 focus:border-[#dfb257] focus:outline-none rounded-xl text-xs font-bold transition-all placeholder:text-zinc-400 text-white"
+                className={cn("w-full pl-10 pr-3 py-2.5 rounded-xl text-xs font-bold transition-all", inputSurface)}
               />
             </div>
           </div>
@@ -272,8 +275,8 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                   className={cn(
                     "py-1.5 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all border cursor-pointer",
                     matches 
-                      ? "bg-[#dfb257]/10 border-[#dfb257] text-[#dfb257]" 
-                      : "bg-zinc-950/20 border-zinc-900 text-zinc-500 hover:text-zinc-300 hover:border-zinc-800"
+                      ? "bg-proton-accent/15 border-proton-accent text-proton-accent" 
+                      : "bg-proton-bg/60 border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/40"
                   )}
                 >
                   {preset.label} {displayCurrency}
@@ -288,7 +291,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
           <button 
             type="button"
             onClick={clearFilters}
-            className="w-full py-3 mt-4 rounded-xl bg-red-950/20 border border-red-900/30 text-[10px] font-black uppercase tracking-[0.25em] hover:text-white hover:bg-gradient-to-b hover:from-red-900/40 hover:to-red-950/60 hover:border-red-500/50 transition-all flex items-center justify-center gap-2 text-red-400 cursor-pointer"
+            className="w-full py-3 mt-4 rounded-xl bg-rose-500/10 border border-rose-500/25 text-[10px] font-black uppercase tracking-[0.25em] hover:text-white hover:bg-rose-600 hover:border-rose-500 transition-all flex items-center justify-center gap-2 text-rose-500 cursor-pointer"
           >
             <Trash2 size={13} className="stroke-[2.5]" />
             {t.market.filters.clear_all}
@@ -359,22 +362,22 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
                 onClose();
               }
             }}
-            className="fixed inset-x-0 bottom-0 max-h-[85vh] flex flex-col rounded-t-[32px] border-t border-x border-zinc-800/80 bg-zinc-950/98 backdrop-blur-2xl shadow-[0_-20px_50px_rgba(0,0,0,0.8)] z-10 overflow-hidden"
+            className="fixed inset-x-0 bottom-0 max-h-[85vh] flex flex-col rounded-t-[32px] border-t border-x border-proton-border bg-proton-card/98 backdrop-blur-2xl shadow-2xl z-10 overflow-hidden text-proton-text"
           >
             {/* Grab Handle */}
             <div className="w-full flex flex-col items-center pt-3 pb-1 select-none cursor-grab active:cursor-grabbing touch-none shrink-0">
-              <div className="w-12 h-1.5 rounded-full bg-zinc-700/80 hover:bg-zinc-600 transition-colors" />
+              <div className="w-12 h-1.5 rounded-full bg-proton-border hover:bg-proton-muted transition-colors" />
             </div>
 
             {/* Bottom Sheet Header */}
-            <div className="px-6 py-3 border-b border-zinc-900 flex items-center justify-between shrink-0">
+            <div className="px-6 py-3 border-b border-proton-border flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
-                <LayoutGrid size={16} className="text-[#dfb257]" />
-                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white">
+                <LayoutGrid size={16} className="text-proton-accent" />
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-proton-text">
                   {language === 'ka' ? 'ფილტრები' : 'Filters'}
                 </h3>
                 {activeFiltersCount > 0 && (
-                  <span className="flex items-center justify-center bg-[#dfb257] text-[#070708] font-black text-[10px] w-5 h-5 rounded-full">
+                  <span className="flex items-center justify-center bg-proton-accent text-proton-on-accent font-black text-[10px] w-5 h-5 rounded-full">
                     {activeFiltersCount}
                   </span>
                 )}
@@ -384,7 +387,7 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
                   <button
                     type="button"
                     onClick={onClearFilters}
-                    className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider px-2 py-1 transition-colors cursor-pointer"
+                    className="text-[10px] font-bold text-rose-500 hover:text-rose-400 uppercase tracking-wider px-2 py-1 transition-colors cursor-pointer"
                   >
                     {language === 'ka' ? 'გასუფთავება' : 'Reset'}
                   </button>
@@ -392,7 +395,7 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 rounded-xl bg-proton-bg border border-proton-border text-proton-muted hover:text-proton-text transition-colors cursor-pointer"
                   aria-label="Close filters"
                 >
                   <X size={16} />
@@ -406,14 +409,14 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
             </div>
 
             {/* Sticky Bottom Action Bar with Apply CTA */}
-            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-zinc-900 bg-zinc-950/95 backdrop-blur-md shrink-0">
+            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-proton-border bg-proton-card/95 backdrop-blur-md shrink-0">
               <button 
                 type="button"
                 onClick={onClose}
-                className="w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all cursor-pointer bg-[#dfb257] text-[#070708] hover:brightness-110 shadow-[#dfb257]/10"
+                className="w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all cursor-pointer bg-proton-accent hover:bg-proton-accent-hover text-proton-on-accent"
               >
                 <span>{language === 'ka' ? 'შედეგების ნახვა' : 'Apply Filters'}</span>
-                <span className="text-[11px] font-mono font-black opacity-80">
+                <span className="text-[11px] font-mono font-black opacity-85">
                   ({matchCount})
                 </span>
               </button>
