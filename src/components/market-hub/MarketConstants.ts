@@ -312,6 +312,72 @@ export const convertPrice = (price: number, from: string, to: string) => {
   return inUSD * (EXCHANGE_RATES[normTo] || 1);
 };
 
+export const normalizeListingPriceValue = (price: unknown): number => {
+  if (typeof price === 'number') {
+    return Number.isFinite(price) && price >= 0 ? price : 0;
+  }
+  if (typeof price === 'string') {
+    const trimmed = price.trim();
+    if (!trimmed) return 0;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  }
+  return 0;
+};
+
+export const roundPriceForDisplayCurrency = (amount: number, currency?: string): number => {
+  if (!Number.isFinite(amount) || amount < 0) return 0;
+  const code = (currency || 'USD').trim().toUpperCase();
+  if (code === 'JPY') {
+    return Math.round(amount);
+  }
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+};
+
+export const parsePriceFilterInput = (raw: string): number | null => {
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+};
+
+export interface CurrencyPricePreset {
+  label: string;
+  min: string;
+  max: string;
+}
+
+const snapPresetThreshold = (amount: number): number => {
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 200) return Math.max(5, Math.round(amount / 5) * 5);
+  if (amount < 1000) return Math.round(amount / 10) * 10;
+  if (amount < 10000) return Math.round(amount / 100) * 100;
+  return Math.round(amount / 1000) * 1000;
+};
+
+const BASE_USD_PRICE_TIERS = [50, 200, 1000] as const;
+
+export const getCurrencyPricePresets = (displayCurrency?: string): CurrencyPricePreset[] => {
+  const code = (displayCurrency || 'USD').trim().toUpperCase();
+  const [tier1, tier2, tier3] = BASE_USD_PRICE_TIERS.map((usdAmount) => {
+    if (code === 'USD') return usdAmount;
+    return snapPresetThreshold(convertPrice(usdAmount, 'USD', code));
+  });
+
+  const f1 = formatCurrencyAmount(tier1, code);
+  const f2 = formatCurrencyAmount(tier2, code);
+  const f3 = formatCurrencyAmount(tier3, code);
+
+  return [
+    { label: `< ${f1}`, min: '', max: String(tier1) },
+    { label: `${f1} - ${f2}`, min: String(tier1), max: String(tier2) },
+    { label: `${f2} - ${f3}`, min: String(tier2), max: String(tier3) },
+    { label: `${f3} +`, min: String(tier3), max: '' },
+  ];
+};
+
 export const safeParseDate = (dateVal: any): number => {
   if (!dateVal) return Date.now();
   try {

@@ -13,7 +13,10 @@ import { cn } from '../../lib/utils';
 import { 
   WORLD_COUNTRIES, 
   CATEGORY_EMOJIS, 
-  MarketTheme 
+  MarketTheme,
+  formatCurrencyAmount,
+  getCurrencyPricePresets,
+  parsePriceFilterInput
 } from './MarketConstants';
 
 export interface MarketFilterPanelProps {
@@ -64,6 +67,11 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
   setSortBy
 }: MarketFilterPanelProps) {
   const inputSurface = currentTheme?.input || "bg-proton-bg border border-proton-border focus:border-proton-accent/60 text-proton-text placeholder:text-proton-muted focus:outline-none focus:ring-1 focus:ring-proton-accent/25";
+  const parsedMinPrice = parsePriceFilterInput(minPrice);
+  const parsedMaxPrice = parsePriceFilterInput(maxPrice);
+  const hasPriceFilter = parsedMinPrice !== null || parsedMaxPrice !== null;
+  const isInvertedRange = parsedMinPrice !== null && parsedMaxPrice !== null && parsedMinPrice > parsedMaxPrice;
+  const pricePresets = React.useMemo(() => getCurrencyPricePresets(displayCurrency), [displayCurrency]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -140,14 +148,14 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 <X size={10} className="shrink-0" />
               </button>
             )}
-            {(minPrice !== '' || maxPrice !== '') && (
+            {hasPriceFilter && (
               <button
                 type="button"
                 onClick={() => { setMinPrice(''); setMaxPrice(''); }}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
                 <span>
-                  {minPrice ? `${minPrice}` : '0'} - {maxPrice ? `${maxPrice}` : '∞'} {displayCurrency}
+                  {parsedMinPrice !== null ? formatCurrencyAmount(parsedMinPrice, displayCurrency) : '0'} - {parsedMaxPrice !== null ? formatCurrencyAmount(parsedMaxPrice, displayCurrency) : '∞'} {displayCurrency}
                 </span>
                 <X size={10} className="shrink-0" />
               </button>
@@ -227,19 +235,38 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
             )}
           </div>
         </div>
-        {/* Price Filter with presets */}
+        {/* Price Filter with currency-consistent presets */}
         <div className="space-y-3">
-          <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
-            {t.market.price} ({displayCurrency})
-          </label>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs font-black uppercase tracking-widest text-proton-accent ml-1 block">
+              {t.market.price} ({displayCurrency})
+            </label>
+            {hasPriceFilter && (
+              <button
+                type="button"
+                onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                className="text-[10px] font-bold text-proton-muted hover:text-proton-accent uppercase tracking-wider cursor-pointer transition-colors"
+              >
+                {language === 'ka' ? 'გასუფთავება' : 'Reset'}
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-proton-muted">MIN</span>
               <input 
                 type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
                 value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.startsWith('-')) return;
+                  setMinPrice(val);
+                }}
                 placeholder="0"
+                aria-label={language === 'ka' ? `მინიმალური ფასი (${displayCurrency})` : `Minimum price (${displayCurrency})`}
                 className={cn("w-full pl-10 pr-3 py-2.5 rounded-xl text-xs font-bold transition-all", inputSurface)}
               />
             </div>
@@ -247,33 +274,50 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-proton-muted">MAX</span>
               <input 
                 type="number"
+                min="0"
+                step="any"
+                inputMode="decimal"
                 value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.startsWith('-')) return;
+                  setMaxPrice(val);
+                }}
                 placeholder="∞"
+                aria-label={language === 'ka' ? `მაქსიმალური ფასი (${displayCurrency})` : `Maximum price (${displayCurrency})`}
                 className={cn("w-full pl-10 pr-3 py-2.5 rounded-xl text-xs font-bold transition-all", inputSurface)}
               />
             </div>
           </div>
 
-          {/* Quick Price Selection Presets */}
-          <div className="grid grid-cols-2 gap-1">
-            {[
-              { label: '< 50', min: '', max: '50' },
-              { label: '50 - 200', min: '50', max: '200' },
-              { label: '200 - 1000', min: '200', max: '1000' },
-              { label: '1000 +', min: '1000', max: '' }
-            ].map((preset, i) => {
-              const matches = minPrice === preset.min && maxPrice === preset.max;
+          {isInvertedRange && (
+            <p className="text-[10px] font-semibold text-amber-500 ml-1">
+              {language === 'ka' ? 'მინიმალური ფასი აღემატება მაქსიმალურს' : 'Min price exceeds max price'}
+            </p>
+          )}
+
+          {/* Quick Price Selection Presets scaled to displayCurrency */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {pricePresets.map((preset, i) => {
+              const matches =
+                (preset.min === '' ? parsedMinPrice === null : parsedMinPrice === Number(preset.min)) &&
+                (preset.max === '' ? parsedMaxPrice === null : parsedMaxPrice === Number(preset.max));
               return (
                 <button
-                  key={i}
+                  key={`${displayCurrency}-${i}`}
                   type="button"
                   onClick={() => {
-                    setMinPrice(preset.min);
-                    setMaxPrice(preset.max);
+                    if (matches) {
+                      setMinPrice('');
+                      setMaxPrice('');
+                    } else {
+                      setMinPrice(preset.min);
+                      setMaxPrice(preset.max);
+                    }
                   }}
+                  aria-pressed={matches}
                   className={cn(
-                    "py-1.5 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all border cursor-pointer",
+                    "py-1.5 px-2 rounded-lg text-[9px] font-black uppercase tracking-wider text-center transition-all border cursor-pointer truncate",
                     matches 
                       ? "bg-proton-accent/15 border-proton-accent text-proton-accent" 
                       : "bg-proton-bg/60 border-proton-border text-proton-muted hover:text-proton-text hover:border-proton-accent/40"

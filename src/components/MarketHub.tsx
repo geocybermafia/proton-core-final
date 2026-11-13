@@ -95,6 +95,9 @@ import {
   handleFirestoreError,
   CATEGORY_EMOJIS,
   convertPrice,
+  normalizeListingPriceValue,
+  roundPriceForDisplayCurrency,
+  parsePriceFilterInput,
   safeParseDate,
   isPhysicalListing,
   isServiceListing,
@@ -266,9 +269,28 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [displayCurrency, setDisplayCurrency] = useState<SupportedCurrency>(() => resolvePreferredCurrency(preferredCurrency));
+  const prevDisplayCurrencyRef = useRef<SupportedCurrency>(displayCurrency);
   useEffect(() => {
     setDisplayCurrency(resolvePreferredCurrency(preferredCurrency));
   }, [preferredCurrency]);
+  useEffect(() => {
+    const prevCurrency = prevDisplayCurrencyRef.current;
+    if (prevCurrency !== displayCurrency) {
+      prevDisplayCurrencyRef.current = displayCurrency;
+      setMinPrice((current) => {
+        const parsed = parsePriceFilterInput(current);
+        if (parsed === null) return '';
+        const converted = convertPrice(parsed, prevCurrency, displayCurrency);
+        return String(roundPriceForDisplayCurrency(converted, displayCurrency));
+      });
+      setMaxPrice((current) => {
+        const parsed = parsePriceFilterInput(current);
+        if (parsed === null) return '';
+        const converted = convertPrice(parsed, prevCurrency, displayCurrency);
+        return String(roundPriceForDisplayCurrency(converted, displayCurrency));
+      });
+    }
+  }, [displayCurrency]);
   const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -457,8 +479,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const currentUseOrderByRef = useRef<boolean>(true);
 
   // Search & Filter state detection
+  const parsedMinPrice = useMemo(() => parsePriceFilterInput(minPrice), [minPrice]);
+  const parsedMaxPrice = useMemo(() => parsePriceFilterInput(maxPrice), [maxPrice]);
+  const hasActivePriceFilter = parsedMinPrice !== null || parsedMaxPrice !== null;
   const isSearchActive = search.trim().length > 0;
-  const hasActiveFilters = activeCategory !== 'all' || activeCountry !== 'GLOBAL' || activeCity.trim().length > 0 || activeListingType !== 'all' || minPrice !== '' || maxPrice !== '' || showOnlyFavorites;
+  const hasActiveFilters = activeCategory !== 'all' || activeCountry !== 'GLOBAL' || activeCity.trim().length > 0 || activeListingType !== 'all' || hasActivePriceFilter || showOnlyFavorites;
   const isFilteredMode = isSearchActive || hasActiveFilters;
 
   // Shopping Cart state
@@ -2070,29 +2095,26 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
     // If text search is not active, but secondary filters are active:
     // Execute scoped query window directly against Firestore to prevent false zero-results
-    if (hasActiveFilters && (activeCountry !== 'GLOBAL' || activeListingType !== 'all' || minPrice !== '' || maxPrice !== '' || activeCity.trim().length > 0)) {
+    if (hasActiveFilters && (activeCountry !== 'GLOBAL' || activeListingType !== 'all' || hasActivePriceFilter || activeCity.trim().length > 0)) {
       setLoading(true);
 
       const runScopedFilterFetch = async () => {
         try {
           const coll = collection(db, 'listings');
-          let qFiltered;
+          let snap;
           if (viewMode === 'my-listings') {
             if (!user) return;
-            qFiltered = query(coll, where('sellerId', '==', user.uid), limit(200));
+            snap = await getDocs(query(coll, where('sellerId', '==', user.uid), limit(200)));
           } else if (activeCategory !== 'all') {
-            qFiltered = query(coll, where('category', '==', activeCategory), limit(200));
+            snap = await getDocs(query(coll, where('category', '==', activeCategory), limit(200)));
           } else {
             try {
-              qFiltered = query(coll, orderBy('createdAt', 'desc'), limit(200));
-              return await getDocs(qFiltered);
+              snap = await getDocs(query(coll, orderBy('createdAt', 'desc'), limit(200)));
             } catch {
-              qFiltered = query(coll, limit(200));
-              return await getDocs(qFiltered);
+              snap = await getDocs(query(coll, limit(200)));
             }
           }
-          const snap = await getDocs(qFiltered);
-          if (!isActive) return;
+          if (!isActive || !snap) return;
 
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[];
           data.sort((a, b) => safeParseDate(b.createdAt) - safeParseDate(a.createdAt));
@@ -2189,7 +2211,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       isActive = false;
       if (unsub) unsub();
     };
-  }, [user, authLoading, activeCategory, viewMode, search, activeCountry, activeCity, activeListingType, minPrice, maxPrice, showOnlyFavorites, isSearchActive, hasActiveFilters, getBaseQuery]);
+  }, [user, authLoading, activeCategory, viewMode, search, activeCountry, activeCity, activeListingType, hasActivePriceFilter, showOnlyFavorites, isSearchActive, hasActiveFilters, getBaseQuery]);
 
   const clearFilters = useCallback(() => {
     setSearch('');
@@ -2211,7 +2233,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     for (let i = 0; i < listings.length; i++) {
       const l = listings[i];
       try {
-        map.set(l.id, convertPrice(l.price || 0, l.currency || 'USD', displayCurrency));
+        const safePrice = normalizeListingPriceValue(l.price);
+        const converted = convertPrice(safePrice, l.currency || 'USD', displayCurrency);
+        map.set(l.id, roundPriceForDisplayCurrency(converted, displayCurrency));
       } catch {
         map.set(l.id, 0);
       }
@@ -2222,7 +2246,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const cartTotal = useMemo(() => {
     return cart.reduce((acc, item) => {
       try {
-        return acc + (priceMap.get(item.id) ?? convertPrice(item.price || 0, item.currency || 'USD', displayCurrency));
+        const fallback = roundPriceForDisplayCurrency(
+          convertPrice(normalizeListingPriceValue(item.price), item.currency || 'USD', displayCurrency),
+          displayCurrency
+        );
+        return acc + (priceMap.get(item.id) ?? fallback);
       } catch {
         return acc;
       }
@@ -2235,17 +2263,21 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       return [];
     }
 
-    const minP = minPrice !== '' ? parseFloat(minPrice) : null;
-    const maxP = maxPrice !== '' ? parseFloat(maxPrice) : null;
     const searchLower = search ? search.toLowerCase() : null;
     const activeCityLower = activeCity ? activeCity.toLowerCase() : null;
 
     // Single pass map with cached converted price and created timestamp
-    const itemsWithMeta = listings.map(l => ({
-      item: l,
-      convertedPrice: priceMap.get(l.id) ?? convertPrice(l.price || 0, l.currency || 'USD', displayCurrency),
-      createdTime: safeParseDate(l.createdAt)
-    }));
+    const itemsWithMeta = listings.map(l => {
+      const fallbackConverted = roundPriceForDisplayCurrency(
+        convertPrice(normalizeListingPriceValue(l.price), l.currency || 'USD', displayCurrency),
+        displayCurrency
+      );
+      return {
+        item: l,
+        convertedPrice: priceMap.get(l.id) ?? fallbackConverted,
+        createdTime: safeParseDate(l.createdAt)
+      };
+    });
 
     const filtered = itemsWithMeta.filter(({ item: l, convertedPrice }) => {
       if (isMyListings) {
@@ -2275,9 +2307,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       // Filter by City
       if (activeCityLower && (!l.city || !l.city.toLowerCase().includes(activeCityLower))) return false;
 
-      // Filter by Price
-      if (minP !== null && convertedPrice < minP) return false;
-      if (maxP !== null && convertedPrice > maxP) return false;
+      // Filter by Price in active displayCurrency
+      if (parsedMinPrice !== null && convertedPrice < parsedMinPrice) return false;
+      if (parsedMaxPrice !== null && convertedPrice > parsedMaxPrice) return false;
 
       // Filter by Search (Bilingual & cross-language: checks both English and Georgian fields independently)
       if (searchLower) {
@@ -2322,7 +2354,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
 
     return filtered.map(r => r.item);
-  }, [listings, priceMap, search, activeCategory, activeCountry, activeCity, minPrice, maxPrice, viewMode, profileSubMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency, showOnlyFavorites, favoritesSet]);
+  }, [listings, priceMap, search, activeCategory, activeCountry, activeCity, parsedMinPrice, parsedMaxPrice, viewMode, profileSubMode, activeListingType, language, sortBy, sellerRatings, user?.uid, displayCurrency, showOnlyFavorites, favoritesSet]);
 
   const displayedListings = useMemo(() => {
     if (isFilteredMode) {
@@ -3349,11 +3381,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     if (activeCategory !== 'all') count++;
     if (activeCountry !== 'GLOBAL') count++;
     if (activeCity !== '') count++;
-    if (minPrice !== '') count++;
-    if (maxPrice !== '') count++;
+    if (parsedMinPrice !== null) count++;
+    if (parsedMaxPrice !== null) count++;
     if (activeListingType !== 'all') count++;
     return count;
-  }, [activeCategory, activeCountry, activeCity, minPrice, maxPrice, activeListingType]);
+  }, [activeCategory, activeCountry, activeCity, parsedMinPrice, parsedMaxPrice, activeListingType]);
 
   // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
   if (authLoading) {
