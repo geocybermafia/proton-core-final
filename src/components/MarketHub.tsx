@@ -109,6 +109,7 @@ import {
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
 import { CartDrawer } from './market-hub/CartDrawer';
 import { CheckoutModal } from './market-hub/CheckoutModal';
+import { ListingDetailsModal } from './market-hub/ListingDetailsModal';
 import { CancelOrderModal } from './market-hub/CancelOrderModal';
 import { MarketChatDrawer } from './market-hub/MarketChatDrawer';
 import { VendorReviewsModal } from './market-hub/VendorReviewsModal';
@@ -410,6 +411,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       }
     }
   }, [viewMode, cancelAndResetAiSpec]);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
@@ -735,10 +737,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   useEffect(() => {
     let originalTitle = t.market.seo_title || "PROTON — პროფესიონალური ეკოსისტემა";
     let originalMetaDesc = document.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+    const activeInspectListing = checkoutItem || selectedListing;
 
-    if (checkoutItem) {
-      const activeTitle = getListingTitle(checkoutItem, language);
-      const activeDesc = language === 'ka' ? (checkoutItem.descriptionGe || checkoutItem.description) : checkoutItem.description;
+    if (activeInspectListing) {
+      const activeTitle = getListingTitle(activeInspectListing, language);
+      const activeDesc = language === 'ka' ? (activeInspectListing.descriptionGe || activeInspectListing.description) : activeInspectListing.description;
       document.title = `${activeTitle} | ${language === 'ka' ? 'მარკეტი' : 'Market'} — PROTON`;
       
       let metaDescNode = document.querySelector('meta[name="description"]');
@@ -759,7 +762,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         metaDescNode.setAttribute('content', originalMetaDesc);
       }
     };
-  }, [t, language, checkoutItem]);
+  }, [t, language, checkoutItem, selectedListing]);
   const [profileSubMode, setProfileSubMode] = useState<'selling' | 'buying'>('selling');
   const { sellerOrders = [], buyerOrders = [] } = useSeller();
   const [sellerOrderFilter, setSellerOrderFilter] = useState<SellerOrderFilter>('all');
@@ -1339,6 +1342,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     },
   });
 
+  const listingDetailsModalRef = useFocusTrap<HTMLDivElement>({
+    isOpen: !!selectedListing && !selectedVendor && !checkoutItem && !activeChatListing && !isCartOpen,
+    onClose: () => setSelectedListing(null),
+  });
+
   // Browser History & Hardware Back-Button Integration (Modals & Drawers)
   const modalHistoryRef = useRef<string | null>(null);
   const isBackNavigationRef = useRef<boolean>(false);
@@ -1346,11 +1354,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   // Compute currently active modal in priority order
   const activeModalKey = useMemo(() => {
     if (checkoutItem) return 'checkout';
+    if (selectedListing) return 'listing-details';
     if (isCartOpen) return 'cart';
     if (isFiltersOpen) return 'filters';
     if (activeChatListing) return 'chat';
     return null;
-  }, [checkoutItem, isCartOpen, isFiltersOpen, activeChatListing]);
+  }, [checkoutItem, selectedListing, isCartOpen, isFiltersOpen, activeChatListing]);
 
   // Synchronize modal state with browser history (Push on Open, Back on Close)
   useEffect(() => {
@@ -1403,6 +1412,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       if (modalHistoryRef.current) {
         isBackNavigationRef.current = true;
         setCheckoutItem(null);
+        setSelectedListing(null);
         setIsCartOpen(false);
         setIsFiltersOpen(false);
         setActiveChatListing(null);
@@ -4087,7 +4097,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   <ListingMap 
                     listings={filteredListings}
                     onSelectListing={(listing) => {
-                      setCheckoutItem(listing);
+                      setSelectedListing(listing);
                     }}
                     onClose={() => setDisplayMode('grid')}
                     language={language}
@@ -4999,12 +5009,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         toggleFavorite={toggleFavorite}
                         sellerRating={sellerRatings[listing.sellerId]}
                         isAdmin={isAdminUser}
-                        onSelectListing={setCheckoutItem}
+                        onSelectListing={setSelectedListing}
                         onSelectVendor={setSelectedVendor}
                         onStartChat={handleStartChat}
                         onStartEdit={startEdit}
                         onDeleteListing={handleDeleteListing}
-                        onBuyNow={handleBuyNow}
+                        onBuyNow={setSelectedListing}
                         onAddToCart={handleAddToCart}
                       />
                     ))
@@ -5246,6 +5256,30 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         onChangeShippingDetails={setShippingDetails}
         onRemoveFromCart={handleRemoveFromCart}
         onCheckout={handleCartCheckout}
+      />
+
+      {/* Listing Details Modal (Opens before Checkout) */}
+      <ListingDetailsModal
+        listing={selectedListing}
+        onClose={() => setSelectedListing(null)}
+        modalRef={listingDetailsModalRef}
+        user={user}
+        language={language}
+        t={t}
+        currentTheme={currentTheme}
+        displayCurrency={displayCurrency}
+        priceMap={priceMap}
+        convertPrice={convertPrice}
+        sellerRating={selectedListing ? sellerRatings[selectedListing.sellerId] : undefined}
+        isInCart={Boolean(selectedListing && cart.some(item => item.id === selectedListing.id))}
+        isFavorite={Boolean(selectedListing && favoritesSet.has(selectedListing.id))}
+        onToggleFavorite={toggleFavorite}
+        onSelectVendor={setSelectedVendor}
+        onAddToCart={handleAddToCart}
+        onStartChat={handleStartChat}
+        onBuyNow={handleBuyNow}
+        onStartEdit={startEdit}
+        onDeleteListing={handleDeleteListing}
       />
 
       {/* Single Item Checkout Modal */}
