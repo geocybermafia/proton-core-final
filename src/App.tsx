@@ -4306,6 +4306,7 @@ export default function App() {
       email: '',
       language: 'en',
       region: 'Tbilisi',
+      preferredCurrency: 'USD',
       notifications: true,
       role: 'Proton Member',
       phoneNumber: '',
@@ -4321,6 +4322,9 @@ export default function App() {
         if (parsed.language !== 'en' && parsed.language !== 'ka') {
           parsed.language = 'en';
         }
+        const rawCurrency = typeof parsed.preferredCurrency === 'string' ? parsed.preferredCurrency.trim().toUpperCase() : '';
+        const validCurrencies = ['USD', 'EUR', 'GEL', 'GBP', 'JPY', 'CNY'];
+        parsed.preferredCurrency = validCurrencies.includes(rawCurrency) ? rawCurrency : 'USD';
         return { ...defaultProfile, ...parsed };
       }
     } catch {
@@ -4657,6 +4661,26 @@ export default function App() {
     }
   }, [user, setLanguage]);
 
+  const handlePreferredCurrencyChange = useCallback((newCurrency: UserProfile['preferredCurrency']) => {
+    const validCurrencies = ['USD', 'EUR', 'GEL', 'GBP', 'JPY', 'CNY'];
+    const raw = typeof newCurrency === 'string' ? newCurrency.trim().toUpperCase() : '';
+    const resolved = (validCurrencies.includes(raw) ? raw : 'USD') as NonNullable<UserProfile['preferredCurrency']>;
+
+    setUserProfile(prev => {
+      if (prev.preferredCurrency === resolved) return prev;
+      return { ...prev, preferredCurrency: resolved };
+    });
+
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      setDoc(userDocRef, { preferredCurrency: resolved }, { merge: true }).catch(err => {
+        if (err?.code !== 'unavailable') {
+          console.error("Error writing preferredCurrency to Firestore:", err);
+        }
+      });
+    }
+  }, [user]);
+
   // Background data fetch for logged in user
   useEffect(() => {
     if (!user) {
@@ -4826,12 +4850,20 @@ export default function App() {
         setUserProfile(prev => {
           const targetLanguage = (dbLanguage && !isStale) ? dbLanguage : prev.language;
           const { securityPin, ...cleanData } = data as any; // Strip raw securityPin if present
+          const validCurrencies = ['USD', 'EUR', 'GEL', 'GBP', 'JPY', 'CNY'];
+          const rawDbCurrency = typeof data.preferredCurrency === 'string' ? data.preferredCurrency.trim().toUpperCase() : '';
+          const targetCurrency = validCurrencies.includes(rawDbCurrency)
+            ? (rawDbCurrency as NonNullable<UserProfile['preferredCurrency']>)
+            : (validCurrencies.includes(String(prev.preferredCurrency || '').toUpperCase())
+                ? (String(prev.preferredCurrency).toUpperCase() as NonNullable<UserProfile['preferredCurrency']>)
+                : 'USD');
           return {
             ...prev,
             ...cleanData,
             name: data.name || prev.name,
             email: data.email || prev.email,
             language: targetLanguage,
+            preferredCurrency: targetCurrency,
             avatar: data.avatar || prev.avatar,
             securityPinEnabled: data.securityPinEnabled !== undefined ? data.securityPinEnabled : prev.securityPinEnabled,
             securityPinMeta: data.securityPinMeta || prev.securityPinMeta,
@@ -4902,6 +4934,7 @@ export default function App() {
             storage_gb: 0.5,
             node_id: `NODE-${user!.uid.slice(0, 5).toUpperCase()}`,
             language: userProfile.language,
+            preferredCurrency: userProfile.preferredCurrency || 'USD',
             theme: (safeStorage.get('proton_theme') as Theme) || 'enterprise'
           };
           await setDoc(docRef, sanitizeForFirestore(defaultProfile)).catch(e => {
@@ -5463,6 +5496,8 @@ export default function App() {
             }>
               <MarketHub 
                 language={userProfile.language} 
+                preferredCurrency={userProfile.preferredCurrency || 'USD'}
+                onCurrencyChange={handlePreferredCurrencyChange}
                 t={t}
                 themeId={theme}
                 isAdmin={isAdmin}
@@ -6934,6 +6969,7 @@ export default function App() {
                         setTheme={handleGlobalThemeChange}
                         themeSchedule={themeSchedule}
                         onUpdateThemeSchedule={handleUpdateThemeSchedule}
+                        onCurrencyChange={handlePreferredCurrencyChange}
                         language={userProfile.language}
                         uiMode={uiMode === 'market' ? 'business' : uiMode}
                         setUiMode={handleModeChange}

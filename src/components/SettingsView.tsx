@@ -53,7 +53,8 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
-import { UserProfile, GlobalAiSettings, Theme, ThemeSchedule } from '../types';
+import { UserProfile, GlobalAiSettings, Theme, ThemeSchedule, SupportedCurrency, resolvePreferredCurrency } from '../types';
+import { CURRENCIES } from './market-hub/MarketConstants';
 import { DEFAULT_THEME_SCHEDULE, isDaytime } from '../hooks/useThemeSchedule';
 import { useToast } from './Toast';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -81,6 +82,7 @@ interface SettingsViewProps {
   setTheme: (theme: Theme) => void;
   themeSchedule?: ThemeSchedule;
   onUpdateThemeSchedule?: (schedule: ThemeSchedule | ((prev: ThemeSchedule) => ThemeSchedule)) => void;
+  onCurrencyChange?: (currency: SupportedCurrency) => void;
   language: 'en' | 'ka';
   uiMode: 'business' | 'creative';
   setUiMode: (mode: 'business' | 'creative') => void;
@@ -122,6 +124,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setTheme,
   themeSchedule,
   onUpdateThemeSchedule,
+  onCurrencyChange,
   language,
   uiMode,
   setUiMode,
@@ -691,6 +694,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           email: userProfile.email || '',
           language: userProfile.language || 'en',
           region: userProfile.region || '',
+          preferredCurrency: resolvePreferredCurrency(userProfile.preferredCurrency),
           notifications: userProfile.notifications !== false,
           notificationsEnabled: userProfile.notificationsEnabled !== false,
           phoneNumber: userProfile.phoneNumber || '',
@@ -799,6 +803,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       email: defaultEmail,
       language: 'en',
       region: 'Tbilisi, GE',
+      preferredCurrency: 'USD',
       notifications: true,
       notificationsEnabled: true,
       phoneNumber: '',
@@ -833,6 +838,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           email: defaultEmail,
           language: 'en',
           region: 'Tbilisi, GE',
+          preferredCurrency: 'USD',
           notifications: true,
           phoneNumber: '',
           avatar: '',
@@ -1742,6 +1748,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </button>
                       </div>
                     </div>
+
+                    {/* 1.5 Preferred Display Currency Sector */}
+                    {(() => {
+                      const activeCurrency = resolvePreferredCurrency(userProfile.preferredCurrency);
+                      return (
+                        <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-4">
+                          <div className="flex items-center justify-between gap-2 text-left">
+                            <div>
+                              <label className="text-[11px] font-black uppercase tracking-wider text-proton-text block">
+                                {language === 'ka' ? 'სასურველი ჩვენების ვალუტა' : 'Preferred Display Currency'}
+                              </label>
+                              <p className="text-[9px] text-proton-muted font-black uppercase tracking-widest mt-0.5">
+                                {language === 'ka'
+                                  ? 'აირჩიეთ ვალუტა ფასების საჩვენებლად Market Hub-ში (არ ცვლის ორიგინალ ტრანზაქციებს)'
+                                  : 'Choose display currency for Market Hub prices (original transactions remain unchanged)'}
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent bg-proton-accent/10 px-2.5 py-1 rounded-md border border-proton-accent/20 flex items-center gap-1 shrink-0">
+                              <Zap size={10} />
+                              {language === 'ka' ? 'ინახება მომენტალურად' : 'Saves instantly'}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+                            {CURRENCIES.map((curr) => {
+                              const code = curr.code as SupportedCurrency;
+                              const isSelected = activeCurrency === code;
+                              return (
+                                <button
+                                  key={curr.code}
+                                  type="button"
+                                  id={`btn-currency-${curr.code}`}
+                                  onClick={() => {
+                                    if (activeCurrency === code) return;
+                                    if (onCurrencyChange) {
+                                      onCurrencyChange(code);
+                                    } else {
+                                      setUserProfile(prev => ({ ...prev, preferredCurrency: code }));
+                                      if (user) {
+                                        const userDocRef = doc(db, 'users', user.uid);
+                                        setDoc(userDocRef, { preferredCurrency: code }, { merge: true }).catch(err => {
+                                          console.warn("Error writing preferredCurrency to Firestore:", err);
+                                        });
+                                      }
+                                    }
+                                    showToast(
+                                      language === 'ka'
+                                        ? `სასურველი ვალუტა განახლდა: ${curr.code} (${curr.symbol})`
+                                        : `Preferred currency updated to ${curr.code} (${curr.symbol})`,
+                                      'success'
+                                    );
+                                  }}
+                                  className={cn(
+                                    "flex items-center justify-center gap-1.5 py-3 px-2 rounded-xl border text-xs font-black uppercase tracking-wider transition-all cursor-pointer",
+                                    isSelected
+                                      ? "bg-proton-accent text-proton-bg border-proton-accent shadow-lg shadow-proton-accent/15"
+                                      : "bg-proton-bg border-proton-border/50 text-proton-muted hover:text-proton-text hover:border-proton-accent/40"
+                                  )}
+                                >
+                                  <span className="text-sm leading-none">{curr.symbol}</span>
+                                  <span>{curr.code}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* 2. Global Site Theme Accent */}
                     <div className="p-6 bg-proton-secondary/5 border border-proton-border/50 rounded-2xl space-y-5">

@@ -1,6 +1,20 @@
 
 import { SecurityPinMeta } from './lib/securityUtils';
 
+export type SupportedCurrency = 'USD' | 'EUR' | 'GEL' | 'GBP' | 'JPY' | 'CNY';
+
+export const SUPPORTED_CURRENCIES: readonly SupportedCurrency[] = ['USD', 'EUR', 'GEL', 'GBP', 'JPY', 'CNY'] as const;
+
+export function resolvePreferredCurrency(currency?: string | null): SupportedCurrency {
+  if (typeof currency === 'string') {
+    const upper = currency.trim().toUpperCase() as SupportedCurrency;
+    if ((SUPPORTED_CURRENCIES as readonly string[]).includes(upper)) {
+      return upper;
+    }
+  }
+  return 'USD';
+}
+
 export type UserProfile = {
   id?: string;
   name: string;
@@ -15,6 +29,7 @@ export type UserProfile = {
   role?: string;
   theme?: Theme;
   themeSchedule?: ThemeSchedule;
+  preferredCurrency?: SupportedCurrency;
   showCommercialHub?: boolean;
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;

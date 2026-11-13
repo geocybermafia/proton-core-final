@@ -58,7 +58,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
-import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter } from '../types';
+import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter, SupportedCurrency, resolvePreferredCurrency } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useMarketHub } from '../contexts/MarketHubContext';
 import { isRealListing } from './market-hub/MarketConstants';
@@ -75,6 +75,8 @@ import 'leaflet/dist/leaflet.css';
 
 interface MarketHubProps {
   language: 'en' | 'ka';
+  preferredCurrency?: SupportedCurrency;
+  onCurrencyChange?: (currency: SupportedCurrency) => void;
   t?: any;
   themeId?: string;
   onBack?: () => void;
@@ -129,7 +131,7 @@ export interface ActiveChatContext {
   orderId?: string | null;
 }
 
-export const MarketHub = React.memo(function MarketHub({ language, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, isAdmin: propIsAdmin }: MarketHubProps) {
+export const MarketHub = React.memo(function MarketHub({ language, preferredCurrency, onCurrencyChange, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, isAdmin: propIsAdmin }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
@@ -262,7 +264,10 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
   const [activeCity, setActiveCity] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [displayCurrency, setDisplayCurrency] = useState('USD');
+  const [displayCurrency, setDisplayCurrency] = useState<SupportedCurrency>(() => resolvePreferredCurrency(preferredCurrency));
+  useEffect(() => {
+    setDisplayCurrency(resolvePreferredCurrency(preferredCurrency));
+  }, [preferredCurrency]);
   const [activeListingType, setActiveListingType] = useState<'all' | 'product' | 'service' | 'project'>('all');
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -3753,7 +3758,11 @@ export const MarketHub = React.memo(function MarketHub({ language, t: propT, the
               <div className="relative group shrink-0">
                 <select 
                   value={displayCurrency}
-                  onChange={(e) => setDisplayCurrency(e.target.value)}
+                  onChange={(e) => {
+                    const nextCurrency = resolvePreferredCurrency(e.target.value);
+                    setDisplayCurrency(nextCurrency);
+                    onCurrencyChange?.(nextCurrency);
+                  }}
                   className={cn(
                     "h-9 pl-3 pr-8 py-1.5 rounded-xl border appearance-none text-[9px] font-black uppercase tracking-widest focus:outline-none transition-all cursor-pointer",
                     currentTheme.input
