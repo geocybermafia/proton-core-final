@@ -630,7 +630,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
             {/* Footer Actions */}
             <div
               className={cn(
-                'p-4 sm:px-6 sm:py-4 border-t shrink-0',
+                'p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:px-6 sm:py-4 border-t shrink-0',
                 currentTheme.border
               )}
             >

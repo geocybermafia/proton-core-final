@@ -3514,6 +3514,7 @@ interface MobileBottomNavProps {
   language: string;
   setIsMobileControlOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleViewChange: (view: View) => void;
+  isSuppressedByOverlay?: boolean;
 }
 
 const MobileBottomNav = React.memo(({
@@ -3524,6 +3525,7 @@ const MobileBottomNav = React.memo(({
   language,
   setIsMobileControlOpen,
   handleViewChange,
+  isSuppressedByOverlay = false,
 }: MobileBottomNavProps) => {
   const navItems = useMemo(() => [
     { id: 'dashboard', icon: LayoutDashboard, label: language === 'ka' ? 'მთავარი' : 'Home' },
@@ -3551,7 +3553,7 @@ const MobileBottomNav = React.memo(({
     }
   }, [setIsMobileControlOpen, handleViewChange]);
 
-  const isVisible = isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas' || (activeView as string) === 'market-hub' || (activeView as string) === 'translator';
+  const isVisible = !isSuppressedByOverlay && (isMobileNavVisible || isMobileControlOpen || activeView === 'clips' || activeView === 'personas' || (activeView as string) === 'market-hub' || (activeView as string) === 'translator');
 
   return (
     <nav 
@@ -3640,6 +3642,7 @@ export default function App() {
   const [isMobileControlOpen, setIsMobileControlOpen] = useState(false);
   const [isMobileNavDrawerOpen, setIsMobileNavDrawerOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isMarketOverlayOpen, setIsMarketOverlayOpen] = useState(false);
 
   const handleModeChange = (newMode: 'business' | 'creative' | 'market', targetView?: View) => {
     const getViewPath = (v: View): string => {
@@ -5478,7 +5481,13 @@ export default function App() {
       {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
       {((activeView as string) === 'market-hub' || hasVisitedMarketHub) && (
         <div 
-          className={cn("fixed inset-0 z-[45] md:z-[100] bg-proton-bg overflow-auto", (activeView as string) === 'market-hub' ? "block" : "hidden")}
+          className={cn(
+            "fixed inset-0 bg-proton-bg overflow-auto",
+            ((activeView as string) === 'market-hub' && isMarketOverlayOpen)
+              ? "z-[110] md:z-[100]"
+              : "z-[45] md:z-[100]",
+            (activeView as string) === 'market-hub' ? "block" : "hidden"
+          )}
         >
           <ViewErrorBoundary 
             viewName="Market Hub" 
@@ -5501,6 +5510,7 @@ export default function App() {
                 t={t}
                 themeId={theme}
                 isAdmin={isAdmin}
+                onMobileOverlayChange={setIsMarketOverlayOpen}
                 onBack={() => {
                   setUiMode('business');
                   setActiveView('dashboard');
@@ -6439,6 +6449,7 @@ export default function App() {
         language={language}
         setIsMobileControlOpen={setIsMobileControlOpen}
         handleViewChange={handleViewChange}
+        isSuppressedByOverlay={(activeView as string) === 'market-hub' && isMarketOverlayOpen}
       />
 
       <main className="flex-1 min-w-0 min-h-0 h-full flex flex-col relative bg-proton-bg w-full overflow-hidden">

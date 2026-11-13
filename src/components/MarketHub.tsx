@@ -81,6 +81,7 @@ interface MarketHubProps {
   themeId?: string;
   onBack?: () => void;
   onOpenAuthModal?: () => void;
+  onMobileOverlayChange?: (isOpen: boolean) => void;
   isAdmin?: boolean;
 }
 
@@ -132,7 +133,7 @@ export interface ActiveChatContext {
   orderId?: string | null;
 }
 
-export const MarketHub = React.memo(function MarketHub({ language, preferredCurrency, onCurrencyChange, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, isAdmin: propIsAdmin }: MarketHubProps) {
+export const MarketHub = React.memo(function MarketHub({ language, preferredCurrency, onCurrencyChange, t: propT, themeId: propThemeId, onBack, onOpenAuthModal, onMobileOverlayChange, isAdmin: propIsAdmin }: MarketHubProps) {
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
@@ -1333,8 +1334,18 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [chatMessageText, setChatMessageText] = useState('');
   const [messagesList, setMessagesList] = useState<any[]>([]);
 
+  const closeInlineMessages = useCallback(() => {
+    setActiveBottomTab('home');
+    setActiveChatListing(null);
+    setActiveChatContext(null);
+    setActiveChatOrder(null);
+  }, []);
+
+  const isInlineMessagesActive = activeBottomTab === 'messages';
+  const isDrawerChatOpen = Boolean(activeChatListing) && !isInlineMessagesActive;
+
   const chatModalRef = useFocusTrap<HTMLDivElement>({
-    isOpen: !!activeChatListing,
+    isOpen: isDrawerChatOpen,
     onClose: () => {
       setActiveChatListing(null);
       setActiveChatContext(null);
@@ -1343,9 +1354,32 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   });
 
   const listingDetailsModalRef = useFocusTrap<HTMLDivElement>({
-    isOpen: !!selectedListing && !selectedVendor && !checkoutItem && !activeChatListing && !isCartOpen,
+    isOpen: !!selectedListing && !selectedVendor && !checkoutItem && !isDrawerChatOpen && !isCartOpen,
     onClose: () => setSelectedListing(null),
   });
+
+  // Notify parent App shell when any MarketHub fullscreen overlay/drawer/modal is open on mobile
+  const isAnyMarketOverlayOpen = Boolean(
+    activeBottomTab === 'categories' ||
+    activeBottomTab === 'messages' ||
+    selectedListing ||
+    checkoutItem ||
+    isCartOpen ||
+    isFiltersOpen ||
+    selectedVendor ||
+    orderToCancel ||
+    sellerSelectedOrder ||
+    buyerSelectedOrder ||
+    publishSuccessModal ||
+    isDrawerChatOpen
+  );
+
+  useEffect(() => {
+    onMobileOverlayChange?.(isAnyMarketOverlayOpen);
+    return () => {
+      onMobileOverlayChange?.(false);
+    };
+  }, [isAnyMarketOverlayOpen, onMobileOverlayChange]);
 
   // Browser History & Hardware Back-Button Integration (Modals & Drawers)
   const modalHistoryRef = useRef<string | null>(null);
@@ -1357,9 +1391,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     if (selectedListing) return 'listing-details';
     if (isCartOpen) return 'cart';
     if (isFiltersOpen) return 'filters';
-    if (activeChatListing) return 'chat';
+    if (isDrawerChatOpen) return 'chat';
     return null;
-  }, [checkoutItem, selectedListing, isCartOpen, isFiltersOpen, activeChatListing]);
+  }, [checkoutItem, selectedListing, isCartOpen, isFiltersOpen, isDrawerChatOpen]);
 
   // Synchronize modal state with browser history (Push on Open, Back on Close)
   useEffect(() => {
@@ -3340,13 +3374,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   return (
     <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       {/* Main Black Proton Header (PROTON // მარკეტი) */}
-      <div className="w-full bg-[#080c14]/95 border-b border-zinc-800/80 py-3 sm:py-4 px-4 sm:px-8 flex flex-col gap-3 sticky top-0 z-50 backdrop-blur-md">
+      <div className="w-full bg-[#080c14]/95 border-b border-zinc-800/80 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3 sm:pt-[max(1rem,env(safe-area-inset-top,0px))] sm:pb-4 px-4 sm:px-8 flex flex-col gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
         <div className="w-full flex items-center justify-between gap-4">
           
           {/* Logo element */}
           <div 
             onClick={() => { 
+              if (activeBottomTab === 'messages') closeInlineMessages();
+              else setActiveBottomTab('home');
               setViewMode('browse'); 
               setActiveCategory('all'); 
               setShowOnlyFavorites(false); 
@@ -3397,6 +3433,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   onOpenAuthModal?.();
                   return;
                 }
+                if (activeBottomTab === 'messages') closeInlineMessages();
+                else setActiveBottomTab('home');
                 resetListingForm();
                 setViewMode('create');
               }}
@@ -3416,13 +3454,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   onOpenAuthModal?.();
                   return;
                 }
+                if (activeBottomTab === 'messages') closeInlineMessages();
+                else setActiveBottomTab('home');
                 setViewMode('my-listings');
                 setProfileSubMode('buying');
-                setActiveBottomTab('home');
               }}
               className={cn(
                 "px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl transition-all relative flex items-center gap-1.5 border cursor-pointer font-bold text-[10px] sm:text-xs uppercase tracking-wider shrink-0",
-                viewMode === 'my-listings' && profileSubMode === 'buying' 
+                viewMode === 'my-listings' && profileSubMode === 'buying' && activeBottomTab !== 'messages'
                   ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm font-black" 
                   : "bg-zinc-900/80 text-zinc-300 hover:text-white border-zinc-800 hover:bg-zinc-800"
               )}
@@ -3440,17 +3479,30 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
             {/* Messages tab */}
             <button 
+              type="button"
               onClick={() => {
                 if (!user) {
                   showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინებების სანახავად." : "Please sign in to view your messages.", 'warning');
+                  onOpenAuthModal?.();
+                  return;
+                }
+                if (activeBottomTab === 'messages') {
+                  closeInlineMessages();
+                  setViewMode('browse');
                   return;
                 }
                 setViewMode('my-listings');
                 setProfileSubMode('buying');
                 setActiveBottomTab('messages');
               }}
-              className="p-2 sm:p-2.5 text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 rounded-xl transition-all relative"
+              className={cn(
+                "p-2 sm:p-2.5 rounded-xl transition-all relative border cursor-pointer",
+                activeBottomTab === 'messages'
+                  ? "bg-[#dfb257]/15 text-[#dfb257] border-[#dfb257]/40 shadow-sm"
+                  : "text-zinc-400 hover:text-[#dfb257] hover:bg-zinc-900 border-transparent"
+              )}
               title={language === 'ka' ? 'შეტყობინებები' : 'Messages'}
+              aria-pressed={activeBottomTab === 'messages'}
             >
               <Mail size={16} />
               {allUserMessages.length > 0 && (
@@ -3463,6 +3515,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             {/* Favorites tab */}
             <button 
               onClick={() => {
+                if (activeBottomTab === 'messages') closeInlineMessages();
+                else setActiveBottomTab('home');
                 setShowOnlyFavorites(!showOnlyFavorites);
                 setViewMode('browse');
               }}
@@ -3623,8 +3677,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             onClick={() => {
               if (!user) {
                 showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შეტყობინებების სანახავად." : "Please sign in to view your messages.", 'warning');
+                onOpenAuthModal?.();
                 return;
               }
+              setViewMode('my-listings');
               setActiveBottomTab('messages');
             }}
             className={cn(
@@ -3648,14 +3704,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             onClick={() => {
               if (!user) {
                 showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია პროფილის სანახავად." : "Please sign in to view your profile.", 'warning');
+                onOpenAuthModal?.();
                 return;
               }
-              setActiveBottomTab('home');
+              if (activeBottomTab === 'messages') closeInlineMessages();
+              else setActiveBottomTab('home');
               setViewMode('my-listings');
             }}
             className={cn(
               "px-3 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
-              viewMode === 'my-listings' && profileSubMode !== 'buying'
+              viewMode === 'my-listings' && profileSubMode !== 'buying' && activeBottomTab !== 'messages'
                 ? "bg-[#dfb257] text-[#070708] border-[#dfb257] shadow-sm font-black"
                 : "bg-zinc-900/90 text-zinc-400 hover:text-white border-zinc-800 hover:bg-zinc-800"
             )}
@@ -3670,7 +3728,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-12 bg-transparent pb-40 relative z-10"
+          className="space-y-12 bg-transparent pb-40 relative"
         >
       {/* Market Hub Header / Banner Section */}
       <div className="flex flex-col gap-6 pb-6 border-b border-zinc-900/40">
@@ -3679,8 +3737,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           <div className="flex items-center gap-4">
             {viewMode !== 'browse' && (
               <button 
-                onClick={() => setViewMode('browse')}
-                className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white"
+                type="button"
+                onClick={() => {
+                  if (activeBottomTab === 'messages') closeInlineMessages();
+                  else setActiveBottomTab('home');
+                  setViewMode('browse');
+                }}
+                className="p-3 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5 text-zinc-300 hover:text-white cursor-pointer"
+                title={language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}
               >
                 <ArrowLeft size={18} />
               </button>
@@ -3689,11 +3753,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <h1 className={cn("text-3xl md:text-4xl font-black mb-1.5 tracking-tighter uppercase leading-none", currentTheme.text)}>
                 <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
               </h1>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   <span className={cn("font-black tracking-widest uppercase text-[8px] opacity-80", currentTheme.muted)}>
                     {viewMode === 'browse' ? (language === 'ka' ? 'ონლაინ' : 'LIVE') : 
+                     viewMode === 'my-listings' && activeBottomTab === 'messages' ? (language === 'ka' ? 'შეტყობინებები' : 'Messages') :
                      viewMode === 'my-listings' ? t.market.my_listings :
                      viewMode === 'privacy' ? t.market.legal.privacy_policy :
                      viewMode === 'terms' ? t.market.legal.terms_of_service :
@@ -3708,7 +3773,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     </span>
                   </div>
                 )}
-                {viewMode === 'my-listings' && (
+                {viewMode === 'my-listings' && activeBottomTab !== 'messages' && (
                   <div className={cn("flex items-center gap-1.5 p-0.5 rounded-lg border", currentTheme.cardAlt)}>
                     <button 
                       onClick={() => setProfileSubMode('selling')}
@@ -3729,6 +3794,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       {t.market.buying_mode}
                     </button>
                   </div>
+                )}
+                {viewMode === 'my-listings' && activeBottomTab === 'messages' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeInlineMessages();
+                      setViewMode('browse');
+                    }}
+                    className={cn("hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[8px] font-black uppercase tracking-wider transition-all cursor-pointer hover:bg-white/10", currentTheme.cardAlt, currentTheme.muted)}
+                  >
+                    <ArrowLeft size={10} />
+                    <span>{language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -3822,10 +3900,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 {isCategoryDropdownOpen && (
                   <>
                     <div 
-                      className="fixed inset-0 z-40" 
+                      className="fixed inset-0 z-[60]" 
                       onClick={() => setIsCategoryDropdownOpen(false)} 
                     />
-                    <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-900 w-full flex justify-between items-center mb-1.5">
                         <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         <span className="text-[#dfb257] text-[8px] tracking-widest">★ PROTON</span>
@@ -3970,10 +4048,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   {isCategoryDropdownOpen && (
                     <>
                       <div 
-                        className="fixed inset-0 z-40" 
+                        className="fixed inset-0 z-[60]" 
                         onClick={() => setIsCategoryDropdownOpen(false)} 
                       />
-                      <div className="absolute left-0 top-12 w-[calc(200%+0.5rem)] sm:w-64 max-w-[calc(100vw-2.5rem)] bg-zinc-950 border-2 border-[#dfb257]/30 rounded-2xl shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="absolute left-0 top-12 w-[calc(200%+0.5rem)] sm:w-64 max-w-[calc(100vw-2.5rem)] bg-zinc-950 border-2 border-[#dfb257]/30 rounded-2xl shadow-2xl p-2 z-[70] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200">
                         <div className="text-[9px] font-black tracking-wider text-zinc-500 uppercase px-3 py-1.5 border-b border-zinc-900 w-full flex justify-between items-center mb-1.5">
                           <span>{language === 'ka' ? 'აირჩიეთ კატეგორია' : 'Select Category'}</span>
                         </div>
@@ -4093,7 +4171,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
 
               {viewMode === 'browse' && displayMode === 'map' && (
-                <div className="mb-8 animate-in fade-in duration-300">
+                <div className="mb-8 animate-in fade-in duration-300 relative z-0 isolate">
                   <ListingMap 
                     listings={filteredListings}
                     onSelectListing={(listing) => {
@@ -4110,9 +4188,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               )}
 
               <div className="space-y-8">
-                {viewMode === 'my-listings' && activeBottomTab === 'messages' && (
+                {(viewMode === 'my-listings' || viewMode === 'browse') && activeBottomTab === 'messages' && (
                   /* Dedicated Desktop Inbox / Direct Messages layout */
-                  <div className="hidden md:grid grid-cols-12 gap-6 bg-zinc-950/20 border border-zinc-900/60 rounded-xl p-6 h-[620px] animate-in fade-in duration-300">
+                  <div className="hidden md:grid grid-cols-12 gap-6 bg-zinc-950/20 border border-zinc-900/60 rounded-xl p-6 h-[calc(100vh-270px)] min-h-[480px] max-h-[660px] animate-in fade-in duration-300">
                     {/* Left Column: Conversational threads */}
                     <div className="col-span-4 border-r border-zinc-900/60 pr-6 flex flex-col h-full overflow-hidden">
                       <div className="pb-4 border-b border-zinc-900/40">
@@ -4274,6 +4352,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                               <div className="px-3 py-1 bg-[#dfb257]/10 border border-[#dfb257]/20 rounded-xl text-[9px] font-bold text-[#dfb257] uppercase tracking-wider">
                                 {activeChatListing.condition === 'new' ? (language === 'ka' ? 'ახალი' : 'New') : (language === 'ka' ? 'მეორადი' : 'Used')}
                               </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveChatListing(null);
+                                  setActiveChatContext(null);
+                                  setActiveChatOrder(null);
+                                }}
+                                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors border border-white/10 cursor-pointer"
+                                title={language === 'ka' ? 'ჩატის დახურვა' : 'Close thread'}
+                                aria-label={language === 'ka' ? 'ჩატის დახურვა' : 'Close thread'}
+                              >
+                                <X size={14} />
+                              </button>
                             </div>
                           </div>
 
@@ -5148,42 +5239,6 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
 
 
-          {/* Mobile Filters Bottom Sheet */}
-          <MobileFilterBottomSheet
-            isOpen={isFiltersOpen}
-            onClose={() => setIsFiltersOpen(false)}
-            language={language}
-            activeFiltersCount={activeFiltersCount}
-            onClearFilters={clearFilters}
-            matchCount={filteredListings.length}
-            sheetRef={filtersDrawerRef}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-          >
-            <MarketFilterPanel
-              language={language}
-              t={t}
-              currentTheme={currentTheme}
-              activeFiltersCount={activeFiltersCount}
-              activeListingType={activeListingType}
-              setActiveListingType={setActiveListingType}
-              activeCategory={activeCategory}
-              setActiveCategory={setActiveCategory}
-              activeCountry={activeCountry}
-              setActiveCountry={setActiveCountry}
-              activeCity={activeCity}
-              setActiveCity={setActiveCity}
-              minPrice={minPrice}
-              setMinPrice={setMinPrice}
-              maxPrice={maxPrice}
-              setMaxPrice={setMaxPrice}
-              displayCurrency={displayCurrency}
-              clearFilters={clearFilters}
-              onCloseMobile={() => setIsFiltersOpen(false)}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-            />
-          </MobileFilterBottomSheet>
         </div>
         </div>
       ) : (
@@ -5220,13 +5275,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             </div>
             <div className="flex flex-wrap justify-center gap-10 text-[10px] font-black uppercase tracking-[0.3em]">
               <button 
-                onClick={() => setViewMode('privacy')}
+                onClick={() => {
+                  if (activeBottomTab === 'messages') closeInlineMessages();
+                  setViewMode('privacy');
+                }}
                 className={cn("transition-all hover:text-white pb-1 border-b border-transparent hover:border-white/20", viewMode === 'privacy' ? "text-white border-white/20" : "text-white/40")}
               >
                 {t.market.legal.privacy_policy}
               </button>
               <button 
-                onClick={() => setViewMode('terms')}
+                onClick={() => {
+                  if (activeBottomTab === 'messages') closeInlineMessages();
+                  setViewMode('terms');
+                }}
                 className={cn("transition-all hover:text-white pb-1 border-b border-transparent hover:border-white/20", viewMode === 'terms' ? "text-white border-white/20" : "text-white/40")}
               >
                 {t.market.legal.terms_of_service}
@@ -5237,288 +5298,325 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           </div>
         </div>
       </footer>
-
-      {/* Shopping Cart Drawer */}
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={() => !isPlacingCartOrders && setIsCartOpen(false)}
-        drawerRef={cartDrawerRef}
-        language={language}
-        currentTheme={currentTheme}
-        cart={cart}
-        cartTotal={cartTotal}
-        displayCurrency={displayCurrency}
-        priceMap={priceMap}
-        convertPrice={convertPrice}
-        isPlacingCartOrders={isPlacingCartOrders}
-        cartServiceInstructions={cartServiceInstructions}
-        onUpdateServiceInstruction={(itemId, instruction) => {
-          setCartServiceInstructions(prev => ({ ...prev, [itemId]: instruction }));
-        }}
-        shippingDetails={shippingDetails}
-        onChangeShippingDetails={setShippingDetails}
-        onRemoveFromCart={handleRemoveFromCart}
-        onCheckout={handleCartCheckout}
-      />
-
-      {/* Listing Details Modal (Opens before Checkout) */}
-      <ListingDetailsModal
-        listing={selectedListing}
-        onClose={() => setSelectedListing(null)}
-        modalRef={listingDetailsModalRef}
-        user={user}
-        language={language}
-        t={t}
-        currentTheme={currentTheme}
-        displayCurrency={displayCurrency}
-        priceMap={priceMap}
-        convertPrice={convertPrice}
-        sellerRating={selectedListing ? sellerRatings[selectedListing.sellerId] : undefined}
-        isInCart={Boolean(selectedListing && cart.some(item => item.id === selectedListing.id))}
-        isFavorite={Boolean(selectedListing && favoritesSet.has(selectedListing.id))}
-        onToggleFavorite={toggleFavorite}
-        onSelectVendor={setSelectedVendor}
-        onAddToCart={handleAddToCart}
-        onStartChat={handleStartChat}
-        onBuyNow={handleBuyNow}
-        onStartEdit={startEdit}
-        onDeleteListing={handleDeleteListing}
-      />
-
-      {/* Single Item Checkout Modal */}
-      <CheckoutModal
-        checkoutItem={checkoutItem}
-        onClose={() => !isCheckingOut && setCheckoutItem(null)}
-        modalRef={singleCheckoutModalRef}
-        language={language}
-        t={t}
-        currentTheme={currentTheme}
-        cart={cart}
-        onViewCart={() => {
-          setCheckoutItem(null);
-          setIsCartOpen(true);
-        }}
-        displayCurrency={displayCurrency}
-        priceMap={priceMap}
-        convertPrice={convertPrice}
-        buyerInstructions={buyerInstructions}
-        onChangeBuyerInstructions={setBuyerInstructions}
-        shippingDetails={shippingDetails}
-        onChangeShippingDetails={setShippingDetails}
-        isCheckingOut={isCheckingOut}
-        onConfirmPurchase={processPurchase}
-        onStartChat={(item) => {
-          setCheckoutItem(null);
-          handleStartChat(item);
-        }}
-      />
-
-      {/* Direct Buyer-Seller Chat Drawer */}
-      <MarketChatDrawer
-        activeChatListing={activeChatListing}
-        activeChatOrder={activeChatOrder ? {
-          orderId: activeChatOrder.id,
-          buyerId: activeChatOrder.buyerId,
-          sellerId: activeChatOrder.sellerId,
-          listingId: activeChatOrder.listingId,
-          itemTitle: activeChatOrder.itemTitle || activeChatListing?.title,
-          amount: activeChatOrder.amount,
-          currency: activeChatOrder.currency,
-          status: activeChatOrder.status
-        } : null}
-        onClose={() => {
-          setActiveChatListing(null);
-          setActiveChatContext(null);
-          setActiveChatOrder(null);
-        }}
-        onViewOrder={handleViewOrderFromChat}
-        chatModalRef={chatModalRef}
-        language={language}
-        currentTheme={currentTheme}
-        user={user}
-        messagesList={messagesList}
-        chatMessageText={chatMessageText}
-        onChangeChatMessageText={setChatMessageText}
-        onSendMessage={handleSendMessage}
-        buyerName={activeChatContext?.buyerName}
-      />
-
-      {/* Vendor Reviews & Rating Modal */}
-      <VendorReviewsModal
-        selectedVendor={selectedVendor}
-        onClose={() => setSelectedVendor(null)}
-        vendorModalRef={vendorModalRef}
-        language={language}
-        currentTheme={currentTheme}
-        user={user}
-        sellerRatings={sellerRatings}
-        selectedVendorRatingBreakdown={selectedVendorRatingBreakdown}
-        selectedVendorReviews={selectedVendorReviews}
-        vendorBuyerOrderKeys={vendorBuyerOrderKeys}
-        eligibleCompletedOrders={eligibleCompletedOrders}
-        unreviewedCompletedOrders={unreviewedCompletedOrders}
-        hasPendingOrInTransitOrder={hasPendingOrInTransitOrder}
-        selectedOrderId={selectedReviewOrderId}
-        onSelectOrderId={setSelectedReviewOrderId}
-        onDeleteReview={handleDeleteReview}
-        reviewRating={reviewRating}
-        onChangeReviewRating={setReviewRating}
-        reviewText={reviewText}
-        onChangeReviewText={setReviewText}
-        onSubmitReview={handleSubmitReview}
-        isSubmittingReview={isSubmittingReview}
-        isCheckingEligibility={isCheckingEligibility}
-        eligibilityError={eligibilityError}
-        onRetryEligibility={() => setEligibilityRetryCount(c => c + 1)}
-      />
-
-      {/* Safe Order Cancellation Confirmation Modal */}
-      <CancelOrderModal
-        order={orderToCancel}
-        isOpen={Boolean(orderToCancel)}
-        isCancelling={isCancellingOrder}
-        onClose={() => !isCancellingOrder && setOrderToCancel(null)}
-        onConfirmCancel={() => {
-          if (orderToCancel) {
-            executeOrderCancellation(orderToCancel);
-          }
-        }}
-        isSeller={profileSubMode === 'selling'}
-        language={language}
-        currentTheme={currentTheme}
-      />
-
-      {/* Seller Order Details & Fulfillment Timeline Modal */}
-      <OrderDetailsModal
-        order={activeSellerSelectedOrder}
-        isOpen={Boolean(activeSellerSelectedOrder)}
-        onClose={() => setSellerSelectedOrder(null)}
-        listings={listings}
-        language={language}
-        currentTheme={currentTheme}
-        isSeller={true}
-        onCancelOrder={(order) => setOrderToCancel(order)}
-        onUpdateOrderStatus={handleUpdateOrderStatus}
-        onOpenShipmentModal={(order) => setShipmentTrackingInput({ orderId: order.id, carrier: '', trackingNumber: '' })}
-        onMessageBuyer={handleStartOrderChat}
-      />
-
-      {/* Buyer Order Details & Fulfillment Timeline Modal (Opened from Chat or Hub) */}
-      <OrderDetailsModal
-        order={activeBuyerSelectedOrder}
-        isOpen={Boolean(activeBuyerSelectedOrder)}
-        onClose={() => setBuyerSelectedOrder(null)}
-        listings={listings}
-        language={language}
-        currentTheme={currentTheme}
-        isSeller={false}
-        onCancelOrder={(order) => setOrderToCancel(order)}
-        onConfirmDelivery={async (order) => {
-          await handleUpdateOrderStatus(order.id, 'completed');
-        }}
-        onMessageSeller={handleStartOrderChat}
-      />
-
-      {/* Publish Success Confirmation Modal */}
-      <AnimatePresence>
-        {publishSuccessModal && (
-          <div 
-            className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="publish-success-dialog-title"
-          >
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setPublishSuccessModal(null)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            />
-
-            {/* Modal Dialog Card */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.94, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 16 }}
-              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-[#dfb257]/30 bg-zinc-950/95 p-6 sm:p-8 flex flex-col items-center text-center shadow-[0_24px_50px_-12px_rgba(0,0,0,0.85)] overflow-hidden z-10"
-            >
-              {/* Radial glow */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#dfb257]/15 rounded-full blur-[80px] pointer-events-none" />
-
-              {/* Close Button */}
-              <button 
-                type="button"
-                onClick={() => setPublishSuccessModal(null)}
-                className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-xl transition-colors cursor-pointer"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-
-              {/* Success Icon */}
-              <div className="w-16 h-16 rounded-2xl bg-[#dfb257]/10 border border-[#dfb257]/30 flex items-center justify-center text-[#dfb257] shadow-[0_0_25px_rgba(223,178,87,0.2)] mb-4">
-                <CheckCircle2 size={32} className="stroke-[2.5]" />
-              </div>
-
-              {/* Title */}
-              <h3 
-                id="publish-success-dialog-title"
-                className="text-lg sm:text-xl font-black uppercase tracking-wider text-white"
-              >
-                {language === 'ka' 
-                  ? (publishSuccessModal.isEdit ? 'განცხადება განახლდა!' : 'განცხადება გამოქვეყნდა!') 
-                  : (publishSuccessModal.isEdit ? 'Listing Updated!' : 'Listing Published!')}
-              </h3>
-
-              {/* Description */}
-              <p className="text-xs font-semibold text-zinc-400 mt-2 max-w-xs leading-relaxed">
-                {language === 'ka' ? (
-                  <>
-                    თქვენი განცხადება <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> წარმატებით შეინახა და უკვე ხელმისაწვდომია მყიდველებისთვის.
-                  </>
-                ) : (
-                  <>
-                    Your listing <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> was saved successfully and is now live on Proton Market.
-                  </>
-                )}
-              </p>
-
-              {/* Navigation Options / Clear Next Steps */}
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPublishSuccessModal(null);
-                    setProfileSubMode('selling');
-                    setViewMode('my-listings');
-                  }}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#dfb257] text-zinc-950 hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_15px_rgba(223,178,87,0.25)] flex items-center justify-center gap-2 cursor-pointer font-sans"
-                >
-                  <Package size={14} />
-                  <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Listings'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPublishSuccessModal(null);
-                    setViewMode('browse');
-                  }}
-                  className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
-                >
-                  <LayoutGrid size={14} />
-                  <span>{language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </motion.div>
   </div>
+
+  {/* Mobile Filters Bottom Sheet (Top-level MarketHub layer) */}
+  <MobileFilterBottomSheet
+    isOpen={isFiltersOpen}
+    onClose={() => setIsFiltersOpen(false)}
+    language={language}
+    activeFiltersCount={activeFiltersCount}
+    onClearFilters={clearFilters}
+    matchCount={filteredListings.length}
+    sheetRef={filtersDrawerRef}
+    sortBy={sortBy}
+    setSortBy={setSortBy}
+  >
+    <MarketFilterPanel
+      language={language}
+      t={t}
+      currentTheme={currentTheme}
+      activeFiltersCount={activeFiltersCount}
+      activeListingType={activeListingType}
+      setActiveListingType={setActiveListingType}
+      activeCategory={activeCategory}
+      setActiveCategory={setActiveCategory}
+      activeCountry={activeCountry}
+      setActiveCountry={setActiveCountry}
+      activeCity={activeCity}
+      setActiveCity={setActiveCity}
+      minPrice={minPrice}
+      setMinPrice={setMinPrice}
+      maxPrice={maxPrice}
+      setMaxPrice={setMaxPrice}
+      displayCurrency={displayCurrency}
+      clearFilters={clearFilters}
+      onCloseMobile={() => setIsFiltersOpen(false)}
+      sortBy={sortBy}
+      setSortBy={setSortBy}
+    />
+  </MobileFilterBottomSheet>
+
+  {/* Shopping Cart Drawer */}
+  <CartDrawer
+    isOpen={isCartOpen}
+    onClose={() => !isPlacingCartOrders && setIsCartOpen(false)}
+    drawerRef={cartDrawerRef}
+    language={language}
+    currentTheme={currentTheme}
+    cart={cart}
+    cartTotal={cartTotal}
+    displayCurrency={displayCurrency}
+    priceMap={priceMap}
+    convertPrice={convertPrice}
+    isPlacingCartOrders={isPlacingCartOrders}
+    cartServiceInstructions={cartServiceInstructions}
+    onUpdateServiceInstruction={(itemId, instruction) => {
+      setCartServiceInstructions(prev => ({ ...prev, [itemId]: instruction }));
+    }}
+    shippingDetails={shippingDetails}
+    onChangeShippingDetails={setShippingDetails}
+    onRemoveFromCart={handleRemoveFromCart}
+    onCheckout={handleCartCheckout}
+  />
+
+  {/* Listing Details Modal (Opens before Checkout) */}
+  <ListingDetailsModal
+    listing={selectedListing}
+    onClose={() => setSelectedListing(null)}
+    modalRef={listingDetailsModalRef}
+    user={user}
+    language={language}
+    t={t}
+    currentTheme={currentTheme}
+    displayCurrency={displayCurrency}
+    priceMap={priceMap}
+    convertPrice={convertPrice}
+    sellerRating={selectedListing ? sellerRatings[selectedListing.sellerId] : undefined}
+    isInCart={Boolean(selectedListing && cart.some(item => item.id === selectedListing.id))}
+    isFavorite={Boolean(selectedListing && favoritesSet.has(selectedListing.id))}
+    onToggleFavorite={toggleFavorite}
+    onSelectVendor={setSelectedVendor}
+    onAddToCart={handleAddToCart}
+    onStartChat={handleStartChat}
+    onBuyNow={handleBuyNow}
+    onStartEdit={startEdit}
+    onDeleteListing={handleDeleteListing}
+  />
+
+  {/* Single Item Checkout Modal */}
+  <CheckoutModal
+    checkoutItem={checkoutItem}
+    onClose={() => !isCheckingOut && setCheckoutItem(null)}
+    modalRef={singleCheckoutModalRef}
+    language={language}
+    t={t}
+    currentTheme={currentTheme}
+    cart={cart}
+    onViewCart={() => {
+      setCheckoutItem(null);
+      setIsCartOpen(true);
+    }}
+    displayCurrency={displayCurrency}
+    priceMap={priceMap}
+    convertPrice={convertPrice}
+    buyerInstructions={buyerInstructions}
+    onChangeBuyerInstructions={setBuyerInstructions}
+    shippingDetails={shippingDetails}
+    onChangeShippingDetails={setShippingDetails}
+    isCheckingOut={isCheckingOut}
+    onConfirmPurchase={processPurchase}
+    onStartChat={(item) => {
+      setCheckoutItem(null);
+      handleStartChat(item);
+    }}
+  />
+
+  {/* Direct Buyer-Seller Chat Drawer (Suppressed when inline Messages view is active) */}
+  <MarketChatDrawer
+    activeChatListing={isDrawerChatOpen ? activeChatListing : null}
+    activeChatOrder={activeChatOrder ? {
+      orderId: activeChatOrder.id,
+      buyerId: activeChatOrder.buyerId,
+      sellerId: activeChatOrder.sellerId,
+      listingId: activeChatOrder.listingId,
+      itemTitle: activeChatOrder.itemTitle || activeChatListing?.title,
+      amount: activeChatOrder.amount,
+      currency: activeChatOrder.currency,
+      status: activeChatOrder.status
+    } : null}
+    onClose={() => {
+      setActiveChatListing(null);
+      setActiveChatContext(null);
+      setActiveChatOrder(null);
+    }}
+    onViewOrder={handleViewOrderFromChat}
+    chatModalRef={chatModalRef}
+    language={language}
+    currentTheme={currentTheme}
+    user={user}
+    messagesList={messagesList}
+    chatMessageText={chatMessageText}
+    onChangeChatMessageText={setChatMessageText}
+    onSendMessage={handleSendMessage}
+    buyerName={activeChatContext?.buyerName}
+  />
+
+  {/* Vendor Reviews & Rating Modal */}
+  <VendorReviewsModal
+    selectedVendor={selectedVendor}
+    onClose={() => setSelectedVendor(null)}
+    vendorModalRef={vendorModalRef}
+    language={language}
+    currentTheme={currentTheme}
+    user={user}
+    sellerRatings={sellerRatings}
+    selectedVendorRatingBreakdown={selectedVendorRatingBreakdown}
+    selectedVendorReviews={selectedVendorReviews}
+    vendorBuyerOrderKeys={vendorBuyerOrderKeys}
+    eligibleCompletedOrders={eligibleCompletedOrders}
+    unreviewedCompletedOrders={unreviewedCompletedOrders}
+    hasPendingOrInTransitOrder={hasPendingOrInTransitOrder}
+    selectedOrderId={selectedReviewOrderId}
+    onSelectOrderId={setSelectedReviewOrderId}
+    onDeleteReview={handleDeleteReview}
+    reviewRating={reviewRating}
+    onChangeReviewRating={setReviewRating}
+    reviewText={reviewText}
+    onChangeReviewText={setReviewText}
+    onSubmitReview={handleSubmitReview}
+    isSubmittingReview={isSubmittingReview}
+    isCheckingEligibility={isCheckingEligibility}
+    eligibilityError={eligibilityError}
+    onRetryEligibility={() => setEligibilityRetryCount(c => c + 1)}
+  />
+
+  {/* Safe Order Cancellation Confirmation Modal */}
+  <CancelOrderModal
+    order={orderToCancel}
+    isOpen={Boolean(orderToCancel)}
+    isCancelling={isCancellingOrder}
+    onClose={() => !isCancellingOrder && setOrderToCancel(null)}
+    onConfirmCancel={() => {
+      if (orderToCancel) {
+        executeOrderCancellation(orderToCancel);
+      }
+    }}
+    isSeller={profileSubMode === 'selling'}
+    language={language}
+    currentTheme={currentTheme}
+  />
+
+  {/* Seller Order Details & Fulfillment Timeline Modal */}
+  <OrderDetailsModal
+    order={activeSellerSelectedOrder}
+    isOpen={Boolean(activeSellerSelectedOrder)}
+    onClose={() => setSellerSelectedOrder(null)}
+    listings={listings}
+    language={language}
+    currentTheme={currentTheme}
+    isSeller={true}
+    onCancelOrder={(order) => setOrderToCancel(order)}
+    onUpdateOrderStatus={handleUpdateOrderStatus}
+    onOpenShipmentModal={(order) => setShipmentTrackingInput({ orderId: order.id, carrier: '', trackingNumber: '' })}
+    onMessageBuyer={handleStartOrderChat}
+  />
+
+  {/* Buyer Order Details & Fulfillment Timeline Modal (Opened from Chat or Hub) */}
+  <OrderDetailsModal
+    order={activeBuyerSelectedOrder}
+    isOpen={Boolean(activeBuyerSelectedOrder)}
+    onClose={() => setBuyerSelectedOrder(null)}
+    listings={listings}
+    language={language}
+    currentTheme={currentTheme}
+    isSeller={false}
+    onCancelOrder={(order) => setOrderToCancel(order)}
+    onConfirmDelivery={async (order) => {
+      await handleUpdateOrderStatus(order.id, 'completed');
+    }}
+    onMessageSeller={handleStartOrderChat}
+  />
+
+  {/* Publish Success Confirmation Modal */}
+  <AnimatePresence>
+    {publishSuccessModal && (
+      <div 
+        className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="publish-success-dialog-title"
+      >
+        {/* Backdrop */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setPublishSuccessModal(null)}
+          className="absolute inset-0 bg-black/80 backdrop-blur-md"
+        />
+
+        {/* Modal Dialog Card */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.94, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: 16 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full max-w-md rounded-[28px] sm:rounded-[32px] border border-[#dfb257]/30 bg-zinc-950/95 p-6 sm:p-8 flex flex-col items-center text-center shadow-[0_24px_50px_-12px_rgba(0,0,0,0.85)] overflow-hidden z-10"
+        >
+          {/* Radial glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-[#dfb257]/15 rounded-full blur-[80px] pointer-events-none" />
+
+          {/* Close Button */}
+          <button 
+            type="button"
+            onClick={() => setPublishSuccessModal(null)}
+            className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-white rounded-xl transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+
+          {/* Success Icon */}
+          <div className="w-16 h-16 rounded-2xl bg-[#dfb257]/10 border border-[#dfb257]/30 flex items-center justify-center text-[#dfb257] shadow-[0_0_25px_rgba(223,178,87,0.2)] mb-4">
+            <CheckCircle2 size={32} className="stroke-[2.5]" />
+          </div>
+
+          {/* Title */}
+          <h3 
+            id="publish-success-dialog-title"
+            className="text-lg sm:text-xl font-black uppercase tracking-wider text-white"
+          >
+            {language === 'ka' 
+              ? (publishSuccessModal.isEdit ? 'განცხადება განახლდა!' : 'განცხადება გამოქვეყნდა!') 
+              : (publishSuccessModal.isEdit ? 'Listing Updated!' : 'Listing Published!')}
+          </h3>
+
+          {/* Description */}
+          <p className="text-xs font-semibold text-zinc-400 mt-2 max-w-xs leading-relaxed">
+            {language === 'ka' ? (
+              <>
+                თქვენი განცხადება <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> წარმატებით შეინახა და უკვე ხელმისაწვდომია მყიდველებისთვის.
+              </>
+            ) : (
+              <>
+                Your listing <span className="text-[#dfb257] font-bold">"{publishSuccessModal.title}"</span> was saved successfully and is now live on Proton Market.
+              </>
+            )}
+          </p>
+
+          {/* Navigation Options / Clear Next Steps */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full mt-6">
+            <button
+              type="button"
+              onClick={() => {
+                setPublishSuccessModal(null);
+                setProfileSubMode('selling');
+                setViewMode('my-listings');
+              }}
+              className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[#dfb257] text-zinc-950 hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_15px_rgba(223,178,87,0.25)] flex items-center justify-center gap-2 cursor-pointer font-sans"
+            >
+              <Package size={14} />
+              <span>{language === 'ka' ? 'ჩემი განცხადებები' : 'My Listings'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPublishSuccessModal(null);
+                setViewMode('browse');
+              }}
+              className="w-full sm:flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-all flex items-center justify-center gap-2 cursor-pointer font-sans"
+            >
+              <LayoutGrid size={14} />
+              <span>{language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}</span>
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    )}
+  </AnimatePresence>
 
   {/* Categories smooth slide-up accordion/overlay */}
   <AnimatePresence>
@@ -5528,7 +5626,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c]/98 backdrop-blur-lg z-40 overflow-y-auto px-6 pt-8 pb-0 border-t border-zinc-800/70"
+        className="fixed inset-0 bg-[#0a0a0c]/98 backdrop-blur-lg z-[120] overflow-y-auto px-6 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))]"
       >
         <div className="max-w-md mx-auto space-y-8">
           <div className="flex items-center justify-between border-b border-zinc-900/40 pb-4">
@@ -5536,14 +5634,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <span>📂</span> {language === 'ka' ? 'კატეგორიები' : 'Browse Categories'}
             </h2>
             <button 
+              type="button"
               onClick={() => setActiveBottomTab('home')}
-              className="text-[10px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[10px] font-black text-zinc-300 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
             >
               {language === 'ka' ? 'დახურვა' : 'Close'}
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pb-[calc(5rem+env(safe-area-inset-bottom,16px))]">
+          <div className="grid grid-cols-2 gap-3 pb-6">
             <button
               type="button"
               onClick={() => {
@@ -5597,7 +5696,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-x-0 bottom-0 top-[60px] bg-[#0a0a0c] z-40 overflow-y-auto px-4 pt-6 pb-[calc(5rem+env(safe-area-inset-bottom,16px))] md:hidden"
+        className="fixed inset-0 bg-[#0a0a0c] z-[120] overflow-y-auto px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.5rem+env(safe-area-inset-bottom,16px))] md:hidden"
       >
         <div className="max-w-md mx-auto space-y-6">
           {/* Top Selector Panel: Chats vs. Orders */}
@@ -5606,8 +5705,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <span>💬</span> {language === 'ka' ? 'კავშირი' : 'Communications'}
             </h2>
             <button 
-              onClick={() => setActiveBottomTab('home')}
-              className="text-[9px] font-black text-zinc-500 hover:text-white uppercase tracking-widest transition-colors"
+              type="button"
+              onClick={closeInlineMessages}
+              className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[9px] font-black text-zinc-300 hover:text-white uppercase tracking-widest transition-colors cursor-pointer"
             >
               {language === 'ka' ? 'დახურვა' : 'Close'}
             </button>

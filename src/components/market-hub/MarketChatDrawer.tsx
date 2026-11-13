@@ -89,7 +89,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
               currentTheme.card
             )}
           >
-            <div className="p-6 sm:p-10 pb-24 sm:pb-10 space-y-4 flex flex-col h-[85vh] md:h-[620px] max-h-[90vh]">
+            <div className="p-6 sm:p-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-10 space-y-4 flex flex-col h-[85vh] md:h-[620px] max-h-[90vh]">
               {/* Main Chat Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">

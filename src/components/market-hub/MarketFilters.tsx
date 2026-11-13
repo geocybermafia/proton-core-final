@@ -406,7 +406,7 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
             </div>
 
             {/* Sticky Bottom Action Bar with Apply CTA */}
-            <div className="p-4 border-t border-zinc-900 bg-zinc-950/95 backdrop-blur-md shrink-0">
+            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-zinc-900 bg-zinc-950/95 backdrop-blur-md shrink-0">
               <button 
                 type="button"
                 onClick={onClose}

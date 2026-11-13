@@ -111,7 +111,7 @@ export const VendorReviewsModal = React.memo(function VendorReviewsModal({
               currentTheme.card
             )}
           >
-            <div className="p-6 sm:p-8 pb-24 sm:pb-8 space-y-6 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-none">
+            <div className="p-6 sm:p-8 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-8 space-y-6 flex flex-col max-h-[90vh] overflow-y-auto scrollbar-none">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <div className="flex items-center gap-3">
