@@ -5188,11 +5188,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         isAdmin={isAdminUser}
                         onSelectListing={setSelectedListing}
                         onSelectVendor={setSelectedVendor}
-                        onStartChat={handleStartChat}
                         onStartEdit={startEdit}
                         onDeleteListing={handleDeleteListing}
-                        onBuyNow={setSelectedListing}
-                        onAddToCart={handleAddToCart}
                       />
                     ))
                   )}
