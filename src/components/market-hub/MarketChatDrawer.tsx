@@ -85,11 +85,11 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.95 }}
             className={cn(
-              "relative w-full max-w-lg sm:rounded-[40px] border border-proton-border overflow-hidden z-10",
+              "relative w-full max-w-lg rounded-t-[32px] sm:rounded-[40px] border border-proton-border overflow-hidden z-10",
               currentTheme.card
             )}
           >
-            <div className="p-6 sm:p-10 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-10 space-y-4 flex flex-col h-[85vh] md:h-[620px] max-h-[90vh]">
+            <div className="p-5 sm:p-10 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-10 space-y-3 sm:space-y-4 flex flex-col h-[100dvh] sm:h-[620px] sm:max-h-[90vh]">
               {/* Main Chat Header */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
