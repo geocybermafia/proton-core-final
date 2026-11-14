@@ -1,7 +1,5 @@
 User-agent: *
 Allow: /
-Disallow: /auth
-Disallow: /dashboard
 Disallow: /api/
 
 Sitemap: https://proton-core-final.vercel.app/sitemap.xml
