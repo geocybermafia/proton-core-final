@@ -14,50 +14,6 @@ import { SellerProvider } from './contexts/SellerContext';
 import { MarketHubProvider } from './contexts/MarketHubContext';
 import { BrowserRouter } from 'react-router-dom';
 
-import { createConfig, WagmiProvider, http } from 'wagmi';
-import { mainnet, polygon, optimism, arbitrum, base } from 'wagmi/chains';
-import { injected } from 'wagmi/connectors';
-import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-
-const queryClient = new QueryClient();
-
-// Safely initialize Wagmi configuration with connector fallback to prevent module-level crashes on mobile WebKit/browsers
-function createSafeWagmiConfig() {
-  try {
-    return createConfig({
-      chains: [mainnet, polygon, optimism, arbitrum, base],
-      connectors: [injected()],
-      transports: {
-        [mainnet.id]: http(),
-        [polygon.id]: http(),
-        [optimism.id]: http(),
-        [arbitrum.id]: http(),
-        [base.id]: http(),
-      },
-    });
-  } catch (err) {
-    console.warn('[Wagmi] Injected connector init failed, falling back to core chains configuration:', err);
-    try {
-      return createConfig({
-        chains: [mainnet, polygon, optimism, arbitrum, base],
-        connectors: [],
-        transports: {
-          [mainnet.id]: http(),
-          [polygon.id]: http(),
-          [optimism.id]: http(),
-          [arbitrum.id]: http(),
-          [base.id]: http(),
-        },
-      });
-    } catch (criticalErr) {
-      console.error('[Wagmi] Critical Wagmi creation error:', criticalErr);
-      throw criticalErr;
-    }
-  }
-}
-
-const config = createSafeWagmiConfig();
-
 import { isChunkLoadError, clearAllChunkRetryFlags } from './lib/lazyWithRetry';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -169,23 +125,19 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 function Root() {
   return (
     <ErrorBoundary>
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
-            <AuthProvider>
-              <ToastProvider>
-                <LanguageProvider>
-                  <SellerProvider>
-                    <MarketHubProvider>
-                      <BrowserRouter>
-                        <App />
-                      </BrowserRouter>
-                    </MarketHubProvider>
-                  </SellerProvider>
-                </LanguageProvider>
-              </ToastProvider>
-            </AuthProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <LanguageProvider>
+            <SellerProvider>
+              <MarketHubProvider>
+                <BrowserRouter>
+                  <App />
+                </BrowserRouter>
+              </MarketHubProvider>
+            </SellerProvider>
+          </LanguageProvider>
+        </ToastProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
