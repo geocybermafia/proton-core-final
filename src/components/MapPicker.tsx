@@ -3,6 +3,7 @@ import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Navigation, Loader2, AlertTriangle, RotateCcw, X } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { MAP_TILE_URLS, resolveMapTileTheme } from './ListingMap';
 
 interface MapPickerProps {
   lat?: number;
@@ -12,12 +13,67 @@ interface MapPickerProps {
   currentTheme: any;
 }
 
+const PICKER_CONTROL_STYLE = `
+  .leaflet-container .leaflet-control-zoom a {
+    background-color: var(--proton-card);
+    color: var(--proton-text);
+    border-color: var(--proton-border);
+  }
+  .leaflet-container .leaflet-control-zoom a:hover {
+    background-color: var(--proton-bg);
+    color: var(--proton-accent);
+  }
+  .leaflet-container .leaflet-control-attribution {
+    background-color: var(--proton-card);
+    color: var(--proton-muted);
+    opacity: 0.9;
+  }
+  .leaflet-container .leaflet-control-attribution a {
+    color: var(--proton-accent);
+  }
+`;
+
 export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPickerProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const [detecting, setDetecting] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [tileScheme, setTileScheme] = useState<'light' | 'dark'>(() =>
+    resolveMapTileTheme(currentTheme)
+  );
+
+  useEffect(() => {
+    const styleId = 'custom-map-picker-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = PICKER_CONTROL_STYLE;
+      document.head.appendChild(style);
+    }
+  }, []);
+
+  useEffect(() => {
+    const syncTileScheme = () => {
+      const next = resolveMapTileTheme(currentTheme);
+      setTileScheme((prev) => (prev === next ? prev : next));
+    };
+
+    syncTileScheme();
+
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const observer = new MutationObserver(syncTileScheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'data-color-scheme'],
+    });
+
+    return () => observer.disconnect();
+  }, [currentTheme]);
 
   // Initialize Map
   useEffect(() => {
@@ -35,11 +91,12 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
       attributionControl: true
     });
 
-    // Add CartoDB Dark Matter tile layer (gorgeous, dark, sleek tech theme)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    const initialScheme = resolveMapTileTheme(currentTheme);
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[initialScheme], {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OSM</a>'
+      attribution: '&copy; <a href="https://openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OSM</a>'
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     // Zoom buttons in bottom right
     L.control.zoom({
@@ -113,9 +170,17 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
+        tileLayerRef.current = null;
       }
     };
   }, []);
+
+  // Dynamically switch tile layer URL when active PROTON theme changes
+  useEffect(() => {
+    if (tileLayerRef.current) {
+      tileLayerRef.current.setUrl(MAP_TILE_URLS[tileScheme]);
+    }
+  }, [tileScheme]);
 
   // Step Three: ResizeObserver Integration for Container Resizing & Drawer Toggles
   useEffect(() => {

@@ -3,6 +3,7 @@ import { Listing } from '../types';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { LayoutGrid, Navigation, Loader2, AlertTriangle, RotateCcw, X } from 'lucide-react';
+import { translations } from '../translations';
 import {
   getListingTitle,
   convertPrice as defaultConvertPrice,
@@ -21,12 +22,281 @@ interface ListingMapProps {
   onClose?: () => void;
 }
 
-// Custom CSS styling for the markers
+export const MAP_TILE_URLS = {
+  light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+} as const;
+
+const LEGACY_CATEGORY_TO_TRANSLATION_KEY: Record<string, string> = {
+  rent: 'service',
+  garden: 'home',
+  building: 'home',
+  'family-technic': 'technics',
+  kids: 'fashion',
+  village: 'business',
+  sport: 'hobby',
+  art: 'hobby',
+  book: 'hobby',
+  music: 'hobby',
+  hunting: 'hobby',
+  animals: 'hobby',
+};
+
+export function getSafeMapImageUrl(rawUrl: unknown): string | null {
+  if (typeof rawUrl !== 'string') return null;
+  const trimmed = rawUrl.trim();
+  if (!trimmed || /[\u0000-\u001F\u007F]/.test(trimmed)) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      return parsed.href;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function getLocalizedMapCategory(
+  category: unknown,
+  language: 'en' | 'ka',
+  customTranslations?: any
+): string {
+  const raw = typeof category === 'string' ? category.trim() : '';
+  if (!raw) {
+    return language === 'ka' ? 'სხვა' : 'Other';
+  }
+
+  const normalized = raw.toLowerCase();
+  const categoryMap: Record<string, string> | undefined =
+    customTranslations?.market?.categories ||
+    translations[language]?.market?.categories ||
+    translations.en.market.categories;
+
+  if (categoryMap) {
+    if (categoryMap[raw]) return categoryMap[raw];
+    if (categoryMap[normalized]) return categoryMap[normalized];
+    const mappedKey = LEGACY_CATEGORY_TO_TRANSLATION_KEY[normalized];
+    if (mappedKey && categoryMap[mappedKey]) {
+      return categoryMap[mappedKey];
+    }
+  }
+
+  return raw.replace(/[-_]+/g, ' ');
+}
+
+export function resolveMapTileTheme(currentTheme?: any): 'light' | 'dark' {
+  if (typeof document !== 'undefined') {
+    const dataTheme = document.documentElement.getAttribute('data-theme');
+    const dataColorScheme = document.documentElement.getAttribute('data-color-scheme');
+
+    if (dataTheme === 'light' || (dataTheme === 'auto' && dataColorScheme === 'light')) {
+      return 'light';
+    }
+    if (dataTheme) {
+      return 'dark';
+    }
+  }
+
+  const cardClass = typeof currentTheme?.card === 'string' ? currentTheme.card : '';
+  if (cardClass.includes('bg-white') || cardClass.includes('text-slate-900')) {
+    return 'light';
+  }
+  return 'dark';
+}
+
+export function buildListingPopupElement({
+  listing,
+  language,
+  displayCurrency,
+  priceMap,
+  convertPrice,
+  onSelect,
+}: {
+  listing: Listing;
+  language: 'en' | 'ka';
+  displayCurrency: string;
+  priceMap?: Map<string, number>;
+  convertPrice: (price: number, from: string, to: string) => number;
+  onSelect: (listing: Listing) => void;
+}): HTMLElement {
+  const localizedTitle = getListingTitle(listing, language);
+  const localizedDesc =
+    (language === 'ka'
+      ? listing.descriptionGe || listing.description
+      : listing.description || listing.descriptionGe) || '';
+  const categoryLabel = getLocalizedMapCategory(listing.category, language);
+
+  const origCurrency = (listing.currency || 'USD').trim().toUpperCase();
+  const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
+  const isSameCurrency = origCurrency === targetCurrency;
+  const convertedVal =
+    priceMap?.get(listing.id) ?? convertPrice(listing.price || 0, origCurrency, targetCurrency);
+  const formattedOriginal = formatOriginalCurrencyPrice(listing.price || 0, origCurrency);
+  const formattedApprox = formatApproxCurrencyEquivalent(convertedVal, targetCurrency);
+
+  const candidateImage =
+    Array.isArray(listing.images) && listing.images.length > 0
+      ? listing.images[0]
+      : listing.image;
+  const safeImageUrl = getSafeMapImageUrl(candidateImage);
+
+  const root = document.createElement('div');
+  root.className = 'w-64 rounded-2xl overflow-hidden p-0 shadow-2xl font-sans';
+  root.style.margin = '-14px -20px';
+  root.style.background = 'var(--proton-card)';
+  root.style.color = 'var(--proton-text)';
+  root.style.border = '1px solid var(--proton-border)';
+
+  const createCategoryBadge = (isOverlay: boolean): HTMLElement => {
+    const badge = document.createElement('div');
+    badge.className = isOverlay
+      ? 'absolute top-2 right-2 px-2.5 py-1 backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest max-w-[85%] truncate'
+      : 'inline-block px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest max-w-full truncate';
+    badge.style.background = 'var(--proton-card)';
+    badge.style.color = 'var(--proton-text)';
+    badge.style.border = '1px solid var(--proton-border)';
+    badge.style.opacity = isOverlay ? '0.92' : '1';
+    badge.textContent = categoryLabel;
+    return badge;
+  };
+
+  if (safeImageUrl) {
+    const imageWrapper = document.createElement('div');
+    imageWrapper.className = 'h-28 overflow-hidden relative';
+    imageWrapper.style.background = 'var(--proton-bg)';
+
+    const img = document.createElement('img');
+    img.src = safeImageUrl;
+    img.alt = localizedTitle;
+    img.className = 'w-full h-full object-cover';
+    img.referrerPolicy = 'no-referrer';
+    img.addEventListener('error', () => {
+      img.style.display = 'none';
+    });
+
+    imageWrapper.appendChild(img);
+    imageWrapper.appendChild(createCategoryBadge(true));
+    root.appendChild(imageWrapper);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'p-4 space-y-2';
+
+  if (!safeImageUrl) {
+    body.appendChild(createCategoryBadge(false));
+  }
+
+  const titleEl = document.createElement('h4');
+  titleEl.className = 'text-sm font-black uppercase tracking-tight leading-tight line-clamp-1';
+  titleEl.style.color = 'var(--proton-text)';
+  titleEl.textContent = localizedTitle;
+  body.appendChild(titleEl);
+
+  const descEl = document.createElement('p');
+  descEl.className = 'text-[10px] leading-relaxed line-clamp-2';
+  descEl.style.color = 'var(--proton-muted)';
+  descEl.textContent = localizedDesc;
+  body.appendChild(descEl);
+
+  const priceRow = document.createElement('div');
+  priceRow.className = 'flex items-start justify-between gap-2 pt-1.5';
+  priceRow.style.borderTop = '1px solid var(--proton-border)';
+
+  const priceLabel = document.createElement('span');
+  priceLabel.className = 'text-[9px] font-bold uppercase tracking-wider';
+  priceLabel.style.color = 'var(--proton-muted)';
+  priceLabel.textContent = isSameCurrency
+    ? (language === 'ka' ? 'ფასი:' : 'Price:')
+    : (language === 'ka' ? 'სავარაუდო:' : 'Est.:');
+
+  const priceValues = document.createElement('div');
+  priceValues.className = 'text-right';
+
+  if (isSameCurrency) {
+    const singlePrice = document.createElement('span');
+    singlePrice.className = 'text-xs font-black font-mono';
+    singlePrice.style.color = 'var(--proton-accent)';
+    singlePrice.textContent = formattedOriginal;
+    priceValues.appendChild(singlePrice);
+  } else {
+    const approxEl = document.createElement('div');
+    approxEl.className = 'text-xs font-black font-mono';
+    approxEl.style.color = 'var(--proton-accent)';
+    approxEl.textContent = formattedApprox;
+
+    const originalEl = document.createElement('div');
+    originalEl.className = 'text-[10px] font-semibold font-mono';
+    originalEl.style.color = 'var(--proton-muted)';
+    originalEl.textContent = `${language === 'ka' ? 'ორიგინალი:' : 'Original:'} ${formattedOriginal}`;
+
+    priceValues.appendChild(approxEl);
+    priceValues.appendChild(originalEl);
+  }
+
+  priceRow.appendChild(priceLabel);
+  priceRow.appendChild(priceValues);
+  body.appendChild(priceRow);
+
+  const detailsBtn = document.createElement('button');
+  detailsBtn.type = 'button';
+  detailsBtn.className =
+    'popup-buy-btn w-full mt-2 py-2 px-4 text-center text-[9px] font-black uppercase tracking-widest rounded-xl hover:brightness-110 cursor-pointer active:scale-95 transition-all duration-200 block shadow-md';
+  detailsBtn.style.background = 'var(--proton-accent)';
+  detailsBtn.style.color = 'var(--proton-on-accent)';
+  detailsBtn.style.border = '1px solid var(--proton-border)';
+  detailsBtn.textContent = language === 'ka' ? 'დეტალების ნახვა' : 'View Details';
+
+  detailsBtn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    detailsBtn.style.opacity = '0.7';
+    detailsBtn.style.transform = 'scale(0.98)';
+    onSelect(listing);
+  });
+
+  body.appendChild(detailsBtn);
+  root.appendChild(body);
+
+  return root;
+}
+
+// Custom CSS styling for map pins and theme-consistent Leaflet controls/popups
 const markerStyle = `
   .custom-map-pin {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .custom-leaflet-popup-container .leaflet-popup-content-wrapper {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+  }
+  .custom-leaflet-popup-container .leaflet-popup-tip {
+    background: var(--proton-card);
+    border: 1px solid var(--proton-border);
+  }
+  .custom-leaflet-popup-container .leaflet-popup-close-button {
+    color: var(--proton-text);
+    z-index: 30;
+  }
+  .leaflet-container .leaflet-control-zoom a {
+    background-color: var(--proton-card);
+    color: var(--proton-text);
+    border-color: var(--proton-border);
+  }
+  .leaflet-container .leaflet-control-zoom a:hover {
+    background-color: var(--proton-bg);
+    color: var(--proton-accent);
+  }
+  .leaflet-container .leaflet-control-attribution {
+    background-color: var(--proton-card);
+    color: var(--proton-muted);
+    opacity: 0.9;
+  }
+  .leaflet-container .leaflet-control-attribution a {
+    color: var(--proton-accent);
   }
 `;
 
@@ -44,6 +314,7 @@ export function ListingMap({
 }: ListingMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const listingsRef = useRef<Listing[]>(listings);
   const onSelectListingRef = useRef<(listing: Listing) => void>(onSelectListing);
@@ -51,6 +322,9 @@ export function ListingMap({
 
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [tileScheme, setTileScheme] = useState<'light' | 'dark'>(() =>
+    resolveMapTileTheme(currentTheme)
+  );
 
   useEffect(() => {
     listingsRef.current = listings;
@@ -63,13 +337,36 @@ export function ListingMap({
   // Set up custom style on mount
   useEffect(() => {
     const styleId = 'custom-map-styles';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement('style');
       style.id = styleId;
-      style.textContent = markerStyle;
       document.head.appendChild(style);
     }
+    style.textContent = markerStyle;
   }, []);
+
+  // Track PROTON theme changes via props & DOM theme attributes
+  useEffect(() => {
+    const syncTileScheme = () => {
+      const next = resolveMapTileTheme(currentTheme);
+      setTileScheme((prev) => (prev === next ? prev : next));
+    };
+
+    syncTileScheme();
+
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const observer = new MutationObserver(syncTileScheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'data-color-scheme'],
+    });
+
+    return () => observer.disconnect();
+  }, [currentTheme]);
 
   // Initialize Map
   useEffect(() => {
@@ -83,11 +380,12 @@ export function ListingMap({
       attributionControl: true
     });
 
-    // Add CartoDB Dark Matter tile layer for an incredibly premium tech aesthetic
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    const initialScheme = resolveMapTileTheme(currentTheme);
+    const tileLayer = L.tileLayer(MAP_TILE_URLS[initialScheme], {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>'
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     // Zoom controls at bottom right
     L.control.zoom({
@@ -98,32 +396,6 @@ export function ListingMap({
     const markersLayer = L.layerGroup().addTo(map);
     markersLayerRef.current = markersLayer;
     mapRef.current = map;
-
-    // Listen to custom details/buy button clicks in popups with proper cleanup
-    const handlePopupOpen = (e: L.PopupEvent) => {
-      const container = e.popup.getElement();
-      if (container) {
-        const btn = container.querySelector('.popup-buy-btn') as HTMLElement | null;
-        if (btn) {
-          const id = btn.getAttribute('data-listing-id');
-          const handleBuyClick = () => {
-            btn.setAttribute('style', 'opacity: 0.7; transform: scale(0.98);');
-            if (id) {
-              const matched = listingsRef.current.find(l => l.id === id);
-              if (matched && onSelectListingRef.current) {
-                onSelectListingRef.current(matched);
-              }
-            }
-          };
-          btn.addEventListener('click', handleBuyClick);
-          map.once('popupclose', () => {
-            btn.removeEventListener('click', handleBuyClick);
-          });
-        }
-      }
-    };
-
-    map.on('popupopen', handlePopupOpen);
 
     // Multiple delayed invalidateSize calls for animation transitions
     const invalidateTimers = [50, 150, 300, 600, 1000].map(delay =>
@@ -138,12 +410,20 @@ export function ListingMap({
     return () => {
       invalidateTimers.forEach(t => clearTimeout(t));
       if (mapRef.current) {
-        mapRef.current.off('popupopen', handlePopupOpen);
         mapRef.current.remove();
         mapRef.current = null;
+        tileLayerRef.current = null;
+        markersLayerRef.current = null;
       }
     };
   }, []);
+
+  // Update tile URL dynamically when theme changes without recreating map state
+  useEffect(() => {
+    if (tileLayerRef.current) {
+      tileLayerRef.current.setUrl(MAP_TILE_URLS[tileScheme]);
+    }
+  }, [tileScheme]);
 
   // Handle parent container resize via ResizeObserver
   useEffect(() => {
@@ -183,7 +463,7 @@ export function ListingMap({
     listings.forEach((listing) => {
       const lat = listing.lat;
       const lng = listing.lng;
-      
+
       // Only draw if coordinates exist and are valid numbers
       if (typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)) {
         validCoords.push([lat, lng]);
@@ -211,77 +491,32 @@ export function ListingMap({
           popupAnchor: [0, -32]
         });
 
-        const localizedTitle = getListingTitle(listing, language);
-        const localizedDesc = language === 'ka' ? (listing.descriptionGe || listing.description) : listing.description;
-        const origCurrency = (listing.currency || 'USD').trim().toUpperCase();
-        const targetCurrency = (displayCurrency || 'USD').trim().toUpperCase();
-        const isSameCurrency = origCurrency === targetCurrency;
-        const convertedVal = priceMap?.get(listing.id) ?? convertPrice(listing.price || 0, origCurrency, targetCurrency);
-        const formattedOriginal = formatOriginalCurrencyPrice(listing.price || 0, origCurrency);
-        const formattedApprox = formatApproxCurrencyEquivalent(convertedVal, targetCurrency);
-        
-        // Theme-aware popup HTML using PROTON CSS semantic tokens
-        const popupHtml = `
-          <div class="w-64 rounded-2xl overflow-hidden p-0 shadow-2xl font-sans" style="margin: -14px -20px; background: var(--proton-card); color: var(--proton-text); border: 1px solid var(--proton-border);">
-            ${listing.image ? `
-              <div class="h-28 overflow-hidden relative">
-                <img src="${listing.image}" alt="${localizedTitle}" class="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                <div class="absolute top-2 right-2 px-2.5 py-1 backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest" style="background: var(--proton-card); color: var(--proton-text); border: 1px solid var(--proton-border); opacity: 0.92;">
-                  ${listing.category}
-                </div>
-              </div>
-            ` : ''}
-            <div class="p-4 space-y-2">
-              <h4 class="text-sm font-black uppercase tracking-tight leading-tight line-clamp-1" style="color: var(--proton-text);">${localizedTitle}</h4>
-              <p class="text-[10px] leading-relaxed line-clamp-2" style="color: var(--proton-muted);">${localizedDesc}</p>
-              
-              <div class="flex items-start justify-between gap-2 pt-1.5" style="border-top: 1px solid var(--proton-border);">
-                <span class="text-[9px] font-bold uppercase tracking-wider" style="color: var(--proton-muted);">
-                  ${isSameCurrency ? (language === 'ka' ? 'ფასი:' : 'Price:') : (language === 'ka' ? 'სავარაუდო:' : 'Est.:')}
-                </span>
-                <div class="text-right">
-                  ${isSameCurrency
-                    ? `<span class="text-xs font-black font-mono" style="color: var(--proton-accent);">${formattedOriginal}</span>`
-                    : `<div class="text-xs font-black font-mono" style="color: var(--proton-accent);">${formattedApprox}</div>
-                       <div class="text-[10px] font-semibold font-mono" style="color: var(--proton-muted);">${language === 'ka' ? 'ორიგინალი:' : 'Original:'} ${formattedOriginal}</div>`
-                  }
-                </div>
-              </div>
-              
-              <button 
-                id="btn-buy-${listing.id}"
-                data-listing-id="${listing.id}"
-                class="popup-buy-btn w-full mt-2 py-2 px-4 text-center text-[9px] font-black uppercase tracking-widest rounded-xl hover:brightness-110 cursor-pointer active:scale-95 transition-all duration-200 block shadow-md"
-                style="background: var(--proton-accent); color: var(--proton-on-accent); border: 1px solid var(--proton-border);"
-              >
-                ${language === 'ka' ? 'დეტალების ნახვა' : 'View Details'}
-              </button>
-            </div>
-          </div>
-        `;
+        const popupElement = buildListingPopupElement({
+          listing,
+          language,
+          displayCurrency,
+          priceMap,
+          convertPrice,
+          onSelect: (selected) => {
+            if (onSelectListingRef.current) {
+              onSelectListingRef.current(selected);
+            }
+          }
+        });
 
-        // Create marker
+        // Create marker with XSS-safe DOM popup
         const marker = L.marker([lat, lng], { icon: customIcon });
-        marker.bindPopup(popupHtml, {
+        marker.bindPopup(popupElement, {
           maxWidth: 300,
           className: 'custom-leaflet-popup-container'
         });
 
-        // Dynamic click binding inside map component directly with cleanup
         marker.on('popupopen', () => {
-          setTimeout(() => {
-            const btn = document.getElementById(`btn-buy-${listing.id}`);
-            if (btn) {
-              btn.onclick = () => {
-                if (onSelectListingRef.current) {
-                  onSelectListingRef.current(listing);
-                }
-              };
-              marker.once('popupclose', () => {
-                if (btn) btn.onclick = null;
-              });
-            }
-          }, 50);
+          const btn = popupElement.querySelector('.popup-buy-btn') as HTMLButtonElement | null;
+          if (btn) {
+            btn.style.opacity = '1';
+            btn.style.transform = '';
+          }
         });
 
         markersLayer.addLayer(marker);
@@ -300,7 +535,7 @@ export function ListingMap({
       // Default viewpoint when no listings are mapped
       map.setView([41.7151, 44.8271], 7);
     }
-    
+
     // Quick invalidate size to guarantee correct display in relative containers
     setTimeout(() => {
       map.invalidateSize();
@@ -333,8 +568,16 @@ export function ListingMap({
         if (mapRef.current) {
           mapRef.current.setView([latitude, longitude], 13);
 
+          const userPopupEl = document.createElement('div');
+          userPopupEl.className = 'p-2 text-center text-xs font-bold text-emerald-500 rounded-lg';
+          userPopupEl.style.background = 'var(--proton-card)';
+          userPopupEl.style.border = '1px solid var(--proton-border)';
+          userPopupEl.textContent =
+            language === 'ka' ? 'თქვენი მიმდინარე ლოკაცია' : 'Your Current Location';
+
           if (userMarkerRef.current) {
             userMarkerRef.current.setLatLng([latitude, longitude]);
+            userMarkerRef.current.setPopupContent(userPopupEl);
           } else {
             const userIconHtml = `
               <div class="relative w-8 h-8 flex items-center justify-center">
@@ -352,11 +595,7 @@ export function ListingMap({
             });
 
             userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon })
-              .bindPopup(
-                `<div class="p-2 text-center text-xs font-bold text-emerald-500 rounded-lg" style="background: var(--proton-card); border: 1px solid var(--proton-border);">${
-                  language === 'ka' ? 'თქვენი მიმდინარე ლოკაცია' : 'Your Current Location'
-                }</div>`
-              )
+              .bindPopup(userPopupEl)
               .addTo(mapRef.current);
           }
         }
