@@ -25,7 +25,7 @@
       "destination": "/api?1=$1"
     },
     {
-      "source": "/((?!assets/|api/|.*\\.[\\w]+$).*)",
+      "source": "/((?!assets/|api/|robots\\.txt|sitemap\\.xml|.*\\.[\\w]+$).*)",
       "destination": "/index.html"
     }
   ]
