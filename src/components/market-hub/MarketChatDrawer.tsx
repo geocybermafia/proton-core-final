@@ -102,7 +102,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                         ? (language === 'ka' ? 'კავშირი მყიდველთან' : 'Chat with Buyer')
                         : (language === 'ka' ? 'კავშირი გამყიდველთან' : 'Chat with Seller')}
                     </h3>
-                    <p className="text-[10px] text-proton-muted">
+                    <p className="text-xs text-proton-muted">
                       {isSellerViewing ? (buyerName || 'Buyer') : activeChatListing.sellerName} • {activeChatListing.title}
                     </p>
                   </div>
@@ -128,16 +128,16 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent">
+                        <span className="text-xs font-black uppercase tracking-wider text-proton-accent">
                           {language === 'ka' ? 'შეკვეთის შესახებ' : 'Regarding Order'} #{activeChatOrder.orderId.slice(-6).toUpperCase()}
                         </span>
                         {activeChatOrder.status && (
-                          <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-proton-card text-proton-text border border-proton-border font-mono">
+                          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-proton-card text-proton-text border border-proton-border font-mono">
                             {activeChatOrder.status}
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] text-proton-muted truncate mt-0.5">
+                      <p className="text-xs text-proton-muted truncate mt-0.5">
                         {activeChatOrder.itemTitle || activeChatListing.title}
                         {activeChatOrder.amount !== undefined ? ` • ${activeChatOrder.amount} ${activeChatOrder.currency || ''}` : ''}
                       </p>
@@ -149,7 +149,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                       type="button"
                       id="chat-view-order-btn"
                       onClick={() => onViewOrder(activeChatOrder.orderId)}
-                      className="px-3 py-1.5 rounded-xl bg-proton-card hover:bg-proton-accent/10 text-proton-text text-[10px] font-black uppercase tracking-wider transition-all border border-proton-border shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+                      className="px-3 py-1.5 rounded-xl bg-proton-card hover:bg-proton-accent/10 text-proton-text text-xs font-black uppercase tracking-wider transition-all border border-proton-border shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
                     >
                       <ExternalLink size={11} className="text-proton-accent" />
                       <span>{language === 'ka' ? 'შეკვეთის ნახვა' : 'View Order'}</span>
@@ -162,7 +162,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
               {!activeChatOrder && (
                 <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-3 flex items-start gap-2.5">
                   <span className="text-sm">💬</span>
-                  <div className="text-[9px] font-bold text-amber-500 leading-relaxed uppercase">
+                  <div className="text-[11px] font-bold text-amber-500 leading-relaxed uppercase">
                     {language === 'ka' 
                       ? `შეთანხმება: პროდუქტის მდგომარეობა - "${activeChatListing.condition === 'new' ? 'ახალი' : activeChatListing.condition === 'used' ? 'მეორადი' : 'განახლებული'}". ${activeChatListing.isNegotiable ? 'ფასზე შეგიძლიათ ვაჭრობა!' : 'ფასი ფიქსირებულია.'}`
                       : `Inquiry terms: item condition is "${activeChatListing.condition || 'new'}". ${activeChatListing.isNegotiable ? 'Custom offers are welcome!' : 'Fixed pricing matches apply.'}`}
@@ -178,7 +178,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                     <p className="text-xs font-bold text-proton-text uppercase tracking-wider">
                       {language === 'ka' ? 'მიწერეთ გამყიდველს' : 'No messages yet'}
                     </p>
-                    <p className="text-[9px] text-proton-muted max-w-xs">
+                    <p className="text-xs text-proton-muted max-w-xs">
                       {language === 'ka' 
                         ? 'ჰკითხეთ მდგომარეობის ან საბოლოო ფასის შესახებ და დაიწყეთ პირდაპირი მოლაპარაკება.'
                         : 'Inquire about item availability, delivery, or state custom quotes.'}
@@ -195,7 +195,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                           : "bg-proton-card text-proton-text border border-proton-border mr-auto rounded-tl-none shadow-sm"
                       )}
                     >
-                      <div className="flex items-center justify-between gap-4 text-[9px] font-black uppercase tracking-wider opacity-75">
+                      <div className="flex items-center justify-between gap-4 text-[11px] font-black uppercase tracking-wider opacity-75">
                         <span>{msg.senderName}</span>
                         <span>
                           {msg.createdAt?.seconds 
