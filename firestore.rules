@@ -61,13 +61,8 @@ service cloud.firestore {
         || getStr(data, 'category', '') in ['service', 'project'];
     }
 
-    function isDigitalListing(data) {
-      return getStr(data, 'listingType', '') == 'digital'
-        || getStr(data, 'category', '') == 'digital';
-    }
-
     function isPhysicalListing(data) {
-      return !isServiceOrProjectListing(data) && !isDigitalListing(data);
+      return !isServiceOrProjectListing(data);
     }
 
     // ======================================================
@@ -299,20 +294,10 @@ service cloud.firestore {
             && incoming().status == 'booked'
           )
           ||
-          // 2. Physical product listings MUST start as 'pending' (cannot be 'booked' or 'completed')
+          // 2. Physical product and digital listings MUST start as 'pending'
           (
             isPhysicalListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
             && incoming().status == 'pending'
-          )
-          ||
-          // 3. Digital product listings can start as 'completed' ONLY IF explicitly digital
-          // AND the listing is atomically transitioned to 'sold' referencing this activeOrderId
-          (
-            isDigitalListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
-            && incoming().status == 'completed'
-            && existsAfter(/databases/$(database)/documents/listings/$(incoming().listingId))
-            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'sold'
-            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == orderId
           )
         );
         
