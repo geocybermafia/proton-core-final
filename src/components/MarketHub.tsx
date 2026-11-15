@@ -3775,9 +3775,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           </div>
         </div>
 
-        {/* Mobile Search & Categories Row (Shown only on mobile — single integrated bar) */}
-        <div className="w-full flex md:hidden items-center gap-2">
-          <div className="flex-1 relative">
+        {/* Mobile Search Row (Shown only on mobile) */}
+        <div className="w-full md:hidden">
+          <div className="w-full relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70 text-proton-accent" />
             <input 
               type="text"
@@ -3796,21 +3796,6 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               </button>
             )}
           </div>
-
-          <button
-            type="button"
-            onClick={() => setActiveBottomTab('categories')}
-            className={cn(
-              "px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1.5 transition-all border shrink-0 cursor-pointer",
-              activeBottomTab === 'categories' || activeCategory !== 'all'
-                ? "bg-proton-accent/15 text-proton-accent border-proton-accent/40 shadow-sm"
-                : "bg-proton-bg border-proton-border text-proton-muted hover:text-proton-text"
-            )}
-            title={language === 'ka' ? 'კატეგორიები' : 'Categories'}
-          >
-            <Tag size={13} />
-            <span>{language === 'ka' ? 'კატეგორია' : 'Category'}</span>
-          </button>
         </div>
 
         {/* Unified Mobile Navigation Bar (Single non-duplicated 4-tab switcher, md:hidden) */}
