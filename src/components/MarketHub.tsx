@@ -112,7 +112,8 @@ import {
   getDefaultCategoryForType,
   inferListingType,
   isCategoryValidForType,
-  isRuleServiceOrProjectOrderTarget
+  isRuleServiceOrProjectOrderTarget,
+  resolvePreservedListingStatus
 } from './market-hub/MarketConstants';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
@@ -3178,6 +3179,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         formData.attributes
       );
 
+      const latestEditingListing = isEdit && editingListing
+        ? (listings.find(l => l.id === editingListing.id) || editingListing)
+        : null;
+      const resolvedListingStatus = isEdit && latestEditingListing
+        ? resolvePreservedListingStatus(latestEditingListing)
+        : 'active';
+
       const listingData = {
         title: resolvedFirestoreTitle,
         titleGe: finalTitleGe,
@@ -3196,7 +3204,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         image: (finalImages && finalImages[0]) || '',
         images: finalImages,
         createdAt: serverTimestamp(),
-        status: 'active',
+        status: resolvedListingStatus,
         lat: sanitizedLat,
         lng: sanitizedLng,
         condition: activeSchema.showCondition ? (formData.condition || 'new') : '',

@@ -1,7 +1,8 @@
 import { auth } from '../../firebase';
 import { translations } from '../../translations';
+import { ListingClassification, ListingStatus, ListingType } from '../../types';
 
-export type ListingType = 'product' | 'service' | 'project';
+export type { ListingClassification, ListingStatus, ListingType };
 
 export const PRODUCT_CATEGORY_IDS = [
   'newyear',
@@ -26,13 +27,27 @@ export const PRODUCT_CATEGORY_IDS = [
 export const SERVICE_CATEGORY_IDS = [
   'service',
   'rent',
+  'audience-growth',
+] as const;
+
+export const PROJECT_ASSET_CATEGORY_IDS = [
+  'social-accounts',
+  'youtube-channels',
+  'digital-projects',
+] as const;
+
+export const JOB_CATEGORY_IDS = [
+  'project-jobs',
+] as const;
+
+export const COLLABORATION_CATEGORY_IDS = [
+  'collaboration',
 ] as const;
 
 export const PROJECT_CATEGORY_IDS = [
   'project-jobs',
   'social-accounts',
   'youtube-channels',
-  'audience-growth',
   'collaboration',
   'digital-projects',
 ] as const;
@@ -51,8 +66,10 @@ export const CATEGORY_IDS_BY_TYPE: Record<ListingType, readonly string[]> = {
 
 const PRODUCT_CATEGORY_SET = new Set<string>(PRODUCT_CATEGORY_IDS);
 const SERVICE_CATEGORY_SET = new Set<string>(SERVICE_CATEGORY_IDS);
+const PROJECT_ASSET_CATEGORY_SET = new Set<string>(PROJECT_ASSET_CATEGORY_IDS);
+const JOB_CATEGORY_SET = new Set<string>(JOB_CATEGORY_IDS);
+const COLLABORATION_CATEGORY_SET = new Set<string>(COLLABORATION_CATEGORY_IDS);
 const PROJECT_CATEGORY_SET = new Set<string>(PROJECT_CATEGORY_IDS);
-const LEGACY_CATEGORIES_ORDER_BOOKING_SET = new Set<string>(['service', 'project']);
 
 export interface MarketTheme {
   card: string;
@@ -340,35 +357,89 @@ export const getDefaultCategoryForType = (type: ListingType): string => {
   return 'technics';
 };
 
+export type ListingClassificationInput = {
+  listingType?: string | null;
+  category?: string | null;
+} | null | undefined;
+
+export const normalizeCategoryId = (category?: string | null): string =>
+  typeof category === 'string' ? category.trim().toLowerCase() : '';
+
+export const normalizeExplicitListingType = (listingType?: string | null): ListingType | null => {
+  if (typeof listingType !== 'string') return null;
+  const normalized = listingType.trim().toLowerCase();
+  if (normalized === 'product' || normalized === 'service' || normalized === 'project') {
+    return normalized;
+  }
+  return null;
+};
+
+/**
+ * Canonical single source of truth for classifying PROTON listings.
+ * - Audience Growth is always classified as 'service' (even on legacy listingType='project' records).
+ * - Project Assets ('youtube-channels', 'social-accounts', 'digital-projects') are classified as
+ *   'project_asset' and are never classified as 'service'.
+ * - Explicit listingType is respected for legacy/ambiguous categories without inventing new mappings.
+ */
+export const classifyListing = (item?: ListingClassificationInput): ListingClassification | null => {
+  if (!item) return null;
+
+  const cat = normalizeCategoryId(item.category);
+  const explicit = normalizeExplicitListingType(item.listingType);
+
+  if (cat === 'audience-growth' || cat === 'service') {
+    return 'service';
+  }
+  if (PROJECT_ASSET_CATEGORY_SET.has(cat)) {
+    return 'project_asset';
+  }
+  if (JOB_CATEGORY_SET.has(cat)) {
+    return 'job';
+  }
+  if (COLLABORATION_CATEGORY_SET.has(cat)) {
+    return 'collaboration';
+  }
+
+  if (explicit === 'service') return 'service';
+  if (explicit === 'project') return 'project';
+  if (explicit === 'product') return 'product';
+
+  if (SERVICE_CATEGORY_SET.has(cat)) return 'service';
+  if (cat === 'project' || PROJECT_CATEGORY_SET.has(cat)) return 'project';
+
+  return 'product';
+};
+
 export const isCategoryValidForType = (
   categoryId: string | undefined | null,
   listingType: 'all' | ListingType
 ): boolean => {
   if (!categoryId || categoryId === 'all') return true;
+  const normalized = normalizeCategoryId(categoryId);
   if (listingType === 'all') {
     return (
-      PRODUCT_CATEGORY_SET.has(categoryId) ||
-      SERVICE_CATEGORY_SET.has(categoryId) ||
-      PROJECT_CATEGORY_SET.has(categoryId)
+      PRODUCT_CATEGORY_SET.has(normalized) ||
+      SERVICE_CATEGORY_SET.has(normalized) ||
+      PROJECT_CATEGORY_SET.has(normalized)
     );
   }
-  return CATEGORY_IDS_BY_TYPE[listingType].includes(categoryId);
+  return CATEGORY_IDS_BY_TYPE[listingType].includes(normalized);
 };
 
 export const inferListingType = (
   category?: string | null,
   explicitListingType?: string | null
 ): ListingType => {
+  const classification = classifyListing({ category, listingType: explicitListingType });
+  if (classification === 'service') return 'service';
   if (
-    explicitListingType === 'product' ||
-    explicitListingType === 'service' ||
-    explicitListingType === 'project'
+    classification === 'project_asset' ||
+    classification === 'job' ||
+    classification === 'collaboration' ||
+    classification === 'project'
   ) {
-    return explicitListingType;
+    return 'project';
   }
-  const cat = (category || '').trim().toLowerCase();
-  if (SERVICE_CATEGORY_SET.has(cat)) return 'service';
-  if (cat === 'project' || PROJECT_CATEGORY_SET.has(cat)) return 'project';
   return 'product';
 };
 
@@ -553,30 +624,44 @@ export const safeParseDate = (dateVal: any): number => {
   }
 };
 
-export const isServiceListing = (item?: { listingType?: string; category?: string } | null): boolean => {
-  if (!item) return false;
-  if (item.listingType === 'service') return true;
-  if (item.listingType === 'product' || item.listingType === 'project') {
-    return item.category === 'service';
-  }
-  return SERVICE_CATEGORY_SET.has(item.category || '');
+export const isServiceListing = (item?: ListingClassificationInput): boolean =>
+  classifyListing(item) === 'service';
+
+export const isProjectAssetListing = (item?: ListingClassificationInput): boolean =>
+  classifyListing(item) === 'project_asset';
+
+export const isJobListing = (item?: ListingClassificationInput): boolean =>
+  classifyListing(item) === 'job';
+
+export const isCollaborationListing = (item?: ListingClassificationInput): boolean =>
+  classifyListing(item) === 'collaboration';
+
+export const isProjectListing = (item?: ListingClassificationInput): boolean => {
+  const classification = classifyListing(item);
+  return (
+    classification === 'project_asset' ||
+    classification === 'job' ||
+    classification === 'collaboration' ||
+    classification === 'project'
+  );
 };
 
-export const isProjectListing = (item?: { listingType?: string; category?: string } | null): boolean => {
-  if (!item) return false;
-  if (item.listingType === 'project' || item.category === 'project') return true;
-  if (!item.listingType && PROJECT_CATEGORY_SET.has(item.category || '')) return true;
-  return false;
-};
+export const isProductListing = (item?: ListingClassificationInput): boolean =>
+  classifyListing(item) === 'product';
 
-export const isPhysicalListing = (item?: { listingType?: string; category?: string } | null): boolean => {
-  if (!item) return false;
-  if (item.listingType === 'service' || item.listingType === 'project') return false;
-  if (LEGACY_CATEGORIES_ORDER_BOOKING_SET.has(item.category || '')) return false;
-  if (!item.listingType && (SERVICE_CATEGORY_SET.has(item.category || '') || PROJECT_CATEGORY_SET.has(item.category || ''))) {
-    return false;
-  }
-  return true;
+export const isPhysicalListing = (item?: ListingClassificationInput): boolean =>
+  isProductListing(item);
+
+export const resolvePreservedListingStatus = (
+  existingListing?: { status?: string | null; isSold?: boolean | null } | null
+): ListingStatus => {
+  if (!existingListing) return 'active';
+  const normalizedStatus = typeof existingListing.status === 'string'
+    ? existingListing.status.trim().toLowerCase()
+    : '';
+  if (normalizedStatus === 'reserved') return 'reserved';
+  if (normalizedStatus === 'sold' || existingListing.isSold === true) return 'sold';
+  return 'active';
 };
 
 /**

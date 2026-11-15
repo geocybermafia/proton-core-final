@@ -545,7 +545,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       </span>
                     </div>
 
-                    {(listing.listingType === 'service' || listing.listingType === 'project') &&
+                    {(isServiceListing(listing) || isProjectListing(listing)) &&
                       listing.serviceDuration && (
                         <div className="flex items-start justify-between gap-4">
                           <span className={cn('text-xs shrink-0', currentTheme.muted)}>
@@ -557,7 +557,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                         </div>
                       )}
 
-                    {(listing.listingType === 'service' || listing.listingType === 'project') &&
+                    {(isServiceListing(listing) || isProjectListing(listing)) &&
                       listing.serviceTerms && (
                         <div className="flex items-start justify-between gap-4">
                           <span className={cn('text-xs shrink-0', currentTheme.muted)}>

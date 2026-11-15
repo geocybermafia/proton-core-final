@@ -382,7 +382,8 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
   },
 
   'audience-growth': {
-    ...COMMON_PROJECT_BASE,
+    ...COMMON_SERVICE_BASE,
+    showServiceTerms: false,
     categoryId: 'audience-growth',
     locationMode: 'remote',
     titleLabelKa: 'პოპულარიზაციის შეთავაზების სათაური',

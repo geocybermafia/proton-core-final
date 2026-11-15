@@ -219,13 +219,13 @@ export const translations = {
         },
         service: {
           service: "Services",
-          rent: "Rentals"
+          rent: "Rentals",
+          "audience-growth": "Audience Growth & Promotion"
         },
         project: {
           "project-jobs": "Jobs & Tasks",
           "social-accounts": "Social Media Accounts",
           "youtube-channels": "YouTube Channels",
-          "audience-growth": "Audience Growth & Promotion",
           collaboration: "Collaboration & Partnerships",
           "digital-projects": "Digital Projects & Online Businesses"
         }
@@ -717,13 +717,13 @@ export const translations = {
         },
         service: {
           service: "მომსახურება",
-          rent: "გაქირავება"
+          rent: "გაქირავება",
+          "audience-growth": "აუდიტორიის ზრდა და პოპულარიზაცია"
         },
         project: {
           "project-jobs": "ვაკანსიები და სამუშაო დავალებები",
           "social-accounts": "სოციალური ქსელების ანგარიშები",
           "youtube-channels": "YouTube არხები",
-          "audience-growth": "აუდიტორიის ზრდა და პოპულარიზაცია",
           collaboration: "თანამშრომლობა და პარტნიორობა",
           "digital-projects": "ციფრული პროექტები და ონლაინბიზნესი"
         }

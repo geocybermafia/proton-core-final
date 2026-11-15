@@ -151,6 +151,16 @@ export interface Project {
   updatedAt?: number;
 }
 
+export type ListingType = 'product' | 'service' | 'project';
+export type ListingStatus = 'active' | 'reserved' | 'sold' | 'low_stock' | string;
+export type ListingClassification =
+  | 'product'
+  | 'service'
+  | 'project_asset'
+  | 'job'
+  | 'collaboration'
+  | 'project';
+
 export type Listing = {
   id: string;
   title: string;
@@ -172,12 +182,12 @@ export type Listing = {
   lat?: number;
   lng?: number;
   createdAt: number;
-  status: 'active' | 'sold' | 'low_stock' | string;
+  status: ListingStatus;
   isSold?: boolean;
   activeOrderId?: string;
   condition?: 'new' | 'used' | 'refurbished' | string;
   isNegotiable?: boolean;
-  listingType?: 'product' | 'service' | 'project';
+  listingType?: ListingType;
   isRemote?: boolean;
   attributes?: Record<string, string | number | boolean>;
   serviceDuration?: string;
