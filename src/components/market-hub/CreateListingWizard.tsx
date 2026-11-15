@@ -16,6 +16,8 @@ import {
   Trash2,
   Eye,
   Edit3,
+  AlertCircle,
+  Globe,
   Languages
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -30,6 +32,15 @@ import {
   isCategoryValidForType,
   roundPriceForDisplayCurrency
 } from './MarketConstants';
+import {
+  getCategoryFormSchema,
+  getDefaultIsRemoteForSchema,
+  filterAttributesForSchema,
+  sanitizeListingAttributes,
+  validateSchemaAttributes,
+  getFormattedListingAttributes
+} from './ListingSchemas';
+import { DynamicAttributesSection } from './DynamicAttributesSection';
 import { Listing } from '../../types';
 import { MarketListingCard } from './MarketListingCard';
 import { FastInput } from './FastInputs';
@@ -56,6 +67,8 @@ export interface ListingFormData {
   condition: string;
   isNegotiable: boolean;
   listingType: 'product' | 'service' | 'project';
+  isRemote: boolean;
+  attributes: Record<string, string | number | boolean>;
   serviceDuration: string;
   serviceTerms: string;
 }
@@ -107,6 +120,59 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 }) => {
   const { showToast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const activeSchema = React.useMemo(
+    () => getCategoryFormSchema(formData.listingType, formData.category),
+    [formData.listingType, formData.category]
+  );
+
+  const effectiveIsRemote = React.useMemo(
+    () => activeSchema.locationMode !== 'physical' && Boolean(formData.isRemote),
+    [activeSchema.locationMode, formData.isRemote]
+  );
+
+  React.useEffect(() => {
+    setFieldErrors({});
+  }, [formData.category, formData.listingType, viewMode]);
+
+  const clearFieldError = React.useCallback((key: string) => {
+    setFieldErrors(prev => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const handleAttributeChange = React.useCallback(
+    (key: string, value: string | number | boolean | undefined) => {
+      setFormData(prev => {
+        const nextAttrs = { ...(prev.attributes || {}) };
+        if (value === undefined || value === null || value === '') {
+          delete nextAttrs[key];
+        } else {
+          nextAttrs[key] = value;
+        }
+
+        let nextIsRemote = prev.isRemote;
+        if (activeSchema.locationMode === 'flexible') {
+          if ((key === 'deliveryFormat' || key === 'employmentFormat') && value === 'remote') {
+            nextIsRemote = true;
+          } else if ((key === 'deliveryFormat' || key === 'employmentFormat') && value === 'onsite') {
+            nextIsRemote = false;
+          }
+        }
+
+        return {
+          ...prev,
+          isRemote: nextIsRemote,
+          attributes: nextAttrs,
+        };
+      });
+    },
+    [activeSchema.locationMode, setFormData]
+  );
 
   const handleRemovePhoto = (e?: React.MouseEvent) => {
     if (e) {
@@ -126,9 +192,35 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     );
   };
 
+  const resolvedLocationForPreview = React.useMemo(() => {
+    const rawCity = (formData.city || '').trim();
+    const rawCountry = (formData.country || '').trim();
+    const rawLocation = (formData.location || '').trim();
+    if (effectiveIsRemote) {
+      const hasRealCity = Boolean(rawCity && rawCity.toLowerCase() !== 'online');
+      if (!hasRealCity) {
+        return {
+          country: 'GLOBAL',
+          city: 'Online',
+          location: rawLocation || 'Online / Remote',
+        };
+      }
+      return {
+        country: rawCountry || 'GLOBAL',
+        city: rawCity,
+        location: rawLocation || `${rawCity}, ${rawCountry || 'GLOBAL'}`,
+      };
+    }
+    return {
+      country: rawCountry,
+      city: rawCity,
+      location: rawLocation,
+    };
+  }, [effectiveIsRemote, formData.city, formData.country, formData.location]);
+
   const selectedCountry = React.useMemo(() => {
-    return WORLD_COUNTRIES.find(c => c.code === formData.country);
-  }, [formData.country]);
+    return WORLD_COUNTRIES.find(c => c.code === resolvedLocationForPreview.country);
+  }, [resolvedLocationForPreview.country]);
 
   const conditionLabel = React.useMemo(() => {
     if (formData.condition === 'new') return language === 'ka' ? 'ახალი' : 'Brand New';
@@ -160,6 +252,11 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   }, [formData.price]);
 
+  const sanitizedPreviewAttributes = React.useMemo(
+    () => sanitizeListingAttributes(formData.listingType, formData.category, formData.attributes),
+    [formData.listingType, formData.category, formData.attributes]
+  );
+
   const activeDisplayCurrency = displayCurrency || formData.currency || 'USD';
   const activeConvertPrice = React.useCallback(
     (amount: number, from: string, to: string) =>
@@ -189,18 +286,20 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       image: validImages[0] || '',
       images: validImages,
       category: formData.category,
-      location: (formData.location || '').trim(),
-      country: formData.country,
-      city: (formData.city || '').trim(),
-      lat: formData.lat,
-      lng: formData.lng,
+      location: resolvedLocationForPreview.location,
+      country: resolvedLocationForPreview.country,
+      city: resolvedLocationForPreview.city,
+      lat: effectiveIsRemote ? undefined : formData.lat,
+      lng: effectiveIsRemote ? undefined : formData.lng,
       createdAt: Date.now(),
       status: 'active',
-      condition: formData.listingType === 'product' ? (formData.condition || 'new') : undefined,
+      condition: activeSchema.showCondition ? (formData.condition || 'new') : undefined,
       isNegotiable: Boolean(formData.isNegotiable),
       listingType: formData.listingType,
-      serviceDuration: formData.listingType === 'service' ? (formData.serviceDuration || '').trim() : '',
-      serviceTerms: formData.listingType === 'service' ? (formData.serviceTerms || '').trim() : '',
+      isRemote: effectiveIsRemote,
+      attributes: sanitizedPreviewAttributes,
+      serviceDuration: activeSchema.showServiceTerms ? (formData.serviceDuration || '').trim() : '',
+      serviceTerms: activeSchema.showServiceTerms ? (formData.serviceTerms || '').trim() : '',
     };
   }, [
     effectivePrimaryLang,
@@ -210,9 +309,6 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     formData.descriptionGe,
     formData.currency,
     formData.category,
-    formData.location,
-    formData.country,
-    formData.city,
     formData.lat,
     formData.lng,
     formData.listingType,
@@ -220,6 +316,11 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     formData.isNegotiable,
     formData.serviceDuration,
     formData.serviceTerms,
+    resolvedLocationForPreview,
+    effectiveIsRemote,
+    activeSchema.showCondition,
+    activeSchema.showServiceTerms,
+    sanitizedPreviewAttributes,
     parsedPreviewPrice,
     sellerName,
     language,
@@ -338,12 +439,11 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         } else if (currentPrimary === 'en' && !tEn && tGe) {
                           setFormData(p => ({ ...p, primaryLanguage: 'ka' }));
                         } else if (!tEn && !tGe) {
-                          showToast(
-                            language === 'ka' 
-                              ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.` 
-                              : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`, 
-                            'warning'
-                          );
+                          const msg = language === 'ka'
+                            ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.`
+                            : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`;
+                          setFieldErrors(prev => ({ ...prev, title: msg }));
+                          showToast(msg, 'warning');
                           return;
                         }
                       }
@@ -351,27 +451,42 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         const priceStr = String(formData.price || '').trim().replace(',', '.');
                         const parsedPrice = parseFloat(priceStr);
                         if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
-                          showToast(language === 'ka' 
-                            ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
-                            : "Please enter a valid price to continue (positive numbers only).",
+                          const msg = language === 'ka'
+                            ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)."
+                            : "Please enter a valid price to continue (positive numbers only).";
+                          setFieldErrors(prev => ({ ...prev, price: msg }));
+                          showToast(msg, 'warning');
+                          return;
+                        }
+                        const attrCheck = validateSchemaAttributes(activeSchema, formData.attributes, language);
+                        if (!attrCheck.valid) {
+                          setFieldErrors(prev => ({ ...prev, ...attrCheck.errors }));
+                          showToast(
+                            attrCheck.firstErrorMessage || (language === 'ka' ? 'შეავსეთ კატეგორიის სავალდებულო ველები.' : 'Please complete required category fields.'),
                             'warning'
                           );
                           return;
                         }
                       }
                       if (step > 3) {
-                        const countryStr = (formData.country || '').trim();
-                        const cityStr = (formData.city || '').trim();
-                        if (!countryStr || !cityStr) {
-                          showToast(language === 'ka' 
-                            ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი გადახედვამდე." 
-                            : "Please select a country and enter a city before preview.",
-                            'warning'
-                          );
-                          return;
+                        if (!effectiveIsRemote) {
+                          const countryStr = (formData.country || '').trim();
+                          const cityStr = (formData.city || '').trim();
+                          if (!countryStr || !cityStr) {
+                            const msg = language === 'ka'
+                              ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი გადახედვამდე."
+                              : "Please select a country and enter a city before preview.";
+                            setFieldErrors(prev => ({ ...prev, city: msg }));
+                            showToast(msg, 'warning');
+                            return;
+                          }
                         }
                         if (!formData.description.trim()) {
-                          showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა გადახედვამდე." : "Please fill in the product description before preview.", 'warning');
+                          const msg = language === 'ka'
+                            ? "გთხოვთ შეავსოთ განცხადების აღწერა გადახედვამდე."
+                            : "Please fill in the listing description before preview.";
+                          setFieldErrors(prev => ({ ...prev, description: msg }));
+                          showToast(msg, 'warning');
                           return;
                         }
                       }
@@ -458,13 +573,19 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       type="button"
                       onClick={() => {
                         const nextType = item.type as 'product' | 'service' | 'project';
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          listingType: nextType,
-                          category: isCategoryValidForType(prev.category, nextType)
+                        setFormData(prev => {
+                          const nextCategory = isCategoryValidForType(prev.category, nextType)
                             ? prev.category
-                            : getDefaultCategoryForType(nextType)
-                        }));
+                            : getDefaultCategoryForType(nextType);
+                          const nextSchema = getCategoryFormSchema(nextType, nextCategory);
+                          return {
+                            ...prev,
+                            listingType: nextType,
+                            category: nextCategory,
+                            isRemote: getDefaultIsRemoteForSchema(nextSchema),
+                            attributes: filterAttributesForSchema(nextSchema, prev.attributes),
+                          };
+                        });
                       }}
                       className={cn(
                         "relative p-4 rounded-2xl border transition-all duration-300 flex flex-col items-center text-center gap-2 hover:scale-[1.03] group overflow-hidden cursor-pointer",
@@ -511,7 +632,16 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   return (
                     <select 
                       value={selectValue}
-                      onChange={e => setFormData({...formData, category: e.target.value})}
+                      onChange={e => {
+                        const nextCategory = e.target.value;
+                        const nextSchema = getCategoryFormSchema(formData.listingType, nextCategory);
+                        setFormData(prev => ({
+                          ...prev,
+                          category: nextCategory,
+                          isRemote: getDefaultIsRemoteForSchema(nextSchema),
+                          attributes: filterAttributesForSchema(nextSchema, prev.attributes),
+                        }));
+                      }}
                       className={cn(
                         "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold tracking-wide shadow-inner transition-all cursor-pointer",
                         currentTheme.input
@@ -538,6 +668,11 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             {(() => {
               const activePrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
               const isKaPrimary = activePrimary === 'ka';
+              const resolvedTitleLabel = language === 'ka'
+                ? (activeSchema.titleLabelKa || t.market.form.title)
+                : (activeSchema.titleLabelEn || t.market.form.title);
+              const kaPlaceholderBase = activeSchema.titlePlaceholderKa || 'მაგ: განცხადების სათაური';
+              const enPlaceholderBase = activeSchema.titlePlaceholderEn || 'e.g. Listing title';
 
               return (
                 <div className="space-y-4">
@@ -590,18 +725,18 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Georgian Title Field */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">🇬🇪</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs shrink-0">🇬🇪</span>
                           <label className={cn(
-                            "text-[10px] font-black uppercase tracking-widest",
+                            "text-[10px] font-black uppercase tracking-widest truncate",
                             isKaPrimary ? currentTheme.accent : currentTheme.muted
                           )}>
-                            {t.market.form.title} (GE)
+                            {resolvedTitleLabel} (GE)
                           </label>
                         </div>
                         <span className={cn(
-                          "text-[8px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold border",
+                          "text-[8px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold border shrink-0",
                           isKaPrimary 
                             ? "bg-proton-accent/15 text-proton-accent border-proton-accent/30" 
                             : "bg-proton-bg text-proton-muted border-proton-border"
@@ -615,14 +750,18 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         <FastInput 
                           type="text"
                           value={formData.titleGe}
-                          onCommit={val => setFormData(p => ({ ...p, titleGe: val }))}
+                          onCommit={val => {
+                            setFormData(p => ({ ...p, titleGe: val }));
+                            clearFieldError('title');
+                          }}
                           placeholder={isKaPrimary
-                            ? (language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა (სავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Required)')
-                            : (language === 'ka' ? 'მაგ: iPhone 14 Pro ან ხის მაგიდა (არასავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Optional)')
+                            ? (language === 'ka' ? `${kaPlaceholderBase} (სავალდებულო)` : `${kaPlaceholderBase} (Required)`)
+                            : (language === 'ka' ? `${kaPlaceholderBase} (არასავალდებულო)` : `${kaPlaceholderBase} (Optional)`)
                           }
                           className={cn(
                             "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
-                            currentTheme.input
+                            currentTheme.input,
+                            isKaPrimary && fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
                           )}
                         />
                       </div>
@@ -630,18 +769,18 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 
                     {/* English Title Field */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">🇬🇧</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs shrink-0">🇬🇧</span>
                           <label className={cn(
-                            "text-[10px] font-black uppercase tracking-widest",
+                            "text-[10px] font-black uppercase tracking-widest truncate",
                             !isKaPrimary ? currentTheme.accent : currentTheme.muted
                           )}>
-                            {t.market.form.title} (EN)
+                            {resolvedTitleLabel} (EN)
                           </label>
                         </div>
                         <span className={cn(
-                          "text-[8px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold border",
+                          "text-[8px] font-mono px-2 py-0.5 rounded-md uppercase tracking-wider font-bold border shrink-0",
                           !isKaPrimary 
                             ? "bg-proton-accent/15 text-proton-accent border-proton-accent/30" 
                             : "bg-proton-bg text-proton-muted border-proton-border"
@@ -655,19 +794,29 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         <FastInput 
                           type="text"
                           value={formData.title}
-                          onCommit={val => setFormData(p => ({ ...p, title: val }))}
+                          onCommit={val => {
+                            setFormData(p => ({ ...p, title: val }));
+                            clearFieldError('title');
+                          }}
                           placeholder={!isKaPrimary
-                            ? (language === 'ka' ? 'e.g. iPhone 14 Pro or Wooden Desk (სავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Required)')
-                            : (language === 'ka' ? 'e.g. iPhone 14 Pro or Wooden Desk (არასავალდებულო)' : 'e.g. iPhone 14 Pro or Wooden Desk (Optional)')
+                            ? (language === 'ka' ? `${enPlaceholderBase} (სავალდებულო)` : `${enPlaceholderBase} (Required)`)
+                            : (language === 'ka' ? `${enPlaceholderBase} (არასავალდებულო)` : `${enPlaceholderBase} (Optional)`)
                           }
                           className={cn(
                             "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
-                            currentTheme.input
+                            currentTheme.input,
+                            !isKaPrimary && fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
                           )}
                         />
                       </div>
                     </div>
                   </div>
+                  {fieldErrors.title && (
+                    <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                      <AlertCircle size={12} className="shrink-0" />
+                      <span>{fieldErrors.title}</span>
+                    </p>
+                  )}
                 </div>
               );
             })()}
@@ -687,7 +836,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-3">
                 <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
-                  <span>🪙</span> {t.market.form.price}
+                  <span>🪙</span> {language === 'ka' ? activeSchema.priceLabelKa : activeSchema.priceLabelEn}
                 </label>
                 <div className="relative group">
                   <div className="absolute left-4.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -699,14 +848,25 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     min="0"
                     step="any"
                     value={formData.price}
-                    onCommit={val => setFormData(p => ({ ...p, price: val }))}
+                    onCommit={val => {
+                      setFormData(p => ({ ...p, price: val }));
+                      clearFieldError('price');
+                    }}
                     placeholder="0.00"
+                    aria-invalid={Boolean(fieldErrors.price)}
                     className={cn(
                       "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
-                      currentTheme.input
+                      currentTheme.input,
+                      fieldErrors.price && "border-rose-500/70 focus:border-rose-500"
                     )}
                   />
                 </div>
+                {fieldErrors.price && (
+                  <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    <span>{fieldErrors.price}</span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-3">
@@ -734,7 +894,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             </div>
 
             {/* Product Condition Selection Header & Sliding Tabs (Products only) */}
-            {formData.listingType === 'product' && (
+            {activeSchema.showCondition && (
               <div className="space-y-4">
                 <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
                   <span>📦</span> {language === 'ka' ? 'ნივთის მდგომარეობა' : 'Item Condition'}
@@ -767,6 +927,17 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Category-Specific Dynamic Attributes */}
+            <DynamicAttributesSection
+              schema={activeSchema}
+              attributes={formData.attributes || {}}
+              onChange={handleAttributeChange}
+              language={language}
+              currentTheme={currentTheme}
+              errors={fieldErrors}
+              onClearError={clearFieldError}
+            />
 
             {/* Price Negotiable Box & Switch */}
             <div className="p-1 px-4 py-3.5 rounded-2xl bg-proton-bg/70 border border-proton-border flex items-center justify-between gap-4">
@@ -802,7 +973,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             </div>
 
             {/* Service specific high-contrast characteristics */}
-            {formData.listingType === 'service' && (
+            {activeSchema.showServiceTerms && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-5 rounded-3xl bg-proton-accent/5 border border-proton-accent/20 shadow-inner">
                 <div className="space-y-3">
                   <label className={cn("text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ml-0.5", currentTheme.accent)}>
@@ -849,22 +1020,81 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
             transition={{ duration: 0.35 }}
             className="space-y-8 animate-in fade-in"
           >
+            {/* Remote / Online toggle for flexible & remote schemas */}
+            {activeSchema.locationMode !== 'physical' && (
+              <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={cn("p-2.5 rounded-xl bg-proton-accent/10 border border-proton-accent/25 shrink-0", currentTheme.accent)}>
+                    <Globe size={15} className="stroke-[2.5]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className={cn("text-xs font-black uppercase tracking-wider", currentTheme.text)}>
+                      {language === 'ka' ? 'დისტანციური / ონლაინ განცხადება' : 'Remote / Online Listing'}
+                    </h4>
+                    <p className={cn("text-[10px] font-medium mt-0.5", currentTheme.muted)}>
+                      {language === 'ka'
+                        ? (effectiveIsRemote
+                          ? 'ონლაინ რეჟიმში რუკა გამორთულია და ქალაქი არასავალდებულოა (თუ არ მიუთითებთ, შეინახება როგორც Online).'
+                          : 'გამორთულია — მიუთითეთ ფიზიკური მდებარეობა და ქალაქი.')
+                        : (effectiveIsRemote
+                          ? 'In online mode, map is hidden and city is optional (defaults to Online / Worldwide if left blank).'
+                          : 'Disabled — provide physical city and location details.')}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={effectiveIsRemote}
+                  aria-label={language === 'ka' ? 'დისტანციური / ონლაინ რეჟიმი' : 'Remote / Online mode'}
+                  onClick={() => {
+                    const nextRemote = !effectiveIsRemote;
+                    clearFieldError('city');
+                    setFormData(prev => ({
+                      ...prev,
+                      isRemote: nextRemote,
+                      country: !nextRemote && prev.country === 'GLOBAL'
+                        ? (language === 'ka' ? 'GEO' : 'USA')
+                        : prev.country,
+                    }));
+                  }}
+                  className={cn(
+                    "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none",
+                    effectiveIsRemote ? "bg-proton-accent" : "bg-proton-border"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-300 ease-in-out",
+                      effectiveIsRemote ? "translate-x-5" : "translate-x-0"
+                    )}
+                  />
+                </button>
+              </div>
+            )}
+
             {/* Country and City Inputs Group */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-3">
                 <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
                   <span>🗺️</span> {t.market.form.country}
+                  {effectiveIsRemote && (
+                    <span className={cn("text-[8px] font-mono lowercase opacity-75", currentTheme.muted)}>
+                      ({language === 'ka' ? 'არასავალდებულო' : 'optional'})
+                    </span>
+                  )}
                 </label>
                 <div className="relative group">
                   <select 
-                    value={formData.country}
+                    value={effectiveIsRemote && !(formData.city || '').trim() && formData.country === 'GLOBAL' ? 'GLOBAL' : formData.country}
                     onChange={e => setFormData({...formData, country: e.target.value})}
                     className={cn(
                       "w-full pl-4.5 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold transition-all cursor-pointer",
                       currentTheme.input
                     )}
                   >
-                    {AVAILABLE_COUNTRY_OPTIONS.map(country => (
+                    {(effectiveIsRemote ? WORLD_COUNTRIES : AVAILABLE_COUNTRY_OPTIONS).map(country => (
                       <option key={country.code} value={country.code} className="bg-proton-card text-proton-text font-bold text-xs py-1">
                         {country.flag} {country.name}
                       </option>
@@ -875,22 +1105,42 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               </div>
 
               <div className="space-y-3">
-                <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.muted)}>
+                <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", effectiveIsRemote ? currentTheme.muted : currentTheme.accent)}>
                   <span>🏙️</span> {t.market.form.city}
+                  {!effectiveIsRemote ? (
+                    <span className="text-rose-500">*</span>
+                  ) : (
+                    <span className={cn("text-[8px] font-mono lowercase opacity-75", currentTheme.muted)}>
+                      ({language === 'ka' ? 'არასავალდებულო' : 'optional'})
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <FastInput 
-                    required
+                    required={!effectiveIsRemote}
                     type="text"
                     value={formData.city}
-                    onCommit={val => setFormData(p => ({ ...p, city: val }))}
-                    placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
+                    onCommit={val => {
+                      setFormData(p => ({ ...p, city: val }));
+                      clearFieldError('city');
+                    }}
+                    placeholder={effectiveIsRemote
+                      ? (language === 'ka' ? 'სურვილისამებრ: მაგ. თბილისი ან ცარიელი (Online)' : 'Optional: e.g. Tbilisi or leave blank for Online')
+                      : (language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi')}
+                    aria-invalid={Boolean(fieldErrors.city)}
                     className={cn(
                       "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
-                      currentTheme.input
+                      currentTheme.input,
+                      fieldErrors.city && "border-rose-500/70 focus:border-rose-500"
                     )}
                   />
                 </div>
+                {fieldErrors.city && (
+                  <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                    <AlertCircle size={12} className="shrink-0" />
+                    <span>{fieldErrors.city}</span>
+                  </p>
+                )}
               </div>
             </div>
 
@@ -905,7 +1155,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   type="text"
                   value={formData.location}
                   onCommit={val => setFormData(p => ({ ...p, location: val }))}
-                  placeholder={language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...'}
+                  placeholder={effectiveIsRemote
+                    ? (language === 'ka' ? 'სურვილისამებრ: ონლაინ / რეგიონი / სამუშაო საათები...' : 'Optional: Online / Timezone / Region notes...')
+                    : (language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...')}
                   className={cn(
                     "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
                     currentTheme.input
@@ -914,35 +1166,38 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               </div>
             </div>
 
-            {/* Interactive Map Coordinates Picker Container */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
-                  <span>🛰️</span> {language === 'ka' ? 'მდებარეობა რუკაზე' : 'Location on Map'}
-                </label>
-                <span className={cn("text-[8px] font-mono block uppercase", currentTheme.muted)}>
-                  {language === 'ka' ? 'კოორდინატები: ' : 'COORDS: '}{formData.lat !== undefined && formData.lat !== null ? formData.lat.toFixed(4) : "41.7151"}, {formData.lng !== undefined && formData.lng !== null ? formData.lng.toFixed(4) : "44.8271"}
-                </span>
-              </div>
-              
-              <div className="p-1 rounded-[28px] bg-proton-bg border border-proton-border overflow-hidden shadow-xl relative">
-                <div className="w-full h-64 min-h-[250px] rounded-[24px] overflow-hidden relative">
-                  <MapPicker 
-                    lat={formData.lat}
-                    lng={formData.lng}
-                    onChange={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
-                    language={language as 'en' | 'ka'}
-                    currentTheme={currentTheme}
-                  />
+            {/* Interactive Map Coordinates Picker Container (Hidden in remote mode) */}
+            {!effectiveIsRemote && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
+                    <span>🛰️</span> {language === 'ka' ? 'მდებარეობა რუკაზე' : 'Location on Map'}
+                  </label>
+                  <span className={cn("text-[8px] font-mono block uppercase", currentTheme.muted)}>
+                    {language === 'ka' ? 'კოორდინატები: ' : 'COORDS: '}{formData.lat !== undefined && formData.lat !== null ? formData.lat.toFixed(4) : "41.7151"}, {formData.lng !== undefined && formData.lng !== null ? formData.lng.toFixed(4) : "44.8271"}
+                  </span>
+                </div>
+                
+                <div className="p-1 rounded-[28px] bg-proton-bg border border-proton-border overflow-hidden shadow-xl relative">
+                  <div className="w-full h-64 min-h-[250px] rounded-[24px] overflow-hidden relative">
+                    <MapPicker 
+                      lat={formData.lat}
+                      lng={formData.lng}
+                      onChange={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
+                      language={language as 'en' | 'ka'}
+                      currentTheme={currentTheme}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Form Description and Spark AI Helper Button */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
-                  <span>📋</span> {t.market.form.description}
+                  <span>📋</span> {language === 'ka' ? activeSchema.descriptionLabelKa : activeSchema.descriptionLabelEn}
+                  <span className="text-rose-500">*</span>
                 </label>
                 
                 <button
@@ -966,13 +1221,24 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               <textarea 
                 required
                 value={formData.description}
-                onChange={e => setFormData({...formData, description: e.target.value})}
-                placeholder={language === 'ka' ? 'აღწერეთ თქვენი ნივთი ან მომსახურება დეტალურად...' : 'Describe your item or service in detail...'}
+                onChange={e => {
+                  setFormData({...formData, description: e.target.value});
+                  clearFieldError('description');
+                }}
+                placeholder={language === 'ka' ? activeSchema.descriptionPlaceholderKa : activeSchema.descriptionPlaceholderEn}
+                aria-invalid={Boolean(fieldErrors.description)}
                 className={cn(
                   "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-semibold h-36 resize-none shadow-inner transition-all",
-                  currentTheme.input
+                  currentTheme.input,
+                  fieldErrors.description && "border-rose-500/70 focus:border-rose-500"
                 )}
               />
+              {fieldErrors.description && (
+                <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                  <AlertCircle size={12} className="shrink-0" />
+                  <span>{fieldErrors.description}</span>
+                </p>
+              )}
             </div>
 
             {/* Graphic/Image upload box */}
@@ -1173,20 +1439,22 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               const secondaryTitle = rawTitleEn && rawTitleGe && rawTitleEn !== rawTitleGe
                 ? (effectivePrimaryLang === 'ka' ? rawTitleEn : rawTitleGe)
                 : '';
-              const trimmedAddress = (formData.location || '').trim();
-              const trimmedDuration = (formData.serviceDuration || '').trim();
-              const trimmedTerms = (formData.serviceTerms || '').trim();
+              const trimmedAddress = resolvedLocationForPreview.location;
+              const trimmedDuration = activeSchema.showServiceTerms ? (formData.serviceDuration || '').trim() : '';
+              const trimmedTerms = activeSchema.showServiceTerms ? (formData.serviceTerms || '').trim() : '';
+              const formattedPreviewAttributes = getFormattedListingAttributes(previewListing, language);
               const hasGpsCoords =
+                !effectiveIsRemote &&
                 typeof formData.lat === 'number' &&
                 !isNaN(formData.lat) &&
                 typeof formData.lng === 'number' &&
                 !isNaN(formData.lng);
               const step2Title =
-                formData.listingType === 'service'
+                activeSchema.showServiceTerms
                   ? (language === 'ka' ? 'ნაბიჯი 2: ფასი და პირობები' : 'Step 2: Price & Terms')
                   : formData.listingType === 'project'
-                  ? (language === 'ka' ? 'ნაბიჯი 2: ბიუჯეტი და ფასი' : 'Step 2: Budget & Price')
-                  : (language === 'ka' ? 'ნაბიჯი 2: ფასი და მდგომარეობა' : 'Step 2: Price & Condition');
+                  ? (language === 'ka' ? 'ნაბიჯი 2: ბიუჯეტი და მახასიათებლები' : 'Step 2: Budget & Specs')
+                  : (language === 'ka' ? 'ნაბიჯი 2: ფასი და მახასიათებლები' : 'Step 2: Price & Specs');
               const showOriginalCurrencyLine =
                 activeDisplayCurrency.trim().toUpperCase() !== (formData.currency || 'USD').trim().toUpperCase();
 
@@ -1247,7 +1515,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       </div>
                     </div>
 
-                    {/* Step 2 Review: Adapted strictly by Listing Type */}
+                    {/* Step 2 Review: Adapted by Schema & Attributes */}
                     <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1270,7 +1538,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           </p>
                         )}
 
-                        {formData.listingType === 'product' && (
+                        {activeSchema.showCondition && (
                           <div className="space-y-1">
                             <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
                               {language === 'ka' ? 'ნივთის მდგომარეობა' : 'Item Condition'}
@@ -1281,7 +1549,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           </div>
                         )}
 
-                        {formData.listingType === 'service' && (
+                        {activeSchema.showServiceTerms && (
                           <div className="space-y-2">
                             {trimmedDuration && (
                               <div>
@@ -1306,7 +1574,18 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           </div>
                         )}
 
-                        {formData.listingType === 'project' && !showOriginalCurrencyLine && !formData.isNegotiable && (
+                        {formattedPreviewAttributes.length > 0 && (
+                          <div className="space-y-1.5 pt-1 border-t border-proton-border/60">
+                            {formattedPreviewAttributes.map(attr => (
+                              <div key={attr.key} className="flex items-start justify-between gap-2 text-[11px]">
+                                <span className={cn("shrink-0", currentTheme.muted)}>{attr.label}:</span>
+                                <span className={cn("font-bold text-right break-all", currentTheme.text)}>{attr.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {formData.listingType === 'project' && !showOriginalCurrencyLine && !formData.isNegotiable && formattedPreviewAttributes.length === 0 && (
                           <p className={cn("text-xs font-bold font-mono", currentTheme.text)}>
                             {parsedPreviewPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} {formData.currency}
                           </p>
@@ -1322,7 +1601,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       </div>
                     </div>
 
-                    {/* Step 3 Review: Address, Media & GPS */}
+                    {/* Step 3 Review: Address, Remote Status, Media & GPS */}
                     <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1339,10 +1618,18 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                           </button>
                         </div>
 
+                        {effectiveIsRemote && (
+                          <div>
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md bg-proton-accent/15 border border-proton-accent/30 text-proton-accent">
+                              🌐 {language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'}
+                            </span>
+                          </div>
+                        )}
+
                         {trimmedAddress && (
                           <div>
                             <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
-                              📍 {language === 'ka' ? 'დეტალური მისამართი' : 'Detailed Address'}
+                              📍 {language === 'ka' ? 'მდებარეობა' : 'Location'}
                             </span>
                             <p className={cn("text-xs font-semibold mt-0.5 break-words", currentTheme.text)}>
                               {trimmedAddress}
@@ -1367,7 +1654,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 
                         {!trimmedAddress && validImages.length === 0 && !hasGpsCoords && (
                           <p className={cn("text-xs font-semibold", currentTheme.text)}>
-                            {selectedCountry?.flag} {formData.city}{selectedCountry?.name ? `, ${selectedCountry.name}` : ''}
+                            {selectedCountry?.flag} {resolvedLocationForPreview.city}{selectedCountry?.name ? `, ${selectedCountry.name}` : ''}
                           </p>
                         )}
                       </div>
@@ -1378,7 +1665,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.muted)}>
-                        {language === 'ka' ? 'აღწერა' : 'Description'}
+                        {language === 'ka' ? activeSchema.descriptionLabelKa : activeSchema.descriptionLabelEn}
                       </span>
                       <button
                         type="button"
@@ -1442,38 +1729,52 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     } else if (currentPrimary === 'en' && !tEn && tGe) {
                       setFormData(p => ({ ...p, primaryLanguage: 'ka' }));
                     } else if (!tEn && !tGe) {
-                      showToast(
-                        language === 'ka' 
-                          ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.` 
-                          : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`, 
-                        'warning'
-                      );
+                      const msg = language === 'ka'
+                        ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.`
+                        : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`;
+                      setFieldErrors(prev => ({ ...prev, title: msg }));
+                      showToast(msg, 'warning');
                       return;
                     }
                   } else if (formStep === 2) {
                     const priceStr = String(formData.price || '').trim().replace(',', '.');
                     const parsedPrice = parseFloat(priceStr);
                     if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
-                      showToast(language === 'ka' 
-                        ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)." 
-                        : "Please enter a valid price to continue (positive numbers only).",
+                      const msg = language === 'ka'
+                        ? "გთხოვთ შეიყვანოთ სწორი ფასი გასაგრძელებლად (მხოლოდ დადებითი რიცხვები)."
+                        : "Please enter a valid price to continue (positive numbers only).";
+                      setFieldErrors(prev => ({ ...prev, price: msg }));
+                      showToast(msg, 'warning');
+                      return;
+                    }
+                    const attrCheck = validateSchemaAttributes(activeSchema, formData.attributes, language);
+                    if (!attrCheck.valid) {
+                      setFieldErrors(prev => ({ ...prev, ...attrCheck.errors }));
+                      showToast(
+                        attrCheck.firstErrorMessage || (language === 'ka' ? 'შეავსეთ კატეგორიის სავალდებულო ველები.' : 'Please complete required category fields.'),
                         'warning'
                       );
                       return;
                     }
                   } else if (formStep === 3) {
-                    const countryStr = (formData.country || '').trim();
-                    const cityStr = (formData.city || '').trim();
-                    if (!countryStr || !cityStr) {
-                      showToast(language === 'ka' 
-                        ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი გადახედვამდე." 
-                        : "Please select a country and city before preview.",
-                        'warning'
-                      );
-                      return;
+                    if (!effectiveIsRemote) {
+                      const countryStr = (formData.country || '').trim();
+                      const cityStr = (formData.city || '').trim();
+                      if (!countryStr || !cityStr) {
+                        const msg = language === 'ka'
+                          ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი გადახედვამდე."
+                          : "Please select a country and city before preview.";
+                        setFieldErrors(prev => ({ ...prev, city: msg }));
+                        showToast(msg, 'warning');
+                        return;
+                      }
                     }
                     if (!formData.description.trim()) {
-                      showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა გადახედვამდე." : "Please fill in the product description before preview.", 'warning');
+                      const msg = language === 'ka'
+                        ? "გთხოვთ შეავსოთ განცხადების აღწერა გადახედვამდე."
+                        : "Please fill in the listing description before preview.";
+                      setFieldErrors(prev => ({ ...prev, description: msg }));
+                      showToast(msg, 'warning');
                       return;
                     }
                   }

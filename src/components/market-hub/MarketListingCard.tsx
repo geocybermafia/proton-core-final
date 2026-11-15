@@ -8,6 +8,7 @@ import {
   Edit3,
   Heart,
   MapPin,
+  Globe,
   MoreVertical,
   Eye
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
   formatOriginalCurrencyPrice,
   formatApproxCurrencyEquivalent
 } from './MarketConstants';
+import { getCardAttributeHighlights, isEffectiveRemoteListing } from './ListingSchemas';
 
 export interface ListingCardImageProps {
   src?: string;
@@ -176,6 +178,9 @@ export const MarketListingCard = React.memo(function MarketListingCard({
     : formattedApprox;
   const isLargePrice = primaryPriceDisplay.length >= 8;
 
+  const isRemote = isEffectiveRemoteListing(listing);
+  const attributeHighlights = getCardAttributeHighlights(listing, language, 2);
+
   const countryEntry = WORLD_COUNTRIES.find(c => c.code === listing.country);
   const countryDisplay = countryEntry
     ? (countryEntry.code === 'GLOBAL'
@@ -183,12 +188,22 @@ export const MarketListingCard = React.memo(function MarketListingCard({
       : countryEntry.name)
     : (listing.country || '');
   const cityDisplay = (listing.city || '').trim();
+  const isDefaultRemotePlaceholder =
+    isRemote &&
+    ((listing.country || '').trim().toUpperCase() === 'GLOBAL' || !countryDisplay) &&
+    (!cityDisplay || cityDisplay.toLowerCase() === 'online');
+
   const locationParts = Array.from(
     new Set([cityDisplay, countryDisplay].filter(Boolean))
   );
-  const locationLabel = locationParts.length > 0
+  const baseLocationLabel = locationParts.length > 0
     ? locationParts.join(', ')
     : (language === 'ka' ? 'მდებარეობა მითითებული არ არის' : 'Location not specified');
+  const locationLabel = isRemote
+    ? (isDefaultRemotePlaceholder
+      ? (language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online')
+      : `${language === 'ka' ? 'დისტანციური' : 'Remote'} · ${baseLocationLabel}`)
+    : baseLocationLabel;
 
   const categoryLabel = getCategoryLabel(listing.category, t, language);
   const sellerName = listing.sellerName || (language === 'ka' ? 'გამყიდველი' : 'Seller');
@@ -352,6 +367,19 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             {displayTitle}
           </h2>
 
+          {attributeHighlights.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 min-w-0">
+              {attributeHighlights.map((highlight, hIdx) => (
+                <span
+                  key={`${listing.id}-hl-${hIdx}`}
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-proton-bg border border-proton-border text-proton-muted truncate max-w-full"
+                >
+                  {highlight}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* 3. Price (with original currency & approx equivalent when needed) */}
           <div className={cn("pt-2.5 border-t min-w-0", currentTheme.border)}>
             <div className="flex items-end justify-between gap-2 min-w-0 flex-wrap">
@@ -409,8 +437,12 @@ export const MarketListingCard = React.memo(function MarketListingCard({
 
           {/* 4. Location */}
           <div className="flex items-center gap-1.5 text-xs text-proton-muted min-w-0">
-            <MapPin size={13} className="shrink-0 text-proton-muted" aria-hidden="true" />
-            {countryEntry?.flag && (
+            {isRemote ? (
+              <Globe size={13} className="shrink-0 text-proton-accent" aria-hidden="true" />
+            ) : (
+              <MapPin size={13} className="shrink-0 text-proton-muted" aria-hidden="true" />
+            )}
+            {!isDefaultRemotePlaceholder && countryEntry?.flag && (
               <span className="text-xs leading-none shrink-0" aria-hidden="true">
                 {countryEntry.flag}
               </span>

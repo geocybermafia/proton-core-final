@@ -178,6 +178,8 @@ export type Listing = {
   condition?: 'new' | 'used' | 'refurbished' | string;
   isNegotiable?: boolean;
   listingType?: 'product' | 'service' | 'project';
+  isRemote?: boolean;
+  attributes?: Record<string, string | number | boolean>;
   serviceDuration?: string;
   serviceTerms?: string;
   stock?: number;

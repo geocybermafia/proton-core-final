@@ -122,7 +122,14 @@ import { ListingDetailsModal } from './market-hub/ListingDetailsModal';
 import { CancelOrderModal } from './market-hub/CancelOrderModal';
 import { MarketChatDrawer } from './market-hub/MarketChatDrawer';
 import { VendorReviewsModal } from './market-hub/VendorReviewsModal';
-import { CreateListingWizard } from './market-hub/CreateListingWizard';
+import { CreateListingWizard, ListingFormData } from './market-hub/CreateListingWizard';
+import {
+  getCategoryFormSchema,
+  getDefaultIsRemoteForSchema,
+  filterAttributesForSchema,
+  sanitizeListingAttributes,
+  validateSchemaAttributes
+} from './market-hub/ListingSchemas';
 import { MarketFilterPanel, MobileFilterBottomSheet } from './market-hub/MarketFilters';
 import { ListingTypeTabs } from './market-hub/MarketPulseMetrics';
 import { MarketListingCard } from './market-hub/MarketListingCard';
@@ -971,6 +978,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       condition: 'new',
       isNegotiable: false,
       listingType: 'product',
+      isRemote: false,
+      attributes: {},
       serviceDuration: '',
       serviceTerms: ''
     });
@@ -982,27 +991,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
   }, [viewMode]);
   // Form State
-  const [formData, setFormData] = useState<{
-    title: string;
-    titleGe: string;
-    primaryLanguage?: 'ka' | 'en';
-    description: string;
-    descriptionGe: string;
-    price: string;
-    currency: string;
-    category: string;
-    country: string;
-    city: string;
-    location: string;
-    images: string[];
-    lat?: number;
-    lng?: number;
-    condition: string;
-    isNegotiable: boolean;
-    listingType: 'product' | 'service' | 'project';
-    serviceDuration: string;
-    serviceTerms: string;
-  }>({
+  const [formData, setFormData] = useState<ListingFormData>({
     title: '',
     titleGe: '',
     primaryLanguage: language === 'ka' ? 'ka' : 'en',
@@ -1020,6 +1009,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     condition: 'new',
     isNegotiable: false,
     listingType: 'product',
+    isRemote: false,
+    attributes: {},
     serviceDuration: '',
     serviceTerms: ''
   });
@@ -1028,7 +1019,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   useEffect(() => {
     if (viewMode === 'create' || viewMode === 'edit') {
       const timer = setTimeout(() => {
-        const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || (formData.images && formData.images.length > 0);
+        const hasDynamicAttributes = Boolean(formData.attributes && Object.keys(formData.attributes).length > 0);
+        const hasContent = formData.title || formData.titleGe || formData.description || formData.descriptionGe || formData.price || formData.city || formData.location || formData.isRemote || hasDynamicAttributes || (formData.images && formData.images.length > 0);
         if (hasContent) {
           // Preserve safe HTTP/HTTPS uploaded URLs in localStorage draft;
           // strictly strip raw base64 data URIs to prevent QuotaExceededError and main thread lag
@@ -1072,12 +1064,25 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     viewMode === 'create' && !isCategoryValidForType(parsed.data.category, restoredType)
                       ? getDefaultCategoryForType(restoredType)
                       : (parsed.data.category || getDefaultCategoryForType(restoredType));
+                  const restoredSchema = getCategoryFormSchema(restoredType, restoredCategory);
+                  const restoredAttributes =
+                    parsed.data.attributes && typeof parsed.data.attributes === 'object'
+                      ? filterAttributesForSchema(restoredSchema, parsed.data.attributes)
+                      : {};
+                  const restoredIsRemote =
+                    restoredSchema.locationMode === 'physical'
+                      ? false
+                      : (typeof parsed.data.isRemote === 'boolean'
+                        ? parsed.data.isRemote
+                        : getDefaultIsRemoteForSchema(restoredSchema));
 
                   return {
                     ...prev,
                     ...parsed.data,
                     listingType: restoredType,
                     category: restoredCategory,
+                    isRemote: restoredIsRemote,
+                    attributes: restoredAttributes,
                     // If the draft contains saved safe image URLs, restore them;
                     // if draft images array is explicitly empty, restore empty array;
                     // preserve prev.images only if parsed.data has no images field defined
@@ -2324,8 +2329,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       if (parsedMinPrice !== null && convertedPrice < parsedMinPrice) return false;
       if (parsedMaxPrice !== null && convertedPrice > parsedMaxPrice) return false;
 
-      // Filter by Search (Bilingual & cross-language: checks both English and Georgian fields independently)
+      // Filter by Search (Bilingual & cross-language + category attributes)
       if (searchLower) {
+        const matchesAttribute = l.attributes
+          ? Object.values(l.attributes).some(
+              val => typeof val !== 'boolean' && val !== null && val !== undefined && String(val).toLowerCase().includes(searchLower)
+            )
+          : false;
         const matchesSearch = 
           (l.title && l.title.toLowerCase().includes(searchLower)) ||
           (l.titleGe && l.titleGe.toLowerCase().includes(searchLower)) ||
@@ -2334,7 +2344,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           (l.descriptionGe && l.descriptionGe.toLowerCase().includes(searchLower)) ||
           (l.sellerName && l.sellerName.toLowerCase().includes(searchLower)) ||
           (l.city && l.city.toLowerCase().includes(searchLower)) ||
-          (l.country && l.country.toLowerCase().includes(searchLower));
+          (l.country && l.country.toLowerCase().includes(searchLower)) ||
+          matchesAttribute;
         if (!matchesSearch) return false;
       }
 
@@ -2784,7 +2795,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   const getFallbackTemplate = (title: string, category: string) => {
-    return `${title} (${category})\n\n[Key Specifications]\n- Model:\n- Condition:\n- Performance:\n- Warranty:\n\n[Overview]\nProfessional distribution assets for high-tier industrial use.`;
+    const schema = getCategoryFormSchema(formData.listingType, category);
+    const isKa = language === 'ka';
+    const specLines = schema.fields.slice(0, 4).map(field => `- ${isKa ? field.labelKa : field.labelEn}:`);
+    const lines = specLines.length > 0
+      ? specLines.join('\n')
+      : (isKa ? '- ძირითადი პარამეტრები:\n- პირობები:' : '- Key Details:\n- Terms:');
+
+    return isKa
+      ? `${title} (${getCategoryLabel(category, t, language)})\n\n[ძირითადი მახასიათებლები]\n${lines}\n\n[მიმოხილვა]\nდამატებითი დეტალები და პირობები.`
+      : `${title} (${getCategoryLabel(category, t, language)})\n\n[Key Details]\n${lines}\n\n[Overview]\nAdditional details and terms.`;
   };
 
   const handleAiDescription = async () => {
@@ -2990,7 +3010,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       const finalTitleEn = rawTitleEn;
       const resolvedFirestoreTitle = primaryTitle;
 
-      // Step 2 validation: Price & Currency
+      const isEdit = viewMode === 'edit' && Boolean(editingListing);
+      const resolvedListingType = inferListingType(formData.category, formData.listingType);
+      const resolvedCategory = (isEdit && formData.category)
+        ? formData.category
+        : (isCategoryValidForType(formData.category, resolvedListingType)
+            ? formData.category
+            : getDefaultCategoryForType(resolvedListingType));
+      const activeSchema = getCategoryFormSchema(resolvedListingType, resolvedCategory);
+
+      // Step 2 validation: Price & Category-Specific Dynamic Attributes
       const priceStr = String(formData.price || '').trim().replace(',', '.');
       const parsedPrice = parseFloat(priceStr);
       if (!priceStr || isNaN(parsedPrice) || parsedPrice <= 0) {
@@ -3004,31 +3033,61 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         return;
       }
 
-      // Step 3 validation: Country and City
-      const countryStr = (formData.country || '').trim();
-      const cityStr = (formData.city || '').trim();
-      if (!countryStr || !cityStr) {
-        showToast(language === 'ka' 
-          ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი." 
-          : "Please select a country and enter a city.",
+      const attrCheck = validateSchemaAttributes(activeSchema, formData.attributes, language);
+      if (!attrCheck.valid) {
+        showToast(
+          attrCheck.firstErrorMessage || (language === 'ka' ? 'გთხოვთ შეავსოთ კატეგორიის სავალდებულო ველები.' : 'Please complete required category fields.'),
           'warning'
         );
-        setFormStep(3);
+        setFormStep(2);
         setIsSubmitting(false);
         return;
+      }
+
+      // Step 3 validation: Country and City (remote-aware)
+      const effectiveIsRemote = activeSchema.locationMode !== 'physical' && Boolean(formData.isRemote);
+      const countryStr = (formData.country || '').trim();
+      const cityStr = (formData.city || '').trim();
+      let finalCountry = countryStr;
+      let finalCity = cityStr;
+      let finalLocation = (formData.location || '').trim();
+
+      if (effectiveIsRemote) {
+        const hasRealCity = Boolean(cityStr && cityStr.toLowerCase() !== 'online');
+        if (!hasRealCity) {
+          finalCountry = 'GLOBAL';
+          finalCity = 'Online';
+          finalLocation = finalLocation || 'Online / Remote';
+        } else {
+          finalCountry = countryStr || 'GLOBAL';
+          finalCity = cityStr;
+          finalLocation = finalLocation || `${cityStr}, ${finalCountry}`;
+        }
+      } else {
+        if (!countryStr || !cityStr) {
+          showToast(language === 'ka' 
+            ? "გთხოვთ შეავსოთ ქვეყანა და ქალაქი." 
+            : "Please select a country and enter a city.",
+            'warning'
+          );
+          setFormStep(3);
+          setIsSubmitting(false);
+          return;
+        }
+        finalLocation = finalLocation || `${cityStr}, ${countryStr}`;
       }
 
       // Step 3 validation: Description
       if (!formData.description.trim()) {
-        showToast(language === 'ka' ? "გთხოვთ შეავსოთ ნივთის აღწერა." : "Please fill in the product description.", 'warning');
+        showToast(language === 'ka' ? "გთხოვთ შეავსოთ განცხადების აღწერა." : "Please fill in the listing description.", 'warning');
         setFormStep(3);
         setIsSubmitting(false);
         return;
       }
 
-      // Safe coordinate assignment (Never send NaN or undefined value directly to firestore fields)
-      const sanitizedLat = (typeof formData.lat === 'number' && !isNaN(formData.lat)) ? formData.lat : null;
-      const sanitizedLng = (typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null;
+      // Safe coordinate assignment (Never store stale map coordinates for remote listings)
+      const sanitizedLat = effectiveIsRemote ? null : ((typeof formData.lat === 'number' && !isNaN(formData.lat)) ? formData.lat : null);
+      const sanitizedLng = effectiveIsRemote ? null : ((typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null);
 
       // Upload any local base64 images to Firebase Storage first to ensure HTTPS URLs in Firestore
       let finalImages = formData.images || [];
@@ -3113,13 +3172,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         }
       }
 
-      const isEdit = viewMode === 'edit' && Boolean(editingListing);
-      const resolvedListingType = inferListingType(formData.category, formData.listingType);
-      const resolvedCategory = (isEdit && formData.category)
-        ? formData.category
-        : (isCategoryValidForType(formData.category, resolvedListingType)
-            ? formData.category
-            : getDefaultCategoryForType(resolvedListingType));
+      const sanitizedAttributes = sanitizeListingAttributes(
+        resolvedListingType,
+        resolvedCategory,
+        formData.attributes
+      );
 
       const listingData = {
         title: resolvedFirestoreTitle,
@@ -3127,26 +3184,28 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         titleEn: finalTitleEn,
         primaryLanguage: effectivePrimaryLang,
         description: formData.description.trim(),
-        descriptionGe: (formData.descriptionGe || formData.description).trim(),
+        descriptionGe: formData.description.trim(),
         price: parsedPrice,
         currency: formData.currency || 'USD',
-        sellerId: (viewMode === 'edit' && editingListing) ? editingListing.sellerId : user.uid,
-        sellerName: (viewMode === 'edit' && editingListing) ? (editingListing.sellerName || 'Unknown') : (user.displayName || user.email?.split('@')[0] || 'Unknown'),
+        sellerId: (isEdit && editingListing) ? editingListing.sellerId : user.uid,
+        sellerName: (isEdit && editingListing) ? (editingListing.sellerName || 'Unknown') : (user.displayName || user.email?.split('@')[0] || 'Unknown'),
         category: resolvedCategory,
-        location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
-        country: countryStr,
-        city: cityStr,
+        location: finalLocation,
+        country: finalCountry,
+        city: finalCity,
         image: (finalImages && finalImages[0]) || '',
         images: finalImages,
         createdAt: serverTimestamp(),
         status: 'active',
         lat: sanitizedLat,
         lng: sanitizedLng,
-        condition: formData.condition || 'new',
+        condition: activeSchema.showCondition ? (formData.condition || 'new') : '',
         isNegotiable: formData.isNegotiable ?? false,
         listingType: resolvedListingType,
-        serviceDuration: formData.serviceDuration || '',
-        serviceTerms: formData.serviceTerms || ''
+        isRemote: effectiveIsRemote,
+        attributes: sanitizedAttributes,
+        serviceDuration: activeSchema.showServiceTerms ? (formData.serviceDuration || '') : '',
+        serviceTerms: activeSchema.showServiceTerms ? (formData.serviceTerms || '') : ''
       };
 
       const savedTitle = primaryTitle;
@@ -3375,24 +3434,38 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       }
     }
 
+    const editListingType = inferListingType(listing.category, listing.listingType);
+    const editSchema = getCategoryFormSchema(editListingType, listing.category);
+    const inferredRemote =
+      editSchema.locationMode !== 'physical' &&
+      (typeof listing.isRemote === 'boolean'
+        ? listing.isRemote
+        : ((listing.country || '').trim().toUpperCase() === 'GLOBAL' &&
+          (listing.city || '').trim().toLowerCase() === 'online'));
+
     setFormData({
       title: editTitleEn,
       titleGe: editTitleGe,
       primaryLanguage: primaryLang,
-      description: listing.description,
+      description: listing.description || listing.descriptionGe || '',
       descriptionGe: listing.descriptionGe || '',
       price: listing.price.toString(),
       currency: listing.currency || 'USD',
       category: listing.category,
-      country: (listing as any).country || 'USA',
+      country: (listing as any).country || (inferredRemote ? 'GLOBAL' : 'USA'),
       city: (listing as any).city || '',
-      location: listing.location,
+      location: listing.location || '',
       images: listing.images || (listing.image ? [listing.image] : []),
       lat: listing.lat,
       lng: listing.lng,
       condition: listing.condition || 'new',
       isNegotiable: listing.isNegotiable || false,
-      listingType: inferListingType(listing.category, listing.listingType),
+      listingType: editListingType,
+      isRemote: inferredRemote,
+      attributes:
+        listing.attributes && typeof listing.attributes === 'object'
+          ? filterAttributesForSchema(editSchema, listing.attributes)
+          : {},
       serviceDuration: listing.serviceDuration || '',
       serviceTerms: listing.serviceTerms || ''
     });

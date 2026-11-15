@@ -14,7 +14,9 @@ import {
   Check,
   Edit3,
   Trash2,
-  Tag
+  Tag,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 import { Listing } from '../../types';
 import { cn } from '../../lib/utils';
@@ -30,6 +32,7 @@ import {
   formatOriginalCurrencyPrice,
   formatApproxCurrencyEquivalent
 } from './MarketConstants';
+import { getFormattedListingAttributes, isEffectiveRemoteListing } from './ListingSchemas';
 
 export interface ListingDetailsModalProps {
   listing: Listing | null;
@@ -137,15 +140,24 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   const formattedApprox = formatApproxCurrencyEquivalent(resolvedPrice, targetCurrency);
 
   const categoryLabel = getCategoryLabel(listing.category, t, language);
+  const isRemote = isEffectiveRemoteListing(listing);
+  const formattedAttributes = getFormattedListingAttributes(listing, language);
 
   const countryObj = WORLD_COUNTRIES.find((c) => c.code === listing.country);
-  const locationParts = [
-    countryObj ? `${countryObj.flag} ${countryObj.name}` : listing.country,
-    listing.city,
-    listing.location
-  ]
-    .map((part) => (typeof part === 'string' ? part.trim() : ''))
-    .filter(Boolean);
+  const isDefaultRemotePlaceholder =
+    isRemote &&
+    (listing.country || '').trim().toUpperCase() === 'GLOBAL' &&
+    (!(listing.city || '').trim() || (listing.city || '').trim().toLowerCase() === 'online');
+
+  const locationParts = isDefaultRemotePlaceholder
+    ? []
+    : [
+        countryObj ? `${countryObj.flag} ${countryObj.name}` : listing.country,
+        listing.city,
+        listing.location
+      ]
+        .map((part) => (typeof part === 'string' ? part.trim() : ''))
+        .filter(Boolean);
   const uniqueLocationParts = Array.from(new Set(locationParts));
 
   const getConditionLabel = (condition?: string) => {
@@ -517,15 +529,19 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
                     <div className="flex items-start justify-between gap-4">
                       <span className={cn('text-xs shrink-0 flex items-center gap-1', currentTheme.muted)}>
-                        <MapPin size={13} className="shrink-0" />
-                        <span>{language === 'ka' ? 'მისამართი' : 'Address'}</span>
+                        {isRemote ? <Globe size={13} className="shrink-0" /> : <MapPin size={13} className="shrink-0" />}
+                        <span>{language === 'ka' ? 'მისამართი / ფორმატი' : 'Location / Format'}</span>
                       </span>
                       <span className={cn('font-medium text-right break-words', currentTheme.text)}>
-                        {uniqueLocationParts.length > 0
-                          ? uniqueLocationParts.join(', ')
-                          : language === 'ka'
-                          ? 'მითითებული არ არის'
-                          : 'Not specified'}
+                        {isRemote
+                          ? (uniqueLocationParts.length > 0
+                            ? `${language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'} (${uniqueLocationParts.join(', ')})`
+                            : (language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'))
+                          : (uniqueLocationParts.length > 0
+                            ? uniqueLocationParts.join(', ')
+                            : language === 'ka'
+                            ? 'მითითებული არ არის'
+                            : 'Not specified')}
                       </span>
                     </div>
 
@@ -535,11 +551,53 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                           <span className={cn('text-xs shrink-0', currentTheme.muted)}>
                             {language === 'ka' ? 'ვადა / ხანგრძლივობა' : 'Duration'}
                           </span>
-                          <span className={cn('font-medium text-right', currentTheme.text)}>
+                          <span className={cn('font-medium text-right break-words', currentTheme.text)}>
                             {listing.serviceDuration}
                           </span>
                         </div>
                       )}
+
+                    {(listing.listingType === 'service' || listing.listingType === 'project') &&
+                      listing.serviceTerms && (
+                        <div className="flex items-start justify-between gap-4">
+                          <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                            {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms'}
+                          </span>
+                          <span className={cn('font-medium text-right break-words', currentTheme.text)}>
+                            {listing.serviceTerms}
+                          </span>
+                        </div>
+                      )}
+
+                    {formattedAttributes.length > 0 && (
+                      <div className={cn('pt-3 mt-1 border-t space-y-2.5', currentTheme.border)}>
+                        {formattedAttributes.map((attr) => (
+                          <div key={attr.key} className="flex items-start justify-between gap-4">
+                            <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                              {attr.label}
+                            </span>
+                            {attr.isSafeUrl ? (
+                              <a
+                                href={attr.value}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(
+                                  'font-medium text-right underline break-all inline-flex items-center gap-1 justify-end',
+                                  currentTheme.accent
+                                )}
+                              >
+                                <span>{attr.value}</span>
+                                <ExternalLink size={12} className="shrink-0" />
+                              </a>
+                            ) : (
+                              <span className={cn('font-medium text-right break-words', currentTheme.text)}>
+                                {attr.value}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Full Description */}

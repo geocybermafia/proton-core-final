@@ -147,9 +147,9 @@ export const translations = {
         clear_all: "Clear All Filters"
       },
       form: {
-        title: "Product Name",
+        title: "Listing Title",
         category: "Category",
-        description: "Description",
+        description: "Listing Description",
         price: "Price",
         currency: "Currency",
         image_url: "Photo Selection",
@@ -645,9 +645,9 @@ export const translations = {
         clear_all: "ფილტრების გასუფთავება"
       },
       form: {
-        title: "ნივთის სახელი",
+        title: "განცხადების სათაური",
         category: "კატეგორია",
-        description: "აღწერა",
+        description: "განცხადების აღწერა",
         price: "ფასი",
         currency: "ვალუტა",
         image_url: "ფოტოს შერჩევა",
