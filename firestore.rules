@@ -109,7 +109,7 @@ service cloud.firestore {
         && getStr(data, 'category', '').size() <= 50
         && getStr(data, 'country', '').size() <= 50
         && getStr(data, 'city', '').size() <= 50
-        && (getStr(data, 'status', 'active') in ['active', 'sold'])
+        && (getStr(data, 'status', 'active') in ['active', 'reserved', 'sold'])
         && getStr(data, 'description', '').size() <= 5000
         && getStr(data, 'image', '').size() <= 2000000;
     }
