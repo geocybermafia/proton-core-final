@@ -2928,6 +2928,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
   const handleSubmitListing = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formStep !== 4) {
+      return;
+    }
     if (!user) {
       showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია განცხადების დასადებად" : "Please log in to post a listing.", 'warning');
       return;
@@ -5396,6 +5399,18 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           handleFileUpload={handleFileUpload}
           isAiGenerating={isAiGenerating}
           handleAiDescription={handleAiDescription}
+          displayCurrency={displayCurrency}
+          convertPrice={convertPrice}
+          sellerName={
+            viewMode === 'edit' && editingListing
+              ? editingListing.sellerName
+              : (user?.displayName || user?.email?.split('@')[0] || undefined)
+          }
+          sellerRating={
+            viewMode === 'edit' && editingListing
+              ? sellerRatings[editingListing.sellerId]
+              : (user?.uid ? sellerRatings[user.uid] : undefined)
+          }
         />
       )}
       {/* Footer */}

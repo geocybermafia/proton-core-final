@@ -16,7 +16,6 @@ import {
   Trash2,
   Eye,
   Edit3,
-  ShoppingBag,
   Languages
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -25,12 +24,14 @@ import {
   CURRENCIES,
   WORLD_COUNTRIES,
   CATEGORY_EMOJIS,
-  getListingTitle,
   getCategoriesForListingType,
   getCategoryLabel,
   getDefaultCategoryForType,
-  isCategoryValidForType
+  isCategoryValidForType,
+  roundPriceForDisplayCurrency
 } from './MarketConstants';
+import { Listing } from '../../types';
+import { MarketListingCard } from './MarketListingCard';
 import { FastInput } from './FastInputs';
 import { MapPicker } from '../MapPicker';
 import { useToast } from '../Toast';
@@ -76,6 +77,10 @@ export interface CreateListingWizardProps {
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isAiGenerating: boolean;
   handleAiDescription: () => void;
+  displayCurrency?: string;
+  convertPrice?: (price: number, from: string, to: string) => number;
+  sellerName?: string;
+  sellerRating?: { avg: number; count: number };
 }
 
 export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
@@ -95,6 +100,10 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   handleFileUpload,
   isAiGenerating,
   handleAiDescription,
+  displayCurrency,
+  convertPrice,
+  sellerName,
+  sellerRating,
 }) => {
   const { showToast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -128,6 +137,129 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     return formData.condition || (language === 'ka' ? 'ახალი' : 'New');
   }, [formData.condition, language]);
 
+  const effectivePrimaryLang: 'ka' | 'en' = React.useMemo(() => {
+    const rawTitleEn = (formData.title || '').trim();
+    const rawTitleGe = (formData.titleGe || '').trim();
+    let lang: 'ka' | 'en' = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+    if (lang === 'ka' && !rawTitleGe && rawTitleEn) {
+      lang = 'en';
+    } else if (lang === 'en' && !rawTitleEn && rawTitleGe) {
+      lang = 'ka';
+    }
+    return lang;
+  }, [formData.primaryLanguage, formData.title, formData.titleGe, language]);
+
+  const validImages = React.useMemo(
+    () => (formData.images || []).map(img => (typeof img === 'string' ? img.trim() : '')).filter(Boolean),
+    [formData.images]
+  );
+
+  const parsedPreviewPrice = React.useMemo(() => {
+    const priceStr = String(formData.price || '').trim().replace(',', '.');
+    const parsed = parseFloat(priceStr);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }, [formData.price]);
+
+  const activeDisplayCurrency = displayCurrency || formData.currency || 'USD';
+  const activeConvertPrice = React.useCallback(
+    (amount: number, from: string, to: string) =>
+      convertPrice ? convertPrice(amount, from, to) : amount,
+    [convertPrice]
+  );
+
+  const previewListing: Listing = React.useMemo(() => {
+    const rawTitleEn = (formData.title || '').trim();
+    const rawTitleGe = (formData.titleGe || '').trim();
+    const primaryTitle = effectivePrimaryLang === 'ka' ? rawTitleGe : rawTitleEn;
+    const resolvedDesc = (formData.description || '').trim();
+    const resolvedDescGe = (formData.descriptionGe || formData.description || '').trim();
+
+    return {
+      id: 'preview-listing',
+      title: primaryTitle || rawTitleGe || rawTitleEn,
+      titleGe: rawTitleGe || undefined,
+      titleEn: rawTitleEn || undefined,
+      primaryLanguage: effectivePrimaryLang,
+      description: resolvedDesc,
+      descriptionGe: resolvedDescGe || undefined,
+      price: parsedPreviewPrice,
+      currency: formData.currency || 'USD',
+      sellerId: 'preview-seller',
+      sellerName: sellerName || (language === 'ka' ? 'თქვენი პროფილი' : 'Your Profile'),
+      image: validImages[0] || '',
+      images: validImages,
+      category: formData.category,
+      location: (formData.location || '').trim(),
+      country: formData.country,
+      city: (formData.city || '').trim(),
+      lat: formData.lat,
+      lng: formData.lng,
+      createdAt: Date.now(),
+      status: 'active',
+      condition: formData.listingType === 'product' ? (formData.condition || 'new') : undefined,
+      isNegotiable: Boolean(formData.isNegotiable),
+      listingType: formData.listingType,
+      serviceDuration: formData.listingType === 'service' ? (formData.serviceDuration || '').trim() : '',
+      serviceTerms: formData.listingType === 'service' ? (formData.serviceTerms || '').trim() : '',
+    };
+  }, [
+    effectivePrimaryLang,
+    formData.title,
+    formData.titleGe,
+    formData.description,
+    formData.descriptionGe,
+    formData.currency,
+    formData.category,
+    formData.location,
+    formData.country,
+    formData.city,
+    formData.lat,
+    formData.lng,
+    formData.listingType,
+    formData.condition,
+    formData.isNegotiable,
+    formData.serviceDuration,
+    formData.serviceTerms,
+    parsedPreviewPrice,
+    sellerName,
+    language,
+    validImages,
+  ]);
+
+  const previewPriceMap = React.useMemo(() => {
+    const map = new Map<string, number>();
+    const converted = activeConvertPrice(
+      parsedPreviewPrice,
+      (formData.currency || 'USD').trim().toUpperCase(),
+      activeDisplayCurrency.trim().toUpperCase()
+    );
+    map.set('preview-listing', roundPriceForDisplayCurrency(converted, activeDisplayCurrency));
+    return map;
+  }, [activeConvertPrice, parsedPreviewPrice, formData.currency, activeDisplayCurrency]);
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    if (formStep !== 4) {
+      e.preventDefault();
+      return;
+    }
+    handleSubmitListing(e);
+  };
+
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key !== 'Enter') return;
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const tagName = target.tagName.toLowerCase();
+    if (tagName === 'textarea' || tagName === 'button') {
+      return;
+    }
+
+    if (formStep < 4) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 30 }}
@@ -143,7 +275,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       <div className="absolute top-0 left-0 w-64 h-64 bg-proton-accent/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-proton-secondary/10 rounded-full blur-[100px] pointer-events-none" />
 
-      <form onSubmit={handleSubmitListing} className="space-y-10 relative z-10">
+      <form onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-10 relative z-10">
         {/* Dynamic Interactive Steps Header */}
         <div className="flex flex-col gap-6 mb-8 pb-8 border-b border-proton-border">
           <div className="flex items-center justify-between">
@@ -956,7 +1088,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <input 
                   type="url"
                   value={formData.images?.[0] || ''}
-                  onChange={e => setFormData({...formData, images: [e.target.value]})}
+                  onChange={e => setFormData({...formData, images: e.target.value ? [e.target.value] : []})}
                   placeholder={language === 'ka' ? '...ან ჩასვით სურათის გარე ბმული (URL)' : '...or paste external image link URL'}
                   className={cn(
                     "w-full pl-10.5 pr-4 py-3 rounded-2xl border text-[11px] font-bold shadow-inner transition-all",
@@ -993,184 +1125,260 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   <p className={cn("text-[10px] font-semibold mt-0.5", currentTheme.muted)}>
                     {language === 'ka' 
                       ? 'ასე გამოჩნდება თქვენი განცხადება ბაზარზე. გადაამოწმეთ ინფორმაცია გამოქვეყნებამდე.' 
-                      : 'This is how your listing will appear to buyers. Review all details before publishing.'}
+                      : 'This is how your listing will appear in the marketplace. Review all details before publishing.'}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Live Buyer-Facing Marketplace Card Mockup */}
-            <div className="flex flex-col items-center">
-              <div className={cn("w-full max-w-sm rounded-2xl overflow-hidden border shadow-xl relative group", currentTheme.card)}>
-                {/* Card Image Container */}
-                <div className="w-full aspect-[4/3] bg-proton-bg relative overflow-hidden flex items-center justify-center">
-                  {formData.images?.[0] ? (
-                    <img 
-                      src={formData.images[0]} 
-                      alt={formData.title || formData.titleGe || 'Listing'} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className={cn("flex flex-col items-center gap-2", currentTheme.muted)}>
-                      <ShoppingBag size={36} className={cn("opacity-40", currentTheme.accent)} />
-                      <span className="text-[9px] font-mono uppercase tracking-widest">
-                        {language === 'ka' ? 'ფოტოს გარეშე' : 'No Photo'}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Top floating badges */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-                    <span className="px-2 py-1 rounded-lg bg-proton-card/90 backdrop-blur-md border border-proton-border text-[9px] font-black uppercase tracking-wider text-proton-text flex items-center gap-1">
-                      <span>{CATEGORY_EMOJIS[formData.category] || '🏷️'}</span>
-                      <span>{getCategoryLabel(formData.category, t, language)}</span>
-                    </span>
-                  </div>
-
-                  <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
-                    <span className="px-2 py-1 rounded-lg bg-proton-card/90 backdrop-blur-md border border-proton-border text-[9px] font-bold text-proton-text flex items-center gap-1">
-                      <span>{selectedCountry?.flag || '🌐'}</span>
-                      <span>{formData.city || selectedCountry?.name || 'Global'}</span>
-                    </span>
-                  </div>
-
-                  {/* Condition or Listing Type Badge */}
-                  <div className="absolute bottom-3 left-3 z-10">
-                    <span className="px-2.5 py-1 rounded-lg bg-proton-card/95 backdrop-blur-md border border-proton-accent/40 text-[8px] font-mono font-black text-proton-accent uppercase tracking-wider">
-                      {formData.listingType === 'service' 
-                        ? (language === 'ka' ? 'სერვისი' : 'SERVICE') 
-                        : formData.listingType === 'project'
-                        ? (language === 'ka' ? 'პროექტი' : 'PROJECT')
-                        : conditionLabel}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Card Body */}
-                <div className="p-4 space-y-3">
-                  <div>
-                    <h4 className={cn("text-sm font-black line-clamp-1", currentTheme.text)}>
-                      {getListingTitle(formData, language) || '—'}
-                    </h4>
-                    {formData.titleGe && formData.title && formData.titleGe !== formData.title && (
-                      <p className={cn("text-[10px] font-semibold line-clamp-1 mt-0.5", currentTheme.muted)}>
-                        {language === 'ka' ? formData.title : formData.titleGe}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Price and Escrow */}
-                  <div className="flex items-center justify-between pt-1 border-t border-proton-border">
-                    <div>
-                      <span className={cn("text-[9px] font-mono block uppercase tracking-wider", currentTheme.muted)}>
-                        {language === 'ka' ? 'ფასი' : 'PRICE'}
-                      </span>
-                      <span className={cn("text-base font-black font-mono", currentTheme.accent)}>
-                        {parseFloat(formData.price || '0').toLocaleString(undefined, { maximumFractionDigits: 2 })} {formData.currency}
-                      </span>
-                    </div>
-
-                    <div className="text-right">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-500 text-[8px] font-black uppercase tracking-wider">
-                        <ShieldCheck size={11} className="stroke-[2.5]" />
-                        <span>ESCROW</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Simulated Buyer Actions */}
-                  <div className="grid grid-cols-2 gap-2 pt-2">
-                    <div className="py-2 px-3 rounded-xl bg-proton-accent/15 border border-proton-accent/35 text-proton-accent text-[9px] font-black uppercase tracking-wider text-center select-none opacity-85">
-                      {language === 'ka' ? 'ყიდვა (მყიდველი)' : 'Buy Now (Mock)'}
-                    </div>
-                    <div className="py-2 px-3 rounded-xl bg-proton-bg border border-proton-border text-proton-muted text-[9px] font-black uppercase tracking-wider text-center select-none opacity-85">
-                      {language === 'ka' ? 'ჩატი (მყიდველი)' : 'Chat (Mock)'}
-                    </div>
-                  </div>
-                </div>
+            {/* Real Buyer-Facing Marketplace Card Preview */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-full max-w-sm">
+                <MarketListingCard
+                  listing={previewListing}
+                  idx={0}
+                  user={null}
+                  language={language}
+                  t={t}
+                  currentTheme={currentTheme}
+                  priceMap={previewPriceMap}
+                  convertPrice={activeConvertPrice}
+                  displayCurrency={activeDisplayCurrency}
+                  isFavorite={false}
+                  toggleFavorite={() => {}}
+                  sellerRating={sellerRating}
+                  onSelectListing={() => {
+                    document.getElementById('listing-preview-details')?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'nearest',
+                    });
+                  }}
+                  onSelectVendor={() => {}}
+                  onStartEdit={() => {}}
+                  onDeleteListing={() => {}}
+                />
               </div>
+
+              <p className={cn("text-[11px] text-center max-w-md leading-relaxed", currentTheme.muted)}>
+                {language === 'ka'
+                  ? 'გადახდის და მიწოდების პირობებზე მყიდველი და გამყიდველი თანხმდებიან უშუალოდ.'
+                  : 'Payment and delivery terms are agreed directly between buyer and seller.'}
+              </p>
             </div>
 
             {/* Summary Details & Quick Edit Jump Links */}
-            <div className="space-y-3">
-              <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center justify-between", currentTheme.muted)}>
-                <span>📋 {language === 'ka' ? 'მონაცემების შემოწმება' : 'Details Breakdown'}</span>
-                <span className={cn("text-[8px] font-mono uppercase", currentTheme.tagMuted)}>
-                  {language === 'ka' ? 'შეცდომის შემთხვევაში დააჭირეთ „შეცვლას“' : 'Click edit to adjust any section'}
-                </span>
-              </div>
+            {(() => {
+              const rawTitleEn = (formData.title || '').trim();
+              const rawTitleGe = (formData.titleGe || '').trim();
+              const secondaryTitle = rawTitleEn && rawTitleGe && rawTitleEn !== rawTitleGe
+                ? (effectivePrimaryLang === 'ka' ? rawTitleEn : rawTitleGe)
+                : '';
+              const trimmedAddress = (formData.location || '').trim();
+              const trimmedDuration = (formData.serviceDuration || '').trim();
+              const trimmedTerms = (formData.serviceTerms || '').trim();
+              const hasGpsCoords =
+                typeof formData.lat === 'number' &&
+                !isNaN(formData.lat) &&
+                typeof formData.lng === 'number' &&
+                !isNaN(formData.lng);
+              const step2Title =
+                formData.listingType === 'service'
+                  ? (language === 'ka' ? 'ნაბიჯი 2: ფასი და პირობები' : 'Step 2: Price & Terms')
+                  : formData.listingType === 'project'
+                  ? (language === 'ka' ? 'ნაბიჯი 2: ბიუჯეტი და ფასი' : 'Step 2: Budget & Price')
+                  : (language === 'ka' ? 'ნაბიჯი 2: ფასი და მდგომარეობა' : 'Step 2: Price & Condition');
+              const showOriginalCurrencyLine =
+                activeDisplayCurrency.trim().toUpperCase() !== (formData.currency || 'USD').trim().toUpperCase();
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Step 1 Review */}
-                <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.accent)}>
-                        {language === 'ka' ? 'ნაბიჯი 1: კატეგორია' : 'Step 1: Category'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setFormStep(1)}
-                        className={cn("text-[9px] font-black hover:underline flex items-center gap-1 cursor-pointer", currentTheme.accent)}
-                      >
-                        <Edit3 size={10} />
-                        <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
-                      </button>
+              return (
+                <div id="listing-preview-details" className="space-y-3">
+                  <div className={cn("text-[10px] font-black uppercase tracking-widest flex items-center justify-between", currentTheme.muted)}>
+                    <span>📋 {language === 'ka' ? 'მონაცემების შემოწმება' : 'Details Breakdown'}</span>
+                    <span className={cn("text-[8px] font-mono uppercase", currentTheme.tagMuted)}>
+                      {language === 'ka' ? 'შეცდომის შემთხვევაში დააჭირეთ „შეცვლას“' : 'Click edit to adjust any section'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Step 1 Review: Type, Language & Secondary Title */}
+                    <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.accent)}>
+                            {language === 'ka' ? 'ნაბიჯი 1: ტიპი' : 'Step 1: Type'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFormStep(1)}
+                            className={cn("text-[9px] font-black hover:underline flex items-center gap-1 cursor-pointer", currentTheme.accent)}
+                          >
+                            <Edit3 size={10} />
+                            <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-proton-accent/15 border border-proton-accent/30 text-proton-accent">
+                            {formData.listingType === 'service'
+                              ? (language === 'ka' ? '⚡ სერვისი' : '⚡ SERVICE')
+                              : formData.listingType === 'project'
+                              ? (language === 'ka' ? '🚀 პროექტი' : '🚀 PROJECT')
+                              : (language === 'ka' ? '📦 პროდუქტი' : '📦 PRODUCT')}
+                          </span>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-proton-card border border-proton-border text-proton-muted">
+                            {effectivePrimaryLang === 'ka'
+                              ? (language === 'ka' ? 'ენა: ქართული' : 'Primary: KA')
+                              : (language === 'ka' ? 'ენა: ინგლისური' : 'Primary: EN')}
+                          </span>
+                        </div>
+
+                        {secondaryTitle && (
+                          <div className="pt-1">
+                            <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
+                              {effectivePrimaryLang === 'ka'
+                                ? (language === 'ka' ? 'სათაური (EN)' : 'English Title')
+                                : (language === 'ka' ? 'სათაური (GE)' : 'Georgian Title')}
+                            </span>
+                            <p className={cn("text-xs font-semibold line-clamp-2 mt-0.5", currentTheme.text)}>
+                              {secondaryTitle}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className={cn("text-xs font-bold line-clamp-1", currentTheme.text)}>{getListingTitle(formData, language) || '—'}</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {formData.listingType === 'service'
-                          ? (language === 'ka' ? 'სერვისი' : 'SERVICE')
-                          : formData.listingType === 'project'
-                          ? (language === 'ka' ? 'პროექტი' : 'PROJECT')
-                          : (language === 'ka' ? 'პროდუქტი' : 'PRODUCT')}
-                      </span>
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {getCategoryLabel(formData.category, t, language)}
-                      </span>
+
+                    {/* Step 2 Review: Adapted strictly by Listing Type */}
+                    <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.accent)}>
+                            {step2Title}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFormStep(2)}
+                            className={cn("text-[9px] font-black hover:underline flex items-center gap-1 cursor-pointer", currentTheme.accent)}
+                          >
+                            <Edit3 size={10} />
+                            <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                          </button>
+                        </div>
+
+                        {showOriginalCurrencyLine && (
+                          <p className={cn("text-xs font-bold font-mono", currentTheme.text)}>
+                            {parsedPreviewPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} {formData.currency}
+                          </p>
+                        )}
+
+                        {formData.listingType === 'product' && (
+                          <div className="space-y-1">
+                            <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
+                              {language === 'ka' ? 'ნივთის მდგომარეობა' : 'Item Condition'}
+                            </span>
+                            <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md bg-proton-card border border-proton-border text-proton-text">
+                              {conditionLabel}
+                            </span>
+                          </div>
+                        )}
+
+                        {formData.listingType === 'service' && (
+                          <div className="space-y-2">
+                            {trimmedDuration && (
+                              <div>
+                                <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
+                                  ⏱️ {language === 'ka' ? 'შესრულების ვადა' : 'Completion Time'}
+                                </span>
+                                <p className={cn("text-xs font-bold mt-0.5 break-words", currentTheme.text)}>
+                                  {trimmedDuration}
+                                </p>
+                              </div>
+                            )}
+                            {trimmedTerms && (
+                              <div>
+                                <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
+                                  📋 {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms'}
+                                </span>
+                                <p className={cn("text-xs font-semibold mt-0.5 break-words", currentTheme.text)}>
+                                  {trimmedTerms}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {formData.listingType === 'project' && !showOriginalCurrencyLine && !formData.isNegotiable && (
+                          <p className={cn("text-xs font-bold font-mono", currentTheme.text)}>
+                            {parsedPreviewPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })} {formData.currency}
+                          </p>
+                        )}
+
+                        {formData.isNegotiable && (
+                          <div>
+                            <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/25 text-emerald-500">
+                              {language === 'ka' ? 'ფასი შეთანხმებით' : 'Negotiable'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Step 3 Review: Address, Media & GPS */}
+                    <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.accent)}>
+                            {language === 'ka' ? 'ნაბიჯი 3: მდებარეობა და მედია' : 'Step 3: Location & Media'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFormStep(3)}
+                            className={cn("text-[9px] font-black hover:underline flex items-center gap-1 cursor-pointer", currentTheme.accent)}
+                          >
+                            <Edit3 size={10} />
+                            <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
+                          </button>
+                        </div>
+
+                        {trimmedAddress && (
+                          <div>
+                            <span className={cn("text-[9px] font-bold block uppercase tracking-wider", currentTheme.muted)}>
+                              📍 {language === 'ka' ? 'დეტალური მისამართი' : 'Detailed Address'}
+                            </span>
+                            <p className={cn("text-xs font-semibold mt-0.5 break-words", currentTheme.text)}>
+                              {trimmedAddress}
+                            </p>
+                          </div>
+                        )}
+
+                        {(validImages.length > 0 || hasGpsCoords) && (
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {validImages.length > 0 && (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-proton-card border border-proton-border text-proton-text">
+                                🖼️ {validImages.length} {language === 'ka' ? 'ფოტო' : validImages.length === 1 ? 'Photo' : 'Photos'}
+                              </span>
+                            )}
+                            {hasGpsCoords && (
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-proton-card border border-proton-border text-proton-text">
+                                🛰️ {language === 'ka' ? 'რუკაზე მონიშნულია' : 'Map Pinned'}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {!trimmedAddress && validImages.length === 0 && !hasGpsCoords && (
+                          <p className={cn("text-xs font-semibold", currentTheme.text)}>
+                            {selectedCountry?.flag} {formData.city}{selectedCountry?.name ? `, ${selectedCountry.name}` : ''}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Step 2 Review */}
-                <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
-                  <div className="space-y-1.5">
+                  {/* Description Preview */}
+                  <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.accent)}>
-                        {language === 'ka' ? 'ნაბიჯი 2: ფასი' : 'Step 2: Price'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setFormStep(2)}
-                        className={cn("text-[9px] font-black hover:underline flex items-center gap-1 cursor-pointer", currentTheme.accent)}
-                      >
-                        <Edit3 size={10} />
-                        <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
-                      </button>
-                    </div>
-                    <p className={cn("text-xs font-bold font-mono", currentTheme.text)}>{formData.price} {formData.currency}</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {formData.listingType === 'product' && (
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                          {conditionLabel}
-                        </span>
-                      )}
-                      {formData.isNegotiable && (
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-500">
-                          {language === 'ka' ? 'მოლაპარაკებადი' : 'Negotiable'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Step 3 Review */}
-                <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col justify-between gap-3">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.accent)}>
-                        {language === 'ka' ? 'ნაბიჯი 3: ლოკაცია' : 'Step 3: Location'}
+                      <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.muted)}>
+                        {language === 'ka' ? 'აღწერა' : 'Description'}
                       </span>
                       <button
                         type="button"
@@ -1181,41 +1389,13 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
                       </button>
                     </div>
-                    <p className={cn("text-xs font-bold line-clamp-1", currentTheme.text)}>
-                      {selectedCountry?.flag} {formData.city}, {selectedCountry?.name}
+                    <p className={cn("text-xs font-sans whitespace-pre-line break-words leading-relaxed max-h-32 overflow-y-auto", currentTheme.subtext)}>
+                      {formData.description.trim()}
                     </p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {formData.images?.[0] ? (language === 'ka' ? '1 ფოტო' : '1 Photo') : (language === 'ka' ? 'ფოტოს გარეშე' : 'No Photo')}
-                      </span>
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {formData.lat !== undefined && formData.lat !== null ? (language === 'ka' ? 'GPS მონიშნულია' : 'GPS Pinned') : (language === 'ka' ? 'GPS გარეშე' : 'No GPS')}
-                      </span>
-                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Description Preview */}
-              <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className={cn("text-[9px] font-mono font-black uppercase tracking-wider", currentTheme.muted)}>
-                    {language === 'ka' ? 'აღწერა' : 'Description'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setFormStep(3)}
-                    className={cn("text-[9px] font-black hover:underline flex items-center gap-1 cursor-pointer", currentTheme.accent)}
-                  >
-                    <Edit3 size={10} />
-                    <span>{language === 'ka' ? 'შეცვლა' : 'Edit'}</span>
-                  </button>
-                </div>
-                <p className={cn("text-xs font-sans whitespace-pre-line leading-relaxed max-h-32 overflow-y-auto", currentTheme.subtext)}>
-                  {formData.description || '—'}
-                </p>
-              </div>
-            </div>
+              );
+            })()}
           </motion.div>
         )}
 
