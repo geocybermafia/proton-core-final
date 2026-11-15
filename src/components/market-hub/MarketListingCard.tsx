@@ -34,6 +34,7 @@ export interface ListingCardImageProps {
   isSold?: boolean;
   language: string;
   themeAccent?: string;
+  category?: string;
 }
 
 export const ListingCardImage = React.memo(function ListingCardImage({
@@ -41,7 +42,8 @@ export const ListingCardImage = React.memo(function ListingCardImage({
   alt,
   isSold,
   language,
-  themeAccent
+  themeAccent,
+  category
 }: ListingCardImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -52,7 +54,7 @@ export const ListingCardImage = React.memo(function ListingCardImage({
   }, [src]);
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-proton-bg">
+    <div className="w-full h-44 sm:h-48 overflow-hidden relative shrink-0 bg-proton-bg">
       {!isLoaded && !hasError && src && (
         <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/40 flex items-center justify-center">
           <div className="w-7 h-7 rounded-full border-2 border-proton-border border-t-proton-accent animate-spin opacity-60" />
@@ -69,15 +71,17 @@ export const ListingCardImage = React.memo(function ListingCardImage({
             setIsLoaded(true);
           }}
           className={cn(
-            "w-full h-full object-cover transition-all duration-500 ease-out",
+            "w-full h-full object-cover object-center block transition-all duration-500 ease-out",
             isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
           )}
           whileHover={{ scale: isSold ? 1.0 : 1.04 }}
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-proton-bg/80">
-          <ShoppingBag size={24} className={cn("opacity-25", themeAccent)} />
+        <div className="w-full h-full flex items-center justify-center bg-slate-800/60">
+          <span className="text-3xl select-none" aria-hidden="true">
+            {CATEGORY_EMOJIS[category || ''] || '🏷️'}
+          </span>
         </div>
       )}
 
@@ -221,19 +225,20 @@ export const MarketListingCard = React.memo(function MarketListingCard({
         onSelectListing(listing);
       }}
       className={cn(
-        "group rounded-xl overflow-hidden transition-all duration-300 flex flex-col relative border hover:shadow-xl hover:-translate-y-1 cursor-pointer min-w-0",
+        "group rounded-xl overflow-hidden transition-all duration-300 flex flex-col h-full w-full relative border hover:shadow-xl hover:-translate-y-1 cursor-pointer min-w-0",
         currentTheme.card,
         isItemSold ? "opacity-85" : "hover:border-proton-accent/45"
       )}
     >
       {/* 1. Product Photo */}
-      <div className="w-full aspect-[4/3] bg-proton-bg relative">
+      <div className="w-full h-44 sm:h-48 overflow-hidden relative shrink-0 bg-proton-bg">
         <ListingCardImage
           src={imageUrl}
           alt={displayTitle}
           isSold={isItemSold}
           language={language}
           themeAccent={currentTheme.accent}
+          category={listing.category}
         />
 
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
