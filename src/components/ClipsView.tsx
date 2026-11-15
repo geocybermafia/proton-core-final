@@ -43,6 +43,7 @@ import { useToast } from './Toast';
 import { Clip, ClipComment, ClipIssue, MarketplaceItem, Order } from '../types';
 
 import { PRESET_LOOPS } from './clips/types';
+import { isRuleServiceOrProjectOrderTarget } from './market-hub/MarketConstants';
 import { ClipPlayer } from './clips/ClipPlayer';
 import { ClipCommentsDrawer } from './clips/ClipCommentsDrawer';
 import { ClipUploadModal } from './clips/ClipUploadModal';
@@ -977,7 +978,7 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
             throw new Error(language === 'ka' ? 'ეს ნივთი უკვე გაყიდულია.' : 'This item has already been sold.');
           }
 
-          const isService = freshData.category === 'service' || freshData.listingType === 'service';
+          const isService = isRuleServiceOrProjectOrderTarget(freshData);
           finalOrderStatus = isService ? 'booked' : 'pending';
           const verifiedOrderData = {
             listingId: productId,

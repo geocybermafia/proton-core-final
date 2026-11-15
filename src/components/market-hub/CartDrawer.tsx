@@ -194,7 +194,9 @@ export const CartDrawer = React.memo(function CartDrawer({
               ) : (
                 <>
                   {cart.map((item) => {
-                    const isService = isServiceListing(item) || isProjectListing(item);
+                    const isServiceType = isServiceListing(item);
+                    const isProjectType = isProjectListing(item);
+                    const isService = isServiceType || isProjectType;
                     return (
                       <motion.div 
                         layout
@@ -222,7 +224,9 @@ export const CartDrawer = React.memo(function CartDrawer({
                                 ? "bg-amber-500/15 border border-amber-500/30 text-amber-500"
                                 : "bg-emerald-500/15 border border-emerald-500/30 text-emerald-500"
                             )}>
-                              {isService
+                              {isProjectType
+                                ? (language === 'ka' ? '🚀 პროექტი' : '🚀 Project')
+                                : isServiceType
                                 ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
                                 : (language === 'ka' ? 'ნივთი' : 'Product')}
                             </span>
@@ -264,8 +268,12 @@ export const CartDrawer = React.memo(function CartDrawer({
                           <div className="pt-2 border-t border-proton-border space-y-1.5">
                             <div className="flex items-center justify-between text-[9px] font-bold">
                               <label htmlFor={`cart-instructions-${item.id}`} className="text-amber-500 flex items-center gap-1 uppercase tracking-wider">
-                                <span>⚡</span>
-                                <span>{language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Service Instructions'}</span>
+                                <span>{isProjectType ? '🚀' : '⚡'}</span>
+                                <span>
+                                  {isProjectType
+                                    ? (language === 'ka' ? 'პროექტის დეტალები / ინსტრუქცია' : 'Project Instructions')
+                                    : (language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Service Instructions')}
+                                </span>
                               </label>
                               <span className={cn(
                                 "font-mono text-[9px]",

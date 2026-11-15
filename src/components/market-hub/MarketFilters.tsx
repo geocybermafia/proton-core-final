@@ -14,6 +14,7 @@ import {
   WORLD_COUNTRIES, 
   CATEGORY_EMOJIS, 
   MarketTheme,
+  getCategoryLabel,
   formatCurrencyAmount,
   getCurrencyPricePresets,
   parsePriceFilterInput
@@ -124,7 +125,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 onClick={() => setActiveCategory('all')}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-proton-accent/10 border border-proton-accent/25 text-[10px] font-bold text-proton-accent hover:bg-proton-accent/20 transition-all cursor-pointer"
               >
-                <span>{CATEGORY_EMOJIS[activeCategory] || ''} {t.market.categories[activeCategory] || activeCategory}</span>
+                <span>{CATEGORY_EMOJIS[activeCategory] || ''} {getCategoryLabel(activeCategory, t, language)}</span>
                 <X size={10} className="shrink-0" />
               </button>
             )}

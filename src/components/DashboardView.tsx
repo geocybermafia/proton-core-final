@@ -118,7 +118,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
               descriptionGe: fullDesc,
               price: '',
               currency: isKa ? 'GEL' : 'USD',
-              category: 'technics',
+              category: 'service',
               country: isKa ? 'GEO' : 'USA',
               city: '',
               location: '',

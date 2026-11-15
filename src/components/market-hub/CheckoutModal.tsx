@@ -9,6 +9,7 @@ import {
   isServiceListing,
   isProjectListing,
   getListingTitle,
+  getCategoryLabel,
   formatCurrencyAmount,
   formatOriginalCurrencyPrice,
   formatApproxCurrencyEquivalent
@@ -201,7 +202,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                       ? "bg-amber-500/15 border border-amber-500/30 text-amber-500"
                       : "bg-emerald-500/15 border border-emerald-500/30 text-emerald-500"
                   )}>
-                    {t.market.categories[checkoutItem.category as keyof typeof t.market.categories] || checkoutItem.category}
+                    {getCategoryLabel(checkoutItem.category, t, language)}
                   </span>
                   <h4 className="text-sm sm:text-base font-bold text-proton-text uppercase tracking-tight line-clamp-1">
                     {getListingTitle(checkoutItem, language)}

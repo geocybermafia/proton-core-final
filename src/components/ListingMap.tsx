@@ -27,21 +27,6 @@ export const MAP_TILE_URLS = {
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
 } as const;
 
-const LEGACY_CATEGORY_TO_TRANSLATION_KEY: Record<string, string> = {
-  rent: 'service',
-  garden: 'home',
-  building: 'home',
-  'family-technic': 'technics',
-  kids: 'fashion',
-  village: 'business',
-  sport: 'hobby',
-  art: 'hobby',
-  book: 'hobby',
-  music: 'hobby',
-  hunting: 'hobby',
-  animals: 'hobby',
-};
-
 export function getSafeMapImageUrl(rawUrl: unknown): string | null {
   if (typeof rawUrl !== 'string') return null;
   const trimmed = rawUrl.trim();
@@ -76,10 +61,12 @@ export function getLocalizedMapCategory(
   if (categoryMap) {
     if (categoryMap[raw]) return categoryMap[raw];
     if (categoryMap[normalized]) return categoryMap[normalized];
-    const mappedKey = LEGACY_CATEGORY_TO_TRANSLATION_KEY[normalized];
-    if (mappedKey && categoryMap[mappedKey]) {
-      return categoryMap[mappedKey];
-    }
+  }
+
+  const fallbackMap = translations[language]?.market?.categories as Record<string, string> | undefined;
+  if (fallbackMap) {
+    if (fallbackMap[raw]) return fallbackMap[raw];
+    if (fallbackMap[normalized]) return fallbackMap[normalized];
   }
 
   return raw.replace(/[-_]+/g, ' ');

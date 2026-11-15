@@ -16,7 +16,11 @@ import { Listing, Order } from '../types';
 import { LedgerItem } from './MarketHubContext';
 import { uploadProductImage, validateListingImageUrl } from '../lib/storageUtils';
 import { executeSecureTransaction } from '../services/cloudFunctionsService';
-import { isRealListing } from '../components/market-hub/MarketConstants';
+import {
+  isRealListing,
+  inferListingType,
+  isRuleServiceOrProjectOrderTarget
+} from '../components/market-hub/MarketConstants';
 export { isRealListing };
 
 export interface CreateListingPayload {
@@ -480,7 +484,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       createdAt: Date.now(),
       status: status as any,
       isSold: false,
-      listingType: payload.listingType || 'product'
+      listingType: inferListingType(payload.category, payload.listingType)
     };
 
     // If status is 'draft' or price <= 0: Keep draft purely in local React state without calling Firestore setDoc
@@ -558,7 +562,7 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const category = payload.category?.trim() || 'Digital Assets';
     const description = payload.description || '';
     const image = processedImages[0] || '';
-    const listingType = payload.listingType || 'product';
+    const listingType = inferListingType(payload.category, payload.listingType);
 
     const firestoreListingData = {
       title,
@@ -682,8 +686,15 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ? `ord-${crypto.randomUUID()}`
       : `ord-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    const orderType = payload.orderType || (listingData.listingType === 'service' ? 'service' : 'product');
-    const initialStatus = orderType === 'service' ? 'booked' : 'pending';
+    const isBookingTarget = isRuleServiceOrProjectOrderTarget(listingData);
+    const orderType = payload.orderType || (
+      listingData.listingType === 'project'
+        ? 'project'
+        : isBookingTarget
+        ? 'service'
+        : 'product'
+    );
+    const initialStatus = isBookingTarget || orderType === 'service' || orderType === 'project' ? 'booked' : 'pending';
     const currency = (listingData.currency || payload.currency || 'USD').substring(0, 10);
     const itemTitle = (listingData.title || payload.itemTitle || 'Marketplace Item').substring(0, 200);
     const buyerInstructions = (payload.buyerInstructions || '').substring(0, 500);

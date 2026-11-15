@@ -20,7 +20,17 @@ import {
   Languages
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { MarketTheme, CURRENCIES, WORLD_COUNTRIES, CATEGORY_EMOJIS, getListingTitle } from './MarketConstants';
+import {
+  MarketTheme,
+  CURRENCIES,
+  WORLD_COUNTRIES,
+  CATEGORY_EMOJIS,
+  getListingTitle,
+  getCategoriesForListingType,
+  getCategoryLabel,
+  getDefaultCategoryForType,
+  isCategoryValidForType
+} from './MarketConstants';
 import { FastInput } from './FastInputs';
 import { MapPicker } from '../MapPicker';
 import { useToast } from '../Toast';
@@ -305,8 +315,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     emoji: '🚀', 
                     labelEn: 'Project', 
                     labelKa: 'პროექტი',
-                    descEn: 'Projects & initiatives',
-                    descKa: 'პროექტები და ინიციატივები'
+                    descEn: 'Digital projects, jobs & partnerships',
+                    descKa: 'ციფრული პროექტები, ვაკანსიები და პარტნიორობა'
                   }
                 ].map(item => {
                   const isSelected = formData.listingType === item.type;
@@ -315,14 +325,13 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       key={item.type}
                       type="button"
                       onClick={() => {
+                        const nextType = item.type as 'product' | 'service' | 'project';
                         setFormData(prev => ({ 
                           ...prev, 
-                          listingType: item.type as any,
-                          category: item.type === 'service' 
-                            ? 'service' 
-                            : item.type === 'project' 
-                            ? 'project' 
-                            : 'technics'
+                          listingType: nextType,
+                          category: isCategoryValidForType(prev.category, nextType)
+                            ? prev.category
+                            : getDefaultCategoryForType(nextType)
                         }));
                       }}
                       className={cn(
@@ -356,20 +365,39 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <span>📁</span> {t.market.form.category}
               </label>
               <div className="relative group">
-                <select 
-                  value={formData.category}
-                  onChange={e => setFormData({...formData, category: e.target.value})}
-                  className={cn(
-                    "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold tracking-wide shadow-inner transition-all cursor-pointer",
-                    currentTheme.input
-                  )}
-                >
-                  {Object.entries(t.market.categories).map(([key, label]) => (
-                    <option key={key} value={key} className="bg-proton-card text-proton-text font-semibold py-2">
-                      {label as string}
-                    </option>
-                  ))}
-                </select>
+                {(() => {
+                  const availableCategories = getCategoriesForListingType(formData.listingType, t, language);
+                  const isLegacyCategoryInEdit =
+                    viewMode === 'edit' &&
+                    Boolean(formData.category) &&
+                    !availableCategories.some(cat => cat.id === formData.category);
+                  const selectValue =
+                    isLegacyCategoryInEdit || availableCategories.some(cat => cat.id === formData.category)
+                      ? formData.category
+                      : getDefaultCategoryForType(formData.listingType);
+
+                  return (
+                    <select 
+                      value={selectValue}
+                      onChange={e => setFormData({...formData, category: e.target.value})}
+                      className={cn(
+                        "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold tracking-wide shadow-inner transition-all cursor-pointer",
+                        currentTheme.input
+                      )}
+                    >
+                      {isLegacyCategoryInEdit && (
+                        <option value={formData.category} className="bg-proton-card text-proton-text font-semibold py-2">
+                          {CATEGORY_EMOJIS[formData.category] || '🏷️'} {getCategoryLabel(formData.category, t, language)}
+                        </option>
+                      )}
+                      {availableCategories.map(cat => (
+                        <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
+                          {cat.emoji} {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  );
+                })()}
                 <ChevronDown size={14} className="absolute right-4.5 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors" />
               </div>
             </div>
@@ -573,38 +601,40 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               </div>
             </div>
 
-            {/* Product Condition Selection Header & Sliding Tabs */}
-            <div className="space-y-4">
-              <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
-                <span>📦</span> {language === 'ka' ? 'ნივთის მდგომარეობა' : 'Item Condition'}
-              </label>
-              
-              <div className="grid grid-cols-3 gap-3 p-1.5 rounded-2xl bg-proton-bg border border-proton-border">
-                {[
-                  { id: 'new', icon: '✨', titleEn: 'Brand New', titleKa: 'ახალი' },
-                  { id: 'used', icon: '⚙️', titleEn: 'Used', titleKa: 'მეორადი' },
-                  { id: 'refurbished', icon: '🛠️', titleEn: 'Restored', titleKa: 'აღდგენილი' }
-                ].map(cond => {
-                  const isAct = formData.condition === cond.id;
-                  return (
-                    <button
-                      key={cond.id}
-                      type="button"
-                      onClick={() => setFormData({...formData, condition: cond.id})}
-                      className={cn(
-                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer",
-                        isAct 
-                          ? "bg-proton-accent text-proton-on-accent shadow-sm"
-                          : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
-                      )}
-                    >
-                      <span className="text-xs">{cond.icon}</span>
-                      <span className="text-[9px] font-black">{language === 'ka' ? cond.titleKa : cond.titleEn}</span>
-                    </button>
-                  );
-                })}
+            {/* Product Condition Selection Header & Sliding Tabs (Products only) */}
+            {formData.listingType === 'product' && (
+              <div className="space-y-4">
+                <label className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
+                  <span>📦</span> {language === 'ka' ? 'ნივთის მდგომარეობა' : 'Item Condition'}
+                </label>
+                
+                <div className="grid grid-cols-3 gap-3 p-1.5 rounded-2xl bg-proton-bg border border-proton-border">
+                  {[
+                    { id: 'new', icon: '✨', titleEn: 'Brand New', titleKa: 'ახალი' },
+                    { id: 'used', icon: '⚙️', titleEn: 'Used', titleKa: 'მეორადი' },
+                    { id: 'refurbished', icon: '🛠️', titleEn: 'Restored', titleKa: 'აღდგენილი' }
+                  ].map(cond => {
+                    const isAct = formData.condition === cond.id;
+                    return (
+                      <button
+                        key={cond.id}
+                        type="button"
+                        onClick={() => setFormData({...formData, condition: cond.id})}
+                        className={cn(
+                          "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 cursor-pointer",
+                          isAct 
+                            ? "bg-proton-accent text-proton-on-accent shadow-sm"
+                            : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
+                        )}
+                      >
+                        <span className="text-xs">{cond.icon}</span>
+                        <span className="text-[9px] font-black">{language === 'ka' ? cond.titleKa : cond.titleEn}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Price Negotiable Box & Switch */}
             <div className="p-1 px-4 py-3.5 rounded-2xl bg-proton-bg/70 border border-proton-border flex items-center justify-between gap-4">
@@ -992,8 +1022,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   {/* Top floating badges */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
                     <span className="px-2 py-1 rounded-lg bg-proton-card/90 backdrop-blur-md border border-proton-border text-[9px] font-black uppercase tracking-wider text-proton-text flex items-center gap-1">
-                      <span>{CATEGORY_EMOJIS[formData.category] || '📦'}</span>
-                      <span>{t.market.categories?.[formData.category] || formData.category}</span>
+                      <span>{CATEGORY_EMOJIS[formData.category] || '🏷️'}</span>
+                      <span>{getCategoryLabel(formData.category, t, language)}</span>
                     </span>
                   </div>
 
@@ -1090,10 +1120,14 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     <p className={cn("text-xs font-bold line-clamp-1", currentTheme.text)}>{getListingTitle(formData, language) || '—'}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {formData.listingType?.toUpperCase()}
+                        {formData.listingType === 'service'
+                          ? (language === 'ka' ? 'სერვისი' : 'SERVICE')
+                          : formData.listingType === 'project'
+                          ? (language === 'ka' ? 'პროექტი' : 'PROJECT')
+                          : (language === 'ka' ? 'პროდუქტი' : 'PRODUCT')}
                       </span>
                       <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {t.market.categories?.[formData.category] || formData.category}
+                        {getCategoryLabel(formData.category, t, language)}
                       </span>
                     </div>
                   </div>
@@ -1117,9 +1151,11 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     </div>
                     <p className={cn("text-xs font-bold font-mono", currentTheme.text)}>{formData.price} {formData.currency}</p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
-                        {conditionLabel}
-                      </span>
+                      {formData.listingType === 'product' && (
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-proton-card border border-proton-border text-proton-muted">
+                          {conditionLabel}
+                        </span>
+                      )}
                       {formData.isNegotiable && (
                         <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/25 text-emerald-500">
                           {language === 'ka' ? 'მოლაპარაკებადი' : 'Negotiable'}

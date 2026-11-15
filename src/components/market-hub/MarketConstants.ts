@@ -1,4 +1,58 @@
 import { auth } from '../../firebase';
+import { translations } from '../../translations';
+
+export type ListingType = 'product' | 'service' | 'project';
+
+export const PRODUCT_CATEGORY_IDS = [
+  'newyear',
+  'phones',
+  'technics',
+  'family-technic',
+  'garden',
+  'furniture',
+  'hunting',
+  'music',
+  'kids',
+  'fashion',
+  'building',
+  'village',
+  'animals',
+  'sport',
+  'business',
+  'book',
+  'art',
+] as const;
+
+export const SERVICE_CATEGORY_IDS = [
+  'service',
+  'rent',
+] as const;
+
+export const PROJECT_CATEGORY_IDS = [
+  'project-jobs',
+  'social-accounts',
+  'youtube-channels',
+  'audience-growth',
+  'collaboration',
+  'digital-projects',
+] as const;
+
+export const ALL_ACTIVE_CATEGORY_IDS = [
+  ...PRODUCT_CATEGORY_IDS,
+  ...SERVICE_CATEGORY_IDS,
+  ...PROJECT_CATEGORY_IDS,
+] as const;
+
+export const CATEGORY_IDS_BY_TYPE: Record<ListingType, readonly string[]> = {
+  product: PRODUCT_CATEGORY_IDS,
+  service: SERVICE_CATEGORY_IDS,
+  project: PROJECT_CATEGORY_IDS,
+};
+
+const PRODUCT_CATEGORY_SET = new Set<string>(PRODUCT_CATEGORY_IDS);
+const SERVICE_CATEGORY_SET = new Set<string>(SERVICE_CATEGORY_IDS);
+const PROJECT_CATEGORY_SET = new Set<string>(PROJECT_CATEGORY_IDS);
+const LEGACY_CATEGORIES_ORDER_BOOKING_SET = new Set<string>(['service', 'project']);
 
 export interface MarketTheme {
   card: string;
@@ -243,12 +297,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 export const CATEGORY_EMOJIS: Record<string, string> = {
-  service: "⚡",
-  rent: "🔑",
-  garden: "🏡",
-  home: "🏡",
-  "family-technic": "🔌",
+  // Product (17)
+  newyear: "🎄",
+  phones: "📱",
   technics: "💻",
+  "family-technic": "🔌",
+  garden: "🏡",
+  furniture: "🛋️",
   hunting: "🏹",
   music: "🎸",
   kids: "🧸",
@@ -260,10 +315,109 @@ export const CATEGORY_EMOJIS: Record<string, string> = {
   business: "💼",
   book: "📚",
   art: "🎨",
+  // Service (2)
+  service: "⚡",
+  rent: "🔑",
+  // Project (6)
+  "project-jobs": "🧑‍💻",
+  "social-accounts": "📣",
+  "youtube-channels": "▶️",
+  "audience-growth": "📈",
+  collaboration: "🤝",
+  "digital-projects": "🚀",
+  // Legacy categories (read-only compatibility)
+  home: "🏡",
   hobby: "🎨",
   realestate: "🏢",
   auto: "🚗",
-  crypto: "🪙"
+  crypto: "🪙",
+  project: "🚀"
+};
+
+export const getDefaultCategoryForType = (type: ListingType): string => {
+  if (type === 'service') return 'service';
+  if (type === 'project') return 'project-jobs';
+  return 'technics';
+};
+
+export const isCategoryValidForType = (
+  categoryId: string | undefined | null,
+  listingType: 'all' | ListingType
+): boolean => {
+  if (!categoryId || categoryId === 'all') return true;
+  if (listingType === 'all') {
+    return (
+      PRODUCT_CATEGORY_SET.has(categoryId) ||
+      SERVICE_CATEGORY_SET.has(categoryId) ||
+      PROJECT_CATEGORY_SET.has(categoryId)
+    );
+  }
+  return CATEGORY_IDS_BY_TYPE[listingType].includes(categoryId);
+};
+
+export const inferListingType = (
+  category?: string | null,
+  explicitListingType?: string | null
+): ListingType => {
+  if (
+    explicitListingType === 'product' ||
+    explicitListingType === 'service' ||
+    explicitListingType === 'project'
+  ) {
+    return explicitListingType;
+  }
+  const cat = (category || '').trim().toLowerCase();
+  if (SERVICE_CATEGORY_SET.has(cat)) return 'service';
+  if (cat === 'project' || PROJECT_CATEGORY_SET.has(cat)) return 'project';
+  return 'product';
+};
+
+export const getCategoryLabel = (
+  categoryId?: string | null,
+  t?: any,
+  language?: string
+): string => {
+  const raw = typeof categoryId === 'string' ? categoryId.trim() : '';
+  if (!raw) {
+    return language === 'ka' ? 'სხვა' : 'Other';
+  }
+  const normalized = raw.toLowerCase();
+  const langKey: 'en' | 'ka' = language === 'ka' ? 'ka' : 'en';
+
+  const providedMap = t?.market?.categories;
+  if (providedMap) {
+    if (providedMap[raw]) return providedMap[raw];
+    if (providedMap[normalized]) return providedMap[normalized];
+  }
+
+  const langMap = translations[langKey]?.market?.categories as Record<string, string> | undefined;
+  if (langMap) {
+    if (langMap[raw]) return langMap[raw];
+    if (langMap[normalized]) return langMap[normalized];
+  }
+
+  const enMap = translations.en.market.categories as Record<string, string>;
+  if (enMap[raw]) return enMap[raw];
+  if (enMap[normalized]) return enMap[normalized];
+
+  return raw.replace(/[-_]+/g, ' ');
+};
+
+export const getCategoriesForListingType = (
+  listingType: 'all' | ListingType,
+  t?: any,
+  language?: string
+): Array<{ id: string; label: string; emoji: string }> => {
+  const ids: readonly string[] =
+    listingType === 'all'
+      ? ALL_ACTIVE_CATEGORY_IDS
+      : CATEGORY_IDS_BY_TYPE[listingType] || PRODUCT_CATEGORY_IDS;
+
+  return ids.map((id) => ({
+    id,
+    label: getCategoryLabel(id, t, language),
+    emoji: CATEGORY_EMOJIS[id] || '🏷️',
+  }));
 };
 
 export const getCurrencySymbol = (currency?: string): string => {
@@ -401,19 +555,42 @@ export const safeParseDate = (dateVal: any): number => {
 
 export const isServiceListing = (item?: { listingType?: string; category?: string } | null): boolean => {
   if (!item) return false;
-  return item.listingType === 'service' || item.category === 'service';
+  if (item.listingType === 'service') return true;
+  if (item.listingType === 'product' || item.listingType === 'project') {
+    return item.category === 'service';
+  }
+  return SERVICE_CATEGORY_SET.has(item.category || '');
 };
 
 export const isProjectListing = (item?: { listingType?: string; category?: string } | null): boolean => {
   if (!item) return false;
-  return item.listingType === 'project' || item.category === 'project';
+  if (item.listingType === 'project' || item.category === 'project') return true;
+  if (!item.listingType && PROJECT_CATEGORY_SET.has(item.category || '')) return true;
+  return false;
 };
 
 export const isPhysicalListing = (item?: { listingType?: string; category?: string } | null): boolean => {
   if (!item) return false;
-  if (item.listingType === 'service' || item.category === 'service') return false;
-  if (item.listingType === 'project' || item.category === 'project') return false;
-  return item.listingType === 'product' || (!item.listingType && item.category !== 'service' && item.category !== 'project');
+  if (item.listingType === 'service' || item.listingType === 'project') return false;
+  if (LEGACY_CATEGORIES_ORDER_BOOKING_SET.has(item.category || '')) return false;
+  if (!item.listingType && (SERVICE_CATEGORY_SET.has(item.category || '') || PROJECT_CATEGORY_SET.has(item.category || ''))) {
+    return false;
+  }
+  return true;
+};
+
+/**
+ * Matches firestore.rules `isServiceOrProjectListing(data)` exactly so order status
+ * creation (`booked` vs `pending`) never fails rules on legacy documents.
+ */
+export const isRuleServiceOrProjectOrderTarget = (item?: { listingType?: string; category?: string } | null): boolean => {
+  if (!item) return false;
+  return (
+    item.listingType === 'service' ||
+    item.listingType === 'project' ||
+    item.category === 'service' ||
+    item.category === 'project'
+  );
 };
 
 export const isPhysicalOrder = (order: any): boolean => {

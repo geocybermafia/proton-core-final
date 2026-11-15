@@ -161,15 +161,74 @@ export const translations = {
         update: "Update Listing"
       },
       categories: {
-        service: "Services & Rent",
-        technics: "Tech & Electronics",
+        // Product (17)
+        newyear: "New Year Products",
+        phones: "Phones & Accessories",
+        technics: "Electronics & Technology",
+        "family-technic": "Home Appliances",
+        garden: "Home & Garden",
+        furniture: "Furniture",
+        hunting: "Hunting & Fishing",
+        music: "Musical Instruments",
+        kids: "Kids & Baby",
+        fashion: "Beauty & Personal Care",
+        building: "Construction & Renovation",
+        village: "Agriculture",
+        animals: "Pets & Accessories",
+        sport: "Sports & Recreation",
+        business: "Business & Equipment",
+        book: "Books & Stationery",
+        art: "Art & Collectibles",
+        // Service (2)
+        service: "Services",
+        rent: "Rentals",
+        // Project (6)
+        "project-jobs": "Jobs & Tasks",
+        "social-accounts": "Social Media Accounts",
+        "youtube-channels": "YouTube Channels",
+        "audience-growth": "Audience Growth & Promotion",
+        collaboration: "Collaboration & Partnerships",
+        "digital-projects": "Digital Projects & Online Businesses",
+        // Legacy categories (read-only compatibility for existing listings)
         home: "Home, Garden & Tools",
-        fashion: "Fashion & Family",
-        business: "Business & Agriculture",
         hobby: "Hobby, Sports & Art",
         realestate: "Real Estate & Spaces",
         auto: "Auto & Transport",
-        crypto: "Digital Assets & Web3"
+        crypto: "Digital Assets & Web3",
+        project: "Project"
+      },
+      categoriesByType: {
+        product: {
+          newyear: "New Year Products",
+          phones: "Phones & Accessories",
+          technics: "Electronics & Technology",
+          "family-technic": "Home Appliances",
+          garden: "Home & Garden",
+          furniture: "Furniture",
+          hunting: "Hunting & Fishing",
+          music: "Musical Instruments",
+          kids: "Kids & Baby",
+          fashion: "Beauty & Personal Care",
+          building: "Construction & Renovation",
+          village: "Agriculture",
+          animals: "Pets & Accessories",
+          sport: "Sports & Recreation",
+          business: "Business & Equipment",
+          book: "Books & Stationery",
+          art: "Art & Collectibles"
+        },
+        service: {
+          service: "Services",
+          rent: "Rentals"
+        },
+        project: {
+          "project-jobs": "Jobs & Tasks",
+          "social-accounts": "Social Media Accounts",
+          "youtube-channels": "YouTube Channels",
+          "audience-growth": "Audience Growth & Promotion",
+          collaboration: "Collaboration & Partnerships",
+          "digital-projects": "Digital Projects & Online Businesses"
+        }
       },
       legal: {
         privacy_policy: "Privacy Policy",
@@ -600,15 +659,74 @@ export const translations = {
         update: "განცხადების განახლება"
       },
       categories: {
-        service: "მომსახურება და გაქირავება",
-        technics: "ტექნიკა და ელექტრონიკა",
+        // Product (17)
+        newyear: "საახალწლო პროდუქცია",
+        phones: "ტელეფონები და აქსესუარები",
+        technics: "ელექტრონიკა/ტექნიკა",
+        "family-technic": "საყოფაცხოვრებო ტექნიკა",
+        garden: "სახლი და ბაღი",
+        furniture: "ავეჯი",
+        hunting: "ნადირობა და თევზაობა",
+        music: "მუსიკალური ინსტრუმენტები",
+        kids: "საბავშვო",
+        fashion: "სილამაზე და თავის მოვლა",
+        building: "მშენებლობა და რემონტი",
+        village: "სოფლის მეურნეობა",
+        animals: "ცხოველები და აქსესუარები",
+        sport: "სპორტი და დასვენება",
+        business: "ბიზნესი და დანადგარები",
+        book: "წიგნები და კანცელარია",
+        art: "ხელოვნება და საკოლექციო",
+        // Service (2)
+        service: "მომსახურება",
+        rent: "გაქირავება",
+        // Project (6)
+        "project-jobs": "ვაკანსიები და სამუშაო დავალებები",
+        "social-accounts": "სოციალური ქსელების ანგარიშები",
+        "youtube-channels": "YouTube არხები",
+        "audience-growth": "აუდიტორიის ზრდა და პოპულარიზაცია",
+        collaboration: "თანამშრომლობა და პარტნიორობა",
+        "digital-projects": "ციფრული პროექტები და ონლაინბიზნესი",
+        // Legacy categories (read-only compatibility for existing listings)
         home: "სახლი, ბაღი და ხელსაწყოები",
-        fashion: "მოდა, სილამაზე და საბავშვო",
-        business: "ბიზნესი და სოფლის მეურნეობა",
         hobby: "ჰობი, სპორტი და ხელოვნება",
         realestate: "უძრავი ქონება და სივრცეები",
         auto: "ავტო და ტრანსპორტი",
-        crypto: "ციფრული აქტივები და Web3"
+        crypto: "ციფრული აქტივები და Web3",
+        project: "პროექტი"
+      },
+      categoriesByType: {
+        product: {
+          newyear: "საახალწლო პროდუქცია",
+          phones: "ტელეფონები და აქსესუარები",
+          technics: "ელექტრონიკა/ტექნიკა",
+          "family-technic": "საყოფაცხოვრებო ტექნიკა",
+          garden: "სახლი და ბაღი",
+          furniture: "ავეჯი",
+          hunting: "ნადირობა და თევზაობა",
+          music: "მუსიკალური ინსტრუმენტები",
+          kids: "საბავშვო",
+          fashion: "სილამაზე და თავის მოვლა",
+          building: "მშენებლობა და რემონტი",
+          village: "სოფლის მეურნეობა",
+          animals: "ცხოველები და აქსესუარები",
+          sport: "სპორტი და დასვენება",
+          business: "ბიზნესი და დანადგარები",
+          book: "წიგნები და კანცელარია",
+          art: "ხელოვნება და საკოლექციო"
+        },
+        service: {
+          service: "მომსახურება",
+          rent: "გაქირავება"
+        },
+        project: {
+          "project-jobs": "ვაკანსიები და სამუშაო დავალებები",
+          "social-accounts": "სოციალური ქსელების ანგარიშები",
+          "youtube-channels": "YouTube არხები",
+          "audience-growth": "აუდიტორიის ზრდა და პოპულარიზაცია",
+          collaboration: "თანამშრომლობა და პარტნიორობა",
+          "digital-projects": "ციფრული პროექტები და ონლაინბიზნესი"
+        }
       },
       legal: {
         privacy_policy: "კონფიდენციალურობის პოლიტიკა",

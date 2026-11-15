@@ -22,6 +22,10 @@ import {
   MarketTheme,
   WORLD_COUNTRIES,
   getListingTitle,
+  getCategoryLabel,
+  isServiceListing,
+  isProjectListing,
+  isPhysicalListing,
   formatCurrencyAmount,
   formatOriginalCurrencyPrice,
   formatApproxCurrencyEquivalent
@@ -132,9 +136,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   const formattedOriginal = formatOriginalCurrencyPrice(listing.price, originalCurrency);
   const formattedApprox = formatApproxCurrencyEquivalent(resolvedPrice, targetCurrency);
 
-  const categoryLabel =
-    (t?.market?.categories && t.market.categories[listing.category]) ||
-    listing.category;
+  const categoryLabel = getCategoryLabel(listing.category, t, language);
 
   const countryObj = WORLD_COUNTRIES.find((c) => c.code === listing.country);
   const locationParts = [
@@ -160,10 +162,10 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   };
 
   const getListingTypeLabel = () => {
-    if (listing.listingType === 'service' || listing.category === 'service') {
+    if (isServiceListing(listing)) {
       return language === 'ka' ? 'სერვისი' : 'Service';
     }
-    if (listing.listingType === 'project') {
+    if (isProjectListing(listing)) {
       return language === 'ka' ? 'პროექტი' : 'Project';
     }
     return language === 'ka' ? 'პროდუქტი' : 'Product';
@@ -487,14 +489,16 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       currentTheme.border
                     )}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <span className={cn('text-xs shrink-0', currentTheme.muted)}>
-                        {language === 'ka' ? 'მდგომარეობა' : 'Condition'}
-                      </span>
-                      <span className={cn('font-medium text-right', currentTheme.text)}>
-                        {getConditionLabel(listing.condition)}
-                      </span>
-                    </div>
+                    {isPhysicalListing(listing) && (
+                      <div className="flex items-start justify-between gap-4">
+                        <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                          {language === 'ka' ? 'მდგომარეობა' : 'Condition'}
+                        </span>
+                        <span className={cn('font-medium text-right', currentTheme.text)}>
+                          {getConditionLabel(listing.condition)}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex items-start justify-between gap-4">
                       <span className={cn('text-xs shrink-0', currentTheme.muted)}>

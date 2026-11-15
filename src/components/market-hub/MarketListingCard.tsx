@@ -18,6 +18,9 @@ import {
   CATEGORY_EMOJIS,
   WORLD_COUNTRIES,
   getListingTitle,
+  getCategoryLabel,
+  isServiceListing,
+  isProjectListing,
   formatCurrencyAmount,
   formatOriginalCurrencyPrice,
   formatApproxCurrencyEquivalent
@@ -187,7 +190,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
     ? locationParts.join(', ')
     : (language === 'ka' ? 'მდებარეობა მითითებული არ არის' : 'Location not specified');
 
-  const categoryLabel = t.market.categories[listing.category] || listing.category;
+  const categoryLabel = getCategoryLabel(listing.category, t, language);
   const sellerName = listing.sellerName || (language === 'ka' ? 'გამყიდველი' : 'Seller');
 
   return (
@@ -392,9 +395,13 @@ export const MarketListingCard = React.memo(function MarketListingCard({
                 <span className="text-[9px] font-bold text-proton-muted uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                   {language === 'ka' ? 'შეთანხმებით' : 'Negotiable'}
                 </span>
-              ) : listing.listingType === 'service' || listing.category === 'service' ? (
+              ) : isServiceListing(listing) ? (
                 <span className="text-[9px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
                   {language === 'ka' ? 'სერვისი' : 'Service'}
+                </span>
+              ) : isProjectListing(listing) ? (
+                <span className="text-[9px] font-bold text-proton-accent uppercase tracking-wider font-mono shrink-0 whitespace-nowrap">
+                  {language === 'ka' ? 'პროექტი' : 'Project'}
                 </span>
               ) : null}
             </div>

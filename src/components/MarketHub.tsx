@@ -106,7 +106,13 @@ import {
   isServiceOrder,
   isSellerActionRequired,
   canCancelOrder,
-  getListingTitle
+  getListingTitle,
+  getCategoriesForListingType,
+  getCategoryLabel,
+  getDefaultCategoryForType,
+  inferListingType,
+  isCategoryValidForType,
+  isRuleServiceOrProjectOrderTarget
 } from './market-hub/MarketConstants';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
@@ -644,8 +650,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               continue;
             }
 
-            const isService = isServiceListing(item) || isProjectListing(item);
-            const isPhysical = isPhysicalListing(item);
+            const isService = isRuleServiceOrProjectOrderTarget(item);
+            const isPhysical = !isService;
             const itemInstructions = isService ? (cartServiceInstructions[item.id]?.trim() || '') : '';
 
             const baseOrderData: any = {
@@ -1061,10 +1067,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   const restoredImages = Array.isArray(parsed.data.images)
                     ? parsed.data.images.filter((img: any): img is string => typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://')))
                     : [];
+                  const restoredType = inferListingType(parsed.data.category, parsed.data.listingType);
+                  const restoredCategory =
+                    viewMode === 'create' && !isCategoryValidForType(parsed.data.category, restoredType)
+                      ? getDefaultCategoryForType(restoredType)
+                      : (parsed.data.category || getDefaultCategoryForType(restoredType));
 
                   return {
                     ...prev,
                     ...parsed.data,
+                    listingType: restoredType,
+                    category: restoredCategory,
                     // If the draft contains saved safe image URLs, restore them;
                     // if draft images array is explicitly empty, restore empty array;
                     // preserve prev.images only if parsed.data has no images field defined
@@ -2290,11 +2303,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       // Filter by Listing Type
       if (activeListingType !== 'all') {
         if (activeListingType === 'service') {
-          if (l.listingType !== 'service' && l.category !== 'service') return false;
+          if (!isServiceListing(l)) return false;
         } else if (activeListingType === 'project') {
-          if (l.listingType !== 'project' && l.category !== 'project') return false;
+          if (!isProjectListing(l)) return false;
         } else {
-          if (l.listingType === 'service' || l.category === 'service' || l.listingType === 'project' || l.category === 'project') return false;
+          if (!isPhysicalListing(l)) return false;
         }
       }
 
@@ -2407,8 +2420,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
     setIsCheckingOut(true);
     try {
-      const isService = isServiceListing(checkoutItem) || isProjectListing(checkoutItem);
-      const isPhysical = isPhysicalListing(checkoutItem);
+      const isService = isRuleServiceOrProjectOrderTarget(checkoutItem);
+      const isPhysical = !isService;
 
       await runTransaction(db, async (transaction) => {
         const listingRef = doc(db, 'listings', checkoutItem.id);
@@ -3097,6 +3110,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         }
       }
 
+      const isEdit = viewMode === 'edit' && Boolean(editingListing);
+      const resolvedListingType = inferListingType(formData.category, formData.listingType);
+      const resolvedCategory = (isEdit && formData.category)
+        ? formData.category
+        : (isCategoryValidForType(formData.category, resolvedListingType)
+            ? formData.category
+            : getDefaultCategoryForType(resolvedListingType));
+
       const listingData = {
         title: resolvedFirestoreTitle,
         titleGe: finalTitleGe,
@@ -3108,7 +3129,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         currency: formData.currency || 'USD',
         sellerId: (viewMode === 'edit' && editingListing) ? editingListing.sellerId : user.uid,
         sellerName: (viewMode === 'edit' && editingListing) ? (editingListing.sellerName || 'Unknown') : (user.displayName || user.email?.split('@')[0] || 'Unknown'),
-        category: formData.category || 'technics',
+        category: resolvedCategory,
         location: (formData.location || `${cityStr}, ${countryStr}`).trim(),
         country: countryStr,
         city: cityStr,
@@ -3120,13 +3141,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         lng: sanitizedLng,
         condition: formData.condition || 'new',
         isNegotiable: formData.isNegotiable ?? false,
-        listingType: formData.listingType || (formData.category === 'service' ? 'service' : 'product'),
+        listingType: resolvedListingType,
         serviceDuration: formData.serviceDuration || '',
         serviceTerms: formData.serviceTerms || ''
       };
 
       const savedTitle = primaryTitle;
-      const isEdit = viewMode === 'edit' && Boolean(editingListing);
 
       if (isEdit && editingListing) {
         // Collect original images before update to detect removed images
@@ -3369,7 +3389,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       lng: listing.lng,
       condition: listing.condition || 'new',
       isNegotiable: listing.isNegotiable || false,
-      listingType: listing.listingType || (listing.category === 'service' ? 'service' : 'product'),
+      listingType: inferListingType(listing.category, listing.listingType),
       serviceDuration: listing.serviceDuration || '',
       serviceTerms: listing.serviceTerms || ''
     });
@@ -3386,6 +3406,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     if (activeListingType !== 'all') count++;
     return count;
   }, [activeCategory, activeCountry, activeCity, parsedMinPrice, parsedMaxPrice, activeListingType]);
+
+  const handleSelectListingType = useCallback((nextType: 'all' | 'product' | 'service' | 'project') => {
+    setActiveListingType(nextType);
+    setActiveCategory(prev => (prev !== 'all' && !isCategoryValidForType(prev, nextType) ? 'all' : prev));
+  }, []);
 
   // Unified Loading Spin Gate to completely seal Cold Boot hydration flickering
   if (authLoading) {
@@ -3989,7 +4014,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               {/* Listing Type Selection Tabs */}
               <ListingTypeTabs
                 activeType={activeListingType}
-                onSelectType={setActiveListingType}
+                onSelectType={handleSelectListingType}
                 language={language}
                 theme={currentTheme}
               />
@@ -4007,7 +4032,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   <span>
                     {activeCategory === 'all' 
                       ? (language === 'ka' ? 'ყველა კატეგორია' : 'All Categories') 
-                      : (t.market.categories[activeCategory] || activeCategory)}
+                      : getCategoryLabel(activeCategory, t, language)}
                   </span>
                   <ChevronDown size={11} className={cn("text-proton-muted transition-transform duration-200", isCategoryDropdownOpen && "rotate-180")} />
                 </button>
@@ -4044,14 +4069,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                         </button>
                         
-                        {Object.entries(t.market.categories).map(([key, label]) => {
-                          const isSelected = activeCategory === key;
+                        {getCategoriesForListingType(activeListingType, t, language).map(cat => {
+                          const isSelected = activeCategory === cat.id;
                           return (
                             <button
-                              key={key}
+                              key={cat.id}
                               type="button"
                               onClick={() => {
-                                setActiveCategory(key);
+                                setActiveCategory(cat.id);
                                 setIsCategoryDropdownOpen(false);
                               }}
                               className={cn(
@@ -4062,8 +4087,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                               )}
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                                <span className="truncate">{label as string}</span>
+                                <span className="text-xs shrink-0">{cat.emoji}</span>
+                                <span className="truncate">{cat.label}</span>
                               </div>
                               {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                             </button>
@@ -4128,7 +4153,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <div className="flex items-center overflow-x-auto scrollbar-none py-0.5 pr-6">
                   <ListingTypeTabs
                     activeType={activeListingType}
-                    onSelectType={setActiveListingType}
+                    onSelectType={handleSelectListingType}
                     language={language}
                     theme={currentTheme}
                   />
@@ -4154,7 +4179,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       <span className="truncate">
                         {activeCategory === 'all' 
                           ? (language === 'ka' ? 'კატეგორია' : 'Category') 
-                          : (t.market.categories[activeCategory] || activeCategory)}
+                          : getCategoryLabel(activeCategory, t, language)}
                       </span>
                     </div>
                     <ChevronDown size={11} className={cn("text-proton-muted transition-transform duration-200 shrink-0", isCategoryDropdownOpen && "rotate-180")} />
@@ -4191,14 +4216,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             {activeCategory === 'all' && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                           </button>
                           
-                          {Object.entries(t.market.categories).map(([key, label]) => {
-                            const isSelected = activeCategory === key;
+                          {getCategoriesForListingType(activeListingType, t, language).map(cat => {
+                            const isSelected = activeCategory === cat.id;
                             return (
                               <button
-                                key={key}
+                                key={cat.id}
                                 type="button"
                                 onClick={() => {
-                                  setActiveCategory(key);
+                                  setActiveCategory(cat.id);
                                   setIsCategoryDropdownOpen(false);
                                 }}
                                 className={cn(
@@ -4209,8 +4234,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 )}
                               >
                                 <div className="flex items-center gap-2 min-w-0 font-bold">
-                                  <span className="text-xs shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                                  <span className="truncate">{label as string}</span>
+                                  <span className="text-xs shrink-0">{cat.emoji}</span>
+                                  <span className="truncate">{cat.label}</span>
                                 </div>
                                 {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-proton-accent" />}
                               </button>
@@ -4264,7 +4289,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     currentTheme={currentTheme}
                     activeFiltersCount={activeFiltersCount}
                     activeListingType={activeListingType}
-                    setActiveListingType={setActiveListingType}
+                    setActiveListingType={handleSelectListingType}
                     activeCategory={activeCategory}
                     setActiveCategory={setActiveCategory}
                     activeCountry={activeCountry}
@@ -4811,7 +4836,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         filteredSellerOrders.length > 0 ? (
                           filteredSellerOrders.map((order, idx) => {
                         const isExpanded = expandedOrderId === order.id;
-                        const isService = order.orderType === 'service';
+                        const isService = order.orderType === 'service' || order.orderType === 'project';
                         const isPhysical = order.orderType === 'product' && Boolean(order.shippingDetails);
                         const isSeller = true;
 
@@ -5431,7 +5456,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       currentTheme={currentTheme}
       activeFiltersCount={activeFiltersCount}
       activeListingType={activeListingType}
-      setActiveListingType={setActiveListingType}
+      setActiveListingType={handleSelectListingType}
       activeCategory={activeCategory}
       setActiveCategory={setActiveCategory}
       activeCountry={activeCountry}
@@ -5773,25 +5798,25 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <span className="mt-2 text-[9px] font-bold tracking-wider leading-none">{language === 'ka' ? 'ყველა' : 'All Goods'}</span>
               {activeCategory === 'all' && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
             </button>
-            {Object.entries(t.market.categories).map(([key, label]) => (
+            {getCategoriesForListingType(activeListingType, t, language).map(cat => (
               <button
-                key={key}
+                key={cat.id}
                 type="button"
                 onClick={() => {
-                  setActiveCategory(key);
+                  setActiveCategory(cat.id);
                   setActiveBottomTab('home');
                   setViewMode('browse');
                 }}
                 className={cn(
                   "w-full flex flex-col justify-between p-3.5 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all border text-left min-h-[72px] relative overflow-hidden group/cat cursor-pointer",
-                  activeCategory === key
+                  activeCategory === cat.id
                     ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-md"
                     : "bg-proton-card text-proton-text border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10"
                 )}
               >
-                <span className="text-xl shrink-0">{CATEGORY_EMOJIS[key] || '🏷️'}</span>
-                <span className="mt-2 text-[9px] font-bold tracking-wider leading-none truncate w-full" title={label as string}>{label as string}</span>
-                {activeCategory === key && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
+                <span className="text-xl shrink-0">{cat.emoji}</span>
+                <span className="mt-2 text-[9px] font-bold tracking-wider leading-none truncate w-full" title={cat.label}>{cat.label}</span>
+                {activeCategory === cat.id && <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-current opacity-80" />}
               </button>
             ))}
           </div>
