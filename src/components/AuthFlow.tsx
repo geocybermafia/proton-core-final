@@ -11,6 +11,7 @@ import { auth, googleProvider, db } from '../firebase';
 import { translations } from '../translations';
 import { motion } from 'framer-motion';
 import { Zap, Loader2, ChevronLeft } from 'lucide-react';
+import { trackEvent } from '../utils/analytics';
 
 interface AuthFlowProps {
   onGoogleSignIn: () => void;
@@ -97,6 +98,7 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
           subscribedToNewsAt: subscribeNews ? new Date().toISOString() : null,
           language: language
         }, { merge: true });
+        trackEvent('sign_up');
       }
     } catch (err: any) {
       setError(err.message);

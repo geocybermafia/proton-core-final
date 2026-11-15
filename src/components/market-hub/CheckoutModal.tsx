@@ -15,6 +15,7 @@ import {
   formatApproxCurrencyEquivalent
 } from './MarketConstants';
 import { CartItemThumbnail } from './CartDrawer';
+import { trackEvent } from '../../utils/analytics';
 
 export interface CheckoutModalProps {
   checkoutItem: Listing | null;
@@ -398,7 +399,12 @@ export const CheckoutModal = React.memo(function CheckoutModal({
               </p>
               
               <button 
-                onClick={onConfirmPurchase}
+                onClick={() => {
+                  if (checkoutItem) {
+                    trackEvent('purchase', { value: checkoutItem.price, currency: checkoutItem.currency || 'USD' });
+                  }
+                  onConfirmPurchase();
+                }}
                 disabled={!canConfirm}
                 className={cn(
                   "w-full min-h-[48px] py-4 sm:py-4.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl transition-all flex items-center justify-center gap-2.5 relative overflow-hidden group cursor-pointer",

@@ -142,6 +142,10 @@ function Root() {
   );
 }
 
+import { initGA } from './utils/analytics';
+
+initGA();
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Root />

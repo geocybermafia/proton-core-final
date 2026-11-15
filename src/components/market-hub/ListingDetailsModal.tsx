@@ -33,6 +33,7 @@ import {
   formatApproxCurrencyEquivalent
 } from './MarketConstants';
 import { getFormattedListingAttributes, isEffectiveRemoteListing } from './ListingSchemas';
+import { trackEvent } from '../../utils/analytics';
 
 export interface ListingDetailsModalProps {
   listing: Listing | null;
@@ -85,6 +86,9 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   useEffect(() => {
     setActiveImageIndex(0);
     setFailedImages({});
+    if (listing) {
+      trackEvent('view_item', { item_id: listing.id, item_name: getListingTitle(listing) });
+    }
   }, [listing?.id]);
 
   const galleryImages = useMemo(() => {
