@@ -148,7 +148,7 @@ export const CartDrawer = React.memo(function CartDrawer({
               currentTheme.card
             )}
           >
-            <div className="p-6 border-b border-proton-border flex items-center justify-between shrink-0 bg-proton-card/95 backdrop-blur-md">
+            <div className="p-4 sm:p-6 border-b border-proton-border flex items-center justify-between shrink-0 bg-proton-card/95 backdrop-blur-md">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 bg-proton-accent/15 rounded-xl text-proton-accent">
                   <ShoppingCart size={18} />
@@ -174,7 +174,7 @@ export const CartDrawer = React.memo(function CartDrawer({
             </div>
 
             {/* Items list */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               {cart.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20">
                   <div className="p-5 bg-proton-bg rounded-[30px] border border-proton-border text-proton-muted">
@@ -304,9 +304,9 @@ export const CartDrawer = React.memo(function CartDrawer({
                   {/* Physical Items Shipping Form in Cart */}
                   {hasPhysicalItems && shippingDetails && onChangeShippingDetails && (
                     <div className="p-4 rounded-3xl bg-proton-bg/60 border border-proton-border space-y-3 mt-4 text-left">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
                         <span className="text-[10px] font-black uppercase tracking-wider text-proton-text flex items-center gap-1.5">
-                          <Truck size={13} className="text-proton-accent" />
+                          <Truck size={13} className="text-proton-accent shrink-0" />
                           <span>{language === 'ka' ? 'მიწოდების მისამართი' : 'Shipping Destination'}</span>
                         </span>
                         <span className="text-[8px] font-bold text-amber-500 uppercase tracking-widest">
@@ -322,7 +322,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                           placeholder={language === 'ka' ? 'მიმღების სახელი, გვარი' : 'Recipient Name'}
                           className={cn("w-full px-3 py-2 rounded-xl border text-base md:text-xs focus:outline-none", currentTheme.input)}
                         />
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <input
                             type="tel"
                             value={shippingDetails.phone}
@@ -361,7 +361,7 @@ export const CartDrawer = React.memo(function CartDrawer({
 
             {/* Action buttons at bottom */}
             {cart.length > 0 && (
-              <div className="p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-proton-border space-y-4 shrink-0 bg-proton-card/95 backdrop-blur-xl shadow-2xl">
+              <div className="p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-proton-border space-y-4 shrink-0 bg-proton-card/95 backdrop-blur-xl shadow-2xl">
                 <div className="space-y-1.5">
                   <div className="flex items-start justify-between gap-3">
                     <span className={cn("text-[10px] font-black uppercase tracking-wider shrink-0 pt-1", currentTheme.muted)}>
@@ -412,7 +412,7 @@ export const CartDrawer = React.memo(function CartDrawer({
                   onClick={onCheckout}
                   disabled={!canCheckout}
                   className={cn(
-                    "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
+                    "w-full min-h-[48px] py-3.5 px-4 rounded-2xl text-[11px] font-black uppercase tracking-[0.12em] sm:tracking-[0.2em] text-center transition-all flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer",
                     currentTheme.accentBg
                   )}
                 >

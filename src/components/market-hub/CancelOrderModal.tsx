@@ -77,15 +77,15 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
           )}
         >
           {/* Header */}
-          <div className="p-5 sm:p-6 border-b border-proton-border flex items-start justify-between shrink-0 bg-proton-bg/60 backdrop-blur-md">
-            <div className="flex items-center gap-3.5">
+          <div className="p-4 sm:p-6 border-b border-proton-border flex items-start justify-between gap-2 shrink-0 bg-proton-bg/60 backdrop-blur-md">
+            <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
               <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 shrink-0">
                 <AlertTriangle size={20} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h3 
                   id="cancel-order-dialog-title" 
-                  className={cn("text-lg sm:text-xl font-black uppercase tracking-tight leading-tight", currentTheme.text)}
+                  className={cn("text-base sm:text-xl font-black uppercase tracking-tight leading-tight break-words", currentTheme.text)}
                 >
                   {language === 'ka' ? 'შეკვეთის გაუქმება?' : 'Cancel this order?'}
                 </h3>
@@ -110,8 +110,8 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
           </div>
 
           {/* Body with Order Details */}
-          <div className="p-5 sm:p-6 space-y-4 text-left">
-            <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border space-y-2.5">
+          <div className="p-4 sm:p-6 space-y-4 text-left">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-proton-bg/70 border border-proton-border space-y-2.5">
               <div className="flex items-center justify-between gap-2">
                 <span className={cn("text-[9px] font-black uppercase tracking-widest", currentTheme.muted)}>
                   {language === 'ka' ? 'შეკვეთილი ნივთი' : 'Order Item'}
@@ -121,7 +121,7 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
                 </span>
               </div>
 
-              <h4 className={cn("text-sm sm:text-base font-black uppercase tracking-tight leading-snug", currentTheme.text)}>
+              <h4 className={cn("text-sm sm:text-base font-black uppercase tracking-tight leading-snug break-words", currentTheme.text)}>
                 {order.itemTitle}
               </h4>
 
@@ -172,12 +172,12 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
           </div>
 
           {/* Footer Actions */}
-          <div className="p-5 sm:p-6 border-t border-proton-border bg-proton-bg/60 flex items-center justify-end gap-3 shrink-0">
+          <div className="p-4 sm:p-6 border-t border-proton-border bg-proton-bg/60 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5 sm:gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={isCancelling}
-              className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-proton-text bg-proton-card hover:bg-proton-bg border border-proton-border transition-all disabled:opacity-50 cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-proton-text bg-proton-card hover:bg-proton-bg border border-proton-border transition-all disabled:opacity-50 flex items-center justify-center text-center cursor-pointer"
             >
               {language === 'ka' ? 'შეკვეთის შენარჩუნება' : 'Keep Order'}
             </button>
@@ -186,11 +186,11 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
               type="button"
               onClick={onConfirmCancel}
               disabled={isCancelling}
-              className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-rose-600 hover:bg-rose-500 border border-rose-500/40 shadow-lg shadow-rose-900/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-rose-600 hover:bg-rose-500 border border-rose-500/40 shadow-lg shadow-rose-900/20 transition-all disabled:opacity-50 flex items-center justify-center text-center gap-2 active:scale-95 cursor-pointer"
             >
               {isCancelling ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin shrink-0" />
                   <span>{language === 'ka' ? 'უქმდება...' : 'Cancelling...'}</span>
                 </>
               ) : (

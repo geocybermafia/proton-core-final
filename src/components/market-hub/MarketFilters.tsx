@@ -94,7 +94,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
           <button 
             type="button"
             onClick={onCloseMobile} 
-            className="lg:hidden p-2 bg-proton-bg border border-proton-border rounded-lg hover:bg-proton-accent/10 hover:text-proton-text transition-all text-proton-muted cursor-pointer"
+            className="md:hidden p-2 bg-proton-bg border border-proton-border rounded-lg hover:bg-proton-accent/10 hover:text-proton-text transition-all text-proton-muted cursor-pointer"
             aria-label="Close filters"
           >
             <X size={16} />
@@ -177,7 +177,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               <select 
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className={cn("w-full pl-10 pr-10 py-3 rounded-xl text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
+                className={cn("w-full pl-10 pr-10 py-3 rounded-xl text-base md:text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
               >
                 <option value="rating" className="bg-proton-card text-proton-text">{language === 'ka' ? '★ რეიტინგი' : '★ RATING'}</option>
                 <option value="newest" className="bg-proton-card text-proton-text">{language === 'ka' ? '📅 უახლესი' : '📅 NEWEST'}</option>
@@ -199,7 +199,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
             <select 
               value={activeCountry}
               onChange={(e) => setActiveCountry(e.target.value)}
-              className={cn("w-full pl-10 pr-10 py-3 rounded-xl text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
+              className={cn("w-full pl-10 pr-10 py-3 rounded-xl text-base md:text-xs font-bold transition-all appearance-none cursor-pointer", inputSurface)}
             >
               {WORLD_COUNTRIES.map(country => (
                 <option key={country.code} value={country.code} className="bg-proton-card text-proton-text">
@@ -223,7 +223,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
               value={activeCity}
               onChange={(e) => setActiveCity(e.target.value)}
               placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
-              className={cn("w-full pl-10 pr-9 py-3 rounded-xl text-xs font-bold transition-all", inputSurface)}
+              className={cn("w-full pl-10 pr-9 py-3 rounded-xl text-base md:text-xs font-bold transition-all", inputSurface)}
             />
             {activeCity && (
               <button
@@ -268,7 +268,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 }}
                 placeholder="0"
                 aria-label={language === 'ka' ? `მინიმალური ფასი (${displayCurrency})` : `Minimum price (${displayCurrency})`}
-                className={cn("w-full pl-10 pr-3 py-2.5 rounded-xl text-xs font-bold transition-all", inputSurface)}
+                className={cn("w-full pl-11 pr-3 py-2.5 rounded-xl text-base md:text-xs font-bold transition-all", inputSurface)}
               />
             </div>
             <div className="relative">
@@ -286,7 +286,7 @@ export const MarketFilterPanel = React.memo(function MarketFilterPanel({
                 }}
                 placeholder="∞"
                 aria-label={language === 'ka' ? `მაქსიმალური ფასი (${displayCurrency})` : `Maximum price (${displayCurrency})`}
-                className={cn("w-full pl-10 pr-3 py-2.5 rounded-xl text-xs font-bold transition-all", inputSurface)}
+                className={cn("w-full pl-11 pr-3 py-2.5 rounded-xl text-base md:text-xs font-bold transition-all", inputSurface)}
               />
             </div>
           </div>

@@ -216,11 +216,11 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                   value={chatMessageText}
                   onChange={(e) => onChangeChatMessageText(e.target.value)}
                   placeholder={language === 'ka' ? 'დაწერეთ შეთავაზება...' : 'Propose price or ask a question...'}
-                  className={cn("flex-1 px-5 py-4 rounded-xl border text-xs font-bold focus:outline-none", currentTheme.input)}
+                  className={cn("flex-1 min-w-0 px-4 sm:px-5 py-3.5 sm:py-4 rounded-xl border text-base md:text-xs font-bold focus:outline-none", currentTheme.input)}
                 />
                 <button 
                   type="submit"
-                  className={cn("px-5 py-4 font-black text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-all flex items-center gap-2 shadow-md cursor-pointer", currentTheme.accentBg)}
+                  className={cn("shrink-0 px-4 sm:px-5 py-3.5 sm:py-4 font-black text-xs uppercase tracking-wider rounded-xl active:scale-95 transition-all flex items-center gap-2 shadow-md cursor-pointer", currentTheme.accentBg)}
                 >
                   <span>{language === 'ka' ? 'გაგზავნა' : 'Send'}</span>
                 </button>

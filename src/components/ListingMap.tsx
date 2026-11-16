@@ -129,7 +129,7 @@ export function buildListingPopupElement({
   const safeImageUrl = getSafeMapImageUrl(candidateImage);
 
   const root = document.createElement('div');
-  root.className = 'w-64 rounded-2xl overflow-hidden p-0 shadow-2xl font-sans';
+  root.className = 'w-60 sm:w-64 max-w-[calc(100vw-4rem)] rounded-2xl overflow-hidden p-0 shadow-2xl font-sans';
   root.style.margin = '-14px -20px';
   root.style.background = 'var(--proton-card)';
   root.style.color = 'var(--proton-text)';
@@ -634,77 +634,80 @@ export function ListingMap({
         className="w-full h-full z-0" 
       />
       
-      {/* Geolocation Fallback Contextual Banner */}
-      {geoError && (
-        <div className="absolute top-16 left-4 right-4 sm:left-6 sm:right-6 z-20 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="px-4 py-3 bg-proton-card/95 backdrop-blur-xl rounded-2xl border border-amber-500/40 text-proton-text shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <AlertTriangle size={16} className="text-amber-500 shrink-0" />
-              <span className="font-medium leading-tight text-[11px] text-proton-text">{geoError}</span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+      {/* Top Overlays & Geolocation Banner */}
+      <div className="absolute top-3 left-3 right-3 sm:top-6 sm:left-6 sm:right-6 z-20 pointer-events-none flex flex-col gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {/* Decorative Status Badge */}
+          <div className="self-start max-w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-proton-card/95 backdrop-blur-xl rounded-2xl border border-proton-border flex items-center gap-2 shadow-xl">
+            <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse shrink-0" />
+            <span className="text-[10px] font-black uppercase tracking-[0.12em] sm:tracking-[0.2em] text-proton-text truncate">
+              {language === 'ka' ? 'ლოკაციების რუკა' : 'Live Asset Map'}
+            </span>
+            <span className="px-1.5 py-0.5 bg-proton-bg rounded text-[8px] font-black text-proton-muted uppercase tracking-widest border border-proton-border shrink-0">
+              {listings.filter(l => typeof l.lat === 'number').length} / {listings.length}
+            </span>
+          </div>
+
+          {/* Controls Overlay: Locate Me + Grid Button */}
+          <div className="pointer-events-auto flex items-center flex-wrap gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={handleLocateUser}
+              disabled={locating}
+              className="px-3 py-2 bg-proton-card/95 backdrop-blur-xl rounded-xl border border-proton-border text-proton-text hover:text-proton-accent hover:border-proton-accent/40 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              title={language === 'ka' ? 'ჩემი ლოკაცია' : 'Locate Me'}
+            >
+              {locating ? (
+                <Loader2 size={12} className="animate-spin text-proton-accent shrink-0" />
+              ) : (
+                <Navigation size={12} className="text-proton-accent shrink-0" />
+              )}
+              <span>{language === 'ka' ? 'ჩემი ლოკაცია' : 'Locate Me'}</span>
+            </button>
+
+            {onClose && (
               <button
                 type="button"
-                onClick={handleLocateUser}
-                disabled={locating}
-                className="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-wider text-amber-500 transition-all flex items-center gap-1 cursor-pointer"
+                onClick={onClose}
+                className="px-3 py-2 bg-proton-card/95 backdrop-blur-xl rounded-xl border border-proton-border text-proton-text hover:text-proton-accent hover:border-proton-accent/40 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-xl active:scale-95 transition-all cursor-pointer"
+                title={language === 'ka' ? 'ბადეზე გადასვლა' : 'Switch to Grid'}
               >
-                {locating ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
-                <span>{language === 'ka' ? 'ხელახლა ცდა' : 'Retry'}</span>
+                <LayoutGrid size={12} className="text-proton-accent shrink-0" />
+                <span>{language === 'ka' ? 'ბადე' : 'Grid'}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setGeoError(null)}
-                className="p-1 hover:bg-proton-bg rounded-lg text-proton-muted hover:text-proton-text transition-all cursor-pointer"
-                title={language === 'ka' ? 'დახურვა' : 'Dismiss'}
-              >
-                <X size={14} />
-              </button>
-            </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Decorative Overlays */}
-      <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-10 pointer-events-none">
-        <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-proton-card/95 backdrop-blur-xl rounded-2xl border border-proton-border flex items-center gap-2 shadow-xl">
-          <div className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-proton-text">
-            {language === 'ka' ? 'ლოკაციების რუკა' : 'Live Asset Map'}
-          </span>
-          <span className="px-1.5 py-0.5 bg-proton-bg rounded text-[8px] font-black text-proton-muted uppercase tracking-widest border border-proton-border">
-            {listings.filter(l => typeof l.lat === 'number').length} / {listings.length}
-          </span>
-        </div>
-      </div>
-
-      {/* Controls Overlay Top Right: Locate Me + Grid Button */}
-      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-20 pointer-events-auto flex items-center gap-2">
-        <button
-          type="button"
-          onClick={handleLocateUser}
-          disabled={locating}
-          className="px-3 py-2 bg-proton-card/95 backdrop-blur-xl rounded-xl border border-proton-border text-proton-text hover:text-proton-accent hover:border-proton-accent/40 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-          title={language === 'ka' ? 'ჩემი ლოკაცია' : 'Locate Me'}
-        >
-          {locating ? (
-            <Loader2 size={12} className="animate-spin text-proton-accent" />
-          ) : (
-            <Navigation size={12} className="text-proton-accent" />
-          )}
-          <span>{language === 'ka' ? 'ჩემი ლოკაცია' : 'Locate Me'}</span>
-        </button>
-
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-2 bg-proton-card/95 backdrop-blur-xl rounded-xl border border-proton-border text-proton-text hover:text-proton-accent hover:border-proton-accent/40 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider shadow-xl active:scale-95 transition-all cursor-pointer"
-            title={language === 'ka' ? 'ბადეზე გადასვლა' : 'Switch to Grid'}
-          >
-            <LayoutGrid size={12} className="text-proton-accent" />
-            <span>{language === 'ka' ? 'ბადე' : 'Grid'}</span>
-          </button>
+        {/* Geolocation Fallback Contextual Banner */}
+        {geoError && (
+          <div className="pointer-events-auto animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="px-3.5 sm:px-4 py-2.5 sm:py-3 bg-proton-card/95 backdrop-blur-xl rounded-2xl border border-amber-500/40 text-proton-text shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                <span className="font-medium leading-tight text-[11px] text-proton-text">{geoError}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={handleLocateUser}
+                  disabled={locating}
+                  className="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 rounded-xl text-[10px] font-black uppercase tracking-wider text-amber-500 transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  {locating ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+                  <span>{language === 'ka' ? 'ხელახლა ცდა' : 'Retry'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGeoError(null)}
+                  className="p-1 hover:bg-proton-bg rounded-lg text-proton-muted hover:text-proton-text transition-all cursor-pointer"
+                  title={language === 'ka' ? 'დახურვა' : 'Dismiss'}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
       

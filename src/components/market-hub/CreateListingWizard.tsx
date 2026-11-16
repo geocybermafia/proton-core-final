@@ -643,7 +643,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         }));
                       }}
                       className={cn(
-                        "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold tracking-wide shadow-inner transition-all cursor-pointer",
+                        "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-base md:text-xs font-bold tracking-wide shadow-inner transition-all cursor-pointer",
                         currentTheme.input
                       )}
                     >
@@ -759,7 +759,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                             : (language === 'ka' ? `${kaPlaceholderBase} (არასავალდებულო)` : `${kaPlaceholderBase} (Optional)`)
                           }
                           className={cn(
-                            "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+                            "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
                             currentTheme.input,
                             isKaPrimary && fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
                           )}
@@ -803,7 +803,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                             : (language === 'ka' ? `${enPlaceholderBase} (არასავალდებულო)` : `${enPlaceholderBase} (Optional)`)
                           }
                           className={cn(
-                            "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+                            "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
                             currentTheme.input,
                             !isKaPrimary && fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
                           )}
@@ -855,7 +855,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     placeholder="0.00"
                     aria-invalid={Boolean(fieldErrors.price)}
                     className={cn(
-                      "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+                      "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
                       currentTheme.input,
                       fieldErrors.price && "border-rose-500/70 focus:border-rose-500"
                     )}
@@ -878,7 +878,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     value={formData.currency}
                     onChange={e => setFormData({...formData, currency: e.target.value})}
                     className={cn(
-                      "w-full pl-4.5 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-mono font-bold transition-all cursor-pointer",
+                      "w-full pl-4.5 pr-10 py-3.5 rounded-2xl border appearance-none text-base md:text-xs font-mono font-bold transition-all cursor-pointer",
                       currentTheme.input
                     )}
                   >
@@ -985,7 +985,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     onCommit={val => setFormData(p => ({ ...p, serviceDuration: val }))}
                     placeholder={language === 'ka' ? "მაგ: 3 დღე" : "e.g. 3 business days"}
                     className={cn(
-                      "w-full px-4 py-3 rounded-xl border text-xs font-bold transition-all",
+                      "w-full px-4 py-3 rounded-xl border text-base md:text-xs font-bold transition-all",
                       currentTheme.input
                     )}
                   />
@@ -1001,7 +1001,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     onCommit={val => setFormData(p => ({ ...p, serviceTerms: val }))}
                     placeholder={language === 'ka' ? "მაგ: შეთანხმების მიხედვით" : "e.g. As agreed with client"}
                     className={cn(
-                      "w-full px-4 py-3 rounded-xl border text-xs font-bold transition-all",
+                      "w-full px-4 py-3 rounded-xl border text-base md:text-xs font-bold transition-all",
                       currentTheme.input
                     )}
                   />
@@ -1090,7 +1090,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     value={effectiveIsRemote && !(formData.city || '').trim() && formData.country === 'GLOBAL' ? 'GLOBAL' : formData.country}
                     onChange={e => setFormData({...formData, country: e.target.value})}
                     className={cn(
-                      "w-full pl-4.5 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold transition-all cursor-pointer",
+                      "w-full pl-4.5 pr-10 py-3.5 rounded-2xl border appearance-none text-base md:text-xs font-bold transition-all cursor-pointer",
                       currentTheme.input
                     )}
                   >
@@ -1129,7 +1129,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       : (language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi')}
                     aria-invalid={Boolean(fieldErrors.city)}
                     className={cn(
-                      "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+                      "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
                       currentTheme.input,
                       fieldErrors.city && "border-rose-500/70 focus:border-rose-500"
                     )}
@@ -1159,7 +1159,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     ? (language === 'ka' ? 'სურვილისამებრ: ონლაინ / რეგიონი / სამუშაო საათები...' : 'Optional: Online / Timezone / Region notes...')
                     : (language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...')}
                   className={cn(
-                    "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+                    "w-full pl-11 pr-4 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
                     currentTheme.input
                   )}
                 />
@@ -1228,7 +1228,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 placeholder={language === 'ka' ? activeSchema.descriptionPlaceholderKa : activeSchema.descriptionPlaceholderEn}
                 aria-invalid={Boolean(fieldErrors.description)}
                 className={cn(
-                  "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-semibold h-36 resize-none shadow-inner transition-all",
+                  "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-semibold h-36 resize-none shadow-inner transition-all",
                   currentTheme.input,
                   fieldErrors.description && "border-rose-500/70 focus:border-rose-500"
                 )}
@@ -1357,7 +1357,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   onChange={e => setFormData({...formData, images: e.target.value ? [e.target.value] : []})}
                   placeholder={language === 'ka' ? '...ან ჩასვით სურათის გარე ბმული (URL)' : '...or paste external image link URL'}
                   className={cn(
-                    "w-full pl-10.5 pr-4 py-3 rounded-2xl border text-[11px] font-bold shadow-inner transition-all",
+                    "w-full pl-10.5 pr-4 py-3 rounded-2xl border text-base md:text-[11px] font-bold shadow-inner transition-all",
                     currentTheme.input
                   )}
                 />
