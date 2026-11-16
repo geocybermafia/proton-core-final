@@ -630,11 +630,34 @@ export const isServiceListing = (item?: ListingClassificationInput): boolean =>
 export const isProjectAssetListing = (item?: ListingClassificationInput): boolean =>
   classifyListing(item) === 'project_asset';
 
+export const isUniqueDigitalAssetListing = (item?: ListingClassificationInput): boolean => {
+  const classification = classifyListing(item);
+  return (
+    classification === 'project_asset' ||
+    normalizeCategoryId(item?.listingType) === 'digital' ||
+    normalizeCategoryId(item?.category) === 'digital'
+  );
+};
+
 export const isJobListing = (item?: ListingClassificationInput): boolean =>
   classifyListing(item) === 'job';
 
 export const isCollaborationListing = (item?: ListingClassificationInput): boolean =>
   classifyListing(item) === 'collaboration';
+
+export const isNonPurchasableListing = (item?: ListingClassificationInput): boolean => {
+  const classification = classifyListing(item);
+  return classification === 'job' || classification === 'collaboration';
+};
+
+export const isRepeatableServiceListing = (item?: ListingClassificationInput): boolean => {
+  if (!item || isNonPurchasableListing(item) || isUniqueDigitalAssetListing(item)) return false;
+  const classification = classifyListing(item);
+  return classification === 'service' || classification === 'project';
+};
+
+export const isExclusiveAssetOrProductListing = (item?: ListingClassificationInput): boolean =>
+  Boolean(item) && !isRepeatableServiceListing(item) && !isNonPurchasableListing(item);
 
 export const isProjectListing = (item?: ListingClassificationInput): boolean => {
   const classification = classifyListing(item);
@@ -664,23 +687,41 @@ export const resolvePreservedListingStatus = (
   return 'active';
 };
 
+export const isListingReserved = (
+  listing?: { status?: string | null; isSold?: boolean | null } | null
+): boolean => resolvePreservedListingStatus(listing) === 'reserved';
+
+export const isListingSold = (
+  listing?: { status?: string | null; isSold?: boolean | null } | null
+): boolean => resolvePreservedListingStatus(listing) === 'sold';
+
+export const isListingUnavailableForPurchase = (
+  listing?: { status?: string | null; isSold?: boolean | null; activeOrderId?: string | null } | null
+): boolean => {
+  if (!listing) return true;
+  const status = resolvePreservedListingStatus(listing);
+  if (status === 'reserved' || status === 'sold') return true;
+  return typeof listing.activeOrderId === 'string' && listing.activeOrderId.trim().length > 0 && !isRepeatableServiceListing(listing as ListingClassificationInput);
+};
+
 /**
- * Matches firestore.rules `isServiceOrProjectListing(data)` exactly so order status
- * creation (`booked` vs `pending`) never fails rules on legacy documents.
+ * Matches repeatable service listings (`service`, `rent`, `audience-growth`, or legacy `project`).
+ * NEVER returns true for unique digital assets (`youtube-channels`, `social-accounts`, `digital-projects`)
+ * or non-purchasable listings (`project-jobs`, `collaboration`).
  */
 export const isRuleServiceOrProjectOrderTarget = (item?: { listingType?: string; category?: string } | null): boolean => {
   if (!item) return false;
-  return (
-    item.listingType === 'service' ||
-    item.listingType === 'project' ||
-    item.category === 'service' ||
-    item.category === 'project'
-  );
+  return isRepeatableServiceListing(item);
 };
 
 export const isPhysicalOrder = (order: any): boolean => {
   if (!order) return false;
   return order.orderType === 'product' && Boolean(order.shippingDetails);
+};
+
+export const isProjectAssetOrder = (order: any): boolean => {
+  if (!order) return false;
+  return order.orderType === 'project';
 };
 
 export const isServiceOrder = (order: any): boolean => {
@@ -700,7 +741,7 @@ export const isSellerActionRequired = (order: any): boolean => {
     return order.status === 'pending' || order.status === 'processing';
   }
   if (isService) {
-    return order.status === 'booked' || order.status === 'in_progress';
+    return order.status === 'booked' || order.status === 'pending' || order.status === 'in_progress';
   }
 
   return order.status === 'pending' || order.status === 'processing' || order.status === 'booked' || order.status === 'in_progress';
@@ -712,7 +753,7 @@ export const canCancelOrder = (order: any): boolean => {
   if (['cancelled', 'completed', 'shipped', 'processing', 'in_progress', 'refunded'].includes(order.status)) {
     return false;
   }
-  // Only physical/product orders in 'pending' or service/project orders in 'booked' (before work begins)
+  // Only exclusive/physical orders in 'pending' or service bookings in 'booked' (before handover/work begins)
   return order.status === 'pending' || order.status === 'booked';
 };
 

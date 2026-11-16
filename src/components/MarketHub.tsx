@@ -115,6 +115,7 @@ import {
   isRuleServiceOrProjectOrderTarget,
   resolvePreservedListingStatus
 } from './market-hub/MarketConstants';
+import { validateListingForOrderCreation } from '../lib/marketOrderRules';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
 import { CartDrawer } from './market-hub/CartDrawer';
@@ -2430,20 +2431,27 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
     if (!checkoutItem) return;
 
+    // 1. Initial client-side validation using marketOrderRules
+    const preValidation = validateListingForOrderCreation(checkoutItem, user.uid);
+    if (!preValidation.ok) {
+      showToast(language === 'ka' ? preValidation.messageKa : preValidation.messageEn, 'error', 6000);
+      return;
+    }
+
     setIsCheckingOut(true);
     try {
-      const isService = isRuleServiceOrProjectOrderTarget(checkoutItem);
-      const isPhysical = !isService;
-
       await runTransaction(db, async (transaction) => {
         const listingRef = doc(db, 'listings', checkoutItem.id);
         const listingSnap = await transaction.get(listingRef);
         if (!listingSnap.exists()) {
-          throw new Error('Listing does not exist.');
+          throw new Error(language === 'ka' ? 'განცხადება ბაზაში ვერ მოიძებნა.' : 'Listing does not exist.');
         }
         const freshData = listingSnap.data();
-        if (freshData.status === 'sold' || freshData.isSold) {
-          throw new Error('This item has already been sold.');
+
+        // 2. Strict transaction-level re-validation against fresh Firestore snapshot for concurrency protection
+        const freshValidation = validateListingForOrderCreation(freshData, user.uid);
+        if (!freshValidation.ok) {
+          throw new Error(language === 'ka' ? freshValidation.messageKa : freshValidation.messageEn);
         }
 
         const verifiedOrderData: any = {
@@ -2453,13 +2461,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           amount: freshData.price,
           currency: freshData.currency || checkoutItem.currency || 'USD',
           itemTitle: getListingTitle(freshData || checkoutItem, language),
-          status: isService ? 'booked' : (isPhysical ? 'pending' : 'completed'),
-          orderType: isService ? 'service' : 'product',
-          buyerInstructions: isService ? buyerInstructions.trim() : '',
+          status: freshValidation.initialOrderStatus,
+          orderType: freshValidation.orderType,
+          buyerInstructions: buyerInstructions.trim() || '',
           createdAt: serverTimestamp()
         };
 
-        if (isPhysical) {
+        if (freshValidation.requiresShipping) {
           verifiedOrderData.shippingDetails = {
             recipientName: (shippingDetails.recipientName || user.displayName || 'Customer').trim(),
             phone: shippingDetails.phone.trim(),
@@ -2472,12 +2480,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         const newOrderRef = doc(collection(db, 'orders'));
         transaction.set(newOrderRef, verifiedOrderData);
 
-        if (!isService) {
-          transaction.update(listingRef, {
-            status: 'sold',
-            isSold: true,
-            activeOrderId: newOrderRef.id
-          });
+        if (freshValidation.requiresAtomicListingLock) {
+          const lockUpdate = freshValidation.buildListingLockUpdate(newOrderRef.id);
+          if (lockUpdate) {
+            transaction.update(listingRef, lockUpdate);
+          }
         }
       });
       
@@ -2494,18 +2501,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       setProfileSubMode('buying');
     } catch (error: any) {
       console.error("Error creating order:", error);
-      if (error && (error.message === 'This item has already been sold.' || error.message?.includes('sold'))) {
-        const itemSoldTitle = getListingTitle(checkoutItem, language);
-        showToast(
-          language === 'ka' 
-            ? `პროდუქტი "${itemSoldTitle}" უკვე გაყიდულია სხვა მომხმარებლის მიერ.` 
-            : `Item "${itemSoldTitle}" has already been sold to another user.`,
-          'error',
-          6000
-        );
-      } else {
-        showToast(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.", 'error');
-      }
+      const errMsg = error?.message || (language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing order.");
+      showToast(errMsg, 'error', 6000);
     } finally {
       setIsCheckingOut(false);
     }
