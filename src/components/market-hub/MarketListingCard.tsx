@@ -210,7 +210,8 @@ export const MarketListingCard = React.memo(function MarketListingCard({
     : baseLocationLabel;
 
   const categoryLabel = getCategoryLabel(listing.category, t, language);
-  const sellerName = listing.sellerName || (language === 'ka' ? 'გამყიდველი' : 'Seller');
+  const tags = Array.isArray(listing.tags) ? listing.tags : [];
+  const sellerName = listing.sellerName || listing.authorName || 'Proton Vendor';
 
   return (
     <motion.article

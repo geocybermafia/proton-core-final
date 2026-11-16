@@ -15,6 +15,7 @@ import { MarketHubProvider } from './contexts/MarketHubContext';
 import { BrowserRouter } from 'react-router-dom';
 
 import { isChunkLoadError, clearAllChunkRetryFlags } from './lib/lazyWithRetry';
+import { initGA } from './utils/analytics';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   constructor(props: any) {
@@ -141,8 +142,6 @@ function Root() {
     </ErrorBoundary>
   );
 }
-
-import { initGA } from './utils/analytics';
 
 initGA();
 

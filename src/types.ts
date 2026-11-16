@@ -173,6 +173,8 @@ export type Listing = {
   currency: string;
   sellerId: string;
   sellerName: string;
+  authorName?: string;
+  tags?: string[];
   image?: string;
   images?: string[];
   category: string;

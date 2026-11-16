@@ -4,14 +4,14 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 
 async function startServer() {
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
-  // Vite middleware for development
+  // Vite middleware for development (HMR disabled in container/iframe runtime)
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { 
         middlewareMode: true,
-        hmr: process.env.DISABLE_HMR !== 'true'
+        hmr: false
       },
       appType: "spa",
     });

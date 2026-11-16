@@ -107,12 +107,12 @@ export const CheckoutModal = React.memo(function CheckoutModal({
             )}
           >
             {/* Fixed Header */}
-            <div className="p-5 sm:p-6 border-b border-proton-border flex items-center justify-between shrink-0 bg-proton-card/95 backdrop-blur-md">
-              <div>
-                <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-proton-text">
+            <div className="p-4 sm:p-6 border-b border-proton-border flex items-center justify-between gap-3 shrink-0 bg-proton-card/95 backdrop-blur-md">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-proton-text break-words min-w-0">
                   {language === 'ka' ? 'შეკვეთის შეთანხმება' : 'Direct Order Request'}
                 </h3>
-                <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-none mt-1", currentTheme.muted)}>
+                <p className={cn("text-[9px] font-bold uppercase tracking-widest leading-snug mt-1 break-words min-w-0", currentTheme.muted)}>
                   {isServiceOrProject
                     ? (language === 'ka' ? 'პირდაპირი ჯავშანი • ანგარიშსწორება შემსრულებელთან' : 'Direct Booking • Direct Settlement')
                     : (language === 'ka' ? 'პირდაპირი შეკვეთა • ანგარიშსწორება გამყიდველთან' : 'Direct Order • Direct Settlement with Seller')}
@@ -121,7 +121,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
               <button 
                 onClick={onClose}
                 disabled={isCheckingOut}
-                className="p-3 bg-proton-bg border border-proton-border rounded-2xl hover:bg-proton-accent/10 transition-colors disabled:opacity-50 text-proton-text"
+                className="p-3 bg-proton-bg border border-proton-border rounded-2xl hover:bg-proton-accent/10 transition-colors disabled:opacity-50 text-proton-text shrink-0"
                 aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
               >
                 <X size={18} />
@@ -129,19 +129,19 @@ export const CheckoutModal = React.memo(function CheckoutModal({
             </div>
 
             {/* Scrollable Body with bottom clearance for virtual keyboard & sticky action footer */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-32 sm:pb-8 space-y-5 custom-scrollbar-minimal overscroll-contain">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-32 sm:pb-8 space-y-5 custom-scrollbar-minimal overscroll-contain">
               {/* Direct Marketplace Model Disclosure Banner */}
               <div className="p-4 rounded-2xl bg-proton-accent/10 border border-proton-accent/25 flex items-start gap-3">
                 <div className="p-2 rounded-xl bg-proton-accent/20 text-proton-accent shrink-0 mt-0.5">
                   <ShieldCheck size={16} />
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
-                  <p className="text-xs font-black uppercase tracking-wider text-proton-accent leading-snug">
+                  <p className="text-xs font-black uppercase tracking-wider text-proton-accent leading-snug break-words min-w-0">
                     {language === 'ka'
                       ? 'პირდაპირი ანგარიშსწორება & მიწოდება'
                       : 'Direct Buyer-Seller Settlement'}
                   </p>
-                  <p className="text-[11px] text-proton-text/80 leading-relaxed font-normal">
+                  <p className="text-[11px] text-proton-text/80 leading-relaxed font-normal break-words min-w-0">
                     {language === 'ka'
                       ? 'Proton არის პირდაპირი დაკავშირების პლატფორმა და არ იღებს მომხმარებლების ფულს. გადახდის ფორმაზე (ნაღდი ანგარიშსწორება მიღებისას ან პირდაპირი გადარიცხვა) და მიწოდებაზე თანხმდებით უშუალოდ გამყიდველთან.'
                       : 'Proton is a connection platform and does not process payments or hold funds. Payment method (cash on delivery or direct bank transfer) and handover are agreed directly with the seller.'}
@@ -166,7 +166,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                     <ShoppingCart size={15} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-proton-text leading-snug">
+                    <p className="text-[11px] font-bold text-proton-text leading-snug break-words min-w-0">
                       {language === 'ka'
                         ? `თქვენს კალათაში უკვე გაქვთ ${cart.length} ნივთი. ეს მოქმედება გააფორმებს მხოლოდ ამ კონკრეტულ ნივთს.`
                         : `You currently have ${cart.length} item(s) in your cart. This action purchases only this listing directly.`}
@@ -174,7 +174,7 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                     <button
                       type="button"
                       onClick={onViewCart}
-                      className="mt-2 text-[10px] font-black uppercase tracking-wider text-amber-500 hover:underline underline-offset-2 transition-colors flex items-center gap-1"
+                      className="mt-2 text-[10px] font-black uppercase tracking-wider text-amber-500 hover:underline underline-offset-2 transition-colors flex items-center gap-1 break-words min-w-0 text-left"
                     >
                       {language === 'ka' ? 'კალათის ნახვა & ერთობლივი შეძენა' : 'View Cart & Checkout All Items'}
                     </button>
@@ -183,8 +183,8 @@ export const CheckoutModal = React.memo(function CheckoutModal({
               )}
 
               {/* Item Details Card */}
-              <div className="bg-proton-bg/60 rounded-3xl p-5 border border-proton-border flex items-center gap-4 sm:gap-5">
-                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-proton-bg border border-proton-border shrink-0 relative">
+              <div className="bg-proton-bg/60 rounded-3xl p-4 sm:p-5 border border-proton-border flex items-center gap-3.5 sm:gap-5 min-w-0">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-proton-bg border border-proton-border shrink-0 relative">
                   {checkoutItem.image ? (
                     <CartItemThumbnail 
                       src={checkoutItem.image} 
@@ -198,21 +198,21 @@ export const CheckoutModal = React.memo(function CheckoutModal({
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className={cn(
-                    "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1.5",
+                    "inline-block px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-widest mb-1.5 max-w-full truncate",
                     isServiceOrProject
                       ? "bg-amber-500/15 border border-amber-500/30 text-amber-500"
                       : "bg-emerald-500/15 border border-emerald-500/30 text-emerald-500"
                   )}>
                     {getCategoryLabel(checkoutItem.category, t, language)}
                   </span>
-                  <h4 className="text-sm sm:text-base font-bold text-proton-text uppercase tracking-tight line-clamp-1">
+                  <h4 className="text-sm sm:text-base font-bold text-proton-text uppercase tracking-tight line-clamp-2 break-words min-w-0">
                     {getListingTitle(checkoutItem, language)}
                   </h4>
-                  <p className="text-lg sm:text-xl font-black text-proton-accent font-mono tabular-nums mt-1">
+                  <p className="text-lg sm:text-xl font-black text-proton-accent font-mono tabular-nums mt-1 break-words min-w-0">
                     {formattedOriginal}
                   </p>
                   {!isSameCurrency && (
-                    <p className="text-xs font-semibold text-proton-muted font-mono tabular-nums mt-0.5">
+                    <p className="text-xs font-semibold text-proton-muted font-mono tabular-nums mt-0.5 break-words min-w-0">
                       {language === 'ka' ? 'სავარაუდო ეკვივალენტი:' : 'Est. equivalent:'} {formattedApprox}
                     </p>
                   )}
@@ -220,32 +220,32 @@ export const CheckoutModal = React.memo(function CheckoutModal({
               </div>
 
               {/* Seller & Location Metas */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-proton-bg/60 rounded-2xl p-3.5 border border-proton-border">
+              <div className="grid grid-cols-2 gap-3 min-w-0">
+                <div className="bg-proton-bg/60 rounded-2xl p-3.5 border border-proton-border min-w-0">
                   <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-70 mb-1.5", currentTheme.muted)}>Seller</p>
                   <div className="flex items-center gap-2 min-w-0">
-                     <ShieldCheck size={13} className={currentTheme.accent} />
-                     <span className="text-[11px] font-black text-proton-text uppercase truncate">{checkoutItem.sellerName}</span>
+                     <ShieldCheck size={13} className={cn("shrink-0", currentTheme.accent)} />
+                     <span className="text-[11px] font-black text-proton-text uppercase truncate min-w-0">{checkoutItem.sellerName || 'Proton Vendor'}</span>
                   </div>
                 </div>
-                <div className="bg-proton-bg/60 rounded-2xl p-3.5 border border-proton-border">
+                <div className="bg-proton-bg/60 rounded-2xl p-3.5 border border-proton-border min-w-0">
                   <p className={cn("text-[8px] font-black uppercase tracking-widest opacity-70 mb-1.5", currentTheme.muted)}>Location</p>
                   <div className="flex items-center gap-2 min-w-0">
-                     <MapPin size={12} className={currentTheme.accent} />
-                     <span className="text-[11px] font-black text-proton-text uppercase truncate">{checkoutItem.city || 'Tbilisi'}</span>
+                     <MapPin size={12} className={cn("shrink-0", currentTheme.accent)} />
+                     <span className="text-[11px] font-black text-proton-text uppercase truncate min-w-0">{checkoutItem.city || 'Tbilisi'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Physical Product Shipping Form */}
               {isPhysical && (
-                <div className="space-y-4 bg-proton-bg/60 rounded-3xl p-5 border border-proton-border text-left">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-proton-text flex items-center gap-1.5">
-                      <Truck size={14} className="text-proton-accent" />
+                <div className="space-y-4 bg-proton-bg/60 rounded-3xl p-4 sm:p-5 border border-proton-border text-left min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-proton-text flex items-center gap-1.5 break-words min-w-0">
+                      <Truck size={14} className="text-proton-accent shrink-0" />
                       <span>{language === 'ka' ? 'მიწოდების მონაცემები' : 'Delivery & Shipping Details'}</span>
                     </h4>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 shrink-0">
                       {language === 'ka' ? '* აუცილებელი ველები' : '* Required fields'}
                     </span>
                   </div>
@@ -328,27 +328,27 @@ export const CheckoutModal = React.memo(function CheckoutModal({
 
               {/* Conditional Service Booking Panel */}
               {isServiceOrProject && (
-                <div className="space-y-4 bg-proton-bg/60 rounded-3xl p-5 border border-proton-border text-left">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-proton-text flex items-center gap-1.5">
-                    <span className="text-amber-500">⚡</span>
+                <div className="space-y-4 bg-proton-bg/60 rounded-3xl p-4 sm:p-5 border border-proton-border text-left min-w-0">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-proton-text flex items-center gap-1.5 break-words min-w-0">
+                    <span className="text-amber-500 shrink-0">⚡</span>
                     <span>{language === 'ka' ? 'სერვისის დეტალები' : 'Service Booking Details'}</span>
                   </h4>
-                  <div className="grid grid-cols-2 gap-3 text-xs font-medium">
-                    <div className="bg-proton-card rounded-xl p-3 border border-proton-border">
+                  <div className="grid grid-cols-2 gap-3 text-xs font-medium min-w-0">
+                    <div className="bg-proton-card rounded-xl p-3 border border-proton-border min-w-0">
                       <span className="block text-[8px] uppercase tracking-wider text-proton-muted mb-1">{language === 'ka' ? 'შესრულების ვადა' : 'Duration'}</span>
-                      <span className="text-proton-text font-bold">{checkoutItem.serviceDuration || (language === 'ka' ? 'შეთანხმებით' : 'Flexible')}</span>
+                      <span className="text-proton-text font-bold break-words block min-w-0">{checkoutItem.serviceDuration || (language === 'ka' ? 'შეთანხმებით' : 'Flexible')}</span>
                     </div>
-                    <div className="bg-proton-card rounded-xl p-3 border border-proton-border">
+                    <div className="bg-proton-card rounded-xl p-3 border border-proton-border min-w-0">
                       <span className="block text-[8px] uppercase tracking-wider text-proton-muted mb-1">{language === 'ka' ? 'პირობა' : 'Requirements'}</span>
-                      <span className="text-proton-text font-bold truncate block">{checkoutItem.serviceTerms || (language === 'ka' ? 'სტანდარტული' : 'Standard')}</span>
+                      <span className="text-proton-text font-bold break-words block min-w-0">{checkoutItem.serviceTerms || (language === 'ka' ? 'სტანდარტული' : 'Standard')}</span>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between ml-0.5">
-                      <label htmlFor="direct-buyer-instructions" className="text-[9px] font-black uppercase tracking-wider text-proton-muted block">
+                    <div className="flex items-center justify-between ml-0.5 gap-2">
+                      <label htmlFor="direct-buyer-instructions" className="text-[9px] font-black uppercase tracking-wider text-proton-muted block min-w-0 break-words">
                         {language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Instructions for the Seller'}
                       </label>
-                      <span className={cn("text-[9px] font-mono", buyerInstructions.length >= 480 ? "text-amber-500 font-bold" : "text-proton-muted")}>
+                      <span className={cn("text-[9px] font-mono shrink-0", buyerInstructions.length >= 480 ? "text-amber-500 font-bold" : "text-proton-muted")}>
                         {buyerInstructions.length}/500
                       </span>
                     </div>
@@ -366,33 +366,33 @@ export const CheckoutModal = React.memo(function CheckoutModal({
             </div>
 
             {/* Sticky Bottom Action Footer with safe-area spacing */}
-            <div className="p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-proton-border shrink-0 bg-proton-card/95 backdrop-blur-md space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-0.5">
-                  <span className={cn("text-[9px] font-black uppercase tracking-widest block", currentTheme.muted)}>
+            <div className="p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:pb-6 border-t border-proton-border shrink-0 bg-proton-card/95 backdrop-blur-md space-y-4">
+              <div className="flex items-start justify-between gap-4 min-w-0">
+                <div className="space-y-0.5 min-w-0">
+                  <span className={cn("text-[9px] font-black uppercase tracking-widest block break-words min-w-0", currentTheme.muted)}>
                     {language === 'ka' ? 'ფასი (პირდაპირი შეთანხმება)' : 'Price (Direct Agreement)'}
                   </span>
                   {!isSameCurrency && (
-                    <span className="text-[11px] font-medium text-proton-muted block font-mono tabular-nums">
+                    <span className="text-[11px] font-medium text-proton-muted block font-mono tabular-nums break-words min-w-0">
                       {language === 'ka' ? 'სავარაუდო ეკვივალენტი:' : 'Est. equivalent:'} {formattedApprox}
                     </span>
                   )}
                 </div>
-                <span className="text-xl font-black text-proton-accent font-mono tabular-nums whitespace-nowrap text-right">
+                <span className="text-xl font-black text-proton-accent font-mono tabular-nums whitespace-nowrap text-right shrink-0">
                   {formatCurrencyAmount(checkoutItem.price, originalCurrency)}
                   <span className="text-xs font-black opacity-75 ml-1">{originalCurrency}</span>
                 </span>
               </div>
 
               {isPhysical && !isShippingComplete && (
-                <p className="text-[10px] font-bold text-amber-500 text-center bg-amber-500/10 py-1.5 px-3 rounded-xl border border-amber-500/25">
+                <p className="text-[10px] font-bold text-amber-500 text-center bg-amber-500/10 py-1.5 px-3 rounded-xl border border-amber-500/25 break-words min-w-0">
                   {language === 'ka' 
                     ? '⚠️ გთხოვთ შეავსოთ ტელეფონი, ქალაქი და მისამართი' 
                     : '⚠️ Please provide contact phone, city, and delivery address'}
                 </p>
               )}
 
-              <p className={cn("text-[9px] font-bold text-center leading-relaxed opacity-80", currentTheme.muted)}>
+              <p className={cn("text-[9px] font-bold text-center leading-relaxed opacity-80 break-words min-w-0", currentTheme.muted)}>
                 {language === 'ka' 
                   ? 'მოთხოვნა გაეგზავნება გამყიდველს. თანხის გადახდა ხდება პირდაპირ გამყიდველთან შეთანხმებით.'
                   : 'Order request will be sent to the seller. Payment is settled directly with the seller.'}

@@ -118,6 +118,9 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
   if (!listing) return null;
 
+  const tags = Array.isArray(listing.tags) ? listing.tags : [];
+  const sellerName = listing.sellerName || listing.authorName || 'Proton Vendor';
+
   const isOwnListing = Boolean(user && listing.sellerId === user.uid);
   const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
   const displayTitle = getListingTitle(listing, language);
@@ -223,7 +226,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
             {/* Header Bar */}
             <div
               className={cn(
-                'px-5 py-4 sm:px-6 border-b flex items-center justify-between gap-4 shrink-0',
+                'p-4 sm:p-6 border-b flex items-center justify-between gap-4 shrink-0',
                 currentTheme.border
               )}
             >
@@ -291,7 +294,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                 {/* Left Column: Photo Gallery */}
                 <div className="md:col-span-6 space-y-3">
@@ -425,18 +428,18 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                 {/* Right Column: Product Info & Details */}
                 <div className="md:col-span-6 space-y-5 min-w-0">
                   {/* Title & Price */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <h2
                       id="listing-details-title"
                       className={cn(
-                        'text-xl sm:text-2xl font-bold leading-snug break-words',
+                        'text-xl sm:text-2xl font-bold leading-snug break-words min-w-0',
                         currentTheme.text
                       )}
                     >
                       {displayTitle}
                     </h2>
                     {secondaryTitle && (
-                      <p className={cn('text-xs break-words', currentTheme.muted)}>
+                      <p className={cn('text-xs break-words min-w-0', currentTheme.muted)}>
                         {secondaryTitle}
                       </p>
                     )}
@@ -489,7 +492,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                         </span>
                       </div>
                       {!isSameCurrency && (
-                        <p className={cn('text-xs', currentTheme.muted)}>
+                        <p className={cn('text-xs break-words min-w-0', currentTheme.muted)}>
                           {language === 'ka'
                             ? `კონვერტირებული თანხა მხოლოდ საორიენტაციოა. შეკვეთა ფორმდება ორიგინალ ვალუტაში (${originalCurrency}).`
                             : `Converted amount is an indicative estimate only. Orders are placed in the listing's original currency (${originalCurrency}).`}
@@ -531,12 +534,12 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       </span>
                     </div>
 
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start justify-between gap-4 min-w-0">
                       <span className={cn('text-xs shrink-0 flex items-center gap-1', currentTheme.muted)}>
                         {isRemote ? <Globe size={13} className="shrink-0" /> : <MapPin size={13} className="shrink-0" />}
                         <span>{language === 'ka' ? 'მისამართი / ფორმატი' : 'Location / Format'}</span>
                       </span>
-                      <span className={cn('font-medium text-right break-words', currentTheme.text)}>
+                      <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
                         {isRemote
                           ? (uniqueLocationParts.length > 0
                             ? `${language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'} (${uniqueLocationParts.join(', ')})`
@@ -551,11 +554,11 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
                     {(isServiceListing(listing) || isProjectListing(listing)) &&
                       listing.serviceDuration && (
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-4 min-w-0">
                           <span className={cn('text-xs shrink-0', currentTheme.muted)}>
                             {language === 'ka' ? 'ვადა / ხანგრძლივობა' : 'Duration'}
                           </span>
-                          <span className={cn('font-medium text-right break-words', currentTheme.text)}>
+                          <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
                             {listing.serviceDuration}
                           </span>
                         </div>
@@ -563,20 +566,20 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
                     {(isServiceListing(listing) || isProjectListing(listing)) &&
                       listing.serviceTerms && (
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start justify-between gap-4 min-w-0">
                           <span className={cn('text-xs shrink-0', currentTheme.muted)}>
                             {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms'}
                           </span>
-                          <span className={cn('font-medium text-right break-words', currentTheme.text)}>
+                          <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
                             {listing.serviceTerms}
                           </span>
                         </div>
                       )}
 
                     {formattedAttributes.length > 0 && (
-                      <div className={cn('pt-3 mt-1 border-t space-y-2.5', currentTheme.border)}>
+                      <div className={cn('pt-3 mt-1 border-t space-y-2.5 min-w-0', currentTheme.border)}>
                         {formattedAttributes.map((attr) => (
-                          <div key={attr.key} className="flex items-start justify-between gap-4">
+                          <div key={attr.key} className="flex items-start justify-between gap-4 min-w-0">
                             <span className={cn('text-xs shrink-0', currentTheme.muted)}>
                               {attr.label}
                             </span>
@@ -586,15 +589,15 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={cn(
-                                  'font-medium text-right underline break-all inline-flex items-center gap-1 justify-end',
+                                  'font-medium text-right break-all min-w-0 underline inline-flex items-center gap-1 justify-end',
                                   currentTheme.accent
                                 )}
                               >
-                                <span>{attr.value}</span>
+                                <span className="break-all min-w-0">{attr.value}</span>
                                 <ExternalLink size={12} className="shrink-0" />
                               </a>
                             ) : (
-                              <span className={cn('font-medium text-right break-words', currentTheme.text)}>
+                              <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
                                 {attr.value}
                               </span>
                             )}
@@ -605,13 +608,13 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                   </div>
 
                   {/* Full Description */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <h3 className={cn('text-xs font-bold uppercase tracking-wider', currentTheme.muted)}>
                       {language === 'ka' ? 'აღწერა' : 'Description'}
                     </h3>
                     <p
                       className={cn(
-                        'text-sm leading-relaxed whitespace-pre-line break-words',
+                        'text-sm leading-relaxed whitespace-pre-line break-words min-w-0',
                         currentTheme.subtext
                       )}
                     >
@@ -630,7 +633,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       onClick={() =>
                         onSelectVendor({
                           id: listing.sellerId,
-                          name: listing.sellerName
+                          name: sellerName
                         })
                       }
                       className={cn(
@@ -647,12 +650,12 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                             currentTheme.card
                           )}
                         >
-                          {(listing.sellerName || 'S').substring(0, 2).toUpperCase()}
+                          {(sellerName || 'S').substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <span className={cn('text-sm font-bold truncate', currentTheme.text)}>
-                              {listing.sellerName || (language === 'ka' ? 'გამყიდველი' : 'Seller')}
+                              {sellerName}
                             </span>
                             <ShieldCheck size={14} className={cn('shrink-0', currentTheme.accent)} />
                           </div>
@@ -684,7 +687,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                   </div>
 
                   {/* Direct Agreement Notice */}
-                  <p className={cn('text-xs leading-relaxed', currentTheme.muted)}>
+                  <p className={cn('text-xs leading-relaxed break-words min-w-0', currentTheme.muted)}>
                     {language === 'ka'
                       ? 'გადახდის და მიწოდების პირობებზე მყიდველი და გამყიდველი თანხმდებიან უშუალოდ.'
                       : 'Payment and delivery terms are agreed directly between buyer and seller.'}
