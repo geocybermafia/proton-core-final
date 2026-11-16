@@ -3,8 +3,40 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 
+function resolveServerPort(): number {
+  const portArgIdx = process.argv.findIndex(
+    (arg) => arg === "--port" || arg.startsWith("--port=")
+  );
+  if (portArgIdx !== -1) {
+    const arg = process.argv[portArgIdx];
+    const rawVal = arg.includes("=")
+      ? arg.split("=")[1]
+      : process.argv[portArgIdx + 1];
+    const parsedArg = Number(rawVal);
+    if (Number.isFinite(parsedArg) && parsedArg > 0) {
+      return parsedArg;
+    }
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    const defaultAppPort = Number(process.env.DEFAULT_APP_PORT);
+    if (Number.isFinite(defaultAppPort) && defaultAppPort > 0) {
+      return defaultAppPort;
+    }
+    if (process.env.PORT && process.env.PORT !== process.env.NGINX_PORT) {
+      const envPort = Number(process.env.PORT);
+      if (Number.isFinite(envPort) && envPort > 0) {
+        return envPort;
+      }
+    }
+    return 3000;
+  }
+
+  return Number(process.env.PORT) || 3000;
+}
+
 async function startServer() {
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = resolveServerPort();
 
   // Vite middleware for development (HMR disabled in container/iframe runtime)
   if (process.env.NODE_ENV !== "production") {

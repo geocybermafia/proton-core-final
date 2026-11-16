@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { db } from '../firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { Workflow, WorkflowStep, Persona, Theme } from '../types';
 import { translations } from '../translations';
 import { cn } from '../lib/utils';
@@ -218,7 +218,7 @@ const WorkflowEditor = ({
                       onClick={() => {
                         setFormData(prev => ({ ...prev, steps: (prev.steps || []).filter(s => s.id !== step.id) }));
                       }}
-                      className="opacity-0 group-hover/step:opacity-100 p-1 text-proton-muted hover:text-red-400 transition-all"
+                      className="opacity-100 md:opacity-0 md:group-hover/step:opacity-100 p-1 text-proton-muted hover:text-red-400 transition-all shrink-0"
                     >
                       <Trash2 size={12} />
                     </button>
@@ -282,14 +282,14 @@ const WorkflowEditor = ({
         )}
 
         {editorMode === 'flow' && (
-          <div className="h-[500px] w-full mt-4 shrink-0">
+          <div className="h-[540px] sm:h-[500px] w-full mt-4 shrink-0">
             <Suspense fallback={
               <div className="h-full w-full flex flex-col items-center justify-center text-proton-muted/50 font-mono text-xs gap-3">
                 <Loader2 className="animate-spin text-proton-accent" size={24} />
                 <span className="uppercase tracking-widest">Loading Builder...</span>
               </div>
             }>
-              <EnterpriseWorkflowBuilder workflow={formData} onSave={setFormData} language={language} />
+              <EnterpriseWorkflowBuilder workflow={formData} onSave={setFormData} onPersist={onSave} language={language} />
             </Suspense>
           </div>
         )}
@@ -597,11 +597,34 @@ export default function WorkflowsView({
   };
 
   const handleSave = async (updatedWorkflow: Workflow) => {
-    setWorkflows(workflows.map(wf => wf.id === updatedWorkflow.id ? updatedWorkflow : wf));
+    setWorkflows(prev => prev.map(wf => wf.id === updatedWorkflow.id ? updatedWorkflow : wf));
     setEditingWorkflow(null);
     if (user && db) {
       const docRef = doc(db, 'users', user.uid, 'workflows', updatedWorkflow.id);
       await setDoc(docRef, sanitizeForFirestore(updatedWorkflow)).catch(e => handleFirestoreError(e, 'update', docRef.path));
+    }
+  };
+
+  const handleDeleteWorkflow = async (id: string) => {
+    try {
+      setWorkflows(prev => prev.filter(wf => wf.id !== id));
+      if (editingWorkflow?.id === id) {
+        setEditingWorkflow(null);
+      }
+      if (user && db) {
+        const docRef = doc(db, 'users', user.uid, 'workflows', id);
+        await deleteDoc(docRef).catch(e => handleFirestoreError(e, 'delete', docRef.path));
+      }
+      showToast(
+        language === 'ka' ? 'ვორქფლოუ წარმატებით წაიშალა!' : 'Workflow deleted successfully!',
+        'success'
+      );
+    } catch (err) {
+      console.error(err);
+      showToast(
+        language === 'ka' ? 'ვორქფლოუს წაშლა ვერ მოხერხდა.' : 'Failed to delete workflow.',
+        'error'
+      );
     }
   };
 
@@ -637,11 +660,11 @@ export default function WorkflowsView({
           { timestamp: Date.now(), result }
         ]
       };
-      setWorkflows(workflows.map(w => w.id === wf.id ? updatedWorkflow : w));
+      setWorkflows(prev => prev.map(w => w.id === wf.id ? updatedWorkflow : w));
       
       if (user && db) {
         const docRef = doc(db, 'users', user.uid, 'workflows', wf.id);
-        await setDoc(docRef, updatedWorkflow).catch(e => handleFirestoreError(e, 'update', docRef.path));
+        await setDoc(docRef, sanitizeForFirestore(updatedWorkflow)).catch(e => handleFirestoreError(e, 'update', docRef.path));
       }
 
       showToast(language === 'ka' ? 'ანალიზი წარმატებით დასრულდა!' : 'Analysis completed successfully!', 'success');
@@ -841,35 +864,54 @@ export default function WorkflowsView({
                 onClick={() => setEditingWorkflow(wf)}
               >
                 <div className="space-y-4 relative z-10">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 rounded-lg bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-3 rounded-lg bg-proton-accent/10 text-proton-accent group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0">
                         <Zap size={22} fill="currentColor" />
                       </div>
-                      <div>
-                        <h3 className="font-bold text-lg group-hover:text-proton-accent transition-colors">{wf.name}</h3>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg group-hover:text-proton-accent transition-colors break-words">{wf.name}</h3>
                         <div className="flex items-center gap-2 mt-0.5">
                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                            <span className="text-[10px] font-mono text-proton-muted uppercase tracking-widest">Active System</span>
                         </div>
                       </div>
                     </div>
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!isCreativeMode) return;
-                        setConfirmation({
-                          message: language === 'ka' ? "გსურთ სამუშაო პროცესის ეფექტურობის ანალიზის გაშვება?" : "Run workflow efficiency analysis?",
-                          action: () => handleAnalyze(wf)
-                        });
-                      }}
-                      disabled={!isCreativeMode}
-                      className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border disabled:opacity-30 disabled:cursor-not-allowed"
-                      title={isCreativeMode ? "Analyze efficiency" : "System in Stasis"}
-                    >
-                      {isCreativeMode ? <Activity size={18} /> : <Lock size={14} />}
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isCreativeMode) return;
+                          setConfirmation({
+                            message: language === 'ka' ? "გსურთ სამუშაო პროცესის ეფექტურობის ანალიზის გაშვება?" : "Run workflow efficiency analysis?",
+                            action: () => handleAnalyze(wf)
+                          });
+                        }}
+                        disabled={!isCreativeMode}
+                        className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-proton-accent hover:bg-proton-accent/10 transition-all border border-proton-border disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={isCreativeMode ? (language === 'ka' ? "ეფექტურობის ანალიზი" : "Analyze efficiency") : (language === 'ka' ? "სისტემა დაბლოკილია" : "System in Stasis")}
+                      >
+                        {isCreativeMode ? <Activity size={18} /> : <Lock size={14} />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmation({
+                            message: language === 'ka'
+                              ? `დარწმუნებული ხართ, რომ გსურთ ვორქფლოუს "${wf.name}" წაშლა?`
+                              : `Are you sure you want to delete workflow "${wf.name}"?`,
+                            action: () => handleDeleteWorkflow(wf.id)
+                          });
+                        }}
+                        className="p-2.5 rounded-xl bg-proton-card/50 text-proton-muted hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/30 transition-all border border-proton-border"
+                        title={language === 'ka' ? 'ვორქფლოუს წაშლა' : 'Delete workflow'}
+                        aria-label={language === 'ka' ? 'ვორქფლოუს წაშლა' : 'Delete workflow'}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Persona Connection Tag */}

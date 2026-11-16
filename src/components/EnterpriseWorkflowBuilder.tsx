@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -52,16 +52,19 @@ const NODE_TYPES = [
 export const EnterpriseWorkflowBuilder = ({ 
   workflow, 
   onSave,
+  onPersist,
   language
 }: { 
   workflow: any, 
   onSave: (wf: any) => void,
+  onPersist?: (wf: any) => Promise<void> | void,
   language: 'en' | 'ka'
 }) => {
   const { showToast } = useToast();
   const t = translations[language].workflows.builder;
-  const [nodes, setNodes] = useState<WorkflowNode[]>(workflow.nodes || []);
-  const [workflowName, setWorkflowName] = useState(workflow.name || '');
+  const [nodes, setNodes] = useState<WorkflowNode[]>(workflow?.nodes || []);
+  const [workflowName, setWorkflowName] = useState(workflow?.name || '');
+  const [isSaving, setIsSaving] = useState(false);
 
   const nodeLibraryLabels: Record<string, string> = {
     onOrderReceived: language === 'ka' ? 'ტრიგერი: მიღებულია შეკვეთა' : 'Trigger: On Order Received',
@@ -77,12 +80,19 @@ export const EnterpriseWorkflowBuilder = ({
     scraper: t.action_scraper
   };
 
+  const getSafeNodeLabel = (subtype: string): string => {
+    const raw = nodeLibraryLabels[subtype];
+    if (typeof raw !== 'string' || !raw.trim()) return subtype;
+    const parts = raw.split(': ');
+    return (parts[1] || parts[0] || subtype).trim();
+  };
+
   const addNode = (nodeType: typeof NODE_TYPES[0]) => {
     const newNode: WorkflowNode = {
       id: Math.random().toString(36).substr(2, 9),
       type: nodeType.type as any,
       subtype: nodeType.subtype,
-      label: nodeLibraryLabels[nodeType.subtype].split(': ')[1],
+      label: getSafeNodeLabel(nodeType.subtype),
     };
     const newNodes = [...nodes, newNode];
     setNodes(newNodes);
@@ -97,13 +107,13 @@ export const EnterpriseWorkflowBuilder = ({
 
   const loadScalableTemplate = () => {
     const templateNodes: WorkflowNode[] = [
-      { id: 'n1', type: 'trigger', subtype: 'lead', label: nodeLibraryLabels.lead.split(': ')[1] },
-      { id: 'n2', type: 'action', subtype: 'crm', label: nodeLibraryLabels.crm.split(': ')[1] },
-      { id: 'n3', type: 'action', subtype: 'slack', label: nodeLibraryLabels.slack.split(': ')[1] },
-      { id: 'n4', type: 'logic', subtype: 'condition', label: nodeLibraryLabels.condition.split(': ')[1] },
-      { id: 'n5', type: 'action', subtype: 'email', label: nodeLibraryLabels.email.split(': ')[1] },
-      { id: 'n6', type: 'logic', subtype: 'wait', label: nodeLibraryLabels.wait.split(': ')[1] },
-      { id: 'n7', type: 'action', subtype: 'email', label: nodeLibraryLabels.email.split(': ')[1] },
+      { id: 'n1', type: 'trigger', subtype: 'lead', label: getSafeNodeLabel('lead') },
+      { id: 'n2', type: 'action', subtype: 'crm', label: getSafeNodeLabel('crm') },
+      { id: 'n3', type: 'action', subtype: 'slack', label: getSafeNodeLabel('slack') },
+      { id: 'n4', type: 'logic', subtype: 'condition', label: getSafeNodeLabel('condition') },
+      { id: 'n5', type: 'action', subtype: 'email', label: getSafeNodeLabel('email') },
+      { id: 'n6', type: 'logic', subtype: 'wait', label: getSafeNodeLabel('wait') },
+      { id: 'n7', type: 'action', subtype: 'email', label: getSafeNodeLabel('email') },
     ];
     setNodes(templateNodes);
     setWorkflowName('[Inbound] - General Website Lead Nurture');
@@ -114,31 +124,52 @@ export const EnterpriseWorkflowBuilder = ({
     });
   };
 
-  useEffect(() => {
-    onSave({ ...workflow, name: workflowName, nodes });
-  }, [workflowName]);
+  const handleSaveAndDeploy = async () => {
+    if (isSaving) return;
+    const updatedWorkflow = { ...workflow, name: workflowName, nodes };
+    onSave(updatedWorkflow);
+    setIsSaving(true);
+    try {
+      if (onPersist) {
+        await onPersist(updatedWorkflow);
+      }
+      showToast(
+        language === 'ka' ? 'ვორქფლოუ წარმატებით შეინახა და გაიშვა!' : 'Workflow successfully saved and deployed!',
+        'success'
+      );
+    } catch (error) {
+      console.error('Failed to save workflow:', error);
+      showToast(
+        language === 'ka' ? 'ვორქფლოუს შენახვა ვერ მოხერხდა' : 'Failed to save workflow',
+        'error'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div className="flex h-full w-full bg-[#F8FAFC] rounded-3xl overflow-hidden border border-[#E2E8F0] shadow-2xl relative">
+    <div className="flex flex-col md:flex-row h-full w-full bg-[#F8FAFC] rounded-3xl overflow-hidden border border-[#E2E8F0] shadow-2xl relative">
       {/* Sidebar: Node Library */}
-      <div className="w-72 bg-white border-r border-[#E2E8F0] flex flex-col p-6 space-y-8 z-20 shadow-sm relative">
+      <div className="w-full md:w-72 max-h-48 md:max-h-full overflow-y-auto shrink-0 bg-white border-b md:border-b-0 md:border-r border-[#E2E8F0] flex flex-col p-4 md:p-6 space-y-4 md:space-y-8 z-20 shadow-sm relative">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-[#64748B] mb-4">
+          <div className="flex items-center gap-2 text-[#64748B] mb-3 md:mb-4">
             <Layers size={16} />
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em]">{t.node_library}</h3>
           </div>
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-2 md:max-h-[60vh] md:overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
             {NODE_TYPES.map((type) => (
               <button
                 key={type.id}
+                type="button"
                 onClick={() => addNode(type)}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-[#F1F5F9] bg-white hover:border-proton-accent hover:shadow-sm transition-all group text-left"
+                className="w-full flex items-center gap-3 p-2.5 md:p-3 rounded-xl border border-[#F1F5F9] bg-white hover:border-proton-accent hover:shadow-sm transition-all group text-left"
               >
                 <div className={cn("p-2 rounded-lg transition-colors shrink-0", type.bgColor, type.color)}>
                   <type.icon size={16} />
                 </div>
                 <div className="min-w-0">
-                   <p className="text-[11px] font-bold text-[#1E293B] group-hover:text-proton-accent transition-colors truncate">{nodeLibraryLabels[type.subtype].split(': ')[1]}</p>
+                   <p className="text-[11px] font-bold text-[#1E293B] group-hover:text-proton-accent transition-colors truncate">{getSafeNodeLabel(type.subtype)}</p>
                    <p className="text-[8px] text-[#94A3B8] font-black uppercase tracking-widest">{type.type}</p>
                 </div>
                 <Plus size={12} className="ml-auto text-[#CBD5E1] group-hover:text-proton-accent shrink-0" />
@@ -147,16 +178,17 @@ export const EnterpriseWorkflowBuilder = ({
           </div>
         </div>
 
-        <div className="mt-auto space-y-4">
+        <div className="mt-auto space-y-3 md:space-y-4">
             <button 
+                type="button"
                 onClick={loadScalableTemplate}
-                className="w-full py-3 bg-proton-accent/5 border border-proton-accent/20 text-proton-accent rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-proton-accent hover:text-white transition-all flex items-center justify-center gap-2"
+                className="w-full py-2.5 md:py-3 bg-proton-accent/5 border border-proton-accent/20 text-proton-accent rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-proton-accent hover:text-white transition-all flex items-center justify-center gap-2"
             >
                 <Zap size={12} />
                 Load Scalable Logic
             </button>
             
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+            <div className="hidden md:block p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
                 <div className="flex items-center gap-2 text-[#1E293B]">
                     <CheckCircle2 size={14} className="text-green-500" />
                     <span className="text-[9px] font-black uppercase tracking-widest">Enterprise Ready</span>
@@ -167,30 +199,33 @@ export const EnterpriseWorkflowBuilder = ({
       </div>
 
       {/* Main Canvas */}
-      <div className="flex flex-1 flex-col relative overflow-hidden">
+      <div className="flex flex-1 min-w-0 min-h-0 flex-col relative overflow-hidden">
         {/* Header: Global Settings */}
-        <div className="h-16 bg-white border-b border-[#E2E8F0] flex items-center px-8 flex-shrink-0 z-20">
-            <div className="flex-1 max-w-md flex items-center gap-4">
+        <div className="min-h-16 py-2.5 md:py-0 bg-white border-b border-[#E2E8F0] flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 px-4 md:px-8 flex-shrink-0 z-20">
+            <div className="flex-1 min-w-[160px] max-w-md flex items-center gap-3 md:gap-4">
                 <div className="shrink-0 bg-slate-100 p-2 rounded-lg">
                     <AlertCircle size={14} className="text-slate-400" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.workflow_name}</p>
                     <input 
                         type="text" 
                         value={workflowName}
-                        onChange={(e) => setWorkflowName(e.target.value)}
+                        onChange={(e) => {
+                          const nextName = e.target.value;
+                          setWorkflowName(nextName);
+                          onSave({ ...workflow, name: nextName, nodes });
+                        }}
                         placeholder={t.placeholder_name}
                         className="w-full bg-transparent border-none p-0 text-sm font-bold text-[#1E293B] focus:ring-0 placeholder:text-slate-300"
                     />
                 </div>
             </div>
             <button 
-              onClick={() => {
-                showToast(language === 'ka' ? 'ვორქფლოუ წარმატებით შეინახა და გაიშვა!' : 'Workflow successfully saved and deployed!', 'success');
-                onSave({ ...workflow, name: workflowName, nodes });
-              }}
-              className="bg-proton-text text-white px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2"
+              type="button"
+              disabled={isSaving}
+              onClick={handleSaveAndDeploy}
+              className="bg-proton-text text-white px-4 md:px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shrink-0 disabled:opacity-50"
             >
                 {t.save_workflow}
                 <ChevronRight size={14} />
@@ -206,7 +241,7 @@ export const EnterpriseWorkflowBuilder = ({
           }} 
         />
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-12 relative z-10">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8 md:p-12 relative z-10">
           <div className="max-w-2xl mx-auto flex flex-col items-center">
             <AnimatePresence mode="popLayout" initial={false}>
               {nodes.length === 0 ? (

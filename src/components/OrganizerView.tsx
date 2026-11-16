@@ -86,7 +86,7 @@ interface OrganizerViewProps {
 export const OrganizerView = ({
   language,
   workflows,
-  tasks,
+  tasks = [],
   projects = [],
   onCreateProject,
   onEditProject,
@@ -130,21 +130,21 @@ export const OrganizerView = ({
   // Daily reset check on mount
   useEffect(() => {
     const todayStr = new Date().toDateString();
-    const lastActiveDate = localStorage.getItem('organizer_last_active_date');
+    const lastActiveDate = safeStorage.get('organizer_last_active_date');
     if (lastActiveDate !== todayStr) {
       // It is a new day! Reset daily anchor.
       setDailyAnchorTaskId(null);
-      localStorage.removeItem('organizer_daily_anchor_task_id');
-      localStorage.setItem('organizer_last_active_date', todayStr);
+      safeStorage.remove('organizer_daily_anchor_task_id');
+      safeStorage.set('organizer_last_active_date', todayStr);
     }
   }, []);
 
-  // Syncing dailyAnchorTaskId to localStorage on state changes
+  // Syncing dailyAnchorTaskId to safeStorage on state changes
   useEffect(() => {
     if (dailyAnchorTaskId) {
-      localStorage.setItem('organizer_daily_anchor_task_id', dailyAnchorTaskId);
+      safeStorage.set('organizer_daily_anchor_task_id', dailyAnchorTaskId);
     } else {
-      localStorage.removeItem('organizer_daily_anchor_task_id');
+      safeStorage.remove('organizer_daily_anchor_task_id');
     }
   }, [dailyAnchorTaskId]);
 
@@ -156,8 +156,8 @@ export const OrganizerView = ({
         const trimmed = legacyFocus.trim().toLowerCase();
         const matched = tasks.find(t => 
           !t.completed && (
-            t.content.trim().toLowerCase() === trimmed || 
-            (t.contentGe && t.contentGe.trim().toLowerCase() === trimmed)
+            (t.content || '').trim().toLowerCase() === trimmed || 
+            (t.contentGe && String(t.contentGe).trim().toLowerCase() === trimmed)
           )
         );
         if (matched) {
@@ -178,7 +178,7 @@ export const OrganizerView = ({
   }, [tasks, dailyAnchorTaskId]);
 
   useEffect(() => {
-    localStorage.setItem('organizer_scratchpad', scratchpad);
+    safeStorage.set('organizer_scratchpad', scratchpad);
   }, [scratchpad]);
 
   // UI Toggles & Filter states
@@ -830,7 +830,8 @@ export const OrganizerView = ({
   // Master filter application
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
-      const matchText = (language === 'ka' ? (task.contentGe || task.content) : task.content).toLowerCase();
+      const rawContent = language === 'ka' ? (task.contentGe || task.content || '') : (task.content || '');
+      const matchText = String(rawContent).toLowerCase();
       const contentMatch = matchText.includes(searchQuery.toLowerCase());
       
       const statusMatch = filterStatus === 'all' 
@@ -1566,7 +1567,7 @@ export const OrganizerView = ({
                 // Complex Grouped view by deadlines
                 <div className="space-y-8">
                   {/* Category 1: Overdue & Urgent */}
-                  {(groupedTasks.overdueAndUrgent.length > 0) && (
+                  {filterStatus !== 'completed' && (groupedTasks.overdueAndUrgent.length > 0) && (
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-red-500 font-black text-xs uppercase tracking-widest block ml-2">
                         <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -1582,7 +1583,7 @@ export const OrganizerView = ({
                   )}
 
                   {/* Category 2: Today & Tomorrow */}
-                  {(groupedTasks.todayAndTomorrow.length > 0 || Object.values(groupedTasks).every(arr => arr.length === 0)) && (
+                  {filterStatus !== 'completed' && (groupedTasks.todayAndTomorrow.length > 0 || Object.values(groupedTasks).every(arr => arr.length === 0)) && (
                     <div className="space-y-4">
                       <div className="text-amber-500 font-black text-xs uppercase tracking-widest block ml-2 flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -1604,7 +1605,7 @@ export const OrganizerView = ({
                   )}
 
                   {/* Category 3: Next 7 Days */}
-                  {groupedTasks.upcomingWeek.length > 0 && (
+                  {filterStatus !== 'completed' && groupedTasks.upcomingWeek.length > 0 && (
                     <div className="space-y-3">
                       <div className="text-cyan-400 font-black text-xs uppercase tracking-widest block ml-2 flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-cyan-400" />
@@ -1620,7 +1621,7 @@ export const OrganizerView = ({
                   )}
 
                   {/* Category 4: Someday / No Deadline */}
-                  {groupedTasks.somedayNoDate.length > 0 && (
+                  {filterStatus !== 'completed' && groupedTasks.somedayNoDate.length > 0 && (
                     <div className="space-y-3">
                       <div className="text-proton-muted font-black text-xs uppercase tracking-widest block ml-2 flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-proton-border" />
@@ -1635,21 +1636,34 @@ export const OrganizerView = ({
                     </div>
                   )}
 
-                  {/* Render completed tasks at the bottom if filtering for more than pending */}
-                  {filterStatus === 'all' && tasks.filter(t => t.completed).length > 0 && (
-                    <div className="space-y-3 border-t border-proton-border/10 pt-6">
-                      <div className="text-emerald-500 font-black text-xs uppercase tracking-widest block ml-2 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                        {language === 'ka' ? 'შესრულებული დავალებები' : 'Completed Log'}
-                        <span className="text-[10px] font-bold opacity-60 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                          {tasks.filter(t => t.completed).length}
-                        </span>
+                  {/* Render completed tasks at the bottom when viewing all or completed */}
+                  {(filterStatus === 'all' || filterStatus === 'completed') && (() => {
+                    const completedFiltered = filteredTasks.filter(t => t.completed);
+                    if (filterStatus === 'all' && completedFiltered.length === 0) return null;
+
+                    return (
+                      <div className={cn("space-y-3", filterStatus === 'all' && "border-t border-proton-border/10 pt-6")}>
+                        <div className="text-emerald-500 font-black text-xs uppercase tracking-widest block ml-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          {language === 'ka' ? 'შესრულებული დავალებები' : 'Completed Log'}
+                          <span className="text-[10px] font-bold opacity-60 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                            {completedFiltered.length}
+                          </span>
+                        </div>
+                        {completedFiltered.length === 0 ? (
+                          <div className={cn("p-8 sm:p-12 rounded-2xl text-center space-y-3", currentTheme.card)}>
+                            <p className="font-bold text-xs uppercase tracking-widest opacity-60">
+                              {language === 'ka' ? 'შესრულებული დავალებები არ მოიძებნა' : 'No completed tasks match your filters'}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className={cn("space-y-3", filterStatus === 'all' && "opacity-60")}>
+                            {completedFiltered.map(task => renderTaskCard(task))}
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-3 opacity-60">
-                        {tasks.filter(t => t.completed).map(task => renderTaskCard(task))}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
              )}
           </div>
@@ -1956,9 +1970,9 @@ export const OrganizerView = ({
                     </button>
                   )}
                 </div>
-                <div className="w-full overflow-hidden">
+                <div className="w-full max-w-full overflow-x-auto">
                   <Calendar 
-                    className="mx-auto" 
+                    className="mx-auto max-w-full" 
                     value={selectedCalendarDate}
                     activeStartDate={currentViewDate}
                     onActiveStartDateChange={({ activeStartDate }: any) => {
@@ -2995,7 +3009,7 @@ export const OrganizerView = ({
         key={task.id} 
         id={`task-card-${task.id}`}
         className={cn(
-          "p-6 rounded-2xl border transition-all group flex flex-col gap-4 relative overflow-hidden", 
+          "p-4 sm:p-6 rounded-2xl border transition-all group flex flex-col gap-4 relative overflow-hidden", 
           currentTheme.card, 
           task.completed && "opacity-40 select-none border-proton-border/20",
           isOverdue && "border-red-500/40 bg-red-500/[0.02] shadow-[0_0_15px_rgba(239,68,68,0.05)]",
@@ -3012,7 +3026,7 @@ export const OrganizerView = ({
           task.priority === 'high' ? "bg-red-500" : task.priority === 'medium' ? "bg-amber-500" : "bg-blue-500"
         )} />
         
-        <div className="flex items-start gap-4 relative z-10">
+        <div className="flex flex-wrap sm:flex-nowrap items-start gap-3 sm:gap-4 relative z-10">
           {/* Checkbox button */}
           <button 
             type="button"
@@ -3028,9 +3042,9 @@ export const OrganizerView = ({
           </button>
             
           {/* Content field */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-[160px] break-words">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={cn("text-xs md:text-sm font-black tracking-tight leading-relaxed", task.completed && "line-through grayscale opacity-50")}>
+              <span className={cn("text-xs md:text-sm font-black tracking-tight leading-relaxed break-words", task.completed && "line-through grayscale opacity-50")}>
                 {language === 'ka' ? (task.contentGe || task.content) : task.content}
               </span>
               {task.recurring && task.recurring !== 'none' && (
@@ -3141,7 +3155,7 @@ export const OrganizerView = ({
           </div>
 
           {/* Stopwatch control button and utility operations button */}
-          <div className="flex items-center gap-2 pr-1 select-none shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap pr-1 select-none shrink-0 ml-auto sm:ml-0">
             {/* Daily Anchor Toggle Button */}
             <button
               type="button"
@@ -3197,7 +3211,7 @@ export const OrganizerView = ({
         </div>
 
         {/* Subtask handling logic */}
-        <div className="ml-11 border-l-2 border-proton-border/20 pl-4 space-y-2 relative z-10 select-none">
+        <div className="ml-4 sm:ml-11 border-l-2 border-proton-border/20 pl-3 sm:pl-4 space-y-2 relative z-10 select-none">
            {task.subtasks?.map(sub => (
              <div key={sub.id} className="flex items-center gap-3 group/sub">
                <button 
@@ -3206,11 +3220,11 @@ export const OrganizerView = ({
                    const newSubtasks = task.subtasks?.map(s => s.id === sub.id ? { ...s, completed: !s.completed } : s);
                    onEditTask(task.id, { subtasks: newSubtasks });
                  }}
-                 className={cn("w-4.5 h-4.5 rounded border flex items-center justify-center transition-all", sub.completed ? "bg-proton-accent border-proton-accent text-proton-bg" : "border-proton-border/30 hover:border-proton-accent")}
+                 className={cn("w-4.5 h-4.5 rounded border flex items-center justify-center transition-all shrink-0", sub.completed ? "bg-proton-accent border-proton-accent text-proton-bg" : "border-proton-border/30 hover:border-proton-accent")}
                >
                  {sub.completed && <Check size={10} strokeWidth={4} />}
                </button>
-               <span className={cn("text-[10px] font-semibold transition-all", sub.completed ? "opacity-30 line-through" : "opacity-80")}>
+               <span className={cn("text-[10px] font-semibold transition-all break-words min-w-0", sub.completed ? "opacity-30 line-through" : "opacity-80")}>
                  {sub.content}
                </span>
                <button 
@@ -3219,7 +3233,7 @@ export const OrganizerView = ({
                    const newSubtasks = task.subtasks?.filter(s => s.id !== sub.id);
                    onEditTask(task.id, { subtasks: newSubtasks });
                  }}
-                 className="opacity-0 group-hover/sub:opacity-100 p-1 text-white/20 hover:text-red-500 transition-all ml-auto"
+                 className="opacity-100 md:opacity-0 md:group-hover/sub:opacity-100 p-1 text-white/40 md:text-white/20 hover:text-red-500 transition-all ml-auto shrink-0"
                >
                  <X size={10} />
                </button>
@@ -3227,8 +3241,8 @@ export const OrganizerView = ({
            ))}
            
             {/* Add subtask input row */}
-            <div className="flex items-center gap-3 pt-2 max-w-md select-none">
-              <div className="flex items-center gap-2 flex-1 min-w-[150px]">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2 max-w-md select-none">
+              <div className="flex items-center gap-2 flex-1 min-w-[120px]">
                 <Plus size={10} className="text-proton-text/40 shrink-0" />
                 <input 
                   type="text"

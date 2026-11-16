@@ -317,7 +317,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
         <div className="relative pt-4 sm:pt-8 pb-4 text-center sm:text-left space-y-8">
           
           {/* Subtle Ambient Radial Lighting Behind Welcome */}
-          <div className="absolute top-1/2 left-1/2 sm:left-1/4 -translate-x-1/2 -translate-y-1/2 w-[380px] sm:w-[600px] h-[240px] bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-cyan-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
+          <div className="absolute top-1/2 left-1/2 sm:left-1/4 -translate-x-1/2 -translate-y-1/2 w-full max-w-[380px] sm:max-w-[600px] h-[240px] bg-gradient-to-r from-amber-500/10 via-purple-500/5 to-cyan-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
           {/* Emotional Welcome Statement */}
           <div className="space-y-4 max-w-3xl">
@@ -326,7 +326,7 @@ export const DashboardView: React.FC<DashboardViewProps> = React.memo(({
               <span>{isKa ? 'ეს შენი პირადი სივრცეა' : 'This is your private space'}</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] break-words">
               {isKa ? (
                 <>
                   კეთილი იყოს შენი მობრძანება,<br className="hidden sm:inline" />{' '}
