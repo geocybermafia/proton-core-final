@@ -61,7 +61,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               }}
               aria-invalid={Boolean(errorMsg)}
               className={cn(
-                "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-xs font-bold shadow-inner transition-all cursor-pointer",
+                "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-base md:text-xs font-bold shadow-inner transition-all cursor-pointer",
                 currentTheme.input,
                 errorMsg && "border-rose-500/70 focus:border-rose-500"
               )}
@@ -120,7 +120,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               placeholder={placeholder}
               aria-invalid={Boolean(errorMsg)}
               className={cn(
-                "w-full pl-10 pr-4 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+                "w-full pl-10 pr-4 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
                 currentTheme.input,
                 errorMsg && "border-rose-500/70 focus:border-rose-500"
               )}
@@ -160,7 +160,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               placeholder={placeholder}
               aria-invalid={Boolean(errorMsg)}
               className={cn(
-                "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold font-mono shadow-inner transition-all",
+                "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold font-mono shadow-inner transition-all",
                 field.suffix ? "pr-16" : "",
                 currentTheme.input,
                 errorMsg && "border-rose-500/70 focus:border-rose-500"
@@ -206,7 +206,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
           placeholder={placeholder}
           aria-invalid={Boolean(errorMsg)}
           className={cn(
-            "w-full px-4.5 py-3.5 rounded-2xl border text-xs font-bold shadow-inner transition-all",
+            "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
             currentTheme.input,
             errorMsg && "border-rose-500/70 focus:border-rose-500"
           )}
