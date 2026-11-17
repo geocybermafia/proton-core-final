@@ -31,6 +31,8 @@ export type UserProfile = {
   themeSchedule?: ThemeSchedule;
   preferredCurrency?: SupportedCurrency;
   showCommercialHub?: boolean;
+  country?: string;
+  competitionOptOut?: boolean;
   securityPinEnabled?: boolean;
   securityPinMeta?: SecurityPinMeta;
 };
@@ -312,3 +314,93 @@ export interface NotificationItem {
   conversationId?: string;
   metadata?: Record<string, any>;
 }
+
+export type AnalyticsPeriod = '24h' | '7d' | '30d' | 'all';
+
+export type RankingScope = 'global' | 'country' | 'category' | 'regional';
+
+export type RankingPeriod = '7d' | '30d';
+
+export type AchievementBadgeId =
+  | 'rising_listing'
+  | 'popular_listing'
+  | 'top_in_category'
+  | 'global_recognition';
+
+export interface PeriodMetrics {
+  impressions: number;
+  views: number;
+  uniqueViewers: number;
+  engagementRate: number;
+}
+
+export interface PeriodComparison {
+  impressionsDelta: number;
+  viewsDelta: number;
+  uniqueViewersDelta: number;
+  engagementRateDelta: number;
+  impressionsChangePct: number | null;
+  viewsChangePct: number | null;
+  uniqueViewersChangePct: number | null;
+}
+
+export interface ListingAnalyticsStats {
+  listingId: string;
+  title: string;
+  titleGe?: string;
+  category: string;
+  listingType?: ListingType;
+  image?: string;
+  status?: string;
+  optedOut: boolean;
+  createdAt: number;
+  updatedAt: number;
+  periods: Record<AnalyticsPeriod, PeriodMetrics>;
+  comparisons: Record<'24h' | '7d' | '30d', PeriodComparison>;
+  achievements: AchievementBadgeId[];
+}
+
+export interface EarnedAchievementEntry {
+  id: AchievementBadgeId;
+  listingId: string;
+  listingTitle: string;
+  listingTitleGe?: string;
+  category: string;
+}
+
+export interface SellerAnalyticsOverview {
+  totalImpressions: number;
+  totalViews: number;
+  totalUniqueViewers: number;
+  engagementRate: number;
+  periodTotals: Record<AnalyticsPeriod, PeriodMetrics>;
+  periodComparisons: Record<'24h' | '7d' | '30d', PeriodComparison>;
+  listings: ListingAnalyticsStats[];
+  competitionOptOut: boolean;
+  earnedAchievements: EarnedAchievementEntry[];
+}
+
+export interface RankingEntry {
+  rank: number;
+  listingId: string;
+  title: string;
+  titleGe?: string;
+  category: string;
+  listingType?: ListingType;
+  image?: string;
+  sellerName: string;
+  country?: string;
+  region?: string;
+  impressions: number;
+  views: number;
+  uniqueViewers: number;
+  engagementRate: number;
+  categoryNormalizedScore: number;
+  sellerRatingAvg?: number;
+  sellerRatingCount?: number;
+  freshnessBoost: number;
+  balancedScore: number;
+  achievements: AchievementBadgeId[];
+  period: RankingPeriod;
+}
+

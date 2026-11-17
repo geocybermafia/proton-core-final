@@ -539,5 +539,27 @@ service cloud.firestore {
           && (existing().userId == request.auth.uid || get(/databases/$(database)/documents/clips/$(clipId)).data.creatorId == request.auth.uid);
       }
     }
+
+    // ======================================================
+    // 10. MARKET HUB LISTING ANALYTICS & HEALTHY COMPETITION
+    // ======================================================
+    match /listing_analytics/{listingId} {
+      allow get: if isSignedIn() && isValidId(listingId) && resource.data.sellerId == request.auth.uid;
+      allow list, write: if false; // Server Admin SDK only
+
+      match /viewers/{viewerHash} {
+        allow read, write: if false; // Strictly server Admin SDK only; viewerHash never exposed
+      }
+    }
+
+    match /listing_analytics_public/{listingId} {
+      allow read: if true; // Public aggregated ranking projection only; zero PII or viewerHash
+      allow write: if false; // Server Admin SDK only
+    }
+
+    match /seller_competition_prefs/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list, write: if false; // Server Admin SDK only
+    }
   }
 }

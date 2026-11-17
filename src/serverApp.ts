@@ -21,6 +21,10 @@ import {
   expandObjectiveAnalysis,
   detectClipIssues
 } from "./lib/gemini-server.js";
+import {
+  MarketAnalyticsService,
+  isAdminCredentialsError
+} from "./lib/analyticsServer.js";
 
 // Lazy dynamic initialization of Firebase Admin for server-side token authentication
 const _adminAuthMap = new Map<string, any>();
@@ -127,8 +131,88 @@ async function getVerifiedAdminAuth(targetProjectId?: string) {
   return _adminAuthMap.get(projectId);
 }
 
-export function createApiApp(): express.Express {
+async function verifyBearerTokenFromRequest(
+  req: express.Request,
+  customVerifier?: (token: string) => Promise<{ uid: string } | null>
+): Promise<{ uid?: string; error?: string; status?: number; code?: string }> {
+  const authHeader = req.headers.authorization || (req.headers as any)['Authorization'];
+  const bearerMatch = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
+  if (!bearerMatch) {
+    return { error: "Unauthorized: Missing or invalid Authorization header", status: 401 };
+  }
+  const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, '');
+  if (!idToken) {
+    return { error: "Unauthorized: Empty authentication token", status: 401 };
+  }
+
+  if (customVerifier) {
+    try {
+      const customResult = await customVerifier(idToken);
+      if (customResult?.uid) return { uid: customResult.uid };
+      return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+    } catch (e: any) {
+      return { error: e?.message || "Unauthorized", status: 401, code: e?.code || "auth/invalid-id-token" };
+    }
+  }
+
+  const tokenParts = idToken.split(".");
+  if (tokenParts.length !== 3) {
+    return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+  }
+
+  let tokenAudience: string | undefined;
+  try {
+    const unpadded = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padLength = (4 - (unpadded.length % 4)) % 4;
+    const base64 = unpadded + '='.repeat(padLength);
+    const parsedPayload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
+    tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === 'string' ? parsedPayload.iss.replace('https://securetoken.google.com/', '') : undefined);
+  } catch {
+    // ignore payload parse failure; verification below will reject
+  }
+
+  const candidateProjects: string[] = [];
+  if (tokenAudience && typeof tokenAudience === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
+    candidateProjects.push(tokenAudience);
+  }
+  for (const proj of [
+    "proton-core-ai",
+    "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
+    process.env.VITE_FIREBASE_PROJECT_ID,
+    process.env.FIREBASE_PROJECT_ID,
+    process.env.GCLOUD_PROJECT,
+  ].filter(Boolean) as string[]) {
+    if (!candidateProjects.includes(proj)) candidateProjects.push(proj);
+  }
+
+  try {
+    const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
+    if (directResult?.uid) return { uid: directResult.uid };
+  } catch {
+    // fall through to Admin Auth SDK
+  }
+
+  for (const projId of candidateProjects) {
+    try {
+      const authInstance = await getVerifiedAdminAuth(projId);
+      const decoded = await authInstance.verifyIdToken(idToken);
+      if (decoded?.uid) return { uid: decoded.uid };
+    } catch {
+      // try next project
+    }
+  }
+
+  return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+}
+
+export interface CreateApiAppOptions {
+  analyticsService?: MarketAnalyticsService;
+  verifyIdToken?: (token: string) => Promise<{ uid: string } | null>;
+}
+
+export function createApiApp(options?: CreateApiAppOptions): express.Express {
   const app = express();
+  const analyticsService = options?.analyticsService || new MarketAnalyticsService();
 
   // Set trust proxy to trust the proxy headers in front of Cloud Run and Vercel Edge
   app.set("trust proxy", 1);
@@ -1026,6 +1110,164 @@ export function createApiApp(): express.Express {
   };
 
   apiRouter.post("/gemini", geminiHandler);
+
+  // Market Hub Analytics & Healthy Competition Rate Limiters
+  const analyticsEventLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: false,
+    handler: (_req, res) => {
+      res.status(429).json({
+        recorded: false,
+        reason: "rate_limited",
+        error: "Too many analytics events from this IP"
+      });
+    }
+  });
+
+  const analyticsReadLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 90,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: false,
+    handler: (_req, res) => {
+      res.status(429).json({
+        error: "Too many analytics requests from this IP",
+        code: "analytics/rate-limited"
+      });
+    }
+  });
+
+  // 1. Record Impression or View event (server-only writes, salted hash, bot & cooldown guards)
+  apiRouter.post("/market/listing-event", analyticsEventLimiter, async (req, res) => {
+    try {
+      const hasAuthHeader = Boolean(req.headers.authorization || (req.headers as any)['Authorization']);
+      let verifiedUid: string | null = null;
+      if (hasAuthHeader) {
+        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+        if (!authRes.uid) {
+          return res.status(authRes.status || 401).json({
+            error: authRes.error || "Unauthorized",
+            code: authRes.code || "auth/invalid-id-token"
+          });
+        }
+        verifiedUid = authRes.uid;
+      }
+
+      const { listingId, eventType, visitorToken } = req.body || {};
+      const result = await analyticsService.recordListingEvent({
+        listingId,
+        eventType,
+        visitorToken,
+        verifiedUid,
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
+        clientIp: req.ip
+      });
+      return res.status(result.status).json(result.body);
+    } catch (err: any) {
+      if (isAdminCredentialsError(err)) {
+        return res.status(503).json({
+          recorded: false,
+          code: "analytics/admin-credentials-missing",
+          error: "Analytics persistence requires server Firebase Admin credentials for proton-core-ai."
+        });
+      }
+      console.error("[MarketAnalytics] listing-event error:", err);
+      return res.status(500).json({ error: "Failed to record listing analytics event" });
+    }
+  });
+
+  // 2. Owner-only Private Listing & Seller Statistics (24h, 7d, 30d, all + period comparisons)
+  apiRouter.get("/market/listing-stats", analyticsReadLimiter, async (req, res) => {
+    try {
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+      if (!authRes.uid) {
+        return res.status(authRes.status || 401).json({
+          error: authRes.error || "Unauthorized",
+          code: authRes.code || "auth/invalid-id-token"
+        });
+      }
+
+      const listingId = typeof req.query.listingId === 'string' && req.query.listingId.trim()
+        ? req.query.listingId.trim()
+        : undefined;
+
+      const result = await analyticsService.getSellerStats({
+        verifiedUid: authRes.uid,
+        listingId
+      });
+      return res.status(result.status).json(result.body);
+    } catch (err: any) {
+      if (isAdminCredentialsError(err)) {
+        return res.status(503).json({
+          code: "analytics/admin-credentials-missing",
+          error: "Analytics storage requires server Firebase Admin credentials for proton-core-ai."
+        });
+      }
+      console.error("[MarketAnalytics] listing-stats error:", err);
+      return res.status(500).json({ error: "Failed to fetch listing statistics" });
+    }
+  });
+
+  // 3. Public Aggregated Healthy Competition Rankings (no PII, no raw viewerHash/UID/IP)
+  apiRouter.get("/market/rankings", analyticsReadLimiter, async (req, res) => {
+    try {
+      const result = await analyticsService.getRankings({
+        scope: typeof req.query.scope === 'string' ? req.query.scope : 'global',
+        period: typeof req.query.period === 'string' ? req.query.period : '7d',
+        category: typeof req.query.category === 'string' ? req.query.category : undefined,
+        country: typeof req.query.country === 'string' ? req.query.country : undefined,
+        region: typeof req.query.region === 'string' ? req.query.region : undefined
+      });
+      return res.status(result.status).json(result.body);
+    } catch (err: any) {
+      if (isAdminCredentialsError(err)) {
+        return res.status(503).json({
+          rankings: [],
+          availableCountries: [],
+          availableRegions: [],
+          code: "analytics/admin-credentials-missing",
+          error: "Public rankings storage requires server Firebase Admin credentials for proton-core-ai."
+        });
+      }
+      console.error("[MarketAnalytics] rankings error:", err);
+      return res.status(500).json({ error: "Failed to load market rankings" });
+    }
+  });
+
+  // 4. Seller Opt-Out Control for Public Competition Rankings
+  apiRouter.post("/market/competition-preference", analyticsReadLimiter, async (req, res) => {
+    try {
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+      if (!authRes.uid) {
+        return res.status(authRes.status || 401).json({
+          error: authRes.error || "Unauthorized",
+          code: authRes.code || "auth/invalid-id-token"
+        });
+      }
+      const { optedOut } = req.body || {};
+      if (typeof optedOut !== 'boolean') {
+        return res.status(400).json({ error: "Bad Request: 'optedOut' boolean is required" });
+      }
+      const result = await analyticsService.updateCompetitionOptOut({
+        verifiedUid: authRes.uid,
+        optedOut
+      });
+      return res.status(result.status).json(result.body);
+    } catch (err: any) {
+      if (isAdminCredentialsError(err)) {
+        return res.status(503).json({
+          code: "analytics/admin-credentials-missing",
+          error: "Updating competition preferences requires server Firebase Admin credentials for proton-core-ai."
+        });
+      }
+      console.error("[MarketAnalytics] competition-preference error:", err);
+      return res.status(500).json({ error: "Failed to update competition preference" });
+    }
+  });
 
   // Mount apiRouter both with and without "/api" prefix for seamless routing
   // whether called as /api/xxx or rewritten directly to /xxx

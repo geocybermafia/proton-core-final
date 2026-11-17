@@ -18,7 +18,7 @@ import {
   Globe,
   ExternalLink
 } from 'lucide-react';
-import { Listing } from '../../types';
+import { AnalyticsPeriod, Listing, ListingAnalyticsStats } from '../../types';
 import { cn } from '../../lib/utils';
 import {
   MarketTheme,
@@ -34,6 +34,8 @@ import {
 } from './MarketConstants';
 import { getFormattedListingAttributes, isEffectiveRemoteListing } from './ListingSchemas';
 import { trackEvent } from '../../utils/analytics';
+import { fetchSingleListingAnalytics, sendListingAnalyticsEvent } from '../../utils/marketAnalyticsClient';
+import { AchievementBadge } from './AchievementBadge';
 
 export interface ListingDetailsModalProps {
   listing: Listing | null;
@@ -84,15 +86,36 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
   const [isActiveImageLoaded, setIsActiveImageLoaded] = useState(false);
   const [needsBackdrop, setNeedsBackdrop] = useState(false);
+  const [ownerAnalytics, setOwnerAnalytics] = useState<ListingAnalyticsStats | null>(null);
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>('7d');
   const mainImageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     setActiveImageIndex(0);
     setFailedImages({});
+    setOwnerAnalytics(null);
     if (listing) {
       trackEvent('view_item', { item_id: listing.id, item_name: getListingTitle(listing) });
+      sendListingAnalyticsEvent({
+        listingId: listing.id,
+        sellerId: listing.sellerId,
+        eventType: 'view',
+        currentUserId: user?.uid,
+      });
+
+      if (user?.uid && listing.sellerId === user.uid) {
+        let active = true;
+        fetchSingleListingAnalytics(listing.id)
+          .then((res) => {
+            if (active && res.listing) setOwnerAnalytics(res.listing);
+          })
+          .catch(() => {});
+        return () => {
+          active = false;
+        };
+      }
     }
-  }, [listing?.id]);
+  }, [listing?.id, listing?.sellerId, user?.uid]);
 
   const galleryImages = useMemo(() => {
     if (!listing) return [];
@@ -750,6 +773,87 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       ? 'გადახდის და მიწოდების პირობებზე მყიდველი და გამყიდველი თანხმდებიან უშუალოდ.'
                       : 'Payment and delivery terms are agreed directly between buyer and seller.'}
                   </p>
+
+                  {/* Owner-Only Real Listing Analytics */}
+                  {isOwnListing && (
+                    <div className={cn('p-3.5 rounded-2xl border space-y-2.5', currentTheme.cardAlt)}>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className={cn('text-[10px] font-black uppercase tracking-wider', currentTheme.text)}>
+                          {language === 'ka' ? 'მფლობელის სტატისტიკა' : 'Owner Analytics'}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {(['24h', '7d', '30d', 'all'] as AnalyticsPeriod[]).map((pk) => (
+                            <button
+                              key={pk}
+                              type="button"
+                              onClick={() => setAnalyticsPeriod(pk)}
+                              className={cn(
+                                'px-2 py-0.5 rounded-md text-[9px] font-black uppercase cursor-pointer transition-colors',
+                                analyticsPeriod === pk
+                                  ? 'bg-proton-accent text-proton-on-accent'
+                                  : 'bg-proton-bg text-proton-muted hover:text-proton-text'
+                              )}
+                            >
+                              {pk === 'all' ? (language === 'ka' ? 'სულ' : 'All') : pk}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const metrics = ownerAnalytics?.periods?.[analyticsPeriod] || {
+                          impressions: 0,
+                          views: 0,
+                          uniqueViewers: 0,
+                          engagementRate: 0,
+                        };
+                        return (
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                              <div className="text-[9px] font-bold text-proton-muted">
+                                {language === 'ka' ? 'გამოჩენა' : 'Impr.'}
+                              </div>
+                              <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
+                                {metrics.impressions}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                              <div className="text-[9px] font-bold text-proton-muted">
+                                {language === 'ka' ? 'ნახვა' : 'Views'}
+                              </div>
+                              <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
+                                {metrics.views}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                              <div className="text-[9px] font-bold text-proton-muted">
+                                {language === 'ka' ? 'უნიკ.' : 'Uniq.'}
+                              </div>
+                              <div className="text-xs font-black font-mono text-emerald-500 tabular-nums">
+                                {metrics.uniqueViewers}
+                              </div>
+                            </div>
+                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                              <div className="text-[9px] font-bold text-proton-muted">
+                                {language === 'ka' ? 'ჩართ.' : 'Eng.'}
+                              </div>
+                              <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
+                                {metrics.engagementRate}%
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {ownerAnalytics && ownerAnalytics.achievements.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          {ownerAnalytics.achievements.map((badge) => (
+                            <AchievementBadge key={badge} badgeId={badge} language={language} compact />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

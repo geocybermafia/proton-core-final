@@ -35,7 +35,9 @@ import {
   Clock,
   MessageSquare,
   ExternalLink,
-  Store
+  Store,
+  Trophy,
+  BarChart3
 } from 'lucide-react';
 import { 
   collection, 
@@ -59,7 +61,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { cn } from '../lib/utils';
-import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter, SupportedCurrency, resolvePreferredCurrency } from '../types';
+import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter, SupportedCurrency, resolvePreferredCurrency, ListingAnalyticsStats, SellerAnalyticsOverview } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useMarketHub } from '../contexts/MarketHubContext';
 import { isRealListing } from './market-hub/MarketConstants';
@@ -137,6 +139,9 @@ import { ListingTypeTabs } from './market-hub/MarketPulseMetrics';
 import { MarketListingCard } from './market-hub/MarketListingCard';
 import { BuyerOrders } from './market-hub/BuyerOrders';
 import { OrderDetailsModal } from './market-hub/OrderDetailsModal';
+import { SellerAnalyticsPanel } from './market-hub/SellerAnalyticsPanel';
+import { MarketRankingsView } from './market-hub/MarketRankingsView';
+import { fetchSellerAnalyticsOverview, setCompetitionOptOutPreference } from '../utils/marketAnalyticsClient';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
@@ -439,7 +444,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }).sort((a, b) => b.lastTimeMillis - a.lastTimeMillis);
   }, [allUserMessages, user?.uid, listings]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
+  const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'rankings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
 
   useEffect(() => {
     if (viewMode !== 'create' && viewMode !== 'edit') {
@@ -467,7 +472,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [sellerSelectedOrder, setSellerSelectedOrder] = useState<Order | null>(null);
   const [buyerSelectedOrder, setBuyerSelectedOrder] = useState<Order | null>(null);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
-  const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders'>('listings');
+  const [activeSellingTab, setActiveSellingTab] = useState<'listings' | 'incoming-orders' | 'statistics'>('listings');
+  const [sellerAnalyticsOverview, setSellerAnalyticsOverview] = useState<SellerAnalyticsOverview | null>(null);
+  const [sellerAnalyticsLoading, setSellerAnalyticsLoading] = useState(false);
+  const [sellerAnalyticsUnavailableReason, setSellerAnalyticsUnavailableReason] = useState<string | undefined>(undefined);
   const [publishSuccessModal, setPublishSuccessModal] = useState<{
     title: string;
     isEdit: boolean;
@@ -2408,6 +2416,95 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     return active;
   }, [listings]);
 
+  const sellerOwnedListings = useMemo(() => {
+    if (!user) return [];
+    return listings.filter((l) => l.sellerId === user.uid);
+  }, [listings, user]);
+
+  const sellerStatsByListingId = useMemo(() => {
+    const m = new Map<string, ListingAnalyticsStats>();
+    if (sellerAnalyticsOverview?.listings) {
+      for (const s of sellerAnalyticsOverview.listings) {
+        m.set(s.listingId, s);
+      }
+    }
+    return m;
+  }, [sellerAnalyticsOverview]);
+
+  const loadSellerAnalytics = useCallback(async () => {
+    if (!user) {
+      setSellerAnalyticsOverview(null);
+      setSellerAnalyticsUnavailableReason(undefined);
+      return;
+    }
+    setSellerAnalyticsLoading(true);
+    try {
+      const res = await fetchSellerAnalyticsOverview();
+      setSellerAnalyticsOverview(res.overview);
+      setSellerAnalyticsUnavailableReason(res.unavailableReason);
+    } catch {
+      // Keep clean zero state on transient error
+    } finally {
+      setSellerAnalyticsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setSellerAnalyticsOverview(null);
+      setSellerAnalyticsUnavailableReason(undefined);
+      return;
+    }
+    if (
+      (viewMode === 'my-listings' && profileSubMode === 'selling') ||
+      viewMode === 'rankings'
+    ) {
+      void loadSellerAnalytics();
+    }
+  }, [user, viewMode, profileSubMode, loadSellerAnalytics]);
+
+  const handleToggleCompetitionOptOut = useCallback(async (nextOptOut: boolean) => {
+    const res = await setCompetitionOptOutPreference(nextOptOut);
+    if (!res.success) {
+      showToast(
+        res.error || (language === 'ka' ? 'პარამეტრის შენახვა ვერ მოხერხდა.' : 'Could not update competition preference.'),
+        'error'
+      );
+      return;
+    }
+    setSellerAnalyticsOverview((prev) =>
+      prev
+        ? {
+            ...prev,
+            competitionOptOut: res.optedOut,
+            listings: prev.listings.map((item) => ({ ...item, optedOut: res.optedOut })),
+          }
+        : prev
+    );
+    showToast(
+      res.optedOut
+        ? (language === 'ka' ? 'საჯარო რეიტინგებიდან გამოთიშვა ჩაირთო (პირადი სტატისტიკა შენარჩუნებულია).' : 'Opted out of public rankings (private stats retained).')
+        : (language === 'ka' ? 'საჯარო რეიტინგებში მონაწილეობა ჩაირთო.' : 'Public rankings participation enabled.'),
+      'success'
+    );
+  }, [language, showToast]);
+
+  const handleOpenListingFromRankings = useCallback(async (listingId: string) => {
+    const localMatch = listings.find((l) => l.id === listingId);
+    if (localMatch) {
+      setSelectedListing(localMatch);
+      return;
+    }
+    try {
+      const snap = await getDoc(doc(db, 'listings', listingId));
+      if (snap.exists()) {
+        setSelectedListing({ id: snap.id, ...snap.data() } as Listing);
+      }
+    } catch {
+      // Ignore fetch failure cleanly
+    }
+  }, [listings]);
+
   const handleBuyNow = async (listing: Listing) => {
     if (!user) {
       showToast(language === 'ka' ? "გთხოვთ გაიაროთ ავტორიზაცია შესყიდვისთვის." : "Please sign in to make a purchase.", 'warning');
@@ -3637,6 +3734,26 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 </span>
               )}
             </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (activeBottomTab === 'messages') closeInlineMessages();
+                else setActiveBottomTab('home');
+                setShowOnlyFavorites(false);
+                setViewMode('rankings');
+              }}
+              className={cn(
+                "px-2.5 lg:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider cursor-pointer whitespace-nowrap",
+                viewMode === 'rankings' && activeBottomTab !== 'messages'
+                  ? "bg-proton-accent text-proton-on-accent font-black shadow-sm"
+                  : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
+              )}
+              title={language === 'ka' ? 'რეიტინგები და მიღწევები' : 'Rankings & Achievements'}
+            >
+              <Trophy size={13} />
+              <span>{language === 'ka' ? 'რეიტინგები' : 'Rankings'}</span>
+            </button>
           </nav>
 
           {/* Desktop Search Bar Grouping */}
@@ -3799,10 +3916,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           </div>
         </div>
 
-        {/* Unified Mobile Navigation Bar (Single non-duplicated 4-tab switcher, md:hidden) */}
+        {/* Unified Mobile Navigation Bar (Single non-duplicated 5-tab switcher, md:hidden) */}
         <nav
           aria-label={language === 'ka' ? 'მობილური მარკეტის ნავიგაცია' : 'Mobile marketplace navigation'}
-          className="w-full grid grid-cols-4 gap-1.5 md:hidden pt-1.5 border-t border-proton-border"
+          className="w-full grid grid-cols-5 gap-1 md:hidden pt-1.5 border-t border-proton-border"
         >
           <button
             type="button"
@@ -3927,6 +4044,25 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               </span>
             )}
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (activeBottomTab === 'messages') closeInlineMessages();
+              else setActiveBottomTab('home');
+              setShowOnlyFavorites(false);
+              setViewMode('rankings');
+            }}
+            className={cn(
+              "px-1 py-1.5 rounded-xl text-[9px] font-bold uppercase tracking-wider flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 transition-all border cursor-pointer relative",
+              viewMode === 'rankings' && activeBottomTab !== 'messages'
+                ? "bg-proton-accent text-proton-on-accent border-proton-accent shadow-sm font-black"
+                : "bg-proton-bg text-proton-muted hover:text-proton-text border-proton-border hover:bg-proton-accent/10"
+            )}
+          >
+            <Trophy size={13} />
+            <span className="truncate max-w-full">{language === 'ka' ? 'რეიტინგი' : 'Rankings'}</span>
+          </button>
         </nav>
       </div>
 
@@ -3968,6 +4104,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className={cn("font-black tracking-widest uppercase text-[8px]", currentTheme.muted)}>
                     {viewMode === 'browse' ? (language === 'ka' ? 'ონლაინ' : 'LIVE') : 
+                     viewMode === 'rankings' ? (language === 'ka' ? 'რეიტინგები და მიღწევები' : 'Rankings & Achievements') :
                      viewMode === 'my-listings' && activeBottomTab === 'messages' ? (language === 'ka' ? 'შეტყობინებები' : 'Messages') :
                      viewMode === 'my-listings' ? t.market.my_listings :
                      viewMode === 'privacy' ? t.market.legal.privacy_policy :
@@ -4212,6 +4349,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           t={t}
           currentTheme={currentTheme}
           onBack={() => setViewMode('browse')}
+        />
+      ) : viewMode === 'rankings' ? (
+        <MarketRankingsView
+          language={language}
+          t={t}
+          currentTheme={currentTheme}
+          listings={listings}
+          earnedAchievements={sellerAnalyticsOverview?.earnedAchievements || []}
+          onSelectListingId={handleOpenListingFromRankings}
         />
       ) : viewMode === 'browse' || viewMode === 'my-listings' ? (
         <div className="space-y-10 w-full">
@@ -4646,13 +4792,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                 {viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages' && (
                   <div className="space-y-3 w-full">
-                    <div className="flex bg-proton-bg p-1 rounded-2xl border border-proton-border shadow-inner self-start max-w-md animate-in fade-in duration-300">
+                    <div className="flex flex-wrap bg-proton-bg p-1 rounded-2xl border border-proton-border shadow-inner self-start max-w-2xl gap-1 animate-in fade-in duration-300">
                       <button
                         type="button"
                         id="seller-tab-postings-btn"
                         onClick={() => setActiveSellingTab('listings')}
                         className={cn(
-                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center cursor-pointer border",
+                          "px-4 sm:px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center cursor-pointer border",
                           activeSellingTab === 'listings' 
                             ? "bg-proton-card text-proton-text shadow-sm border-proton-border" 
                             : "text-proton-muted hover:text-proton-text border-transparent"
@@ -4663,10 +4809,24 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       </button>
                       <button
                         type="button"
+                        id="seller-tab-statistics-btn"
+                        onClick={() => setActiveSellingTab('statistics')}
+                        className={cn(
+                          "px-4 sm:px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center cursor-pointer border",
+                          activeSellingTab === 'statistics' 
+                            ? "bg-proton-card text-proton-accent shadow-sm border-proton-border" 
+                            : "text-proton-muted hover:text-proton-text border-transparent"
+                        )}
+                      >
+                        <BarChart3 size={13} />
+                        <span>{language === 'ka' ? 'სტატისტიკა' : 'Statistics'}</span>
+                      </button>
+                      <button
+                        type="button"
                         id="seller-tab-incoming-orders-btn"
                         onClick={() => setActiveSellingTab('incoming-orders')}
                         className={cn(
-                          "px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative cursor-pointer border",
+                          "px-4 sm:px-5 py-2.5 rounded-xl transition-all text-[9px] font-black uppercase tracking-widest flex items-center gap-2 grow sm:grow-0 justify-center relative cursor-pointer border",
                           activeSellingTab === 'incoming-orders' 
                             ? "bg-proton-card text-proton-text shadow-sm border-proton-border" 
                             : "text-proton-muted hover:text-proton-text border-transparent"
@@ -4898,6 +5058,19 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       onMessageSeller={handleStartOrderChat}
                       selectedOrder={buyerSelectedOrder}
                       onSelectOrder={setBuyerSelectedOrder}
+                    />
+                  ) : viewMode === 'my-listings' && profileSubMode === 'selling' && activeSellingTab === 'statistics' ? (
+                    <SellerAnalyticsPanel
+                      overview={sellerAnalyticsOverview}
+                      loading={sellerAnalyticsLoading}
+                      unavailableReason={sellerAnalyticsUnavailableReason}
+                      sellerListings={sellerOwnedListings}
+                      language={language}
+                      t={t}
+                      currentTheme={currentTheme}
+                      onToggleOptOut={handleToggleCompetitionOptOut}
+                      onSelectListing={setSelectedListing}
+                      onOpenRankings={() => setViewMode('rankings')}
                     />
                   ) : (
                     <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-4 gap-3.5 sm:gap-5 lg:gap-6 items-stretch w-full min-w-0">
@@ -5317,6 +5490,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         onSelectVendor={setSelectedVendor}
                         onStartEdit={startEdit}
                         onDeleteListing={handleDeleteListing}
+                        ownerStats={user?.uid === listing.sellerId ? sellerStatsByListingId.get(listing.id) : undefined}
                       />
                     ))
                   )}
@@ -5378,7 +5552,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         )}
       </div>
 
-            {!loading && !isSearchingBackend && listings.length === 0 && !isFilteredMode && (
+            {(viewMode === 'browse' || (viewMode === 'my-listings' && profileSubMode === 'selling' && activeSellingTab === 'listings')) && !loading && !isSearchingBackend && listings.length === 0 && !isFilteredMode && (
               <div className="py-20 px-6 max-w-2xl mx-auto text-center space-y-8 bg-proton-card border border-proton-border rounded-xl backdrop-blur-md animate-in fade-in zoom-in duration-500 shadow-lg">
                 <div className="w-16 h-16 bg-proton-accent/10 rounded-xl flex items-center justify-center mx-auto border border-proton-accent/25">
                   <LayoutGrid size={28} className="text-proton-accent" />
@@ -5414,7 +5588,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               </div>
             )}
 
-            {!loading && !isSearchingBackend && isFilteredMode && filteredListings.length === 0 && (
+            {(viewMode === 'browse' || (viewMode === 'my-listings' && profileSubMode === 'selling' && activeSellingTab === 'listings')) && !loading && !isSearchingBackend && isFilteredMode && filteredListings.length === 0 && (
               <div className="py-24 text-center space-y-6 max-w-sm mx-auto bg-proton-card border border-proton-border p-8 rounded-2xl shadow-lg">
                 <div className="w-16 h-16 bg-proton-bg rounded-2xl flex items-center justify-center mx-auto border border-proton-border">
                   <Search size={24} className="text-proton-muted" />
@@ -5437,7 +5611,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               </div>
             )}
 
-            {(loading || isSearchingBackend) && (
+            {(viewMode === 'browse' || (viewMode === 'my-listings' && profileSubMode === 'selling' && activeSellingTab === 'listings')) && (loading || isSearchingBackend) && (
               <div className="flex justify-center py-20">
                 <Loader2 className={cn("w-10 h-10 animate-spin", currentTheme.accent)} />
               </div>

@@ -423,7 +423,50 @@ export const translations = {
       cancel: "Cancel",
       prompt_placeholder: "Describe your custom AI avatar...",
       generating_ai: "AI is rendering image...",
-      camera_error: "Camera stream failed"
+      camera_error: "Camera stream failed",
+      analytics: {
+        tab_statistics: "Statistics",
+        tab_rankings: "Rankings",
+        tab_achievements: "Achievements",
+        impressions: "Impressions",
+        views: "Views",
+        unique_viewers: "Unique Viewers",
+        engagement_rate: "Engagement Rate",
+        period_24h: "Last 24h",
+        period_7d: "Last 7 Days",
+        period_30d: "Last 30 Days",
+        period_all: "All Time",
+        vs_previous: "vs previous period",
+        owner_only_note: "Visible only to you as the listing owner.",
+        guest_id_note: "Guest counts use an anonymous browser identifier; signed-in users use verified accounts.",
+        opt_out_label: "Participate in Public Rankings",
+        opt_out_desc: "Opt out anytime without affecting your private listing statistics.",
+        no_data_yet: "Real metrics start from 0 and update as buyers view your listings.",
+        listing_performance: "Listing Performance"
+      },
+      rankings: {
+        title: "Healthy Competition",
+        subtitle: "Balanced recognition across quality listings, engagement, and trusted sellers.",
+        scope_global: "Global",
+        scope_country: "Country",
+        scope_category: "Category",
+        scope_regional: "Regional",
+        profile_location_note: "Country & regional rankings use only verified profile location data, never IP guessing.",
+        fairness_note: "Scores balance unique viewers, engagement rate, category normalization, verified reviews, and fresh-listing discovery.",
+        empty: "No qualifying listings in this ranking scope yet."
+      },
+      achievements: {
+        title: "Real Achievements",
+        subtitle: "Awarded strictly from verified listing engagement and category performance.",
+        rising_listing: "Rising Listing",
+        rising_listing_desc: "Strong 7-day unique viewer growth or early high engagement.",
+        popular_listing: "Popular Listing",
+        popular_listing_desc: "Sustained 30-day demand with 25+ unique viewers and 35+ opens.",
+        top_in_category: "Top in Category",
+        top_in_category_desc: "Leading balanced score within its listing category.",
+        global_recognition: "Global Recognition",
+        global_recognition_desc: "Top 10 global standing with verified engagement."
+      }
     },
     settings: {
       title: "System Settings",
@@ -921,7 +964,50 @@ export const translations = {
       cancel: "გაუქმება",
       prompt_placeholder: "აღწერეთ სასურველი AI ავატარი...",
       generating_ai: "AI აგენერირებს გამოსახულებას...",
-      camera_error: "კამერა არ არის ხელმისაწვდომი"
+      camera_error: "კამერა არ არის ხელმისაწვდომი",
+      analytics: {
+        tab_statistics: "სტატისტიკა",
+        tab_rankings: "რეიტინგები",
+        tab_achievements: "მიღწევები",
+        impressions: "გამოჩენები",
+        views: "ნახვები",
+        unique_viewers: "უნიკალური მნახველები",
+        engagement_rate: "ჩართულობა",
+        period_24h: "ბოლო 24 სთ",
+        period_7d: "ბოლო 7 დღე",
+        period_30d: "ბოლო 30 დღე",
+        period_all: "მთლიანი პერიოდი",
+        vs_previous: "წინა პერიოდთან შედარებით",
+        owner_only_note: "ხილვადია მხოლოდ თქვენთვის, როგორც განცხადების მფლობელისთვის.",
+        guest_id_note: "სტუმრებისთვის გამოიყენება ანონიმური ბრაუზერის იდენტიფიკატორი, ავტორიზებულებისთვის — ანგარიშის UID.",
+        opt_out_label: "საჯარო რეიტინგებში მონაწილეობა",
+        opt_out_desc: "შეგიძლიათ ნებისმიერ დროს უარი თქვათ საჯარო რეიტინგზე — პირადი სტატისტიკა სრულად შეგინარჩუნდებათ.",
+        no_data_yet: "საწყისი მაჩვენებლები 0-ია და ივსება მხოლოდ რეალური ნახვების მიხედვით.",
+        listing_performance: "განცხადებების შედეგები"
+      },
+      rankings: {
+        title: "ჯანსაღი კონკურენცია",
+        subtitle: "დაბალანსებული შეფასება ხარისხიანი განცხადებების, ჩართულობისა და სანდო გამყიდველების წასახალისებლად.",
+        scope_global: "გლობალური",
+        scope_country: "ქვეყნის",
+        scope_category: "კატეგორიის",
+        scope_regional: "რეგიონული",
+        profile_location_note: "ქვეყნისა და რეგიონის რეიტინგები ეყრდნობა მხოლოდ პროფილში მითითებულ სანდო მონაცემს და არა IP-ს.",
+        fairness_note: "ქულა აბალანსებს უნიკალურ მნახველებს, ჩართულობას, კატეგორიის ნორმალიზაციას, შეფასებებსა და ახალი განცხადებების შანსს.",
+        empty: "ამ ფილტრში კვალიფიციური განცხადებები ჯერ არ არის."
+      },
+      achievements: {
+        title: "რეალური მიღწევები",
+        subtitle: "ენიჭება მხოლოდ დადასტურებული ნახვების, ჩართულობისა და კატეგორიის შედეგების საფუძველზე.",
+        rising_listing: "სწრაფად მზარდი",
+        rising_listing_desc: "7-დღიანი უნიკალური მნახველების სწრაფი ზრდა ან მაღალი საწყისი ჩართულობა.",
+        popular_listing: "პოპულარული განცხადება",
+        popular_listing_desc: "მდგრადი 30-დღიანი ინტერესი: 25+ უნიკალური მნახველი და 35+ გახსნა.",
+        top_in_category: "კატეგორიის გამორჩეული",
+        top_in_category_desc: "ლიდერი დაბალანსებული ქულა საკუთარ კატეგორიაში.",
+        global_recognition: "საერთაშორისო აღიარება",
+        global_recognition_desc: "საერთაშორისო ტოპ 10-ეული დადასტურებული ჩართულობით."
+      }
     },
     settings: {
       title: "სისტემის პარამეტრები",

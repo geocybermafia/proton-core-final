@@ -211,6 +211,65 @@
         "createdAt": { "type": "number" }
       },
       "required": ["id", "clipId", "userId", "userName", "text", "createdAt"]
+    },
+    "ListingAnalytics": {
+      "title": "Listing Analytics",
+      "description": "Server-managed private analytics counters and rolling buckets for a listing",
+      "type": "object",
+      "properties": {
+        "listingId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "category": { "type": "string" },
+        "impressions": { "type": "number" },
+        "views": { "type": "number" },
+        "uniqueViewers": { "type": "number" },
+        "optedOut": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["listingId", "sellerId", "impressions", "views", "uniqueViewers"]
+    },
+    "ListingViewerMarker": {
+      "title": "Listing Viewer Marker",
+      "description": "Server-only salted viewer hash deduplication marker (zero PII/IP)",
+      "type": "object",
+      "properties": {
+        "viewerHash": { "type": "string" },
+        "viewerType": { "type": "string", "enum": ["auth", "guest"] },
+        "firstImpressionAt": { "type": "number" },
+        "lastImpressionAt": { "type": "number" },
+        "firstViewedAt": { "type": "number" },
+        "lastViewAt": { "type": "number" }
+      },
+      "required": ["viewerHash", "viewerType"]
+    },
+    "ListingAnalyticsPublic": {
+      "title": "Listing Analytics Public Projection",
+      "description": "Public aggregated stats for opted-in active listings used in rankings (zero PII)",
+      "type": "object",
+      "properties": {
+        "listingId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "country": { "type": "string" },
+        "region": { "type": "string" },
+        "impressions": { "type": "number" },
+        "views": { "type": "number" },
+        "uniqueViewers": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["listingId", "category", "impressions", "views", "uniqueViewers"]
+    },
+    "SellerCompetitionPreference": {
+      "title": "Seller Competition Preference",
+      "description": "Opt-out control for public Healthy Competition rankings",
+      "type": "object",
+      "properties": {
+        "optedOut": { "type": "boolean" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["optedOut", "updatedAt"]
     }
   },
   "firestore": {
@@ -273,6 +332,22 @@
     "/users/{userId}/chatHistory/{personaId}": {
       "schema": "object",
       "description": "Chat messages with a persona"
+    },
+    "/listing_analytics/{listingId}": {
+      "schema": "ListingAnalytics",
+      "description": "Private server-maintained analytics counters per listing (owner read-only)"
+    },
+    "/listing_analytics/{listingId}/viewers/{viewerHash}": {
+      "schema": "ListingViewerMarker",
+      "description": "Server-only salted hash markers for unique viewer deduplication and cooldowns"
+    },
+    "/listing_analytics_public/{listingId}": {
+      "schema": "ListingAnalyticsPublic",
+      "description": "Aggregated public ranking metrics for opted-in active listings"
+    },
+    "/seller_competition_prefs/{userId}": {
+      "schema": "SellerCompetitionPreference",
+      "description": "Seller opt-out preference for public rankings"
     }
   }
 }

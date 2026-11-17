@@ -12,7 +12,7 @@ import {
   MoreVertical,
   Eye
 } from 'lucide-react';
-import { Listing } from '../../types';
+import { Listing, ListingAnalyticsStats } from '../../types';
 import { cn } from '../../lib/utils';
 import {
   MarketTheme,
@@ -27,6 +27,7 @@ import {
   formatApproxCurrencyEquivalent
 } from './MarketConstants';
 import { getCardAttributeHighlights, isEffectiveRemoteListing } from './ListingSchemas';
+import { hasSessionImpression, sendListingAnalyticsEvent } from '../../utils/marketAnalyticsClient';
 
 export interface ListingCardImageProps {
   src?: string;
@@ -167,6 +168,7 @@ export interface MarketListingCardProps {
   onSelectVendor: (vendor: { id: string; name: string }) => void;
   onStartEdit: (listing: Listing) => void;
   onDeleteListing: (id: string) => void;
+  ownerStats?: ListingAnalyticsStats;
 }
 
 export const MarketListingCard = React.memo(function MarketListingCard({
@@ -186,10 +188,12 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   onSelectListing,
   onSelectVendor,
   onStartEdit,
-  onDeleteListing
+  onDeleteListing,
+  ownerStats
 }: MarketListingCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuContainerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -218,6 +222,44 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   const canManageListing = isOwnListing;
   const showManagementMenu = canManageListing || Boolean(isAdmin);
   const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
+
+  // Real Impression Tracking: >= 50% visible continuously for >= 800ms
+  useEffect(() => {
+    if (isOwnListing || !listing?.id || hasSessionImpression(listing.id)) return;
+    const el = cardRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (!dwellTimer) {
+            dwellTimer = setTimeout(() => {
+              sendListingAnalyticsEvent({
+                listingId: listing.id,
+                sellerId: listing.sellerId,
+                eventType: 'impression',
+                currentUserId: user?.uid,
+              });
+              observer.disconnect();
+            }, 800);
+          }
+        } else if (dwellTimer) {
+          clearTimeout(dwellTimer);
+          dwellTimer = null;
+        }
+      },
+      { threshold: [0.5] }
+    );
+
+    observer.observe(el);
+    return () => {
+      if (dwellTimer) clearTimeout(dwellTimer);
+      observer.disconnect();
+    };
+  }, [listing.id, listing.sellerId, isOwnListing, user?.uid]);
   const displayTitle = getListingTitle(listing, language);
   const imageUrl = (listing.images && listing.images.length > 0) ? listing.images[0] : listing.image;
 
@@ -265,6 +307,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
 
   return (
     <motion.article
+      ref={cardRef}
       layout
       initial={{ opacity: 0, scale: 0.96 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -582,6 +625,35 @@ export const MarketListingCard = React.memo(function MarketListingCard({
               <Eye size={15} className="shrink-0" aria-hidden="true" />
               <span className="truncate">{language === 'ka' ? 'დეტალების ნახვა' : 'View Details'}</span>
             </button>
+          )}
+
+          {isOwnListing && ownerStats && (
+            <div className="pt-2 border-t border-proton-border grid grid-cols-3 gap-1.5 text-center">
+              <div className="px-1.5 py-1 rounded-lg bg-proton-bg/70 border border-proton-border">
+                <div className="text-[8px] font-bold uppercase text-proton-muted">
+                  {language === 'ka' ? 'გამოჩენა' : 'Impr.'}
+                </div>
+                <div className="text-[11px] font-black font-mono text-proton-text tabular-nums">
+                  {ownerStats.periods.all.impressions}
+                </div>
+              </div>
+              <div className="px-1.5 py-1 rounded-lg bg-proton-bg/70 border border-proton-border">
+                <div className="text-[8px] font-bold uppercase text-proton-muted">
+                  {language === 'ka' ? 'ნახვა' : 'Views'}
+                </div>
+                <div className="text-[11px] font-black font-mono text-proton-text tabular-nums">
+                  {ownerStats.periods.all.views}
+                </div>
+              </div>
+              <div className="px-1.5 py-1 rounded-lg bg-proton-bg/70 border border-proton-border">
+                <div className="text-[8px] font-bold uppercase text-proton-muted">
+                  {language === 'ka' ? 'უნიკ.' : 'Uniq.'}
+                </div>
+                <div className="text-[11px] font-black font-mono text-emerald-500 tabular-nums">
+                  {ownerStats.periods.all.uniqueViewers}
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
