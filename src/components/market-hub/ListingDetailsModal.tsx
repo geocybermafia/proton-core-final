@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -82,6 +82,9 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 }: ListingDetailsModalProps) {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+  const [isActiveImageLoaded, setIsActiveImageLoaded] = useState(false);
+  const [needsBackdrop, setNeedsBackdrop] = useState(false);
+  const mainImageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -102,6 +105,32 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
 
     return Array.from(new Set(combined));
   }, [listing]);
+
+  const activeImageSrc = galleryImages[activeImageIndex];
+
+  const handleMainImageReady = (img: HTMLImageElement) => {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (w > 0 && h > 0) {
+      const ratio = w / h;
+      const modalAspect = 4 / 3;
+      const fillRatio = Math.min(ratio / modalAspect, modalAspect / ratio);
+      setNeedsBackdrop(1 - fillRatio > 0.06);
+    } else {
+      setNeedsBackdrop(false);
+    }
+    setIsActiveImageLoaded(true);
+  };
+
+  useEffect(() => {
+    setIsActiveImageLoaded(false);
+    setNeedsBackdrop(false);
+
+    const img = mainImageRef.current;
+    if (activeImageSrc && img && img.complete && img.naturalWidth > 0) {
+      handleMainImageReady(img);
+    }
+  }, [activeImageSrc]);
 
   useEffect(() => {
     if (!listing || galleryImages.length <= 1) return;
@@ -190,7 +219,6 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
     return language === 'ka' ? 'პროდუქტი' : 'Product';
   };
 
-  const activeImageSrc = galleryImages[activeImageIndex];
   const hasActiveImageError = Boolean(failedImages[activeImageIndex]);
 
   return (
@@ -297,7 +325,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
             <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                 {/* Left Column: Photo Gallery */}
-                <div className="md:col-span-6 space-y-3">
+                <div className="md:col-span-6 space-y-3 min-w-0">
                   <div
                     className={cn(
                       'relative w-full aspect-[4/3] rounded-2xl overflow-hidden border bg-proton-bg flex items-center justify-center',
@@ -305,18 +333,48 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     )}
                   >
                     {activeImageSrc && !hasActiveImageError ? (
-                      <img
-                        src={activeImageSrc}
-                        alt={displayTitle}
-                        referrerPolicy="no-referrer"
-                        onError={() =>
-                          setFailedImages((prev) => ({
-                            ...prev,
-                            [activeImageIndex]: true
-                          }))
-                        }
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        {!isActiveImageLoaded && (
+                          <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/30 flex items-center justify-center pointer-events-none">
+                            <div className="w-6 h-6 rounded-full border-2 border-proton-border border-t-proton-accent animate-spin opacity-60" />
+                          </div>
+                        )}
+
+                        {isActiveImageLoaded && needsBackdrop && (
+                          <div
+                            aria-hidden="true"
+                            className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none"
+                          >
+                            <img
+                              src={activeImageSrc}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover object-center blur-xl scale-110 opacity-35"
+                            />
+                            <div className="absolute inset-0 bg-proton-bg/30" />
+                          </div>
+                        )}
+
+                        <img
+                          ref={mainImageRef}
+                          src={activeImageSrc}
+                          alt={displayTitle}
+                          referrerPolicy="no-referrer"
+                          onLoad={(e) => handleMainImageReady(e.currentTarget)}
+                          onError={() => {
+                            setIsActiveImageLoaded(false);
+                            setNeedsBackdrop(false);
+                            setFailedImages((prev) => ({
+                              ...prev,
+                              [activeImageIndex]: true
+                            }));
+                          }}
+                          className={cn(
+                            'relative z-[1] w-full h-full object-contain object-center transition-opacity duration-200',
+                            isActiveImageLoaded ? 'opacity-100' : 'opacity-0'
+                          )}
+                        />
+                      </>
                     ) : (
                       <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
                         <ShoppingBag
@@ -332,7 +390,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     )}
 
                     {isItemSold && (
-                      <div className="absolute inset-0 bg-black/55 flex items-center justify-center pointer-events-none">
+                      <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center pointer-events-none">
                         <span className="px-4 py-2 rounded-xl bg-proton-card/95 border border-rose-500/40 text-sm font-bold text-rose-500">
                           {language === 'ka' ? 'გაყიდულია' : 'Sold Out'}
                         </span>
@@ -350,7 +408,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                                 galleryImages.length
                             )
                           }
-                          className="absolute left-3 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] rounded-xl bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center transition-colors cursor-pointer"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 z-20 min-w-[44px] min-h-[44px] rounded-xl bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center transition-colors cursor-pointer"
                           aria-label={
                             language === 'ka' ? 'წინა ფოტო' : 'Previous photo'
                           }
@@ -365,7 +423,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                               (prev) => (prev + 1) % galleryImages.length
                             )
                           }
-                          className="absolute right-3 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] rounded-xl bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center transition-colors cursor-pointer"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 z-20 min-w-[44px] min-h-[44px] rounded-xl bg-black/70 hover:bg-black/90 text-white border border-white/15 flex items-center justify-center transition-colors cursor-pointer"
                           aria-label={
                             language === 'ka' ? 'შემდეგი ფოტო' : 'Next photo'
                           }
@@ -373,7 +431,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                           <ChevronRight size={20} />
                         </button>
 
-                        <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/75 text-white text-xs font-mono tabular-nums border border-white/10">
+                        <div className="absolute bottom-3 right-3 z-20 px-2.5 py-1 rounded-lg bg-black/75 text-white text-xs font-mono tabular-nums border border-white/10">
                           {activeImageIndex + 1} / {galleryImages.length}
                         </div>
                       </>

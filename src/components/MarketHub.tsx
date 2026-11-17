@@ -2732,28 +2732,32 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           let height = img.height;
 
           // Max dimensions
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 800;
+          const MAX_WIDTH = 1280;
+          const MAX_HEIGHT = 1280;
 
           if (width > height) {
             if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
+              height = Math.round(height * (MAX_WIDTH / width));
               width = MAX_WIDTH;
             }
           } else {
             if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
+              width = Math.round(width * (MAX_HEIGHT / height));
               height = MAX_HEIGHT;
             }
           }
 
-          canvas.width = width;
-          canvas.height = height;
+          canvas.width = Math.max(1, Math.round(width));
+          canvas.height = Math.max(1, Math.round(height));
           const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
 
-          // Get base64 with quality reduction
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          // Get base64 with balanced quality reduction
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
           // If user is authenticated, upload directly to permanent storage so draft retains the HTTPS URL
           if (user?.uid) {
@@ -3926,7 +3930,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         </nav>
       </div>
 
-      <div className="px-4 py-4 sm:p-6 lg:p-10 grow relative">
+      <div className="w-full max-w-[1680px] mx-auto px-4 py-4 sm:p-6 lg:p-10 grow relative">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -4896,7 +4900,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       onSelectOrder={setBuyerSelectedOrder}
                     />
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch w-full">
+                    <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 min-[1440px]:grid-cols-4 gap-3.5 sm:gap-5 lg:gap-6 items-stretch w-full min-w-0">
                       <AnimatePresence mode="popLayout">
                       {viewMode === 'my-listings' && activeSellingTab === 'incoming-orders' ? (
                         filteredSellerOrders.length > 0 ? (

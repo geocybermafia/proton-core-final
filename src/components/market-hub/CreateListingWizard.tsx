@@ -120,7 +120,40 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
 }) => {
   const { showToast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const previewImgRef = React.useRef<HTMLImageElement | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const previewImageUrl = formData.images?.[0] || '';
+  const [isPreviewLoaded, setIsPreviewLoaded] = React.useState(false);
+  const [previewHasError, setPreviewHasError] = React.useState(false);
+  const [previewNeedsBackdrop, setPreviewNeedsBackdrop] = React.useState(false);
+
+  const handlePreviewImageReady = React.useCallback((img: HTMLImageElement) => {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (w > 0 && h > 0) {
+      const naturalRatio = w / h;
+      const boxW = img.clientWidth;
+      const boxH = img.clientHeight;
+      const boxRatio = boxW > 0 && boxH > 0 ? boxW / boxH : 4 / 3;
+      const fillRatio = Math.min(naturalRatio / boxRatio, boxRatio / naturalRatio);
+      setPreviewNeedsBackdrop(1 - fillRatio > 0.06);
+    } else {
+      setPreviewNeedsBackdrop(false);
+    }
+    setPreviewHasError(false);
+    setIsPreviewLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    setIsPreviewLoaded(false);
+    setPreviewHasError(false);
+    setPreviewNeedsBackdrop(false);
+
+    const img = previewImgRef.current;
+    if (previewImageUrl && img && img.complete && img.naturalWidth > 0) {
+      handlePreviewImageReady(img);
+    }
+  }, [previewImageUrl, handlePreviewImageReady]);
 
   const activeSchema = React.useMemo(
     () => getCategoryFormSchema(formData.listingType, formData.category),
@@ -1261,10 +1294,12 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               
               <div 
                 className={cn(
-                  "w-full h-44 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all overflow-hidden relative",
-                  (formData.images?.[0] || isResizing) 
-                    ? "border-proton-border bg-proton-bg shadow-lg" 
-                    : "bg-proton-bg/60 border-proton-border hover:border-proton-accent/50 hover:bg-proton-bg group cursor-pointer"
+                  "w-full rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-all overflow-hidden relative",
+                  formData.images?.[0] && !isResizing
+                    ? "aspect-[4/3] max-h-80 sm:max-h-96 min-h-[176px] border-proton-border bg-proton-bg shadow-lg"
+                    : isResizing
+                    ? "h-44 border-proton-border bg-proton-bg shadow-lg"
+                    : "h-44 bg-proton-bg/60 border-proton-border hover:border-proton-accent/50 hover:bg-proton-bg group cursor-pointer"
                 )}
               >
                 {!formData.images?.[0] && !isResizing && (
@@ -1288,14 +1323,52 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                     </span>
                   </div>
                 ) : formData.images?.[0] ? (
-                  <div className="relative w-full h-full p-2.5">
-                    <img 
-                      src={formData.images[0]} 
-                      className="w-full h-full object-cover rounded-2xl" 
-                      alt={formData.title || formData.titleGe || 'Listing'} 
-                    />
+                  <div className="relative w-full h-full p-2.5 flex items-center justify-center overflow-hidden">
+                    {!isPreviewLoaded && !previewHasError && (
+                      <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/30 flex items-center justify-center pointer-events-none">
+                        <Loader2 className={cn("w-6 h-6 animate-spin opacity-60", currentTheme.accent)} />
+                      </div>
+                    )}
+
+                    {isPreviewLoaded && previewNeedsBackdrop && !previewHasError && (
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none"
+                      >
+                        <img
+                          src={formData.images[0]}
+                          alt=""
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover object-center blur-xl scale-110 opacity-35"
+                        />
+                        <div className="absolute inset-0 bg-proton-bg/30" />
+                      </div>
+                    )}
+
+                    {!previewHasError ? (
+                      <img 
+                        ref={previewImgRef}
+                        src={formData.images[0]} 
+                        onLoad={(e) => handlePreviewImageReady(e.currentTarget)}
+                        onError={() => {
+                          setPreviewHasError(true);
+                          setIsPreviewLoaded(true);
+                          setPreviewNeedsBackdrop(false);
+                        }}
+                        className={cn(
+                          "relative z-[1] w-full h-full object-contain object-center rounded-2xl transition-opacity duration-200",
+                          isPreviewLoaded ? "opacity-100" : "opacity-0"
+                        )}
+                        alt={formData.title || formData.titleGe || 'Listing'} 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="relative z-[1] flex flex-col items-center justify-center gap-2 text-proton-muted">
+                        <Camera size={28} className="opacity-40" />
+                      </div>
+                    )}
                     
-                    <div className="absolute bottom-5 left-5 bg-proton-card/90 border border-proton-border px-3 py-1.5 rounded-xl backdrop-blur-md select-none pointer-events-none animate-fade-in">
+                    <div className="absolute bottom-5 left-5 z-10 bg-proton-card/90 border border-proton-border px-3 py-1.5 rounded-xl backdrop-blur-md select-none pointer-events-none animate-fade-in">
                       <div className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-proton-accent animate-pulse" />
                         <span className={cn("text-[8px] font-mono font-black uppercase tracking-wider", currentTheme.text)}>
