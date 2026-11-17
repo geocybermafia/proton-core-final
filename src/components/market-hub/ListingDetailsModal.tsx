@@ -16,7 +16,8 @@ import {
   Trash2,
   Tag,
   Globe,
-  ExternalLink
+  ExternalLink,
+  Link
 } from 'lucide-react';
 import { AnalyticsPeriod, Listing, ListingAnalyticsStats } from '../../types';
 import { cn } from '../../lib/utils';
@@ -88,7 +89,18 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   const [needsBackdrop, setNeedsBackdrop] = useState(false);
   const [ownerAnalytics, setOwnerAnalytics] = useState<ListingAnalyticsStats | null>(null);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>('7d');
+  const [copiedLink, setCopiedLink] = useState(false);
   const mainImageRef = useRef<HTMLImageElement | null>(null);
+
+  const handleCopyLink = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     setActiveImageIndex(0);
@@ -327,6 +339,27 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                   }
                 >
                   <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className={cn(
+                    'min-w-[44px] min-h-[44px] px-3 flex items-center justify-center gap-1.5 rounded-xl border transition-colors cursor-pointer text-xs font-medium',
+                    currentTheme.border,
+                    copiedLink
+                      ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
+                      : 'hover:bg-proton-bg text-proton-muted hover:text-proton-text'
+                  )}
+                  aria-label={language === 'ka' ? 'ბმულის კოპირება' : 'Copy link'}
+                  title={language === 'ka' ? 'ბმულის კოპირება' : 'Copy direct link'}
+                >
+                  {copiedLink ? <Check size={16} className="text-emerald-400" /> : <Link size={16} />}
+                  <span className="hidden sm:inline">
+                    {copiedLink
+                      ? language === 'ka' ? 'კოპირებულია!' : 'Copied!'
+                      : language === 'ka' ? 'გაზიარება' : 'Share'}
+                  </span>
                 </button>
 
                 <button

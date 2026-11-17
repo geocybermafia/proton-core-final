@@ -454,6 +454,73 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }
   }, [viewMode, cancelAndResetAiSpec]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+
+  const handleOpenListingFromRankings = useCallback(async (listingId: string) => {
+    const localMatch = listings.find((l) => l.id === listingId);
+    if (localMatch) {
+      setSelectedListing(localMatch);
+      return;
+    }
+    try {
+      const snap = await getDoc(doc(db, 'listings', listingId));
+      if (snap.exists()) {
+        setSelectedListing({ id: snap.id, ...snap.data() } as Listing);
+      }
+    } catch {
+      // Ignore fetch failure cleanly
+    }
+  }, [listings]);
+
+  // Deep-linking: Initial load check for ?listingId=<id>
+  const initialListingIdProcessedRef = useRef(false);
+  useEffect(() => {
+    if (initialListingIdProcessedRef.current) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlListingId = params.get('listingId');
+      if (urlListingId) {
+        initialListingIdProcessedRef.current = true;
+        handleOpenListingFromRankings(urlListingId);
+      }
+    } catch {}
+  }, [handleOpenListingFromRankings]);
+
+  // Deep-linking: Update URL when selectedListing changes
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (selectedListing) {
+        url.searchParams.set('listingId', selectedListing.id);
+      } else {
+        url.searchParams.delete('listingId');
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch (e) {
+      console.error(e);
+    }
+  }, [selectedListing]);
+
+  // Deep-linking: Handle browser back/forward navigation (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlListingId = params.get('listingId');
+        if (urlListingId) {
+          if (!selectedListing || selectedListing.id !== urlListingId) {
+            handleOpenListingFromRankings(urlListingId);
+          }
+        } else {
+          if (selectedListing) {
+            setSelectedListing(null);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [selectedListing, handleOpenListingFromRankings]);
+
   const [checkoutItem, setCheckoutItem] = useState<Listing | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [displayMode, setDisplayMode] = useState<'grid' | 'map'>('grid');
@@ -2488,22 +2555,6 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       'success'
     );
   }, [language, showToast]);
-
-  const handleOpenListingFromRankings = useCallback(async (listingId: string) => {
-    const localMatch = listings.find((l) => l.id === listingId);
-    if (localMatch) {
-      setSelectedListing(localMatch);
-      return;
-    }
-    try {
-      const snap = await getDoc(doc(db, 'listings', listingId));
-      if (snap.exists()) {
-        setSelectedListing({ id: snap.id, ...snap.data() } as Listing);
-      }
-    } catch {
-      // Ignore fetch failure cleanly
-    }
-  }, [listings]);
 
   const handleBuyNow = async (listing: Listing) => {
     if (!user) {
