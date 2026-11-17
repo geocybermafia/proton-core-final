@@ -22,6 +22,7 @@ import {
   detectClipIssues
 } from "./lib/gemini-server.js";
 import {
+  AnalyticsConfigError,
   MarketAnalyticsService,
   isAdminCredentialsError
 } from "./lib/analyticsServer.js";
@@ -1169,10 +1170,11 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       return res.status(result.status).json(result.body);
     } catch (err: any) {
       if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
         return res.status(503).json({
           recorded: false,
-          code: "analytics/admin-credentials-missing",
-          error: "Analytics persistence requires server Firebase Admin credentials for proton-core-ai."
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Analytics persistence requires server Firebase Admin credentials for proton-core-ai."
         });
       }
       console.error("[MarketAnalytics] listing-event error:", err);
@@ -1202,9 +1204,10 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       return res.status(result.status).json(result.body);
     } catch (err: any) {
       if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
         return res.status(503).json({
-          code: "analytics/admin-credentials-missing",
-          error: "Analytics storage requires server Firebase Admin credentials for proton-core-ai."
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Analytics storage requires server Firebase Admin credentials for proton-core-ai."
         });
       }
       console.error("[MarketAnalytics] listing-stats error:", err);
@@ -1225,12 +1228,13 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       return res.status(result.status).json(result.body);
     } catch (err: any) {
       if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
         return res.status(503).json({
           rankings: [],
           availableCountries: [],
           availableRegions: [],
-          code: "analytics/admin-credentials-missing",
-          error: "Public rankings storage requires server Firebase Admin credentials for proton-core-ai."
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Public rankings storage requires server Firebase Admin credentials for proton-core-ai."
         });
       }
       console.error("[MarketAnalytics] rankings error:", err);
@@ -1259,9 +1263,10 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       return res.status(result.status).json(result.body);
     } catch (err: any) {
       if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
         return res.status(503).json({
-          code: "analytics/admin-credentials-missing",
-          error: "Updating competition preferences requires server Firebase Admin credentials for proton-core-ai."
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Updating competition preferences requires server Firebase Admin credentials for proton-core-ai."
         });
       }
       console.error("[MarketAnalytics] competition-preference error:", err);

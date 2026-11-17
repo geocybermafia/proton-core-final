@@ -85,7 +85,123 @@ function parseTimestampMs(val: any): number {
   return Date.now();
 }
 
+export const DEV_FALLBACK_ANALYTICS_SALT = 'proton-market-analytics-v1-salt';
+export const MIN_ANALYTICS_SALT_LENGTH = 32;
+
+export class AnalyticsConfigError extends Error {
+  public readonly code: string;
+  public readonly statusCode: number;
+
+  constructor(code: string, message: string, statusCode = 503) {
+    super(message);
+    this.name = 'AnalyticsConfigError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
+
+export function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL);
+}
+
+export interface ParsedServiceAccount {
+  type?: string;
+  project_id?: string;
+  private_key_id?: string;
+  private_key: string;
+  client_email: string;
+  client_id?: string;
+  [key: string]: any;
+}
+
+/**
+ * Safely parses FIREBASE_SERVICE_ACCOUNT_JSON:
+ * - Trims whitespace and strips redundant outer single/double quotes if present
+ * - Protects JSON.parse with try/catch
+ * - Normalizes literal `\\n` sequences inside `private_key` to real newlines
+ * - Never exposes raw secret contents in thrown error messages
+ */
+export function parseServiceAccountJson(rawSaJson: string): ParsedServiceAccount {
+  let cleaned = rawSaJson.trim();
+
+  if (
+    (cleaned.startsWith("'") && cleaned.endsWith("'")) ||
+    (cleaned.startsWith('"') && cleaned.endsWith('"'))
+  ) {
+    const inner = cleaned.slice(1, -1).trim();
+    if (inner.startsWith('{')) {
+      cleaned = inner;
+    } else if (cleaned.startsWith('"')) {
+      try {
+        const unwrapped = JSON.parse(cleaned);
+        if (typeof unwrapped === 'string' && unwrapped.trim().startsWith('{')) {
+          cleaned = unwrapped.trim();
+        }
+      } catch {
+        // Handled by main JSON.parse below
+      }
+    }
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new AnalyticsConfigError(
+      'analytics/admin-credentials-invalid',
+      'Server Firebase Admin service account JSON is malformed.'
+    );
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new AnalyticsConfigError(
+      'analytics/admin-credentials-invalid',
+      'Server Firebase Admin service account JSON must be an object.'
+    );
+  }
+
+  if (typeof parsed.client_email !== 'string' || !parsed.client_email.includes('@')) {
+    throw new AnalyticsConfigError(
+      'analytics/admin-credentials-invalid',
+      'Server Firebase Admin service account JSON is missing a valid client_email.'
+    );
+  }
+
+  if (typeof parsed.private_key !== 'string' || !parsed.private_key.trim()) {
+    throw new AnalyticsConfigError(
+      'analytics/admin-credentials-invalid',
+      'Server Firebase Admin service account JSON is missing a valid private_key.'
+    );
+  }
+
+  const normalizedKey = parsed.private_key.replace(/\\n/g, '\n').trim();
+  if (!normalizedKey.includes('-----BEGIN ') || !normalizedKey.includes('-----END ')) {
+    throw new AnalyticsConfigError(
+      'analytics/admin-credentials-invalid',
+      'Server Firebase Admin private_key is not valid PEM format.'
+    );
+  }
+
+  return {
+    ...parsed,
+    private_key: `${normalizedKey}\n`,
+  };
+}
+
 let cachedAdminFirestore: any = null;
+
+export async function resetAdminFirestoreCacheForTests(): Promise<void> {
+  cachedAdminFirestore = null;
+  try {
+    const { getApps, deleteApp } = await import('firebase-admin/app');
+    const existing = getApps().find((a: any) => a.name === 'proton-analytics-admin');
+    if (existing) {
+      await deleteApp(existing);
+    }
+  } catch {
+    // Ignore cleanup errors when app wasn't initialized
+  }
+}
 
 export async function getAdminFirestoreInstance(): Promise<any> {
   if (cachedAdminFirestore) return cachedAdminFirestore;
@@ -100,9 +216,27 @@ export async function getAdminFirestoreInstance(): Promise<any> {
   let app = getApps().find((a: any) => a.name === appName);
   if (!app) {
     const rawSaJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-    if (rawSaJson && rawSaJson.trim().startsWith('{')) {
-      const parsed = JSON.parse(rawSaJson);
-      app = initializeApp({ credential: cert(parsed), projectId: parsed.project_id || projectId }, appName);
+    if (typeof rawSaJson === 'string' && rawSaJson.trim().length > 0) {
+      const parsed = parseServiceAccountJson(rawSaJson);
+      try {
+        app = initializeApp(
+          {
+            credential: cert({
+              projectId: parsed.project_id || projectId,
+              clientEmail: parsed.client_email,
+              privateKey: parsed.private_key,
+            }),
+            projectId: parsed.project_id || projectId,
+          },
+          appName
+        );
+      } catch {
+        console.error('[MarketAnalytics] Failed to initialize Firebase Admin credential from FIREBASE_SERVICE_ACCOUNT_JSON.');
+        throw new AnalyticsConfigError(
+          'analytics/admin-credentials-invalid',
+          'Server Firebase Admin service account credential or private key is invalid.'
+        );
+      }
     } else {
       app = initializeApp({ projectId }, appName);
     }
@@ -387,22 +521,45 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
 
 export class MarketAnalyticsService {
   private readonly repo: AnalyticsRepository;
-  private readonly salt: string;
+  private readonly explicitSalt?: string;
   // In-memory short burst IP+listing guard to prevent rotating-token spam WITHOUT storing raw IPs in DB
   private readonly ipListingThrottle = new Map<string, number>();
 
   constructor(repo?: AnalyticsRepository, salt?: string) {
     this.repo = repo || new FirestoreAdminAnalyticsRepository();
-    this.salt =
-      salt ||
-      process.env.ANALYTICS_HASH_SALT ||
-      process.env.ANALYTICS_SALT ||
-      'proton-market-analytics-v1-salt';
+    if (typeof salt === 'string' && salt.length > 0) {
+      this.explicitSalt = salt;
+    }
+  }
+
+  private resolveEffectiveSalt(): string {
+    if (this.explicitSalt) {
+      return this.explicitSalt;
+    }
+
+    if (isProductionRuntime()) {
+      const prodSalt = (process.env.ANALYTICS_HASH_SALT || '').trim();
+      if (
+        !prodSalt ||
+        prodSalt.length < MIN_ANALYTICS_SALT_LENGTH ||
+        prodSalt === DEV_FALLBACK_ANALYTICS_SALT
+      ) {
+        throw new AnalyticsConfigError(
+          'analytics/salt-missing',
+          'Server analytics hash salt (ANALYTICS_HASH_SALT) is missing or insufficiently strong for production.'
+        );
+      }
+      return prodSalt;
+    }
+
+    const devSalt = (process.env.ANALYTICS_HASH_SALT || process.env.ANALYTICS_SALT || '').trim();
+    return devSalt || DEV_FALLBACK_ANALYTICS_SALT;
   }
 
   computeViewerHash(listingId: string, identityKey: string): string {
+    const activeSalt = this.resolveEffectiveSalt();
     return crypto
-      .createHmac('sha256', this.salt)
+      .createHmac('sha256', activeSalt)
       .update(`${listingId}:${identityKey}`)
       .digest('hex');
   }
@@ -411,11 +568,12 @@ export class MarketAnalyticsService {
     clientIp: string | undefined,
     listingId: string,
     eventType: MarketEventType,
-    nowMs: number
+    nowMs: number,
+    activeSalt: string
   ): boolean {
     if (!clientIp) return true;
     const keyHash = crypto
-      .createHmac('sha256', this.salt)
+      .createHmac('sha256', activeSalt)
       .update(`${clientIp}:${listingId}:${eventType}`)
       .digest('hex')
       .slice(0, 24);
@@ -476,7 +634,24 @@ export class MarketAnalyticsService {
       identityKey = `guest:${params.visitorToken}`;
     }
 
-    if (!this.checkInMemoryIpGuard(params.clientIp, params.listingId, params.eventType, nowMs)) {
+    let activeSalt: string;
+    try {
+      activeSalt = this.resolveEffectiveSalt();
+    } catch (err: any) {
+      if (err instanceof AnalyticsConfigError && err.code === 'analytics/salt-missing') {
+        return {
+          status: 503,
+          body: {
+            recorded: false,
+            code: 'analytics/salt-missing',
+            error: err.message,
+          },
+        };
+      }
+      throw err;
+    }
+
+    if (!this.checkInMemoryIpGuard(params.clientIp, params.listingId, params.eventType, nowMs, activeSalt)) {
       return { status: 200, body: { recorded: false, reason: 'rate_throttled' } };
     }
 
@@ -780,12 +955,19 @@ export class MarketAnalyticsService {
 }
 
 export function isAdminCredentialsError(err: any): boolean {
+  if (err instanceof AnalyticsConfigError) return true;
+  const code = String(err?.code || '');
   const msg = String(err?.message || err || '');
   return (
     err?.code === 7 ||
     err?.code === 16 ||
+    code === 'analytics/admin-credentials-missing' ||
+    code === 'analytics/admin-credentials-invalid' ||
+    code === 'analytics/salt-missing' ||
     msg.includes('PERMISSION_DENIED') ||
     msg.includes('Could not load the default credentials') ||
-    msg.includes('UNAUTHENTICATED')
+    msg.includes('UNAUTHENTICATED') ||
+    msg.includes('Failed to parse private key') ||
+    msg.includes('Invalid PEM')
   );
 }
