@@ -37,6 +37,19 @@ export interface ListingCardImageProps {
   category?: string;
 }
 
+const CONTAINER_ASPECT_RATIO = 4 / 3;
+const MAX_COVER_CROP_FRACTION = 0.1;
+
+function resolveImageFitMode(naturalWidth: number, naturalHeight: number): 'cover' | 'contain' {
+  if (!naturalWidth || !naturalHeight) return 'contain';
+  const naturalRatio = naturalWidth / naturalHeight;
+  const visibleFraction = Math.min(
+    naturalRatio / CONTAINER_ASPECT_RATIO,
+    CONTAINER_ASPECT_RATIO / naturalRatio
+  );
+  return 1 - visibleFraction <= MAX_COVER_CROP_FRACTION ? 'cover' : 'contain';
+}
+
 export const ListingCardImage = React.memo(function ListingCardImage({
   src,
   alt,
@@ -47,14 +60,31 @@ export const ListingCardImage = React.memo(function ListingCardImage({
 }: ListingCardImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [fitMode, setFitMode] = useState<'cover' | 'contain' | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const handleImageReady = (img: HTMLImageElement) => {
+    setFitMode(resolveImageFitMode(img.naturalWidth, img.naturalHeight));
+    setHasError(false);
+    setIsLoaded(true);
+  };
 
   useEffect(() => {
     setIsLoaded(false);
     setHasError(false);
+    setFitMode(null);
+
+    const img = imgRef.current;
+    if (src && img && img.complete && img.naturalWidth > 0) {
+      handleImageReady(img);
+    }
   }, [src]);
 
+  const isContainMode = isLoaded && fitMode === 'contain';
+  const isCoverMode = isLoaded && fitMode === 'cover';
+
   return (
-    <div className="w-full h-44 sm:h-48 overflow-hidden relative shrink-0 bg-proton-bg">
+    <div className="w-full h-full overflow-hidden relative">
       {!isLoaded && !hasError && src && (
         <div className="absolute inset-0 z-0 animate-pulse bg-proton-border/40 flex items-center justify-center">
           <div className="w-7 h-7 rounded-full border-2 border-proton-border border-t-proton-accent animate-spin opacity-60" />
@@ -62,21 +92,41 @@ export const ListingCardImage = React.memo(function ListingCardImage({
       )}
 
       {src && !hasError ? (
-        <motion.img
-          src={src}
-          alt={alt}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => {
-            setHasError(true);
-            setIsLoaded(true);
-          }}
-          className={cn(
-            "w-full h-full object-cover object-center block transition-all duration-500 ease-out",
-            isLoaded ? "opacity-100 scale-100" : "opacity-0 scale-[1.02]"
+        <>
+          {isContainMode && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none"
+            >
+              <img
+                src={src}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover object-center blur-xl scale-110 opacity-35"
+              />
+              <div className="absolute inset-0 bg-proton-bg/30" />
+            </div>
           )}
-          whileHover={{ scale: isSold ? 1.0 : 1.04 }}
-          referrerPolicy="no-referrer"
-        />
+
+          <motion.img
+            ref={imgRef}
+            src={src}
+            alt={alt}
+            onLoad={(e) => handleImageReady(e.currentTarget)}
+            onError={() => {
+              setHasError(true);
+              setIsLoaded(true);
+              setFitMode(null);
+            }}
+            className={cn(
+              "relative z-[1] w-full h-full object-center block transition-opacity duration-300 ease-out",
+              isCoverMode ? "object-cover" : "object-contain",
+              isLoaded ? "opacity-100" : "opacity-0"
+            )}
+            whileHover={{ scale: isSold ? 1.0 : (isContainMode ? 1.02 : 1.04) }}
+            referrerPolicy="no-referrer"
+          />
+        </>
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-slate-800/60">
           <span className="text-3xl select-none" aria-hidden="true">
@@ -232,7 +282,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
       )}
     >
       {/* 1. Product Photo */}
-      <div className="w-full h-44 sm:h-48 overflow-hidden relative shrink-0 bg-proton-bg">
+      <div className="w-full aspect-[4/3] overflow-hidden relative shrink-0 bg-proton-bg">
         <ListingCardImage
           src={imageUrl}
           alt={displayTitle}
@@ -242,7 +292,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           category={listing.category}
         />
 
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/35 via-black/10 to-transparent pointer-events-none z-[2]" />
 
         {/* Non-overlapping Top Overlay Bar: max 1 category badge on left + compact Favorite & options menu on right */}
         <div className="absolute top-2.5 inset-x-2.5 z-20 flex items-start justify-between gap-2 pointer-events-none">
