@@ -286,6 +286,138 @@
         "updatedAt": { "type": "number" }
       },
       "required": ["optedOut", "updatedAt"]
+    },
+    "SellerAnalytics": {
+      "title": "Seller Analytics",
+      "description": "Server-managed private seller audience, funnel metrics, and rolling buckets (no fabricated history)",
+      "type": "object",
+      "properties": {
+        "sellerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "schemaVersion": { "type": "number" },
+            "sellerName": { "type": "string", "maxLength": 200 },
+            "lastEventAt": { "type": "number" }
+          }
+        },
+        "optedOut": { "type": "boolean" },
+        "country": { "type": "string", "maxLength": 64 },
+        "region": { "type": "string", "maxLength": 64 },
+        "funnelTrackingSince": { "type": "number" },
+        "audience": {
+          "type": "object",
+          "properties": {
+            "totalImpressions": { "type": "number" },
+            "totalViews": { "type": "number" },
+            "uniqueViewers": { "type": "number" },
+            "authImpressions": { "type": "number" },
+            "authViews": { "type": "number" },
+            "authUniqueViewers": { "type": "number" },
+            "guestImpressions": { "type": "number" },
+            "guestViews": { "type": "number" },
+            "guestUniqueViewers": { "type": "number" }
+          }
+        },
+        "totals": {
+          "type": "object",
+          "properties": {
+            "totalEvents": { "type": "number" },
+            "totalUniqueUsers": { "type": "number" },
+            "authEvents": { "type": "number" },
+            "guestEvents": { "type": "number" },
+            "authUniqueUsers": { "type": "number" },
+            "guestUniqueUsers": { "type": "number" }
+          }
+        },
+        "profileViews": { "type": "number" },
+        "uniqueProfileViewers": { "type": "number" },
+        "authProfileViews": { "type": "number" },
+        "guestProfileViews": { "type": "number" },
+        "authUniqueProfileViewers": { "type": "number" },
+        "guestUniqueProfileViewers": { "type": "number" },
+        "listingToSellerClicks": { "type": "number" },
+        "uniqueListingToSellerUsers": { "type": "number" },
+        "authListingToSellerClicks": { "type": "number" },
+        "guestListingToSellerClicks": { "type": "number" },
+        "contactClicks": { "type": "number" },
+        "uniqueContactClickers": { "type": "number" },
+        "authContactClicks": { "type": "number" },
+        "guestContactClicks": { "type": "number" },
+        "authUniqueContactClickers": { "type": "number" },
+        "guestUniqueContactClickers": { "type": "number" },
+        "orderIntents": { "type": "number" },
+        "uniqueOrderIntentUsers": { "type": "number" },
+        "authOrderIntents": { "type": "number" },
+        "guestOrderIntents": { "type": "number" },
+        "authUniqueOrderIntentUsers": { "type": "number" },
+        "guestUniqueOrderIntentUsers": { "type": "number" },
+        "contactConfirmed": { "type": "number" },
+        "uniqueContactedBuyers": { "type": "number" },
+        "ordersConfirmed": { "type": "number" },
+        "uniqueOrderBuyers": { "type": "number" },
+        "guestToAuthLinks": { "type": "number" },
+        "hourly": { "type": "object" },
+        "daily": { "type": "object" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["sellerId", "optedOut", "funnelTrackingSince", "createdAt", "updatedAt"]
+    },
+    "SellerViewerMarker": {
+      "title": "Seller Viewer Marker",
+      "description": "Server-only seller-scoped HMAC viewer hash marker (zero raw IP, visitorToken, User-Agent, UID, or PII)",
+      "type": "object",
+      "properties": {
+        "viewerHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$" },
+        "viewerType": { "type": "string", "enum": ["auth", "guest"] },
+        "firstSeenAt": { "type": "number" },
+        "lastSeenAt": { "type": "number" },
+        "firstProfileViewAt": { "type": "number" },
+        "lastProfileViewAt": { "type": "number" },
+        "firstListingToSellerAt": { "type": "number" },
+        "lastListingToSellerAt": { "type": "number" },
+        "firstContactClickAt": { "type": "number" },
+        "lastContactClickAt": { "type": "number" },
+        "firstOrderIntentAt": { "type": "number" },
+        "lastOrderIntentAt": { "type": "number" },
+        "firstContactConfirmedAt": { "type": "number" },
+        "firstOrderConfirmedAt": { "type": "number" },
+        "firstAudienceAt": { "type": "number" },
+        "lastAudienceAt": { "type": "number" }
+      },
+      "required": ["viewerHash", "viewerType", "firstSeenAt", "lastSeenAt"]
+    },
+    "AnalyticsGuestSession": {
+      "title": "Analytics Guest Session",
+      "description": "Server-only HMAC guest session index for atomic single-claim guest-to-auth identity linking (30-day TTL)",
+      "type": "object",
+      "properties": {
+        "guestHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$" },
+        "listingIds": { "type": "array", "description": "Bounded unique listing IDs (max 50)" },
+        "sellerIds": { "type": "array", "description": "Bounded unique seller IDs (max 30)" },
+        "linkedUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "linkedAt": { "type": "number" },
+        "expiresAt": { "type": "number" }
+      },
+      "required": ["guestHash", "listingIds", "sellerIds", "createdAt", "updatedAt", "expiresAt"]
+    },
+    "AnalyticsVerifiedMarker": {
+      "title": "Analytics Verified Marker",
+      "description": "Server-only idempotency marker preventing duplicate counting of confirmed orders and buyer-seller contacts",
+      "type": "object",
+      "properties": {
+        "markerId": { "type": "string", "maxLength": 128, "pattern": "^(order|contact)_[a-zA-Z0-9_\\-]+$" },
+        "markerType": { "type": "string", "enum": ["contact_confirmed", "order_confirmed"] },
+        "sellerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "buyerHash": { "type": "string", "minLength": 64, "maxLength": 64, "pattern": "^[a-f0-9]{64}$" },
+        "sourceId": { "type": "string", "maxLength": 120, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "recordedAt": { "type": "number" }
+      },
+      "required": ["markerId", "markerType", "sellerId", "buyerHash", "sourceId", "recordedAt"]
     }
   },
   "firestore": {
@@ -364,6 +496,22 @@
     "/seller_competition_prefs/{userId}": {
       "schema": "SellerCompetitionPreference",
       "description": "Seller opt-out preference for public rankings"
+    },
+    "/seller_analytics/{sellerId}": {
+      "schema": "SellerAnalytics",
+      "description": "Private aggregated seller analytics and funnel metrics (owner get-only, server Admin SDK writes only)"
+    },
+    "/seller_analytics/{sellerId}/viewers/{sellerViewerHash}": {
+      "schema": "SellerViewerMarker",
+      "description": "Server-only seller-scoped HMAC viewer markers (zero client read/write)"
+    },
+    "/analytics_guest_sessions/{guestHash}": {
+      "schema": "AnalyticsGuestSession",
+      "description": "Server-only guest session index with 30-day TTL and atomic single-claim state (zero client read/write)"
+    },
+    "/analytics_verified_markers/{markerId}": {
+      "schema": "AnalyticsVerifiedMarker",
+      "description": "Server-only verified funnel idempotency markers for orders and contacts (zero client read/write)"
     }
   }
 }

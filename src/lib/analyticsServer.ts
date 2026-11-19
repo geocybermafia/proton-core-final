@@ -3,13 +3,20 @@ import {
   AchievementBadgeId,
   AnalyticsPeriod,
   EarnedAchievementEntry,
+  GuestSessionClaimResult,
+  GuestSessionIndexDoc,
   ListingAnalyticsStats,
   PeriodComparison,
   PeriodMetrics,
   RankingEntry,
   RankingPeriod,
   RankingScope,
+  SellerAnalyticsDoc,
   SellerAnalyticsOverview,
+  SellerViewerDoc,
+  VerifiedFunnelMarkerDoc,
+  VerifiedMarkerClaimResult,
+  VerifiedMarkerType,
 } from '../types';
 import {
   BucketCounter,
@@ -19,15 +26,21 @@ import {
   aggregatePeriodFromBuckets,
   aggregateViewerBreakdownFromDoc,
   buildRankingsFromPublicDocs,
+  buildVerifiedFunnelMarkerId,
   computeListingAchievements,
+  createEmptySellerAnalyticsDoc,
+  evaluateGuestSessionClaim,
   getDayBucketKey,
   getHourBucketKey,
   isBotUserAgent,
   isValidAnalyticsId,
+  isValidHmacDigest,
+  mergeGuestSessionActivity,
   normalizeListingTypeFilter,
   pruneDailyBuckets,
   pruneHourlyBuckets,
   resolveReliableSellerLocation,
+  sanitizeSellerViewerDoc,
   sumPeriodMetricsList,
   sumViewerBreakdownList,
 } from './marketAnalyticsUtils.js';
@@ -82,15 +95,37 @@ export interface SellerRatingsScanResult {
   truncationReason?: string;
 }
 
+export interface SellerListingsScanResult {
+  listings: ListingRecordForAnalytics[];
+  truncated: boolean;
+  truncationReason?: string;
+}
+
+export interface SellerListingAnalyticsScanResult {
+  docsByListingId: Map<string, RawListingAnalyticsDoc>;
+  truncated: boolean;
+  truncationReason?: string;
+}
+
+export interface AggregatedRankMapsResult {
+  globalRankMap: Map<string, number>;
+  catRankMap: Map<string, { rank: number; total: number }>;
+  truncated: boolean;
+  warnings: string[];
+}
+
 export interface AnalyticsRepository {
   getListing(listingId: string): Promise<ListingRecordForAnalytics | null>;
   getSellerProfileLocation(sellerId: string): Promise<{ country?: string; region?: string; optedOut?: boolean }>;
   getSellerListings(sellerId: string): Promise<ListingRecordForAnalytics[]>;
+  getSellerListingsWithMeta?(sellerId: string): Promise<SellerListingsScanResult>;
   getListingAnalyticsDoc(listingId: string): Promise<RawListingAnalyticsDoc | null>;
+  getSellerListingAnalyticsMap?(sellerId: string): Promise<SellerListingAnalyticsScanResult>;
   getAllPublicAnalyticsDocs(): Promise<RawListingAnalyticsDoc[]>;
   getAllPublicAnalyticsDocsWithMeta?(): Promise<PublicDocsScanResult>;
   getSellerRatingsMap(): Promise<Record<string, { avg: number; count: number }>>;
   getSellerRatingsMapWithMeta?(): Promise<SellerRatingsScanResult>;
+  getAggregatedRankMaps?(nowMs: number): Promise<AggregatedRankMapsResult>;
   recordEventTransaction(params: {
     listing: ListingRecordForAnalytics;
     sellerLocation: { country?: string; region?: string; optedOut?: boolean };
@@ -100,6 +135,38 @@ export interface AnalyticsRepository {
     nowMs: number;
   }): Promise<{ recorded: boolean; reason?: string; uniqueIncremented: boolean }>;
   setSellerCompetitionOptOut(sellerId: string, optedOut: boolean, nowMs: number): Promise<void>;
+  getSellerAnalyticsDoc?(sellerId: string): Promise<SellerAnalyticsDoc | null>;
+  ensureSellerAnalyticsDoc?(params: {
+    sellerId: string;
+    optedOut?: boolean;
+    sellerName?: string;
+    country?: string;
+    region?: string;
+    nowMs?: number;
+  }): Promise<SellerAnalyticsDoc>;
+  getSellerViewerDoc?(sellerId: string, sellerViewerHash: string): Promise<SellerViewerDoc | null>;
+  upsertSellerViewerDoc?(sellerId: string, viewerDoc: SellerViewerDoc): Promise<SellerViewerDoc>;
+  getGuestSessionIndex?(guestHash: string): Promise<GuestSessionIndexDoc | null>;
+  recordGuestSessionActivity?(params: {
+    guestHash: string;
+    listingId?: string;
+    sellerId?: string;
+    nowMs?: number;
+  }): Promise<GuestSessionIndexDoc>;
+  claimGuestSession?(params: {
+    guestHash: string;
+    uid: string;
+    nowMs?: number;
+  }): Promise<GuestSessionClaimResult>;
+  getVerifiedFunnelMarker?(markerId: string): Promise<VerifiedFunnelMarkerDoc | null>;
+  claimVerifiedFunnelMarker?(params: {
+    markerType: VerifiedMarkerType;
+    sourceId: string;
+    sellerId: string;
+    buyerHash: string;
+    listingId?: string;
+    nowMs?: number;
+  }): Promise<VerifiedMarkerClaimResult>;
 }
 
 function parseTimestampMs(val: any): number {
@@ -272,6 +339,8 @@ export async function getAdminFirestoreInstance(): Promise<any> {
 
 export const DEFAULT_CURSOR_BATCH_SIZE = 500;
 export const DEFAULT_CURSOR_MAX_PAGES = 200; // Up to 100,000 docs before safety guard triggers explicit incomplete flag
+export const SELLER_SCOPED_CURSOR_MAX_PAGES = 40; // Up to 20,000 seller-scoped docs via paginated cursor
+export const OPT_OUT_BATCH_CHUNK_SIZE = 200; // 2 ops per listing => max 400 writes < Firestore 500-op batch cap
 export const ANALYTICS_CACHE_TTL_MS = 30_000;
 
 export interface CursorQueryLike {
@@ -365,6 +434,7 @@ export async function scanCollectionWithCursor<T = Record<string, any>>(params: 
 export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
   private publicDocsCache: { expiresAt: number; value: PublicDocsScanResult } | null = null;
   private ratingsCache: { expiresAt: number; value: SellerRatingsScanResult } | null = null;
+  private rankMapsCache: { expiresAt: number; value: AggregatedRankMapsResult } | null = null;
   private readonly cacheTtlMs: number;
 
   constructor(options?: { cacheTtlMs?: number }) {
@@ -374,6 +444,7 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
   invalidateCaches(): void {
     this.publicDocsCache = null;
     this.ratingsCache = null;
+    this.rankMapsCache = null;
   }
 
   async getListing(listingId: string): Promise<ListingRecordForAnalytics | null> {
@@ -419,33 +490,46 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     };
   }
 
-  async getSellerListings(sellerId: string): Promise<ListingRecordForAnalytics[]> {
+  private mapListingDocToRecord(id: string, data: Record<string, any>): ListingRecordForAnalytics {
+    return {
+      id,
+      sellerId: data.sellerId,
+      sellerName: data.sellerName || data.authorName,
+      title: data.title || data.titleGe || 'Untitled',
+      titleGe: data.titleGe,
+      category: data.category || 'other',
+      listingType: inferListingType(data.category, data.listingType),
+      image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
+      status: data.status,
+      country: data.country,
+      city: data.city,
+      createdAt: parseTimestampMs(data.createdAt),
+      isDemo: data.isDemo,
+      isSeed: data.isSeed,
+      isMock: data.isMock,
+    };
+  }
+
+  async getSellerListingsWithMeta(sellerId: string): Promise<SellerListingsScanResult> {
     const db = await getAdminFirestoreInstance();
-    const snap = await db
-      .collection('listings')
-      .where('sellerId', '==', sellerId)
-      .limit(100)
-      .get();
-    return snap.docs.map((d: any) => {
-      const data = d.data() || {};
-      return {
-        id: d.id,
-        sellerId: data.sellerId,
-        sellerName: data.sellerName || data.authorName,
-        title: data.title || data.titleGe || 'Untitled',
-        titleGe: data.titleGe,
-        category: data.category || 'other',
-        listingType: inferListingType(data.category, data.listingType),
-        image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
-        status: data.status,
-        country: data.country,
-        city: data.city,
-        createdAt: parseTimestampMs(data.createdAt),
-        isDemo: data.isDemo,
-        isSeed: data.isSeed,
-        isMock: data.isMock,
-      };
+    const { FieldPath } = await import('firebase-admin/firestore');
+    const scan = await scanCollectionWithCursor<Record<string, any>>({
+      collectionRef: db.collection('listings').where('sellerId', '==', sellerId),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+      label: `listings:seller:${sellerId}`,
     });
+    return {
+      listings: scan.items.map((item) => this.mapListingDocToRecord(item.id, item.data)),
+      truncated: scan.truncated,
+      ...(scan.truncationReason ? { truncationReason: scan.truncationReason } : {}),
+    };
+  }
+
+  async getSellerListings(sellerId: string): Promise<ListingRecordForAnalytics[]> {
+    const res = await this.getSellerListingsWithMeta(sellerId);
+    return res.listings;
   }
 
   async getListingAnalyticsDoc(listingId: string): Promise<RawListingAnalyticsDoc | null> {
@@ -453,6 +537,27 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     const snap = await db.collection('listing_analytics').doc(listingId).get();
     if (!snap.exists) return null;
     return snap.data() as RawListingAnalyticsDoc;
+  }
+
+  async getSellerListingAnalyticsMap(sellerId: string): Promise<SellerListingAnalyticsScanResult> {
+    const db = await getAdminFirestoreInstance();
+    const { FieldPath } = await import('firebase-admin/firestore');
+    const scan = await scanCollectionWithCursor<RawListingAnalyticsDoc>({
+      collectionRef: db.collection('listing_analytics').where('sellerId', '==', sellerId),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+      label: `listing_analytics:seller:${sellerId}`,
+    });
+    const docsByListingId = new Map<string, RawListingAnalyticsDoc>();
+    for (const item of scan.items) {
+      docsByListingId.set(item.id, item.data);
+    }
+    return {
+      docsByListingId,
+      truncated: scan.truncated,
+      ...(scan.truncationReason ? { truncationReason: scan.truncationReason } : {}),
+    };
   }
 
   async getAllPublicAnalyticsDocsWithMeta(): Promise<PublicDocsScanResult> {
@@ -534,6 +639,82 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
   async getSellerRatingsMap(): Promise<Record<string, { avg: number; count: number }>> {
     const res = await this.getSellerRatingsMapWithMeta();
     return res.ratings;
+  }
+
+  async getAggregatedRankMaps(nowMs: number = Date.now()): Promise<AggregatedRankMapsResult> {
+    const now = Date.now();
+    if (this.cacheTtlMs > 0 && this.rankMapsCache && this.rankMapsCache.expiresAt > now) {
+      return this.rankMapsCache.value;
+    }
+
+    const warnings: string[] = [];
+    let truncated = false;
+
+    const [publicScan, ratingsScan] = await Promise.all([
+      this.getAllPublicAnalyticsDocsWithMeta().catch((err): PublicDocsScanResult => {
+        console.error('[MarketAnalytics] Failed to load public docs for seller stats:', err);
+        truncated = true;
+        warnings.push('public_docs_read_failed');
+        return { docs: [], truncated: true, truncationReason: 'public_docs_read_failed' };
+      }),
+      this.getSellerRatingsMapWithMeta().catch((err): SellerRatingsScanResult => {
+        console.error('[MarketAnalytics] Failed to load seller ratings for seller stats:', err);
+        truncated = true;
+        warnings.push('ratings_read_failed');
+        return { ratings: {}, truncated: true, truncationReason: 'ratings_read_failed' };
+      }),
+    ]);
+
+    if (publicScan.truncated) {
+      truncated = true;
+      if (publicScan.truncationReason && !warnings.includes(publicScan.truncationReason)) {
+        warnings.push(publicScan.truncationReason);
+      } else if (!publicScan.truncationReason && warnings.length === 0) {
+        warnings.push('public_docs_truncated');
+      }
+    }
+    if (ratingsScan.truncated) {
+      truncated = true;
+      if (ratingsScan.truncationReason && !warnings.includes(ratingsScan.truncationReason)) {
+        warnings.push(ratingsScan.truncationReason);
+      } else if (!ratingsScan.truncationReason && warnings.length === 0) {
+        warnings.push('seller_ratings_truncated');
+      }
+    }
+
+    const globalRankings = buildRankingsFromPublicDocs({
+      docs: publicScan.docs,
+      sellerRatingsMap: ratingsScan.ratings,
+      scope: 'global',
+      period: '30d',
+      nowMs,
+      limitCount: Math.max(300, publicScan.docs.length),
+    });
+
+    const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+    const catRankMap = new Map<string, { rank: number; total: number }>();
+    const byCat = new Map<string, RankingEntry[]>();
+    for (const r of globalRankings) {
+      const cat = (r.category || 'other').toLowerCase();
+      const arr = byCat.get(cat) || [];
+      arr.push(r);
+      byCat.set(cat, arr);
+    }
+    for (const arr of byCat.values()) {
+      arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+    }
+
+    const result: AggregatedRankMapsResult = {
+      globalRankMap,
+      catRankMap,
+      truncated,
+      warnings,
+    };
+
+    if (this.cacheTtlMs > 0 && !truncated) {
+      this.rankMapsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+    }
+    return result;
   }
 
   async recordEventTransaction(params: {
@@ -725,6 +906,7 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     }).then((res: { recorded: boolean; reason?: string; uniqueIncremented: boolean }) => {
       if (res.recorded) {
         this.publicDocsCache = null;
+        this.rankMapsCache = null;
       }
       return res;
     });
@@ -732,6 +914,8 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
 
   async setSellerCompetitionOptOut(sellerId: string, optedOut: boolean, nowMs: number): Promise<void> {
     const db = await getAdminFirestoreInstance();
+    const { FieldPath } = await import('firebase-admin/firestore');
+
     await db
       .collection('seller_competition_prefs')
       .doc(sellerId)
@@ -743,36 +927,226 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       .doc(sellerId)
       .set({ competitionOptOut: optedOut }, { merge: true });
 
-    // Sync all existing analytics docs owned by seller
-    const analyticsSnap = await db
-      .collection('listing_analytics')
-      .where('sellerId', '==', sellerId)
-      .limit(100)
-      .get();
-
-    const batch = db.batch();
-    for (const d of analyticsSnap.docs) {
-      const data = d.data() as RawListingAnalyticsDoc;
-      const normalizedType = inferListingType(data.category, data.listingType);
-      batch.set(
-        d.ref,
-        { optedOut, listingType: normalizedType, updatedAt: nowMs },
-        { merge: true }
-      );
-      const pubRef = db.collection('listing_analytics_public').doc(d.id);
-      if (optedOut || (data.status && data.status !== 'active')) {
-        batch.delete(pubRef);
-      } else {
-        batch.set(pubRef, {
-          ...data,
-          listingType: normalizedType,
-          optedOut: false,
-          updatedAt: nowMs,
-        });
-      }
+    // Keep seller_analytics/{sellerId}.optedOut synchronized if doc already exists
+    const sellerAnalyticsRef = db.collection('seller_analytics').doc(sellerId);
+    const sellerAnalyticsSnap = await sellerAnalyticsRef.get().catch(() => null);
+    if (sellerAnalyticsSnap?.exists) {
+      await sellerAnalyticsRef.set({ optedOut, updatedAt: nowMs }, { merge: true });
     }
-    await batch.commit();
-    this.publicDocsCache = null;
+
+    // Cursor-paginate all analytics docs owned by seller (never truncated at 100)
+    const scan = await scanCollectionWithCursor<RawListingAnalyticsDoc>({
+      collectionRef: db.collection('listing_analytics').where('sellerId', '==', sellerId),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+      label: `optout:listing_analytics:seller:${sellerId}`,
+    });
+
+    if (scan.truncated) {
+      throw new Error(
+        `Failed to complete competition opt-out update: listing analytics scan was truncated (${scan.truncationReason || 'cursor_max_pages_exceeded'}). Some listings may not have been updated.`
+      );
+    }
+
+    for (let i = 0; i < scan.items.length; i += OPT_OUT_BATCH_CHUNK_SIZE) {
+      const chunk = scan.items.slice(i, i + OPT_OUT_BATCH_CHUNK_SIZE);
+      const batch = db.batch();
+      for (const item of chunk) {
+        const data = item.data;
+        const normalizedType = inferListingType(data.category, data.listingType);
+        const docRef = db.collection('listing_analytics').doc(item.id);
+        batch.set(
+          docRef,
+          { optedOut, listingType: normalizedType, updatedAt: nowMs },
+          { merge: true }
+        );
+        const pubRef = db.collection('listing_analytics_public').doc(item.id);
+        if (optedOut || (data.status && data.status !== 'active')) {
+          batch.delete(pubRef);
+        } else {
+          batch.set(pubRef, {
+            ...data,
+            listingType: normalizedType,
+            optedOut: false,
+            updatedAt: nowMs,
+          });
+        }
+      }
+      await batch.commit();
+    }
+
+    this.invalidateCaches();
+  }
+
+  // ============================================================================
+  // PHASE 2B: SELLER ANALYTICS FOUNDATION REPOSITORY METHODS
+  // ============================================================================
+
+  async getSellerAnalyticsDoc(sellerId: string): Promise<SellerAnalyticsDoc | null> {
+    if (!isValidAnalyticsId(sellerId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection('seller_analytics').doc(sellerId).get();
+    if (!snap.exists) return null;
+    return snap.data() as SellerAnalyticsDoc;
+  }
+
+  async ensureSellerAnalyticsDoc(params: {
+    sellerId: string;
+    optedOut?: boolean;
+    sellerName?: string;
+    country?: string;
+    region?: string;
+    nowMs?: number;
+  }): Promise<SellerAnalyticsDoc> {
+    if (!isValidAnalyticsId(params.sellerId)) {
+      throw new Error('Invalid sellerId for seller_analytics');
+    }
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection('seller_analytics').doc(params.sellerId);
+    return db.runTransaction(async (tx: any) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        return snap.data() as SellerAnalyticsDoc;
+      }
+      const initialDoc = createEmptySellerAnalyticsDoc(params);
+      tx.set(ref, initialDoc);
+      return initialDoc;
+    });
+  }
+
+  async getSellerViewerDoc(sellerId: string, sellerViewerHash: string): Promise<SellerViewerDoc | null> {
+    if (!isValidAnalyticsId(sellerId) || !isValidHmacDigest(sellerViewerHash)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db
+      .collection('seller_analytics')
+      .doc(sellerId)
+      .collection('viewers')
+      .doc(sellerViewerHash)
+      .get();
+    if (!snap.exists) return null;
+    return snap.data() as SellerViewerDoc;
+  }
+
+  async upsertSellerViewerDoc(sellerId: string, viewerDoc: SellerViewerDoc): Promise<SellerViewerDoc> {
+    if (!isValidAnalyticsId(sellerId)) {
+      throw new Error('Invalid sellerId for seller viewer storage');
+    }
+    const cleanDoc = sanitizeSellerViewerDoc(viewerDoc as SellerViewerDoc & Record<string, any>);
+    const db = await getAdminFirestoreInstance();
+    const ref = db
+      .collection('seller_analytics')
+      .doc(sellerId)
+      .collection('viewers')
+      .doc(cleanDoc.viewerHash);
+    await ref.set(cleanDoc, { merge: true });
+    return cleanDoc;
+  }
+
+  async getGuestSessionIndex(guestHash: string): Promise<GuestSessionIndexDoc | null> {
+    if (!isValidHmacDigest(guestHash)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection('analytics_guest_sessions').doc(guestHash).get();
+    if (!snap.exists) return null;
+    return snap.data() as GuestSessionIndexDoc;
+  }
+
+  async recordGuestSessionActivity(params: {
+    guestHash: string;
+    listingId?: string;
+    sellerId?: string;
+    nowMs?: number;
+  }): Promise<GuestSessionIndexDoc> {
+    if (!isValidHmacDigest(params.guestHash)) {
+      throw new Error('Invalid guestHash');
+    }
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection('analytics_guest_sessions').doc(params.guestHash);
+    const nowMs = params.nowMs ?? Date.now();
+    return db.runTransaction(async (tx: any) => {
+      const snap = await tx.get(ref);
+      const existing = snap.exists ? (snap.data() as GuestSessionIndexDoc) : null;
+      const nextDoc = mergeGuestSessionActivity(existing, {
+        guestHash: params.guestHash,
+        listingId: params.listingId,
+        sellerId: params.sellerId,
+        nowMs,
+      });
+      tx.set(ref, nextDoc);
+      return nextDoc;
+    });
+  }
+
+  async claimGuestSession(params: {
+    guestHash: string;
+    uid: string;
+    nowMs?: number;
+  }): Promise<GuestSessionClaimResult> {
+    if (!isValidHmacDigest(params.guestHash) || !isValidAnalyticsId(params.uid)) {
+      return { status: 400, claimed: false, reason: 'invalid_request' };
+    }
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection('analytics_guest_sessions').doc(params.guestHash);
+    const nowMs = params.nowMs ?? Date.now();
+    return db.runTransaction(async (tx: any) => {
+      const snap = await tx.get(ref);
+      const existing = snap.exists ? (snap.data() as GuestSessionIndexDoc) : null;
+      const evaluation = evaluateGuestSessionClaim(existing, {
+        uid: params.uid,
+        nowMs,
+      });
+      if (evaluation.claimed && !evaluation.idempotent && evaluation.nextDoc) {
+        tx.set(ref, evaluation.nextDoc);
+      }
+      const { nextDoc: _unused, ...publicResult } = evaluation;
+      return publicResult;
+    });
+  }
+
+  async getVerifiedFunnelMarker(markerId: string): Promise<VerifiedFunnelMarkerDoc | null> {
+    if (!isValidAnalyticsId(markerId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection('analytics_verified_markers').doc(markerId).get();
+    if (!snap.exists) return null;
+    return snap.data() as VerifiedFunnelMarkerDoc;
+  }
+
+  async claimVerifiedFunnelMarker(params: {
+    markerType: VerifiedMarkerType;
+    sourceId: string;
+    sellerId: string;
+    buyerHash: string;
+    listingId?: string;
+    nowMs?: number;
+  }): Promise<VerifiedMarkerClaimResult> {
+    if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.buyerHash)) {
+      throw new Error('Invalid sellerId or buyerHash for verified funnel marker');
+    }
+    if (params.listingId !== undefined && !isValidAnalyticsId(params.listingId)) {
+      throw new Error('Invalid listingId for verified funnel marker');
+    }
+    const markerId = buildVerifiedFunnelMarkerId(params.markerType, params.sourceId);
+    const nowMs = params.nowMs ?? Date.now();
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection('analytics_verified_markers').doc(markerId);
+
+    return db.runTransaction(async (tx: any) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        return { created: false, duplicate: true, markerId };
+      }
+      const markerDoc: VerifiedFunnelMarkerDoc = {
+        markerId,
+        markerType: params.markerType,
+        sellerId: params.sellerId,
+        buyerHash: params.buyerHash,
+        sourceId: params.sourceId,
+        ...(params.listingId ? { listingId: params.listingId } : {}),
+        recordedAt: nowMs,
+      };
+      tx.set(ref, markerDoc);
+      return { created: true, duplicate: false, markerId };
+    });
   }
 }
 
@@ -818,6 +1192,54 @@ export class MarketAnalyticsService {
     return crypto
       .createHmac('sha256', activeSalt)
       .update(`${listingId}:${identityKey}`)
+      .digest('hex');
+  }
+
+  /**
+   * Server-only HMAC hash for seller_analytics/{sellerId}/viewers/{sellerViewerHash}.
+   * Never persisted with raw IP, visitorToken, or User-Agent.
+   */
+  computeSellerViewerHash(sellerId: string, identityKey: string): string {
+    if (!isValidAnalyticsId(sellerId)) {
+      throw new Error('Invalid sellerId for seller viewer hash');
+    }
+    const activeSalt = this.resolveEffectiveSalt();
+    return crypto
+      .createHmac('sha256', activeSalt)
+      .update(`seller:${sellerId}:${identityKey}`)
+      .digest('hex');
+  }
+
+  /**
+   * Server-only HMAC hash for analytics_guest_sessions/{guestHash}.
+   */
+  computeGuestSessionHash(visitorToken: string): string {
+    if (
+      typeof visitorToken !== 'string' ||
+      visitorToken.length < 8 ||
+      visitorToken.length > 128 ||
+      !/^[a-zA-Z0-9_-]+$/.test(visitorToken)
+    ) {
+      throw new Error('Invalid visitorToken for guest session hash');
+    }
+    const activeSalt = this.resolveEffectiveSalt();
+    return crypto
+      .createHmac('sha256', activeSalt)
+      .update(`guest_session:${visitorToken}`)
+      .digest('hex');
+  }
+
+  /**
+   * Server-only HMAC hash for buyer identity in verified funnel markers.
+   */
+  computeBuyerIdentityHash(buyerUid: string): string {
+    if (!isValidAnalyticsId(buyerUid)) {
+      throw new Error('Invalid buyerUid for verified marker hash');
+    }
+    const activeSalt = this.resolveEffectiveSalt();
+    return crypto
+      .createHmac('sha256', activeSalt)
+      .update(`buyer:${buyerUid}`)
       .digest('hex');
   }
 
@@ -969,48 +1391,91 @@ export class MarketAnalyticsService {
       return { status: 200, body: { listing: stats } };
     }
 
-    const [sellerListings, sellerPref, publicDocs, ratingsMap] = await Promise.all([
-      this.repo.getSellerListings(verifiedUid),
+    const [listingsResult, sellerPref] = await Promise.all([
+      this.repo.getSellerListingsWithMeta
+        ? this.repo.getSellerListingsWithMeta(verifiedUid)
+        : this.repo.getSellerListings(verifiedUid).then((listings): SellerListingsScanResult => ({
+            listings,
+            truncated: false,
+          })),
       this.repo.getSellerProfileLocation(verifiedUid),
-      this.repo.getAllPublicAnalyticsDocs().catch((err) => {
-        console.error('[MarketAnalytics] Failed to load public docs for seller stats:', err);
-        return [] as RawListingAnalyticsDoc[];
-      }),
-      this.repo.getSellerRatingsMap().catch((err) => {
-        console.error('[MarketAnalytics] Failed to load seller ratings for seller stats:', err);
-        return {};
-      }),
     ]);
 
-    const realListings = sellerListings.filter(
+    const realListings = listingsResult.listings.filter(
       (l) => !l.isDemo && !l.isSeed && !l.isMock && l.status !== 'deleted'
     );
 
-    const globalRankings = buildRankingsFromPublicDocs({
-      docs: publicDocs,
-      sellerRatingsMap: ratingsMap,
-      scope: 'global',
-      period: '30d',
-      nowMs,
-      limitCount: Math.max(300, publicDocs.length),
-    });
-    const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+    let listingsTruncated = Boolean(listingsResult.truncated);
+    let listingsTruncationReason = listingsResult.truncationReason;
+    let analyticsTruncated = false;
+    let analyticsTruncationReason: string | undefined;
 
-    const catRankMap = new Map<string, { rank: number; total: number }>();
-    const byCat = new Map<string, RankingEntry[]>();
-    for (const r of globalRankings) {
-      const cat = (r.category || 'other').toLowerCase();
-      const arr = byCat.get(cat) || [];
-      arr.push(r);
-      byCat.set(cat, arr);
-    }
-    for (const arr of byCat.values()) {
-      arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+    let globalRankMap = new Map<string, number>();
+    let catRankMap = new Map<string, { rank: number; total: number }>();
+
+    // Only query ranking context if seller actually has eligible active competition listings
+    if (realListings.length > 0 && !sellerPref.optedOut) {
+      if (this.repo.getAggregatedRankMaps) {
+        const rankMaps = await this.repo.getAggregatedRankMaps(nowMs);
+        globalRankMap = rankMaps.globalRankMap;
+        catRankMap = rankMaps.catRankMap;
+        if (rankMaps.truncated) {
+          analyticsTruncated = true;
+          analyticsTruncationReason = rankMaps.warnings?.[0] || 'rank_maps_truncated';
+        }
+      } else {
+        const [publicDocs, ratingsMap] = await Promise.all([
+          this.repo.getAllPublicAnalyticsDocs().catch((err) => {
+            console.error('[MarketAnalytics] Failed to load public docs for seller stats:', err);
+            return [] as RawListingAnalyticsDoc[];
+          }),
+          this.repo.getSellerRatingsMap().catch((err) => {
+            console.error('[MarketAnalytics] Failed to load seller ratings for seller stats:', err);
+            return {};
+          }),
+        ]);
+
+        const globalRankings = buildRankingsFromPublicDocs({
+          docs: publicDocs,
+          sellerRatingsMap: ratingsMap,
+          scope: 'global',
+          period: '30d',
+          nowMs,
+          limitCount: Math.max(300, publicDocs.length),
+        });
+        globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+
+        const byCat = new Map<string, RankingEntry[]>();
+        for (const r of globalRankings) {
+          const cat = (r.category || 'other').toLowerCase();
+          const arr = byCat.get(cat) || [];
+          arr.push(r);
+          byCat.set(cat, arr);
+        }
+        for (const arr of byCat.values()) {
+          arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+        }
+      }
     }
 
-    const analyticsDocs = await Promise.all(
-      realListings.map((l) => this.repo.getListingAnalyticsDoc(l.id))
-    );
+    let analyticsDocs: Array<RawListingAnalyticsDoc | null>;
+    if (realListings.length === 0) {
+      analyticsDocs = [];
+    } else if (this.repo.getSellerListingAnalyticsMap) {
+      const sellerAnalyticsScan = await this.repo.getSellerListingAnalyticsMap(verifiedUid);
+      analyticsDocs = realListings.map((l) => sellerAnalyticsScan.docsByListingId.get(l.id) ?? null);
+      if (sellerAnalyticsScan.truncated) {
+        analyticsTruncated = true;
+        analyticsTruncationReason = sellerAnalyticsScan.truncationReason || 'seller_analytics_scan_truncated';
+      }
+    } else {
+      analyticsDocs = await Promise.all(
+        realListings.map((l) => this.repo.getListingAnalyticsDoc(l.id))
+      );
+    }
+
+    const isPartialData = listingsTruncated || analyticsTruncated;
+    const truncationReason = listingsTruncationReason || analyticsTruncationReason;
 
     const listingStats: ListingAnalyticsStats[] = realListings.map((listing, idx) => {
       const rawDoc = analyticsDocs[idx];
@@ -1109,6 +1574,8 @@ export class MarketAnalyticsService {
       competitionOptOut: Boolean(sellerPref.optedOut),
       earnedAchievements,
       ...(overviewBreakdown ? { viewerBreakdown: overviewBreakdown } : {}),
+      isPartialData,
+      ...(truncationReason ? { truncationReason } : {}),
     };
 
     return { status: 200, body: { overview } };
@@ -1256,6 +1723,75 @@ export class MarketAnalyticsService {
         optedOut: Boolean(params.optedOut),
       },
     };
+  }
+
+  // Phase 2B Server Foundation Operations (no public HTTP endpoints exposed yet)
+
+  async getSellerAnalyticsDoc(sellerId: string): Promise<SellerAnalyticsDoc | null> {
+    if (!isValidAnalyticsId(sellerId) || !this.repo.getSellerAnalyticsDoc) {
+      return null;
+    }
+    return this.repo.getSellerAnalyticsDoc(sellerId);
+  }
+
+  async ensureSellerAnalyticsDoc(params: {
+    sellerId: string;
+    optedOut?: boolean;
+    sellerName?: string;
+    country?: string;
+    region?: string;
+    nowMs?: number;
+  }): Promise<SellerAnalyticsDoc> {
+    if (!this.repo.ensureSellerAnalyticsDoc) {
+      throw new Error('Repository does not implement ensureSellerAnalyticsDoc');
+    }
+    return this.repo.ensureSellerAnalyticsDoc(params);
+  }
+
+  async claimGuestSessionForUser(params: {
+    visitorToken: string;
+    uid: string;
+    nowMs?: number;
+  }): Promise<GuestSessionClaimResult> {
+    if (!this.repo.claimGuestSession) {
+      throw new Error('Repository does not implement claimGuestSession');
+    }
+    if (!isValidAnalyticsId(params.uid)) {
+      return { status: 400, claimed: false, reason: 'invalid_request' };
+    }
+    let guestHash: string;
+    try {
+      guestHash = this.computeGuestSessionHash(params.visitorToken);
+    } catch {
+      return { status: 400, claimed: false, reason: 'invalid_request' };
+    }
+    return this.repo.claimGuestSession({
+      guestHash,
+      uid: params.uid,
+      nowMs: params.nowMs ?? Date.now(),
+    });
+  }
+
+  async claimVerifiedFunnelMarker(params: {
+    markerType: VerifiedMarkerType;
+    sourceId: string;
+    sellerId: string;
+    buyerUid: string;
+    listingId?: string;
+    nowMs?: number;
+  }): Promise<VerifiedMarkerClaimResult> {
+    if (!this.repo.claimVerifiedFunnelMarker) {
+      throw new Error('Repository does not implement claimVerifiedFunnelMarker');
+    }
+    const buyerHash = this.computeBuyerIdentityHash(params.buyerUid);
+    return this.repo.claimVerifiedFunnelMarker({
+      markerType: params.markerType,
+      sourceId: params.sourceId,
+      sellerId: params.sellerId,
+      buyerHash,
+      listingId: params.listingId,
+      nowMs: params.nowMs ?? Date.now(),
+    });
   }
 }
 

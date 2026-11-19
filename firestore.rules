@@ -561,5 +561,26 @@ service cloud.firestore {
       allow get: if isOwner(userId) && isValidId(userId);
       allow list, write: if false; // Server Admin SDK only
     }
+
+    // ======================================================
+    // 11. PHASE 2B: SELLER ANALYTICS FOUNDATION (PRIVATE & SERVER-ONLY)
+    // ======================================================
+    match /seller_analytics/{sellerId} {
+      allow get: if isOwner(sellerId) && isValidId(sellerId)
+        && (resource == null || resource.data.sellerId == request.auth.uid);
+      allow list, write: if false; // Server Admin SDK only
+
+      match /viewers/{sellerViewerHash} {
+        allow read, write: if false; // Strictly server Admin SDK only; HMAC viewer hash never exposed
+      }
+    }
+
+    match /analytics_guest_sessions/{guestHash} {
+      allow read, write: if false; // Strictly server Admin SDK only
+    }
+
+    match /analytics_verified_markers/{markerId} {
+      allow read, write: if false; // Strictly server Admin SDK only; verified idempotency markers
+    }
   }
 }

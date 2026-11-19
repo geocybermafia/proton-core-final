@@ -1,6 +1,8 @@
 import {
   AchievementBadgeId,
   AnalyticsPeriod,
+  GuestSessionClaimResult,
+  GuestSessionIndexDoc,
   ListingType,
   ListingTypeFilter,
   ListingViewerBreakdown,
@@ -9,6 +11,12 @@ import {
   RankingEntry,
   RankingPeriod,
   RankingScope,
+  SellerAnalyticsBucket,
+  SellerAnalyticsDoc,
+  SellerAudienceCounters,
+  SellerAnalyticsTotalCounters,
+  SellerViewerDoc,
+  VerifiedMarkerType,
   ViewerSegmentMetrics,
 } from '../types';
 import { inferListingType } from './listingClassification.js';
@@ -835,8 +843,419 @@ export function buildRankingsFromPublicDocs(params: {
       sellerRatingCount: entry.rating?.count,
       freshnessBoost: entry.scoreData.freshnessBoost,
       balancedScore: entry.scoreData.balancedScore,
-      achievements,
-      period,
-    };
+    achievements,
+    period,
+  };
   });
 }
+
+// ============================================================================
+// PHASE 2B: SELLER ANALYTICS DATA FOUNDATION (PURE HELPERS)
+// ============================================================================
+
+export const SELLER_DAILY_BUCKET_RETENTION_DAYS = 62;
+export const SELLER_HOURLY_BUCKET_RETENTION_HOURS = 52;
+export const GUEST_SESSION_MAX_LISTING_IDS = 50;
+export const GUEST_SESSION_MAX_SELLER_IDS = 30;
+export const GUEST_SESSION_TTL_DAYS = 30;
+export const GUEST_SESSION_TTL_MS = GUEST_SESSION_TTL_DAYS * 24 * 60 * 60 * 1000;
+export const SELLER_ANALYTICS_SCHEMA_VERSION = 1;
+
+const SELLER_BUCKET_NUMERIC_KEYS: ReadonlyArray<keyof SellerAnalyticsBucket> = [
+  'profileViews',
+  'uniqueProfileViewers',
+  'authProfileViews',
+  'guestProfileViews',
+  'authUniqueProfileViewers',
+  'guestUniqueProfileViewers',
+  'listingToSellerClicks',
+  'uniqueListingToSellerUsers',
+  'authListingToSellerClicks',
+  'guestListingToSellerClicks',
+  'contactClicks',
+  'uniqueContactClickers',
+  'authContactClicks',
+  'guestContactClicks',
+  'authUniqueContactClickers',
+  'guestUniqueContactClickers',
+  'orderIntents',
+  'uniqueOrderIntentUsers',
+  'authOrderIntents',
+  'guestOrderIntents',
+  'authUniqueOrderIntentUsers',
+  'guestUniqueOrderIntentUsers',
+  'contactConfirmed',
+  'uniqueContactedBuyers',
+  'ordersConfirmed',
+  'uniqueOrderBuyers',
+  'guestToAuthLinks',
+  'audienceImpressions',
+  'audienceViews',
+  'audienceUniqueViewers',
+  'authAudienceImpressions',
+  'authAudienceViews',
+  'authAudienceUniqueViewers',
+  'guestAudienceImpressions',
+  'guestAudienceViews',
+  'guestAudienceUniqueViewers',
+  'totalEvents',
+  'uniqueUsers',
+  'authEvents',
+  'guestEvents',
+  'authUniqueUsers',
+  'guestUniqueUsers',
+];
+
+export function isValidHmacDigest(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
+}
+
+export function createEmptySellerAudienceCounters(): SellerAudienceCounters {
+  return {
+    totalImpressions: 0,
+    totalViews: 0,
+    uniqueViewers: 0,
+    authImpressions: 0,
+    authViews: 0,
+    authUniqueViewers: 0,
+    guestImpressions: 0,
+    guestViews: 0,
+    guestUniqueViewers: 0,
+  };
+}
+
+export function createEmptySellerAnalyticsTotalCounters(): SellerAnalyticsTotalCounters {
+  return {
+    totalEvents: 0,
+    totalUniqueUsers: 0,
+    authEvents: 0,
+    guestEvents: 0,
+    authUniqueUsers: 0,
+    guestUniqueUsers: 0,
+  };
+}
+
+export function createEmptySellerAnalyticsBucket(): SellerAnalyticsBucket {
+  const bucket: SellerAnalyticsBucket = {};
+  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
+    bucket[key] = 0;
+  }
+  return bucket;
+}
+
+function sanitizeSellerAnalyticsBucket(raw: unknown): SellerAnalyticsBucket {
+  const sanitized = createEmptySellerAnalyticsBucket();
+  if (!raw || typeof raw !== 'object') return sanitized;
+  const src = raw as Record<string, unknown>;
+  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
+    const val = Number(src[key]);
+    sanitized[key] = Number.isFinite(val) && val >= 0 ? val : 0;
+  }
+  return sanitized;
+}
+
+export function pruneSellerHourlyBuckets(
+  hourly: Record<string, SellerAnalyticsBucket> | undefined,
+  nowMs: number
+): Record<string, SellerAnalyticsBucket> {
+  const result: Record<string, SellerAnalyticsBucket> = {};
+  if (!hourly || typeof hourly !== 'object') return result;
+  const minTs = nowMs - SELLER_HOURLY_BUCKET_RETENTION_HOURS * 60 * 60 * 1000;
+  const minKey = getHourBucketKey(minTs);
+  for (const [k, v] of Object.entries(hourly)) {
+    if (k >= minKey && v && typeof v === 'object') {
+      result[k] = sanitizeSellerAnalyticsBucket(v);
+    }
+  }
+  return result;
+}
+
+export function pruneSellerDailyBuckets(
+  daily: Record<string, SellerAnalyticsBucket> | undefined,
+  nowMs: number
+): Record<string, SellerAnalyticsBucket> {
+  const result: Record<string, SellerAnalyticsBucket> = {};
+  if (!daily || typeof daily !== 'object') return result;
+  const minTs = nowMs - SELLER_DAILY_BUCKET_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const minKey = getDayBucketKey(minTs);
+  for (const [k, v] of Object.entries(daily)) {
+    if (k >= minKey && v && typeof v === 'object') {
+      result[k] = sanitizeSellerAnalyticsBucket(v);
+    }
+  }
+  return result;
+}
+
+/**
+ * Creates a clean zero-initialized seller_analytics/{sellerId} document.
+ * Strictly never invents or backfills historical activity.
+ */
+export function createEmptySellerAnalyticsDoc(params: {
+  sellerId: string;
+  optedOut?: boolean;
+  sellerName?: string;
+  country?: string;
+  region?: string;
+  nowMs?: number;
+}): SellerAnalyticsDoc {
+  const nowMs = params.nowMs ?? Date.now();
+  return {
+    sellerId: params.sellerId,
+    metadata: {
+      schemaVersion: SELLER_ANALYTICS_SCHEMA_VERSION,
+      ...(params.sellerName ? { sellerName: params.sellerName } : {}),
+    },
+    optedOut: Boolean(params.optedOut),
+    ...(params.country ? { country: params.country } : {}),
+    ...(params.region ? { region: params.region } : {}),
+    funnelTrackingSince: nowMs,
+    audience: createEmptySellerAudienceCounters(),
+    totals: createEmptySellerAnalyticsTotalCounters(),
+    profileViews: 0,
+    uniqueProfileViewers: 0,
+    authProfileViews: 0,
+    guestProfileViews: 0,
+    authUniqueProfileViewers: 0,
+    guestUniqueProfileViewers: 0,
+    listingToSellerClicks: 0,
+    uniqueListingToSellerUsers: 0,
+    authListingToSellerClicks: 0,
+    guestListingToSellerClicks: 0,
+    contactClicks: 0,
+    uniqueContactClickers: 0,
+    authContactClicks: 0,
+    guestContactClicks: 0,
+    authUniqueContactClickers: 0,
+    guestUniqueContactClickers: 0,
+    orderIntents: 0,
+    uniqueOrderIntentUsers: 0,
+    authOrderIntents: 0,
+    guestOrderIntents: 0,
+    authUniqueOrderIntentUsers: 0,
+    guestUniqueOrderIntentUsers: 0,
+    contactConfirmed: 0,
+    uniqueContactedBuyers: 0,
+    ordersConfirmed: 0,
+    uniqueOrderBuyers: 0,
+    guestToAuthLinks: 0,
+    hourly: {},
+    daily: {},
+    createdAt: nowMs,
+    updatedAt: nowMs,
+  };
+}
+
+const SELLER_VIEWER_TIMESTAMP_FIELDS: ReadonlyArray<keyof SellerViewerDoc> = [
+  'firstSeenAt',
+  'lastSeenAt',
+  'firstProfileViewAt',
+  'lastProfileViewAt',
+  'firstListingToSellerAt',
+  'lastListingToSellerAt',
+  'firstContactClickAt',
+  'lastContactClickAt',
+  'firstOrderIntentAt',
+  'lastOrderIntentAt',
+  'firstContactConfirmedAt',
+  'firstOrderConfirmedAt',
+  'firstAudienceAt',
+  'lastAudienceAt',
+];
+
+/**
+ * Enforces zero-PII storage for seller_analytics/{sellerId}/viewers/{sellerViewerHash}.
+ * Strips IP, visitorToken, userAgent, UID, email, and any non-allowlisted keys.
+ */
+export function sanitizeSellerViewerDoc(input: SellerViewerDoc & Record<string, any>): SellerViewerDoc {
+  if (!isValidHmacDigest(input?.viewerHash)) {
+    throw new Error('Invalid HMAC viewerHash for seller viewer storage');
+  }
+  const viewerType = input.viewerType === 'auth' ? 'auth' : 'guest';
+  const nowFallback = typeof input.lastSeenAt === 'number' && Number.isFinite(input.lastSeenAt)
+    ? input.lastSeenAt
+    : Date.now();
+  const firstSeenAt = typeof input.firstSeenAt === 'number' && Number.isFinite(input.firstSeenAt)
+    ? input.firstSeenAt
+    : nowFallback;
+
+  const clean: SellerViewerDoc = {
+    viewerHash: input.viewerHash,
+    viewerType,
+    firstSeenAt,
+    lastSeenAt: nowFallback,
+  };
+
+  for (const field of SELLER_VIEWER_TIMESTAMP_FIELDS) {
+    if (field === 'firstSeenAt' || field === 'lastSeenAt') continue;
+    const rawVal = input[field];
+    if (typeof rawVal === 'number' && Number.isFinite(rawVal) && rawVal > 0) {
+      (clean as any)[field] = rawVal;
+    }
+  }
+  return clean;
+}
+
+export function normalizeBoundedUniqueIdList(
+  existing: unknown,
+  addition: unknown,
+  maxLimit: number
+): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  if (Array.isArray(existing)) {
+    for (const item of existing) {
+      if (isValidAnalyticsId(item) && !seen.has(item)) {
+        seen.add(item);
+        result.push(item);
+        if (result.length >= maxLimit) return result;
+      }
+    }
+  }
+
+  if (isValidAnalyticsId(addition) && !seen.has(addition) && result.length < maxLimit) {
+    result.push(addition);
+  }
+
+  return result;
+}
+
+export function isGuestSessionExpired(doc: Pick<GuestSessionIndexDoc, 'expiresAt'> | null | undefined, nowMs: number): boolean {
+  if (!doc) return true;
+  if (typeof doc.expiresAt !== 'number' || !Number.isFinite(doc.expiresAt)) return true;
+  return doc.expiresAt <= nowMs;
+}
+
+export function mergeGuestSessionActivity(
+  existingDoc: GuestSessionIndexDoc | null | undefined,
+  params: {
+    guestHash: string;
+    listingId?: string;
+    sellerId?: string;
+    nowMs?: number;
+  }
+): GuestSessionIndexDoc {
+  if (!isValidHmacDigest(params.guestHash)) {
+    throw new Error('Invalid HMAC guestHash');
+  }
+  const nowMs = params.nowMs ?? Date.now();
+  const activeExisting =
+    existingDoc && !isGuestSessionExpired(existingDoc, nowMs) ? existingDoc : null;
+
+  const listingIds = normalizeBoundedUniqueIdList(
+    activeExisting?.listingIds,
+    params.listingId,
+    GUEST_SESSION_MAX_LISTING_IDS
+  );
+  const sellerIds = normalizeBoundedUniqueIdList(
+    activeExisting?.sellerIds,
+    params.sellerId,
+    GUEST_SESSION_MAX_SELLER_IDS
+  );
+
+  return {
+    guestHash: params.guestHash,
+    listingIds,
+    sellerIds,
+    linkedUid: activeExisting?.linkedUid ?? null,
+    createdAt: activeExisting?.createdAt ?? nowMs,
+    updatedAt: nowMs,
+    linkedAt: activeExisting?.linkedAt ?? null,
+    expiresAt: nowMs + GUEST_SESSION_TTL_MS,
+  };
+}
+
+/**
+ * Pure single-claim state transition for analytics_guest_sessions/{guestHash}.
+ * Guarantees:
+ * - Missing, expired, or empty session -> no_guest_session
+ * - Same uid -> idempotent success (never mutates linkedUid or linkedAt)
+ * - Different uid -> 409 visitor_already_claimed (never overwrites linkedUid)
+ * - Unclaimed valid session -> binds linkedUid atomically
+ */
+export function evaluateGuestSessionClaim(
+  existingDoc: GuestSessionIndexDoc | null | undefined,
+  params: {
+    uid: string;
+    nowMs?: number;
+  }
+): GuestSessionClaimResult & { nextDoc?: GuestSessionIndexDoc } {
+  const nowMs = params.nowMs ?? Date.now();
+  if (!isValidAnalyticsId(params.uid)) {
+    return { status: 400, claimed: false, reason: 'invalid_request' };
+  }
+
+  if (!existingDoc || isGuestSessionExpired(existingDoc, nowMs)) {
+    return { status: 200, claimed: false, reason: 'no_guest_session' };
+  }
+
+  const boundedListingIds = normalizeBoundedUniqueIdList(
+    existingDoc.listingIds,
+    undefined,
+    GUEST_SESSION_MAX_LISTING_IDS
+  );
+  const boundedSellerIds = normalizeBoundedUniqueIdList(
+    existingDoc.sellerIds,
+    undefined,
+    GUEST_SESSION_MAX_SELLER_IDS
+  );
+
+  if (existingDoc.linkedUid) {
+    if (existingDoc.linkedUid === params.uid) {
+      return {
+        status: 200,
+        claimed: true,
+        idempotent: true,
+        linkedUid: existingDoc.linkedUid,
+        listingIds: boundedListingIds,
+        sellerIds: boundedSellerIds,
+      };
+    }
+    return {
+      status: 409,
+      claimed: false,
+      reason: 'visitor_already_claimed',
+    };
+  }
+
+  if (boundedListingIds.length === 0 && boundedSellerIds.length === 0) {
+    return { status: 200, claimed: false, reason: 'no_guest_session' };
+  }
+
+  const nextDoc: GuestSessionIndexDoc = {
+    guestHash: existingDoc.guestHash,
+    listingIds: boundedListingIds,
+    sellerIds: boundedSellerIds,
+    linkedUid: params.uid,
+    createdAt: existingDoc.createdAt,
+    updatedAt: nowMs,
+    linkedAt: nowMs,
+    expiresAt: existingDoc.expiresAt,
+  };
+
+  return {
+    status: 200,
+    claimed: true,
+    idempotent: false,
+    linkedUid: params.uid,
+    listingIds: boundedListingIds,
+    sellerIds: boundedSellerIds,
+    nextDoc,
+  };
+}
+
+export function buildVerifiedFunnelMarkerId(
+  markerType: VerifiedMarkerType,
+  sourceId: string
+): string {
+  if (!isValidAnalyticsId(sourceId)) {
+    throw new Error('Invalid sourceId for verified funnel marker');
+  }
+  const prefix = markerType === 'order_confirmed' ? 'order_' : 'contact_';
+  const markerId = `${prefix}${sourceId}`;
+  if (!isValidAnalyticsId(markerId)) {
+    throw new Error('Verified funnel markerId exceeds 128 characters or contains invalid characters');
+  }
+  return markerId;
+}
+

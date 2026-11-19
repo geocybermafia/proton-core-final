@@ -30,6 +30,16 @@
 11. **Price Manipulation (Order)**: Creating an order for an item but setting the `amount` to `0.01` regardless of listing price.
 12. **Timestamp Fraud**: Providing a back-dated `createdAt` timestamp.
 
+### Phase 2B Seller Analytics Foundation
+- `seller_analytics/{sellerId}`: Private aggregated seller analytics & funnel metrics. Client `get` allowed strictly when `request.auth.uid == sellerId`, `isValidId(sellerId)`, and (`resource == null || resource.data.sellerId == request.auth.uid`). `list` and all client writes (`create`, `update`, `delete`) are forbidden (`if false`). Admin SDK only writes. Daily buckets capped at 62 days; hourly buckets capped at 52 hours.
+- `seller_analytics/{sellerId}/viewers/{sellerViewerHash}`: Server-only HMAC-SHA256 viewer markers. Client `read` and `write` strictly forbidden (`if false`). Zero raw IP, raw `visitorToken`, `User-Agent`, email, or UID stored.
+- `analytics_guest_sessions/{guestHash}`: Server-only HMAC-SHA256 guest session index with max 50 `listingIds`, max 30 `sellerIds`, and 30-day TTL (`expiresAt`). Client `read` and `write` strictly forbidden (`if false`). Single-claim transactional binding prevents overwriting `linkedUid` (`409 visitor_already_claimed`).
+- `analytics_verified_markers/{markerId}`: Server-only idempotency markers (`order_{orderId}`, `contact_{sourceId}`). Client `read` and `write` strictly forbidden (`if false`).
+
 ## Test Runner (Draft)
 
-(Full `firestore.rules.test.ts` to be implemented after rules draft)
+- `tests/seller-reviews-security.test.ts`
+- `tests/market-phase1-competition.test.ts`
+- `tests/market-analytics-competition.test.ts`
+- `tests/market-phase2a-session-hygiene.test.ts`
+- `tests/market-phase2b-seller-foundation.test.ts`

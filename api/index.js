@@ -1399,6 +1399,240 @@ function buildRankingsFromPublicDocs(params) {
     };
   });
 }
+var GUEST_SESSION_MAX_LISTING_IDS = 50;
+var GUEST_SESSION_MAX_SELLER_IDS = 30;
+var GUEST_SESSION_TTL_DAYS = 30;
+var GUEST_SESSION_TTL_MS = GUEST_SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3;
+var SELLER_ANALYTICS_SCHEMA_VERSION = 1;
+function isValidHmacDigest(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+}
+function createEmptySellerAudienceCounters() {
+  return {
+    totalImpressions: 0,
+    totalViews: 0,
+    uniqueViewers: 0,
+    authImpressions: 0,
+    authViews: 0,
+    authUniqueViewers: 0,
+    guestImpressions: 0,
+    guestViews: 0,
+    guestUniqueViewers: 0
+  };
+}
+function createEmptySellerAnalyticsTotalCounters() {
+  return {
+    totalEvents: 0,
+    totalUniqueUsers: 0,
+    authEvents: 0,
+    guestEvents: 0,
+    authUniqueUsers: 0,
+    guestUniqueUsers: 0
+  };
+}
+function createEmptySellerAnalyticsDoc(params) {
+  const nowMs = params.nowMs ?? Date.now();
+  return {
+    sellerId: params.sellerId,
+    metadata: {
+      schemaVersion: SELLER_ANALYTICS_SCHEMA_VERSION,
+      ...params.sellerName ? { sellerName: params.sellerName } : {}
+    },
+    optedOut: Boolean(params.optedOut),
+    ...params.country ? { country: params.country } : {},
+    ...params.region ? { region: params.region } : {},
+    funnelTrackingSince: nowMs,
+    audience: createEmptySellerAudienceCounters(),
+    totals: createEmptySellerAnalyticsTotalCounters(),
+    profileViews: 0,
+    uniqueProfileViewers: 0,
+    authProfileViews: 0,
+    guestProfileViews: 0,
+    authUniqueProfileViewers: 0,
+    guestUniqueProfileViewers: 0,
+    listingToSellerClicks: 0,
+    uniqueListingToSellerUsers: 0,
+    authListingToSellerClicks: 0,
+    guestListingToSellerClicks: 0,
+    contactClicks: 0,
+    uniqueContactClickers: 0,
+    authContactClicks: 0,
+    guestContactClicks: 0,
+    authUniqueContactClickers: 0,
+    guestUniqueContactClickers: 0,
+    orderIntents: 0,
+    uniqueOrderIntentUsers: 0,
+    authOrderIntents: 0,
+    guestOrderIntents: 0,
+    authUniqueOrderIntentUsers: 0,
+    guestUniqueOrderIntentUsers: 0,
+    contactConfirmed: 0,
+    uniqueContactedBuyers: 0,
+    ordersConfirmed: 0,
+    uniqueOrderBuyers: 0,
+    guestToAuthLinks: 0,
+    hourly: {},
+    daily: {},
+    createdAt: nowMs,
+    updatedAt: nowMs
+  };
+}
+var SELLER_VIEWER_TIMESTAMP_FIELDS = [
+  "firstSeenAt",
+  "lastSeenAt",
+  "firstProfileViewAt",
+  "lastProfileViewAt",
+  "firstListingToSellerAt",
+  "lastListingToSellerAt",
+  "firstContactClickAt",
+  "lastContactClickAt",
+  "firstOrderIntentAt",
+  "lastOrderIntentAt",
+  "firstContactConfirmedAt",
+  "firstOrderConfirmedAt",
+  "firstAudienceAt",
+  "lastAudienceAt"
+];
+function sanitizeSellerViewerDoc(input) {
+  if (!isValidHmacDigest(input?.viewerHash)) {
+    throw new Error("Invalid HMAC viewerHash for seller viewer storage");
+  }
+  const viewerType = input.viewerType === "auth" ? "auth" : "guest";
+  const nowFallback = typeof input.lastSeenAt === "number" && Number.isFinite(input.lastSeenAt) ? input.lastSeenAt : Date.now();
+  const firstSeenAt = typeof input.firstSeenAt === "number" && Number.isFinite(input.firstSeenAt) ? input.firstSeenAt : nowFallback;
+  const clean = {
+    viewerHash: input.viewerHash,
+    viewerType,
+    firstSeenAt,
+    lastSeenAt: nowFallback
+  };
+  for (const field of SELLER_VIEWER_TIMESTAMP_FIELDS) {
+    if (field === "firstSeenAt" || field === "lastSeenAt") continue;
+    const rawVal = input[field];
+    if (typeof rawVal === "number" && Number.isFinite(rawVal) && rawVal > 0) {
+      clean[field] = rawVal;
+    }
+  }
+  return clean;
+}
+function normalizeBoundedUniqueIdList(existing, addition, maxLimit) {
+  const result = [];
+  const seen = /* @__PURE__ */ new Set();
+  if (Array.isArray(existing)) {
+    for (const item of existing) {
+      if (isValidAnalyticsId(item) && !seen.has(item)) {
+        seen.add(item);
+        result.push(item);
+        if (result.length >= maxLimit) return result;
+      }
+    }
+  }
+  if (isValidAnalyticsId(addition) && !seen.has(addition) && result.length < maxLimit) {
+    result.push(addition);
+  }
+  return result;
+}
+function isGuestSessionExpired(doc, nowMs) {
+  if (!doc) return true;
+  if (typeof doc.expiresAt !== "number" || !Number.isFinite(doc.expiresAt)) return true;
+  return doc.expiresAt <= nowMs;
+}
+function mergeGuestSessionActivity(existingDoc, params) {
+  if (!isValidHmacDigest(params.guestHash)) {
+    throw new Error("Invalid HMAC guestHash");
+  }
+  const nowMs = params.nowMs ?? Date.now();
+  const activeExisting = existingDoc && !isGuestSessionExpired(existingDoc, nowMs) ? existingDoc : null;
+  const listingIds = normalizeBoundedUniqueIdList(
+    activeExisting?.listingIds,
+    params.listingId,
+    GUEST_SESSION_MAX_LISTING_IDS
+  );
+  const sellerIds = normalizeBoundedUniqueIdList(
+    activeExisting?.sellerIds,
+    params.sellerId,
+    GUEST_SESSION_MAX_SELLER_IDS
+  );
+  return {
+    guestHash: params.guestHash,
+    listingIds,
+    sellerIds,
+    linkedUid: activeExisting?.linkedUid ?? null,
+    createdAt: activeExisting?.createdAt ?? nowMs,
+    updatedAt: nowMs,
+    linkedAt: activeExisting?.linkedAt ?? null,
+    expiresAt: nowMs + GUEST_SESSION_TTL_MS
+  };
+}
+function evaluateGuestSessionClaim(existingDoc, params) {
+  const nowMs = params.nowMs ?? Date.now();
+  if (!isValidAnalyticsId(params.uid)) {
+    return { status: 400, claimed: false, reason: "invalid_request" };
+  }
+  if (!existingDoc || isGuestSessionExpired(existingDoc, nowMs)) {
+    return { status: 200, claimed: false, reason: "no_guest_session" };
+  }
+  const boundedListingIds = normalizeBoundedUniqueIdList(
+    existingDoc.listingIds,
+    void 0,
+    GUEST_SESSION_MAX_LISTING_IDS
+  );
+  const boundedSellerIds = normalizeBoundedUniqueIdList(
+    existingDoc.sellerIds,
+    void 0,
+    GUEST_SESSION_MAX_SELLER_IDS
+  );
+  if (existingDoc.linkedUid) {
+    if (existingDoc.linkedUid === params.uid) {
+      return {
+        status: 200,
+        claimed: true,
+        idempotent: true,
+        linkedUid: existingDoc.linkedUid,
+        listingIds: boundedListingIds,
+        sellerIds: boundedSellerIds
+      };
+    }
+    return {
+      status: 409,
+      claimed: false,
+      reason: "visitor_already_claimed"
+    };
+  }
+  if (boundedListingIds.length === 0 && boundedSellerIds.length === 0) {
+    return { status: 200, claimed: false, reason: "no_guest_session" };
+  }
+  const nextDoc = {
+    guestHash: existingDoc.guestHash,
+    listingIds: boundedListingIds,
+    sellerIds: boundedSellerIds,
+    linkedUid: params.uid,
+    createdAt: existingDoc.createdAt,
+    updatedAt: nowMs,
+    linkedAt: nowMs,
+    expiresAt: existingDoc.expiresAt
+  };
+  return {
+    status: 200,
+    claimed: true,
+    idempotent: false,
+    linkedUid: params.uid,
+    listingIds: boundedListingIds,
+    sellerIds: boundedSellerIds,
+    nextDoc
+  };
+}
+function buildVerifiedFunnelMarkerId(markerType, sourceId) {
+  if (!isValidAnalyticsId(sourceId)) {
+    throw new Error("Invalid sourceId for verified funnel marker");
+  }
+  const prefix = markerType === "order_confirmed" ? "order_" : "contact_";
+  const markerId = `${prefix}${sourceId}`;
+  if (!isValidAnalyticsId(markerId)) {
+    throw new Error("Verified funnel markerId exceeds 128 characters or contains invalid characters");
+  }
+  return markerId;
+}
 
 // src/lib/analyticsServer.ts
 function parseTimestampMs(val) {
@@ -1519,6 +1753,8 @@ async function getAdminFirestoreInstance() {
 }
 var DEFAULT_CURSOR_BATCH_SIZE = 500;
 var DEFAULT_CURSOR_MAX_PAGES = 200;
+var SELLER_SCOPED_CURSOR_MAX_PAGES = 40;
+var OPT_OUT_BATCH_CHUNK_SIZE = 200;
 var ANALYTICS_CACHE_TTL_MS = 3e4;
 async function scanCollectionWithCursor(params) {
   const batchSize = Math.max(1, Math.min(1e3, params.batchSize ?? DEFAULT_CURSOR_BATCH_SIZE));
@@ -1585,6 +1821,7 @@ async function scanCollectionWithCursor(params) {
 var FirestoreAdminAnalyticsRepository = class {
   publicDocsCache = null;
   ratingsCache = null;
+  rankMapsCache = null;
   cacheTtlMs;
   constructor(options) {
     this.cacheTtlMs = options?.cacheTtlMs ?? ANALYTICS_CACHE_TTL_MS;
@@ -1592,6 +1829,7 @@ var FirestoreAdminAnalyticsRepository = class {
   invalidateCaches() {
     this.publicDocsCache = null;
     this.ratingsCache = null;
+    this.rankMapsCache = null;
   }
   async getListing(listingId) {
     const db = await getAdminFirestoreInstance();
@@ -1634,35 +1872,70 @@ var FirestoreAdminAnalyticsRepository = class {
       optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut)
     };
   }
-  async getSellerListings(sellerId) {
+  mapListingDocToRecord(id, data) {
+    return {
+      id,
+      sellerId: data.sellerId,
+      sellerName: data.sellerName || data.authorName,
+      title: data.title || data.titleGe || "Untitled",
+      titleGe: data.titleGe,
+      category: data.category || "other",
+      listingType: inferListingType(data.category, data.listingType),
+      image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
+      status: data.status,
+      country: data.country,
+      city: data.city,
+      createdAt: parseTimestampMs(data.createdAt),
+      isDemo: data.isDemo,
+      isSeed: data.isSeed,
+      isMock: data.isMock
+    };
+  }
+  async getSellerListingsWithMeta(sellerId) {
     const db = await getAdminFirestoreInstance();
-    const snap = await db.collection("listings").where("sellerId", "==", sellerId).limit(100).get();
-    return snap.docs.map((d) => {
-      const data = d.data() || {};
-      return {
-        id: d.id,
-        sellerId: data.sellerId,
-        sellerName: data.sellerName || data.authorName,
-        title: data.title || data.titleGe || "Untitled",
-        titleGe: data.titleGe,
-        category: data.category || "other",
-        listingType: inferListingType(data.category, data.listingType),
-        image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
-        status: data.status,
-        country: data.country,
-        city: data.city,
-        createdAt: parseTimestampMs(data.createdAt),
-        isDemo: data.isDemo,
-        isSeed: data.isSeed,
-        isMock: data.isMock
-      };
+    const { FieldPath } = await import("firebase-admin/firestore");
+    const scan = await scanCollectionWithCursor({
+      collectionRef: db.collection("listings").where("sellerId", "==", sellerId),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+      label: `listings:seller:${sellerId}`
     });
+    return {
+      listings: scan.items.map((item) => this.mapListingDocToRecord(item.id, item.data)),
+      truncated: scan.truncated,
+      ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
+    };
+  }
+  async getSellerListings(sellerId) {
+    const res = await this.getSellerListingsWithMeta(sellerId);
+    return res.listings;
   }
   async getListingAnalyticsDoc(listingId) {
     const db = await getAdminFirestoreInstance();
     const snap = await db.collection("listing_analytics").doc(listingId).get();
     if (!snap.exists) return null;
     return snap.data();
+  }
+  async getSellerListingAnalyticsMap(sellerId) {
+    const db = await getAdminFirestoreInstance();
+    const { FieldPath } = await import("firebase-admin/firestore");
+    const scan = await scanCollectionWithCursor({
+      collectionRef: db.collection("listing_analytics").where("sellerId", "==", sellerId),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+      label: `listing_analytics:seller:${sellerId}`
+    });
+    const docsByListingId = /* @__PURE__ */ new Map();
+    for (const item of scan.items) {
+      docsByListingId.set(item.id, item.data);
+    }
+    return {
+      docsByListingId,
+      truncated: scan.truncated,
+      ...scan.truncationReason ? { truncationReason: scan.truncationReason } : {}
+    };
   }
   async getAllPublicAnalyticsDocsWithMeta() {
     const now = Date.now();
@@ -1733,6 +2006,74 @@ var FirestoreAdminAnalyticsRepository = class {
   async getSellerRatingsMap() {
     const res = await this.getSellerRatingsMapWithMeta();
     return res.ratings;
+  }
+  async getAggregatedRankMaps(nowMs = Date.now()) {
+    const now = Date.now();
+    if (this.cacheTtlMs > 0 && this.rankMapsCache && this.rankMapsCache.expiresAt > now) {
+      return this.rankMapsCache.value;
+    }
+    const warnings = [];
+    let truncated = false;
+    const [publicScan, ratingsScan] = await Promise.all([
+      this.getAllPublicAnalyticsDocsWithMeta().catch((err) => {
+        console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
+        truncated = true;
+        warnings.push("public_docs_read_failed");
+        return { docs: [], truncated: true, truncationReason: "public_docs_read_failed" };
+      }),
+      this.getSellerRatingsMapWithMeta().catch((err) => {
+        console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
+        truncated = true;
+        warnings.push("ratings_read_failed");
+        return { ratings: {}, truncated: true, truncationReason: "ratings_read_failed" };
+      })
+    ]);
+    if (publicScan.truncated) {
+      truncated = true;
+      if (publicScan.truncationReason && !warnings.includes(publicScan.truncationReason)) {
+        warnings.push(publicScan.truncationReason);
+      } else if (!publicScan.truncationReason && warnings.length === 0) {
+        warnings.push("public_docs_truncated");
+      }
+    }
+    if (ratingsScan.truncated) {
+      truncated = true;
+      if (ratingsScan.truncationReason && !warnings.includes(ratingsScan.truncationReason)) {
+        warnings.push(ratingsScan.truncationReason);
+      } else if (!ratingsScan.truncationReason && warnings.length === 0) {
+        warnings.push("seller_ratings_truncated");
+      }
+    }
+    const globalRankings = buildRankingsFromPublicDocs({
+      docs: publicScan.docs,
+      sellerRatingsMap: ratingsScan.ratings,
+      scope: "global",
+      period: "30d",
+      nowMs,
+      limitCount: Math.max(300, publicScan.docs.length)
+    });
+    const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+    const catRankMap = /* @__PURE__ */ new Map();
+    const byCat = /* @__PURE__ */ new Map();
+    for (const r of globalRankings) {
+      const cat = (r.category || "other").toLowerCase();
+      const arr = byCat.get(cat) || [];
+      arr.push(r);
+      byCat.set(cat, arr);
+    }
+    for (const arr of byCat.values()) {
+      arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+    }
+    const result = {
+      globalRankMap,
+      catRankMap,
+      truncated,
+      warnings
+    };
+    if (this.cacheTtlMs > 0 && !truncated) {
+      this.rankMapsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+    }
+    return result;
   }
   async recordEventTransaction(params) {
     const db = await getAdminFirestoreInstance();
@@ -1890,38 +2231,187 @@ var FirestoreAdminAnalyticsRepository = class {
     }).then((res) => {
       if (res.recorded) {
         this.publicDocsCache = null;
+        this.rankMapsCache = null;
       }
       return res;
     });
   }
   async setSellerCompetitionOptOut(sellerId, optedOut, nowMs) {
     const db = await getAdminFirestoreInstance();
+    const { FieldPath } = await import("firebase-admin/firestore");
     await db.collection("seller_competition_prefs").doc(sellerId).set({ optedOut, updatedAt: nowMs }, { merge: true });
     await db.collection("users").doc(sellerId).set({ competitionOptOut: optedOut }, { merge: true });
-    const analyticsSnap = await db.collection("listing_analytics").where("sellerId", "==", sellerId).limit(100).get();
-    const batch = db.batch();
-    for (const d of analyticsSnap.docs) {
-      const data = d.data();
-      const normalizedType = inferListingType(data.category, data.listingType);
-      batch.set(
-        d.ref,
-        { optedOut, listingType: normalizedType, updatedAt: nowMs },
-        { merge: true }
-      );
-      const pubRef = db.collection("listing_analytics_public").doc(d.id);
-      if (optedOut || data.status && data.status !== "active") {
-        batch.delete(pubRef);
-      } else {
-        batch.set(pubRef, {
-          ...data,
-          listingType: normalizedType,
-          optedOut: false,
-          updatedAt: nowMs
-        });
-      }
+    const sellerAnalyticsRef = db.collection("seller_analytics").doc(sellerId);
+    const sellerAnalyticsSnap = await sellerAnalyticsRef.get().catch(() => null);
+    if (sellerAnalyticsSnap?.exists) {
+      await sellerAnalyticsRef.set({ optedOut, updatedAt: nowMs }, { merge: true });
     }
-    await batch.commit();
-    this.publicDocsCache = null;
+    const scan = await scanCollectionWithCursor({
+      collectionRef: db.collection("listing_analytics").where("sellerId", "==", sellerId),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: SELLER_SCOPED_CURSOR_MAX_PAGES,
+      label: `optout:listing_analytics:seller:${sellerId}`
+    });
+    if (scan.truncated) {
+      throw new Error(
+        `Failed to complete competition opt-out update: listing analytics scan was truncated (${scan.truncationReason || "cursor_max_pages_exceeded"}). Some listings may not have been updated.`
+      );
+    }
+    for (let i = 0; i < scan.items.length; i += OPT_OUT_BATCH_CHUNK_SIZE) {
+      const chunk = scan.items.slice(i, i + OPT_OUT_BATCH_CHUNK_SIZE);
+      const batch = db.batch();
+      for (const item of chunk) {
+        const data = item.data;
+        const normalizedType = inferListingType(data.category, data.listingType);
+        const docRef = db.collection("listing_analytics").doc(item.id);
+        batch.set(
+          docRef,
+          { optedOut, listingType: normalizedType, updatedAt: nowMs },
+          { merge: true }
+        );
+        const pubRef = db.collection("listing_analytics_public").doc(item.id);
+        if (optedOut || data.status && data.status !== "active") {
+          batch.delete(pubRef);
+        } else {
+          batch.set(pubRef, {
+            ...data,
+            listingType: normalizedType,
+            optedOut: false,
+            updatedAt: nowMs
+          });
+        }
+      }
+      await batch.commit();
+    }
+    this.invalidateCaches();
+  }
+  // ============================================================================
+  // PHASE 2B: SELLER ANALYTICS FOUNDATION REPOSITORY METHODS
+  // ============================================================================
+  async getSellerAnalyticsDoc(sellerId) {
+    if (!isValidAnalyticsId(sellerId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection("seller_analytics").doc(sellerId).get();
+    if (!snap.exists) return null;
+    return snap.data();
+  }
+  async ensureSellerAnalyticsDoc(params) {
+    if (!isValidAnalyticsId(params.sellerId)) {
+      throw new Error("Invalid sellerId for seller_analytics");
+    }
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection("seller_analytics").doc(params.sellerId);
+    return db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        return snap.data();
+      }
+      const initialDoc = createEmptySellerAnalyticsDoc(params);
+      tx.set(ref, initialDoc);
+      return initialDoc;
+    });
+  }
+  async getSellerViewerDoc(sellerId, sellerViewerHash) {
+    if (!isValidAnalyticsId(sellerId) || !isValidHmacDigest(sellerViewerHash)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection("seller_analytics").doc(sellerId).collection("viewers").doc(sellerViewerHash).get();
+    if (!snap.exists) return null;
+    return snap.data();
+  }
+  async upsertSellerViewerDoc(sellerId, viewerDoc) {
+    if (!isValidAnalyticsId(sellerId)) {
+      throw new Error("Invalid sellerId for seller viewer storage");
+    }
+    const cleanDoc = sanitizeSellerViewerDoc(viewerDoc);
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection("seller_analytics").doc(sellerId).collection("viewers").doc(cleanDoc.viewerHash);
+    await ref.set(cleanDoc, { merge: true });
+    return cleanDoc;
+  }
+  async getGuestSessionIndex(guestHash) {
+    if (!isValidHmacDigest(guestHash)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection("analytics_guest_sessions").doc(guestHash).get();
+    if (!snap.exists) return null;
+    return snap.data();
+  }
+  async recordGuestSessionActivity(params) {
+    if (!isValidHmacDigest(params.guestHash)) {
+      throw new Error("Invalid guestHash");
+    }
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection("analytics_guest_sessions").doc(params.guestHash);
+    const nowMs = params.nowMs ?? Date.now();
+    return db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const existing = snap.exists ? snap.data() : null;
+      const nextDoc = mergeGuestSessionActivity(existing, {
+        guestHash: params.guestHash,
+        listingId: params.listingId,
+        sellerId: params.sellerId,
+        nowMs
+      });
+      tx.set(ref, nextDoc);
+      return nextDoc;
+    });
+  }
+  async claimGuestSession(params) {
+    if (!isValidHmacDigest(params.guestHash) || !isValidAnalyticsId(params.uid)) {
+      return { status: 400, claimed: false, reason: "invalid_request" };
+    }
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection("analytics_guest_sessions").doc(params.guestHash);
+    const nowMs = params.nowMs ?? Date.now();
+    return db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const existing = snap.exists ? snap.data() : null;
+      const evaluation = evaluateGuestSessionClaim(existing, {
+        uid: params.uid,
+        nowMs
+      });
+      if (evaluation.claimed && !evaluation.idempotent && evaluation.nextDoc) {
+        tx.set(ref, evaluation.nextDoc);
+      }
+      const { nextDoc: _unused, ...publicResult } = evaluation;
+      return publicResult;
+    });
+  }
+  async getVerifiedFunnelMarker(markerId) {
+    if (!isValidAnalyticsId(markerId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection("analytics_verified_markers").doc(markerId).get();
+    if (!snap.exists) return null;
+    return snap.data();
+  }
+  async claimVerifiedFunnelMarker(params) {
+    if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.buyerHash)) {
+      throw new Error("Invalid sellerId or buyerHash for verified funnel marker");
+    }
+    if (params.listingId !== void 0 && !isValidAnalyticsId(params.listingId)) {
+      throw new Error("Invalid listingId for verified funnel marker");
+    }
+    const markerId = buildVerifiedFunnelMarkerId(params.markerType, params.sourceId);
+    const nowMs = params.nowMs ?? Date.now();
+    const db = await getAdminFirestoreInstance();
+    const ref = db.collection("analytics_verified_markers").doc(markerId);
+    return db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        return { created: false, duplicate: true, markerId };
+      }
+      const markerDoc = {
+        markerId,
+        markerType: params.markerType,
+        sellerId: params.sellerId,
+        buyerHash: params.buyerHash,
+        sourceId: params.sourceId,
+        ...params.listingId ? { listingId: params.listingId } : {},
+        recordedAt: nowMs
+      };
+      tx.set(ref, markerDoc);
+      return { created: true, duplicate: false, markerId };
+    });
   }
 };
 var MarketAnalyticsService = class {
@@ -1955,6 +2445,37 @@ var MarketAnalyticsService = class {
   computeViewerHash(listingId, identityKey) {
     const activeSalt = this.resolveEffectiveSalt();
     return crypto.createHmac("sha256", activeSalt).update(`${listingId}:${identityKey}`).digest("hex");
+  }
+  /**
+   * Server-only HMAC hash for seller_analytics/{sellerId}/viewers/{sellerViewerHash}.
+   * Never persisted with raw IP, visitorToken, or User-Agent.
+   */
+  computeSellerViewerHash(sellerId, identityKey) {
+    if (!isValidAnalyticsId(sellerId)) {
+      throw new Error("Invalid sellerId for seller viewer hash");
+    }
+    const activeSalt = this.resolveEffectiveSalt();
+    return crypto.createHmac("sha256", activeSalt).update(`seller:${sellerId}:${identityKey}`).digest("hex");
+  }
+  /**
+   * Server-only HMAC hash for analytics_guest_sessions/{guestHash}.
+   */
+  computeGuestSessionHash(visitorToken) {
+    if (typeof visitorToken !== "string" || visitorToken.length < 8 || visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(visitorToken)) {
+      throw new Error("Invalid visitorToken for guest session hash");
+    }
+    const activeSalt = this.resolveEffectiveSalt();
+    return crypto.createHmac("sha256", activeSalt).update(`guest_session:${visitorToken}`).digest("hex");
+  }
+  /**
+   * Server-only HMAC hash for buyer identity in verified funnel markers.
+   */
+  computeBuyerIdentityHash(buyerUid) {
+    if (!isValidAnalyticsId(buyerUid)) {
+      throw new Error("Invalid buyerUid for verified marker hash");
+    }
+    const activeSalt = this.resolveEffectiveSalt();
+    return crypto.createHmac("sha256", activeSalt).update(`buyer:${buyerUid}`).digest("hex");
   }
   checkInMemoryIpGuard(clientIp, listingId, eventType, nowMs, activeSalt) {
     if (!clientIp) return true;
@@ -2059,44 +2580,80 @@ var MarketAnalyticsService = class {
       const stats = await this.buildSingleListingStats(listing, rawDoc, nowMs);
       return { status: 200, body: { listing: stats } };
     }
-    const [sellerListings, sellerPref, publicDocs, ratingsMap] = await Promise.all([
-      this.repo.getSellerListings(verifiedUid),
-      this.repo.getSellerProfileLocation(verifiedUid),
-      this.repo.getAllPublicAnalyticsDocs().catch((err) => {
-        console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
-        return [];
-      }),
-      this.repo.getSellerRatingsMap().catch((err) => {
-        console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
-        return {};
-      })
+    const [listingsResult, sellerPref] = await Promise.all([
+      this.repo.getSellerListingsWithMeta ? this.repo.getSellerListingsWithMeta(verifiedUid) : this.repo.getSellerListings(verifiedUid).then((listings) => ({
+        listings,
+        truncated: false
+      })),
+      this.repo.getSellerProfileLocation(verifiedUid)
     ]);
-    const realListings = sellerListings.filter(
+    const realListings = listingsResult.listings.filter(
       (l) => !l.isDemo && !l.isSeed && !l.isMock && l.status !== "deleted"
     );
-    const globalRankings = buildRankingsFromPublicDocs({
-      docs: publicDocs,
-      sellerRatingsMap: ratingsMap,
-      scope: "global",
-      period: "30d",
-      nowMs,
-      limitCount: Math.max(300, publicDocs.length)
-    });
-    const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
-    const catRankMap = /* @__PURE__ */ new Map();
-    const byCat = /* @__PURE__ */ new Map();
-    for (const r of globalRankings) {
-      const cat = (r.category || "other").toLowerCase();
-      const arr = byCat.get(cat) || [];
-      arr.push(r);
-      byCat.set(cat, arr);
+    let listingsTruncated = Boolean(listingsResult.truncated);
+    let listingsTruncationReason = listingsResult.truncationReason;
+    let analyticsTruncated = false;
+    let analyticsTruncationReason;
+    let globalRankMap = /* @__PURE__ */ new Map();
+    let catRankMap = /* @__PURE__ */ new Map();
+    if (realListings.length > 0 && !sellerPref.optedOut) {
+      if (this.repo.getAggregatedRankMaps) {
+        const rankMaps = await this.repo.getAggregatedRankMaps(nowMs);
+        globalRankMap = rankMaps.globalRankMap;
+        catRankMap = rankMaps.catRankMap;
+        if (rankMaps.truncated) {
+          analyticsTruncated = true;
+          analyticsTruncationReason = rankMaps.warnings?.[0] || "rank_maps_truncated";
+        }
+      } else {
+        const [publicDocs, ratingsMap] = await Promise.all([
+          this.repo.getAllPublicAnalyticsDocs().catch((err) => {
+            console.error("[MarketAnalytics] Failed to load public docs for seller stats:", err);
+            return [];
+          }),
+          this.repo.getSellerRatingsMap().catch((err) => {
+            console.error("[MarketAnalytics] Failed to load seller ratings for seller stats:", err);
+            return {};
+          })
+        ]);
+        const globalRankings = buildRankingsFromPublicDocs({
+          docs: publicDocs,
+          sellerRatingsMap: ratingsMap,
+          scope: "global",
+          period: "30d",
+          nowMs,
+          limitCount: Math.max(300, publicDocs.length)
+        });
+        globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
+        const byCat = /* @__PURE__ */ new Map();
+        for (const r of globalRankings) {
+          const cat = (r.category || "other").toLowerCase();
+          const arr = byCat.get(cat) || [];
+          arr.push(r);
+          byCat.set(cat, arr);
+        }
+        for (const arr of byCat.values()) {
+          arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+        }
+      }
     }
-    for (const arr of byCat.values()) {
-      arr.forEach((r, idx) => catRankMap.set(r.listingId, { rank: idx + 1, total: arr.length }));
+    let analyticsDocs;
+    if (realListings.length === 0) {
+      analyticsDocs = [];
+    } else if (this.repo.getSellerListingAnalyticsMap) {
+      const sellerAnalyticsScan = await this.repo.getSellerListingAnalyticsMap(verifiedUid);
+      analyticsDocs = realListings.map((l) => sellerAnalyticsScan.docsByListingId.get(l.id) ?? null);
+      if (sellerAnalyticsScan.truncated) {
+        analyticsTruncated = true;
+        analyticsTruncationReason = sellerAnalyticsScan.truncationReason || "seller_analytics_scan_truncated";
+      }
+    } else {
+      analyticsDocs = await Promise.all(
+        realListings.map((l) => this.repo.getListingAnalyticsDoc(l.id))
+      );
     }
-    const analyticsDocs = await Promise.all(
-      realListings.map((l) => this.repo.getListingAnalyticsDoc(l.id))
-    );
+    const isPartialData = listingsTruncated || analyticsTruncated;
+    const truncationReason = listingsTruncationReason || analyticsTruncationReason;
     const listingStats = realListings.map((listing, idx) => {
       const rawDoc = analyticsDocs[idx];
       const agg = aggregatePeriodFromBuckets(
@@ -2183,7 +2740,9 @@ var MarketAnalyticsService = class {
       listings: listingStats,
       competitionOptOut: Boolean(sellerPref.optedOut),
       earnedAchievements,
-      ...overviewBreakdown ? { viewerBreakdown: overviewBreakdown } : {}
+      ...overviewBreakdown ? { viewerBreakdown: overviewBreakdown } : {},
+      isPartialData,
+      ...truncationReason ? { truncationReason } : {}
     };
     return { status: 200, body: { overview } };
   }
@@ -2291,6 +2850,52 @@ var MarketAnalyticsService = class {
         optedOut: Boolean(params.optedOut)
       }
     };
+  }
+  // Phase 2B Server Foundation Operations (no public HTTP endpoints exposed yet)
+  async getSellerAnalyticsDoc(sellerId) {
+    if (!isValidAnalyticsId(sellerId) || !this.repo.getSellerAnalyticsDoc) {
+      return null;
+    }
+    return this.repo.getSellerAnalyticsDoc(sellerId);
+  }
+  async ensureSellerAnalyticsDoc(params) {
+    if (!this.repo.ensureSellerAnalyticsDoc) {
+      throw new Error("Repository does not implement ensureSellerAnalyticsDoc");
+    }
+    return this.repo.ensureSellerAnalyticsDoc(params);
+  }
+  async claimGuestSessionForUser(params) {
+    if (!this.repo.claimGuestSession) {
+      throw new Error("Repository does not implement claimGuestSession");
+    }
+    if (!isValidAnalyticsId(params.uid)) {
+      return { status: 400, claimed: false, reason: "invalid_request" };
+    }
+    let guestHash;
+    try {
+      guestHash = this.computeGuestSessionHash(params.visitorToken);
+    } catch {
+      return { status: 400, claimed: false, reason: "invalid_request" };
+    }
+    return this.repo.claimGuestSession({
+      guestHash,
+      uid: params.uid,
+      nowMs: params.nowMs ?? Date.now()
+    });
+  }
+  async claimVerifiedFunnelMarker(params) {
+    if (!this.repo.claimVerifiedFunnelMarker) {
+      throw new Error("Repository does not implement claimVerifiedFunnelMarker");
+    }
+    const buyerHash = this.computeBuyerIdentityHash(params.buyerUid);
+    return this.repo.claimVerifiedFunnelMarker({
+      markerType: params.markerType,
+      sourceId: params.sourceId,
+      sellerId: params.sellerId,
+      buyerHash,
+      listingId: params.listingId,
+      nowMs: params.nowMs ?? Date.now()
+    });
   }
 };
 function isAdminCredentialsError(err) {

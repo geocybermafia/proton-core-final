@@ -396,6 +396,8 @@ export interface SellerAnalyticsOverview {
   competitionOptOut: boolean;
   earnedAchievements: EarnedAchievementEntry[];
   viewerBreakdown?: ListingViewerBreakdown;
+  isPartialData: boolean;
+  truncationReason?: string;
 }
 
 export interface RankingEntry {
@@ -470,14 +472,121 @@ export interface SellerFunnelMetrics {
   guestToAuthLinks: number;
 }
 
+export interface SellerAnalyticsMetadata {
+  schemaVersion: number;
+  sellerName?: string;
+  lastEventAt?: number;
+}
+
+export interface SellerAudienceCounters {
+  totalImpressions: number;
+  totalViews: number;
+  uniqueViewers: number;
+  authImpressions: number;
+  authViews: number;
+  authUniqueViewers: number;
+  guestImpressions: number;
+  guestViews: number;
+  guestUniqueViewers: number;
+}
+
+export interface SellerAnalyticsTotalCounters {
+  totalEvents: number;
+  totalUniqueUsers: number;
+  authEvents: number;
+  guestEvents: number;
+  authUniqueUsers: number;
+  guestUniqueUsers: number;
+}
+
+export interface SellerAnalyticsBucket extends Partial<SellerFunnelMetrics> {
+  audienceImpressions?: number;
+  audienceViews?: number;
+  audienceUniqueViewers?: number;
+  authAudienceImpressions?: number;
+  authAudienceViews?: number;
+  authAudienceUniqueViewers?: number;
+  guestAudienceImpressions?: number;
+  guestAudienceViews?: number;
+  guestAudienceUniqueViewers?: number;
+  totalEvents?: number;
+  uniqueUsers?: number;
+  authEvents?: number;
+  guestEvents?: number;
+  authUniqueUsers?: number;
+  guestUniqueUsers?: number;
+}
+
 export interface SellerAnalyticsDoc extends SellerFunnelMetrics {
   sellerId: string;
+  metadata?: SellerAnalyticsMetadata;
   optedOut: boolean;
   country?: string;
   region?: string;
   funnelTrackingSince: number;
-  daily?: Record<string, Partial<SellerFunnelMetrics>>;
+  audience?: SellerAudienceCounters;
+  totals?: SellerAnalyticsTotalCounters;
+  hourly?: Record<string, SellerAnalyticsBucket>;
+  daily?: Record<string, SellerAnalyticsBucket>;
   createdAt: number;
   updatedAt: number;
+}
+
+export interface SellerViewerDoc {
+  viewerHash: string;
+  viewerType: 'auth' | 'guest';
+  firstSeenAt: number;
+  lastSeenAt: number;
+  firstProfileViewAt?: number;
+  lastProfileViewAt?: number;
+  firstListingToSellerAt?: number;
+  lastListingToSellerAt?: number;
+  firstContactClickAt?: number;
+  lastContactClickAt?: number;
+  firstOrderIntentAt?: number;
+  lastOrderIntentAt?: number;
+  firstContactConfirmedAt?: number;
+  firstOrderConfirmedAt?: number;
+  firstAudienceAt?: number;
+  lastAudienceAt?: number;
+}
+
+export interface GuestSessionIndexDoc {
+  guestHash: string;
+  listingIds: string[];
+  sellerIds: string[];
+  linkedUid: string | null;
+  createdAt: number;
+  updatedAt: number;
+  linkedAt: number | null;
+  expiresAt: number;
+}
+
+export interface GuestSessionClaimResult {
+  status: 200 | 400 | 409;
+  claimed: boolean;
+  idempotent?: boolean;
+  reason?: 'no_guest_session' | 'visitor_already_claimed' | 'invalid_request';
+  linkedUid?: string;
+  listingIds?: string[];
+  sellerIds?: string[];
+}
+
+export type VerifiedMarkerType = 'contact_confirmed' | 'order_confirmed';
+
+export interface VerifiedFunnelMarkerDoc {
+  markerId: string;
+  markerType: VerifiedMarkerType;
+  sellerId: string;
+  buyerHash: string;
+  sourceId: string;
+  listingId?: string;
+  recordedAt: number;
+}
+
+export interface VerifiedMarkerClaimResult {
+  created: boolean;
+  duplicate: boolean;
+  markerId: string;
 }
 
