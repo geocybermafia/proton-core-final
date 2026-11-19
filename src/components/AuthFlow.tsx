@@ -12,6 +12,7 @@ import { translations } from '../translations';
 import { motion } from 'framer-motion';
 import { Zap, Loader2, ChevronLeft } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
+import { beginAuthVisitorLinkIntent, cancelAuthVisitorLinkIntent } from '../utils/marketAnalyticsClient';
 
 interface AuthFlowProps {
   onGoogleSignIn: () => void;
@@ -84,8 +85,10 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
     setLoading(true);
     try {
       if (isLogin) {
+        beginAuthVisitorLinkIntent('email_password', auth.currentUser?.uid);
         await signInWithEmailAndPassword(auth, email, password);
       } else {
+        beginAuthVisitorLinkIntent('email_signup', auth.currentUser?.uid);
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const userDocRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userDocRef, {
@@ -101,6 +104,7 @@ export const AuthFlow = ({ onGoogleSignIn, onBack, language }: AuthFlowProps) =>
         trackEvent('sign_up');
       }
     } catch (err: any) {
+      cancelAuthVisitorLinkIntent();
       setError(err.message);
     } finally {
       setLoading(false);

@@ -422,3 +422,62 @@ export interface RankingEntry {
   period: RankingPeriod;
 }
 
+export type MarketFunnelEventType =
+  | 'seller_profile_view'
+  | 'listing_to_seller'
+  | 'contact_click'
+  | 'contact_confirmed'
+  | 'order_intent'
+  | 'order_confirmed';
+
+export interface SellerFunnelMetrics {
+  // Seller profile / vendor modal views (Total vs Unique + Guest/Auth)
+  profileViews: number;
+  uniqueProfileViewers: number;
+  authProfileViews: number;
+  guestProfileViews: number;
+  authUniqueProfileViewers: number;
+  guestUniqueProfileViewers: number;
+
+  // Listing -> Seller discovery transitions (Total vs Unique + Guest/Auth)
+  listingToSellerClicks: number;
+  uniqueListingToSellerUsers: number;
+  authListingToSellerClicks: number;
+  guestListingToSellerClicks: number;
+
+  // UI Click / Intention events (distinct from confirmed backend actions)
+  contactClicks: number;
+  uniqueContactClickers: number;
+  authContactClicks: number;
+  guestContactClicks: number;
+  authUniqueContactClickers: number;
+  guestUniqueContactClickers: number;
+
+  orderIntents: number;
+  uniqueOrderIntentUsers: number;
+  authOrderIntents: number;
+  guestOrderIntents: number;
+  authUniqueOrderIntentUsers: number;
+  guestUniqueOrderIntentUsers: number;
+
+  // Verified / Confirmed backend actions (Auth-only DB-backed truth)
+  contactConfirmed: number;
+  uniqueContactedBuyers: number;
+  ordersConfirmed: number;
+  uniqueOrderBuyers: number;
+
+  // Guest -> Auth identity links attributed to this seller
+  guestToAuthLinks: number;
+}
+
+export interface SellerAnalyticsDoc extends SellerFunnelMetrics {
+  sellerId: string;
+  optedOut: boolean;
+  country?: string;
+  region?: string;
+  funnelTrackingSince: number;
+  daily?: Record<string, Partial<SellerFunnelMetrics>>;
+  createdAt: number;
+  updatedAt: number;
+}
+

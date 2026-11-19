@@ -6,6 +6,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { db, auth } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { beginAuthVisitorLinkIntent, cancelAuthVisitorLinkIntent } from '../utils/marketAnalyticsClient';
 import { useSeller } from '../contexts/SellerContext';
 import { useSellerStats } from '../hooks/useSellerStats';
 import { cn } from '../lib/utils';
@@ -84,9 +85,11 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
 
   const handleGoogleSignIn = async () => {
     try {
+      beginAuthVisitorLinkIntent('google_popup', user?.uid);
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (err) {
+      cancelAuthVisitorLinkIntent();
       console.error("Sign in failed:", err);
     }
   };

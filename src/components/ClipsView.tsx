@@ -38,6 +38,7 @@ import { db, auth, googleProvider } from '../firebase';
 import { uploadClipVideo, deleteClipVideoFromStorage } from '../lib/storageUtils';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { beginAuthVisitorLinkIntent, cancelAuthVisitorLinkIntent } from '../utils/marketAnalyticsClient';
 import { useSeller } from '../contexts/SellerContext';
 import { useToast } from './Toast';
 import { Clip, ClipComment, ClipIssue, MarketplaceItem, Order } from '../types';
@@ -1544,9 +1545,11 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
                 <button
                   onClick={async () => {
                     try {
+                      beginAuthVisitorLinkIntent('google_popup', auth.currentUser?.uid);
                       await signInWithPopup(auth, googleProvider);
                       setShowAuthModalPrompt(false);
                     } catch (err: any) {
+                      cancelAuthVisitorLinkIntent();
                       console.warn("Sign in popup error:", err);
                       if (onOpenAuthModal) onOpenAuthModal();
                     }

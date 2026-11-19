@@ -9,6 +9,7 @@ import { AutomationEngine } from './components/AutomationEngine';
 
 import { auth, db, googleProvider } from './firebase';
 import { useAuth } from './contexts/AuthContext';
+import { beginAuthVisitorLinkIntent, cancelAuthVisitorLinkIntent } from './utils/marketAnalyticsClient';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 import { signInWithPopup } from 'firebase/auth';
@@ -2711,6 +2712,7 @@ export default function App() {
     const handleGoogleSignIn = async () => {
     try {
       addLog('info', 'Starting Google Sign-In');
+      beginAuthVisitorLinkIntent('google_popup', user?.uid);
       const result = await signInWithPopup(auth, googleProvider);
       addLog('info', `Signed in as ${result.user.email}`);
       const userDocRef = doc(db, 'users', result.user.uid);
@@ -2723,6 +2725,7 @@ export default function App() {
         }), 'create', userDocRef.path);
       }
     } catch (error) {
+      cancelAuthVisitorLinkIntent();
       addLog('error', 'Google Sign-In failed', error);
     }
   };
