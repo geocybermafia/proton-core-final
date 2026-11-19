@@ -102,30 +102,84 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
 
     const hBucket: BucketCounter = hourly[hourKey]
       ? { ...hourly[hourKey] }
-      : { impressions: 0, views: 0, uniqueViewers: 0 };
+      : {
+          impressions: 0,
+          views: 0,
+          uniqueViewers: 0,
+          authImpressions: 0,
+          authViews: 0,
+          authUniqueViewers: 0,
+          guestImpressions: 0,
+          guestViews: 0,
+          guestUniqueViewers: 0,
+        };
     const dBucket: BucketCounter = daily[dayKey]
       ? { ...daily[dayKey] }
-      : { impressions: 0, views: 0, uniqueViewers: 0 };
+      : {
+          impressions: 0,
+          views: 0,
+          uniqueViewers: 0,
+          authImpressions: 0,
+          authViews: 0,
+          authUniqueViewers: 0,
+          guestImpressions: 0,
+          guestViews: 0,
+          guestUniqueViewers: 0,
+        };
 
+    const isAuthViewer = viewerType === 'auth';
     let impressions = existing?.impressions || 0;
     let views = existing?.views || 0;
     let uniqueViewers = existing?.uniqueViewers || 0;
+    let authImpressions = existing?.authImpressions || 0;
+    let authViews = existing?.authViews || 0;
+    let authUniqueViewers = existing?.authUniqueViewers || 0;
+    let guestImpressions = existing?.guestImpressions || 0;
+    let guestViews = existing?.guestViews || 0;
+    let guestUniqueViewers = existing?.guestUniqueViewers || 0;
     let uniqueIncremented = false;
 
     if (eventType === 'impression') {
       impressions += 1;
       hBucket.impressions += 1;
       dBucket.impressions += 1;
+      if (isAuthViewer) {
+        authImpressions += 1;
+        hBucket.authImpressions = (hBucket.authImpressions || 0) + 1;
+        dBucket.authImpressions = (dBucket.authImpressions || 0) + 1;
+      } else {
+        guestImpressions += 1;
+        hBucket.guestImpressions = (hBucket.guestImpressions || 0) + 1;
+        dBucket.guestImpressions = (dBucket.guestImpressions || 0) + 1;
+      }
       viewerData.firstImpressionAt = viewerData.firstImpressionAt || nowMs;
       viewerData.lastImpressionAt = nowMs;
     } else {
       views += 1;
       hBucket.views += 1;
       dBucket.views += 1;
+      if (isAuthViewer) {
+        authViews += 1;
+        hBucket.authViews = (hBucket.authViews || 0) + 1;
+        dBucket.authViews = (dBucket.authViews || 0) + 1;
+      } else {
+        guestViews += 1;
+        hBucket.guestViews = (hBucket.guestViews || 0) + 1;
+        dBucket.guestViews = (dBucket.guestViews || 0) + 1;
+      }
       if (!viewerData.firstViewedAt) {
         uniqueViewers += 1;
         hBucket.uniqueViewers += 1;
         dBucket.uniqueViewers += 1;
+        if (isAuthViewer) {
+          authUniqueViewers += 1;
+          hBucket.authUniqueViewers = (hBucket.authUniqueViewers || 0) + 1;
+          dBucket.authUniqueViewers = (dBucket.authUniqueViewers || 0) + 1;
+        } else {
+          guestUniqueViewers += 1;
+          hBucket.guestUniqueViewers = (hBucket.guestUniqueViewers || 0) + 1;
+          dBucket.guestUniqueViewers = (dBucket.guestUniqueViewers || 0) + 1;
+        }
         viewerData.firstViewedAt = nowMs;
         uniqueIncremented = true;
       }
@@ -152,6 +206,13 @@ class InMemoryAnalyticsRepository implements AnalyticsRepository {
       impressions,
       views,
       uniqueViewers,
+      authImpressions,
+      authViews,
+      authUniqueViewers,
+      guestImpressions,
+      guestViews,
+      guestUniqueViewers,
+      breakdownSince: existing?.breakdownSince ?? nowMs,
       hourly,
       daily,
       createdAt: existing?.createdAt || nowMs,

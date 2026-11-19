@@ -18,16 +18,20 @@ import {
   AchievementBadgeId,
   EarnedAchievementEntry,
   Listing,
+  ListingType,
+  ListingTypeFilter,
   RankingEntry,
   RankingPeriod,
   RankingScope,
 } from '../../types';
 import { cn } from '../../lib/utils';
 import {
-  ALL_ACTIVE_CATEGORY_IDS,
   MarketTheme,
   WORLD_COUNTRIES,
+  getCategoriesForListingType,
   getCategoryLabel,
+  inferListingType,
+  isCategoryValidForType,
 } from './MarketConstants';
 import { fetchPublicRankings } from '../../utils/marketAnalyticsClient';
 import { ACHIEVEMENT_META, AchievementBadge } from './AchievementBadge';
@@ -48,6 +52,12 @@ const ALL_BADGE_IDS: AchievementBadgeId[] = [
   'global_recognition',
 ];
 
+const LISTING_TYPE_LABEL: Record<ListingType, { en: string; ka: string }> = {
+  product: { en: 'Product', ka: 'პროდუქტი' },
+  service: { en: 'Service', ka: 'სერვისი' },
+  project: { en: 'Project', ka: 'პროექტი' },
+};
+
 export const MarketRankingsView = React.memo(function MarketRankingsView({
   language,
   t,
@@ -59,6 +69,7 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
   const [activeSubTab, setActiveSubTab] = useState<'rankings' | 'achievements'>('rankings');
   const [scope, setScope] = useState<RankingScope>('global');
   const [period, setPeriod] = useState<RankingPeriod>('7d');
+  const [listingTypeFilter, setListingTypeFilter] = useState<ListingTypeFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [countryFilter, setCountryFilter] = useState<string>('');
   const [regionFilter, setRegionFilter] = useState<string>('');
@@ -66,6 +77,7 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
   const [availableRegions, setAvailableRegions] = useState<string[]>([]);
+  const [isPartialData, setIsPartialData] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [unavailableReason, setUnavailableReason] = useState<string | undefined>();
 
@@ -73,10 +85,12 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
     let active = true;
     setLoading(true);
     setUnavailableReason(undefined);
+    setIsPartialData(false);
 
     fetchPublicRankings({
       scope,
       period,
+      listingType: listingTypeFilter,
       category: scope === 'category' ? categoryFilter : undefined,
       country: scope === 'country' ? countryFilter : undefined,
       region: scope === 'regional' ? regionFilter : undefined,
@@ -86,11 +100,13 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
         setRankings(res.rankings);
         setAvailableCountries(res.availableCountries);
         setAvailableRegions(res.availableRegions);
+        setIsPartialData(Boolean(res.isPartialData));
         setUnavailableReason(res.unavailableReason);
       })
       .catch(() => {
         if (!active) return;
         setRankings([]);
+        setIsPartialData(false);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -99,7 +115,25 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
     return () => {
       active = false;
     };
-  }, [scope, period, categoryFilter, countryFilter, regionFilter]);
+  }, [scope, period, listingTypeFilter, categoryFilter, countryFilter, regionFilter]);
+
+  const handleListingTypeChange = (nextType: ListingTypeFilter) => {
+    setListingTypeFilter(nextType);
+    if (
+      nextType !== 'all' &&
+      categoryFilter !== 'all' &&
+      !isCategoryValidForType(categoryFilter, nextType)
+    ) {
+      setCategoryFilter('all');
+    }
+  };
+
+  const listingTypeTabs: Array<{ id: ListingTypeFilter; en: string; ka: string }> = [
+    { id: 'all', en: 'All Types', ka: 'ყველა ტიპი' },
+    { id: 'product', en: 'Products', ka: 'პროდუქტები' },
+    { id: 'service', en: 'Services', ka: 'სერვისები' },
+    { id: 'project', en: 'Projects', ka: 'პროექტები' },
+  ];
 
   const scopeButtons: Array<{
     id: RankingScope;
@@ -113,6 +147,7 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
     { id: 'regional', en: 'Regional', ka: 'რეგიონული', Icon: Compass },
   ];
 
+  const categoryOptions = getCategoriesForListingType(listingTypeFilter, t, language);
   const countryOptions = WORLD_COUNTRIES.filter(
     (c) => c.code !== 'GLOBAL' && (availableCountries.length === 0 || availableCountries.includes(c.code))
   );
@@ -225,6 +260,25 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
               </div>
             </div>
 
+            {/* ListingType Competition Filter */}
+            <div className="pt-2.5 border-t border-proton-border flex flex-wrap items-center gap-1.5">
+              {listingTypeTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleListingTypeChange(tab.id)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer',
+                    listingTypeFilter === tab.id
+                      ? 'bg-proton-accent/15 text-proton-accent border-proton-accent/40'
+                      : 'bg-proton-bg text-proton-muted border-proton-border hover:text-proton-text'
+                  )}
+                >
+                  {language === 'ka' ? tab.ka : tab.en}
+                </button>
+              ))}
+            </div>
+
             {/* Dynamic Secondary Filters (Category, Country, Regional) */}
             {(scope === 'category' || scope === 'country' || scope === 'regional') && (
               <div className="pt-2.5 border-t border-proton-border flex flex-wrap items-center justify-between gap-3">
@@ -240,9 +294,9 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
                     <option value="all" className="bg-proton-card text-proton-text">
                       {language === 'ka' ? 'ყველა კატეგორია' : 'All Categories'}
                     </option>
-                    {ALL_ACTIVE_CATEGORY_IDS.map((catId) => (
-                      <option key={catId} value={catId} className="bg-proton-card text-proton-text">
-                        {getCategoryLabel(catId, t, language)}
+                    {categoryOptions.map((cat) => (
+                      <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text">
+                        {cat.emoji} {cat.label}
                       </option>
                     ))}
                   </select>
@@ -310,6 +364,17 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
                 {language === 'ka'
                   ? 'საჯარო რეიტინგების წაკითხვა სერვერიდან მოითხოვს Firestore Admin უფლებებს. გამოგონილი რეიტინგები არ გამოიყენება.'
                   : 'Public rankings require server Firestore Admin permissions. No fabricated rankings are displayed.'}
+              </p>
+            </div>
+          )}
+
+          {isPartialData && (
+            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-2.5 text-xs text-amber-200">
+              <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+              <p>
+                {language === 'ka'
+                  ? 'დიდი მოცულობის გამო რეიტინგი გამოთვლილია ნაწილობრივ მონაცემებზე (უსაფრთხოების ლიმიტი ამოქმედდა).'
+                  : 'Rankings were computed on a partial dataset because a safety scan limit was reached.'}
               </p>
             </div>
           )}
@@ -392,6 +457,15 @@ export const MarketRankingsView = React.memo(function MarketRankingsView({
                         </div>
                         <div className="flex items-center gap-2 flex-wrap text-[11px] text-proton-muted">
                           <span className="font-semibold text-proton-text/90">{entry.sellerName}</span>
+                          <span>•</span>
+                          <span className="uppercase text-[10px] font-bold tracking-wider text-proton-accent">
+                            {(() => {
+                              const resolvedType = inferListingType(entry.category, entry.listingType);
+                              return language === 'ka'
+                                ? LISTING_TYPE_LABEL[resolvedType].ka
+                                : LISTING_TYPE_LABEL[resolvedType].en;
+                            })()}
+                          </span>
                           <span>•</span>
                           <span>{getCategoryLabel(entry.category, t, language)}</span>
                           {(entry.region || entry.country) && (

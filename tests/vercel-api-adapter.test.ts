@@ -399,4 +399,40 @@ describe('Vercel API Adapter & Shared ServerApp Suite', () => {
       else process.env.ANALYTICS_SALT = prevLegacySalt;
     }
   });
+
+  it('14. Read-only production inspection: fetch public rankings, listing stats error handling, and existing listings count', async () => {
+    const testApp = createApiApp();
+
+    // 1. Fetch public rankings
+    const rankingsRes = await makeRequest(testApp, {
+      method: 'GET',
+      path: '/api/market/rankings?scope=global&period=7d',
+    });
+    assert.ok([200, 503].includes(rankingsRes.status));
+    assert.ok(Array.isArray(rankingsRes.body.rankings));
+    console.log('[ReadOnly Audit] Public rankings status:', rankingsRes.status, 'count:', rankingsRes.body.rankings.length);
+
+    // 2. Fetch listing stats without auth (expects 401)
+    const statsUnauthRes = await makeRequest(testApp, {
+      method: 'GET',
+      path: '/api/market/listing-stats?listingId=dummy',
+    });
+    assert.strictEqual(statsUnauthRes.status, 401);
+    assert.ok(statsUnauthRes.body.error);
+    console.log('[ReadOnly Audit] Unauth listing-stats response:', statsUnauthRes.body);
+
+    // 3. Inspect Firestore listings via Admin SDK (read-only)
+    try {
+      const db = await getAdminFirestoreInstance();
+      const listingsSnap = await db.collection('listings').limit(10).get();
+      console.log('[ReadOnly Audit] Existing listings count in Firestore:', listingsSnap.size);
+      listingsSnap.forEach((doc: any) => {
+        const d = doc.data();
+        console.log(`- Listing ID: ${doc.id}, Title: ${d.title || d.titleGe}, SellerId: ${d.sellerId}`);
+      });
+    } catch (e: any) {
+      console.log('[ReadOnly Audit] Firestore direct read note:', e.message);
+    }
+  });
 });
+

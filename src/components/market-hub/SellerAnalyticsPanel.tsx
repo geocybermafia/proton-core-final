@@ -146,6 +146,8 @@ export const SellerAnalyticsPanel = React.memo(function SellerAnalyticsPanel({
   };
   const activeComparison =
     selectedPeriod !== 'all' ? overview?.periodComparisons?.[selectedPeriod] : undefined;
+  const activeBreakdown = overview?.viewerBreakdown?.periods?.[selectedPeriod];
+  const breakdownSince = overview?.viewerBreakdown?.breakdownSince;
 
   const isOptedOut = Boolean(overview?.competitionOptOut);
 
@@ -326,6 +328,48 @@ export const SellerAnalyticsPanel = React.memo(function SellerAnalyticsPanel({
         </div>
       </div>
 
+      {/* Guest vs Authenticated Viewer Breakdown (when recorded) */}
+      {activeBreakdown && (
+        <div className={cn('p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3', currentTheme.card)}>
+          <div className="space-y-0.5">
+            <div className={cn('text-[11px] font-black uppercase tracking-wider', currentTheme.text)}>
+              {language === 'ka' ? 'ავტორიზებული vs სტუმარი მნახველები' : 'Signed-in vs Guest Audience'}
+            </div>
+            {breakdownSince && (
+              <div className={cn('text-[10px]', currentTheme.muted)}>
+                {language === 'ka'
+                  ? `აღრიცხვა დაწყებულია: ${new Date(breakdownSince).toLocaleDateString()}`
+                  : `Tracked since ${new Date(breakdownSince).toLocaleDateString()}`}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-4 text-xs font-mono tabular-nums">
+            <div className="flex items-center gap-1.5">
+              <span className={cn('text-[10px] font-sans uppercase font-bold', currentTheme.muted)}>
+                {language === 'ka' ? 'ავტორიზებული:' : 'Signed-in:'}
+              </span>
+              <span className="font-bold text-emerald-500">
+                {activeBreakdown.authUniqueViewers} {language === 'ka' ? 'უნიკ.' : 'uniq'}
+              </span>
+              <span className={currentTheme.muted}>
+                ({activeBreakdown.authViews} {language === 'ka' ? 'ნახვა' : 'views'})
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={cn('text-[10px] font-sans uppercase font-bold', currentTheme.muted)}>
+                {language === 'ka' ? 'სტუმარი:' : 'Guest:'}
+              </span>
+              <span className={cn('font-bold', currentTheme.text)}>
+                {activeBreakdown.guestUniqueViewers} {language === 'ka' ? 'უნიკ.' : 'uniq'}
+              </span>
+              <span className={currentTheme.muted}>
+                ({activeBreakdown.guestViews} {language === 'ka' ? 'ნახვა' : 'views'})
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Healthy Competition Opt-Out Control + Earned Real Achievements */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
         <div className={cn('p-4 rounded-2xl border flex items-center justify-between gap-4', currentTheme.card)}>
@@ -450,6 +494,11 @@ export const SellerAnalyticsPanel = React.memo(function SellerAnalyticsPanel({
                         <span className="text-[10px] font-semibold text-proton-muted">
                           {getCategoryLabel(stat.category, t, language)}
                         </span>
+                        {stat.viewerBreakdown?.periods?.[selectedPeriod] && (
+                          <span className="text-[10px] font-mono text-proton-muted">
+                            • {language === 'ka' ? 'ავტ.' : 'Auth'}: {stat.viewerBreakdown.periods[selectedPeriod].authUniqueViewers} / {language === 'ka' ? 'სტუმ.' : 'Guest'}: {stat.viewerBreakdown.periods[selectedPeriod].guestUniqueViewers}
+                          </span>
+                        )}
                         {stat.achievements.map((badge) => (
                           <AchievementBadge key={badge} badgeId={badge} language={language} compact />
                         ))}

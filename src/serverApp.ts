@@ -1221,6 +1221,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       const result = await analyticsService.getRankings({
         scope: typeof req.query.scope === 'string' ? req.query.scope : 'global',
         period: typeof req.query.period === 'string' ? req.query.period : '7d',
+        listingType: typeof req.query.listingType === 'string' ? req.query.listingType : undefined,
         category: typeof req.query.category === 'string' ? req.query.category : undefined,
         country: typeof req.query.country === 'string' ? req.query.country : undefined,
         region: typeof req.query.region === 'string' ? req.query.region : undefined

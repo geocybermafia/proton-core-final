@@ -1,6 +1,7 @@
 import { auth } from '../firebase';
 import {
   ListingAnalyticsStats,
+  ListingTypeFilter,
   RankingEntry,
   RankingPeriod,
   RankingScope,
@@ -231,6 +232,7 @@ export async function fetchSingleListingAnalytics(listingId: string): Promise<{
 export async function fetchPublicRankings(params: {
   scope: RankingScope;
   period: RankingPeriod;
+  listingType?: ListingTypeFilter;
   category?: string;
   country?: string;
   region?: string;
@@ -238,11 +240,19 @@ export async function fetchPublicRankings(params: {
   rankings: RankingEntry[];
   availableCountries: string[];
   availableRegions: string[];
+  isPartialData?: boolean;
+  dataCompleteness?: {
+    isComplete: boolean;
+    publicDocsTruncated: boolean;
+    ratingsTruncated: boolean;
+    warnings: string[];
+  };
   unavailableReason?: string;
 }> {
   const qs = new URLSearchParams();
   qs.set('scope', params.scope);
   qs.set('period', params.period);
+  if (params.listingType && params.listingType !== 'all') qs.set('listingType', params.listingType);
   if (params.category && params.category !== 'all') qs.set('category', params.category);
   if (params.country) qs.set('country', params.country);
   if (params.region) qs.set('region', params.region);
@@ -261,6 +271,8 @@ export async function fetchPublicRankings(params: {
     rankings: Array.isArray(data.rankings) ? data.rankings : [],
     availableCountries: Array.isArray(data.availableCountries) ? data.availableCountries : [],
     availableRegions: Array.isArray(data.availableRegions) ? data.availableRegions : [],
+    isPartialData: Boolean(data.isPartialData),
+    dataCompleteness: data.dataCompleteness,
   };
 }
 

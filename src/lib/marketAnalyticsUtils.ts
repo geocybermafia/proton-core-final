@@ -1,17 +1,28 @@
 import {
   AchievementBadgeId,
   AnalyticsPeriod,
+  ListingType,
+  ListingTypeFilter,
+  ListingViewerBreakdown,
   PeriodComparison,
   PeriodMetrics,
   RankingEntry,
   RankingPeriod,
   RankingScope,
+  ViewerSegmentMetrics,
 } from '../types';
+import { inferListingType } from './listingClassification.js';
 
 export interface BucketCounter {
   impressions: number;
   views: number;
   uniqueViewers: number;
+  authImpressions?: number;
+  authViews?: number;
+  authUniqueViewers?: number;
+  guestImpressions?: number;
+  guestViews?: number;
+  guestUniqueViewers?: number;
 }
 
 export interface RawListingAnalyticsDoc {
@@ -30,6 +41,13 @@ export interface RawListingAnalyticsDoc {
   impressions: number;
   views: number;
   uniqueViewers: number;
+  authImpressions?: number;
+  authViews?: number;
+  authUniqueViewers?: number;
+  guestImpressions?: number;
+  guestViews?: number;
+  guestUniqueViewers?: number;
+  breakdownSince?: number;
   hourly?: Record<string, BucketCounter>;
   daily?: Record<string, BucketCounter>;
   createdAt: number;
@@ -42,6 +60,7 @@ export const BOT_USER_AGENT_PATTERN =
 
 export const IMPRESSION_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
 export const VIEW_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+/** @deprecated Preserved for export compatibility; server queries now use cursor pagination without fixed truncation. */
 export const ANALYTICS_MAX_LISTINGS_SCAN = 300;
 
 export function isBotUserAgent(userAgent?: string | null): boolean {
@@ -77,6 +96,30 @@ export function getDayBucketKey(tsMs: number): string {
   return `${year}-${month}-${day}`;
 }
 
+function sanitizeBucketCounter(v: BucketCounter): BucketCounter {
+  const bucket: BucketCounter = {
+    impressions: Number(v.impressions) || 0,
+    views: Number(v.views) || 0,
+    uniqueViewers: Number(v.uniqueViewers) || 0,
+  };
+  if (
+    typeof v.authImpressions === 'number' ||
+    typeof v.authViews === 'number' ||
+    typeof v.authUniqueViewers === 'number' ||
+    typeof v.guestImpressions === 'number' ||
+    typeof v.guestViews === 'number' ||
+    typeof v.guestUniqueViewers === 'number'
+  ) {
+    bucket.authImpressions = Number(v.authImpressions) || 0;
+    bucket.authViews = Number(v.authViews) || 0;
+    bucket.authUniqueViewers = Number(v.authUniqueViewers) || 0;
+    bucket.guestImpressions = Number(v.guestImpressions) || 0;
+    bucket.guestViews = Number(v.guestViews) || 0;
+    bucket.guestUniqueViewers = Number(v.guestUniqueViewers) || 0;
+  }
+  return bucket;
+}
+
 export function pruneHourlyBuckets(
   hourly: Record<string, BucketCounter> | undefined,
   nowMs: number
@@ -87,11 +130,7 @@ export function pruneHourlyBuckets(
   const minKey = getHourBucketKey(minTs);
   for (const [k, v] of Object.entries(hourly)) {
     if (k >= minKey && v && typeof v === 'object') {
-      result[k] = {
-        impressions: Number(v.impressions) || 0,
-        views: Number(v.views) || 0,
-        uniqueViewers: Number(v.uniqueViewers) || 0,
-      };
+      result[k] = sanitizeBucketCounter(v);
     }
   }
   return result;
@@ -107,11 +146,7 @@ export function pruneDailyBuckets(
   const minKey = getDayBucketKey(minTs);
   for (const [k, v] of Object.entries(daily)) {
     if (k >= minKey && v && typeof v === 'object') {
-      result[k] = {
-        impressions: Number(v.impressions) || 0,
-        views: Number(v.views) || 0,
-        uniqueViewers: Number(v.uniqueViewers) || 0,
-      };
+      result[k] = sanitizeBucketCounter(v);
     }
   }
   return result;
@@ -253,6 +288,121 @@ export function sumPeriodMetricsList(list: PeriodMetrics[]): PeriodMetrics {
     views,
     uniqueViewers,
     engagementRate: computeEngagementRate(views, impressions),
+  };
+}
+
+function createZeroViewerSegmentMetrics(): ViewerSegmentMetrics {
+  return {
+    authImpressions: 0,
+    authViews: 0,
+    authUniqueViewers: 0,
+    guestImpressions: 0,
+    guestViews: 0,
+    guestUniqueViewers: 0,
+  };
+}
+
+function sumViewerBreakdownBuckets(
+  buckets: Record<string, BucketCounter> | undefined,
+  keys: string[]
+): ViewerSegmentMetrics {
+  const totals = createZeroViewerSegmentMetrics();
+  if (!buckets) return totals;
+  for (const key of keys) {
+    const b = buckets[key];
+    if (!b) continue;
+    totals.authImpressions += Number(b.authImpressions) || 0;
+    totals.authViews += Number(b.authViews) || 0;
+    totals.authUniqueViewers += Number(b.authUniqueViewers) || 0;
+    totals.guestImpressions += Number(b.guestImpressions) || 0;
+    totals.guestViews += Number(b.guestViews) || 0;
+    totals.guestUniqueViewers += Number(b.guestUniqueViewers) || 0;
+  }
+  return totals;
+}
+
+export function hasRecordedViewerBreakdown(docData?: Partial<RawListingAnalyticsDoc> | null): boolean {
+  if (!docData) return false;
+  if (typeof docData.breakdownSince === 'number' && Number.isFinite(docData.breakdownSince)) {
+    return true;
+  }
+  return (
+    typeof docData.authImpressions === 'number' ||
+    typeof docData.authViews === 'number' ||
+    typeof docData.authUniqueViewers === 'number' ||
+    typeof docData.guestImpressions === 'number' ||
+    typeof docData.guestViews === 'number' ||
+    typeof docData.guestUniqueViewers === 'number'
+  );
+}
+
+/**
+ * Aggregates guest vs authenticated viewer breakdown ONLY when breakdown counters exist on the document.
+ * Never invents or backfills historical guest/auth splits for legacy analytics docs.
+ */
+export function aggregateViewerBreakdownFromDoc(
+  docData: Partial<RawListingAnalyticsDoc> | null | undefined,
+  nowMs: number = Date.now()
+): ListingViewerBreakdown | undefined {
+  if (!hasRecordedViewerBreakdown(docData)) {
+    return undefined;
+  }
+
+  const h24Keys = buildHourWindowKeys(nowMs, 0, 24);
+  const d7Keys = buildDayWindowKeys(nowMs, 0, 7);
+  const d30Keys = buildDayWindowKeys(nowMs, 0, 30);
+
+  return {
+    ...(typeof docData?.breakdownSince === 'number' && Number.isFinite(docData.breakdownSince)
+      ? { breakdownSince: docData.breakdownSince }
+      : {}),
+    periods: {
+      '24h': sumViewerBreakdownBuckets(docData?.hourly, h24Keys),
+      '7d': sumViewerBreakdownBuckets(docData?.daily, d7Keys),
+      '30d': sumViewerBreakdownBuckets(docData?.daily, d30Keys),
+      all: {
+        authImpressions: Number(docData?.authImpressions) || 0,
+        authViews: Number(docData?.authViews) || 0,
+        authUniqueViewers: Number(docData?.authUniqueViewers) || 0,
+        guestImpressions: Number(docData?.guestImpressions) || 0,
+        guestViews: Number(docData?.guestViews) || 0,
+        guestUniqueViewers: Number(docData?.guestUniqueViewers) || 0,
+      },
+    },
+  };
+}
+
+export function sumViewerBreakdownList(
+  breakdowns: Array<ListingViewerBreakdown | undefined>
+): ListingViewerBreakdown | undefined {
+  const valid = breakdowns.filter((b): b is ListingViewerBreakdown => Boolean(b));
+  if (valid.length === 0) return undefined;
+
+  const periodKeys: AnalyticsPeriod[] = ['24h', '7d', '30d', 'all'];
+  const periods = {} as Record<AnalyticsPeriod, ViewerSegmentMetrics>;
+
+  for (const pk of periodKeys) {
+    const sum = createZeroViewerSegmentMetrics();
+    for (const item of valid) {
+      const m = item.periods[pk];
+      if (!m) continue;
+      sum.authImpressions += m.authImpressions || 0;
+      sum.authViews += m.authViews || 0;
+      sum.authUniqueViewers += m.authUniqueViewers || 0;
+      sum.guestImpressions += m.guestImpressions || 0;
+      sum.guestViews += m.guestViews || 0;
+      sum.guestUniqueViewers += m.guestUniqueViewers || 0;
+    }
+    periods[pk] = sum;
+  }
+
+  const sinceCandidates = valid
+    .map((b) => b.breakdownSince)
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+
+  return {
+    ...(sinceCandidates.length > 0 ? { breakdownSince: Math.min(...sinceCandidates) } : {}),
+    periods,
   };
 }
 
@@ -505,11 +655,21 @@ export function computeListingAchievements(params: {
   return badges;
 }
 
+export function normalizeListingTypeFilter(raw?: string | null): ListingTypeFilter {
+  if (typeof raw !== 'string') return 'all';
+  const trimmed = raw.trim().toLowerCase();
+  if (trimmed === 'product' || trimmed === 'service' || trimmed === 'project') {
+    return trimmed as ListingType;
+  }
+  return 'all';
+}
+
 export function buildRankingsFromPublicDocs(params: {
   docs: RawListingAnalyticsDoc[];
   sellerRatingsMap: Record<string, { avg: number; count: number }>;
   scope: RankingScope;
   period: RankingPeriod;
+  listingType?: ListingTypeFilter;
   category?: string;
   country?: string;
   region?: string;
@@ -521,6 +681,7 @@ export function buildRankingsFromPublicDocs(params: {
     sellerRatingsMap,
     scope,
     period,
+    listingType,
     category,
     country,
     region,
@@ -534,8 +695,10 @@ export function buildRankingsFromPublicDocs(params: {
     .map((d) => {
       const agg = aggregatePeriodFromBuckets(d, nowMs);
       const periodMetrics = agg.periods[period];
+      const normalizedType = inferListingType(d.category, d.listingType);
       return {
         doc: d,
+        normalizedType,
         agg,
         periodMetrics,
       };
@@ -611,12 +774,16 @@ export function buildRankingsFromPublicDocs(params: {
     });
   }
 
-  // Apply requested scope filter (strictly without IP guessing)
+  // Apply requested scope + listingType filters (strictly without IP guessing)
   const normCountryFilter = normalizeCountryCode(country);
   const normRegionFilter = region ? region.trim().toLowerCase() : '';
   const normCategoryFilter = category && category !== 'all' ? category.trim().toLowerCase() : '';
+  const normListingTypeFilter = normalizeListingTypeFilter(listingType);
 
   const scoped = scoredAll.filter((entry) => {
+    if (normListingTypeFilter !== 'all' && entry.normalizedType !== normListingTypeFilter) {
+      return false;
+    }
     if (scope === 'country') {
       if (!entry.doc.country) return false;
       if (normCountryFilter && entry.doc.country.toUpperCase() !== normCountryFilter) return false;
@@ -631,7 +798,7 @@ export function buildRankingsFromPublicDocs(params: {
       if (!normCategoryFilter) return true;
       return (entry.doc.category || '').toLowerCase() === normCategoryFilter;
     }
-    return true; // 'global'
+    return true; // 'global' or 'listingType'
   });
 
   return scoped.slice(0, limitCount).map((entry, idx) => {
@@ -654,7 +821,7 @@ export function buildRankingsFromPublicDocs(params: {
       title: entry.doc.title,
       titleGe: entry.doc.titleGe,
       category: entry.doc.category,
-      listingType: entry.doc.listingType,
+      listingType: entry.normalizedType,
       image: entry.doc.image,
       sellerName: entry.doc.sellerName || 'Proton Vendor',
       country: entry.doc.country,

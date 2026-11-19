@@ -12,23 +12,26 @@ import {
   SellerAnalyticsOverview,
 } from '../types';
 import {
-  ANALYTICS_MAX_LISTINGS_SCAN,
   BucketCounter,
   IMPRESSION_COOLDOWN_MS,
   RawListingAnalyticsDoc,
   VIEW_COOLDOWN_MS,
   aggregatePeriodFromBuckets,
+  aggregateViewerBreakdownFromDoc,
   buildRankingsFromPublicDocs,
   computeListingAchievements,
   getDayBucketKey,
   getHourBucketKey,
   isBotUserAgent,
   isValidAnalyticsId,
+  normalizeListingTypeFilter,
   pruneDailyBuckets,
   pruneHourlyBuckets,
   resolveReliableSellerLocation,
   sumPeriodMetricsList,
+  sumViewerBreakdownList,
 } from './marketAnalyticsUtils.js';
+import { inferListingType } from './listingClassification.js';
 
 export type MarketEventType = 'impression' | 'view';
 
@@ -60,13 +63,34 @@ export interface ViewerMarkerDoc {
   lastViewAt?: number;
 }
 
+export interface DataCompletenessInfo {
+  isComplete: boolean;
+  publicDocsTruncated: boolean;
+  ratingsTruncated: boolean;
+  warnings: string[];
+}
+
+export interface PublicDocsScanResult {
+  docs: RawListingAnalyticsDoc[];
+  truncated: boolean;
+  truncationReason?: string;
+}
+
+export interface SellerRatingsScanResult {
+  ratings: Record<string, { avg: number; count: number }>;
+  truncated: boolean;
+  truncationReason?: string;
+}
+
 export interface AnalyticsRepository {
   getListing(listingId: string): Promise<ListingRecordForAnalytics | null>;
   getSellerProfileLocation(sellerId: string): Promise<{ country?: string; region?: string; optedOut?: boolean }>;
   getSellerListings(sellerId: string): Promise<ListingRecordForAnalytics[]>;
   getListingAnalyticsDoc(listingId: string): Promise<RawListingAnalyticsDoc | null>;
   getAllPublicAnalyticsDocs(): Promise<RawListingAnalyticsDoc[]>;
+  getAllPublicAnalyticsDocsWithMeta?(): Promise<PublicDocsScanResult>;
   getSellerRatingsMap(): Promise<Record<string, { avg: number; count: number }>>;
+  getSellerRatingsMapWithMeta?(): Promise<SellerRatingsScanResult>;
   recordEventTransaction(params: {
     listing: ListingRecordForAnalytics;
     sellerLocation: { country?: string; region?: string; optedOut?: boolean };
@@ -246,7 +270,112 @@ export async function getAdminFirestoreInstance(): Promise<any> {
   return cachedAdminFirestore;
 }
 
+export const DEFAULT_CURSOR_BATCH_SIZE = 500;
+export const DEFAULT_CURSOR_MAX_PAGES = 200; // Up to 100,000 docs before safety guard triggers explicit incomplete flag
+export const ANALYTICS_CACHE_TTL_MS = 30_000;
+
+export interface CursorQueryLike {
+  orderBy(fieldPath: any, directionStr?: 'asc' | 'desc'): CursorQueryLike;
+  limit(limit: number): CursorQueryLike;
+  startAfter(snapshot: any): CursorQueryLike;
+  select?(...fields: string[]): CursorQueryLike;
+  get(): Promise<{ docs: Array<{ id: string; data: () => any }> }>;
+}
+
+export async function scanCollectionWithCursor<T = Record<string, any>>(params: {
+  collectionRef: CursorQueryLike;
+  documentIdField: any;
+  batchSize?: number;
+  maxPages?: number;
+  selectFields?: string[];
+  label?: string;
+}): Promise<{ items: Array<{ id: string; data: T }>; truncated: boolean; truncationReason?: string }> {
+  const batchSize = Math.max(1, Math.min(1000, params.batchSize ?? DEFAULT_CURSOR_BATCH_SIZE));
+  const maxPages = Math.max(1, params.maxPages ?? DEFAULT_CURSOR_MAX_PAGES);
+  const label = params.label || 'collection';
+
+  const items: Array<{ id: string; data: T }> = [];
+  const seenIds = new Set<string>();
+  let lastDoc: { id: string; data: () => any } | null = null;
+  let prevCursorId: string | null = null;
+  let pagesRead = 0;
+  let truncated = false;
+  let truncationReason: string | undefined;
+
+  while (true) {
+    if (pagesRead >= maxPages) {
+      truncated = true;
+      truncationReason = `cursor_max_pages_exceeded:${maxPages}`;
+      console.error(
+        `[MarketAnalytics] Incomplete scan for ${label}: reached safety limit of ${maxPages} pages (${items.length} docs read).`
+      );
+      break;
+    }
+
+    let q: CursorQueryLike = params.collectionRef.orderBy(params.documentIdField);
+    if (params.selectFields && params.selectFields.length > 0 && typeof q.select === 'function') {
+      q = q.select(...params.selectFields);
+    }
+    if (lastDoc) {
+      q = q.startAfter(lastDoc);
+    }
+    q = q.limit(batchSize);
+
+    const snap = await q.get();
+    pagesRead += 1;
+
+    const batchDocs = Array.isArray(snap?.docs) ? snap.docs : [];
+    if (batchDocs.length === 0) {
+      break;
+    }
+
+    let addedInBatch = 0;
+    for (const d of batchDocs) {
+      if (!d || !d.id || seenIds.has(d.id)) {
+        continue;
+      }
+      seenIds.add(d.id);
+      items.push({ id: d.id, data: (d.data() || {}) as T });
+      addedInBatch += 1;
+    }
+
+    const nextLastDoc = batchDocs[batchDocs.length - 1];
+    if (!nextLastDoc || !nextLastDoc.id || nextLastDoc.id === prevCursorId || addedInBatch === 0) {
+      if (batchDocs.length >= batchSize) {
+        truncated = true;
+        truncationReason = 'cursor_stalled_loop_guard';
+        console.error(
+          `[MarketAnalytics] Cursor pagination loop guard triggered for ${label} at docId=${nextLastDoc?.id || 'unknown'} (${items.length} docs read).`
+        );
+      }
+      break;
+    }
+
+    prevCursorId = nextLastDoc.id;
+    lastDoc = nextLastDoc;
+
+    if (batchDocs.length < batchSize) {
+      break;
+    }
+  }
+
+  return { items, truncated, truncationReason };
+}
+
 export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
+  private publicDocsCache: { expiresAt: number; value: PublicDocsScanResult } | null = null;
+  private ratingsCache: { expiresAt: number; value: SellerRatingsScanResult } | null = null;
+  private readonly cacheTtlMs: number;
+
+  constructor(options?: { cacheTtlMs?: number }) {
+    this.cacheTtlMs = options?.cacheTtlMs ?? ANALYTICS_CACHE_TTL_MS;
+  }
+
+  invalidateCaches(): void {
+    this.publicDocsCache = null;
+    this.ratingsCache = null;
+  }
+
   async getListing(listingId: string): Promise<ListingRecordForAnalytics | null> {
     const db = await getAdminFirestoreInstance();
     const snap = await db.collection('listings').doc(listingId).get();
@@ -259,7 +388,7 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       title: data.title || data.titleGe || 'Untitled',
       titleGe: data.titleGe,
       category: data.category || 'other',
-      listingType: data.listingType,
+      listingType: inferListingType(data.category, data.listingType),
       image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
       status: data.status,
       country: data.country,
@@ -306,7 +435,7 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
         title: data.title || data.titleGe || 'Untitled',
         titleGe: data.titleGe,
         category: data.category || 'other',
-        listingType: data.listingType,
+        listingType: inferListingType(data.category, data.listingType),
         image: Array.isArray(data.images) && data.images[0] ? data.images[0] : data.image,
         status: data.status,
         country: data.country,
@@ -326,32 +455,85 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     return snap.data() as RawListingAnalyticsDoc;
   }
 
-  async getAllPublicAnalyticsDocs(): Promise<RawListingAnalyticsDoc[]> {
+  async getAllPublicAnalyticsDocsWithMeta(): Promise<PublicDocsScanResult> {
+    const now = Date.now();
+    if (this.cacheTtlMs > 0 && this.publicDocsCache && this.publicDocsCache.expiresAt > now) {
+      return this.publicDocsCache.value;
+    }
+
     const db = await getAdminFirestoreInstance();
-    const snap = await db
-      .collection('listing_analytics_public')
-      .limit(ANALYTICS_MAX_LISTINGS_SCAN)
-      .get();
-    return snap.docs.map((d: any) => d.data() as RawListingAnalyticsDoc);
+    const { FieldPath } = await import('firebase-admin/firestore');
+    const scan = await scanCollectionWithCursor<RawListingAnalyticsDoc>({
+      collectionRef: db.collection('listing_analytics_public'),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: DEFAULT_CURSOR_MAX_PAGES,
+      label: 'listing_analytics_public',
+    });
+
+    const result: PublicDocsScanResult = {
+      docs: scan.items.map((item) => item.data),
+      truncated: scan.truncated,
+      ...(scan.truncationReason ? { truncationReason: scan.truncationReason } : {}),
+    };
+
+    if (this.cacheTtlMs > 0 && !result.truncated) {
+      this.publicDocsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+    }
+    return result;
   }
 
-  async getSellerRatingsMap(): Promise<Record<string, { avg: number; count: number }>> {
+  async getAllPublicAnalyticsDocs(): Promise<RawListingAnalyticsDoc[]> {
+    const res = await this.getAllPublicAnalyticsDocsWithMeta();
+    return res.docs;
+  }
+
+  async getSellerRatingsMapWithMeta(): Promise<SellerRatingsScanResult> {
+    const now = Date.now();
+    if (this.cacheTtlMs > 0 && this.ratingsCache && this.ratingsCache.expiresAt > now) {
+      return this.ratingsCache.value;
+    }
+
     const db = await getAdminFirestoreInstance();
-    const snap = await db.collection('seller_reviews').limit(500).get();
+    const { FieldPath } = await import('firebase-admin/firestore');
+    const scan = await scanCollectionWithCursor<{ sellerId?: string; rating?: number }>({
+      collectionRef: db.collection('seller_reviews'),
+      documentIdField: FieldPath.documentId(),
+      batchSize: DEFAULT_CURSOR_BATCH_SIZE,
+      maxPages: DEFAULT_CURSOR_MAX_PAGES,
+      selectFields: ['sellerId', 'rating'],
+      label: 'seller_reviews',
+    });
+
     const agg: Record<string, { sum: number; count: number }> = {};
-    snap.docs.forEach((d: any) => {
-      const r = d.data() || {};
+    for (const item of scan.items) {
+      const r = item.data || {};
       if (r.sellerId && typeof r.rating === 'number' && r.rating >= 1 && r.rating <= 5) {
         if (!agg[r.sellerId]) agg[r.sellerId] = { sum: 0, count: 0 };
         agg[r.sellerId].sum += r.rating;
         agg[r.sellerId].count += 1;
       }
-    });
-    const out: Record<string, { avg: number; count: number }> = {};
-    for (const [sid, v] of Object.entries(agg)) {
-      out[sid] = { avg: Math.round((v.sum / v.count) * 10) / 10, count: v.count };
     }
-    return out;
+    const ratings: Record<string, { avg: number; count: number }> = {};
+    for (const [sid, v] of Object.entries(agg)) {
+      ratings[sid] = { avg: Math.round((v.sum / v.count) * 10) / 10, count: v.count };
+    }
+
+    const result: SellerRatingsScanResult = {
+      ratings,
+      truncated: scan.truncated,
+      ...(scan.truncationReason ? { truncationReason: scan.truncationReason } : {}),
+    };
+
+    if (this.cacheTtlMs > 0 && !result.truncated) {
+      this.ratingsCache = { expiresAt: now + this.cacheTtlMs, value: result };
+    }
+    return result;
+  }
+
+  async getSellerRatingsMap(): Promise<Record<string, { avg: number; count: number }>> {
+    const res = await this.getSellerRatingsMapWithMeta();
+    return res.ratings;
   }
 
   async recordEventTransaction(params: {
@@ -412,32 +594,78 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
         impressions: 0,
         views: 0,
         uniqueViewers: 0,
+        authImpressions: 0,
+        authViews: 0,
+        authUniqueViewers: 0,
+        guestImpressions: 0,
+        guestViews: 0,
+        guestUniqueViewers: 0,
       };
       const dBucket: BucketCounter = daily[dayKey] || {
         impressions: 0,
         views: 0,
         uniqueViewers: 0,
+        authImpressions: 0,
+        authViews: 0,
+        authUniqueViewers: 0,
+        guestImpressions: 0,
+        guestViews: 0,
+        guestUniqueViewers: 0,
       };
 
+      const isAuthViewer = viewerType === 'auth';
       let impressions = Number(existingDoc.impressions) || 0;
       let views = Number(existingDoc.views) || 0;
       let uniqueViewers = Number(existingDoc.uniqueViewers) || 0;
+      let authImpressions = Number(existingDoc.authImpressions) || 0;
+      let authViews = Number(existingDoc.authViews) || 0;
+      let authUniqueViewers = Number(existingDoc.authUniqueViewers) || 0;
+      let guestImpressions = Number(existingDoc.guestImpressions) || 0;
+      let guestViews = Number(existingDoc.guestViews) || 0;
+      let guestUniqueViewers = Number(existingDoc.guestUniqueViewers) || 0;
       let uniqueIncremented = false;
 
       if (eventType === 'impression') {
         impressions += 1;
         hBucket.impressions += 1;
         dBucket.impressions += 1;
+        if (isAuthViewer) {
+          authImpressions += 1;
+          hBucket.authImpressions = (Number(hBucket.authImpressions) || 0) + 1;
+          dBucket.authImpressions = (Number(dBucket.authImpressions) || 0) + 1;
+        } else {
+          guestImpressions += 1;
+          hBucket.guestImpressions = (Number(hBucket.guestImpressions) || 0) + 1;
+          dBucket.guestImpressions = (Number(dBucket.guestImpressions) || 0) + 1;
+        }
         viewerData.firstImpressionAt = viewerData.firstImpressionAt || nowMs;
         viewerData.lastImpressionAt = nowMs;
       } else {
         views += 1;
         hBucket.views += 1;
         dBucket.views += 1;
+        if (isAuthViewer) {
+          authViews += 1;
+          hBucket.authViews = (Number(hBucket.authViews) || 0) + 1;
+          dBucket.authViews = (Number(dBucket.authViews) || 0) + 1;
+        } else {
+          guestViews += 1;
+          hBucket.guestViews = (Number(hBucket.guestViews) || 0) + 1;
+          dBucket.guestViews = (Number(dBucket.guestViews) || 0) + 1;
+        }
         if (!viewerData.firstViewedAt) {
           uniqueViewers += 1;
           hBucket.uniqueViewers += 1;
           dBucket.uniqueViewers += 1;
+          if (isAuthViewer) {
+            authUniqueViewers += 1;
+            hBucket.authUniqueViewers = (Number(hBucket.authUniqueViewers) || 0) + 1;
+            dBucket.authUniqueViewers = (Number(dBucket.authUniqueViewers) || 0) + 1;
+          } else {
+            guestUniqueViewers += 1;
+            hBucket.guestUniqueViewers = (Number(hBucket.guestUniqueViewers) || 0) + 1;
+            dBucket.guestUniqueViewers = (Number(dBucket.guestUniqueViewers) || 0) + 1;
+          }
           viewerData.firstViewedAt = nowMs;
           uniqueIncremented = true;
         }
@@ -447,14 +675,20 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       hourly[hourKey] = hBucket;
       daily[dayKey] = dBucket;
 
+      const breakdownSince =
+        typeof existingDoc.breakdownSince === 'number' && Number.isFinite(existingDoc.breakdownSince)
+          ? existingDoc.breakdownSince
+          : nowMs;
+
       const optedOut = Boolean(sellerLocation.optedOut ?? existingDoc.optedOut);
+      const normalizedListingType = inferListingType(listing.category, listing.listingType);
       const nextAnalyticsDoc: RawListingAnalyticsDoc = {
         listingId: listing.id,
         sellerId: listing.sellerId,
         title: listing.title,
         ...(listing.titleGe ? { titleGe: listing.titleGe } : {}),
         category: listing.category,
-        ...(listing.listingType ? { listingType: listing.listingType } : {}),
+        listingType: normalizedListingType,
         ...(listing.image ? { image: listing.image } : {}),
         status: listing.status || 'active',
         sellerName: listing.sellerName || 'Proton Vendor',
@@ -464,6 +698,13 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
         impressions,
         views,
         uniqueViewers,
+        authImpressions,
+        authViews,
+        authUniqueViewers,
+        guestImpressions,
+        guestViews,
+        guestUniqueViewers,
+        breakdownSince,
         hourly,
         daily,
         createdAt: Number(existingDoc.createdAt) || nowMs,
@@ -481,6 +722,11 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       }
 
       return { recorded: true, uniqueIncremented };
+    }).then((res: { recorded: boolean; reason?: string; uniqueIncremented: boolean }) => {
+      if (res.recorded) {
+        this.publicDocsCache = null;
+      }
+      return res;
     });
   }
 
@@ -507,15 +753,26 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     const batch = db.batch();
     for (const d of analyticsSnap.docs) {
       const data = d.data() as RawListingAnalyticsDoc;
-      batch.set(d.ref, { optedOut, updatedAt: nowMs }, { merge: true });
+      const normalizedType = inferListingType(data.category, data.listingType);
+      batch.set(
+        d.ref,
+        { optedOut, listingType: normalizedType, updatedAt: nowMs },
+        { merge: true }
+      );
       const pubRef = db.collection('listing_analytics_public').doc(d.id);
       if (optedOut || (data.status && data.status !== 'active')) {
         batch.delete(pubRef);
       } else {
-        batch.set(pubRef, { ...data, optedOut: false, updatedAt: nowMs });
+        batch.set(pubRef, {
+          ...data,
+          listingType: normalizedType,
+          optedOut: false,
+          updatedAt: nowMs,
+        });
       }
     }
     await batch.commit();
+    this.publicDocsCache = null;
   }
 }
 
@@ -715,8 +972,14 @@ export class MarketAnalyticsService {
     const [sellerListings, sellerPref, publicDocs, ratingsMap] = await Promise.all([
       this.repo.getSellerListings(verifiedUid),
       this.repo.getSellerProfileLocation(verifiedUid),
-      this.repo.getAllPublicAnalyticsDocs().catch(() => [] as RawListingAnalyticsDoc[]),
-      this.repo.getSellerRatingsMap().catch(() => ({})),
+      this.repo.getAllPublicAnalyticsDocs().catch((err) => {
+        console.error('[MarketAnalytics] Failed to load public docs for seller stats:', err);
+        return [] as RawListingAnalyticsDoc[];
+      }),
+      this.repo.getSellerRatingsMap().catch((err) => {
+        console.error('[MarketAnalytics] Failed to load seller ratings for seller stats:', err);
+        return {};
+      }),
     ]);
 
     const realListings = sellerListings.filter(
@@ -729,7 +992,7 @@ export class MarketAnalyticsService {
       scope: 'global',
       period: '30d',
       nowMs,
-      limitCount: 300,
+      limitCount: Math.max(300, publicDocs.length),
     });
     const globalRankMap = new Map(globalRankings.map((r) => [r.listingId, r.rank]));
 
@@ -755,6 +1018,7 @@ export class MarketAnalyticsService {
         rawDoc || { impressions: 0, views: 0, uniqueViewers: 0 },
         nowMs
       );
+      const viewerBreakdown = aggregateViewerBreakdownFromDoc(rawDoc, nowMs);
       const catInfo = catRankMap.get(listing.id);
       const achievements = computeListingAchievements({
         curr7d: agg.periods['7d'],
@@ -772,7 +1036,7 @@ export class MarketAnalyticsService {
         title: listing.title,
         titleGe: listing.titleGe,
         category: listing.category,
-        listingType: listing.listingType,
+        listingType: inferListingType(listing.category, listing.listingType),
         image: listing.image,
         status: listing.status || 'active',
         optedOut: Boolean(sellerPref.optedOut ?? rawDoc?.optedOut),
@@ -781,6 +1045,7 @@ export class MarketAnalyticsService {
         periods: agg.periods,
         comparisons: agg.comparisons,
         achievements,
+        ...(viewerBreakdown ? { viewerBreakdown } : {}),
       };
     });
 
@@ -831,6 +1096,8 @@ export class MarketAnalyticsService {
       }
     }
 
+    const overviewBreakdown = sumViewerBreakdownList(listingStats.map((s) => s.viewerBreakdown));
+
     const overview: SellerAnalyticsOverview = {
       totalImpressions: periodTotals.all.impressions,
       totalViews: periodTotals.all.views,
@@ -841,6 +1108,7 @@ export class MarketAnalyticsService {
       listings: listingStats,
       competitionOptOut: Boolean(sellerPref.optedOut),
       earnedAchievements,
+      ...(overviewBreakdown ? { viewerBreakdown: overviewBreakdown } : {}),
     };
 
     return { status: 200, body: { overview } };
@@ -855,6 +1123,7 @@ export class MarketAnalyticsService {
       rawDoc || { impressions: 0, views: 0, uniqueViewers: 0 },
       nowMs
     );
+    const viewerBreakdown = aggregateViewerBreakdownFromDoc(rawDoc, nowMs);
     const achievements = computeListingAchievements({
       curr7d: agg.periods['7d'],
       prev7d: agg.prevPeriods['7d'],
@@ -868,7 +1137,7 @@ export class MarketAnalyticsService {
       title: listing.title,
       titleGe: listing.titleGe,
       category: listing.category,
-      listingType: listing.listingType,
+      listingType: inferListingType(listing.category, listing.listingType),
       image: listing.image,
       status: listing.status || 'active',
       optedOut: Boolean(rawDoc?.optedOut),
@@ -877,12 +1146,14 @@ export class MarketAnalyticsService {
       periods: agg.periods,
       comparisons: agg.comparisons,
       achievements,
+      ...(viewerBreakdown ? { viewerBreakdown } : {}),
     };
   }
 
   async getRankings(params: {
     scope?: string;
     period?: string;
+    listingType?: string;
     category?: string;
     country?: string;
     region?: string;
@@ -891,23 +1162,49 @@ export class MarketAnalyticsService {
     const scope: RankingScope =
       params.scope === 'country' ||
       params.scope === 'category' ||
-      params.scope === 'regional'
+      params.scope === 'regional' ||
+      params.scope === 'listingType'
         ? params.scope
         : 'global';
 
     const period: RankingPeriod = params.period === '30d' ? '30d' : '7d';
+    const listingType = normalizeListingTypeFilter(params.listingType);
     const nowMs = params.nowMs ?? Date.now();
 
-    const [publicDocs, sellerRatingsMap] = await Promise.all([
-      this.repo.getAllPublicAnalyticsDocs(),
-      this.repo.getSellerRatingsMap().catch(() => ({})),
+    const [publicScan, ratingsScan] = await Promise.all([
+      this.repo.getAllPublicAnalyticsDocsWithMeta
+        ? this.repo.getAllPublicAnalyticsDocsWithMeta()
+        : this.repo.getAllPublicAnalyticsDocs().then((docs) => ({ docs, truncated: false as const })),
+      this.repo.getSellerRatingsMapWithMeta
+        ? this.repo.getSellerRatingsMapWithMeta()
+        : this.repo.getSellerRatingsMap()
+            .then((ratings) => ({ ratings, truncated: false as const }))
+            .catch((err) => {
+              console.error('[MarketAnalytics] Failed to load seller ratings map for rankings:', err);
+              return { ratings: {}, truncated: true as const, truncationReason: 'ratings_read_failed' };
+            }),
     ]);
+
+    const publicDocs = publicScan.docs;
+    const sellerRatingsMap = ratingsScan.ratings;
+    const warnings: string[] = [];
+    if (publicScan.truncated) {
+      warnings.push(publicScan.truncationReason || 'public_docs_truncated');
+    }
+    if (ratingsScan.truncated) {
+      warnings.push(ratingsScan.truncationReason || 'seller_ratings_truncated');
+    }
+    const isPartialData = warnings.length > 0;
+    if (isPartialData) {
+      console.error('[MarketAnalytics] Rankings computed on partial data:', warnings.join(', '));
+    }
 
     const rankings = buildRankingsFromPublicDocs({
       docs: publicDocs,
       sellerRatingsMap,
       scope,
       period,
+      listingType,
       category: params.category,
       country: params.country,
       region: params.region,
@@ -927,9 +1224,17 @@ export class MarketAnalyticsService {
       body: {
         scope,
         period,
+        listingType,
         rankings,
         availableCountries,
         availableRegions,
+        isPartialData,
+        dataCompleteness: {
+          isComplete: !isPartialData,
+          publicDocsTruncated: publicScan.truncated,
+          ratingsTruncated: ratingsScan.truncated,
+          warnings,
+        },
       },
     };
   }

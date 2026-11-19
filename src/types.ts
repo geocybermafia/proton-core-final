@@ -317,7 +317,9 @@ export interface NotificationItem {
 
 export type AnalyticsPeriod = '24h' | '7d' | '30d' | 'all';
 
-export type RankingScope = 'global' | 'country' | 'category' | 'regional';
+export type RankingScope = 'global' | 'country' | 'category' | 'regional' | 'listingType';
+
+export type ListingTypeFilter = 'all' | ListingType;
 
 export type RankingPeriod = '7d' | '30d';
 
@@ -332,6 +334,20 @@ export interface PeriodMetrics {
   views: number;
   uniqueViewers: number;
   engagementRate: number;
+}
+
+export interface ViewerSegmentMetrics {
+  authImpressions: number;
+  authViews: number;
+  authUniqueViewers: number;
+  guestImpressions: number;
+  guestViews: number;
+  guestUniqueViewers: number;
+}
+
+export interface ListingViewerBreakdown {
+  breakdownSince?: number;
+  periods: Record<AnalyticsPeriod, ViewerSegmentMetrics>;
 }
 
 export interface PeriodComparison {
@@ -358,6 +374,7 @@ export interface ListingAnalyticsStats {
   periods: Record<AnalyticsPeriod, PeriodMetrics>;
   comparisons: Record<'24h' | '7d' | '30d', PeriodComparison>;
   achievements: AchievementBadgeId[];
+  viewerBreakdown?: ListingViewerBreakdown;
 }
 
 export interface EarnedAchievementEntry {
@@ -378,6 +395,7 @@ export interface SellerAnalyticsOverview {
   listings: ListingAnalyticsStats[];
   competitionOptOut: boolean;
   earnedAchievements: EarnedAchievementEntry[];
+  viewerBreakdown?: ListingViewerBreakdown;
 }
 
 export interface RankingEntry {
