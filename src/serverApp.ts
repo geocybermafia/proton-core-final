@@ -1182,6 +1182,48 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
     }
   });
 
+  // PHASE 2C: Record Seller Funnel Event (seller_profile_view, listing_to_seller, contact_click, contact_confirmed, order_intent, order_confirmed)
+  apiRouter.post("/market/seller-funnel-event", analyticsEventLimiter, async (req, res) => {
+    try {
+      const hasAuthHeader = Boolean(req.headers.authorization || (req.headers as any)['Authorization']);
+      let verifiedUid: string | null = null;
+      if (hasAuthHeader) {
+        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+        if (!authRes.uid) {
+          return res.status(authRes.status || 401).json({
+            error: authRes.error || "Unauthorized",
+            code: authRes.code || "auth/invalid-id-token"
+          });
+        }
+        verifiedUid = authRes.uid;
+      }
+
+      const { sellerId, eventType, visitorToken, sourceId, listingId } = req.body || {};
+      const result = await analyticsService.recordSellerFunnelEvent({
+        sellerId,
+        eventType,
+        visitorToken,
+        verifiedUid,
+        sourceId,
+        listingId,
+        userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined,
+        clientIp: req.ip
+      });
+      return res.status(result.status).json(result.body);
+    } catch (err: any) {
+      if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
+        return res.status(503).json({
+          recorded: false,
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Seller analytics requires server Firebase Admin credentials for proton-core-ai."
+        });
+      }
+      console.error("[MarketAnalytics] seller-funnel-event error:", err);
+      return res.status(500).json({ error: "Failed to record seller funnel event" });
+    }
+  });
+
   // 2. Owner-only Private Listing & Seller Statistics (24h, 7d, 30d, all + period comparisons)
   apiRouter.get("/market/listing-stats", analyticsReadLimiter, async (req, res) => {
     try {
