@@ -1477,8 +1477,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     onClose: () => setSelectedListing(null),
   });
 
-  // Notify parent App shell when any MarketHub fullscreen overlay/drawer/modal is open on mobile
+  // Notify parent App shell when any MarketHub fullscreen overlay/drawer/modal or wizard is open on mobile
   const isAnyMarketOverlayOpen = Boolean(
+    viewMode === 'create' ||
+    viewMode === 'edit' ||
     activeBottomTab === 'categories' ||
     activeBottomTab === 'messages' ||
     selectedListing ||
@@ -3661,7 +3663,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   }
 
   return (
-    <div className="min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div
+      className={cn(
+        "min-h-screen bg-proton-bg text-proton-text relative flex flex-col w-full overflow-x-hidden p-0 m-0 md:pb-0",
+        isAnyMarketOverlayOpen
+          ? "pb-[env(safe-area-inset-bottom,0px)]"
+          : "pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))]"
+      )}
+    >
       {/* Main Proton Header (PROTON // მარკეტი) */}
       <div className="w-full bg-proton-card/95 border-b border-proton-border pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 md:pt-[max(0.875rem,env(safe-area-inset-top,0px))] md:pb-3.5 px-3 sm:px-6 lg:px-8 flex flex-col gap-2 md:gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
@@ -3944,34 +3953,37 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           </div>
         </div>
 
-        {/* Mobile Search Row (Shown only on mobile) */}
-        <div className="w-full md:hidden">
-          <div className="w-full relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70 text-proton-accent" />
-            <input 
-              type="text"
-              value={searchRaw}
-              onChange={(e) => setSearchRaw(e.target.value)}
-              placeholder={language === 'ka' ? 'ძებნა მარკეტში...' : 'Search marketplace...'}
-              className={cn("w-full font-bold tracking-wide pl-9 pr-8 py-2 rounded-xl text-base md:text-xs transition-colors", currentTheme.input)}
-            />
-            {searchRaw && (
-              <button 
-                type="button"
-                onClick={() => { setSearch(''); setSearchRaw(''); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs cursor-pointer"
-              >
-                ✕
-              </button>
-            )}
+        {/* Mobile Search Row (Shown only on mobile outside listing creation/editing wizard) */}
+        {viewMode !== 'create' && viewMode !== 'edit' && (
+          <div className="w-full md:hidden">
+            <div className="w-full relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70 text-proton-accent" />
+              <input 
+                type="text"
+                value={searchRaw}
+                onChange={(e) => setSearchRaw(e.target.value)}
+                placeholder={language === 'ka' ? 'ძებნა მარკეტში...' : 'Search marketplace...'}
+                className={cn("w-full font-bold tracking-wide pl-9 pr-8 py-2 rounded-xl text-base md:text-xs transition-colors", currentTheme.input)}
+              />
+              {searchRaw && (
+                <button 
+                  type="button"
+                  onClick={() => { setSearch(''); setSearchRaw(''); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-proton-muted hover:text-proton-text font-bold text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Unified Mobile Navigation Bar (Single non-duplicated 5-tab switcher, md:hidden) */}
-        <nav
-          aria-label={language === 'ka' ? 'მობილური მარკეტის ნავიგაცია' : 'Mobile marketplace navigation'}
-          className="w-full grid grid-cols-5 gap-1 md:hidden pt-1.5 border-t border-proton-border"
-        >
+        {/* Unified Mobile Navigation Bar (Single non-duplicated 5-tab switcher, md:hidden; hidden during create/edit wizard) */}
+        {viewMode !== 'create' && viewMode !== 'edit' && (
+          <nav
+            aria-label={language === 'ka' ? 'მობილური მარკეტის ნავიგაცია' : 'Mobile marketplace navigation'}
+            className="w-full grid grid-cols-5 gap-1 md:hidden pt-1.5 border-t border-proton-border"
+          >
           <button
             type="button"
             onClick={() => {
@@ -4114,14 +4126,18 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             <Trophy size={13} />
             <span className="truncate max-w-full">{language === 'ka' ? 'რეიტინგი' : 'Rankings'}</span>
           </button>
-        </nav>
+          </nav>
+        )}
       </div>
 
       <div className="w-full max-w-[1680px] mx-auto px-4 py-4 sm:p-6 lg:p-10 grow relative">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-5 md:space-y-12 bg-transparent pb-40 relative"
+          className={cn(
+            "space-y-5 md:space-y-12 bg-transparent relative",
+            isAnyMarketOverlayOpen ? "pb-8 md:pb-16" : "pb-16 md:pb-16"
+          )}
         >
       {/* Market Hub Header / Banner Section */}
       <div className={cn("flex flex-col gap-3 md:gap-6 border-b border-proton-border", viewMode === 'browse' ? "pb-3 md:pb-6" : "pb-4 md:pb-6")}>

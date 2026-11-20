@@ -400,7 +400,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        "max-w-2xl mx-auto p-4 sm:p-12 pb-24 sm:pb-12 rounded-[28px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-2xl",
+        "max-w-2xl mx-auto p-4 sm:p-12 pb-6 sm:pb-12 rounded-[28px] sm:rounded-[48px] border backdrop-blur-2xl relative overflow-hidden shadow-2xl",
         currentTheme.card,
         "hover:border-proton-accent/40 transition-colors duration-500"
       )}

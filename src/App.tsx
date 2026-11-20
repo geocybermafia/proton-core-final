@@ -1160,8 +1160,10 @@ const MobileBottomNav = React.memo(({
 
   return (
     <nav 
+      aria-label={language === 'ka' ? 'საერთო მობილური ნავიგაცია' : 'Primary mobile navigation'}
+      aria-hidden={!isVisible}
       className={cn(
-        "md:hidden fixed bottom-0 left-0 right-0 h-16 bg-proton-card/98 backdrop-blur-md border-t border-proton-border z-50 flex items-center justify-around px-2 pb-safe shadow-2xl transition-all duration-300 ease-in-out",
+        "md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom,0px))] pb-[env(safe-area-inset-bottom,0px)] bg-proton-card/98 backdrop-blur-md border-t border-proton-border z-50 flex items-center justify-around px-2 shadow-2xl transition-all duration-300 ease-in-out",
         isVisible
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-full opacity-0 pointer-events-none"
@@ -3097,14 +3099,14 @@ export default function App() {
       <AutomationEngine workflows={workflows} />
 
       {/* PERSISTENT FULLSCREEN ROUTING LAYER (State Caching & Zero-Latency Switching) */}
-      {((activeView as string) === 'market-hub' || hasVisitedMarketHub) && (
+      {((activeView as string) === 'market-hub' || (activeView as string) === 'market' || hasVisitedMarketHub) && (
         <div 
           className={cn(
             "fixed inset-0 bg-proton-bg overflow-auto",
-            ((activeView as string) === 'market-hub' && isMarketOverlayOpen)
+            (((activeView as string) === 'market-hub' || (activeView as string) === 'market') && isMarketOverlayOpen)
               ? "z-[110] md:z-[100]"
               : "z-[45] md:z-[100]",
-            (activeView as string) === 'market-hub' ? "block" : "hidden"
+            ((activeView as string) === 'market-hub' || (activeView as string) === 'market') ? "block" : "hidden"
           )}
         >
           <ViewErrorBoundary 
@@ -4067,7 +4069,7 @@ export default function App() {
         language={language}
         setIsMobileControlOpen={setIsMobileControlOpen}
         handleViewChange={handleViewChange}
-        isSuppressedByOverlay={(activeView as string) === 'market-hub' && isMarketOverlayOpen}
+        isSuppressedByOverlay={((activeView as string) === 'market-hub' || (activeView as string) === 'market') && isMarketOverlayOpen}
       />
 
       <main className="flex-1 min-w-0 min-h-0 h-full flex flex-col relative bg-proton-bg w-full overflow-hidden">
