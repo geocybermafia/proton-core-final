@@ -1199,6 +1199,14 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       }
 
       const { sellerId, eventType, visitorToken, sourceId, listingId } = req.body || {};
+      if ((eventType === "contact_confirmed" || eventType === "order_confirmed") && !verifiedUid) {
+        return res.status(401).json({
+          recorded: false,
+          error: "Unauthorized: Authentication required for confirmed funnel events",
+          code: "analytics/auth-required"
+        });
+      }
+
       const result = await analyticsService.recordSellerFunnelEvent({
         sellerId,
         eventType,

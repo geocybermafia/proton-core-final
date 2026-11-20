@@ -119,8 +119,40 @@ export interface AggregatedRankMapsResult {
   warnings: string[];
 }
 
+export interface OrderRecordForAnalytics {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  sellerId: string;
+  status: string;
+  orderType?: string;
+}
+
+export interface MarketMessageRecordForAnalytics {
+  id: string;
+  listingId?: string;
+  conversationId?: string;
+  senderId: string;
+  receiverId?: string;
+  buyerId?: string;
+  sellerId: string;
+  participants?: string[];
+}
+
+export const CONFIRMED_ORDER_ALLOWED_STATUSES = new Set<string>([
+  'pending',
+  'booked',
+  'processing',
+  'in_progress',
+  'shipped',
+  'delivered',
+  'completed',
+]);
+
 export interface AnalyticsRepository {
   getListing(listingId: string): Promise<ListingRecordForAnalytics | null>;
+  getOrderForAnalytics?(orderId: string): Promise<OrderRecordForAnalytics | null>;
+  getMarketMessageForAnalytics?(messageId: string): Promise<MarketMessageRecordForAnalytics | null>;
   getSellerProfileLocation(sellerId: string): Promise<{ country?: string; region?: string; optedOut?: boolean }>;
   getSellerListings(sellerId: string): Promise<ListingRecordForAnalytics[]>;
   getSellerListingsWithMeta?(sellerId: string): Promise<SellerListingsScanResult>;
@@ -482,6 +514,42 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       isDemo: data.isDemo,
       isSeed: data.isSeed,
       isMock: data.isMock,
+    };
+  }
+
+  async getOrderForAnalytics(orderId: string): Promise<OrderRecordForAnalytics | null> {
+    if (!isValidAnalyticsId(orderId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection('orders').doc(orderId).get();
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    return {
+      id: snap.id,
+      listingId: typeof data.listingId === 'string' ? data.listingId : '',
+      buyerId: typeof data.buyerId === 'string' ? data.buyerId : '',
+      sellerId: typeof data.sellerId === 'string' ? data.sellerId : '',
+      status: typeof data.status === 'string' ? data.status : '',
+      orderType: typeof data.orderType === 'string' ? data.orderType : undefined,
+    };
+  }
+
+  async getMarketMessageForAnalytics(messageId: string): Promise<MarketMessageRecordForAnalytics | null> {
+    if (!isValidAnalyticsId(messageId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection('market_messages').doc(messageId).get();
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    return {
+      id: snap.id,
+      listingId: typeof data.listingId === 'string' ? data.listingId : undefined,
+      conversationId: typeof data.conversationId === 'string' ? data.conversationId : undefined,
+      senderId: typeof data.senderId === 'string' ? data.senderId : '',
+      receiverId: typeof data.receiverId === 'string' ? data.receiverId : undefined,
+      buyerId: typeof data.buyerId === 'string' ? data.buyerId : undefined,
+      sellerId: typeof data.sellerId === 'string' ? data.sellerId : '',
+      participants: Array.isArray(data.participants)
+        ? data.participants.filter((p: unknown): p is string => typeof p === 'string')
+        : undefined,
     };
   }
 
@@ -1210,10 +1278,10 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       // Map eventType to field counters & timestamps
       let counterField: keyof SellerAnalyticsDoc;
       let uniqueField: keyof SellerAnalyticsDoc;
-      let authField: keyof SellerAnalyticsDoc;
-      let guestField: keyof SellerAnalyticsDoc;
-      let authUniqueField: keyof SellerAnalyticsDoc;
-      let guestUniqueField: keyof SellerAnalyticsDoc;
+      let authField: keyof SellerAnalyticsDoc | undefined;
+      let guestField: keyof SellerAnalyticsDoc | undefined;
+      let authUniqueField: keyof SellerAnalyticsDoc | undefined;
+      let guestUniqueField: keyof SellerAnalyticsDoc | undefined;
       let timestampField: keyof SellerViewerDoc;
       let lastTimestampField: keyof SellerViewerDoc;
       let uniqueViewerCheckField: keyof SellerViewerDoc;
@@ -1266,10 +1334,6 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
         case 'contact_confirmed':
           counterField = 'contactConfirmed';
           uniqueField = 'uniqueContactedBuyers';
-          authField = 'contactConfirmed';
-          guestField = 'contactConfirmed';
-          authUniqueField = 'uniqueContactedBuyers';
-          guestUniqueField = 'uniqueContactedBuyers';
           timestampField = 'firstContactConfirmedAt';
           lastTimestampField = 'firstContactConfirmedAt';
           uniqueViewerCheckField = 'firstContactConfirmedAt';
@@ -1277,10 +1341,6 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
         case 'order_confirmed':
           counterField = 'ordersConfirmed';
           uniqueField = 'uniqueOrderBuyers';
-          authField = 'ordersConfirmed';
-          guestField = 'ordersConfirmed';
-          authUniqueField = 'uniqueOrderBuyers';
-          guestUniqueField = 'uniqueOrderBuyers';
           timestampField = 'firstOrderConfirmedAt';
           lastTimestampField = 'firstOrderConfirmedAt';
           uniqueViewerCheckField = 'firstOrderConfirmedAt';
@@ -1303,10 +1363,10 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
         ...existingSeller,
         [counterField]: (Number(existingSeller[counterField]) || 0) + 1,
         ...(uniqueIncremented ? { [uniqueField]: (Number(existingSeller[uniqueField]) || 0) + 1 } : {}),
-        [authField]: isAuth ? (Number(existingSeller[authField]) || 0) + 1 : (Number(existingSeller[authField]) || 0),
-        [guestField]: !isAuth ? (Number(existingSeller[guestField]) || 0) + 1 : (Number(existingSeller[guestField]) || 0),
-        ...(uniqueIncremented && isAuth && authUniqueField in existingSeller ? { [authUniqueField]: (Number(existingSeller[authUniqueField]) || 0) + 1 } : {}),
-        ...(uniqueIncremented && !isAuth && guestUniqueField in existingSeller ? { [guestUniqueField]: (Number(existingSeller[guestUniqueField]) || 0) + 1 } : {}),
+        ...(authField ? { [authField]: isAuth ? (Number(existingSeller[authField]) || 0) + 1 : (Number(existingSeller[authField]) || 0) } : {}),
+        ...(guestField ? { [guestField]: !isAuth ? (Number(existingSeller[guestField]) || 0) + 1 : (Number(existingSeller[guestField]) || 0) } : {}),
+        ...(uniqueIncremented && isAuth && authUniqueField && authUniqueField in existingSeller ? { [authUniqueField]: (Number(existingSeller[authUniqueField]) || 0) + 1 } : {}),
+        ...(uniqueIncremented && !isAuth && guestUniqueField && guestUniqueField in existingSeller ? { [guestUniqueField]: (Number(existingSeller[guestUniqueField]) || 0) + 1 } : {}),
         audience: {
           totalImpressions: existingSeller.audience?.totalImpressions || 0,
           totalViews: existingSeller.audience?.totalViews || 0,
@@ -2005,14 +2065,6 @@ export class MarketAnalyticsService {
     nowMs?: number;
   }): Promise<{ status: number; body: Record<string, any> }> {
     const nowMs = params.nowMs ?? Date.now();
-    if (isBotUserAgent(params.userAgent)) {
-      return { status: 200, body: { recorded: false, reason: 'bot_filtered' } };
-    }
-
-    if (!isValidAnalyticsId(params.sellerId)) {
-      return { status: 400, body: { error: 'Invalid sellerId', code: 'analytics/invalid-seller-id' } };
-    }
-
     const validEventTypes: MarketFunnelEventType[] = [
       'seller_profile_view',
       'listing_to_seller',
@@ -2023,6 +2075,31 @@ export class MarketAnalyticsService {
     ];
     if (!validEventTypes.includes(params.eventType as MarketFunnelEventType)) {
       return { status: 400, body: { error: 'Invalid eventType', code: 'analytics/invalid-event-type' } };
+    }
+
+    const isConfirmedEvent =
+      params.eventType === 'contact_confirmed' || params.eventType === 'order_confirmed';
+
+    // Confirmed funnel actions (order_confirmed / contact_confirmed) are strictly Auth-only.
+    if (isConfirmedEvent) {
+      if (!params.verifiedUid || !isValidAnalyticsId(params.verifiedUid)) {
+        return {
+          status: 401,
+          body: {
+            recorded: false,
+            error: 'Unauthorized: Authentication required for confirmed funnel events',
+            code: 'analytics/auth-required',
+          },
+        };
+      }
+    }
+
+    if (isBotUserAgent(params.userAgent)) {
+      return { status: 200, body: { recorded: false, reason: 'bot_filtered' } };
+    }
+
+    if (!isValidAnalyticsId(params.sellerId)) {
+      return { status: 400, body: { error: 'Invalid sellerId', code: 'analytics/invalid-seller-id' } };
     }
 
     let viewerType: 'auth' | 'guest';
@@ -2044,9 +2121,8 @@ export class MarketAnalyticsService {
       identityKey = `guest:${params.visitorToken}`;
     }
 
-    let activeSalt: string;
     try {
-      activeSalt = this.resolveEffectiveSalt();
+      this.resolveEffectiveSalt();
     } catch (err: any) {
       if (err instanceof AnalyticsConfigError && err.code === 'analytics/salt-missing') {
         return {
@@ -2061,52 +2137,241 @@ export class MarketAnalyticsService {
       throw err;
     }
 
-    // Never count seller's own profile views or events
-    if (params.verifiedUid && params.verifiedUid === params.sellerId) {
-      return { status: 200, body: { recorded: false, reason: 'owner_excluded' } };
-    }
+    let targetSellerId = String(params.sellerId);
+    let targetListingId = typeof params.listingId === 'string' ? params.listingId : undefined;
 
-    const viewerHash = this.computeSellerViewerHash(String(params.sellerId), identityKey);
+    if (isConfirmedEvent) {
+      const verifiedUid = params.verifiedUid!;
+      if (typeof params.sourceId !== 'string' || !isValidAnalyticsId(params.sourceId)) {
+        return {
+          status: 400,
+          body: {
+            recorded: false,
+            error: 'Valid sourceId required for confirmed funnel markers',
+            code: 'analytics/invalid-source-id',
+          },
+        };
+      }
+      const sourceId = params.sourceId;
 
-    // If eventType requires verified idempotency marker (contact_confirmed or order_confirmed)
-    if (params.eventType === 'contact_confirmed' || params.eventType === 'order_confirmed') {
-      const sourceId = typeof params.sourceId === 'string' && isValidAnalyticsId(params.sourceId)
-        ? params.sourceId
-        : (params.listingId ? `${params.listingId}_${params.verifiedUid || 'guest'}` : null);
-
-      if (!sourceId) {
-        return { status: 400, body: { error: 'sourceId required for confirmed funnel markers', code: 'analytics/invalid-source-id' } };
+      if (params.eventType === 'order_confirmed') {
+        if (!this.repo.getOrderForAnalytics) {
+          throw new Error('Repository does not implement getOrderForAnalytics');
+        }
+        const order = await this.repo.getOrderForAnalytics(sourceId);
+        if (!order) {
+          return {
+            status: 404,
+            body: {
+              recorded: false,
+              error: 'Order not found',
+              code: 'analytics/order-not-found',
+            },
+          };
+        }
+        if (order.buyerId !== verifiedUid) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: Order does not belong to authenticated buyer',
+              code: 'analytics/order-buyer-mismatch',
+            },
+          };
+        }
+        if (!isValidAnalyticsId(order.sellerId) || order.sellerId === verifiedUid) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'Invalid order seller',
+              code: 'analytics/invalid-order-seller',
+            },
+          };
+        }
+        if (order.sellerId !== targetSellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: sellerId does not match authoritative order seller',
+              code: 'analytics/seller-mismatch',
+            },
+          };
+        }
+        if (
+          typeof params.listingId === 'string' &&
+          params.listingId.length > 0 &&
+          order.listingId !== params.listingId
+        ) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'listingId does not match authoritative order listing',
+              code: 'analytics/listing-mismatch',
+            },
+          };
+        }
+        const normalizedStatus = String(order.status || '').trim().toLowerCase();
+        if (!CONFIRMED_ORDER_ALLOWED_STATUSES.has(normalizedStatus)) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'Order status is not eligible for confirmation',
+              code: 'analytics/invalid-order-status',
+            },
+          };
+        }
+        // Always derive authoritative sellerId and listingId from DB truth
+        targetSellerId = order.sellerId;
+        targetListingId = isValidAnalyticsId(order.listingId) ? order.listingId : undefined;
+      } else {
+        // contact_confirmed
+        if (!this.repo.getMarketMessageForAnalytics) {
+          throw new Error('Repository does not implement getMarketMessageForAnalytics');
+        }
+        const message = await this.repo.getMarketMessageForAnalytics(sourceId);
+        if (!message) {
+          return {
+            status: 404,
+            body: {
+              recorded: false,
+              error: 'Message not found',
+              code: 'analytics/message-not-found',
+            },
+          };
+        }
+        if (message.senderId !== verifiedUid) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: Message does not belong to authenticated sender',
+              code: 'analytics/message-sender-mismatch',
+            },
+          };
+        }
+        if (!isValidAnalyticsId(message.sellerId) || message.sellerId === verifiedUid) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'Invalid message seller',
+              code: 'analytics/invalid-message-seller',
+            },
+          };
+        }
+        if (message.sellerId !== targetSellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: sellerId does not match authoritative message seller',
+              code: 'analytics/seller-mismatch',
+            },
+          };
+        }
+        if (message.buyerId && message.buyerId !== verifiedUid) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: Message buyerId does not match authenticated user',
+              code: 'analytics/message-buyer-mismatch',
+            },
+          };
+        }
+        if (message.receiverId && message.receiverId !== message.sellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: Message receiver does not match seller',
+              code: 'analytics/message-receiver-mismatch',
+            },
+          };
+        }
+        if (
+          Array.isArray(message.participants) &&
+          (!message.participants.includes(verifiedUid) ||
+            !message.participants.includes(message.sellerId))
+        ) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: Message participants do not match sender and seller',
+              code: 'analytics/message-participants-mismatch',
+            },
+          };
+        }
+        if (
+          typeof params.listingId === 'string' &&
+          params.listingId.length > 0 &&
+          message.listingId !== params.listingId
+        ) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'listingId does not match authoritative message listing',
+              code: 'analytics/listing-mismatch',
+            },
+          };
+        }
+        // Always derive authoritative sellerId and listingId from DB truth
+        targetSellerId = message.sellerId;
+        targetListingId =
+          message.listingId && isValidAnalyticsId(message.listingId)
+            ? message.listingId
+            : undefined;
       }
 
-      const markerType = params.eventType === 'order_confirmed' ? 'order_confirmed' : 'contact_confirmed';
-      const buyerHash = this.computeBuyerIdentityHash(String(params.verifiedUid || params.visitorToken || ''));
+      // Never count seller's own confirmed actions
+      if (verifiedUid === targetSellerId) {
+        return { status: 200, body: { recorded: false, reason: 'owner_excluded' } };
+      }
 
+      const markerType =
+        params.eventType === 'order_confirmed' ? 'order_confirmed' : 'contact_confirmed';
+      const buyerHash = this.computeBuyerIdentityHash(verifiedUid);
+
+      // Marker is claimed ONLY after real DB order/message verification passes
       if (this.repo.claimVerifiedFunnelMarker) {
         const markerRes = await this.repo.claimVerifiedFunnelMarker({
           markerType,
           sourceId,
-          sellerId: String(params.sellerId),
+          sellerId: targetSellerId,
           buyerHash,
-          listingId: typeof params.listingId === 'string' ? params.listingId : undefined,
+          listingId: targetListingId,
           nowMs,
         });
         if (markerRes.duplicate) {
           return { status: 200, body: { recorded: false, reason: 'duplicate_verified_marker' } };
         }
       }
+    } else {
+      // Never count seller's own profile views or non-confirmed funnel events
+      if (params.verifiedUid && params.verifiedUid === targetSellerId) {
+        return { status: 200, body: { recorded: false, reason: 'owner_excluded' } };
+      }
     }
+
+    const viewerHash = this.computeSellerViewerHash(targetSellerId, identityKey);
 
     if (!this.repo.recordSellerFunnelEvent) {
       throw new Error('Repository does not implement recordSellerFunnelEvent');
     }
 
     const txResult = await this.repo.recordSellerFunnelEvent({
-      sellerId: String(params.sellerId),
+      sellerId: targetSellerId,
       eventType: params.eventType as MarketFunnelEventType,
       viewerHash,
       viewerType,
       nowMs,
-      listingId: typeof params.listingId === 'string' ? params.listingId : undefined,
+      listingId: targetListingId,
       sourceId: typeof params.sourceId === 'string' ? params.sourceId : undefined,
     });
 
