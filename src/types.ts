@@ -446,6 +446,8 @@ export interface SellerFunnelMetrics {
   uniqueListingToSellerUsers: number;
   authListingToSellerClicks: number;
   guestListingToSellerClicks: number;
+  authUniqueListingToSellerUsers?: number;
+  guestUniqueListingToSellerUsers?: number;
 
   // UI Click / Intention events (distinct from confirmed backend actions)
   contactClicks: number;

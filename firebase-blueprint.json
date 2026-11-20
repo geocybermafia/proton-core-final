@@ -340,6 +340,8 @@
         "uniqueListingToSellerUsers": { "type": "number" },
         "authListingToSellerClicks": { "type": "number" },
         "guestListingToSellerClicks": { "type": "number" },
+        "authUniqueListingToSellerUsers": { "type": "number" },
+        "guestUniqueListingToSellerUsers": { "type": "number" },
         "contactClicks": { "type": "number" },
         "uniqueContactClickers": { "type": "number" },
         "authContactClicks": { "type": "number" },

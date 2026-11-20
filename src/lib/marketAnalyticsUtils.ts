@@ -6,6 +6,7 @@ import {
   ListingType,
   ListingTypeFilter,
   ListingViewerBreakdown,
+  MarketFunnelEventType,
   PeriodComparison,
   PeriodMetrics,
   RankingEntry,
@@ -872,6 +873,8 @@ const SELLER_BUCKET_NUMERIC_KEYS: ReadonlyArray<keyof SellerAnalyticsBucket> = [
   'uniqueListingToSellerUsers',
   'authListingToSellerClicks',
   'guestListingToSellerClicks',
+  'authUniqueListingToSellerUsers',
+  'guestUniqueListingToSellerUsers',
   'contactClicks',
   'uniqueContactClickers',
   'authContactClicks',
@@ -1021,6 +1024,8 @@ export function createEmptySellerAnalyticsDoc(params: {
     uniqueListingToSellerUsers: 0,
     authListingToSellerClicks: 0,
     guestListingToSellerClicks: 0,
+    authUniqueListingToSellerUsers: 0,
+    guestUniqueListingToSellerUsers: 0,
     contactClicks: 0,
     uniqueContactClickers: 0,
     authContactClicks: 0,
@@ -1258,4 +1263,275 @@ export function buildVerifiedFunnelMarkerId(
   }
   return markerId;
 }
+
+export interface SellerFunnelTransactionInput {
+  sellerId: string;
+  eventType: MarketFunnelEventType;
+  viewerHash: string;
+  viewerType: 'auth' | 'guest';
+  existingSeller?: SellerAnalyticsDoc | null;
+  existingViewer?: SellerViewerDoc | null;
+  sellerMeta?: {
+    optedOut?: boolean;
+    sellerName?: string;
+    country?: string;
+    region?: string;
+  };
+  nowMs?: number;
+}
+
+export interface SellerFunnelTransactionOutput {
+  recorded: boolean;
+  reason?: string;
+  uniqueIncremented: boolean;
+  nextSellerDoc?: SellerAnalyticsDoc;
+  nextViewerDoc?: SellerViewerDoc;
+}
+
+/**
+ * Pure transactional state transition for seller_analytics/{sellerId} and
+ * seller_analytics/{sellerId}/viewers/{viewerHash}.
+ * Ensures root counters, per-event Auth/Guest unique counters, and 52h/62d
+ * hourly/daily buckets stay 100% consistent and backwards-compatible with legacy docs.
+ */
+export function computeSellerFunnelTransactionUpdate(
+  input: SellerFunnelTransactionInput
+): SellerFunnelTransactionOutput {
+  const nowMs = input.nowMs ?? Date.now();
+  const baseSeller =
+    input.existingSeller ??
+    createEmptySellerAnalyticsDoc({
+      sellerId: input.sellerId,
+      optedOut: input.sellerMeta?.optedOut,
+      sellerName: input.sellerMeta?.sellerName,
+      country: input.sellerMeta?.country,
+      region: input.sellerMeta?.region,
+      nowMs,
+    });
+
+  const viewerData: SellerViewerDoc = input.existingViewer
+    ? { ...input.existingViewer }
+    : {
+        viewerHash: input.viewerHash,
+        viewerType: input.viewerType,
+        firstSeenAt: nowMs,
+        lastSeenAt: nowMs,
+      };
+  viewerData.lastSeenAt = nowMs;
+
+  const hourKey = getHourBucketKey(nowMs);
+  const dayKey = getDayBucketKey(nowMs);
+  const hourly = pruneSellerHourlyBuckets(baseSeller.hourly, nowMs);
+  const daily = pruneSellerDailyBuckets(baseSeller.daily, nowMs);
+  const hBucket = hourly[hourKey] || createEmptySellerAnalyticsBucket();
+  const dBucket = daily[dayKey] || createEmptySellerAnalyticsBucket();
+
+  const isAuth = input.viewerType === 'auth';
+  let uniqueIncremented = false;
+
+  let counterField: keyof SellerAnalyticsDoc;
+  let uniqueField: keyof SellerAnalyticsDoc;
+  let authField: keyof SellerAnalyticsDoc | undefined;
+  let guestField: keyof SellerAnalyticsDoc | undefined;
+  let authUniqueField: keyof SellerAnalyticsDoc | undefined;
+  let guestUniqueField: keyof SellerAnalyticsDoc | undefined;
+  let lastTimestampField: keyof SellerViewerDoc;
+  let uniqueViewerCheckField: keyof SellerViewerDoc;
+
+  switch (input.eventType) {
+    case 'seller_profile_view':
+      counterField = 'profileViews';
+      uniqueField = 'uniqueProfileViewers';
+      authField = 'authProfileViews';
+      guestField = 'guestProfileViews';
+      authUniqueField = 'authUniqueProfileViewers';
+      guestUniqueField = 'guestUniqueProfileViewers';
+      lastTimestampField = 'lastProfileViewAt';
+      uniqueViewerCheckField = 'firstProfileViewAt';
+      break;
+    case 'listing_to_seller':
+      counterField = 'listingToSellerClicks';
+      uniqueField = 'uniqueListingToSellerUsers';
+      authField = 'authListingToSellerClicks';
+      guestField = 'guestListingToSellerClicks';
+      authUniqueField = 'authUniqueListingToSellerUsers';
+      guestUniqueField = 'guestUniqueListingToSellerUsers';
+      lastTimestampField = 'lastListingToSellerAt';
+      uniqueViewerCheckField = 'firstListingToSellerAt';
+      break;
+    case 'contact_click':
+      counterField = 'contactClicks';
+      uniqueField = 'uniqueContactClickers';
+      authField = 'authContactClicks';
+      guestField = 'guestContactClicks';
+      authUniqueField = 'authUniqueContactClickers';
+      guestUniqueField = 'guestUniqueContactClickers';
+      lastTimestampField = 'lastContactClickAt';
+      uniqueViewerCheckField = 'firstContactClickAt';
+      break;
+    case 'order_intent':
+      counterField = 'orderIntents';
+      uniqueField = 'uniqueOrderIntentUsers';
+      authField = 'authOrderIntents';
+      guestField = 'guestOrderIntents';
+      authUniqueField = 'authUniqueOrderIntentUsers';
+      guestUniqueField = 'guestUniqueOrderIntentUsers';
+      lastTimestampField = 'lastOrderIntentAt';
+      uniqueViewerCheckField = 'firstOrderIntentAt';
+      break;
+    case 'contact_confirmed':
+      counterField = 'contactConfirmed';
+      uniqueField = 'uniqueContactedBuyers';
+      lastTimestampField = 'firstContactConfirmedAt';
+      uniqueViewerCheckField = 'firstContactConfirmedAt';
+      break;
+    case 'order_confirmed':
+      counterField = 'ordersConfirmed';
+      uniqueField = 'uniqueOrderBuyers';
+      lastTimestampField = 'firstOrderConfirmedAt';
+      uniqueViewerCheckField = 'firstOrderConfirmedAt';
+      break;
+    default:
+      return { recorded: false, reason: 'invalid_event_type', uniqueIncremented: false };
+  }
+
+  const isFirstViewerAction = !viewerData[uniqueViewerCheckField];
+  if (isFirstViewerAction) {
+    viewerData[uniqueViewerCheckField] = nowMs;
+    uniqueIncremented = true;
+  }
+  if (lastTimestampField !== uniqueViewerCheckField || isFirstViewerAction) {
+    viewerData[lastTimestampField] = nowMs;
+  }
+  viewerData.firstAudienceAt = viewerData.firstAudienceAt || nowMs;
+  viewerData.lastAudienceAt = nowMs;
+
+  const cleanViewerDoc = sanitizeSellerViewerDoc(
+    viewerData as SellerViewerDoc & Record<string, any>
+  );
+
+  const nextSellerDoc: SellerAnalyticsDoc = {
+    ...baseSeller,
+    metadata: {
+      schemaVersion: baseSeller.metadata?.schemaVersion || SELLER_ANALYTICS_SCHEMA_VERSION,
+      ...(baseSeller.metadata?.sellerName
+        ? { sellerName: baseSeller.metadata.sellerName }
+        : input.sellerMeta?.sellerName
+          ? { sellerName: input.sellerMeta.sellerName }
+          : {}),
+      lastEventAt: nowMs,
+    },
+    [counterField]: (Number(baseSeller[counterField]) || 0) + 1,
+    ...(uniqueIncremented ? { [uniqueField]: (Number(baseSeller[uniqueField]) || 0) + 1 } : {}),
+    ...(authField
+      ? {
+          [authField]: isAuth
+            ? (Number(baseSeller[authField]) || 0) + 1
+            : Number(baseSeller[authField]) || 0,
+        }
+      : {}),
+    ...(guestField
+      ? {
+          [guestField]: !isAuth
+            ? (Number(baseSeller[guestField]) || 0) + 1
+            : Number(baseSeller[guestField]) || 0,
+        }
+      : {}),
+    ...(authUniqueField
+      ? {
+          [authUniqueField]:
+            uniqueIncremented && isAuth
+              ? (Number(baseSeller[authUniqueField]) || 0) + 1
+              : Number(baseSeller[authUniqueField]) || 0,
+        }
+      : {}),
+    ...(guestUniqueField
+      ? {
+          [guestUniqueField]:
+            uniqueIncremented && !isAuth
+              ? (Number(baseSeller[guestUniqueField]) || 0) + 1
+              : Number(baseSeller[guestUniqueField]) || 0,
+        }
+      : {}),
+    audience: {
+      totalImpressions: baseSeller.audience?.totalImpressions || 0,
+      totalViews: baseSeller.audience?.totalViews || 0,
+      uniqueViewers: baseSeller.audience?.uniqueViewers || 0,
+      authImpressions: baseSeller.audience?.authImpressions || 0,
+      authViews: baseSeller.audience?.authViews || 0,
+      authUniqueViewers: baseSeller.audience?.authUniqueViewers || 0,
+      guestImpressions: baseSeller.audience?.guestImpressions || 0,
+      guestViews: baseSeller.audience?.guestViews || 0,
+      guestUniqueViewers: baseSeller.audience?.guestUniqueViewers || 0,
+    },
+    totals: {
+      totalEvents: (Number(baseSeller.totals?.totalEvents) || 0) + 1,
+      totalUniqueUsers:
+        (Number(baseSeller.totals?.totalUniqueUsers) || 0) + (uniqueIncremented ? 1 : 0),
+      authEvents: (Number(baseSeller.totals?.authEvents) || 0) + (isAuth ? 1 : 0),
+      guestEvents: (Number(baseSeller.totals?.guestEvents) || 0) + (!isAuth ? 1 : 0),
+      authUniqueUsers:
+        (Number(baseSeller.totals?.authUniqueUsers) || 0) +
+        (uniqueIncremented && isAuth ? 1 : 0),
+      guestUniqueUsers:
+        (Number(baseSeller.totals?.guestUniqueUsers) || 0) +
+        (uniqueIncremented && !isAuth ? 1 : 0),
+    },
+    hourly,
+    daily,
+    updatedAt: nowMs,
+  };
+
+  // Update per-event & aggregate bucket counters identically for hourly & daily buckets
+  const applyBucketUpdates = (bucket: SellerAnalyticsBucket) => {
+    const cKey = counterField as keyof SellerAnalyticsBucket;
+    const uKey = uniqueField as keyof SellerAnalyticsBucket;
+    bucket[cKey] = (Number(bucket[cKey]) || 0) + 1;
+    if (uniqueIncremented) {
+      bucket[uKey] = (Number(bucket[uKey]) || 0) + 1;
+    }
+    if (authField && isAuth) {
+      const aKey = authField as keyof SellerAnalyticsBucket;
+      bucket[aKey] = (Number(bucket[aKey]) || 0) + 1;
+    }
+    if (guestField && !isAuth) {
+      const gKey = guestField as keyof SellerAnalyticsBucket;
+      bucket[gKey] = (Number(bucket[gKey]) || 0) + 1;
+    }
+    if (uniqueIncremented && authUniqueField && isAuth) {
+      const auKey = authUniqueField as keyof SellerAnalyticsBucket;
+      bucket[auKey] = (Number(bucket[auKey]) || 0) + 1;
+    }
+    if (uniqueIncremented && guestUniqueField && !isAuth) {
+      const guKey = guestUniqueField as keyof SellerAnalyticsBucket;
+      bucket[guKey] = (Number(bucket[guKey]) || 0) + 1;
+    }
+
+    bucket.totalEvents = (Number(bucket.totalEvents) || 0) + 1;
+    bucket.authEvents = (Number(bucket.authEvents) || 0) + (isAuth ? 1 : 0);
+    bucket.guestEvents = (Number(bucket.guestEvents) || 0) + (!isAuth ? 1 : 0);
+    if (uniqueIncremented) {
+      bucket.uniqueUsers = (Number(bucket.uniqueUsers) || 0) + 1;
+      if (isAuth) {
+        bucket.authUniqueUsers = (Number(bucket.authUniqueUsers) || 0) + 1;
+      } else {
+        bucket.guestUniqueUsers = (Number(bucket.guestUniqueUsers) || 0) + 1;
+      }
+    }
+  };
+
+  applyBucketUpdates(hBucket);
+  applyBucketUpdates(dBucket);
+
+  hourly[hourKey] = hBucket;
+  daily[dayKey] = dBucket;
+
+  return {
+    recorded: true,
+    uniqueIncremented,
+    nextSellerDoc,
+    nextViewerDoc: cleanViewerDoc,
+  };
+}
+
 

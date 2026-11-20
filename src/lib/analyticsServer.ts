@@ -30,7 +30,7 @@ import {
   buildRankingsFromPublicDocs,
   buildVerifiedFunnelMarkerId,
   computeListingAchievements,
-  createEmptySellerAnalyticsBucket,
+  computeSellerFunnelTransactionUpdate,
   createEmptySellerAnalyticsDoc,
   evaluateGuestSessionClaim,
   getDayBucketKey,
@@ -42,8 +42,6 @@ import {
   normalizeListingTypeFilter,
   pruneDailyBuckets,
   pruneHourlyBuckets,
-  pruneSellerDailyBuckets,
-  pruneSellerHourlyBuckets,
   resolveReliableSellerLocation,
   sanitizeSellerViewerDoc,
   sumPeriodMetricsList,
@@ -149,8 +147,22 @@ export const CONFIRMED_ORDER_ALLOWED_STATUSES = new Set<string>([
   'completed',
 ]);
 
+export interface SellerRecordForAnalytics {
+  id: string;
+  exists: boolean;
+  sellerName?: string;
+  country?: string;
+  region?: string;
+  optedOut?: boolean;
+  deleted?: boolean;
+  isDemo?: boolean;
+  isSeed?: boolean;
+  isMock?: boolean;
+}
+
 export interface AnalyticsRepository {
   getListing(listingId: string): Promise<ListingRecordForAnalytics | null>;
+  getSellerForAnalytics?(sellerId: string): Promise<SellerRecordForAnalytics | null>;
   getOrderForAnalytics?(orderId: string): Promise<OrderRecordForAnalytics | null>;
   getMarketMessageForAnalytics?(messageId: string): Promise<MarketMessageRecordForAnalytics | null>;
   getSellerProfileLocation(sellerId: string): Promise<{ country?: string; region?: string; optedOut?: boolean }>;
@@ -212,6 +224,12 @@ export interface AnalyticsRepository {
     nowMs?: number;
     listingId?: string;
     sourceId?: string;
+    sellerMeta?: {
+      optedOut?: boolean;
+      sellerName?: string;
+      country?: string;
+      region?: string;
+    };
   }): Promise<{ recorded: boolean; reason?: string }>;
 }
 
@@ -550,6 +568,69 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
       participants: Array.isArray(data.participants)
         ? data.participants.filter((p: unknown): p is string => typeof p === 'string')
         : undefined,
+    };
+  }
+
+  async getSellerForAnalytics(sellerId: string): Promise<SellerRecordForAnalytics | null> {
+    if (!isValidAnalyticsId(sellerId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const [userSnap, prefSnap] = await Promise.all([
+      db.collection('users').doc(sellerId).get(),
+      db.collection('seller_competition_prefs').doc(sellerId).get().catch(() => null),
+    ]);
+    const pData = prefSnap?.exists ? prefSnap.data() || {} : {};
+
+    if (userSnap.exists) {
+      const uData = userSnap.data() || {};
+      if (
+        uData.deleted === true ||
+        uData.status === 'deleted' ||
+        uData.isDemo ||
+        uData.isSeed ||
+        uData.isMock
+      ) {
+        return null;
+      }
+      const loc = resolveReliableSellerLocation({
+        profileCountry: uData.country,
+        profileRegion: uData.region,
+      });
+      return {
+        id: sellerId,
+        exists: true,
+        sellerName:
+          typeof uData.displayName === 'string' && uData.displayName.trim()
+            ? uData.displayName.trim()
+            : typeof uData.name === 'string' && uData.name.trim()
+              ? uData.name.trim()
+              : typeof uData.sellerName === 'string' && uData.sellerName.trim()
+                ? uData.sellerName.trim()
+                : undefined,
+        country: loc.country,
+        region: loc.region,
+        optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut),
+      };
+    }
+
+    // Fallback check: real seller owning at least one non-deleted/non-demo listing in `listings`
+    const listingsSnap = await db
+      .collection('listings')
+      .where('sellerId', '==', sellerId)
+      .limit(5)
+      .get();
+    const validListingDoc = (listingsSnap.docs || []).find((d: any) => {
+      const data = d.data() || {};
+      return !data.isDemo && !data.isSeed && !data.isMock && data.status !== 'deleted';
+    });
+    if (!validListingDoc) {
+      return null;
+    }
+    const lData = validListingDoc.data() || {};
+    return {
+      id: sellerId,
+      exists: true,
+      sellerName: lData.sellerName || lData.authorName,
+      optedOut: Boolean(pData.optedOut),
     };
   }
 
@@ -1239,6 +1320,12 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     nowMs?: number;
     listingId?: string;
     sourceId?: string;
+    sellerMeta?: {
+      optedOut?: boolean;
+      sellerName?: string;
+      country?: string;
+      region?: string;
+    };
   }): Promise<{ recorded: boolean; reason?: string }> {
     if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.viewerHash)) {
       throw new Error('Invalid sellerId or viewerHash for seller funnel event');
@@ -1248,9 +1335,6 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
     const sellerRef = db.collection('seller_analytics').doc(params.sellerId);
     const viewerRef = sellerRef.collection('viewers').doc(params.viewerHash);
 
-    const hourKey = getHourBucketKey(nowMs);
-    const dayKey = getDayBucketKey(nowMs);
-
     return db.runTransaction(async (tx: any) => {
       const [sellerSnap, viewerSnap] = await Promise.all([
         tx.get(sellerRef),
@@ -1259,150 +1343,28 @@ export class FirestoreAdminAnalyticsRepository implements AnalyticsRepository {
 
       const existingSeller = sellerSnap.exists
         ? (sellerSnap.data() as SellerAnalyticsDoc)
-        : createEmptySellerAnalyticsDoc({ sellerId: params.sellerId, nowMs });
-
-      const viewerData: SellerViewerDoc = viewerSnap.exists
+        : null;
+      const existingViewer = viewerSnap.exists
         ? (viewerSnap.data() as SellerViewerDoc)
-        : { viewerHash: params.viewerHash, viewerType: params.viewerType, firstSeenAt: nowMs, lastSeenAt: nowMs };
+        : null;
 
-      viewerData.lastSeenAt = nowMs;
+      const mutation = computeSellerFunnelTransactionUpdate({
+        sellerId: params.sellerId,
+        eventType: params.eventType,
+        viewerHash: params.viewerHash,
+        viewerType: params.viewerType,
+        existingSeller,
+        existingViewer,
+        sellerMeta: params.sellerMeta,
+        nowMs,
+      });
 
-      const hourly = pruneSellerHourlyBuckets(existingSeller.hourly, nowMs);
-      const daily = pruneSellerDailyBuckets(existingSeller.daily, nowMs);
-      const hBucket = hourly[hourKey] || createEmptySellerAnalyticsBucket();
-      const dBucket = daily[dayKey] || createEmptySellerAnalyticsBucket();
-
-      const isAuth = params.viewerType === 'auth';
-      let uniqueIncremented = false;
-
-      // Map eventType to field counters & timestamps
-      let counterField: keyof SellerAnalyticsDoc;
-      let uniqueField: keyof SellerAnalyticsDoc;
-      let authField: keyof SellerAnalyticsDoc | undefined;
-      let guestField: keyof SellerAnalyticsDoc | undefined;
-      let authUniqueField: keyof SellerAnalyticsDoc | undefined;
-      let guestUniqueField: keyof SellerAnalyticsDoc | undefined;
-      let timestampField: keyof SellerViewerDoc;
-      let lastTimestampField: keyof SellerViewerDoc;
-      let uniqueViewerCheckField: keyof SellerViewerDoc;
-
-      switch (params.eventType) {
-        case 'seller_profile_view':
-          counterField = 'profileViews';
-          uniqueField = 'uniqueProfileViewers';
-          authField = 'authProfileViews';
-          guestField = 'guestProfileViews';
-          authUniqueField = 'authUniqueProfileViewers';
-          guestUniqueField = 'guestUniqueProfileViewers';
-          timestampField = 'firstProfileViewAt';
-          lastTimestampField = 'lastProfileViewAt';
-          uniqueViewerCheckField = 'firstProfileViewAt';
-          break;
-        case 'listing_to_seller':
-          counterField = 'listingToSellerClicks';
-          uniqueField = 'uniqueListingToSellerUsers';
-          authField = 'authListingToSellerClicks';
-          guestField = 'guestListingToSellerClicks';
-          authUniqueField = 'authListingToSellerClicks'; // bucket fallback
-          guestUniqueField = 'guestListingToSellerClicks'; // bucket fallback
-          timestampField = 'firstListingToSellerAt';
-          lastTimestampField = 'lastListingToSellerAt';
-          uniqueViewerCheckField = 'firstListingToSellerAt';
-          break;
-        case 'contact_click':
-          counterField = 'contactClicks';
-          uniqueField = 'uniqueContactClickers';
-          authField = 'authContactClicks';
-          guestField = 'guestContactClicks';
-          authUniqueField = 'authUniqueContactClickers';
-          guestUniqueField = 'guestUniqueContactClickers';
-          timestampField = 'firstContactClickAt';
-          lastTimestampField = 'lastContactClickAt';
-          uniqueViewerCheckField = 'firstContactClickAt';
-          break;
-        case 'order_intent':
-          counterField = 'orderIntents';
-          uniqueField = 'uniqueOrderIntentUsers';
-          authField = 'authOrderIntents';
-          guestField = 'guestOrderIntents';
-          authUniqueField = 'authUniqueOrderIntentUsers';
-          guestUniqueField = 'guestUniqueOrderIntentUsers';
-          timestampField = 'firstOrderIntentAt';
-          lastTimestampField = 'lastOrderIntentAt';
-          uniqueViewerCheckField = 'firstOrderIntentAt';
-          break;
-        case 'contact_confirmed':
-          counterField = 'contactConfirmed';
-          uniqueField = 'uniqueContactedBuyers';
-          timestampField = 'firstContactConfirmedAt';
-          lastTimestampField = 'firstContactConfirmedAt';
-          uniqueViewerCheckField = 'firstContactConfirmedAt';
-          break;
-        case 'order_confirmed':
-          counterField = 'ordersConfirmed';
-          uniqueField = 'uniqueOrderBuyers';
-          timestampField = 'firstOrderConfirmedAt';
-          lastTimestampField = 'firstOrderConfirmedAt';
-          uniqueViewerCheckField = 'firstOrderConfirmedAt';
-          break;
-        default:
-          return { recorded: false, reason: 'invalid_event_type' };
+      if (!mutation.recorded || !mutation.nextSellerDoc || !mutation.nextViewerDoc) {
+        return { recorded: false, reason: mutation.reason };
       }
 
-      const isFirstViewerAction = !viewerData[uniqueViewerCheckField];
-      if (isFirstViewerAction) {
-        viewerData[uniqueViewerCheckField] = nowMs;
-        uniqueIncremented = true;
-      }
-      viewerData[lastTimestampField] = nowMs;
-      viewerData.firstAudienceAt = viewerData.firstAudienceAt || nowMs;
-      viewerData.lastAudienceAt = nowMs;
-
-      // Update seller doc counters
-      const nextDoc: SellerAnalyticsDoc = {
-        ...existingSeller,
-        [counterField]: (Number(existingSeller[counterField]) || 0) + 1,
-        ...(uniqueIncremented ? { [uniqueField]: (Number(existingSeller[uniqueField]) || 0) + 1 } : {}),
-        ...(authField ? { [authField]: isAuth ? (Number(existingSeller[authField]) || 0) + 1 : (Number(existingSeller[authField]) || 0) } : {}),
-        ...(guestField ? { [guestField]: !isAuth ? (Number(existingSeller[guestField]) || 0) + 1 : (Number(existingSeller[guestField]) || 0) } : {}),
-        ...(uniqueIncremented && isAuth && authUniqueField && authUniqueField in existingSeller ? { [authUniqueField]: (Number(existingSeller[authUniqueField]) || 0) + 1 } : {}),
-        ...(uniqueIncremented && !isAuth && guestUniqueField && guestUniqueField in existingSeller ? { [guestUniqueField]: (Number(existingSeller[guestUniqueField]) || 0) + 1 } : {}),
-        audience: {
-          totalImpressions: existingSeller.audience?.totalImpressions || 0,
-          totalViews: existingSeller.audience?.totalViews || 0,
-          uniqueViewers: existingSeller.audience?.uniqueViewers || 0,
-          authImpressions: existingSeller.audience?.authImpressions || 0,
-          authViews: existingSeller.audience?.authViews || 0,
-          authUniqueViewers: existingSeller.audience?.authUniqueViewers || 0,
-          guestImpressions: existingSeller.audience?.guestImpressions || 0,
-          guestViews: existingSeller.audience?.guestViews || 0,
-          guestUniqueViewers: existingSeller.audience?.guestUniqueViewers || 0,
-        },
-        totals: {
-          totalEvents: (Number(existingSeller.totals?.totalEvents) || 0) + 1,
-          totalUniqueUsers: (Number(existingSeller.totals?.totalUniqueUsers) || 0) + (uniqueIncremented ? 1 : 0),
-          authEvents: (Number(existingSeller.totals?.authEvents) || 0) + (isAuth ? 1 : 0),
-          guestEvents: (Number(existingSeller.totals?.guestEvents) || 0) + (!isAuth ? 1 : 0),
-          authUniqueUsers: (Number(existingSeller.totals?.authUniqueUsers) || 0) + (uniqueIncremented && isAuth ? 1 : 0),
-          guestUniqueUsers: (Number(existingSeller.totals?.guestUniqueUsers) || 0) + (uniqueIncremented && !isAuth ? 1 : 0),
-        },
-        hourly,
-        daily,
-        updatedAt: nowMs,
-      };
-
-      // Update bucket counters
-      hBucket[counterField as keyof SellerAnalyticsBucket] = (Number(hBucket[counterField as keyof SellerAnalyticsBucket]) || 0) + 1;
-      dBucket[counterField as keyof SellerAnalyticsBucket] = (Number(dBucket[counterField as keyof SellerAnalyticsBucket]) || 0) + 1;
-      if (uniqueIncremented) {
-        hBucket[uniqueField as keyof SellerAnalyticsBucket] = (Number(hBucket[uniqueField as keyof SellerAnalyticsBucket]) || 0) + 1;
-        dBucket[uniqueField as keyof SellerAnalyticsBucket] = (Number(dBucket[uniqueField as keyof SellerAnalyticsBucket]) || 0) + 1;
-      }
-      hourly[hourKey] = hBucket;
-      daily[dayKey] = dBucket;
-
-      tx.set(viewerRef, viewerData, { merge: true });
-      tx.set(sellerRef, nextDoc);
+      tx.set(viewerRef, mutation.nextViewerDoc, { merge: true });
+      tx.set(sellerRef, mutation.nextSellerDoc);
 
       return { recorded: true };
     });
@@ -2138,9 +2100,13 @@ export class MarketAnalyticsService {
     }
 
     let targetSellerId = String(params.sellerId);
-    let targetListingId = typeof params.listingId === 'string' ? params.listingId : undefined;
+    let targetListingId: string | undefined;
+    let sellerMeta:
+      | { optedOut?: boolean; sellerName?: string; country?: string; region?: string }
+      | undefined;
 
     if (isConfirmedEvent) {
+      targetListingId = typeof params.listingId === 'string' ? params.listingId : undefined;
       const verifiedUid = params.verifiedUid!;
       if (typeof params.sourceId !== 'string' || !isValidAnalyticsId(params.sourceId)) {
         return {
@@ -2353,7 +2319,105 @@ export class MarketAnalyticsService {
         }
       }
     } else {
-      // Never count seller's own profile views or non-confirmed funnel events
+      // Phase 2C Fix 2A: Non-confirmed funnel events (seller_profile_view, listing_to_seller, contact_click, order_intent)
+      // 1. Verify target seller actually exists in trusted DB source before any write
+      if (!this.repo.getSellerForAnalytics) {
+        throw new Error('Repository does not implement getSellerForAnalytics');
+      }
+      const seller = await this.repo.getSellerForAnalytics(targetSellerId);
+      if (
+        !seller ||
+        !seller.exists ||
+        seller.deleted ||
+        seller.isDemo ||
+        seller.isSeed ||
+        seller.isMock
+      ) {
+        return {
+          status: 404,
+          body: {
+            recorded: false,
+            error: 'Seller not found',
+            code: 'analytics/seller-not-found',
+          },
+        };
+      }
+      sellerMeta = {
+        optedOut: seller.optedOut,
+        sellerName: seller.sellerName,
+        country: seller.country,
+        region: seller.region,
+      };
+
+      // 2. Validate listingId: mandatory for listing_to_seller; validated whenever provided for other events
+      const rawListingId = params.listingId;
+      if (params.eventType === 'listing_to_seller') {
+        if (rawListingId === undefined || rawListingId === null || rawListingId === '') {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'listingId is required for listing_to_seller events',
+              code: 'analytics/listing-id-required',
+            },
+          };
+        }
+      }
+
+      if (rawListingId !== undefined && rawListingId !== null) {
+        if (!isValidAnalyticsId(rawListingId)) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'Invalid listingId',
+              code: 'analytics/invalid-listing-id',
+            },
+          };
+        }
+        const listing = await this.repo.getListing(rawListingId);
+        const normalizedListingStatus =
+          typeof listing?.status === 'string' ? listing.status.trim().toLowerCase() : '';
+        if (
+          !listing ||
+          listing.isDemo ||
+          listing.isSeed ||
+          listing.isMock ||
+          normalizedListingStatus === 'deleted'
+        ) {
+          return {
+            status: 404,
+            body: {
+              recorded: false,
+              error: 'Listing not found',
+              code: 'analytics/listing-not-found',
+            },
+          };
+        }
+        if (normalizedListingStatus !== '' && normalizedListingStatus !== 'active') {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: 'Listing is not active',
+              code: 'analytics/listing-not-active',
+            },
+          };
+        }
+        if (listing.sellerId !== targetSellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: 'Forbidden: Listing does not belong to target seller',
+              code: 'analytics/listing-seller-mismatch',
+            },
+          };
+        }
+        targetListingId = listing.id;
+      }
+
+      // 3. Never count seller's own profile views or non-confirmed funnel events
       if (params.verifiedUid && params.verifiedUid === targetSellerId) {
         return { status: 200, body: { recorded: false, reason: 'owner_excluded' } };
       }
@@ -2373,6 +2437,7 @@ export class MarketAnalyticsService {
       nowMs,
       listingId: targetListingId,
       sourceId: typeof params.sourceId === 'string' ? params.sourceId : undefined,
+      ...(sellerMeta ? { sellerMeta } : {}),
     });
 
     return {

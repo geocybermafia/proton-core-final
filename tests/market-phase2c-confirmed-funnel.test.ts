@@ -7,6 +7,7 @@ import {
   MarketAnalyticsService,
   MarketMessageRecordForAnalytics,
   OrderRecordForAnalytics,
+  SellerRecordForAnalytics,
 } from '../src/lib/analyticsServer.js';
 import {
   buildVerifiedFunnelMarkerId,
@@ -32,6 +33,7 @@ const TEST_SALT = 'proton-phase2c-confirmed-funnel-test-salt-32chars';
 const BROWSER_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36';
 
 class InMemoryPhase2cAnalyticsRepo implements AnalyticsRepository {
+  public sellers = new Map<string, SellerRecordForAnalytics>();
   public listings = new Map<string, ListingRecordForAnalytics>();
   public orders = new Map<string, OrderRecordForAnalytics>();
   public marketMessages = new Map<string, MarketMessageRecordForAnalytics>();
@@ -43,6 +45,10 @@ class InMemoryPhase2cAnalyticsRepo implements AnalyticsRepository {
 
   async getListing(listingId: string): Promise<ListingRecordForAnalytics | null> {
     return this.listings.get(listingId) ?? null;
+  }
+
+  async getSellerForAnalytics(sellerId: string): Promise<SellerRecordForAnalytics | null> {
+    return this.sellers.get(sellerId) ?? null;
   }
 
   async getSellerProfileLocation() {
@@ -897,6 +903,14 @@ describe('Phase 2C First Critical Fix: Auth-Only & DB-Verified Confirmed Funnel 
 
   it('13. Non-confirmed funnel events (seller_profile_view, listing_to_seller, contact_click, order_intent) keep Guest & Auth support unchanged', async () => {
     const repo = new InMemoryPhase2cAnalyticsRepo();
+    repo.sellers.set('seller_1', { id: 'seller_1', exists: true, sellerName: 'Seller One' });
+    repo.listings.set('listing_1', {
+      id: 'listing_1',
+      sellerId: 'seller_1',
+      title: 'Listing One',
+      category: 'electronics',
+      status: 'active',
+    });
     await withTestServer(repo, { auth_tok: 'auth_user_1' }, async (baseUrl) => {
       const guestEvents: MarketFunnelEventType[] = [
         'seller_profile_view',
