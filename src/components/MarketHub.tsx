@@ -3674,7 +3674,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       {/* Main Proton Header (PROTON // მარკეტი) */}
       <div className="w-full bg-proton-card/95 border-b border-proton-border pt-[max(0.5rem,env(safe-area-inset-top,0px))] pb-2 md:pt-[max(0.875rem,env(safe-area-inset-top,0px))] md:pb-3.5 px-3 sm:px-6 lg:px-8 flex flex-col gap-2 md:gap-3 sticky top-0 z-50 backdrop-blur-md">
         {/* Top bar layer */}
-        <div className="w-full flex items-center justify-between gap-2 sm:gap-3 lg:gap-4">
+        <div className="w-full flex flex-wrap md:flex-nowrap items-center justify-between gap-2 sm:gap-3 lg:gap-4">
           
           {/* Logo element */}
           <div 
@@ -3840,7 +3840,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           </div>
 
           {/* Action buttons list (Utilities + Single Add Listing CTA) */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-2 md:gap-1.5 shrink-0 ml-auto md:ml-0">
             {/* Create Listing Button (Single canonical location on both Mobile & Desktop) */}
             <button
               type="button"
@@ -3855,7 +3855,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 resetListingForm();
                 setViewMode('create');
               }}
-              className={cn("flex font-black px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs items-center gap-1 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0", currentTheme.accentBg)}
+              className={cn("flex min-h-[44px] md:min-h-0 font-black px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[10px] sm:text-xs items-center justify-center gap-1 transition-all shadow-md cursor-pointer hover:scale-[1.02] active:scale-[0.98] shrink-0", currentTheme.accentBg)}
               title={language === 'ka' ? 'განცხადების დამატება' : 'Create Listing'}
             >
               <Plus size={14} className="stroke-[3]" />
@@ -3908,7 +3908,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 setViewMode('browse');
               }}
               className={cn(
-                "p-2 sm:p-2.5 rounded-xl transition-all relative cursor-pointer border",
+                "min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center p-2 sm:p-2.5 rounded-xl transition-all relative cursor-pointer border",
                 showOnlyFavorites 
                   ? "text-rose-500 bg-rose-500/10 border-rose-500/30" 
                   : "text-proton-muted hover:text-proton-accent hover:bg-proton-bg border-transparent"
@@ -3927,7 +3927,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             <button 
               type="button"
               onClick={() => setIsCartOpen(true)}
-              className="p-2 sm:p-2.5 text-proton-muted hover:text-proton-accent hover:bg-proton-bg rounded-xl transition-all relative cursor-pointer"
+              className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center p-2 sm:p-2.5 text-proton-muted hover:text-proton-accent hover:bg-proton-bg rounded-xl transition-all relative cursor-pointer"
               title={language === 'ka' ? 'კალათა' : 'Shopping Cart'}
             >
               <ShoppingBag size={16} />
@@ -3943,7 +3943,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               <button 
                 type="button"
                 onClick={onBack}
-                className="p-2 md:px-3 md:py-2 bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-proton-text hover:text-proton-accent font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+                className="min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 justify-center p-2 md:px-3 md:py-2 bg-proton-bg hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 text-proton-text hover:text-proton-accent font-black rounded-xl text-[10px] sm:text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
                 title={language === 'ka' ? 'მთავარზე დაბრუნება' : 'Return to Dashboard'}
               >
                 <LayoutDashboard size={14} className="text-proton-accent" />
