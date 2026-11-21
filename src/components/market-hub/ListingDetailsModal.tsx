@@ -618,45 +618,45 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                   </div>
 
                   {/* 3-Tab Navigation Switcher */}
-                  <div className="flex items-center p-1 rounded-2xl bg-proton-bg border border-proton-border gap-1 my-3">
+                  <div className="flex items-center p-1 rounded-2xl bg-proton-bg border border-proton-border gap-1 my-3 min-w-0">
                     <button
                       type="button"
                       onClick={() => setActiveDetailTab('main')}
                       className={cn(
-                        "flex-1 min-h-[38px] py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                        "flex-1 min-w-0 min-h-[38px] py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer",
                         activeDetailTab === 'main'
                           ? "bg-proton-accent text-proton-on-accent shadow-sm"
                           : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
                       )}
                     >
-                      <span>📋</span>
-                      <span className="truncate">{language === 'ka' ? 'ძირითადი' : 'Main'}</span>
+                      <span className="shrink-0">📋</span>
+                      <span className="truncate min-w-0">{language === 'ka' ? 'ძირითადი' : 'Main'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveDetailTab('specs')}
                       className={cn(
-                        "flex-1 min-h-[38px] py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                        "flex-1 min-w-0 min-h-[38px] py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer",
                         activeDetailTab === 'specs'
                           ? "bg-proton-accent text-proton-on-accent shadow-sm"
                           : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
                       )}
                     >
-                      <span>⚙️</span>
-                      <span className="truncate">{language === 'ka' ? 'მახასიათებლები' : 'Specs'}</span>
+                      <span className="shrink-0">⚙️</span>
+                      <span className="truncate min-w-0">{language === 'ka' ? 'მახასიათებლები' : 'Specs'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveDetailTab('seller')}
                       className={cn(
-                        "flex-1 min-h-[38px] py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                        "flex-1 min-w-0 min-h-[38px] py-2 px-1 sm:px-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wider transition-all flex items-center justify-center gap-1 sm:gap-1.5 cursor-pointer",
                         activeDetailTab === 'seller'
                           ? "bg-proton-accent text-proton-on-accent shadow-sm"
                           : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
                       )}
                     >
-                      <span>👤</span>
-                      <span className="truncate">{language === 'ka' ? 'გამყიდველი' : 'Seller'}</span>
+                      <span className="shrink-0">👤</span>
+                      <span className="truncate min-w-0">{language === 'ka' ? 'გამყიდველი' : 'Seller'}</span>
                     </button>
                   </div>
 
