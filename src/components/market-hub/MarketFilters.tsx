@@ -454,11 +454,23 @@ export const MobileFilterBottomSheet = React.memo(function MobileFilterBottomShe
             </div>
 
             {/* Sticky Bottom Action Bar with Apply CTA */}
-            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-proton-border bg-proton-card/95 backdrop-blur-md shrink-0">
+            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] border-t border-proton-border bg-proton-card/95 backdrop-blur-md shrink-0 flex items-center gap-2.5">
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="min-h-[44px] px-4 py-3.5 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-500 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                  aria-label={language === 'ka' ? 'ფილტრების განულება' : 'Reset filters'}
+                >
+                  <Trash2 size={14} className="shrink-0" />
+                  <span>{language === 'ka' ? 'განულება' : 'Reset'}</span>
+                </button>
+              )}
               <button 
                 type="button"
                 onClick={onClose}
-                className="w-full py-3.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all cursor-pointer bg-proton-accent hover:bg-proton-accent-hover text-proton-on-accent"
+                className="flex-1 min-h-[44px] py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all cursor-pointer bg-proton-accent hover:bg-proton-accent-hover text-proton-on-accent"
+                aria-label={language === 'ka' ? `ფილტრების გამოყენება (${matchCount} შედეგი)` : `Apply filters (${matchCount} results)`}
               >
                 <span>{language === 'ka' ? 'შედეგების ნახვა' : 'Apply Filters'}</span>
                 <span className="text-[11px] font-mono font-black opacity-85">

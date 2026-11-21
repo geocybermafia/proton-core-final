@@ -90,6 +90,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   const [ownerAnalytics, setOwnerAnalytics] = useState<ListingAnalyticsStats | null>(null);
   const [analyticsPeriod, setAnalyticsPeriod] = useState<AnalyticsPeriod>('7d');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [activeDetailTab, setActiveDetailTab] = useState<'main' | 'specs' | 'seller'>('main');
   const mainImageRef = useRef<HTMLImageElement | null>(null);
 
   const handleCopyLink = () => {
@@ -106,6 +107,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
     setActiveImageIndex(0);
     setFailedImages({});
     setOwnerAnalytics(null);
+    setActiveDetailTab('main');
     if (listing) {
       trackEvent('view_item', { item_id: listing.id, item_name: getListingTitle(listing) });
       sendListingAnalyticsEvent({
@@ -615,278 +617,335 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     </div>
                   </div>
 
-                  {/* Key Specifications List */}
-                  <div
-                    className={cn(
-                      'py-4 border-y space-y-3 text-sm',
-                      currentTheme.border
-                    )}
-                  >
-                    {isPhysicalListing(listing) && (
-                      <div className="flex items-start justify-between gap-4">
-                        <span className={cn('text-xs shrink-0', currentTheme.muted)}>
-                          {language === 'ka' ? 'მდგომარეობა' : 'Condition'}
-                        </span>
-                        <span className={cn('font-medium text-right', currentTheme.text)}>
-                          {getConditionLabel(listing.condition)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className="flex items-start justify-between gap-4">
-                      <span className={cn('text-xs shrink-0', currentTheme.muted)}>
-                        {language === 'ka' ? 'მოლაპარაკება' : 'Negotiability'}
-                      </span>
-                      <span className={cn('font-medium text-right', currentTheme.text)}>
-                        {listing.isNegotiable
-                          ? language === 'ka'
-                            ? 'შესაძლებელია'
-                            : 'Negotiable'
-                          : language === 'ka'
-                          ? 'ფიქსირებული'
-                          : 'Fixed'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-4 min-w-0">
-                      <span className={cn('text-xs shrink-0 flex items-center gap-1', currentTheme.muted)}>
-                        {isRemote ? <Globe size={13} className="shrink-0" /> : <MapPin size={13} className="shrink-0" />}
-                        <span>{language === 'ka' ? 'მისამართი / ფორმატი' : 'Location / Format'}</span>
-                      </span>
-                      <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
-                        {isRemote
-                          ? (uniqueLocationParts.length > 0
-                            ? `${language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'} (${uniqueLocationParts.join(', ')})`
-                            : (language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'))
-                          : (uniqueLocationParts.length > 0
-                            ? uniqueLocationParts.join(', ')
-                            : language === 'ka'
-                            ? 'მითითებული არ არის'
-                            : 'Not specified')}
-                      </span>
-                    </div>
-
-                    {(isServiceListing(listing) || isProjectListing(listing)) &&
-                      listing.serviceDuration && (
-                        <div className="flex items-start justify-between gap-4 min-w-0">
-                          <span className={cn('text-xs shrink-0', currentTheme.muted)}>
-                            {language === 'ka' ? 'ვადა / ხანგრძლივობა' : 'Duration'}
-                          </span>
-                          <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
-                            {listing.serviceDuration}
-                          </span>
-                        </div>
-                      )}
-
-                    {(isServiceListing(listing) || isProjectListing(listing)) &&
-                      listing.serviceTerms && (
-                        <div className="flex items-start justify-between gap-4 min-w-0">
-                          <span className={cn('text-xs shrink-0', currentTheme.muted)}>
-                            {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms'}
-                          </span>
-                          <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
-                            {listing.serviceTerms}
-                          </span>
-                        </div>
-                      )}
-
-                    {formattedAttributes.length > 0 && (
-                      <div className={cn('pt-3 mt-1 border-t space-y-2.5 min-w-0', currentTheme.border)}>
-                        {formattedAttributes.map((attr) => (
-                          <div key={attr.key} className="flex items-start justify-between gap-4 min-w-0">
-                            <span className={cn('text-xs shrink-0', currentTheme.muted)}>
-                              {attr.label}
-                            </span>
-                            {attr.isSafeUrl ? (
-                              <a
-                                href={attr.value}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={cn(
-                                  'font-medium text-right break-all min-w-0 underline inline-flex items-center gap-1 justify-end',
-                                  currentTheme.accent
-                                )}
-                              >
-                                <span className="break-all min-w-0">{attr.value}</span>
-                                <ExternalLink size={12} className="shrink-0" />
-                              </a>
-                            ) : (
-                              <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
-                                {attr.value}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Full Description */}
-                  <div className="space-y-2 min-w-0">
-                    <h3 className={cn('text-xs font-bold uppercase tracking-wider', currentTheme.muted)}>
-                      {language === 'ka' ? 'აღწერა' : 'Description'}
-                    </h3>
-                    <p
-                      className={cn(
-                        'text-sm leading-relaxed whitespace-pre-line break-words min-w-0',
-                        currentTheme.subtext
-                      )}
-                    >
-                      {displayDescription?.trim()
-                        ? displayDescription
-                        : language === 'ka'
-                        ? 'დამატებითი აღწერა მითითებული არ არის.'
-                        : 'No additional description provided.'}
-                    </p>
-                  </div>
-
-                  {/* Seller Info & Rating */}
-                  <div className={cn('pt-3 border-t', currentTheme.border)}>
+                  {/* 3-Tab Navigation Switcher */}
+                  <div className="flex items-center p-1 rounded-2xl bg-proton-bg border border-proton-border gap-1 my-3">
                     <button
                       type="button"
-                      onClick={() =>
-                        onSelectVendor({
-                          id: listing.sellerId,
-                          name: sellerName
-                        })
-                      }
+                      onClick={() => setActiveDetailTab('main')}
                       className={cn(
-                        'w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-colors cursor-pointer',
-                        currentTheme.cardAlt,
-                        currentTheme.bgHover
+                        "flex-1 min-h-[38px] py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                        activeDetailTab === 'main'
+                          ? "bg-proton-accent text-proton-on-accent shadow-sm"
+                          : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
                       )}
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={cn(
-                            'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border',
-                            currentTheme.border,
-                            currentTheme.card
-                          )}
-                        >
-                          {(sellerName || 'S').substring(0, 2).toUpperCase()}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className={cn('text-sm font-bold truncate', currentTheme.text)}>
-                              {sellerName}
-                            </span>
-                            <ShieldCheck size={14} className={cn('shrink-0', currentTheme.accent)} />
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs mt-0.5">
-                            {sellerRating && sellerRating.count > 0 ? (
-                              <>
-                                <Star size={12} className="fill-amber-400 text-amber-500 shrink-0" />
-                                <span className={cn('font-bold tabular-nums', currentTheme.accent)}>
-                                  {sellerRating.avg.toFixed(1)}
-                                </span>
-                                <span className={currentTheme.muted}>
-                                  ({sellerRating.count}{' '}
-                                  {language === 'ka' ? 'შეფასება' : 'reviews'})
-                                </span>
-                              </>
-                            ) : (
-                              <span className={currentTheme.muted}>
-                                {language === 'ka' ? 'ახალი გამყიდველი' : 'New seller'}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <span className={cn('text-xs font-medium shrink-0', currentTheme.muted)}>
-                        {language === 'ka' ? 'პროფილი' : 'Reviews'}
-                      </span>
+                      <span>📋</span>
+                      <span className="truncate">{language === 'ka' ? 'ძირითადი' : 'Main'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveDetailTab('specs')}
+                      className={cn(
+                        "flex-1 min-h-[38px] py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                        activeDetailTab === 'specs'
+                          ? "bg-proton-accent text-proton-on-accent shadow-sm"
+                          : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
+                      )}
+                    >
+                      <span>⚙️</span>
+                      <span className="truncate">{language === 'ka' ? 'მახასიათებლები' : 'Specs'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveDetailTab('seller')}
+                      className={cn(
+                        "flex-1 min-h-[38px] py-2 px-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                        activeDetailTab === 'seller'
+                          ? "bg-proton-accent text-proton-on-accent shadow-sm"
+                          : "text-proton-muted hover:text-proton-text hover:bg-proton-card"
+                      )}
+                    >
+                      <span>👤</span>
+                      <span className="truncate">{language === 'ka' ? 'გამყიდველი' : 'Seller'}</span>
                     </button>
                   </div>
 
-                  {/* Direct Agreement Notice */}
-                  <p className={cn('text-xs leading-relaxed break-words min-w-0', currentTheme.muted)}>
-                    {language === 'ka'
-                      ? 'გადახდის და მიწოდების პირობებზე მყიდველი და გამყიდველი თანხმდებიან უშუალოდ.'
-                      : 'Payment and delivery terms are agreed directly between buyer and seller.'}
-                  </p>
+                  {/* Tab Content Panels */}
+                  <div className="space-y-4 min-w-0 pt-1">
+                    {activeDetailTab === 'main' && (
+                      <div className="space-y-4 animate-in fade-in duration-200">
+                        {/* Full Description */}
+                        <div className="space-y-2 min-w-0">
+                          <h3 className={cn('text-xs font-bold uppercase tracking-wider', currentTheme.muted)}>
+                            {language === 'ka' ? 'აღწერა' : 'Description'}
+                          </h3>
+                          <p
+                            className={cn(
+                              'text-sm leading-relaxed whitespace-pre-line break-words min-w-0',
+                              currentTheme.subtext
+                            )}
+                          >
+                            {displayDescription?.trim()
+                              ? displayDescription
+                              : language === 'ka'
+                              ? 'დამატებითი აღწერა მითითებული არ არის.'
+                              : 'No additional description provided.'}
+                          </p>
+                        </div>
 
-                  {/* Owner-Only Real Listing Analytics */}
-                  {isOwnListing && (
-                    <div className={cn('p-3.5 rounded-2xl border space-y-2.5', currentTheme.cardAlt)}>
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className={cn('text-[10px] font-black uppercase tracking-wider', currentTheme.text)}>
-                          {language === 'ka' ? 'მფლობელის სტატისტიკა' : 'Owner Analytics'}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          {(['24h', '7d', '30d', 'all'] as AnalyticsPeriod[]).map((pk) => (
-                            <button
-                              key={pk}
-                              type="button"
-                              onClick={() => setAnalyticsPeriod(pk)}
-                              className={cn(
-                                'px-2 py-0.5 rounded-md text-[9px] font-black uppercase cursor-pointer transition-colors',
-                                analyticsPeriod === pk
-                                  ? 'bg-proton-accent text-proton-on-accent'
-                                  : 'bg-proton-bg text-proton-muted hover:text-proton-text'
-                              )}
-                            >
-                              {pk === 'all' ? (language === 'ka' ? 'სულ' : 'All') : pk}
-                            </button>
-                          ))}
+                        {/* Direct Agreement Notice */}
+                        <p className={cn('text-xs leading-relaxed break-words min-w-0 pt-2 border-t', currentTheme.border, currentTheme.muted)}>
+                          {language === 'ka'
+                            ? 'გადახდის და მიწოდების პირობებზე მყიდველი და გამყიდველი თანხმდებიან უშუალოდ.'
+                            : 'Payment and delivery terms are agreed directly between buyer and seller.'}
+                        </p>
+                      </div>
+                    )}
+
+                    {activeDetailTab === 'specs' && (
+                      <div className="space-y-4 animate-in fade-in duration-200">
+                        <div
+                          className={cn(
+                            'py-3 border-y space-y-3 text-sm',
+                            currentTheme.border
+                          )}
+                        >
+                          {isPhysicalListing(listing) && (
+                            <div className="flex items-start justify-between gap-4">
+                              <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                                {language === 'ka' ? 'მდგომარეობა' : 'Condition'}
+                              </span>
+                              <span className={cn('font-medium text-right', currentTheme.text)}>
+                                {getConditionLabel(listing.condition)}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-start justify-between gap-4">
+                            <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                              {language === 'ka' ? 'მოლაპარაკება' : 'Negotiability'}
+                            </span>
+                            <span className={cn('font-medium text-right', currentTheme.text)}>
+                              {listing.isNegotiable
+                                ? language === 'ka'
+                                  ? 'შესაძლებელია'
+                                  : 'Negotiable'
+                                : language === 'ka'
+                                ? 'ფიქსირებული'
+                                : 'Fixed'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-4 min-w-0">
+                            <span className={cn('text-xs shrink-0 flex items-center gap-1', currentTheme.muted)}>
+                              {isRemote ? <Globe size={13} className="shrink-0" /> : <MapPin size={13} className="shrink-0" />}
+                              <span>{language === 'ka' ? 'მისამართი / ფორმატი' : 'Location / Format'}</span>
+                            </span>
+                            <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
+                              {isRemote
+                                ? (uniqueLocationParts.length > 0
+                                  ? `${language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'} (${uniqueLocationParts.join(', ')})`
+                                  : (language === 'ka' ? 'დისტანციური / ონლაინ' : 'Remote / Online'))
+                                : (uniqueLocationParts.length > 0
+                                  ? uniqueLocationParts.join(', ')
+                                  : language === 'ka'
+                                  ? 'მითითებული არ არის'
+                                  : 'Not specified')}
+                            </span>
+                          </div>
+
+                          {(isServiceListing(listing) || isProjectListing(listing)) &&
+                            listing.serviceDuration && (
+                              <div className="flex items-start justify-between gap-4 min-w-0">
+                                <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                                  {language === 'ka' ? 'ვადა / ხანგრძლივობა' : 'Duration'}
+                                </span>
+                                <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
+                                  {listing.serviceDuration}
+                                </span>
+                              </div>
+                            )}
+
+                          {(isServiceListing(listing) || isProjectListing(listing)) &&
+                            listing.serviceTerms && (
+                              <div className="flex items-start justify-between gap-4 min-w-0">
+                                <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                                  {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms'}
+                                </span>
+                                <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
+                                  {listing.serviceTerms}
+                                </span>
+                              </div>
+                            )}
+
+                          {formattedAttributes.length > 0 && (
+                            <div className={cn('pt-3 mt-1 border-t space-y-2.5 min-w-0', currentTheme.border)}>
+                              {formattedAttributes.map((attr) => (
+                                <div key={attr.key} className="flex items-start justify-between gap-4 min-w-0">
+                                  <span className={cn('text-xs shrink-0', currentTheme.muted)}>
+                                    {attr.label}
+                                  </span>
+                                  {attr.isSafeUrl ? (
+                                    <a
+                                      href={attr.value}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={cn(
+                                        'font-medium text-right break-all min-w-0 underline inline-flex items-center gap-1 justify-end',
+                                        currentTheme.accent
+                                      )}
+                                    >
+                                      <span className="break-all min-w-0">{attr.value}</span>
+                                      <ExternalLink size={12} className="shrink-0" />
+                                    </a>
+                                  ) : (
+                                    <span className={cn('font-medium text-right break-words min-w-0', currentTheme.text)}>
+                                      {attr.value}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
+                    )}
 
-                      {(() => {
-                        const metrics = ownerAnalytics?.periods?.[analyticsPeriod] || {
-                          impressions: 0,
-                          views: 0,
-                          uniqueViewers: 0,
-                          engagementRate: 0,
-                        };
-                        return (
-                          <div className="grid grid-cols-4 gap-2 text-center">
-                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
-                              <div className="text-[9px] font-bold text-proton-muted">
-                                {language === 'ka' ? 'გამოჩენა' : 'Impr.'}
+                    {activeDetailTab === 'seller' && (
+                      <div className="space-y-4 animate-in fade-in duration-200">
+                        {/* Seller Info & Rating */}
+                        <div className={cn('pt-1', currentTheme.border)}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onSelectVendor({
+                                id: listing.sellerId,
+                                name: sellerName
+                              })
+                            }
+                            className={cn(
+                              'w-full p-3.5 rounded-2xl border flex items-center justify-between gap-3 text-left transition-colors cursor-pointer',
+                              currentTheme.cardAlt,
+                              currentTheme.bgHover
+                            )}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div
+                                className={cn(
+                                  'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border',
+                                  currentTheme.border,
+                                  currentTheme.card
+                                )}
+                              >
+                                {(sellerName || 'S').substring(0, 2).toUpperCase()}
                               </div>
-                              <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
-                                {metrics.impressions}
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <span className={cn('text-sm font-bold truncate', currentTheme.text)}>
+                                    {sellerName}
+                                  </span>
+                                  <ShieldCheck size={14} className={cn('shrink-0', currentTheme.accent)} />
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs mt-0.5">
+                                  {sellerRating && sellerRating.count > 0 ? (
+                                    <>
+                                      <Star size={12} className="fill-amber-400 text-amber-500 shrink-0" />
+                                      <span className={cn('font-bold tabular-nums', currentTheme.accent)}>
+                                        {sellerRating.avg.toFixed(1)}
+                                      </span>
+                                      <span className={currentTheme.muted}>
+                                        ({sellerRating.count}{' '}
+                                        {language === 'ka' ? 'შეფასება' : 'reviews'})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className={currentTheme.muted}>
+                                      {language === 'ka' ? 'ახალი გამყიდველი' : 'New seller'}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
-                              <div className="text-[9px] font-bold text-proton-muted">
-                                {language === 'ka' ? 'ნახვა' : 'Views'}
-                              </div>
-                              <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
-                                {metrics.views}
-                              </div>
-                            </div>
-                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
-                              <div className="text-[9px] font-bold text-proton-muted">
-                                {language === 'ka' ? 'უნიკ.' : 'Uniq.'}
-                              </div>
-                              <div className="text-xs font-black font-mono text-emerald-500 tabular-nums">
-                                {metrics.uniqueViewers}
-                              </div>
-                            </div>
-                            <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
-                              <div className="text-[9px] font-bold text-proton-muted">
-                                {language === 'ka' ? 'ჩართ.' : 'Eng.'}
-                              </div>
-                              <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
-                                {metrics.engagementRate}%
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
 
-                      {ownerAnalytics && ownerAnalytics.achievements.length > 0 && (
-                        <div className="flex flex-wrap gap-1 pt-0.5">
-                          {ownerAnalytics.achievements.map((badge) => (
-                            <AchievementBadge key={badge} badgeId={badge} language={language} compact />
-                          ))}
+                            <span className={cn('text-xs font-medium shrink-0', currentTheme.muted)}>
+                              {language === 'ka' ? 'პროფილი' : 'Reviews'}
+                            </span>
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  )}
+
+                        {/* Owner-Only Real Listing Analytics */}
+                        {isOwnListing && (
+                          <div className={cn('p-3.5 rounded-2xl border space-y-2.5 mt-3', currentTheme.cardAlt)}>
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <span className={cn('text-[10px] font-black uppercase tracking-wider', currentTheme.text)}>
+                                {language === 'ka' ? 'მფლობელის სტატისტიკა' : 'Owner Analytics'}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {(['24h', '7d', '30d', 'all'] as AnalyticsPeriod[]).map((pk) => (
+                                  <button
+                                    key={pk}
+                                    type="button"
+                                    onClick={() => setAnalyticsPeriod(pk)}
+                                    className={cn(
+                                      'px-2 py-0.5 rounded-md text-[9px] font-black uppercase cursor-pointer transition-colors',
+                                      analyticsPeriod === pk
+                                        ? 'bg-proton-accent text-proton-on-accent'
+                                        : 'bg-proton-bg text-proton-muted hover:text-proton-text'
+                                    )}
+                                  >
+                                    {pk === 'all' ? (language === 'ka' ? 'სულ' : 'All') : pk}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {(() => {
+                              const metrics = ownerAnalytics?.periods?.[analyticsPeriod] || {
+                                impressions: 0,
+                                views: 0,
+                                uniqueViewers: 0,
+                                engagementRate: 0,
+                              };
+                              return (
+                                <div className="grid grid-cols-4 gap-2 text-center">
+                                  <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                                    <div className="text-[9px] font-bold text-proton-muted">
+                                      {language === 'ka' ? 'გამოჩენა' : 'Impr.'}
+                                    </div>
+                                    <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
+                                      {metrics.impressions}
+                                    </div>
+                                  </div>
+                                  <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                                    <div className="text-[9px] font-bold text-proton-muted">
+                                      {language === 'ka' ? 'ნახვა' : 'Views'}
+                                    </div>
+                                    <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
+                                      {metrics.views}
+                                    </div>
+                                  </div>
+                                  <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                                    <div className="text-[9px] font-bold text-proton-muted">
+                                      {language === 'ka' ? 'უნიკ.' : 'Uniq.'}
+                                    </div>
+                                    <div className="text-xs font-black font-mono text-emerald-500 tabular-nums">
+                                      {metrics.uniqueViewers}
+                                    </div>
+                                  </div>
+                                  <div className="p-2 rounded-xl bg-proton-bg/70 border border-proton-border">
+                                    <div className="text-[9px] font-bold text-proton-muted">
+                                      {language === 'ka' ? 'ჩართ.' : 'Eng.'}
+                                    </div>
+                                    <div className={cn('text-xs font-black font-mono tabular-nums', currentTheme.text)}>
+                                      {metrics.engagementRate}%
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {ownerAnalytics && ownerAnalytics.achievements.length > 0 && (
+                              <div className="flex flex-wrap gap-1 pt-0.5">
+                                {ownerAnalytics.achievements.map((badge) => (
+                                  <AchievementBadge key={badge} badgeId={badge} language={language} compact />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
