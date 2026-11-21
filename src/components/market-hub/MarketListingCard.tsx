@@ -459,10 +459,10 @@ export const MarketListingCard = React.memo(function MarketListingCard({
       </div>
 
       {/* Card Content */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3.5 min-w-0">
+      <div className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between gap-3 min-w-0">
         <div className="space-y-3 min-w-0">
           {/* 2. Product Title */}
-          <h2 className="text-sm sm:text-base font-bold tracking-tight text-proton-text group-hover:text-proton-accent transition-colors line-clamp-2 min-h-[2.6rem] leading-snug break-words">
+          <h2 className="text-[13px] sm:text-base font-bold tracking-tight text-proton-text group-hover:text-proton-accent transition-colors line-clamp-2 min-h-[2.5rem] sm:min-h-[2.6rem] leading-snug break-words">
             {displayTitle}
           </h2>
 
@@ -628,28 +628,28 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           )}
 
           {isOwnListing && ownerStats && (
-            <div className="pt-2 border-t border-proton-border grid grid-cols-3 gap-1.5 text-center">
-              <div className="px-1.5 py-1 rounded-lg bg-proton-bg/70 border border-proton-border">
-                <div className="text-[8px] font-bold uppercase text-proton-muted">
+            <div className="pt-2 border-t border-proton-border grid grid-cols-3 gap-1 text-center min-w-0">
+              <div className="px-1 py-1 rounded-lg bg-proton-bg/70 border border-proton-border min-w-0">
+                <div className="text-[7px] sm:text-[8px] font-bold uppercase text-proton-muted truncate">
                   {language === 'ka' ? 'გამოჩენა' : 'Impr.'}
                 </div>
-                <div className="text-[11px] font-black font-mono text-proton-text tabular-nums">
+                <div className="text-[10px] sm:text-[11px] font-black font-mono text-proton-text tabular-nums truncate">
                   {ownerStats.periods.all.impressions}
                 </div>
               </div>
-              <div className="px-1.5 py-1 rounded-lg bg-proton-bg/70 border border-proton-border">
-                <div className="text-[8px] font-bold uppercase text-proton-muted">
+              <div className="px-1 py-1 rounded-lg bg-proton-bg/70 border border-proton-border min-w-0">
+                <div className="text-[7px] sm:text-[8px] font-bold uppercase text-proton-muted truncate">
                   {language === 'ka' ? 'ნახვა' : 'Views'}
                 </div>
-                <div className="text-[11px] font-black font-mono text-proton-text tabular-nums">
+                <div className="text-[10px] sm:text-[11px] font-black font-mono text-proton-text tabular-nums truncate">
                   {ownerStats.periods.all.views}
                 </div>
               </div>
-              <div className="px-1.5 py-1 rounded-lg bg-proton-bg/70 border border-proton-border">
-                <div className="text-[8px] font-bold uppercase text-proton-muted">
+              <div className="px-1 py-1 rounded-lg bg-proton-bg/70 border border-proton-border min-w-0">
+                <div className="text-[7px] sm:text-[8px] font-bold uppercase text-proton-muted truncate">
                   {language === 'ka' ? 'უნიკ.' : 'Uniq.'}
                 </div>
-                <div className="text-[11px] font-black font-mono text-emerald-500 tabular-nums">
+                <div className="text-[10px] sm:text-[11px] font-black font-mono text-emerald-500 tabular-nums truncate">
                   {ownerStats.periods.all.uniqueViewers}
                 </div>
               </div>
