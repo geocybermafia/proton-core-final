@@ -68,12 +68,70 @@ export const ChatMessageList = React.memo(function ChatMessageList({
   const prevCountRef = useRef<number>(0);
   const prevConvKeyRef = useRef<string | undefined>(conversationKey);
   const isNearBottomRef = useRef<boolean>(true);
+  const lastClientHeightRef = useRef<number>(0);
+  const lastClientWidthRef = useRef<number>(0);
+  const lastScrollHeightRef = useRef<number>(0);
+  const lastScrollTopRef = useRef<number>(0);
+  const isAutoScrollingRef = useRef<boolean>(false);
+  const autoScrollTimeoutRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+
+  const lastMessageSenderId = messages.length > 0 ? messages[messages.length - 1]?.senderId : undefined;
+
+  const clearAutoScrolling = () => {
+    isAutoScrollingRef.current = false;
+    if (autoScrollTimeoutRef.current !== null) {
+      window.clearTimeout(autoScrollTimeoutRef.current);
+      autoScrollTimeoutRef.current = null;
+    }
+  };
 
   const handleScroll = () => {
     const container = scrollContainerRef.current;
-    if (!container) return;
-    const distanceFromBottom = container.scrollHeight - container.clientHeight - container.scrollTop;
+    if (!container || container.clientHeight === 0) return;
+
+    const { scrollHeight, clientHeight, clientWidth, scrollTop } = container;
+    const distanceFromBottom = scrollHeight - clientHeight - scrollTop;
+
+    if (isAutoScrollingRef.current) {
+      const containerDimensionsUnchanged =
+        clientHeight === lastClientHeightRef.current &&
+        clientWidth === lastClientWidthRef.current;
+      const scrolledUpManually =
+        containerDimensionsUnchanged &&
+        scrollHeight >= lastScrollHeightRef.current &&
+        scrollTop < lastScrollTopRef.current - 1;
+
+      if (scrolledUpManually) {
+        clearAutoScrolling();
+        isNearBottomRef.current = distanceFromBottom <= 24;
+      } else if (distanceFromBottom <= 24) {
+        clearAutoScrolling();
+        isNearBottomRef.current = true;
+      }
+
+      lastScrollTopRef.current = scrollTop;
+      return;
+    }
+
+    const containerResized =
+      lastClientHeightRef.current > 0 &&
+      (clientHeight < lastClientHeightRef.current || clientWidth !== lastClientWidthRef.current);
+
+    if (
+      isNearBottomRef.current &&
+      distanceFromBottom > 24 &&
+      containerResized &&
+      scrollTop >= lastScrollTopRef.current - 1
+    ) {
+      return;
+    }
+
     isNearBottomRef.current = distanceFromBottom <= 24;
+    lastClientHeightRef.current = clientHeight;
+    lastClientWidthRef.current = clientWidth;
+    lastScrollHeightRef.current = scrollHeight;
+    lastScrollTopRef.current = scrollTop;
   };
 
   useEffect(() => {
@@ -81,40 +139,187 @@ export const ChatMessageList = React.memo(function ChatMessageList({
     if (!container) return;
 
     const conversationChanged = prevConvKeyRef.current !== conversationKey;
+    const isInitialLoadWithMessages = prevCountRef.current === 0 && messages.length > 0;
     const hasNewMessages = messages.length > prevCountRef.current;
 
-    if (conversationChanged || hasNewMessages) {
+    const syncMetrics = (el: HTMLDivElement) => {
+      if (el.clientHeight === 0) return;
+      lastClientHeightRef.current = el.clientHeight;
+      lastClientWidthRef.current = el.clientWidth;
+      lastScrollHeightRef.current = el.scrollHeight;
+      lastScrollTopRef.current = el.scrollTop;
+    };
+
+    if (conversationChanged || isInitialLoadWithMessages) {
+      clearAutoScrolling();
       isNearBottomRef.current = true;
-      const scrollBehavior = conversationChanged || prevCountRef.current === 0 ? 'auto' : 'smooth';
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: scrollBehavior,
+      const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+      container.scrollTop = maxScrollTop;
+      syncMetrics(container);
+
+      const rafId = requestAnimationFrame(() => {
+        const el = scrollContainerRef.current;
+        if (!el || el.clientHeight === 0) return;
+        const target = Math.max(0, el.scrollHeight - el.clientHeight);
+        el.scrollTop = target;
+        isNearBottomRef.current = true;
+        syncMetrics(el);
       });
-      if (scrollBehavior === 'auto') {
-        requestAnimationFrame(() => {
-          if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+
+      prevConvKeyRef.current = conversationKey;
+      prevCountRef.current = messages.length;
+      return () => cancelAnimationFrame(rafId);
+    }
+
+    if (hasNewMessages) {
+      const isOwnNewMessage = Boolean(currentUserId && lastMessageSenderId === currentUserId);
+      if (isOwnNewMessage || isNearBottomRef.current || isAutoScrollingRef.current) {
+        isNearBottomRef.current = true;
+        const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+        if (maxScrollTop - container.scrollTop <= 2) {
+          clearAutoScrolling();
+          container.scrollTop = maxScrollTop;
+          syncMetrics(container);
+        } else {
+          if (autoScrollTimeoutRef.current !== null) {
+            window.clearTimeout(autoScrollTimeoutRef.current);
           }
-        });
+          isAutoScrollingRef.current = true;
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth',
+          });
+          autoScrollTimeoutRef.current = window.setTimeout(() => {
+            autoScrollTimeoutRef.current = null;
+            const el = scrollContainerRef.current;
+            if (!el || el.clientHeight === 0) {
+              isAutoScrollingRef.current = false;
+              return;
+            }
+            if (isAutoScrollingRef.current) {
+              isAutoScrollingRef.current = false;
+              const dist = el.scrollHeight - el.clientHeight - el.scrollTop;
+              isNearBottomRef.current = dist <= 24;
+              syncMetrics(el);
+            }
+          }, 700);
+          if (container.clientHeight > 0) {
+            lastClientHeightRef.current = container.clientHeight;
+            lastClientWidthRef.current = container.clientWidth;
+            lastScrollHeightRef.current = container.scrollHeight;
+          }
+        }
+      } else if (container.clientHeight > 0) {
+        lastClientHeightRef.current = container.clientHeight;
+        lastClientWidthRef.current = container.clientWidth;
+        lastScrollHeightRef.current = container.scrollHeight;
       }
+    } else if (messages.length < prevCountRef.current) {
+      syncMetrics(container);
     }
 
     prevConvKeyRef.current = conversationKey;
     prevCountRef.current = messages.length;
-  }, [messages.length, conversationKey]);
+  }, [messages.length, lastMessageSenderId, conversationKey, currentUserId]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container || typeof ResizeObserver === 'undefined') return;
+    if (!container) return;
 
-    const observer = new ResizeObserver(() => {
-      if (isNearBottomRef.current && scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    const handleScrollEnd = () => {
+      const el = scrollContainerRef.current;
+      if (!el || el.clientHeight === 0) return;
+      if (isAutoScrollingRef.current) {
+        clearAutoScrolling();
+        const dist = el.scrollHeight - el.clientHeight - el.scrollTop;
+        isNearBottomRef.current = dist <= 24;
       }
-    });
+      lastClientHeightRef.current = el.clientHeight;
+      lastClientWidthRef.current = el.clientWidth;
+      lastScrollHeightRef.current = el.scrollHeight;
+      lastScrollTopRef.current = el.scrollTop;
+    };
 
-    observer.observe(container);
-    return () => observer.disconnect();
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0 && isAutoScrollingRef.current) {
+        clearAutoScrolling();
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        touchStartYRef.current = e.touches[0].clientY;
+      } else {
+        touchStartYRef.current = null;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (
+        isAutoScrollingRef.current &&
+        touchStartYRef.current !== null &&
+        e.touches.length === 1 &&
+        e.touches[0].clientY - touchStartYRef.current > 4
+      ) {
+        clearAutoScrolling();
+      }
+    };
+
+    const handleTouchEnd = () => {
+      touchStartYRef.current = null;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        isAutoScrollingRef.current &&
+        (e.key === 'ArrowUp' || e.key === 'PageUp' || e.key === 'Home')
+      ) {
+        clearAutoScrolling();
+      }
+    };
+
+    container.addEventListener('scrollend', handleScrollEnd);
+    container.addEventListener('wheel', handleWheel, { passive: true });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: true });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    container.addEventListener('keydown', handleKeyDown);
+
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            const el = scrollContainerRef.current;
+            if (!el || el.clientHeight === 0) return;
+
+            if (isNearBottomRef.current) {
+              clearAutoScrolling();
+              const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+              if (Math.abs(el.scrollTop - maxScrollTop) > 1) {
+                el.scrollTop = maxScrollTop;
+              }
+            }
+
+            lastClientHeightRef.current = el.clientHeight;
+            lastClientWidthRef.current = el.clientWidth;
+            lastScrollHeightRef.current = el.scrollHeight;
+            lastScrollTopRef.current = el.scrollTop;
+          })
+        : null;
+
+    observer?.observe(container);
+
+    return () => {
+      clearAutoScrolling();
+      observer?.disconnect();
+      container.removeEventListener('scrollend', handleScrollEnd);
+      container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
+      container.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const messagesWithMeta = useMemo(() => {
