@@ -334,7 +334,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
   ];
 
   return (
-    <div id="buyer-orders-container" className="space-y-6 w-full animate-in fade-in duration-300">
+    <div id="buyer-orders-container" className="space-y-6 w-full min-w-0 max-w-full animate-in fade-in duration-300">
       {/* Header & Sub-Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-proton-border">
         <div>
@@ -364,7 +364,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
       {/* Buyer Filter Tabs */}
       <div 
         id="buyer-order-filters-nav"
-        className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none"
+        className="w-full min-w-0 max-w-full flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none"
       >
         {filterTabs.map(tab => {
           const Icon = tab.icon;
@@ -408,7 +408,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         /* Global Empty State: Buyer has no orders at all */
         <div 
           id="buyer-orders-empty-state"
-          className={cn("p-10 sm:p-14 rounded-3xl border text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-4 shadow-xl", currentTheme.card)}
+          className={cn("w-full p-6 sm:p-14 rounded-3xl border text-center flex flex-col items-center justify-center max-w-xl mx-auto space-y-4 shadow-xl", currentTheme.card)}
         >
           <div className="w-16 h-16 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
             <ShoppingBag size={28} />
@@ -436,7 +436,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         /* Filter Empty State: No orders match this filter */
         <div 
           id="buyer-orders-filtered-empty"
-          className={cn("p-8 sm:p-12 rounded-3xl border text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-xl", currentTheme.card)}
+          className={cn("w-full p-6 sm:p-12 rounded-3xl border text-center flex flex-col items-center justify-center max-w-md mx-auto space-y-4 shadow-xl", currentTheme.card)}
         >
           <div className="w-14 h-14 rounded-2xl bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted">
             <Package size={24} />
@@ -461,7 +461,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         </div>
       ) : (
         /* Orders Grid */
-        <div id="buyer-orders-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="buyer-orders-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
           {filteredOrders.map((order) => {
             const isPhysical = isPhysicalOrder(order);
             const isService = isServiceOrder(order);
@@ -482,15 +482,15 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "relative rounded-2xl border p-4 sm:p-5 flex flex-col justify-between transition-all backdrop-blur-md shadow-xl",
+                  "relative w-full min-w-0 rounded-2xl border p-4 sm:p-5 flex flex-col justify-between transition-all backdrop-blur-md shadow-xl",
                   currentTheme.card,
                   isDeliveryConfirmable && "border-indigo-500/45 ring-1 ring-indigo-500/20"
                 )}
               >
                 {/* Card Top: Order Date & Status */}
-                <div>
-                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-proton-border">
-                    <div className="flex items-center gap-2">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-proton-border">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className="w-7 h-7 rounded-lg bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted shrink-0">
                         {isPhysical ? (
                           <Truck size={14} className="text-cyan-500" />
@@ -500,7 +500,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                           <ShoppingBag size={14} className={currentTheme.accent} />
                         )}
                       </div>
-                      <div className="flex flex-col">
+                      <div className="flex flex-col min-w-0">
                         <span className={cn("text-[10px] font-mono tracking-wider", currentTheme.muted)}>
                           {orderDateStr}
                         </span>
@@ -687,10 +687,10 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                         )}
 
                         {/* Technical Metadata & Order ID */}
-                        <div className="pt-2 flex items-center justify-between text-[9px] font-mono text-proton-muted border-t border-proton-border">
-                          <div className="flex items-center gap-1">
-                            <span>ID:</span>
-                            <span className={cn("font-bold", currentTheme.text)}>{order.id}</span>
+                        <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-[9px] font-mono text-proton-muted border-t border-proton-border">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <span className="shrink-0">ID:</span>
+                            <span className={cn("font-bold break-all", currentTheme.text)}>{order.id}</span>
                             <button
                               type="button"
                               onClick={() => copyToClipboard(order.id, `order-id-${order.id}`)}

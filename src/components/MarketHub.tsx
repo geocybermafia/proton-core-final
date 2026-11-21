@@ -4561,7 +4561,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             </div>
           )}
 
-          <div className="flex flex-col md:flex-row gap-8 items-start w-full">
+          <div className="flex flex-col md:flex-row gap-8 items-stretch md:items-start w-full">
             {/* Desktop Left Sidebar: Categories/Filters */}
             {viewMode === 'browse' && (
               <aside className="hidden md:block w-72 shrink-0 space-y-6 sticky top-20 animate-in fade-in slide-in-from-left duration-300">
@@ -4590,7 +4590,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               </aside>
             )}
 
-            <div className="flex-1 min-w-0 space-y-8">
+            <div className="w-full md:w-auto flex-1 min-w-0 space-y-8">
 
 
               {viewMode === 'browse' && displayMode === 'map' && (
@@ -4610,7 +4610,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 </div>
               )}
 
-              <div className="space-y-8">
+              <div className="w-full min-w-0 space-y-8">
                 {(viewMode === 'my-listings' || viewMode === 'browse') && activeBottomTab === 'messages' && (
                   /* Dedicated Desktop Inbox / Direct Messages layout */
                   <div className="hidden md:grid grid-cols-12 gap-6 bg-proton-card border border-proton-border rounded-xl p-6 h-[calc(100vh-270px)] min-h-[480px] max-h-[660px] animate-in fade-in duration-300 shadow-lg">
@@ -4858,7 +4858,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 )}
 
                 {viewMode === 'my-listings' && profileSubMode === 'selling' && activeBottomTab !== 'messages' && (
-                  <div className="space-y-3 w-full">
+                  <div className="space-y-3 w-full min-w-0">
                     <div className="flex flex-wrap bg-proton-bg p-1 rounded-2xl border border-proton-border shadow-inner self-start max-w-2xl gap-1 animate-in fade-in duration-300">
                       <button
                         type="button"
@@ -4996,7 +4996,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         </div>
 
                         {/* Filter Tabs for Seller Incoming Orders */}
-                        <div className="w-full overflow-x-auto scrollbar-none no-scrollbar py-0.5">
+                        <div className="w-full min-w-0 max-w-full overflow-x-auto scrollbar-none no-scrollbar py-0.5">
                         <div className="flex items-center gap-1.5 sm:gap-2 min-w-max pb-1">
                           {/* Tab 1: All */}
                           <button
@@ -5486,7 +5486,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                       );
                     })
                   ) : (
-                    <div className="col-span-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-proton-card border border-proton-border rounded-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300 shadow-lg">
+                    <div className="col-span-full w-full py-16 px-6 max-w-md mx-auto text-center space-y-4 bg-proton-card border border-proton-border rounded-xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-300 shadow-lg">
                       <div className="w-14 h-14 bg-proton-bg rounded-xl flex items-center justify-center mx-auto border border-proton-border text-proton-text">
                         {sellerOrderFilter === 'action-required' ? (
                           <CheckCircle2 size={24} className="text-emerald-500" />
