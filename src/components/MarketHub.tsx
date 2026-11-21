@@ -1530,6 +1530,57 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     };
   }, [isAnyMarketOverlayOpen, onMobileOverlayChange]);
 
+  const mobileMessagesOverlayRef = useRef<HTMLDivElement | null>(null);
+  const shouldPinMobileBottomRef = useRef<boolean>(false);
+  const [mobileVisualViewport, setMobileVisualViewport] = useState<{ height: number; offsetTop: number } | null>(null);
+
+  useEffect(() => {
+    if (activeBottomTab !== 'messages' || typeof window === 'undefined' || !window.visualViewport) {
+      setMobileVisualViewport(null);
+      return;
+    }
+
+    const vv = window.visualViewport;
+    const syncViewport = () => {
+      if (window.innerWidth >= 768) {
+        setMobileVisualViewport(null);
+        return;
+      }
+      const logEl = mobileMessagesOverlayRef.current?.querySelector('[role="log"]') as HTMLElement | null;
+      if (logEl) {
+        shouldPinMobileBottomRef.current =
+          logEl.scrollHeight - logEl.clientHeight - logEl.scrollTop <= 48;
+      }
+      setMobileVisualViewport({
+        height: Math.round(vv.height),
+        offsetTop: Math.round(vv.offsetTop),
+      });
+    };
+
+    syncViewport();
+    vv.addEventListener('resize', syncViewport);
+    vv.addEventListener('scroll', syncViewport);
+    window.addEventListener('resize', syncViewport);
+
+    return () => {
+      vv.removeEventListener('resize', syncViewport);
+      vv.removeEventListener('scroll', syncViewport);
+      window.removeEventListener('resize', syncViewport);
+    };
+  }, [activeBottomTab]);
+
+  useEffect(() => {
+    if (!shouldPinMobileBottomRef.current) return;
+    const rafId = requestAnimationFrame(() => {
+      const logEl = mobileMessagesOverlayRef.current?.querySelector('[role="log"]') as HTMLElement | null;
+      if (logEl) {
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      shouldPinMobileBottomRef.current = false;
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [mobileVisualViewport]);
+
   // Browser History & Hardware Back-Button Integration (Modals & Drawers)
   const modalHistoryRef = useRef<string | null>(null);
   const isBackNavigationRef = useRef<boolean>(false);
@@ -6123,241 +6174,152 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   <AnimatePresence>
     {activeBottomTab === 'messages' && (
       <motion.div 
+        ref={mobileMessagesOverlayRef}
         initial={{ opacity: 0, y: "100%" }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="fixed inset-0 bg-proton-bg z-[120] overflow-y-auto px-4 pt-[calc(1.25rem+env(safe-area-inset-top,0px))] pb-[calc(1.25rem+env(safe-area-inset-bottom,16px))] md:hidden flex flex-col"
+        style={
+          mobileVisualViewport
+            ? {
+                height: `${mobileVisualViewport.height}px`,
+                top: `${mobileVisualViewport.offsetTop}px`,
+                bottom: 'auto',
+              }
+            : undefined
+        }
+        className={cn(
+          "fixed inset-x-0 top-0 bottom-0 bg-proton-bg z-[120] px-3 sm:px-4 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] md:hidden flex flex-col overflow-x-hidden",
+          activeChatListing ? "overflow-hidden" : "overflow-y-auto"
+        )}
       >
-        <div className={cn("max-w-md w-full mx-auto flex flex-col", activeChatListing ? "flex-1 min-h-0 gap-3 sm:gap-4" : "space-y-6")}>
-          {/* Top Selector Panel: Chats vs. Orders */}
-          <div className="flex items-center justify-between border-b border-proton-border pb-3 shrink-0">
-            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-proton-accent flex items-center gap-2 font-sans">
-              <span>💬</span> {language === 'ka' ? 'კავშირი' : 'Communications'}
-            </h2>
-            <button 
-              type="button"
-              onClick={closeInlineMessages}
-              className="px-3 py-1.5 rounded-xl bg-proton-card border border-proton-border text-[9px] font-black text-proton-muted hover:text-proton-text uppercase tracking-widest transition-colors cursor-pointer"
-            >
-              {language === 'ka' ? 'დახურვა' : 'Close'}
-            </button>
-          </div>
+        <div
+          className={cn(
+            "max-w-md w-full mx-auto flex flex-col min-w-0",
+            activeChatListing ? "flex-1 min-h-0" : "space-y-5 pb-4"
+          )}
+        >
+          {/* Top Selector Panel: Hidden during active thread so ChatThreadHeader provides Back + Close cleanly */}
+          {!activeChatListing && (
+            <div className="flex items-center justify-between gap-2 border-b border-proton-border pb-3 shrink-0 min-w-0">
+              <h2 className="text-xs font-black uppercase tracking-[0.16em] text-proton-accent flex items-center gap-2 font-sans truncate">
+                <span aria-hidden="true">💬</span>
+                <span className="truncate">{language === 'ka' ? 'კავშირი' : 'Communications'}</span>
+              </h2>
+              <button 
+                type="button"
+                onClick={closeInlineMessages}
+                className="min-h-[44px] min-w-[44px] px-3.5 py-2 rounded-xl bg-proton-card border border-proton-border text-xs font-bold text-proton-text hover:bg-proton-accent/10 hover:border-proton-accent/40 transition-colors cursor-pointer shrink-0 flex items-center justify-center gap-1.5 active:scale-95"
+                aria-label={language === 'ka' ? 'დახურვა' : 'Close'}
+              >
+                <X size={15} className="shrink-0" />
+                <span>{language === 'ka' ? 'დახურვა' : 'Close'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Inner active screen selector or dual panel */}
-          <div className={cn(activeChatListing ? "flex-1 min-h-0 flex flex-col" : "space-y-6")}>
+          <div className={cn("min-w-0", activeChatListing ? "flex-1 min-h-0 flex flex-col" : "space-y-6")}>
             {activeChatListing ? (
-              // Active Chat Thread
-              <div className="flex-1 min-h-0 flex flex-col gap-3">
-                <div className="flex items-center gap-3 bg-proton-card p-3 rounded-xl border border-proton-border shrink-0">
-                  <button 
-                    onClick={() => {
-                      setActiveChatListing(null);
-                      setActiveChatContext(null);
-                      setActiveChatOrder(null);
-                    }}
-                    className="p-1 px-2.5 rounded-lg bg-proton-bg border border-proton-border text-[10px] font-black uppercase text-proton-muted hover:text-proton-text cursor-pointer shrink-0"
-                  >
-                    ← {language === 'ka' ? 'უკან' : 'Back'}
-                  </button>
-                  <div className="truncate flex-1 min-w-0">
-                    <span className="text-[9px] font-bold text-proton-muted block uppercase font-mono tracking-wider truncate">
-                      {user?.uid === activeChatContext?.sellerId
-                        ? (language === 'ka' ? `მყიდველი: ${activeChatContext?.buyerName || 'Buyer'}` : `Buyer: ${activeChatContext?.buyerName || 'Buyer'}`)
-                        : (language === 'ka' ? 'ჩატი განცხადებაზე:' : 'Chatting about:')}
-                    </span>
-                    <h4 className="text-xs font-black text-proton-text truncate">{getListingTitle(activeChatListing, language)}</h4>
-                  </div>
-                </div>
+              // Active Chat Thread using Shared Chat Components
+              <div className="flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 min-w-0">
+                <ChatThreadHeader
+                  listing={activeChatListing}
+                  order={
+                    activeChatOrder
+                      ? {
+                          orderId: activeChatOrder.id,
+                          itemTitle: activeChatOrder.itemTitle || activeChatListing.title,
+                          amount: activeChatOrder.amount,
+                          currency: activeChatOrder.currency,
+                          status: activeChatOrder.status,
+                        }
+                      : null
+                  }
+                  currentUserId={user?.uid}
+                  buyerName={activeChatContext?.buyerName}
+                  sellerName={activeChatContext?.sellerName || activeChatListing.sellerName}
+                  language={language}
+                  currentTheme={currentTheme}
+                  onBack={() => {
+                    setActiveChatListing(null);
+                    setActiveChatContext(null);
+                    setActiveChatOrder(null);
+                  }}
+                  onClose={closeInlineMessages}
+                  onViewOrder={handleViewOrderFromChat}
+                  showInquiryTerms={Boolean(listings.some((l) => l.id === activeChatListing.id))}
+                />
 
-                {/* Order Context Banner if activeChatOrder exists */}
-                {activeChatOrder && (
-                  <div className="bg-proton-accent/10 border border-proton-accent/30 rounded-xl p-2.5 flex items-center justify-between gap-2 text-xs shrink-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Package size={14} className="text-proton-accent shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-proton-accent block truncate">
-                          {language === 'ka' ? 'შეკვეთის შესახებ' : 'Regarding Order'} #{activeChatOrder.id.slice(-6).toUpperCase()}
-                        </span>
-                        <p className="text-[9px] text-proton-muted truncate">
-                          {activeChatOrder.itemTitle || getListingTitle(activeChatListing, language)}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleViewOrderFromChat(activeChatOrder.id)}
-                      className="px-2.5 py-1 rounded-lg bg-proton-card hover:bg-proton-accent/10 text-proton-text text-[9px] font-black uppercase tracking-wider transition-all border border-proton-border hover:border-proton-accent/40 shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
-                    >
-                      <ExternalLink size={10} className="text-proton-accent" />
-                      <span>{language === 'ka' ? 'ნახვა' : 'View Order'}</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Chat Messages Log */}
-                <div className="bg-proton-card rounded-2xl p-3 sm:p-4 border border-proton-border flex-1 min-h-[200px] overflow-y-auto space-y-3 flex flex-col">
-                  {messagesList.length === 0 ? (
-                    <div className="text-center my-auto py-8">
-                      <p className="text-[10px] uppercase font-black tracking-widest text-proton-muted">
-                        {language === 'ka' ? 'შეტყობინებები არ არის' : 'No messages yet'}
-                      </p>
-                      <span className="text-[9px] text-proton-muted/80 mt-1 block font-semibold">
-                        {language === 'ka' ? 'მისწერეთ შეკითხვა გამყიდველს.' : 'Send a friendly query.'}
-                      </span>
-                    </div>
-                  ) : (
-                    messagesList.map((msg) => {
-                      const isMe = msg.senderId === user?.uid;
-                      return (
-                        <div 
-                          key={msg.id}
-                          className={cn(
-                            "max-w-[85%] p-3 rounded-2xl text-xs flex flex-col gap-1 shadow-sm",
-                            isMe 
-                              ? "bg-proton-accent text-proton-on-accent self-end rounded-tr-none font-bold" 
-                              : "bg-proton-bg text-proton-text self-start rounded-tl-none font-medium border border-proton-border"
-                          )}
-                        >
-                          <div className="flex items-center gap-1.5 justify-between">
-                            <span className={cn("text-[8px] font-black uppercase tracking-wider", isMe ? "text-proton-on-accent/75" : "text-proton-muted")}>
-                              {msg.senderName}
-                            </span>
-                          </div>
-                          <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
-                        </div>
-                      );
-                    })
+                <ChatMessageList
+                  messages={messagesList}
+                  currentUserId={user?.uid}
+                  isSellerViewing={Boolean(
+                    user?.uid &&
+                      user.uid === (activeChatContext?.sellerId || activeChatListing.sellerId)
                   )}
-                </div>
+                  language={language}
+                  emptyStateAction={setChatMessageText}
+                  conversationKey={
+                    activeChatContext?.conversationId ||
+                    `${activeChatListing.id}_${activeChatOrder?.id || ''}`
+                  }
+                />
 
-                {/* Chat Input */}
-                <form onSubmit={handleSendMessage} className="flex gap-2 shrink-0">
-                  <input 
-                    type="text"
-                    value={chatMessageText}
-                    onChange={(e) => setChatMessageText(e.target.value)}
-                    placeholder={language === 'ka' ? 'დაწერეთ შეტყობინება...' : 'Type a secure message...'}
-                    className={cn("flex-1 min-w-0 rounded-xl px-4 py-2.5 text-base md:text-xs", currentTheme.input)}
-                  />
-                  <button 
-                    type="submit"
-                    disabled={!chatMessageText.trim()}
-                    className={cn("shrink-0 px-4 py-2.5 disabled:opacity-40 transition-all rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer", currentTheme.accentBg)}
-                  >
-                    {language === 'ka' ? 'გაგზავნა' : 'Send'}
-                  </button>
-                </form>
+                <ChatComposer
+                  value={chatMessageText}
+                  onChange={setChatMessageText}
+                  onSubmit={handleSendMessage}
+                  language={language}
+                  currentTheme={currentTheme}
+                  placeholder={
+                    language === 'ka'
+                      ? 'დაწერეთ შეთავაზება ან შეკითხვა...'
+                      : 'Propose a price or ask a question...'
+                  }
+                />
               </div>
             ) : (
               // Chats and Orders List
-              <div className="space-y-6">
-                {/* Conversations */}
-                <div className="space-y-3">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-accent">
-                    {language === 'ka' ? 'ჩატების სია' : 'Direct Messages'}
-                  </h3>
-                  {groupedChats.length === 0 ? (
-                    <div className="bg-proton-card border border-proton-border p-6 rounded-xl text-center">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-proton-muted">
-                        {language === 'ka' ? 'აქტიური საუბრები არ არის' : 'No active chats found'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {groupedChats.map((chat) => {
-                        const relatedListing = listings.find(l => l.id === chat.listingId);
-                        const isSeller = user?.uid === chat.sellerId;
-                        return (
-                          <button
-                            key={chat.conversationId}
-                            onClick={() => {
-                              const orderId = chat.orderId || chat.messages.find((m: any) => m.orderId)?.orderId;
-                              const matched = orderId ? (sellerOrders.find(o => o.id === orderId) || buyerOrders.find(o => o.id === orderId)) : null;
+              <div className="space-y-6 min-w-0">
+                {/* Conversations via Shared ChatThreadList */}
+                <div className="space-y-3 min-w-0">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-proton-accent truncate">
+                      {language === 'ka' ? 'ჩატების სია' : 'Direct Messages'}
+                    </h3>
+                    {desktopChatThreads.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-proton-card border border-proton-border text-[11px] font-bold text-proton-text tabular-nums shrink-0">
+                        {desktopChatThreads.length}
+                      </span>
+                    )}
+                  </div>
 
-                              const resolvedListing = relatedListing || {
-                                id: chat.listingId,
-                                title: chat.listingTitle,
-                                sellerId: chat.sellerId || (user?.uid === chat.buyerId ? '' : user?.uid || ''),
-                                sellerName: chat.sellerName || 'Seller',
-                                price: 0,
-                                currency: 'USD',
-                                condition: 'new',
-                                isNegotiable: false,
-                                status: 'active'
-                              } as any;
-
-                              const ctx: ActiveChatContext = {
-                                conversationId: chat.conversationId,
-                                listing: resolvedListing,
-                                buyerId: chat.buyerId,
-                                sellerId: chat.sellerId,
-                                buyerName: chat.buyerName,
-                                sellerName: chat.sellerName,
-                                orderId: orderId || null
-                              };
-
-                              setActiveChatContext(ctx);
-                              setActiveChatListing(resolvedListing);
-
-                              if (matched) {
-                                setActiveChatOrder(matched);
-                              } else if (orderId) {
-                                setActiveChatOrder({
-                                  id: orderId,
-                                  listingId: chat.listingId,
-                                  itemTitle: chat.listingTitle,
-                                  buyerId: chat.buyerId,
-                                  sellerId: chat.sellerId,
-                                  amount: 0,
-                                  currency: 'USD',
-                                  status: 'pending',
-                                  createdAt: Date.now()
-                                } as any);
-                              } else {
-                                setActiveChatOrder(null);
-                              }
-                            }}
-                            className="w-full text-left bg-proton-card hover:bg-proton-accent/10 border border-proton-border hover:border-proton-accent/40 p-3 rounded-xl flex items-center justify-between transition-all cursor-pointer"
-                          >
-                            <div className="truncate flex-1 pr-3">
-                              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                                <span className="text-[10px] font-black text-proton-accent truncate">
-                                  {isSeller ? (chat.buyerName || 'Buyer') : chat.listingTitle}
-                                </span>
-                                {isSeller && (
-                                  <span className="text-[9px] text-proton-muted truncate max-w-[120px]">
-                                    • {chat.listingTitle}
-                                  </span>
-                                )}
-                                {chat.orderId && (
-                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-proton-accent/15 text-proton-accent border border-proton-accent/30 text-[8px] font-mono font-bold shrink-0">
-                                    <Package size={9} />
-                                    <span>#{chat.orderId.slice(-6).toUpperCase()}</span>
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-proton-text truncate font-semibold mt-0.5">
-                                {chat.lastMessage}
-                              </p>
-                            </div>
-                            <ChevronRight size={14} className="text-proton-muted block shrink-0" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                  <ChatThreadList
+                    threads={desktopChatThreads}
+                    activeConversationId={activeChatContext?.conversationId}
+                    currentUserId={user?.uid}
+                    language={language}
+                    currentTheme={currentTheme}
+                    onSelectThread={handleSelectDesktopThread}
+                    onBrowseMarket={() => {
+                      closeInlineMessages();
+                      setViewMode('browse');
+                    }}
+                  />
                 </div>
 
+
                 {/* Orders Status */}
-                <div className="space-y-3">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-proton-accent flex items-center gap-1.5">
-                    <span>📦</span> {language === 'ka' ? 'თქვენი შეკვეთები' : 'Transactions & Orders'}
+                <div className="space-y-3 min-w-0">
+                  <h3 className="text-xs font-black uppercase tracking-wider text-proton-accent flex items-center gap-1.5">
+                    <span aria-hidden="true">📦</span>
+                    <span>{language === 'ka' ? 'თქვენი შეკვეთები' : 'Transactions & Orders'}</span>
                   </h3>
 
                   {buyerOrders.length === 0 && sellerOrders.length === 0 ? (
-                    <div className="bg-proton-card border border-proton-border p-6 rounded-xl text-center">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-proton-muted">
+                    <div className="bg-proton-card border border-proton-border p-5 rounded-2xl text-center">
+                      <p className="text-xs font-semibold text-proton-muted">
                         {language === 'ka' ? 'შეკვეთები არ ფიქსირდება' : 'No purchase orders yet'}
                       </p>
                     </div>
@@ -6365,19 +6327,20 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     <div className="space-y-2.5">
                       {/* Purchases */}
                       {buyerOrders.map((order, idx) => (
-                        <div key={order.id || idx} className="bg-proton-card border border-proton-border p-3 rounded-2xl flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="px-2 py-0.5 rounded bg-proton-bg text-[8px] font-black text-proton-accent border border-proton-border font-mono uppercase">
+                        <div key={order.id || idx} className="bg-proton-card border border-proton-border p-3.5 rounded-2xl flex flex-col gap-2 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-2 py-0.5 rounded bg-proton-bg text-[11px] font-bold text-proton-accent border border-proton-border font-mono uppercase">
                               {language === 'ka' ? 'შესყიდვა' : 'PURCHASE'}
                             </span>
-                            <span className="text-[9px] font-bold text-emerald-500 uppercase font-mono tracking-widest">
+                            <span className="text-[11px] font-bold text-emerald-500 uppercase font-mono tracking-wider">
                               {order.status || 'Success'}
                             </span>
                           </div>
-                          <div>
-                            <h5 className="text-xs font-black text-proton-text">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
-                            <p className="text-[10px] text-proton-muted font-semibold mt-0.5">
-                              Total: <span className="text-proton-text font-black">{order.amount ?? (order as any).price} {order.currency}</span>
+                          <div className="min-w-0">
+                            <h5 className="text-xs font-bold text-proton-text break-words">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
+                            <p className="text-xs text-proton-muted font-medium mt-0.5">
+                              {language === 'ka' ? 'ჯამი:' : 'Total:'}{' '}
+                              <span className="text-proton-text font-bold tabular-nums">{order.amount ?? (order as any).price} {order.currency}</span>
                             </p>
                           </div>
                         </div>
@@ -6385,19 +6348,20 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                       {/* Sales */}
                       {sellerOrders.map((order, idx) => (
-                        <div key={order.id || idx} className="bg-proton-card border border-proton-border p-3 rounded-2xl flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="px-2 py-0.5 rounded bg-proton-accent/15 text-[8px] font-black text-proton-accent border border-proton-accent/30 font-mono uppercase">
+                        <div key={order.id || idx} className="bg-proton-card border border-proton-border p-3.5 rounded-2xl flex flex-col gap-2 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="px-2 py-0.5 rounded bg-proton-accent/15 text-[11px] font-bold text-proton-accent border border-proton-accent/30 font-mono uppercase">
                               {language === 'ka' ? 'გაყიდვა' : 'SALE'}
                             </span>
-                            <span className="text-[9px] font-bold text-emerald-500 uppercase font-mono tracking-widest">
+                            <span className="text-[11px] font-bold text-emerald-500 uppercase font-mono tracking-wider">
                               {order.status || 'Received'}
                             </span>
                           </div>
-                          <div>
-                            <h5 className="text-xs font-black text-proton-text">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
-                            <p className="text-[10px] text-proton-muted font-semibold mt-0.5">
-                              Incoming: <span className="text-proton-accent font-black">{order.amount ?? (order as any).price} {order.currency}</span>
+                          <div className="min-w-0">
+                            <h5 className="text-xs font-bold text-proton-text break-words">{order.itemTitle || (order as any).listingTitle || 'Proton Asset'}</h5>
+                            <p className="text-xs text-proton-muted font-medium mt-0.5">
+                              {language === 'ka' ? 'შემოსავალი:' : 'Incoming:'}{' '}
+                              <span className="text-proton-accent font-bold tabular-nums">{order.amount ?? (order as any).price} {order.currency}</span>
                             </p>
                           </div>
                         </div>
