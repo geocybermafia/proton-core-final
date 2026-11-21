@@ -46,6 +46,7 @@ import { MarketListingCard } from './MarketListingCard';
 import { FastInput } from './FastInputs';
 import { MapPicker } from '../MapPicker';
 import { useToast } from '../Toast';
+import { auth } from '../../firebase';
 
 const AVAILABLE_COUNTRY_OPTIONS = WORLD_COUNTRIES.filter(c => c.code !== 'GLOBAL');
 
@@ -122,6 +123,80 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const previewImgRef = React.useRef<HTMLImageElement | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  
+  // Draft Save & Recovery State
+  const [draftStatus, setDraftStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [hasCheckedDraft, setHasCheckedDraft] = React.useState(false);
+  const [savedDraftData, setSavedDraftData] = React.useState<{ formStep: number; formData: ListingFormData; updatedAt: number } | null>(null);
+
+  const userId = auth.currentUser?.uid || 'guest';
+  const draftStorageKey = `proton_markethub_draft_v1_${userId}`;
+
+  React.useEffect(() => {
+    if (viewMode === 'create' && !hasCheckedDraft) {
+      setHasCheckedDraft(true);
+      try {
+        const raw = localStorage.getItem(draftStorageKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.version === 1 && parsed.formData) {
+            const hasData = Boolean(
+              (parsed.formData.title && parsed.formData.title.trim()) ||
+              (parsed.formData.titleGe && parsed.formData.titleGe.trim()) ||
+              (parsed.formData.description && parsed.formData.description.trim()) ||
+              (parsed.formData.price && Number(parsed.formData.price) > 0)
+            );
+            if (hasData) {
+              setSavedDraftData(parsed);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load listing draft', e);
+      }
+    }
+  }, [viewMode, draftStorageKey, hasCheckedDraft]);
+
+  const isInitialMount = React.useRef(true);
+  React.useEffect(() => {
+    if (viewMode !== 'create') return;
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const hasData = Boolean(
+      (formData.title && formData.title.trim()) ||
+      (formData.titleGe && formData.titleGe.trim()) ||
+      (formData.description && formData.description.trim()) ||
+      (formData.price && Number(formData.price) > 0) ||
+      (formData.images && formData.images.length > 0)
+    );
+
+    if (!hasData) return;
+
+    setDraftStatus('saving');
+    const timer = setTimeout(() => {
+      try {
+        const payload = {
+          version: 1,
+          updatedAt: Date.now(),
+          formStep,
+          formData,
+        };
+        localStorage.setItem(draftStorageKey, JSON.stringify(payload));
+        setDraftStatus('saved');
+        const resetTimer = setTimeout(() => setDraftStatus('idle'), 3000);
+        return () => clearTimeout(resetTimer);
+      } catch (e) {
+        console.error('Failed to save listing draft', e);
+        setDraftStatus('error');
+      }
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [formData, formStep, viewMode, draftStorageKey]);
+
   const previewImageUrl = formData.images?.[0] || '';
   const [isPreviewLoaded, setIsPreviewLoaded] = React.useState(false);
   const [previewHasError, setPreviewHasError] = React.useState(false);
@@ -410,6 +485,56 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-proton-secondary/10 rounded-full blur-[100px] pointer-events-none" />
 
       <form onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-10 relative z-10">
+        {/* Draft Restore Banner */}
+        {savedDraftData && viewMode === 'create' && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-proton-accent/10 border border-proton-accent/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-fade-in mb-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-proton-accent text-sm">💾</span>
+                <h4 className={cn("text-xs font-black uppercase tracking-wider", currentTheme.text)}>
+                  {language === 'ka' ? 'მოიძებნა დაუმთავრებელი მონახაზი' : 'Unfinished Draft Found'}
+                </h4>
+              </div>
+              <p className={cn("text-[10px] font-semibold", currentTheme.muted)}>
+                {language === 'ka' 
+                  ? `ბოლოს განახლდა: ${new Date(savedDraftData.updatedAt).toLocaleTimeString()} (ნაბიჯი ${savedDraftData.formStep})` 
+                  : `Last updated: ${new Date(savedDraftData.updatedAt).toLocaleTimeString()} (Step ${savedDraftData.formStep})`}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(savedDraftData.formData);
+                  setFormStep(savedDraftData.formStep);
+                  setSavedDraftData(null);
+                  showToast(
+                    language === 'ka' ? 'მონახაზი აღდგენილია' : 'Draft restored successfully',
+                    'success'
+                  );
+                }}
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-proton-accent text-proton-on-accent text-[9px] font-black uppercase tracking-widest hover:opacity-90 transition-all cursor-pointer shadow-sm text-center"
+              >
+                {language === 'ka' ? 'მონახაზის აღდგენა' : 'Restore Draft'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem(draftStorageKey);
+                  setSavedDraftData(null);
+                  showToast(
+                    language === 'ka' ? 'მონახაზი წაიშალა' : 'Draft discarded',
+                    'info'
+                  );
+                }}
+                className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-proton-card border border-proton-border text-proton-muted hover:text-proton-text text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer text-center"
+              >
+                {language === 'ka' ? 'ახლის დაწყება' : 'Start Fresh'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Dynamic Interactive Steps Header */}
         <div className="flex flex-col gap-6 mb-8 pb-8 border-b border-proton-border">
           <div className="flex items-center justify-between">
@@ -430,9 +555,28 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               </div>
             </div>
             
-            {/* Compact step progress radial tracker */}
-            <div className="text-[10px] font-mono font-black text-proton-muted bg-proton-bg px-3 py-1.5 rounded-full border border-proton-border select-none">
-              PROGRESS: {formStep === 1 ? '25%' : formStep === 2 ? '50%' : formStep === 3 ? '75%' : '100%'}
+            <div className="flex items-center gap-2.5">
+              {/* Draft Status Indicator */}
+              {viewMode === 'create' && draftStatus !== 'idle' && (
+                <div className={cn(
+                  "text-[9px] font-mono font-black px-3 py-1.5 rounded-full border flex items-center gap-1.5 select-none animate-fade-in",
+                  draftStatus === 'saving' && "bg-amber-500/10 text-amber-500 border-amber-500/30",
+                  draftStatus === 'saved' && "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
+                  draftStatus === 'error' && "bg-rose-500/10 text-rose-500 border-rose-500/30"
+                )}>
+                  <span className={cn("w-1.5 h-1.5 rounded-full", draftStatus === 'saving' && "bg-amber-500 animate-ping", draftStatus === 'saved' && "bg-emerald-500", draftStatus === 'error' && "bg-rose-500")} />
+                  <span>
+                    {draftStatus === 'saving' && (language === 'ka' ? 'ინახება...' : 'Saving...')}
+                    {draftStatus === 'saved' && (language === 'ka' ? 'მონახაზი შენახულია' : 'Draft Saved')}
+                    {draftStatus === 'error' && (language === 'ka' ? 'შენახვა ვერ მოხერხდა' : 'Save Failed')}
+                  </span>
+                </div>
+              )}
+
+              {/* Compact step progress radial tracker */}
+              <div className="text-[10px] font-mono font-black text-proton-muted bg-proton-bg px-3 py-1.5 rounded-full border border-proton-border select-none">
+                PROGRESS: {formStep === 1 ? '25%' : formStep === 2 ? '50%' : formStep === 3 ? '75%' : '100%'}
+              </div>
             </div>
           </div>
 
