@@ -472,7 +472,10 @@ service cloud.firestore {
         && request.auth.uid in incoming().participants
         && incoming().buyerId is string && isValidId(incoming().buyerId)
         && incoming().sellerId is string && isValidId(incoming().sellerId)
+        && incoming().buyerId != incoming().sellerId
         && incoming().listingId is string && isValidId(incoming().listingId)
+        && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
+        && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId == incoming().sellerId
         && incoming().participants.hasAll([incoming().buyerId, incoming().sellerId])
         && incoming().conversationId is string
         && incoming().conversationId == incoming().listingId + '_' + incoming().buyerId
