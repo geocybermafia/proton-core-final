@@ -94,3 +94,35 @@ export async function resetUserWorkspaceCall(params: ResetUserWorkspaceParams): 
   return result.data;
 }
 
+export interface MarkMarketConversationReadParams {
+  conversationId: string;
+  lastVisibleMessageId: string;
+}
+
+export interface MarkMarketConversationReadResponse {
+  success: boolean;
+  conversationId: string;
+  role: 'buyer' | 'seller';
+  unreadCount: number;
+  lastReadAt: number;
+  lastReadMessageId: string;
+  clearedCount: number;
+}
+
+/**
+ * Advances the authenticated participant's read cursor up to `lastVisibleMessageId`
+ * and reconciles their server-authoritative unread count via `markMarketConversationRead`.
+ */
+export async function markMarketConversationReadCall(
+  params: MarkMarketConversationReadParams
+): Promise<MarkMarketConversationReadResponse> {
+  const callable = httpsCallable<MarkMarketConversationReadParams, MarkMarketConversationReadResponse>(
+    functions,
+    'markMarketConversationRead'
+  );
+
+  const result = await callable(params);
+  return result.data;
+}
+
+

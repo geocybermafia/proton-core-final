@@ -33,8 +33,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onOrderUpdated = exports.onMarketMessageCreated = exports.onOrderCreated = exports.resetUserWorkspace = exports.updateSecurityPin = exports.verifyStepUpPin = exports.processSecureTransaction = void 0;
+exports.onOrderUpdated = exports.onMarketMessageCreated = exports.markMarketConversationRead = exports.DEFAULT_UNREAD_RECONCILE_CHUNK_SIZE = exports.onOrderCreated = exports.resetUserWorkspace = exports.updateSecurityPin = exports.verifyStepUpPin = exports.processSecureTransaction = void 0;
 exports.processMarketMessageNotification = processMarketMessageNotification;
+exports.extractTimestampMs = extractTimestampMs;
+exports.compareMessageOrder = compareMessageOrder;
+exports.processMarketMessageConversationUpdate = processMarketMessageConversationUpdate;
+exports.processMarketMessageCreated = processMarketMessageCreated;
+exports.processMarkMarketConversationRead = processMarkMarketConversationRead;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const app_1 = require("firebase-admin/app");
@@ -623,15 +628,437 @@ async function processMarketMessageNotification({ messageId, messageData, firest
     logger.log(`[onMarketMessageCreated] Successfully created notification ${notificationId} for recipient ${recipientId} (${isBuyerSending ? "buyer->seller" : "seller->buyer"})`);
     return { created: true, recipientId, notificationId };
 }
+// ============================================================================
+// CHAT-AUD-02 STAGE 1: UNREAD MESSAGES & READ CURSOR BACKEND FOUNDATION
+// ============================================================================
+exports.DEFAULT_UNREAD_RECONCILE_CHUNK_SIZE = 200;
+function extractTimestampMs(val) {
+    if (typeof val === "number" && Number.isFinite(val)) {
+        return val;
+    }
+    if (!val)
+        return null;
+    if (val instanceof Date) {
+        const ms = val.getTime();
+        return Number.isFinite(ms) ? ms : null;
+    }
+    if (typeof val === "object") {
+        const obj = val;
+        if (typeof obj.toMillis === "function") {
+            const ms = obj.toMillis();
+            return typeof ms === "number" && Number.isFinite(ms) ? ms : null;
+        }
+        if (typeof obj.seconds === "number") {
+            const nanos = typeof obj.nanoseconds === "number" ? obj.nanoseconds : 0;
+            return obj.seconds * 1000 + Math.floor(nanos / 1e6);
+        }
+        if (typeof obj._seconds === "number") {
+            const nanos = typeof obj._nanoseconds === "number" ? obj._nanoseconds : 0;
+            return obj._seconds * 1000 + Math.floor(nanos / 1e6);
+        }
+    }
+    if (typeof val === "string") {
+        const parsed = Date.parse(val);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+}
+function compareMessageOrder(aCreatedAtMs, aMessageId, bCreatedAtMs, bMessageId) {
+    if (aCreatedAtMs !== bCreatedAtMs) {
+        return aCreatedAtMs > bCreatedAtMs ? 1 : -1;
+    }
+    if (aMessageId === bMessageId)
+        return 0;
+    return aMessageId > bMessageId ? 1 : -1;
+}
+async function processMarketMessageConversationUpdate({ messageId, messageData, firestore, now = () => Date.now(), logger = console }) {
+    const cleanMessageId = getTrimmedNonEmptyString(messageId);
+    if (!cleanMessageId) {
+        logger.warn("[onMarketMessageCreated:conv] Missing or invalid messageId.");
+        return { updated: false, reason: "invalid_message_id" };
+    }
+    if (!messageData || typeof messageData !== "object") {
+        logger.warn(`[onMarketMessageCreated:conv] Document data is empty for message ${cleanMessageId}.`);
+        return { updated: false, reason: "empty_message_data" };
+    }
+    const cleanSenderId = getTrimmedNonEmptyString(messageData.senderId);
+    const cleanSellerId = getTrimmedNonEmptyString(messageData.sellerId);
+    const cleanBuyerId = getTrimmedNonEmptyString(messageData.buyerId);
+    const cleanListingId = getTrimmedNonEmptyString(messageData.listingId);
+    const cleanConversationId = getTrimmedNonEmptyString(messageData.conversationId);
+    if (!cleanSenderId || !cleanSellerId || !cleanBuyerId || !cleanListingId || !cleanConversationId) {
+        logger.warn(`[onMarketMessageCreated:conv] Message ${cleanMessageId} missing required identity/routing fields.`);
+        return { updated: false, reason: "missing_required_fields" };
+    }
+    if (cleanBuyerId === cleanSellerId) {
+        logger.warn(`[onMarketMessageCreated:conv] Message ${cleanMessageId} rejected: buyerId matches sellerId (${cleanSellerId}).`);
+        return { updated: false, reason: "self_messaging_forbidden" };
+    }
+    const canonicalConversationId = `${cleanListingId}_${cleanBuyerId}`;
+    if (cleanConversationId !== canonicalConversationId) {
+        logger.warn(`[onMarketMessageCreated:conv] Message ${cleanMessageId} conversationId mismatch: ` +
+            `got=${cleanConversationId}, expected=${canonicalConversationId}.`);
+        return { updated: false, reason: "conversation_id_mismatch" };
+    }
+    if (cleanSenderId !== cleanBuyerId && cleanSenderId !== cleanSellerId) {
+        logger.warn(`[onMarketMessageCreated:conv] Message ${cleanMessageId} senderId ${cleanSenderId} is neither buyer nor seller.`);
+        return { updated: false, reason: "sender_not_participant" };
+    }
+    const rawParticipants = messageData.participants;
+    if (!Array.isArray(rawParticipants) || rawParticipants.length !== 2) {
+        logger.warn(`[onMarketMessageCreated:conv] Message ${cleanMessageId} missing or invalid participants array.`);
+        return { updated: false, reason: "participants_invalid" };
+    }
+    const cleanParticipants = rawParticipants.map((p) => getTrimmedNonEmptyString(p));
+    const participantSet = new Set(cleanParticipants);
+    if (participantSet.size !== 2 ||
+        !participantSet.has(cleanBuyerId) ||
+        !participantSet.has(cleanSellerId)) {
+        logger.warn(`[onMarketMessageCreated:conv] Message ${cleanMessageId} participants mismatch.`);
+        return { updated: false, reason: "participants_mismatch" };
+    }
+    const listingSnap = await firestore.collection("listings").doc(cleanListingId).get();
+    if (!listingSnap.exists) {
+        logger.warn(`[onMarketMessageCreated:conv] Listing ${cleanListingId} does not exist for message ${cleanMessageId}.`);
+        return { updated: false, reason: "listing_not_found" };
+    }
+    const listingData = listingSnap.data() || {};
+    const authoritativeSellerId = getTrimmedNonEmptyString(listingData.sellerId);
+    if (!authoritativeSellerId || authoritativeSellerId !== cleanSellerId) {
+        logger.warn(`[onMarketMessageCreated:conv] Forged or mismatched sellerId for message ${cleanMessageId}: ` +
+            `claimed=${cleanSellerId}, authoritative=${authoritativeSellerId || "missing"}.`);
+        return { updated: false, reason: "seller_mismatch" };
+    }
+    const isBuyerSending = cleanSenderId === cleanBuyerId;
+    const recipientId = isBuyerSending ? cleanSellerId : cleanBuyerId;
+    if (!recipientId || recipientId === cleanSenderId) {
+        return { updated: false, reason: "invalid_recipient" };
+    }
+    if (messageData.receiverId !== undefined) {
+        const cleanReceiverId = getTrimmedNonEmptyString(messageData.receiverId);
+        if (!cleanReceiverId || cleanReceiverId !== recipientId) {
+            return { updated: false, reason: "receiver_mismatch" };
+        }
+    }
+    const nowMs = now();
+    const messageCreatedAtMs = extractTimestampMs(messageData.createdAt) ?? nowMs;
+    const rawText = typeof messageData.text === "string" ? messageData.text.trim() : "";
+    const previewText = rawText.length > 500 ? `${rawText.slice(0, 497)}...` : rawText;
+    const incomingOrderId = getTrimmedNonEmptyString(messageData.orderId) || null;
+    const incomingListingTitle = getTrimmedNonEmptyString(messageData.listingTitle) ||
+        getTrimmedNonEmptyString(listingData.title) ||
+        "Marketplace Item";
+    const convRef = firestore.collection("market_conversations").doc(canonicalConversationId);
+    const procRef = convRef.collection("processed_messages").doc(cleanMessageId);
+    const unreadMsgRef = convRef.collection("unread").doc(recipientId).collection("messages").doc(cleanMessageId);
+    return firestore.runTransaction(async (tx) => {
+        const convSnap = await tx.get(convRef);
+        const procSnap = await tx.get(procRef);
+        if (procSnap.exists) {
+            logger.log(`[onMarketMessageCreated:conv] Message ${cleanMessageId} already processed for ${canonicalConversationId}. Skipping.`);
+            return {
+                updated: false,
+                duplicate: true,
+                conversationId: canonicalConversationId,
+                recipientId,
+                reason: "already_processed"
+            };
+        }
+        const existingConv = convSnap.exists ? (convSnap.data() || {}) : null;
+        if (existingConv) {
+            const existingBuyer = getTrimmedNonEmptyString(existingConv.buyerId);
+            const existingSeller = getTrimmedNonEmptyString(existingConv.sellerId);
+            const existingListing = getTrimmedNonEmptyString(existingConv.listingId);
+            if ((existingBuyer && existingBuyer !== cleanBuyerId) ||
+                (existingSeller && existingSeller !== cleanSellerId) ||
+                (existingListing && existingListing !== cleanListingId)) {
+                logger.warn(`[onMarketMessageCreated:conv] Conversation ${canonicalConversationId} participant mismatch on existing doc.`);
+                return { updated: false, reason: "conversation_participant_conflict" };
+            }
+        }
+        const prevBuyerUnread = typeof existingConv?.buyerUnreadCount === "number" && existingConv.buyerUnreadCount >= 0
+            ? existingConv.buyerUnreadCount
+            : 0;
+        const prevSellerUnread = typeof existingConv?.sellerUnreadCount === "number" && existingConv.sellerUnreadCount >= 0
+            ? existingConv.sellerUnreadCount
+            : 0;
+        const recipientLastReadAt = isBuyerSending
+            ? (typeof existingConv?.sellerLastReadAt === "number" ? existingConv.sellerLastReadAt : null)
+            : (typeof existingConv?.buyerLastReadAt === "number" ? existingConv.buyerLastReadAt : null);
+        const recipientLastReadMessageId = isBuyerSending
+            ? getTrimmedNonEmptyString(existingConv?.sellerLastReadMessageId)
+            : getTrimmedNonEmptyString(existingConv?.buyerLastReadMessageId);
+        const isAlreadyReadByCursor = recipientLastReadAt !== null &&
+            compareMessageOrder(messageCreatedAtMs, cleanMessageId, recipientLastReadAt, recipientLastReadMessageId) <= 0;
+        const shouldMarkUnread = !isAlreadyReadByCursor;
+        const nextBuyerUnread = !isBuyerSending && shouldMarkUnread ? prevBuyerUnread + 1 : prevBuyerUnread;
+        const nextSellerUnread = isBuyerSending && shouldMarkUnread ? prevSellerUnread + 1 : prevSellerUnread;
+        const prevLastMessageAt = typeof existingConv?.lastMessageAt === "number" ? existingConv.lastMessageAt : null;
+        const prevLastMessageId = getTrimmedNonEmptyString(existingConv?.lastMessageId);
+        const isNewerLastMessage = prevLastMessageAt === null ||
+            compareMessageOrder(messageCreatedAtMs, cleanMessageId, prevLastMessageAt, prevLastMessageId) > 0;
+        const nextSellerName = (!isBuyerSending ? getTrimmedNonEmptyString(messageData.senderName) : "") ||
+            getTrimmedNonEmptyString(listingData.sellerName) ||
+            getTrimmedNonEmptyString(existingConv?.sellerName) ||
+            "Seller";
+        const nextBuyerName = (isBuyerSending ? getTrimmedNonEmptyString(messageData.senderName) : "") ||
+            getTrimmedNonEmptyString(messageData.buyerName) ||
+            getTrimmedNonEmptyString(existingConv?.buyerName) ||
+            "Buyer";
+        const existingOrderId = getTrimmedNonEmptyString(existingConv?.orderId) || null;
+        const nextOrderId = isNewerLastMessage
+            ? (incomingOrderId || existingOrderId)
+            : (existingOrderId || incomingOrderId);
+        const nextConvDoc = {
+            conversationId: canonicalConversationId,
+            listingId: cleanListingId,
+            listingTitle: isNewerLastMessage
+                ? incomingListingTitle
+                : (getTrimmedNonEmptyString(existingConv?.listingTitle) || incomingListingTitle),
+            orderId: nextOrderId,
+            buyerId: cleanBuyerId,
+            sellerId: cleanSellerId,
+            buyerName: nextBuyerName,
+            sellerName: nextSellerName,
+            participants: [cleanBuyerId, cleanSellerId],
+            lastMessageId: isNewerLastMessage ? cleanMessageId : (prevLastMessageId || cleanMessageId),
+            lastMessageText: isNewerLastMessage
+                ? previewText
+                : (typeof existingConv?.lastMessageText === "string" ? existingConv.lastMessageText : previewText),
+            lastMessageAt: isNewerLastMessage ? messageCreatedAtMs : prevLastMessageAt,
+            lastSenderId: isNewerLastMessage
+                ? cleanSenderId
+                : (getTrimmedNonEmptyString(existingConv?.lastSenderId) || cleanSenderId),
+            buyerUnreadCount: nextBuyerUnread,
+            sellerUnreadCount: nextSellerUnread,
+            buyerLastReadAt: typeof existingConv?.buyerLastReadAt === "number" ? existingConv.buyerLastReadAt : null,
+            sellerLastReadAt: typeof existingConv?.sellerLastReadAt === "number" ? existingConv.sellerLastReadAt : null,
+            buyerLastReadMessageId: getTrimmedNonEmptyString(existingConv?.buyerLastReadMessageId) || null,
+            sellerLastReadMessageId: getTrimmedNonEmptyString(existingConv?.sellerLastReadMessageId) || null,
+            updatedAt: now()
+        };
+        tx.set(procRef, {
+            messageId: cleanMessageId,
+            conversationId: canonicalConversationId,
+            senderId: cleanSenderId,
+            recipientId,
+            createdAt: messageCreatedAtMs,
+            processedAt: nextConvDoc.updatedAt
+        });
+        if (shouldMarkUnread) {
+            tx.set(unreadMsgRef, {
+                messageId: cleanMessageId,
+                conversationId: canonicalConversationId,
+                senderId: cleanSenderId,
+                recipientId,
+                createdAt: messageCreatedAtMs,
+                recordedAt: nextConvDoc.updatedAt
+            });
+        }
+        tx.set(convRef, nextConvDoc, { merge: true });
+        return {
+            updated: true,
+            duplicate: false,
+            markedUnread: shouldMarkUnread,
+            conversationId: canonicalConversationId,
+            recipientId
+        };
+    });
+}
+async function processMarketMessageCreated(deps) {
+    let conversation = { updated: false, reason: "not_run" };
+    let notification = { created: false, reason: "not_run" };
+    try {
+        conversation = await processMarketMessageConversationUpdate(deps);
+    }
+    catch (err) {
+        (deps.logger || console).error(`[onMarketMessageCreated] Error updating conversation state for message ${deps.messageId}:`, err);
+        conversation = { updated: false, reason: "error" };
+    }
+    try {
+        notification = await processMarketMessageNotification(deps);
+    }
+    catch (err) {
+        (deps.logger || console).error(`[onMarketMessageCreated] Error creating message notification for message ${deps.messageId}:`, err);
+        notification = { created: false, reason: "error" };
+    }
+    return { conversation, notification };
+}
+async function processMarkMarketConversationRead({ callerUid, conversationId, lastVisibleMessageId, firestore, now = () => Date.now(), chunkSize = exports.DEFAULT_UNREAD_RECONCILE_CHUNK_SIZE, logger = console }) {
+    const cleanCallerUid = getTrimmedNonEmptyString(callerUid);
+    if (!cleanCallerUid) {
+        throw new https_1.HttpsError("unauthenticated", "Authentication required to mark conversation as read.");
+    }
+    const cleanConversationId = getTrimmedNonEmptyString(conversationId);
+    const cleanLastVisibleMessageId = getTrimmedNonEmptyString(lastVisibleMessageId);
+    if (!cleanConversationId || cleanConversationId.length > 260) {
+        throw new https_1.HttpsError("invalid-argument", "conversationId must be a valid non-empty string.");
+    }
+    if (!cleanLastVisibleMessageId || cleanLastVisibleMessageId.length > 128) {
+        throw new https_1.HttpsError("invalid-argument", "lastVisibleMessageId must be a valid non-empty string.");
+    }
+    const convRef = firestore.collection("market_conversations").doc(cleanConversationId);
+    const initialConvSnap = await convRef.get();
+    if (!initialConvSnap.exists) {
+        throw new https_1.HttpsError("not-found", "Conversation not found.");
+    }
+    const initialConvData = (initialConvSnap.data() || {});
+    const convBuyerId = getTrimmedNonEmptyString(initialConvData.buyerId);
+    const convSellerId = getTrimmedNonEmptyString(initialConvData.sellerId);
+    if (!convBuyerId || !convSellerId || convBuyerId === convSellerId) {
+        throw new https_1.HttpsError("failed-precondition", "Conversation participant metadata is invalid.");
+    }
+    if (cleanCallerUid !== convBuyerId && cleanCallerUid !== convSellerId) {
+        throw new https_1.HttpsError("permission-denied", "Only conversation participants can mark messages as read.");
+    }
+    const msgSnap = await firestore.collection("market_messages").doc(cleanLastVisibleMessageId).get();
+    if (!msgSnap.exists) {
+        throw new https_1.HttpsError("not-found", "Target message not found.");
+    }
+    const msgData = msgSnap.data() || {};
+    const msgListingId = getTrimmedNonEmptyString(msgData.listingId);
+    const msgBuyerId = getTrimmedNonEmptyString(msgData.buyerId);
+    const msgConversationId = getTrimmedNonEmptyString(msgData.conversationId) ||
+        (msgListingId && msgBuyerId ? `${msgListingId}_${msgBuyerId}` : "");
+    if (!msgConversationId || msgConversationId !== cleanConversationId) {
+        throw new https_1.HttpsError("permission-denied", "Target message does not belong to the specified conversation.");
+    }
+    if (Array.isArray(msgData.participants)) {
+        const cleanMsgParticipants = msgData.participants.map((p) => getTrimmedNonEmptyString(p));
+        if (!cleanMsgParticipants.includes(cleanCallerUid)) {
+            throw new https_1.HttpsError("permission-denied", "Caller is not a participant of the target message.");
+        }
+    }
+    const role = cleanCallerUid === convBuyerId ? "buyer" : "seller";
+    const targetCreatedAtMs = extractTimestampMs(msgData.createdAt) ?? now();
+    const safeChunkSize = Math.max(1, Math.min(chunkSize, 250));
+    const unreadMsgsCol = convRef.collection("unread").doc(cleanCallerUid).collection("messages");
+    let totalCleared = 0;
+    let finalUnreadCount = 0;
+    let finalLastReadAt = targetCreatedAtMs;
+    let finalLastReadMessageId = cleanLastVisibleMessageId;
+    const MAX_CHUNKS = 100;
+    for (let iteration = 0; iteration < MAX_CHUNKS; iteration++) {
+        const stepOutcome = await firestore.runTransaction(async (tx) => {
+            const freshConvSnap = await tx.get(convRef);
+            if (!freshConvSnap.exists) {
+                throw new https_1.HttpsError("not-found", "Conversation not found.");
+            }
+            const freshConv = (freshConvSnap.data() || {});
+            const freshBuyerId = getTrimmedNonEmptyString(freshConv.buyerId);
+            const freshSellerId = getTrimmedNonEmptyString(freshConv.sellerId);
+            if (cleanCallerUid !== freshBuyerId && cleanCallerUid !== freshSellerId) {
+                throw new https_1.HttpsError("permission-denied", "Caller is no longer a participant in this conversation.");
+            }
+            const activeRole = cleanCallerUid === freshBuyerId ? "buyer" : "seller";
+            const prevReadAt = activeRole === "buyer"
+                ? (typeof freshConv.buyerLastReadAt === "number" ? freshConv.buyerLastReadAt : null)
+                : (typeof freshConv.sellerLastReadAt === "number" ? freshConv.sellerLastReadAt : null);
+            const prevReadMsgId = activeRole === "buyer"
+                ? getTrimmedNonEmptyString(freshConv.buyerLastReadMessageId)
+                : getTrimmedNonEmptyString(freshConv.sellerLastReadMessageId);
+            // Monotonic cursor progression: never regress read cursor if an older messageId arrives late
+            const useIncomingCursor = prevReadAt === null ||
+                compareMessageOrder(targetCreatedAtMs, cleanLastVisibleMessageId, prevReadAt, prevReadMsgId) > 0;
+            const effectiveCursorMs = useIncomingCursor ? targetCreatedAtMs : prevReadAt;
+            const effectiveCursorMsgId = useIncomingCursor ? cleanLastVisibleMessageId : prevReadMsgId;
+            const unreadQuery = unreadMsgsCol.orderBy("createdAt", "asc").limit(safeChunkSize + 1);
+            const unreadSnap = await tx.get(unreadQuery);
+            const docs = unreadSnap?.docs || [];
+            const toDelete = [];
+            const remainingUnread = [];
+            for (const docSnap of docs) {
+                const dData = typeof docSnap.data === "function" ? (docSnap.data() || {}) : {};
+                const dCreatedAtMs = extractTimestampMs(dData.createdAt) ?? 0;
+                const dMsgId = getTrimmedNonEmptyString(dData.messageId) || docSnap.id;
+                if (compareMessageOrder(dCreatedAtMs, dMsgId, effectiveCursorMs, effectiveCursorMsgId) <= 0) {
+                    toDelete.push(docSnap);
+                }
+                else {
+                    remainingUnread.push(docSnap);
+                }
+            }
+            const batchToDelete = toDelete.slice(0, safeChunkSize);
+            for (const docSnap of batchToDelete) {
+                tx.delete(docSnap.ref);
+            }
+            const lastReturnedDoc = docs.length > 0 ? docs[docs.length - 1] : null;
+            const lastReturnedData = lastReturnedDoc && typeof lastReturnedDoc.data === "function"
+                ? (lastReturnedDoc.data() || {})
+                : null;
+            const lastReturnedMs = lastReturnedData ? (extractTimestampMs(lastReturnedData.createdAt) ?? 0) : 0;
+            const hasMoreAtOrBeforeCursor = docs.length > safeChunkSize &&
+                batchToDelete.length === safeChunkSize &&
+                lastReturnedMs <= effectiveCursorMs;
+            const currentUnreadCount = activeRole === "buyer"
+                ? (typeof freshConv.buyerUnreadCount === "number" ? freshConv.buyerUnreadCount : 0)
+                : (typeof freshConv.sellerUnreadCount === "number" ? freshConv.sellerUnreadCount : 0);
+            const nextUnreadCount = !hasMoreAtOrBeforeCursor && docs.length <= safeChunkSize
+                ? remainingUnread.length
+                : Math.max(remainingUnread.length, currentUnreadCount - batchToDelete.length);
+            const updatedAt = now();
+            const updatePatch = activeRole === "buyer"
+                ? {
+                    buyerUnreadCount: nextUnreadCount,
+                    buyerLastReadAt: effectiveCursorMs,
+                    buyerLastReadMessageId: effectiveCursorMsgId,
+                    updatedAt
+                }
+                : {
+                    sellerUnreadCount: nextUnreadCount,
+                    sellerLastReadAt: effectiveCursorMs,
+                    sellerLastReadMessageId: effectiveCursorMsgId,
+                    updatedAt
+                };
+            tx.update(convRef, updatePatch);
+            return {
+                clearedThisChunk: batchToDelete.length,
+                hasMore: hasMoreAtOrBeforeCursor,
+                unreadCount: nextUnreadCount,
+                lastReadAt: effectiveCursorMs,
+                lastReadMessageId: effectiveCursorMsgId
+            };
+        });
+        totalCleared += stepOutcome.clearedThisChunk;
+        finalUnreadCount = stepOutcome.unreadCount;
+        finalLastReadAt = stepOutcome.lastReadAt;
+        finalLastReadMessageId = stepOutcome.lastReadMessageId;
+        if (!stepOutcome.hasMore || stepOutcome.clearedThisChunk === 0) {
+            break;
+        }
+    }
+    logger.log(`[markMarketConversationRead] ${role} (${cleanCallerUid}) read ${cleanConversationId} ` +
+        `up to ${finalLastReadMessageId} (${finalLastReadAt}); cleared=${totalCleared}, remaining=${finalUnreadCount}`);
+    return {
+        success: true,
+        conversationId: cleanConversationId,
+        role,
+        unreadCount: finalUnreadCount,
+        lastReadAt: finalLastReadAt,
+        lastReadMessageId: finalLastReadMessageId,
+        clearedCount: totalCleared
+    };
+}
+/**
+ * Callable Cloud Function: markMarketConversationRead
+ *
+ * Allows an authenticated buyer or seller participant to advance their read cursor
+ * up to a verified message in that conversation and clear their unread markers.
+ */
+exports.markMarketConversationRead = (0, https_1.onCall)(async (request) => {
+    return processMarkMarketConversationRead({
+        callerUid: request.auth?.uid,
+        conversationId: request.data?.conversationId,
+        lastVisibleMessageId: request.data?.lastVisibleMessageId,
+        firestore: db
+    });
+});
 /**
  * Backend Event Trigger: onMarketMessageCreated
  *
- * Automatically and reliably notifies the verified chat counterparty (buyer <-> seller)
- * when a direct or order-linked marketplace message is created.
- * - Verifies listing existence and authoritative listing.sellerId match
- * - Blocks self-messaging, missing/forged participant fields, and conversation mismatches
- * - Deterministic notification ID (market_msg_{messageId}) + atomic create() for strict idempotency
- * - Safe against failures
+ * - Transactionally maintains server-authoritative `market_conversations/{conversationId}`
+ *   unread counts, lastMessage ordering, and per-message idempotency markers.
+ * - Preserves verified two-way buyer <-> seller notifications in `users/{recipientId}/notifications`.
  */
 exports.onMarketMessageCreated = (0, firestore_1.onDocumentCreated)({
     document: "market_messages/{messageId}",
@@ -646,7 +1073,7 @@ exports.onMarketMessageCreated = (0, firestore_1.onDocumentCreated)({
         const messageData = snapshot.data();
         const messageId = event.params.messageId || snapshot.id;
         const firestore = snapshot.ref.firestore || db;
-        await processMarketMessageNotification({
+        await processMarketMessageCreated({
             messageId,
             messageData,
             firestore
@@ -654,7 +1081,7 @@ exports.onMarketMessageCreated = (0, firestore_1.onDocumentCreated)({
     }
     catch (error) {
         // Failure safety: Do not fail core message transaction
-        console.error(`[onMarketMessageCreated] Error creating message notification for message ${event.params?.messageId}:`, error);
+        console.error(`[onMarketMessageCreated] Error processing market message ${event.params?.messageId}:`, error);
     }
 });
 /**

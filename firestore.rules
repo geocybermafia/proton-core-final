@@ -45,6 +45,10 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    function isValidConversationId(id) {
+      return id is string && id.size() >= 3 && id.size() <= 260 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
     // Safely get string property or default
     function getStr(data, key, defVal) {
       return (key in data && data[key] is string) ? data[key] : defVal;
@@ -486,6 +490,31 @@ service cloud.firestore {
         && (!('senderAvatar' in incoming()) || (incoming().senderAvatar is string && incoming().senderAvatar.size() <= 2000))
         && (!('senderName' in incoming()) || (incoming().senderName is string && incoming().senderName.size() <= 200));
       allow update, delete: if false;
+    }
+
+    // Server-authoritative conversation summaries, unread counters & read cursors
+    match /market_conversations/{conversationId} {
+      allow get: if isSignedIn() && isValidConversationId(conversationId) && (
+        ('participants' in resource.data && request.auth.uid in resource.data.participants) ||
+        getStr(resource.data, 'buyerId', '') == request.auth.uid ||
+        getStr(resource.data, 'sellerId', '') == request.auth.uid
+      );
+      allow list: if isSignedIn() && (
+        'participants' in resource.data && request.auth.uid in resource.data.participants
+      );
+      allow write: if false; // Server Admin SDK only (onMarketMessageCreated & markMarketConversationRead)
+
+      match /processed_messages/{messageId} {
+        allow read, write: if false; // Strictly server Admin SDK only
+      }
+
+      match /unread/{recipientId} {
+        allow read, write: if false; // Strictly server Admin SDK only
+
+        match /messages/{messageId} {
+          allow read, write: if false; // Strictly server Admin SDK only
+        }
+      }
     }
 
     // ======================================================

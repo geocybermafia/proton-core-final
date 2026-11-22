@@ -420,6 +420,71 @@
         "recordedAt": { "type": "number" }
       },
       "required": ["markerId", "markerType", "sellerId", "buyerHash", "sourceId", "recordedAt"]
+    },
+    "MarketConversation": {
+      "title": "Market Conversation",
+      "description": "Server-authoritative conversation summary, two-way unread counters, and monotonic read cursors managed exclusively by Cloud Functions Admin SDK",
+      "type": "object",
+      "properties": {
+        "conversationId": { "type": "string", "maxLength": 260, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "listingTitle": { "type": "string", "maxLength": 300 },
+        "orderId": { "type": "string", "maxLength": 128 },
+        "buyerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "sellerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "buyerName": { "type": "string", "maxLength": 200 },
+        "sellerName": { "type": "string", "maxLength": 200 },
+        "participants": { "type": "array", "description": "Bounded 2-element array [buyerId, sellerId]" },
+        "lastMessageId": { "type": "string", "maxLength": 128 },
+        "lastMessageText": { "type": "string", "maxLength": 500 },
+        "lastMessageAt": { "type": "number" },
+        "lastSenderId": { "type": "string", "maxLength": 128 },
+        "buyerUnreadCount": { "type": "number" },
+        "sellerUnreadCount": { "type": "number" },
+        "buyerLastReadAt": { "type": "number" },
+        "sellerLastReadAt": { "type": "number" },
+        "buyerLastReadMessageId": { "type": "string", "maxLength": 128 },
+        "sellerLastReadMessageId": { "type": "string", "maxLength": 128 },
+        "updatedAt": { "type": "number" }
+      },
+      "required": [
+        "conversationId",
+        "listingId",
+        "buyerId",
+        "sellerId",
+        "participants",
+        "buyerUnreadCount",
+        "sellerUnreadCount",
+        "updatedAt"
+      ]
+    },
+    "MarketConversationProcessedMessage": {
+      "title": "Market Conversation Processed Message Marker",
+      "description": "Server-only per-message idempotency marker preventing duplicate unreadCount increments on Cloud Function trigger retries or out-of-order delivery",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "conversationId": { "type": "string", "maxLength": 260, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "recipientId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "number" },
+        "processedAt": { "type": "number" }
+      },
+      "required": ["messageId", "conversationId", "senderId", "recipientId", "createdAt", "processedAt"]
+    },
+    "MarketConversationUnreadMarker": {
+      "title": "Market Conversation Unread Marker",
+      "description": "Server-only per-recipient unread message marker created transactionally by onMarketMessageCreated and removed up to read cursor by markMarketConversationRead",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "conversationId": { "type": "string", "maxLength": 260, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "recipientId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "number" },
+        "recordedAt": { "type": "number" }
+      },
+      "required": ["messageId", "conversationId", "senderId", "recipientId", "createdAt", "recordedAt"]
     }
   },
   "firestore": {
@@ -449,7 +514,19 @@
     },
     "/market_messages/{messageId}": {
       "schema": "object",
-      "description": "Direct message chat between buyers and sellers"
+      "description": "Append-only direct and order-linked chat messages between buyers and sellers"
+    },
+    "/market_conversations/{conversationId}": {
+      "schema": "MarketConversation",
+      "description": "Server-maintained canonical conversation documents (ID: listingId_buyerId). Readable only by participants; all writes performed exclusively by onMarketMessageCreated and markMarketConversationRead Cloud Functions via Admin SDK."
+    },
+    "/market_conversations/{conversationId}/processed_messages/{messageId}": {
+      "schema": "MarketConversationProcessedMessage",
+      "description": "Server-only per-message idempotency markers for onMarketMessageCreated (zero client read/write access)."
+    },
+    "/market_conversations/{conversationId}/unread/{recipientId}/messages/{messageId}": {
+      "schema": "MarketConversationUnreadMarker",
+      "description": "Server-only per-recipient unread message markers ordered by createdAt for race-safe cursor reconciliation (zero client read/write access)."
     },
     "/users/{userId}": {
       "schema": "UserProfile",

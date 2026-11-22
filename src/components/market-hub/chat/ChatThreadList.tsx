@@ -18,12 +18,15 @@ export interface ChatThreadSummary {
   lastMessage: string;
   lastTime: unknown;
   lastSenderId?: string;
+  unreadCount?: number;
+  hasServerConversation?: boolean;
 }
 
 export interface ChatThreadListProps {
   threads: ChatThreadSummary[];
   activeConversationId?: string | null;
   currentUserId?: string | null;
+  unreadByConversationId?: Record<string, number>;
   language: string;
   currentTheme: MarketTheme;
   onSelectThread: (thread: ChatThreadSummary) => void;
@@ -64,6 +67,7 @@ export const ChatThreadList = React.memo(function ChatThreadList({
   threads,
   activeConversationId,
   currentUserId,
+  unreadByConversationId,
   language,
   currentTheme,
   onSelectThread,
@@ -135,6 +139,14 @@ export const ChatThreadList = React.memo(function ChatThreadList({
 
         const timeLabel = formatThreadTime(thread.lastTime, language);
         const isLastFromMe = Boolean(currentUserId && thread.lastSenderId === currentUserId);
+        const rawUnread =
+          unreadByConversationId && Object.prototype.hasOwnProperty.call(unreadByConversationId, thread.conversationId)
+            ? unreadByConversationId[thread.conversationId]
+            : thread.unreadCount;
+        const threadUnreadCount =
+          typeof rawUnread === 'number' && Number.isFinite(rawUnread) && rawUnread > 0
+            ? Math.floor(rawUnread)
+            : 0;
 
         return (
           <button
@@ -194,10 +206,31 @@ export const ChatThreadList = React.memo(function ChatThreadList({
                 )}
               </div>
 
-              <p className="text-xs text-proton-muted truncate mt-1">
-                {isLastFromMe ? `${isKa ? 'თქვენ' : 'You'}: ` : ''}
-                {thread.lastMessage || (isKa ? 'შეტყობინება' : 'Message')}
-              </p>
+              <div className="flex items-center justify-between gap-2 mt-1 min-w-0">
+                <p
+                  className={cn(
+                    'text-xs truncate min-w-0',
+                    threadUnreadCount > 0 ? 'text-proton-text font-semibold' : 'text-proton-muted'
+                  )}
+                >
+                  {isLastFromMe ? `${isKa ? 'თქვენ' : 'You'}: ` : ''}
+                  {thread.lastMessage || (isKa ? 'შეტყობინება' : 'Message')}
+                </p>
+
+                {threadUnreadCount > 0 && (
+                  <span
+                    data-testid={`thread-unread-badge-${thread.conversationId}`}
+                    aria-label={
+                      isKa
+                        ? `${threadUnreadCount} წაუკითხავი შეტყობინება`
+                        : `${threadUnreadCount} unread messages`
+                    }
+                    className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-black leading-none tabular-nums shrink-0 shadow-sm"
+                  >
+                    {threadUnreadCount}
+                  </span>
+                )}
+              </div>
             </div>
 
             <ChevronRight size={16} className="text-proton-muted shrink-0 md:hidden" aria-hidden="true" />

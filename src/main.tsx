@@ -12,6 +12,7 @@ import { ToastProvider } from './components/Toast';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { SellerProvider } from './contexts/SellerContext';
 import { MarketHubProvider } from './contexts/MarketHubContext';
+import { MarketChatUnreadProvider } from './contexts/MarketChatUnreadContext';
 import { BrowserRouter } from 'react-router-dom';
 
 import { isChunkLoadError, clearAllChunkRetryFlags } from './lib/lazyWithRetry';
@@ -131,9 +132,11 @@ function Root() {
           <LanguageProvider>
             <SellerProvider>
               <MarketHubProvider>
-                <BrowserRouter>
-                  <App />
-                </BrowserRouter>
+                <MarketChatUnreadProvider>
+                  <BrowserRouter>
+                    <App />
+                  </BrowserRouter>
+                </MarketChatUnreadProvider>
               </MarketHubProvider>
             </SellerProvider>
           </LanguageProvider>

@@ -19,6 +19,10 @@ export interface ChatMessageListProps {
   language: string;
   emptyStateAction?: (suggestedText: string) => void;
   conversationKey?: string;
+  onLastMessageVisibilityChange?: (info: {
+    lastMessageId: string | null;
+    isLastMessageVisible: boolean;
+  }) => void;
   className?: string;
 }
 
@@ -61,10 +65,15 @@ export const ChatMessageList = React.memo(function ChatMessageList({
   language,
   emptyStateAction,
   conversationKey,
+  onLastMessageVisibilityChange,
   className,
 }: ChatMessageListProps) {
   const isKa = language === 'ka';
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastMessageElRef = useRef<HTMLDivElement | null>(null);
+  const onLastMessageVisibilityChangeRef = useRef(onLastMessageVisibilityChange);
+  onLastMessageVisibilityChangeRef.current = onLastMessageVisibilityChange;
+  const lastReportedVisibilityRef = useRef<string>('');
   const prevCountRef = useRef<number>(0);
   const prevConvKeyRef = useRef<string | undefined>(conversationKey);
   const isNearBottomRef = useRef<boolean>(true);
@@ -76,7 +85,40 @@ export const ChatMessageList = React.memo(function ChatMessageList({
   const autoScrollTimeoutRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
 
+  const lastMessageId = messages.length > 0 ? (messages[messages.length - 1]?.id ?? null) : null;
   const lastMessageSenderId = messages.length > 0 ? messages[messages.length - 1]?.senderId : undefined;
+
+  const reportLastMessageVisibility = (forceCheck = false) => {
+    const cb = onLastMessageVisibilityChangeRef.current;
+    if (!cb) return;
+    const container = scrollContainerRef.current;
+    if (!container || !lastMessageId || container.clientHeight === 0 || container.clientWidth === 0) {
+      const sig = `${lastMessageId || ''}:0`;
+      if (forceCheck || lastReportedVisibilityRef.current !== sig) {
+        lastReportedVisibilityRef.current = sig;
+        cb({ lastMessageId, isLastMessageVisible: false });
+      }
+      return;
+    }
+
+    const distanceFromBottom = container.scrollHeight - container.clientHeight - container.scrollTop;
+    let isVisible = distanceFromBottom <= 24;
+
+    const lastEl = lastMessageElRef.current;
+    if (!isVisible && lastEl) {
+      const cRect = container.getBoundingClientRect();
+      const eRect = lastEl.getBoundingClientRect();
+      if (cRect.height > 0 && eRect.height > 0) {
+        isVisible = eRect.top < cRect.bottom - 4 && eRect.bottom > cRect.top + 4;
+      }
+    }
+
+    const sig = `${lastMessageId}:${isVisible ? 1 : 0}`;
+    if (forceCheck || lastReportedVisibilityRef.current !== sig) {
+      lastReportedVisibilityRef.current = sig;
+      cb({ lastMessageId, isLastMessageVisible: isVisible });
+    }
+  };
 
   const clearAutoScrolling = () => {
     isAutoScrollingRef.current = false;
@@ -132,6 +174,7 @@ export const ChatMessageList = React.memo(function ChatMessageList({
     lastClientWidthRef.current = clientWidth;
     lastScrollHeightRef.current = scrollHeight;
     lastScrollTopRef.current = scrollTop;
+    reportLastMessageVisibility();
   };
 
   useEffect(() => {
@@ -304,6 +347,7 @@ export const ChatMessageList = React.memo(function ChatMessageList({
             lastClientWidthRef.current = el.clientWidth;
             lastScrollHeightRef.current = el.scrollHeight;
             lastScrollTopRef.current = el.scrollTop;
+            reportLastMessageVisibility();
           })
         : null;
 
@@ -321,6 +365,47 @@ export const ChatMessageList = React.memo(function ChatMessageList({
       container.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const lastEl = lastMessageElRef.current;
+
+    reportLastMessageVisibility(true);
+
+    if (!container || !lastEl || !lastMessageId || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        const cb = onLastMessageVisibilityChangeRef.current;
+        if (!cb) return;
+        const c = scrollContainerRef.current;
+        if (!c || c.clientHeight === 0 || c.clientWidth === 0) {
+          const sig = `${lastMessageId}:0`;
+          if (lastReportedVisibilityRef.current !== sig) {
+            lastReportedVisibilityRef.current = sig;
+            cb({ lastMessageId, isLastMessageVisible: false });
+          }
+          return;
+        }
+        const entry = entries[entries.length - 1];
+        const dist = c.scrollHeight - c.clientHeight - c.scrollTop;
+        const isVisible = Boolean(entry?.isIntersecting || dist <= 24);
+        const sig = `${lastMessageId}:${isVisible ? 1 : 0}`;
+        if (lastReportedVisibilityRef.current !== sig) {
+          lastReportedVisibilityRef.current = sig;
+          cb({ lastMessageId, isLastMessageVisible: isVisible });
+        }
+      },
+      { root: container, threshold: 0.1 }
+    );
+
+    io.observe(lastEl);
+    return () => {
+      io.disconnect();
+    };
+  }, [lastMessageId, conversationKey, messages.length]);
 
   const messagesWithMeta = useMemo(() => {
     return messages.map((msg, index) => {
@@ -400,8 +485,9 @@ export const ChatMessageList = React.memo(function ChatMessageList({
           )}
         </div>
       ) : (
-        messagesWithMeta.map(({ msg, showDateDivider, dateLabel, timeLabel }) => {
+        messagesWithMeta.map(({ msg, showDateDivider, dateLabel, timeLabel }, idx) => {
           const isMe = Boolean(currentUserId && msg.senderId === currentUserId);
+          const isLastItem = idx === messagesWithMeta.length - 1;
           return (
             <React.Fragment key={msg.id}>
               {showDateDivider && (
@@ -413,6 +499,7 @@ export const ChatMessageList = React.memo(function ChatMessageList({
               )}
 
               <div
+                ref={isLastItem ? lastMessageElRef : undefined}
                 className={cn(
                   'flex flex-col max-w-[85%] sm:max-w-[min(78%,520px)] min-w-0 rounded-2xl px-3.5 py-2.5 shadow-sm',
                   isMe

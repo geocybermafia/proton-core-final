@@ -43,6 +43,10 @@ export interface MarketChatDrawerProps {
   buyerName?: string;
   conversationId?: string;
   isSendDisabled?: boolean;
+  onLastMessageVisibilityChange?: (info: {
+    lastMessageId: string | null;
+    isLastMessageVisible: boolean;
+  }) => void;
 }
 
 export const MarketChatDrawer = React.memo(function MarketChatDrawer({
@@ -61,6 +65,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
   buyerName,
   conversationId,
   isSendDisabled = false,
+  onLastMessageVisibilityChange,
 }: MarketChatDrawerProps) {
   const isSellerViewing = Boolean(user && activeChatListing && user.uid === activeChatListing.sellerId);
 
@@ -115,6 +120,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                 language={language}
                 emptyStateAction={onChangeChatMessageText}
                 conversationKey={conversationId || `${activeChatListing.id}_${activeChatOrder?.orderId || ''}`}
+                onLastMessageVisibilityChange={onLastMessageVisibilityChange}
               />
 
               <ChatComposer

@@ -65,9 +65,11 @@ import { cn } from '../lib/utils';
 import { Listing, Order, ShippingDetails, TrackingInfo, SellerOrderFilter, SupportedCurrency, resolvePreferredCurrency, ListingAnalyticsStats, SellerAnalyticsOverview } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useMarketHub } from '../contexts/MarketHubContext';
+import { useMarketChatUnread } from '../contexts/MarketChatUnreadContext';
 import { isRealListing } from './market-hub/MarketConstants';
 import { useSeller } from '../contexts/SellerContext';
 import { useToast } from './Toast';
+import { markMarketConversationReadCall } from '../services/cloudFunctionsService';
 import { LegalView } from './LegalView';
 import { generateTechSpec } from '../services/geminiService';
 import { ListingMap } from './ListingMap';
@@ -128,6 +130,11 @@ import {
   resolveMarketChatNavigation,
   validateActiveChatContext,
 } from '../lib/marketChatNavigation';
+import {
+  createConversationReadController,
+  formatUnreadBadgeCount,
+  mergeConversationThreadsWithLegacy,
+} from '../lib/marketChatUnread';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
 import { CartDrawer } from './market-hub/CartDrawer';
@@ -173,6 +180,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const t = propT || translations[language];
   const themeId = propThemeId || 'proton';
   const { user, loading: authLoading } = useAuth();
+  const {
+    conversations: serverConversations,
+    conversationsById: serverConversationsById,
+    unreadByConversationId,
+    totalUnreadCount,
+  } = useMarketChatUnread();
+  const globalUnreadBadgeLabel = useMemo(
+    () => formatUnreadBadgeCount(totalUnreadCount),
+    [totalUnreadCount]
+  );
   const { showToast } = useToast();
   const [hasAdminClaim, setHasAdminClaim] = useState(false);
 
@@ -332,17 +349,25 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [allUserMessages, setAllUserMessages] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!user) return;
+    const uid = user?.uid;
+    if (!uid) {
+      setAllUserMessages([]);
+      return;
+    }
 
-    // Check if on Chat Tab (Tab 5 mapping representing the messages view)
-    const activeTab = activeBottomTab === 'messages' ? 5 : 0;
-    if (activeTab !== 5) return;
+    // Legacy message list subscription is only needed while Messages view is active;
+    // global unread counts come from MarketChatUnreadContext (`market_conversations`).
+    if (activeBottomTab !== 'messages') {
+      return;
+    }
 
+    let isCurrent = true;
     const q = query(
       collection(db, 'market_messages'),
-      where('participants', 'array-contains', user.uid)
+      where('participants', 'array-contains', uid)
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!isCurrent) return;
       const msgs = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -351,8 +376,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     }, (err) => {
       console.error("Error reading all market messages:", err);
     });
-    return () => unsubscribe();
-  }, [user, activeBottomTab]);
+    return () => {
+      isCurrent = false;
+      unsubscribe();
+    };
+  }, [user?.uid, activeBottomTab]);
 
   const groupedChats = useMemo(() => {
     if (!user) return [];
@@ -460,27 +488,37 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   }, [allUserMessages, user?.uid, listings]);
 
   const desktopChatThreads = useMemo<ChatThreadSummary[]>(() => {
-    return groupedChats.map((chat) => {
-      const relListing = listings.find((l) => l.id === chat.listingId);
-      const lastMsg = chat.messages[chat.messages.length - 1];
-      return {
-        conversationId: chat.conversationId,
-        listingId: chat.listingId,
-        listingTitle: chat.listingTitle,
-        titleGe: relListing?.titleGe,
-        titleEn: relListing?.titleEn,
-        primaryLanguage: relListing?.primaryLanguage,
-        sellerId: chat.sellerId,
-        sellerName: chat.sellerName,
-        buyerId: chat.buyerId,
-        buyerName: chat.buyerName,
-        orderId: chat.orderId,
-        lastMessage: chat.lastMessage,
-        lastTime: chat.lastTime,
-        lastSenderId: lastMsg?.senderId,
-      };
+    return mergeConversationThreadsWithLegacy({
+      serverConversations,
+      legacyThreads: groupedChats,
+      listings,
+      currentUserId: user?.uid,
     });
-  }, [groupedChats, listings]);
+  }, [serverConversations, groupedChats, listings, user?.uid]);
+
+  const navigationLookupChats = useMemo<MarketChatThreadLookupItem[]>(() => {
+    const byId = new Map<string, MarketChatThreadLookupItem>();
+    for (const chat of groupedChats) {
+      if (chat?.conversationId) {
+        byId.set(chat.conversationId, chat);
+      }
+    }
+    for (const conv of serverConversations) {
+      if (conv?.conversationId && !byId.has(conv.conversationId)) {
+        byId.set(conv.conversationId, {
+          conversationId: conv.conversationId,
+          listingId: conv.listingId,
+          listingTitle: conv.listingTitle,
+          sellerId: conv.sellerId,
+          sellerName: conv.sellerName,
+          buyerId: conv.buyerId,
+          buyerName: conv.buyerName,
+          orderId: conv.orderId ?? null,
+        });
+      }
+    }
+    return Array.from(byId.values());
+  }, [groupedChats, serverConversations]);
 
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'browse' | 'my-listings' | 'rankings' | 'create' | 'edit' | 'privacy' | 'terms'>('browse');
@@ -1526,6 +1564,148 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const isInlineMessagesActive = activeBottomTab === 'messages';
   const isDrawerChatOpen = Boolean(activeChatListing) && !isInlineMessagesActive;
 
+  const [documentVisibilityState, setDocumentVisibilityState] = useState<string>(() =>
+    typeof document !== 'undefined' ? document.visibilityState : 'visible'
+  );
+  const [surfaceVisibility, setSurfaceVisibility] = useState<{
+    desktop: { lastMessageId: string | null; isLastMessageVisible: boolean };
+    mobile: { lastMessageId: string | null; isLastMessageVisible: boolean };
+    drawer: { lastMessageId: string | null; isLastMessageVisible: boolean };
+  }>({
+    desktop: { lastMessageId: null, isLastMessageVisible: false },
+    mobile: { lastMessageId: null, isLastMessageVisible: false },
+    drawer: { lastMessageId: null, isLastMessageVisible: false },
+  });
+
+  const makeSurfaceVisibilityHandler = useCallback(
+    (surface: 'desktop' | 'mobile' | 'drawer') =>
+      (info: { lastMessageId: string | null; isLastMessageVisible: boolean }) => {
+        setSurfaceVisibility((prev) => {
+          const cur = prev[surface];
+          if (
+            cur.lastMessageId === info.lastMessageId &&
+            cur.isLastMessageVisible === info.isLastMessageVisible
+          ) {
+            return prev;
+          }
+          return { ...prev, [surface]: info };
+        });
+      },
+    []
+  );
+
+  const handleDesktopLastMsgVisibility = useMemo(
+    () => makeSurfaceVisibilityHandler('desktop'),
+    [makeSurfaceVisibilityHandler]
+  );
+  const handleMobileLastMsgVisibility = useMemo(
+    () => makeSurfaceVisibilityHandler('mobile'),
+    [makeSurfaceVisibilityHandler]
+  );
+  const handleDrawerLastMsgVisibility = useMemo(
+    () => makeSurfaceVisibilityHandler('drawer'),
+    [makeSurfaceVisibilityHandler]
+  );
+
+  const readControllerRef = useRef<ReturnType<typeof createConversationReadController> | null>(null);
+  if (!readControllerRef.current) {
+    readControllerRef.current = createConversationReadController({
+      debounceMs: 180,
+      markReadFn: markMarketConversationReadCall,
+      onError: (err, params) => {
+        console.warn(
+          `[MarketHub] markMarketConversationRead failed safely for ${params.conversationId}:`,
+          err
+        );
+      },
+    });
+  }
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const handleVisibilityChange = () => {
+      setDocumentVisibilityState(document.visibilityState);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      readControllerRef.current?.dispose();
+    };
+  }, []);
+
+  // Immediately wipe all user-scoped chat & active thread state on logout or account switch
+  useEffect(() => {
+    navSeqRef.current += 1;
+    pendingNavTargetRef.current = null;
+    pendingNavOrderIdRef.current = null;
+    setAllUserMessages([]);
+    setMessagesList([]);
+    setActiveChatContext(null);
+    setActiveChatListing(null);
+    setActiveChatOrder(null);
+    setChatResolutionError(null);
+    setSurfaceVisibility({
+      desktop: { lastMessageId: null, isLastMessageVisible: false },
+      mobile: { lastMessageId: null, isLastMessageVisible: false },
+      drawer: { lastMessageId: null, isLastMessageVisible: false },
+    });
+    readControllerRef.current?.resetForUser(user?.uid ?? null);
+  }, [user?.uid]);
+
+  const activeConvUnreadCount = activeChatContext?.conversationId
+    ? (unreadByConversationId[activeChatContext.conversationId] ?? 0)
+    : 0;
+  const hasActiveServerConversation = Boolean(
+    activeChatContext?.conversationId && serverConversationsById[activeChatContext.conversationId]
+  );
+  const isActiveChatVisibleInUi = Boolean(
+    activeChatContext && activeChatListing && user?.uid && (isDrawerChatOpen || isInlineMessagesActive)
+  );
+  const currentLastMessageId =
+    messagesList.length > 0 ? (messagesList[messagesList.length - 1]?.id ?? null) : null;
+  const isLastMessageVisibleOnActiveSurface = Boolean(
+    currentLastMessageId &&
+      ((isInlineMessagesActive &&
+        ((surfaceVisibility.desktop.isLastMessageVisible &&
+          surfaceVisibility.desktop.lastMessageId === currentLastMessageId) ||
+          (surfaceVisibility.mobile.isLastMessageVisible &&
+            surfaceVisibility.mobile.lastMessageId === currentLastMessageId))) ||
+        (isDrawerChatOpen &&
+          surfaceVisibility.drawer.isLastMessageVisible &&
+          surfaceVisibility.drawer.lastMessageId === currentLastMessageId))
+  );
+
+  useEffect(() => {
+    readControllerRef.current?.evaluate({
+      isActive: isActiveChatVisibleInUi,
+      currentUserId: user?.uid,
+      buyerId: activeChatContext?.buyerId,
+      sellerId: activeChatContext?.sellerId,
+      conversationId: activeChatContext?.conversationId,
+      documentVisibilityState,
+      isLastMessageVisible: isLastMessageVisibleOnActiveSurface,
+      lastVisibleMessageId: currentLastMessageId,
+      hasServerConversation: hasActiveServerConversation,
+      unreadCount: activeConvUnreadCount,
+    });
+  }, [
+    isActiveChatVisibleInUi,
+    user?.uid,
+    activeChatContext?.conversationId,
+    activeChatContext?.buyerId,
+    activeChatContext?.sellerId,
+    documentVisibilityState,
+    isLastMessageVisibleOnActiveSurface,
+    currentLastMessageId,
+    hasActiveServerConversation,
+    activeConvUnreadCount,
+  ]);
+
   const chatModalRef = useFocusTrap<HTMLDivElement>({
     isOpen: isDrawerChatOpen,
     onClose: () => {
@@ -1747,7 +1927,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       const hints = extractNavigationLookupHints({
         target,
         knownListings: listings,
-        groupedChats,
+        groupedChats: navigationLookupChats,
         orders: combinedOrders,
       });
 
@@ -1787,8 +1967,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           ? [...combinedOrders, fetchedOrder]
           : combinedOrders;
 
-      // If listing was deleted and in-memory groupedChats hasn't loaded yet, query conversation messages safely
-      let augmentedChats: MarketChatThreadLookupItem[] = groupedChats;
+      // If listing was deleted and in-memory navigationLookupChats hasn't loaded yet, query conversation messages safely
+      let augmentedChats: MarketChatThreadLookupItem[] = navigationLookupChats;
       if (
         !fetchedListing &&
         !hints.matchedChat &&
@@ -1820,7 +2000,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 buyerName: cleanChatId(sample.buyerName) || cleanChatId(buyerMsg?.senderName),
                 orderId: cleanChatId(docs.find(d => d.orderId)?.orderId) || null,
               };
-              augmentedChats = [...groupedChats, reconstructed];
+              augmentedChats = [...navigationLookupChats, reconstructed];
             }
           }
         } catch (e) {
@@ -1873,7 +2053,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         showToast(errorText, 'error');
       }
     }
-  }, [sellerOrders, buyerOrders, groupedChats, listings, user, language, showToast]);
+  }, [sellerOrders, buyerOrders, navigationLookupChats, listings, user, language, showToast]);
 
   useEffect(() => {
     // Check initial window navigation target if set before MarketHub mounted
@@ -1908,7 +2088,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
   useEffect(() => {
     const pending = pendingNavTargetRef.current;
-    if (!pending || !user?.uid || groupedChats.length === 0) return;
+    if (!pending || !user?.uid || navigationLookupChats.length === 0) return;
 
     const combinedOrders = [...sellerOrders, ...buyerOrders];
     const augmentedOrders =
@@ -1922,7 +2102,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       currentUserDisplayName: user.displayName,
       fetchedListing: pending.fetchedListing,
       knownListings: listings,
-      groupedChats,
+      groupedChats: navigationLookupChats,
       orders: augmentedOrders,
     });
 
@@ -1947,35 +2127,48 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       setActiveChatOrder(null);
       setChatResolutionError(language === 'ka' ? resolution.messageKa : resolution.messageEn);
     }
-  }, [groupedChats, listings, sellerOrders, buyerOrders, user, language]);
+  }, [navigationLookupChats, listings, sellerOrders, buyerOrders, user, language]);
+
+  const sellerOrdersRef = useRef(sellerOrders);
+  sellerOrdersRef.current = sellerOrders;
+  const buyerOrdersRef = useRef(buyerOrders);
+  buyerOrdersRef.current = buyerOrders;
+  const activeChatOrderRef = useRef(activeChatOrder);
+  activeChatOrderRef.current = activeChatOrder;
+  const allUserMessagesRef = useRef(allUserMessages);
+  allUserMessagesRef.current = allUserMessages;
 
   useEffect(() => {
-    if (!activeChatContext || !user) {
+    const uid = user?.uid;
+    const convId = activeChatContext?.conversationId;
+    const targetListingId = activeChatContext?.listing?.id;
+    const targetBuyerId = activeChatContext?.buyerId;
+
+    if (!convId || !targetListingId || !targetBuyerId || !uid) {
       setMessagesList([]);
       return;
     }
 
-    const convId = activeChatContext.conversationId;
-    const targetListingId = activeChatContext.listing.id;
-    const targetBuyerId = activeChatContext.buyerId;
-
+    let isCurrent = true;
+    setMessagesList([]);
     let unsubscribe: () => void = () => {};
 
     try {
       const qMsgs = query(
         collection(db, 'market_messages'),
         where('conversationId', '==', convId),
-        where('participants', 'array-contains', user.uid)
+        where('participants', 'array-contains', uid)
       );
 
       unsubscribe = onSnapshot(qMsgs, (snapshot) => {
+        if (!isCurrent) return;
         const msgs = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data() as any
         }));
 
         // Blend any legacy messages for this specific conversation if loaded in allUserMessages
-        const legacyMsgs = allUserMessages.filter(m => {
+        const legacyMsgs = allUserMessagesRef.current.filter(m => {
           if (msgs.some(em => em.id === m.id)) return false;
           const mConv = m.conversationId || (m.listingId && m.buyerId ? `${m.listingId}_${m.buyerId}` : '');
           return mConv === convId || (m.listingId === targetListingId && (m.buyerId === targetBuyerId || (!m.buyerId && (m.senderId === targetBuyerId || m.receiverId === targetBuyerId))));
@@ -1986,23 +2179,27 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         setMessagesList(combined);
 
         // If activeChatOrder is not yet set, check if messages reference an orderId
-        if (!activeChatOrder) {
+        if (!activeChatOrderRef.current) {
           const orderMsg = combined.slice().reverse().find(m => m.orderId);
           if (orderMsg?.orderId) {
-            const matched = sellerOrders.find(o => o.id === orderMsg.orderId) || buyerOrders.find(o => o.id === orderMsg.orderId);
+            const matched =
+              sellerOrdersRef.current.find(o => o.id === orderMsg.orderId) ||
+              buyerOrdersRef.current.find(o => o.id === orderMsg.orderId);
             if (matched) {
               setActiveChatOrder(matched);
             }
           }
         }
       }, (err) => {
+        if (!isCurrent) return;
         console.warn("Scoped conversationId query returned error, using fallback with client filter:", err);
         const fallbackQ = query(
           collection(db, 'market_messages'),
           where('listingId', '==', targetListingId),
-          where('participants', 'array-contains', user.uid)
+          where('participants', 'array-contains', uid)
         );
         unsubscribe = onSnapshot(fallbackQ, (snapshot) => {
+          if (!isCurrent) return;
           const msgs = snapshot.docs
             .map(doc => ({ id: doc.id, ...doc.data() as any }))
             .filter(m => {
@@ -2017,8 +2214,11 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       console.error("Error setting up conversation message listener:", e);
     }
 
-    return () => unsubscribe();
-  }, [activeChatContext, user, activeChatOrder, sellerOrders, buyerOrders, allUserMessages]);
+    return () => {
+      isCurrent = false;
+      unsubscribe();
+    };
+  }, [activeChatContext?.conversationId, activeChatContext?.listing?.id, activeChatContext?.buyerId, user?.uid]);
 
   const handleStartChat = useCallback((listing: Listing) => {
     if (!user) {
@@ -2241,7 +2441,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       currentUserId: user?.uid,
       currentUserDisplayName: user?.displayName,
       knownListings: listings,
-      groupedChats,
+      groupedChats: navigationLookupChats,
       orders: combinedOrders,
     });
 
@@ -2286,7 +2486,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     } else {
       setActiveChatOrder(null);
     }
-  }, [groupedChats, listings, sellerOrders, buyerOrders, user?.uid, user?.displayName, language, showToast]);
+  }, [groupedChats, navigationLookupChats, listings, sellerOrders, buyerOrders, user?.uid, user?.displayName, language, showToast]);
 
   // Dynamically resolve theme from design system.
   // Strips hardcoded hex values to support full color-variable harmony of Light, Forest, Titanium, Rose, Sunset, etc.
@@ -4216,9 +4416,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
               aria-pressed={activeBottomTab === 'messages'}
             >
               <Mail size={16} />
-              {allUserMessages.length > 0 && (
-                <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[8px] font-black flex items-center justify-center text-white scale-90 border border-proton-card">
-                  {allUserMessages.length}
+              {globalUnreadBadgeLabel && (
+                <span
+                  data-testid="desktop-messages-unread-badge"
+                  className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 bg-rose-500 rounded-full text-[9px] font-black leading-none flex items-center justify-center text-white border border-proton-card tabular-nums"
+                >
+                  {globalUnreadBadgeLabel}
                 </span>
               )}
             </button>
@@ -4421,14 +4624,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           >
             <Mail size={13} />
             <span className="truncate max-w-full">{language === 'ka' ? 'ჩატი' : 'Messages'}</span>
-            {groupedChats.length > 0 && (
-              <span className={cn(
-                "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full",
-                activeBottomTab === 'messages'
-                  ? "bg-black/20 text-proton-on-accent"
-                  : "bg-rose-500 text-white"
-              )}>
-                {groupedChats.length}
+            {globalUnreadBadgeLabel && (
+              <span
+                data-testid="mobile-messages-unread-badge"
+                className={cn(
+                  "absolute top-1 right-1.5 inline-flex items-center justify-center h-3.5 min-w-[14px] px-1 text-[8px] font-black leading-none rounded-full tabular-nums",
+                  activeBottomTab === 'messages'
+                    ? "bg-black/20 text-proton-on-accent"
+                    : "bg-rose-500 text-white"
+                )}
+              >
+                {globalUnreadBadgeLabel}
               </span>
             )}
           </button>
@@ -4981,6 +5187,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                           threads={desktopChatThreads}
                           activeConversationId={activeChatContext?.conversationId}
                           currentUserId={user?.uid}
+                          unreadByConversationId={unreadByConversationId}
                           language={language}
                           currentTheme={currentTheme}
                           onSelectThread={handleSelectDesktopThread}
@@ -5036,6 +5243,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                               activeChatContext?.conversationId ||
                               `${activeChatListing.id}_${activeChatOrder?.id || ''}`
                             }
+                            onLastMessageVisibilityChange={handleDesktopLastMsgVisibility}
                           />
 
                           <ChatComposer
@@ -6138,6 +6346,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     buyerName={activeChatContext?.buyerName}
     conversationId={activeChatContext?.conversationId}
     isSendDisabled={!isActiveChatSendAllowed}
+    onLastMessageVisibilityChange={handleDrawerLastMsgVisibility}
   />
 
   {/* Vendor Reviews & Rating Modal */}
@@ -6479,6 +6688,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     activeChatContext?.conversationId ||
                     `${activeChatListing.id}_${activeChatOrder?.id || ''}`
                   }
+                  onLastMessageVisibilityChange={handleMobileLastMsgVisibility}
                 />
 
                 <ChatComposer
@@ -6537,6 +6747,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                     threads={desktopChatThreads}
                     activeConversationId={activeChatContext?.conversationId}
                     currentUserId={user?.uid}
+                    unreadByConversationId={unreadByConversationId}
                     language={language}
                     currentTheme={currentTheme}
                     onSelectThread={handleSelectDesktopThread}
