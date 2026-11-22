@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X, Loader2, Package, Wrench, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, X, Loader2, Package, Wrench, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Order } from '../../types';
-import { MarketTheme, isPhysicalOrder, isServiceOrder } from './MarketConstants';
+import { MarketTheme, isPhysicalOrder, isProjectAssetOrder, isServiceOrder } from './MarketConstants';
 
 export interface CancelOrderModalProps {
   order: Order | null;
@@ -42,7 +42,9 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
   if (!isOpen || !order) return null;
 
   const isPhysical = isPhysicalOrder(order) || (order.orderType === 'product' && Boolean(order.shippingDetails));
-  const isService = isServiceOrder(order) || order.orderType === 'service' || order.orderType === 'project';
+  const isProjectAsset = isProjectAssetOrder(order);
+  const isService = isServiceOrder(order);
+  const restoresListing = isPhysical || isProjectAsset;
 
   return (
     <AnimatePresence>
@@ -136,6 +138,11 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
                       <Package size={12} className="text-cyan-500" />
                       {language === 'ka' ? 'ფიზიკური მიწოდება' : 'Physical Order'}
                     </>
+                  ) : isProjectAsset ? (
+                    <>
+                      <ShieldCheck size={12} className="text-purple-400" />
+                      {language === 'ka' ? 'ციფრული აქტივი' : 'Digital Asset'}
+                    </>
                   ) : isService ? (
                     <>
                       <Wrench size={12} className="text-amber-500" />
@@ -154,17 +161,17 @@ export const CancelOrderModal = React.memo(function CancelOrderModal({
               <p className={cn("text-[11px] font-medium leading-relaxed", currentTheme.subtext)}>
                 {isSeller
                   ? (language === 'ka'
-                    ? (isPhysical 
-                        ? 'შეკვეთა გადავა "გაუქმებულ" სტატუსში. ნივთი ავტომატურად აღდგება მარკეტში და ხელახლა გახდება ხელმისაწვდომი შესაძენად.'
+                    ? (restoresListing 
+                        ? 'შეკვეთა გადავა "გაუქმებულ" სტატუსში. დაჯავშნილი ნივთი/აქტივი ავტომატურად აღდგება მარკეტში და ხელახლა გახდება ხელმისაწვდომი შესაძენად.'
                         : 'შეკვეთა გადავა "გაუქმებულ" სტატუსში. გაუქმებული შეკვეთები აღარ აისახება შემოსავლის ჯამში.')
-                    : (isPhysical
+                    : (restoresListing
                         ? 'The order status will transition to "Cancelled". The listing will be automatically restored to active and available in the marketplace.'
                         : 'The order status will transition to "Cancelled". Cancelled orders will not contribute to your Seller Revenue.'))
                   : (language === 'ka'
-                    ? (isPhysical
-                        ? 'შეკვეთა გაუქმდება დაუყოვნებლივ. ნივთი ავტომატურად დაბრუნდება მარკეტში ხელმისაწვდომ სტატუსში.'
+                    ? (restoresListing
+                        ? 'შეკვეთა გაუქმდება დაუყოვნებლივ. დაჯავშნილი ნივთი/აქტივი ავტომატურად დაბრუნდება მარკეტში ხელმისაწვდომ სტატუსში.'
                         : 'შეკვეთა გაუქმდება და შეჩერდება დამუშავება. გამყიდველს დაუყოვნებლივ ეცნობება გაუქმების შესახებ.')
-                    : (isPhysical
+                    : (restoresListing
                         ? 'The order will be cancelled immediately and the listing will be automatically restored to active in the marketplace.'
                         : 'The order will be cancelled immediately and processing will not proceed. The seller will see the updated status.'))}
               </p>

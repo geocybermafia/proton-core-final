@@ -212,3 +212,82 @@ export const isProductListing = (item?: ListingClassificationInput): boolean =>
 
 export const isPhysicalListing = (item?: ListingClassificationInput): boolean =>
   isProductListing(item);
+
+export const resolvePreservedListingStatus = (
+  existingListing?: { status?: string | null; isSold?: boolean | null } | null
+): 'active' | 'reserved' | 'sold' | 'deleted' => {
+  if (!existingListing) return 'active';
+  const normalizedStatus = typeof existingListing.status === 'string'
+    ? existingListing.status.trim().toLowerCase()
+    : '';
+  if (normalizedStatus === 'reserved') return 'reserved';
+  if (normalizedStatus === 'sold' || existingListing.isSold === true) return 'sold';
+  return 'active';
+};
+
+export const isListingReserved = (
+  listing?: { status?: string | null; isSold?: boolean | null } | null
+): boolean => resolvePreservedListingStatus(listing) === 'reserved';
+
+export const isListingSold = (
+  listing?: { status?: string | null; isSold?: boolean | null } | null
+): boolean => resolvePreservedListingStatus(listing) === 'sold';
+
+export const isListingUnavailableForPurchase = (
+  listing?: { status?: string | null; isSold?: boolean | null; activeOrderId?: string | null; listingType?: string | null; category?: string | null } | null
+): boolean => {
+  if (!listing) return true;
+  const status = resolvePreservedListingStatus(listing);
+  if (status === 'reserved' || status === 'sold') return true;
+  return (
+    typeof listing.activeOrderId === 'string' &&
+    listing.activeOrderId.trim().length > 0 &&
+    !isRepeatableServiceListing(listing)
+  );
+};
+
+export const isPhysicalOrder = (order: any): boolean => {
+  if (!order) return false;
+  return order.orderType === 'product' && Boolean(order.shippingDetails);
+};
+
+export const isProjectAssetOrder = (order: any): boolean => {
+  if (!order) return false;
+  return order.orderType === 'project';
+};
+
+export const isServiceOrder = (order: any): boolean => {
+  if (!order) return false;
+  return order.orderType === 'service';
+};
+
+export const isSellerActionRequired = (order: any): boolean => {
+  if (!order) return false;
+  if (order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded') {
+    return false;
+  }
+  const isPhysical = isPhysicalOrder(order);
+  const isProjectAsset = isProjectAssetOrder(order);
+  const isService = isServiceOrder(order);
+
+  if (isPhysical) {
+    return order.status === 'pending' || order.status === 'processing';
+  }
+  if (isProjectAsset) {
+    return order.status === 'pending' || order.status === 'booked' || order.status === 'in_progress';
+  }
+  if (isService) {
+    return order.status === 'booked' || order.status === 'in_progress';
+  }
+
+  return order.status === 'pending' || order.status === 'processing' || order.status === 'booked' || order.status === 'in_progress';
+};
+
+export const canCancelOrder = (order: any): boolean => {
+  if (!order || !order.status) return false;
+  if (['cancelled', 'completed', 'shipped', 'processing', 'in_progress', 'refunded'].includes(order.status)) {
+    return false;
+  }
+  return order.status === 'pending' || order.status === 'booked';
+};
+

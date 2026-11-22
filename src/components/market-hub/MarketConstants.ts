@@ -28,6 +28,15 @@ import {
   isUniqueDigitalAssetListing,
   normalizeCategoryId,
   normalizeExplicitListingType,
+  resolvePreservedListingStatus,
+  isListingReserved,
+  isListingSold,
+  isListingUnavailableForPurchase,
+  isPhysicalOrder,
+  isProjectAssetOrder,
+  isServiceOrder,
+  isSellerActionRequired,
+  canCancelOrder,
 } from '../../lib/listingClassification';
 
 export type { ListingClassification, ListingClassificationInput, ListingStatus, ListingType };
@@ -57,6 +66,15 @@ export {
   isUniqueDigitalAssetListing,
   normalizeCategoryId,
   normalizeExplicitListingType,
+  resolvePreservedListingStatus,
+  isListingReserved,
+  isListingSold,
+  isListingUnavailableForPurchase,
+  isPhysicalOrder,
+  isProjectAssetOrder,
+  isServiceOrder,
+  isSellerActionRequired,
+  canCancelOrder,
 };
 
 export interface MarketTheme {
@@ -522,36 +540,7 @@ export const safeParseDate = (dateVal: any): number => {
   }
 };
 
-// Pure listing type predicates imported and re-exported from ../../lib/listingClassification above.
-
-export const resolvePreservedListingStatus = (
-  existingListing?: { status?: string | null; isSold?: boolean | null } | null
-): ListingStatus => {
-  if (!existingListing) return 'active';
-  const normalizedStatus = typeof existingListing.status === 'string'
-    ? existingListing.status.trim().toLowerCase()
-    : '';
-  if (normalizedStatus === 'reserved') return 'reserved';
-  if (normalizedStatus === 'sold' || existingListing.isSold === true) return 'sold';
-  return 'active';
-};
-
-export const isListingReserved = (
-  listing?: { status?: string | null; isSold?: boolean | null } | null
-): boolean => resolvePreservedListingStatus(listing) === 'reserved';
-
-export const isListingSold = (
-  listing?: { status?: string | null; isSold?: boolean | null } | null
-): boolean => resolvePreservedListingStatus(listing) === 'sold';
-
-export const isListingUnavailableForPurchase = (
-  listing?: { status?: string | null; isSold?: boolean | null; activeOrderId?: string | null } | null
-): boolean => {
-  if (!listing) return true;
-  const status = resolvePreservedListingStatus(listing);
-  if (status === 'reserved' || status === 'sold') return true;
-  return typeof listing.activeOrderId === 'string' && listing.activeOrderId.trim().length > 0 && !isRepeatableServiceListing(listing as ListingClassificationInput);
-};
+// Pure listing type, status, and order predicate helpers imported and re-exported from ../../lib/listingClassification above.
 
 /**
  * Matches repeatable service listings (`service`, `rent`, `audience-growth`, or legacy `project`).
@@ -561,49 +550,6 @@ export const isListingUnavailableForPurchase = (
 export const isRuleServiceOrProjectOrderTarget = (item?: { listingType?: string; category?: string } | null): boolean => {
   if (!item) return false;
   return isRepeatableServiceListing(item);
-};
-
-export const isPhysicalOrder = (order: any): boolean => {
-  if (!order) return false;
-  return order.orderType === 'product' && Boolean(order.shippingDetails);
-};
-
-export const isProjectAssetOrder = (order: any): boolean => {
-  if (!order) return false;
-  return order.orderType === 'project';
-};
-
-export const isServiceOrder = (order: any): boolean => {
-  if (!order) return false;
-  return order.orderType === 'service' || order.orderType === 'project';
-};
-
-export const isSellerActionRequired = (order: any): boolean => {
-  if (!order) return false;
-  if (order.status === 'completed' || order.status === 'cancelled' || order.status === 'refunded') {
-    return false;
-  }
-  const isPhysical = isPhysicalOrder(order);
-  const isService = isServiceOrder(order);
-
-  if (isPhysical) {
-    return order.status === 'pending' || order.status === 'processing';
-  }
-  if (isService) {
-    return order.status === 'booked' || order.status === 'pending' || order.status === 'in_progress';
-  }
-
-  return order.status === 'pending' || order.status === 'processing' || order.status === 'booked' || order.status === 'in_progress';
-};
-
-export const canCancelOrder = (order: any): boolean => {
-  if (!order || !order.status) return false;
-  // Non-cancellable once progressed or in terminal states
-  if (['cancelled', 'completed', 'shipped', 'processing', 'in_progress', 'refunded'].includes(order.status)) {
-    return false;
-  }
-  // Only exclusive/physical orders in 'pending' or service bookings in 'booked' (before handover/work begins)
-  return order.status === 'pending' || order.status === 'booked';
 };
 
 /**

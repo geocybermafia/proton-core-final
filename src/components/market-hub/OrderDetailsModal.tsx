@@ -31,6 +31,7 @@ import {
   MarketTheme, 
   safeParseDate, 
   isPhysicalOrder, 
+  isProjectAssetOrder,
   isServiceOrder, 
   canCancelOrder 
 } from './MarketConstants';
@@ -109,6 +110,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
   if (!isOpen || !order) return null;
 
   const isPhysical = isPhysicalOrder(order);
+  const isProjectAsset = isProjectAssetOrder(order);
   const isService = isServiceOrder(order);
   const isCancelled = order.status === 'cancelled';
   const canCancel = canCancelOrder(order);
@@ -238,8 +240,45 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
         icon: <CheckCircle2 size={16} />
       });
     }
+  } else if (isProjectAsset) {
+    // Unique Digital Asset Timeline
+    timelineSteps.push({
+      id: 'placed',
+      title: language === 'ka' ? 'შეკვეთა გაფორმდა · აქტივი დაიჯავშნა' : 'Order Placed · Asset Reserved',
+      description: language === 'ka'
+        ? 'ციფრული აქტივი დაჯავშნილია თქვენთვის და ელოდება გამყიდველის მიერ გადაცემის დასრულებას.'
+        : 'Digital asset has been reserved for your order and awaits seller transfer completion.',
+      status: 'completed',
+      timestamp: orderCreatedTimestamp,
+      icon: <ShieldCheck size={16} />
+    });
+
+    if (isCancelled) {
+      timelineSteps.push({
+        id: 'cancelled',
+        title: language === 'ka' ? 'შეკვეთა გაუქმდა · აქტივი გააქტიურდა' : 'Order Cancelled · Asset Restored',
+        description: language === 'ka'
+          ? 'შეკვეთა გაუქმდა და დაჯავშნილი აქტივი დაბრუნდა მარკეტში.'
+          : 'Order was cancelled and the reserved asset returned to the marketplace.',
+        status: 'cancelled',
+        timestamp: null,
+        icon: <XCircle size={16} />
+      });
+    } else {
+      const isTransferCompleted = order.status === 'completed';
+      timelineSteps.push({
+        id: 'transfer',
+        title: language === 'ka' ? 'აქტივის გადაცემა & დასრულება' : 'Asset Transfer & Completion',
+        description: isTransferCompleted
+          ? (language === 'ka' ? 'გამყიდველმა დაასრულა ციფრული აქტივის გადაცემა. აქტივი გაყიდულია.' : 'Seller completed the digital asset transfer. Asset marked as sold.')
+          : (language === 'ka' ? 'შეთანხმდით გადახდასა და წვდომების გადაცემაზე ჩატში, რის შემდეგაც გამყიდველი დაასრულებს შეკვეთას.' : 'Arrange direct settlement and credential handover in chat; seller will mark the order completed.'),
+        status: isTransferCompleted ? 'completed' : 'current',
+        timestamp: null,
+        icon: <CheckCircle2 size={16} />
+      });
+    }
   } else {
-    // Service / Project Timeline
+    // Service Timeline
     // 1. Booking Created
     timelineSteps.push({
       id: 'booked',
@@ -423,6 +462,8 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
               <div className={cn("w-10 h-10 rounded-2xl bg-proton-card border border-proton-border flex items-center justify-center shrink-0", currentTheme.text)}>
                 {isPhysical ? (
                   <Truck size={20} className="text-cyan-500" />
+                ) : isProjectAsset ? (
+                  <ShieldCheck size={20} className="text-purple-400" />
                 ) : isService ? (
                   <Wrench size={20} className="text-amber-500" />
                 ) : (
@@ -476,6 +517,8 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-proton-card border border-proton-border text-proton-muted">
                       {isPhysical 
                         ? (language === 'ka' ? 'ფიზიკური პროდუქტი' : 'Physical Product')
+                        : isProjectAsset
+                          ? (language === 'ka' ? 'ციფრული აქტივი' : 'Digital Asset')
                         : isService 
                           ? (language === 'ka' ? 'სერვისი / მომსახურება' : 'Service')
                           : (language === 'ka' ? 'პროდუქტი' : 'Product')}
@@ -929,6 +972,18 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                     >
                       <Truck size={14} />
                       <span>{language === 'ka' ? 'ამანათის გაგზავნა & თრექინგი' : 'Ship Parcel & Add Tracking'}</span>
+                    </button>
+                  )}
+
+                  {isProjectAsset && (order.status === 'pending' || order.status === 'booked' || order.status === 'in_progress') && onUpdateOrderStatus && (
+                    <button
+                      type="button"
+                      onClick={() => handleSellerStatusChange('completed')}
+                      disabled={isUpdatingStatus}
+                      className="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>{language === 'ka' ? 'დასრულებულად მონიშვნა' : 'Mark Completed'}</span>
                     </button>
                   )}
 

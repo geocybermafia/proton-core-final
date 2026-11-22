@@ -40,6 +40,7 @@ exports.compareMessageOrder = compareMessageOrder;
 exports.processMarketMessageConversationUpdate = processMarketMessageConversationUpdate;
 exports.processMarketMessageCreated = processMarketMessageCreated;
 exports.processMarkMarketConversationRead = processMarkMarketConversationRead;
+exports.processOrderUpdatedRestoration = processOrderUpdatedRestoration;
 const https_1 = require("firebase-functions/v2/https");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const app_1 = require("firebase-admin/app");
@@ -1084,18 +1085,87 @@ exports.onMarketMessageCreated = (0, firestore_1.onDocumentCreated)({
         console.error(`[onMarketMessageCreated] Error processing market message ${event.params?.messageId}:`, error);
     }
 });
+async function processOrderUpdatedRestoration({ orderId, beforeData, afterData, firestore, deleteSentinel = firestore_2.FieldValue.delete(), logger = console }) {
+    if (!beforeData || !afterData) {
+        return { restored: false, reason: "missing_snapshot" };
+    }
+    const oldStatus = beforeData.status;
+    const newStatus = afterData.status;
+    if ((oldStatus !== "pending" && oldStatus !== "booked") ||
+        (newStatus !== "cancelled" && newStatus !== "refunded")) {
+        return { restored: false, reason: "non_cancellation_transition" };
+    }
+    const listingId = getTrimmedNonEmptyString(afterData.listingId || beforeData.listingId);
+    const sellerId = getTrimmedNonEmptyString(afterData.sellerId || beforeData.sellerId);
+    if (!listingId || !sellerId) {
+        logger.warn(`[onOrderUpdated] Order ${orderId} cancelled but missing listingId or sellerId.`);
+        return { restored: false, reason: "missing_order_metadata" };
+    }
+    const orderType = afterData.orderType || beforeData.orderType || "product";
+    const isPhysical = orderType === "product" && Boolean(afterData.shippingDetails || beforeData.shippingDetails);
+    const isProjectAsset = orderType === "project";
+    if (!isPhysical && !isProjectAsset) {
+        logger.log(`[onOrderUpdated] Order ${orderId} cancelled for repeatable/non-exclusive order (${orderType}). No listing restoration needed.`);
+        return { restored: false, reason: "non_restorable_order_type" };
+    }
+    const listingRef = firestore.collection("listings").doc(listingId);
+    return await firestore.runTransaction(async (tx) => {
+        const freshListingSnap = await tx.get(listingRef);
+        if (!freshListingSnap.exists) {
+            logger.log(`[onOrderUpdated] Order ${orderId} cancelled, but associated listing ${listingId} no longer exists.`);
+            return { restored: false, reason: "listing_not_found" };
+        }
+        const freshListing = freshListingSnap.data();
+        if (!freshListing) {
+            return { restored: false, reason: "empty_listing" };
+        }
+        if (freshListing.sellerId !== sellerId) {
+            logger.warn(`[onOrderUpdated] Transaction aborted: sellerId mismatch for listing ${listingId}.`);
+            return { restored: false, reason: "seller_mismatch" };
+        }
+        if (freshListing.activeOrderId !== orderId) {
+            logger.warn(`[onOrderUpdated] Restoration skipped/aborted for listing ${listingId}: ` +
+                `activeOrderId '${freshListing.activeOrderId || ""}' does not match order '${orderId}'.`);
+            return { restored: false, reason: "active_order_mismatch" };
+        }
+        const currentListingStatus = typeof freshListing.status === "string"
+            ? freshListing.status.trim().toLowerCase()
+            : "";
+        if (currentListingStatus === "active") {
+            // Already restored atomically by client transaction; safe no-op prevents duplicate writes.
+            return { restored: false, reason: "already_active" };
+        }
+        if (isProjectAsset) {
+            if (currentListingStatus === "sold" || freshListing.isSold === true) {
+                logger.warn(`[onOrderUpdated] Protected sold digital asset ${listingId} from restoration on order ${orderId}.`);
+                return { restored: false, reason: "digital_asset_already_sold" };
+            }
+            if (currentListingStatus !== "reserved") {
+                logger.log(`[onOrderUpdated] Digital asset ${listingId} status is '${freshListing.status}' (not reserved). No action taken.`);
+                return { restored: false, reason: "unexpected_status" };
+            }
+        }
+        else if (currentListingStatus !== "sold" && currentListingStatus !== "reserved") {
+            logger.log(`[onOrderUpdated] Physical listing ${listingId} status is '${freshListing.status}'. No action taken.`);
+            return { restored: false, reason: "unexpected_status" };
+        }
+        tx.update(listingRef, {
+            status: "active",
+            isSold: false,
+            activeOrderId: deleteSentinel
+        });
+        logger.log(`[onOrderUpdated] Safely restored listing ${listingId} to active for verified order ${orderId}.`);
+        return { restored: true, reason: "restored" };
+    });
+}
 /**
  * Backend Event Trigger: onOrderUpdated
  *
- * Safe Order Cancellation Audit & Event Handler:
- * - Checks status transition: from 'pending' or 'booked' to 'cancelled' or 'refunded'
- * - Validates order integrity: sellerId, buyerId, listingId
- * - Checks physical order type (skips services and projects)
- * - Verifies listing existence and matches sellerId
- * - CRITICAL SAFETY GUARD: Automatic listing restoration is SUSPENDED because
- *   the listing schema currently lacks a deterministic provenance link (e.g. activeOrderId)
- *   connecting the 'sold' state specifically to this order. Without activeOrderId,
- *   blind restoration risks reactivating listings sold under other orders or marked sold by sellers.
+ * Safe Order Cancellation Audit & Transactional Listing Restoration:
+ * - Handles cancellations/refunds from 'pending' or 'booked' state.
+ * - Supports physical 'product' orders and unique digital asset 'project' orders.
+ * - Requires strict sellerId + activeOrderId provenance match inside Firestore transaction.
+ * - NEVER restores a 'sold' digital asset and safely no-ops if client transaction already restored 'active'.
  */
 exports.onOrderUpdated = (0, firestore_1.onDocumentUpdated)({
     document: "orders/{orderId}",
@@ -1106,90 +1176,13 @@ exports.onOrderUpdated = (0, firestore_1.onDocumentUpdated)({
         const afterSnap = event.data?.after;
         if (!beforeSnap || !afterSnap)
             return;
-        const beforeData = beforeSnap.data();
-        const afterData = afterSnap.data();
-        if (!beforeData || !afterData)
-            return;
         const orderId = event.params.orderId || afterSnap.id;
-        const oldStatus = beforeData.status;
-        const newStatus = afterData.status;
-        // 1. Terminal / Progress transition guard:
-        // Only cancellations or refunds from pending / booked state are valid for cancellation processing
-        if ((oldStatus !== "pending" && oldStatus !== "booked") || (newStatus !== "cancelled" && newStatus !== "refunded")) {
-            return;
-        }
-        const listingId = (afterData.listingId || beforeData.listingId || "").trim();
-        const sellerId = (afterData.sellerId || beforeData.sellerId || "").trim();
-        if (!listingId || !sellerId) {
-            console.warn(`[onOrderUpdated] Order ${orderId} cancelled but missing listingId or sellerId.`);
-            return;
-        }
-        // 2. Physical order check (skip services and projects where listings remain active)
-        const orderType = afterData.orderType || beforeData.orderType || "product";
-        const isPhysical = orderType === "product" && Boolean(afterData.shippingDetails || beforeData.shippingDetails);
-        if (!isPhysical) {
-            console.log(`[onOrderUpdated] Order ${orderId} cancelled for non-physical/service item (${orderType}). No listing restoration needed.`);
-            return;
-        }
         const firestore = afterSnap.ref.firestore || db;
-        const listingRef = firestore.collection("listings").doc(listingId);
-        const listingSnap = await listingRef.get();
-        if (!listingSnap.exists) {
-            console.log(`[onOrderUpdated] Order ${orderId} cancelled, but associated listing ${listingId} no longer exists.`);
-            return;
-        }
-        const listingData = listingSnap.data();
-        if (!listingData)
-            return;
-        // 3. Verify seller identity match
-        if (listingData.sellerId !== sellerId) {
-            console.warn(`[onOrderUpdated] Integrity mismatch: order seller (${sellerId}) does not match listing seller (${listingData.sellerId}).`);
-            return;
-        }
-        // 4. Check listing status
-        if (listingData.status !== "sold") {
-            console.log(`[onOrderUpdated] Order ${orderId} cancelled, but listing ${listingId} status is '${listingData.status}' (not sold). No action taken.`);
-            return;
-        }
-        // 5. CRITICAL PROVENANCE CHECK & SUSPENSION:
-        // Check if the listing has an explicit pointer verifying that this specific order caused it to be sold.
-        // If listingData.activeOrderId is missing, automated restoration is safely SUSPENDED
-        // to prevent restoring listings that were sold by other transactions or manually marked sold.
-        const hasDirectProvenance = listingData.activeOrderId === orderId;
-        if (!hasDirectProvenance) {
-            console.warn(`[onOrderUpdated] Automated listing restoration SUSPENDED for listing ${listingId}: ` +
-                `Listing lacks deterministic activeOrderId matching order ${orderId}. ` +
-                `A schema migration adding activeOrderId at purchase time is required for safe server restoration.`);
-            return;
-        }
-        // 6. TRANSACTIONAL ATOMIC RESTORATION:
-        // Re-read and update inside a transaction to prevent race conditions or overwriting re-sold items
-        await firestore.runTransaction(async (tx) => {
-            const freshListingSnap = await tx.get(listingRef);
-            if (!freshListingSnap.exists)
-                return;
-            const freshListing = freshListingSnap.data();
-            if (!freshListing)
-                return;
-            // Double-check sellerId, status, and activeOrderId inside transaction lock
-            if (freshListing.sellerId !== sellerId) {
-                console.warn(`[onOrderUpdated] Transaction aborted: sellerId mismatch.`);
-                return;
-            }
-            if (freshListing.status !== "sold") {
-                console.log(`[onOrderUpdated] Transaction aborted: listing is no longer in 'sold' status (${freshListing.status}).`);
-                return;
-            }
-            if (freshListing.activeOrderId !== orderId) {
-                console.warn(`[onOrderUpdated] Transaction aborted: activeOrderId '${freshListing.activeOrderId}' does not match order '${orderId}'.`);
-                return;
-            }
-            tx.update(listingRef, {
-                status: "active",
-                isSold: false,
-                activeOrderId: firestore_2.FieldValue.delete()
-            });
-            console.log(`[onOrderUpdated] Safely restored listing ${listingId} to active for verified order ${orderId}.`);
+        await processOrderUpdatedRestoration({
+            orderId,
+            beforeData: beforeSnap.data(),
+            afterData: afterSnap.data(),
+            firestore
         });
     }
     catch (error) {

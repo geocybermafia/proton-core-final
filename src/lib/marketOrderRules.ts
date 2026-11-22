@@ -1,9 +1,10 @@
 import {
   classifyListing,
+  isUniqueDigitalAssetListing,
   normalizeCategoryId,
   resolvePreservedListingStatus,
   ListingClassificationInput
-} from '../components/market-hub/MarketConstants';
+} from './listingClassification';
 
 export type OrderCreationMode =
   | 'service'
@@ -21,6 +22,12 @@ export type OrderRejectionCode =
   | 'INVALID_PRICE'
   | 'MISSING_SELLER';
 
+export type ListingLockUpdatePayload = {
+  status: 'reserved' | 'sold';
+  isSold?: boolean;
+  activeOrderId: string;
+};
+
 export interface OrderValidationSuccess {
   ok: true;
   mode: Exclude<OrderCreationMode, 'non_purchasable'>;
@@ -28,11 +35,7 @@ export interface OrderValidationSuccess {
   initialOrderStatus: 'booked' | 'pending';
   requiresShipping: boolean;
   requiresAtomicListingLock: boolean;
-  buildListingLockUpdate: (orderId: string) => {
-    status: 'reserved' | 'sold';
-    isSold: boolean;
-    activeOrderId: string;
-  } | null;
+  buildListingLockUpdate: (orderId: string) => ListingLockUpdatePayload | null;
 }
 
 export interface OrderValidationFailure {
@@ -169,6 +172,8 @@ export function validateListingForOrderCreation(
   }
 
   if (mode === 'unique_digital_asset') {
+    // Only send ['status', 'activeOrderId'] so listings lacking an `isSold` field
+    // satisfy firestore.rules `affectedKeys().hasOnly(['status', 'activeOrderId'])`.
     return {
       ok: true,
       mode: 'unique_digital_asset',
@@ -178,7 +183,6 @@ export function validateListingForOrderCreation(
       requiresAtomicListingLock: true,
       buildListingLockUpdate: (orderId: string) => ({
         status: 'reserved',
-        isSold: false,
         activeOrderId: orderId
       })
     };
@@ -199,10 +203,68 @@ export function validateListingForOrderCreation(
   };
 }
 
+export interface BuildVerifiedOrderPayloadInput {
+  listingId: string;
+  freshListing: ListingLike & Record<string, any>;
+  buyerId: string;
+  itemTitle: string;
+  validation: OrderValidationSuccess;
+  buyerInstructions?: string;
+  shippingDetails?: {
+    recipientName?: string;
+    phone?: string;
+    city?: string;
+    address?: string;
+    notes?: string;
+  } | null;
+  fallbackBuyerName?: string | null;
+  createdAt: unknown;
+}
+
+/**
+ * Canonical order creation payload builder shared by single-item and cart checkout.
+ */
+export function buildVerifiedOrderPayload({
+  listingId,
+  freshListing,
+  buyerId,
+  itemTitle,
+  validation,
+  buyerInstructions,
+  shippingDetails,
+  fallbackBuyerName,
+  createdAt
+}: BuildVerifiedOrderPayloadInput): Record<string, any> {
+  const orderData: Record<string, any> = {
+    listingId,
+    buyerId,
+    sellerId: freshListing.sellerId,
+    amount: freshListing.price,
+    currency: freshListing.currency || 'USD',
+    itemTitle,
+    status: validation.initialOrderStatus,
+    orderType: validation.orderType,
+    buyerInstructions: validation.requiresShipping ? '' : (buyerInstructions || '').trim(),
+    createdAt
+  };
+
+  if (validation.requiresShipping && shippingDetails) {
+    orderData.shippingDetails = {
+      recipientName: (shippingDetails.recipientName || fallbackBuyerName || 'Customer').trim(),
+      phone: (shippingDetails.phone || '').trim(),
+      city: (shippingDetails.city || '').trim(),
+      address: (shippingDetails.address || '').trim(),
+      notes: (shippingDetails.notes || '').trim()
+    };
+  }
+
+  return orderData;
+}
+
 /**
  * Determines whether cancelling `orderId` should unlock `listing` back to `active`.
- * Strictly requires provenance match when `activeOrderId` is present so unrelated
- * or superseded orders can NEVER unlock an active reservation or sold asset.
+ * Strictly requires provenance match (`listing.activeOrderId === orderId`) so
+ * unrelated, completed, or superseded orders can NEVER unlock an asset.
  */
 export function shouldUnlockListingOnOrderCancel(
   listing: {
@@ -210,9 +272,12 @@ export function shouldUnlockListingOnOrderCancel(
     isSold?: boolean | null;
     sellerId?: string | null;
     activeOrderId?: string | null;
+    listingType?: string | null;
+    category?: string | null;
   } | null | undefined,
   orderId: string,
-  expectedSellerId?: string
+  expectedSellerId?: string,
+  orderType?: string | null
 ): boolean {
   if (!listing || !orderId) return false;
   if (expectedSellerId && listing.sellerId !== expectedSellerId) return false;
@@ -220,12 +285,17 @@ export function shouldUnlockListingOnOrderCancel(
   const status = resolvePreservedListingStatus(listing);
   if (status !== 'reserved' && status !== 'sold') return false;
 
-  if (typeof listing.activeOrderId === 'string' && listing.activeOrderId.trim().length > 0) {
-    return listing.activeOrderId === orderId;
+  if (typeof listing.activeOrderId !== 'string' || listing.activeOrderId.trim() !== orderId) {
+    return false;
   }
 
-  // Only allow legacy sold items (never 'reserved') to fall back if seller matches and no activeOrderId was stored.
-  return status === 'sold' && Boolean(expectedSellerId && listing.sellerId === expectedSellerId);
+  const isDigitalAsset =
+    orderType === 'project' || isUniqueDigitalAssetListing(listing as ListingClassificationInput);
+  if (isDigitalAsset && status === 'sold') {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -244,4 +314,12 @@ export function shouldFinalizeListingSoldOnOrderComplete(
   if (expectedSellerId && listing.sellerId !== expectedSellerId) return false;
   const status = typeof listing.status === 'string' ? listing.status.trim().toLowerCase() : '';
   return status === 'reserved' && listing.activeOrderId === orderId;
+}
+
+export function buildListingSoldFinalizationUpdate(orderId: string) {
+  return {
+    status: 'sold' as const,
+    isSold: true,
+    activeOrderId: orderId
+  };
 }

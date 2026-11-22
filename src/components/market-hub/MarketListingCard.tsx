@@ -24,7 +24,10 @@ import {
   isProjectListing,
   formatCurrencyAmount,
   formatOriginalCurrencyPrice,
-  formatApproxCurrencyEquivalent
+  formatApproxCurrencyEquivalent,
+  isListingReserved,
+  isListingSold,
+  isListingUnavailableForPurchase
 } from './MarketConstants';
 import { getCardAttributeHighlights, isEffectiveRemoteListing } from './ListingSchemas';
 import { hasSessionImpression, sendListingAnalyticsEvent } from '../../utils/marketAnalyticsClient';
@@ -33,6 +36,7 @@ export interface ListingCardImageProps {
   src?: string;
   alt: string;
   isSold?: boolean;
+  isReserved?: boolean;
   language: string;
   themeAccent?: string;
   category?: string;
@@ -55,6 +59,7 @@ export const ListingCardImage = React.memo(function ListingCardImage({
   src,
   alt,
   isSold,
+  isReserved,
   language,
   themeAccent,
   category
@@ -124,7 +129,7 @@ export const ListingCardImage = React.memo(function ListingCardImage({
               isCoverMode ? "object-cover" : "object-contain",
               isLoaded ? "opacity-100" : "opacity-0"
             )}
-            whileHover={{ scale: isSold ? 1.0 : (isContainMode ? 1.02 : 1.04) }}
+            whileHover={{ scale: (isSold || isReserved) ? 1.0 : (isContainMode ? 1.02 : 1.04) }}
             referrerPolicy="no-referrer"
           />
         </>
@@ -136,7 +141,7 @@ export const ListingCardImage = React.memo(function ListingCardImage({
         </div>
       )}
 
-      {isSold && (
+      {isSold ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[2px] bg-black/55 pointer-events-none select-none">
           <div className="px-3.5 py-1.5 rounded-xl bg-proton-card/95 border border-rose-500/40 shadow-xl flex items-center gap-2 transform -rotate-3">
             <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse" />
@@ -145,7 +150,16 @@ export const ListingCardImage = React.memo(function ListingCardImage({
             </span>
           </div>
         </div>
-      )}
+      ) : isReserved ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[2px] bg-black/45 pointer-events-none select-none">
+          <div className="px-3.5 py-1.5 rounded-xl bg-proton-card/95 border border-amber-500/40 shadow-xl flex items-center gap-2 transform -rotate-3">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+            <span className="text-[11px] font-black tracking-widest text-amber-400 uppercase font-mono">
+              {language === 'ka' ? 'დაჯავშნილია' : 'RESERVED'}
+            </span>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 });
@@ -221,7 +235,9 @@ export const MarketListingCard = React.memo(function MarketListingCard({
   const isOwnListing = !!user && listing.sellerId === user.uid;
   const canManageListing = isOwnListing;
   const showManagementMenu = canManageListing || Boolean(isAdmin);
-  const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
+  const isItemSold = isListingSold(listing);
+  const isItemReserved = isListingReserved(listing);
+  const isItemUnavailable = isListingUnavailableForPurchase(listing);
 
   // Real Impression Tracking: >= 50% visible continuously for >= 800ms
   useEffect(() => {
@@ -321,7 +337,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
       className={cn(
         "group rounded-xl overflow-hidden transition-all duration-300 flex flex-col h-full w-full relative border hover:shadow-xl hover:-translate-y-1 cursor-pointer min-w-0",
         currentTheme.card,
-        isItemSold ? "opacity-85" : "hover:border-proton-accent/45"
+        isItemUnavailable ? "opacity-85" : "hover:border-proton-accent/45"
       )}
     >
       {/* 1. Product Photo */}
@@ -330,6 +346,7 @@ export const MarketListingCard = React.memo(function MarketListingCard({
           src={imageUrl}
           alt={displayTitle}
           isSold={isItemSold}
+          isReserved={isItemReserved}
           language={language}
           themeAccent={currentTheme.accent}
           category={listing.category}
@@ -608,6 +625,16 @@ export const MarketListingCard = React.memo(function MarketListingCard({
             >
               <span className="w-1.5 h-1.5 rounded-full bg-rose-500/70 shrink-0" />
               <span className="truncate">{language === 'ka' ? 'გაყიდულია' : 'SOLD'}</span>
+            </button>
+          ) : isItemReserved ? (
+            <button
+              type="button"
+              disabled
+              aria-label={`${language === 'ka' ? 'დაჯავშნილია' : 'Reserved'}: ${displayTitle}`}
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/30 flex items-center justify-center gap-2 cursor-not-allowed select-none"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse" />
+              <span className="truncate">{language === 'ka' ? 'დაჯავშნილია' : 'RESERVED'}</span>
             </button>
           ) : (
             <button

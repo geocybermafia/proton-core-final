@@ -108,6 +108,7 @@ import {
   isServiceListing,
   isProjectListing,
   isPhysicalOrder,
+  isProjectAssetOrder,
   isServiceOrder,
   isSellerActionRequired,
   canCancelOrder,
@@ -117,10 +118,15 @@ import {
   getDefaultCategoryForType,
   inferListingType,
   isCategoryValidForType,
-  isRuleServiceOrProjectOrderTarget,
   resolvePreservedListingStatus
 } from './market-hub/MarketConstants';
-import { validateListingForOrderCreation } from '../lib/marketOrderRules';
+import {
+  buildListingSoldFinalizationUpdate,
+  buildVerifiedOrderPayload,
+  shouldFinalizeListingSoldOnOrderComplete,
+  shouldUnlockListingOnOrderCancel,
+  validateListingForOrderCreation
+} from '../lib/marketOrderRules';
 import {
   cleanChatId,
   extractBuyerIdFromConversationId,
@@ -741,17 +747,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       return;
     }
 
-    const isOwnListing = listing.sellerId === user.uid;
-
-    if (isOwnListing) {
-      showToast(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.", 'warning');
+    const validation = validateListingForOrderCreation(listing, user.uid);
+    if (!validation.ok) {
+      showToast(
+        language === 'ka' ? validation.messageKa : validation.messageEn,
+        validation.code === 'SELF_PURCHASE' ? 'warning' : 'error',
+        6000
+      );
       return;
     }
 
-    if (listing.status === 'sold' || listing.isSold) {
-      showToast(language === 'ka' ? "ეს ნივთი უკვე გაყიდულია." : "This item is already sold.", 'error');
-      return;
-    }
     setCart((prev) => {
       const exists = prev.some((item) => item.id === listing.id);
       if (exists) {
@@ -760,8 +765,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       }
       showToast(
         language === 'ka' 
-          ? `"${listing.title}" დაემატა კალათაში.` 
-          : `"${listing.title}" added to cart.`, 
+          ? `"${getListingTitle(listing, language)}" დაემატა კალათაში.` 
+          : `"${getListingTitle(listing, language)}" added to cart.`, 
         'success'
       );
       return [...prev, listing];
@@ -784,93 +789,136 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       return;
     }
     if (cart.length === 0) return;
+
+    const uniqueCart: Listing[] = [];
+    const seenIds = new Set<string>();
+    for (const item of cart) {
+      if (item?.id && !seenIds.has(item.id)) {
+        seenIds.add(item.id);
+        uniqueCart.push(item);
+      }
+    }
+    if (uniqueCart.length === 0) return;
+
     setIsPlacingCartOrders(true);
     try {
+      // Atomic Firestore transaction covering all cart items in a single commit
+      await runTransaction(db, async (transaction) => {
+        // 1. First read all listing docs concurrently
+        const listingSnapshots = await Promise.all(
+          uniqueCart.map((item) => transaction.get(doc(db, 'listings', item.id)))
+        );
 
-        // Atomic Firestore transaction covering all cart items in a single commit
-        await runTransaction(db, async (transaction) => {
-          // 1. First read all listing docs concurrently
-          const listingSnapshots = await Promise.all(
-            cart.map(item => transaction.get(doc(db, 'listings', item.id)))
-          );
+        // 2. Validate every item against canonical order rules before any writes
+        const invalidItems: {
+          id: string;
+          title: string;
+          reason: string;
+          messageEn: string;
+          messageKa: string;
+        }[] = [];
+        const verifiedOrders: {
+          listingRef: any;
+          orderData: Record<string, any>;
+          validation: Extract<ReturnType<typeof validateListingForOrderCreation>, { ok: true }>;
+        }[] = [];
 
-          // 2. Validate all items before making any modifications
-          const invalidItems: { id: string; title: string; reason: 'missing' | 'sold' }[] = [];
-          const verifiedOrders: { listingRef: any; orderData: any; isService: boolean }[] = [];
+        let requiresAnyShipping = false;
 
-          for (let i = 0; i < cart.length; i++) {
-            const item = cart[i];
-            const docSnap = listingSnapshots[i];
-            if (!docSnap.exists()) {
-              invalidItems.push({ id: item.id, title: item.title, reason: 'missing' });
-              continue;
-            }
-            const freshData = docSnap.data();
-            if (freshData.status === 'sold' || freshData.isSold) {
-              invalidItems.push({ id: item.id, title: freshData.title || item.title, reason: 'sold' });
-              continue;
-            }
-
-            const isService = isRuleServiceOrProjectOrderTarget(item);
-            const isPhysical = !isService;
-            const itemInstructions = isService ? (cartServiceInstructions[item.id]?.trim() || '') : '';
-
-            const baseOrderData: any = {
-              listingId: item.id,
-              buyerId: user.uid,
-              sellerId: freshData.sellerId || item.sellerId,
-              amount: freshData.price,
-              currency: freshData.currency || 'USD',
-              itemTitle: freshData.title || item.title,
-              status: isService ? 'booked' : (isPhysical ? 'pending' : 'completed'),
-              orderType: isService ? 'service' : 'product',
-              buyerInstructions: itemInstructions,
-              createdAt: serverTimestamp()
-            };
-
-            if (isPhysical) {
-              baseOrderData.shippingDetails = {
-                recipientName: (shippingDetails.recipientName || user.displayName || 'Customer').trim(),
-                phone: shippingDetails.phone.trim(),
-                city: shippingDetails.city.trim(),
-                address: shippingDetails.address.trim(),
-                notes: shippingDetails.notes?.trim() || ''
-              };
-            }
-
-            verifiedOrders.push({
-              listingRef: doc(db, 'listings', item.id),
-              orderData: baseOrderData,
-              isService
+        for (let i = 0; i < uniqueCart.length; i++) {
+          const item = uniqueCart[i];
+          const docSnap = listingSnapshots[i];
+          if (!docSnap.exists()) {
+            const title = getListingTitle(item, language);
+            invalidItems.push({
+              id: item.id,
+              title,
+              reason: 'LISTING_NOT_FOUND',
+              messageEn: `Item "${title}" no longer exists and was removed from your cart.`,
+              messageKa: `განცხადება "${title}" ბაზაში აღარ არსებობს და ამოიშალა კალათიდან.`
             });
+            continue;
           }
 
-          if (invalidItems.length > 0) {
-            const err: any = new Error(
-              invalidItems.length === 1
-                ? (invalidItems[0].reason === 'sold'
-                    ? `Product "${invalidItems[0].title}" has already been sold.`
-                    : `Product "${invalidItems[0].title}" no longer exists in our database.`)
-                : `${invalidItems.length} items in your cart are no longer available.`
+          const freshData = docSnap.data();
+          const title = getListingTitle(freshData || item, language);
+          const freshValidation = validateListingForOrderCreation(freshData, user.uid);
+          if (!freshValidation.ok) {
+            invalidItems.push({
+              id: item.id,
+              title,
+              reason: freshValidation.code,
+              messageEn: `${title}: ${freshValidation.messageEn}`,
+              messageKa: `${title}: ${freshValidation.messageKa}`
+            });
+            continue;
+          }
+
+          if (freshValidation.requiresShipping) {
+            requiresAnyShipping = true;
+          }
+
+          const orderData = buildVerifiedOrderPayload({
+            listingId: item.id,
+            freshListing: freshData,
+            buyerId: user.uid,
+            itemTitle: title,
+            validation: freshValidation,
+            buyerInstructions: !freshValidation.requiresShipping
+              ? (cartServiceInstructions[item.id]?.trim() || '')
+              : '',
+            shippingDetails: freshValidation.requiresShipping ? shippingDetails : null,
+            fallbackBuyerName: user.displayName,
+            createdAt: serverTimestamp()
+          });
+
+          verifiedOrders.push({
+            listingRef: doc(db, 'listings', item.id),
+            orderData,
+            validation: freshValidation
+          });
+        }
+
+        if (invalidItems.length > 0) {
+          const err: any = new Error(
+            invalidItems.length === 1
+              ? (language === 'ka' ? invalidItems[0].messageKa : invalidItems[0].messageEn)
+              : `${invalidItems.length} items in your cart are no longer available.`
+          );
+          err.invalidItems = invalidItems;
+          throw err;
+        }
+
+        if (requiresAnyShipping) {
+          const isShippingComplete = Boolean(
+            shippingDetails &&
+            shippingDetails.phone.trim().length >= 4 &&
+            shippingDetails.city.trim().length >= 2 &&
+            shippingDetails.address.trim().length >= 3
+          );
+          if (!isShippingComplete) {
+            throw new Error(
+              language === 'ka'
+                ? 'ფიზიკური ნივთებისთვის გთხოვთ შეავსოთ ტელეფონი, ქალაქი და მისამართი.'
+                : 'Please provide contact phone, city, and delivery address for physical items.'
             );
-            err.invalidItems = invalidItems;
-            throw err;
           }
+        }
 
-          // 3. Commit all writes atomically
-          for (const { listingRef, orderData, isService } of verifiedOrders) {
-            const newOrderRef = doc(collection(db, 'orders'));
-            transaction.set(newOrderRef, orderData);
+        // 3. Commit all order creations and atomic listing locks
+        for (const { listingRef, orderData, validation } of verifiedOrders) {
+          const newOrderRef = doc(collection(db, 'orders'));
+          transaction.set(newOrderRef, orderData);
 
-            if (!isService) {
-              transaction.update(listingRef, {
-                status: 'sold',
-                isSold: true,
-                activeOrderId: newOrderRef.id
-              });
+          if (validation.requiresAtomicListingLock) {
+            const lockUpdate = validation.buildListingLockUpdate(newOrderRef.id);
+            if (lockUpdate) {
+              transaction.update(listingRef, lockUpdate);
             }
           }
-        });
+        }
+      });
+
       setCart([]);
       setCartServiceInstructions({});
       setIsCartOpen(false);
@@ -898,26 +946,22 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           const single = err.invalidItems[0];
           showToast(
             language === 'ka'
-              ? (single.reason === 'sold'
-                  ? `პროდუქტი "${single.title}" უკვე გაყიდულია და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
-                  : `პროდუქტი "${single.title}" აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან.`)
-              : (single.reason === 'sold'
-                  ? `Item "${single.title}" has already been sold and was removed from your cart. You can proceed with your remaining items.`
-                  : `Item "${single.title}" is no longer available and was removed from your cart.`),
+              ? `${single.messageKa} ნივთი ამოიშალა კალათიდან.`
+              : `${single.messageEn} Item was removed from your cart.`,
             'error',
             7000
           );
         } else {
           showToast(
             language === 'ka'
-              ? `პროდუქტები (${invalidTitles}) აღარ არის ხელმისაწვდომი და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
-              : `Items (${invalidTitles}) are no longer available and were removed from your cart. You can proceed with your remaining items.`,
+              ? `ნივთები (${invalidTitles}) მიუწვდომელია და ამოიშალა კალათიდან. შეგიძლიათ განაგრძოთ დარჩენილი ნივთების შეძენა.`
+              : `Items (${invalidTitles}) are unavailable and were removed from your cart. You can proceed with your remaining items.`,
             'error',
             7000
           );
         }
-      } else if (err && err.message && (err.message.includes('sold') || err.message.includes('no longer exists'))) {
-        showToast(language === 'ka' ? `შეცდომა: ${err.message}` : `Error: ${err.message}`, 'error', 6000);
+      } else if (err && err.message) {
+        showToast(err.message, 'error', 6000);
       } else {
         showToast(language === 'ka' ? "შეკვეთისას მოხდა შეცდომა." : "Error processing cart purchase.", 'error');
       }
@@ -3090,12 +3134,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       return;
     }
 
-    const isOwnListing = listing.sellerId === user.uid;
-
-    if (isOwnListing) {
-      showToast(language === 'ka' ? "თქვენ არ შეგიძლიათ საკუთარი ნივთის ყიდვა." : "You cannot buy your own item.", 'warning');
+    const validation = validateListingForOrderCreation(listing, user.uid);
+    if (!validation.ok) {
+      showToast(
+        language === 'ka' ? validation.messageKa : validation.messageEn,
+        validation.code === 'SELF_PURCHASE' ? 'warning' : 'error',
+        6000
+      );
       return;
     }
+
     setCheckoutItem(listing);
   };
 
@@ -3129,28 +3177,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           throw new Error(language === 'ka' ? freshValidation.messageKa : freshValidation.messageEn);
         }
 
-        const verifiedOrderData: any = {
+        const verifiedOrderData = buildVerifiedOrderPayload({
           listingId: checkoutItem.id,
+          freshListing: freshData,
           buyerId: user.uid,
-          sellerId: freshData.sellerId || checkoutItem.sellerId,
-          amount: freshData.price,
-          currency: freshData.currency || checkoutItem.currency || 'USD',
           itemTitle: getListingTitle(freshData || checkoutItem, language),
-          status: freshValidation.initialOrderStatus,
-          orderType: freshValidation.orderType,
-          buyerInstructions: buyerInstructions.trim() || '',
+          validation: freshValidation,
+          buyerInstructions: !freshValidation.requiresShipping ? buyerInstructions : '',
+          shippingDetails: freshValidation.requiresShipping ? shippingDetails : null,
+          fallbackBuyerName: user.displayName,
           createdAt: serverTimestamp()
-        };
-
-        if (freshValidation.requiresShipping) {
-          verifiedOrderData.shippingDetails = {
-            recipientName: (shippingDetails.recipientName || user.displayName || 'Customer').trim(),
-            phone: shippingDetails.phone.trim(),
-            city: shippingDetails.city.trim(),
-            address: shippingDetails.address.trim(),
-            notes: shippingDetails.notes?.trim() || ''
-          };
-        }
+        });
 
         const newOrderRef = doc(collection(db, 'orders'));
         transaction.set(newOrderRef, verifiedOrderData);
@@ -3191,6 +3228,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
     setIsCancellingOrder(true);
     try {
+      let restoredListingId: string | null = null;
       await runTransaction(db, async (transaction) => {
         const orderRef = doc(db, 'orders', order.id);
         const orderSnap = await transaction.get(orderRef);
@@ -3230,7 +3268,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           throw new Error(language === 'ka' ? "მიმდინარე სამუშაოს შეკვეთის გაუქმება შეუძლებელია." : "Orders with work in progress cannot be cancelled.");
         }
 
-        // Only 'pending' (physical) or 'booked' (service/project) orders can be cancelled
+        // Only 'pending' (physical or unique digital asset) or 'booked' (service) orders can be cancelled
         if (currentStatus !== 'pending' && currentStatus !== 'booked') {
           throw new Error(
             language === 'ka'
@@ -3249,24 +3287,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
           if (listingSnap.exists()) {
             const listingData = listingSnap.data() as Record<string, any>;
-
-            // Safety and integrity checks to safely restore listing:
-            // 1. Seller match: Listing sellerId must match order sellerId
-            const isMatchingSeller = listingData.sellerId === freshOrder.sellerId;
-            // 2. State check: Listing is currently marked sold or isSold
-            const isCurrentlySold = listingData.status === 'sold' || listingData.isSold === true;
-            // 3. Relational link check:
-            //    If activeOrderId is present, it MUST match this order (order.id or freshOrder.id).
-            //    If activeOrderId is empty/missing, it must match seller and be currently sold.
-            //    If activeOrderId points to a different order, do not overwrite it.
-            const belongsToThisOrder = 
-              listingData.activeOrderId === order.id ||
-              listingData.activeOrderId === freshOrder.id ||
-              (!listingData.activeOrderId && isMatchingSeller);
-
-            if (isCurrentlySold && isMatchingSeller && belongsToThisOrder) {
-              shouldRestoreListing = true;
-            }
+            shouldRestoreListing = shouldUnlockListingOnOrderCancel(
+              listingData,
+              orderSnap.id || order.id,
+              freshOrder.sellerId,
+              freshOrder.orderType
+            );
           }
         }
 
@@ -3275,8 +3301,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           status: 'cancelled'
         });
 
-        // Atomically restore the listing to 'active' if safety conditions met
+        // Atomically restore the listing to 'active' if provenance and asset-state guards pass
         if (shouldRestoreListing && listingRef) {
+          restoredListingId = freshOrder.listingId;
           transaction.update(listingRef, {
             status: 'active',
             isSold: false,
@@ -3285,10 +3312,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         }
       });
 
-      // Update local listings state for immediate UI responsiveness
-      if (order.listingId) {
+      // Update local listings state immediately when the transaction actually restored the listing
+      if (restoredListingId) {
         setListings(prev => prev.map(item => {
-          if (item.id === order.listingId && (item.status === 'sold' || item.isSold)) {
+          if (item.id === restoredListingId && (item.activeOrderId === order.id || item.status === 'reserved' || (order.orderType !== 'project' && (item.status === 'sold' || item.isSold)))) {
             return {
               ...item,
               status: 'active',
@@ -3331,9 +3358,107 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         return await executeOrderCancellation(targetOrder);
       }
 
-      const isPhysical = targetOrder.orderType === 'product' && Boolean(targetOrder.shippingDetails);
+      const isPhysical = isPhysicalOrder(targetOrder);
+      const isProjectAsset = isProjectAssetOrder(targetOrder);
       const isSeller = targetOrder.sellerId === user.uid;
       const isBuyer = targetOrder.buyerId === user.uid;
+
+      if (isProjectAsset) {
+        if (!isSeller) {
+          showToast(
+            language === 'ka'
+              ? "მხოლოდ გამყიდველს შეუძლია ციფრული აქტივის შეკვეთის დასრულება."
+              : "Only the seller can complete a digital asset order.",
+            'warning'
+          );
+          return;
+        }
+        if (newStatus !== 'completed') {
+          showToast(
+            language === 'ka'
+              ? "ციფრული აქტივის შეკვეთისთვის დაშვებულია მხოლოდ დასრულება ან გაუქმება."
+              : "Only completion or cancellation is allowed for digital asset orders.",
+            'warning'
+          );
+          return;
+        }
+
+        let finalizedListingId: string | null = null;
+        await runTransaction(db, async (transaction) => {
+          const orderRef = doc(db, 'orders', orderId);
+          const orderSnap = await transaction.get(orderRef);
+          if (!orderSnap.exists()) {
+            throw new Error(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.");
+          }
+
+          const freshOrder = orderSnap.data();
+          if (freshOrder.sellerId !== user.uid) {
+            throw new Error(language === 'ka' ? "არაავტორიზებული ოპერაცია." : "Only the seller can complete this order.");
+          }
+          if (freshOrder.orderType !== 'project') {
+            throw new Error(language === 'ka' ? "შეკვეთის ტიპი არ შეესაბამება ციფრულ აქტივს." : "Order type mismatch.");
+          }
+          if (freshOrder.status === 'completed') {
+            throw new Error(language === 'ka' ? "შეკვეთა უკვე დასრულებულია." : "Order is already completed.");
+          }
+          if (freshOrder.status !== 'pending' && freshOrder.status !== 'in_progress') {
+            throw new Error(
+              language === 'ka'
+                ? `შეკვეთის დასრულება შეუძლებელია მიმდინარე სტატუსში (${freshOrder.status}).`
+                : `Cannot complete order from status: ${freshOrder.status}.`
+            );
+          }
+
+          let listingRef: any = null;
+          let shouldMarkListingSold = false;
+          if (freshOrder.listingId) {
+            listingRef = doc(db, 'listings', freshOrder.listingId);
+            const listingSnap = await transaction.get(listingRef);
+            if (listingSnap.exists()) {
+              const freshListing = listingSnap.data() as Record<string, any>;
+              if (
+                typeof freshListing.activeOrderId === 'string' &&
+                freshListing.activeOrderId.trim().length > 0 &&
+                freshListing.activeOrderId !== orderId
+              ) {
+                throw new Error(
+                  language === 'ka'
+                    ? "აქტივი დაჯავშნილია სხვა აქტიური შეკვეთით."
+                    : "Listing is currently held by a different active order."
+                );
+              }
+              shouldMarkListingSold = shouldFinalizeListingSoldOnOrderComplete(
+                freshListing,
+                orderId,
+                freshOrder.sellerId
+              );
+            }
+          }
+
+          transaction.update(orderRef, { status: 'completed' });
+          if (shouldMarkListingSold && listingRef) {
+            finalizedListingId = freshOrder.listingId;
+            transaction.update(listingRef, buildListingSoldFinalizationUpdate(orderId));
+          }
+        });
+
+        if (finalizedListingId) {
+          setListings(prev => prev.map(item => (
+            item.id === finalizedListingId
+              ? { ...item, status: 'sold', isSold: true, activeOrderId: orderId }
+              : item
+          )));
+        }
+
+        showToast(
+          language === 'ka'
+            ? "შეკვეთა დასრულდა და ციფრული აქტივი გაყიდულად მოინიშნა!"
+            : "Order completed and digital asset marked as sold!",
+          'success'
+        );
+        setShipmentTrackingInput(null);
+        return;
+      }
 
       if (isPhysical) {
         if (newStatus === 'processing' || newStatus === 'shipped') {
@@ -3378,9 +3503,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         'success'
       );
       setShipmentTrackingInput(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating order status:", error);
-      showToast(language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status.", 'error');
+      showToast(error?.message || (language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status."), 'error');
     }
   };
 
@@ -5590,8 +5715,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                         filteredSellerOrders.length > 0 ? (
                           filteredSellerOrders.map((order, idx) => {
                         const isExpanded = expandedOrderId === order.id;
-                        const isService = order.orderType === 'service' || order.orderType === 'project';
-                        const isPhysical = order.orderType === 'product' && Boolean(order.shippingDetails);
+                        const isProjectAsset = isProjectAssetOrder(order);
+                        const isService = isServiceOrder(order);
+                        const isPhysical = isPhysicalOrder(order);
                         const isSeller = true;
 
                       return (
@@ -5607,13 +5733,15 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             <div className="flex items-center justify-between gap-2 mb-4 sm:mb-6 relative">
                               <div className={cn(
                                 "p-3 sm:p-4 rounded-lg border border-proton-border shrink-0",
-                                isService 
+                                isProjectAsset
+                                  ? "bg-purple-500/15 text-purple-400"
+                                  : isService 
                                   ? "bg-amber-500/15 text-amber-500" 
                                   : isPhysical 
                                   ? "bg-cyan-500/15 text-cyan-500" 
                                   : "bg-proton-bg text-proton-text"
                               )}>
-                                {isService ? <Zap size={20} /> : isPhysical ? <Truck size={20} /> : <ShoppingBag size={20} />}
+                                {isProjectAsset ? <ShieldCheck size={20} /> : isService ? <Zap size={20} /> : isPhysical ? <Truck size={20} /> : <ShoppingBag size={20} />}
                               </div>
                               <div className="text-right flex flex-col items-end gap-1.5">
                                 <span className={cn("text-[9px] font-black uppercase tracking-widest block", currentTheme.muted)}>
@@ -5641,7 +5769,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                   {order.status === 'booked' 
                                     ? (language === 'ka' ? '🚀 შეკვეთილია' : '🚀 Booked')
                                     : order.status === 'pending'
-                                    ? (language === 'ka' ? '⏳ მიღებულია' : '⏳ Pending')
+                                    ? (isProjectAsset
+                                      ? (language === 'ka' ? '🔒 დაჯავშნილია · გადაცემის მოლოდინში' : '🔒 Reserved · Pending Transfer')
+                                      : (language === 'ka' ? '⏳ მიღებულია' : '⏳ Pending'))
                                     : order.status === 'processing'
                                     ? (language === 'ka' ? '📦 მუშავდება' : '📦 Processing')
                                     : order.status === 'shipped'
@@ -5667,6 +5797,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             <p className={cn("text-xs font-bold font-mono mb-3 sm:mb-4", currentTheme.muted)}>
                               {order.amount} {order.currency}
                             </p>
+
+                            {isProjectAsset && (
+                              <div className="mt-3 sm:mt-4 bg-proton-bg/70 rounded-2xl p-3 sm:p-4 border border-proton-border text-xs text-left">
+                                <span className="text-[8px] font-black uppercase tracking-wider text-proton-muted block mb-1">
+                                  {language === 'ka' ? 'ტიპი' : 'Asset Type'}
+                                </span>
+                                <p className="text-proton-text font-bold">
+                                  {language === 'ka' ? 'უნიკალური ციფრული აქტივი' : 'Unique Digital Asset'}
+                                </p>
+                              </div>
+                            )}
 
                             {isService && (
                               <div className="mt-3 sm:mt-4 bg-proton-bg/70 rounded-2xl p-3 sm:p-4 border border-proton-border text-xs text-left">
@@ -5697,10 +5838,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                 animate={{ opacity: 1, height: 'auto' }}
                                 className="mt-6 pt-6 border-t border-proton-border text-left space-y-4"
                               >
-                                {isService && order.buyerInstructions && (
+                                {(isService || isProjectAsset) && order.buyerInstructions && (
                                   <div className="space-y-1">
                                     <span className="text-[8px] font-black uppercase tracking-widest text-proton-muted block">
-                                      {language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Client Requirements'}
+                                      {isProjectAsset
+                                        ? (language === 'ka' ? 'მყიდველის შენიშვნა / კონტაქტი' : 'Buyer Transfer Notes')
+                                        : (language === 'ka' ? 'მოთხოვნები შემსრულებლისთვის' : 'Client Requirements')}
                                     </span>
                                     <p className="text-[11px] font-medium text-proton-text bg-proton-bg p-3.5 rounded-xl border border-proton-border whitespace-pre-line leading-relaxed shadow-inner">
                                       {order.buyerInstructions}
@@ -5757,6 +5900,29 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                                   <p>ID: #{order.id}</p>
                                   <p>Role: {isSeller ? (isService ? 'Service Provider' : 'Merchant / Seller') : 'Customer'}</p>
                                 </div>
+
+                                {isProjectAsset && isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
+                                  <div className="pt-2 flex flex-wrap gap-2">
+                                    {(order.status === 'pending' || order.status === 'booked' || order.status === 'in_progress') && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                        className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-md active:scale-95 cursor-pointer"
+                                      >
+                                        🎯 {language === 'ka' ? 'დასრულებულად მონიშვნა' : 'Mark Completed'}
+                                      </button>
+                                    )}
+                                    {canCancelOrder(order) && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setOrderToCancel(order)}
+                                        className="px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider text-rose-500 hover:text-white bg-rose-500/10 border border-rose-500/30 hover:bg-rose-600 transition-all active:scale-95 cursor-pointer"
+                                      >
+                                        ❌ {language === 'ka' ? 'შეკვეთის გაუქმება' : 'Cancel Order'}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
 
                                 {isService && isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
                                   <div className="pt-2 flex flex-wrap gap-2">

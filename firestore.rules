@@ -65,13 +65,18 @@ service cloud.firestore {
         || getStr(data, 'category', '') in ['service', 'project'];
     }
 
+    function isUniqueDigitalAssetListingData(data) {
+      return getStr(data, 'category', '') in ['social-accounts', 'youtube-channels', 'digital-projects', 'digital']
+        || getStr(data, 'listingType', '') == 'digital';
+    }
+
     function isNonPurchasableListing(data) {
       return getStr(data, 'category', '') in ['project-jobs', 'collaboration']
         || getStr(data, 'listingType', '') in ['job', 'collaboration'];
     }
 
     function isPhysicalListing(data) {
-      return !isServiceOrProjectListing(data);
+      return !isServiceOrProjectListing(data) && !isUniqueDigitalAssetListingData(data);
     }
 
     // ======================================================
@@ -229,11 +234,25 @@ service cloud.firestore {
       allow update: if isVerified() && isValidId(listingId)
         && incoming().createdAt == existing().createdAt
         && (
-          (isOwner(existing().sellerId) && isValidListingShape(incoming()) && incoming().sellerId == existing().sellerId && !(existing().status == 'sold' && incoming().status == 'active')) ||
-          (isOwner(existing().sellerId) && incoming().diff(existing()).affectedKeys().hasOnly(['status']) && !(existing().status == 'sold' && incoming().status == 'active')) ||
+          (
+            isOwner(existing().sellerId) &&
+            isValidListingShape(incoming()) &&
+            incoming().sellerId == existing().sellerId &&
+            !(existing().status == 'sold' && incoming().status == 'active') &&
+            !(existing().status == 'reserved' && incoming().status != 'reserved') &&
+            (existing().status != 'reserved' || (incoming().price == existing().price && getStr(incoming(), 'currency', 'USD') == getStr(existing(), 'currency', 'USD')))
+          ) ||
+          (
+            isOwner(existing().sellerId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
+            !(existing().status == 'sold' && incoming().status == 'active') &&
+            !(existing().status == 'reserved' && incoming().status != 'reserved')
+          ) ||
           // Legitimate buyer purchase transition for physical products (sold state):
           (
             existing().status == 'active' &&
+            (!('isSold' in existing()) || existing().isSold == false) &&
+            !isUniqueDigitalAssetListingData(existing()) &&
             incoming().status == 'sold' &&
             incoming().sellerId == existing().sellerId &&
             incoming().price == existing().price &&
@@ -257,10 +276,13 @@ service cloud.firestore {
           // Legitimate buyer purchase transition for unique digital assets (reserved state):
           (
             existing().status == 'active' &&
+            (!('isSold' in existing()) || existing().isSold == false) &&
+            (!('activeOrderId' in existing()) || existing().activeOrderId == null || existing().activeOrderId == '') &&
+            isUniqueDigitalAssetListingData(existing()) &&
             incoming().status == 'reserved' &&
             incoming().sellerId == existing().sellerId &&
             incoming().price == existing().price &&
-            incoming().currency == existing().currency &&
+            getStr(incoming(), 'currency', 'USD') == getStr(existing(), 'currency', 'USD') &&
             incoming().createdAt == existing().createdAt &&
             incoming().diff(existing()).affectedKeys().hasOnly(['status', 'activeOrderId']) &&
             (
@@ -271,7 +293,7 @@ service cloud.firestore {
               getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.buyerId == request.auth.uid &&
               getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.sellerId == existing().sellerId &&
               getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.amount == existing().price &&
-              getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.currency == existing().currency &&
+              getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.currency == getStr(existing(), 'currency', 'USD') &&
               getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.status == 'pending' &&
               getAfter(/databases/$(database)/documents/orders/$(incoming().activeOrderId)).data.orderType == 'project'
             )
@@ -280,6 +302,8 @@ service cloud.firestore {
           (
             existing().status == 'reserved' &&
             incoming().status == 'sold' &&
+            incoming().isSold == true &&
+            request.auth.uid == existing().sellerId &&
             incoming().sellerId == existing().sellerId &&
             incoming().price == existing().price &&
             incoming().createdAt == existing().createdAt &&
@@ -287,21 +311,30 @@ service cloud.firestore {
             (
               'activeOrderId' in existing() &&
               existing().activeOrderId is string &&
+              isValidId(existing().activeOrderId) &&
+              incoming().activeOrderId == existing().activeOrderId &&
               existsAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)) &&
+              getAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)).data.listingId == listingId &&
+              getAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)).data.sellerId == existing().sellerId &&
+              getAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)).data.orderType == 'project' &&
               getAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)).data.status == 'completed'
             )
           ) ||
           // Legitimate order cancellation restoration:
-          // Transitioning from sold or reserved to active when associated order is cancelled
+          // Transitioning from sold (physical only) or reserved (digital asset) to active when associated order is cancelled
           (
             (existing().status == 'sold' || existing().status == 'reserved') &&
             incoming().status == 'active' &&
+            (!('isSold' in incoming()) || incoming().isSold == false) &&
+            (!('activeOrderId' in incoming()) || incoming().activeOrderId == null) &&
             incoming().sellerId == existing().sellerId &&
             incoming().price == existing().price &&
             incoming().createdAt == existing().createdAt &&
             incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isSold', 'activeOrderId']) &&
             (
               (
+                existing().status == 'sold' &&
+                !isUniqueDigitalAssetListingData(existing()) &&
                 (!('activeOrderId' in existing()) || existing().activeOrderId == null) &&
                 request.auth.uid == existing().sellerId
               ) ||
@@ -309,6 +342,7 @@ service cloud.firestore {
                 'activeOrderId' in existing() &&
                 existing().activeOrderId is string &&
                 isValidId(existing().activeOrderId) &&
+                !(existing().status == 'sold' && isUniqueDigitalAssetListingData(existing())) &&
                 existsAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)) &&
                 getAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)).data.listingId == listingId &&
                 (request.auth.uid == existing().sellerId || request.auth.uid == getAfter(/databases/$(database)/documents/orders/$(existing().activeOrderId)).data.buyerId) &&
@@ -331,13 +365,15 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/listings/$(incoming().listingId))
         && !isNonPurchasableListing(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
         && get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'active'
+        && (!('isSold' in get(/databases/$(database)/documents/listings/$(incoming().listingId)).data) || get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.isSold == false)
         && incoming().amount == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.price
-        && incoming().currency == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.currency
+        && incoming().currency == getStr(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data, 'currency', 'USD')
         && incoming().sellerId == get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId
         && (
           // 1. Service listings MUST start as 'booked' and have orderType == 'service'
           (
             incoming().orderType == 'service'
+            && !isUniqueDigitalAssetListingData(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
             && incoming().status == 'booked'
           )
           ||
@@ -345,16 +381,19 @@ service cloud.firestore {
           // and atomically reserve the listing in the same transaction
           (
             incoming().orderType == 'project'
+            && isUniqueDigitalAssetListingData(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
+            && (!('activeOrderId' in get(/databases/$(database)/documents/listings/$(incoming().listingId)).data) || get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == null || get(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == '')
             && incoming().status == 'pending'
             && existsAfter(/databases/$(database)/documents/listings/$(incoming().listingId))
-            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).status == 'reserved'
-            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).activeOrderId == orderId
-            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).sellerId == incoming().sellerId
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.status == 'reserved'
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.activeOrderId == orderId
+            && getAfter(/databases/$(database)/documents/listings/$(incoming().listingId)).data.sellerId == incoming().sellerId
           )
           ||
           // 3. Physical product listings MUST start as 'pending' and have orderType == 'product' (or omitted orderType defaulting to product)
           (
             (!('orderType' in incoming()) || incoming().orderType == 'product')
+            && !isUniqueDigitalAssetListingData(get(/databases/$(database)/documents/listings/$(incoming().listingId)).data)
             && incoming().status == 'pending'
           )
         );
@@ -375,10 +414,11 @@ service cloud.firestore {
           (
             isOwner(existing().sellerId)
             && (
-              (existing().status == 'pending' && incoming().status == 'processing' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              (existing().status == 'pending' && getStr(existing(), 'orderType', 'product') == 'product' && incoming().status == 'processing' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
               ||
               (
                 existing().status == 'processing' 
+                && getStr(existing(), 'orderType', 'product') == 'product'
                 && incoming().status == 'shipped' 
                 && (
                   (incoming().diff(existing()).affectedKeys().hasOnly(['status']))
@@ -397,7 +437,22 @@ service cloud.firestore {
               ||
               (existing().status == 'in_progress' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
               ||
-              (existing().status == 'pending' && incoming().status == 'completed' && getStr(existing(), 'orderType', 'product') == 'project' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              (
+                existing().status == 'pending'
+                && incoming().status == 'completed'
+                && getStr(existing(), 'orderType', 'product') == 'project'
+                && incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+                && (
+                  !exists(/databases/$(database)/documents/listings/$(existing().listingId))
+                  || get(/databases/$(database)/documents/listings/$(existing().listingId)).data.status != 'reserved'
+                  || getStr(get(/databases/$(database)/documents/listings/$(existing().listingId)).data, 'activeOrderId', '') != orderId
+                  || (
+                    existsAfter(/databases/$(database)/documents/listings/$(existing().listingId))
+                    && getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data.status == 'sold'
+                    && getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data.isSold == true
+                  )
+                )
+              )
               ||
               (existing().status in ['pending', 'booked'] && incoming().status in ['cancelled', 'refunded'] && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
             )

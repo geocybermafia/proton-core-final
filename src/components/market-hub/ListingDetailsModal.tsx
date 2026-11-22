@@ -31,7 +31,10 @@ import {
   isPhysicalListing,
   formatCurrencyAmount,
   formatOriginalCurrencyPrice,
-  formatApproxCurrencyEquivalent
+  formatApproxCurrencyEquivalent,
+  isListingReserved,
+  isListingSold,
+  isListingUnavailableForPurchase
 } from './MarketConstants';
 import { getFormattedListingAttributes, isEffectiveRemoteListing } from './ListingSchemas';
 import { trackEvent } from '../../utils/analytics';
@@ -188,7 +191,9 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
   const sellerName = listing.sellerName || listing.authorName || 'Proton Vendor';
 
   const isOwnListing = Boolean(user && listing.sellerId === user.uid);
-  const isItemSold = listing.status === 'sold' || Boolean((listing as any).isSold);
+  const isItemSold = isListingSold(listing);
+  const isItemReserved = isListingReserved(listing);
+  const isItemUnavailable = isListingUnavailableForPurchase(listing);
   const displayTitle = getListingTitle(listing, language);
   const secondaryTitle =
     listing.titleGe && listing.title && listing.titleGe.trim() !== listing.title.trim()
@@ -304,7 +309,7 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                 <span className={cn('shrink-0', currentTheme.muted)}>
                   {getListingTypeLabel()}
                 </span>
-                {isItemSold && (
+                {isItemSold ? (
                   <>
                     <span aria-hidden="true" className={currentTheme.muted}>
                       ·
@@ -313,7 +318,16 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       {language === 'ka' ? 'გაყიდულია' : 'Sold'}
                     </span>
                   </>
-                )}
+                ) : isItemReserved ? (
+                  <>
+                    <span aria-hidden="true" className={currentTheme.muted}>
+                      ·
+                    </span>
+                    <span className="font-bold text-amber-500 shrink-0">
+                      {language === 'ka' ? 'დაჯავშნილია' : 'Reserved'}
+                    </span>
+                  </>
+                ) : null}
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -447,13 +461,19 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                       </div>
                     )}
 
-                    {isItemSold && (
+                    {isItemSold ? (
                       <div className="absolute inset-0 z-10 bg-black/55 flex items-center justify-center pointer-events-none">
                         <span className="px-4 py-2 rounded-xl bg-proton-card/95 border border-rose-500/40 text-sm font-bold text-rose-500">
                           {language === 'ka' ? 'გაყიდულია' : 'Sold Out'}
                         </span>
                       </div>
-                    )}
+                    ) : isItemReserved ? (
+                      <div className="absolute inset-0 z-10 bg-black/45 flex items-center justify-center pointer-events-none">
+                        <span className="px-4 py-2 rounded-xl bg-proton-card/95 border border-amber-500/40 text-sm font-bold text-amber-400">
+                          {language === 'ka' ? 'დაჯავშნილია' : 'Reserved'}
+                        </span>
+                      </div>
+                    ) : null}
 
                     {galleryImages.length > 1 && (
                       <>
@@ -989,12 +1009,16 @@ export const ListingDetailsModal = React.memo(function ListingDetailsModal({
                     </button>
                   )}
                 </div>
-              ) : isItemSold ? (
+              ) : isItemUnavailable ? (
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                  <span className="text-sm font-bold text-rose-500">
-                    {language === 'ka'
-                      ? 'ეს განცხადება უკვე გაყიდულია.'
-                      : 'This listing is already sold.'}
+                  <span className={cn("text-sm font-bold", isItemSold ? "text-rose-500" : "text-amber-500")}>
+                    {isItemSold
+                      ? (language === 'ka'
+                          ? 'ეს განცხადება უკვე გაყიდულია.'
+                          : 'This listing is already sold.')
+                      : (language === 'ka'
+                          ? 'ეს განცხადება ამჟამად დაჯავშნილია აქტიური შეკვეთით.'
+                          : 'This listing is currently reserved by an active order.')}
                   </span>
                   <button
                     type="button"

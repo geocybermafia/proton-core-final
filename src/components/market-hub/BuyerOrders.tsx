@@ -22,7 +22,8 @@ import {
   Zap,
   Loader2,
   Store,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Order, Listing, BuyerOrderFilter } from '../../types';
@@ -30,6 +31,7 @@ import {
   MarketTheme, 
   safeParseDate, 
   isPhysicalOrder, 
+  isProjectAssetOrder,
   isServiceOrder, 
   canCancelOrder 
 } from './MarketConstants';
@@ -210,6 +212,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
   // Status mapping badge renderer
   const renderStatusBadge = (order: Order) => {
     const isPhysical = isPhysicalOrder(order);
+    const isProjectAsset = isProjectAssetOrder(order);
     const isService = isServiceOrder(order);
     const status = order.status;
 
@@ -266,6 +269,46 @@ export const BuyerOrders = React.memo(function BuyerOrders({
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
               <Clock size={11} />
               {language === 'ka' ? 'დაჯავშნილია' : 'Booked'}
+            </span>
+          );
+        case 'in_progress':
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-500 border border-blue-500/25">
+              <Wrench size={11} className="animate-pulse" />
+              {language === 'ka' ? 'მიმდინარე' : 'In progress'}
+            </span>
+          );
+        case 'completed':
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/25">
+              <CheckCircle2 size={11} />
+              {language === 'ka' ? 'დასრულებული' : 'Completed'}
+            </span>
+          );
+        case 'cancelled':
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/15 text-rose-500 border border-rose-500/25">
+              <XCircle size={11} />
+              {language === 'ka' ? 'გაუქმებული' : 'Cancelled'}
+            </span>
+          );
+        default:
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-proton-bg text-proton-muted border border-proton-border">
+              {status}
+            </span>
+          );
+      }
+    }
+
+    if (isProjectAsset) {
+      switch (status) {
+        case 'pending':
+        case 'booked':
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/25">
+              <Clock size={11} className="animate-pulse" />
+              {language === 'ka' ? 'დაჯავშნილია · გადაცემის მოლოდინში' : 'Reserved · Awaiting Transfer'}
             </span>
           );
         case 'in_progress':
@@ -464,6 +507,7 @@ export const BuyerOrders = React.memo(function BuyerOrders({
         <div id="buyer-orders-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
           {filteredOrders.map((order) => {
             const isPhysical = isPhysicalOrder(order);
+            const isProjectAsset = isProjectAssetOrder(order);
             const isService = isServiceOrder(order);
             const isExpanded = expandedOrderIds.has(order.id);
             const sellerInfo = getSellerInfo(order);
@@ -494,6 +538,8 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                       <div className="w-7 h-7 rounded-lg bg-proton-bg border border-proton-border flex items-center justify-center text-proton-muted shrink-0">
                         {isPhysical ? (
                           <Truck size={14} className="text-cyan-500" />
+                        ) : isProjectAsset ? (
+                          <ShieldCheck size={14} className="text-purple-400" />
                         ) : isService ? (
                           <Wrench size={14} className="text-amber-500" />
                         ) : (
@@ -507,6 +553,8 @@ export const BuyerOrders = React.memo(function BuyerOrders({
                         <span className={cn("text-[8px] font-black uppercase tracking-widest", currentTheme.tagMuted)}>
                           {isPhysical 
                             ? (language === 'ka' ? 'ფიზიკური მიწოდება' : 'Physical Order')
+                            : isProjectAsset
+                              ? (language === 'ka' ? 'ციფრული აქტივი' : 'Digital Asset')
                             : isService 
                               ? (language === 'ka' ? 'სერვისი / ჯავშანი' : 'Service Booking')
                               : (language === 'ka' ? 'პროდუქტი' : 'Product')}
