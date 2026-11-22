@@ -11,6 +11,7 @@ export interface ChatComposerProps {
   currentTheme: MarketTheme;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 const MIN_TEXTAREA_HEIGHT = 44;
@@ -24,11 +25,12 @@ export const ChatComposer = React.memo(function ChatComposer({
   currentTheme,
   placeholder,
   className,
+  disabled = false,
 }: ChatComposerProps) {
   const isKa = language === 'ka';
   const formRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const canSend = value.trim().length > 0;
+  const canSend = !disabled && value.trim().length > 0;
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -76,6 +78,7 @@ export const ChatComposer = React.memo(function ChatComposer({
         ref={textareaRef}
         rows={1}
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={
@@ -85,6 +88,7 @@ export const ChatComposer = React.memo(function ChatComposer({
         aria-label={isKa ? 'შეტყობინების ტექსტი' : 'Message text'}
         className={cn(
           'flex-1 min-w-0 min-h-[44px] max-h-[120px] resize-none rounded-xl border px-3.5 sm:px-4 py-2.5 text-base sm:text-sm font-medium leading-snug focus:outline-none transition-colors',
+          disabled && 'opacity-60 cursor-not-allowed',
           currentTheme.input
         )}
       />

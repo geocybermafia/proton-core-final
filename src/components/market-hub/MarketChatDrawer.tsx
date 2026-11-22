@@ -41,6 +41,8 @@ export interface MarketChatDrawerProps {
   onChangeChatMessageText: (text: string) => void;
   onSendMessage: (e: React.FormEvent) => void;
   buyerName?: string;
+  conversationId?: string;
+  isSendDisabled?: boolean;
 }
 
 export const MarketChatDrawer = React.memo(function MarketChatDrawer({
@@ -56,7 +58,9 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
   chatMessageText,
   onChangeChatMessageText,
   onSendMessage,
-  buyerName
+  buyerName,
+  conversationId,
+  isSendDisabled = false,
 }: MarketChatDrawerProps) {
   const isSellerViewing = Boolean(user && activeChatListing && user.uid === activeChatListing.sellerId);
 
@@ -110,7 +114,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                 isSellerViewing={isSellerViewing}
                 language={language}
                 emptyStateAction={onChangeChatMessageText}
-                conversationKey={`${activeChatListing.id}_${activeChatOrder?.orderId || ''}`}
+                conversationKey={conversationId || `${activeChatListing.id}_${activeChatOrder?.orderId || ''}`}
               />
 
               <ChatComposer
@@ -119,6 +123,7 @@ export const MarketChatDrawer = React.memo(function MarketChatDrawer({
                 onSubmit={onSendMessage}
                 language={language}
                 currentTheme={currentTheme}
+                disabled={isSendDisabled}
                 placeholder={
                   language === 'ka'
                     ? 'დაწერეთ შეთავაზება ან შეკითხვა...'

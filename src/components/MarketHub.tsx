@@ -37,7 +37,8 @@ import {
   ExternalLink,
   Store,
   Trophy,
-  BarChart3
+  BarChart3,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   collection, 
@@ -118,6 +119,15 @@ import {
   resolvePreservedListingStatus
 } from './market-hub/MarketConstants';
 import { validateListingForOrderCreation } from '../lib/marketOrderRules';
+import {
+  cleanChatId,
+  extractBuyerIdFromConversationId,
+  extractNavigationLookupHints,
+  MarketChatThreadLookupItem,
+  MarketNavigationTarget,
+  resolveMarketChatNavigation,
+  validateActiveChatContext,
+} from '../lib/marketChatNavigation';
 
 import { FastInput, FastTextarea } from './market-hub/FastInputs';
 import { CartDrawer } from './market-hub/CartDrawer';
@@ -377,11 +387,12 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       }
 
       if (!buyerId) {
-        if (msg.conversationId && typeof msg.conversationId === 'string' && msg.conversationId.includes('_')) {
-          buyerId = msg.conversationId.split('_').slice(1).join('_');
-        } else if (sellerId && msg.participants && Array.isArray(msg.participants)) {
+        if (msg.conversationId && typeof msg.conversationId === 'string') {
+          buyerId = extractBuyerIdFromConversationId(msg.conversationId, lid);
+        }
+        if (!buyerId && sellerId && msg.participants && Array.isArray(msg.participants)) {
           buyerId = msg.participants.find((p: string) => p !== sellerId) || '';
-        } else if (msg.senderId && sellerId) {
+        } else if (!buyerId && msg.senderId && sellerId) {
           buyerId = msg.senderId !== sellerId ? msg.senderId : (msg.receiverId || '');
         }
       }
@@ -1480,8 +1491,32 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const [activeChatListing, setActiveChatListing] = useState<Listing | null>(null);
   const [chatMessageText, setChatMessageText] = useState('');
   const [messagesList, setMessagesList] = useState<any[]>([]);
+  const [chatResolutionError, setChatResolutionError] = useState<string | null>(null);
+
+  const activeChatSendValidation = useMemo(
+    () =>
+      validateActiveChatContext({
+        context: activeChatContext,
+        listing: activeChatListing,
+        order: activeChatOrder,
+        currentUserId: user?.uid,
+      }),
+    [activeChatContext, activeChatListing, activeChatOrder, user?.uid]
+  );
+  const isActiveChatSendAllowed = activeChatSendValidation.ok;
+
+  const navSeqRef = useRef(0);
+  const pendingNavOrderIdRef = useRef<string | null>(null);
+  const pendingNavTargetRef = useRef<{
+    target: MarketNavigationTarget;
+    fetchedListing: Listing | null;
+    fetchedOrder: Order | null;
+  } | null>(null);
 
   const closeInlineMessages = useCallback(() => {
+    navSeqRef.current += 1;
+    pendingNavTargetRef.current = null;
+    setChatResolutionError(null);
     setActiveBottomTab('home');
     setActiveChatListing(null);
     setActiveChatContext(null);
@@ -1494,6 +1529,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   const chatModalRef = useFocusTrap<HTMLDivElement>({
     isOpen: isDrawerChatOpen,
     onClose: () => {
+      navSeqRef.current += 1;
+      pendingNavTargetRef.current = null;
+      setChatResolutionError(null);
       setActiveChatListing(null);
       setActiveChatContext(null);
       setActiveChatOrder(null);
@@ -1663,14 +1701,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   }, []);
 
   // SELLER NOTIFICATION ROUTING (P1 Support)
-  const pendingNavOrderIdRef = useRef<string | null>(null);
-  const pendingNavConversationIdRef = useRef<string | null>(null);
-
-  const handleProcessMarketNavigation = useCallback(async (target: any) => {
+  const handleProcessMarketNavigation = useCallback(async (target: MarketNavigationTarget | any) => {
     if (!target) return;
-    const { type, orderId, listingId, conversationId, buyerId } = target;
+    const { type, orderId, conversationId } = target;
 
     if (type === 'market_order' || (!type && orderId)) {
+      navSeqRef.current += 1;
+      pendingNavTargetRef.current = null;
+      setChatResolutionError(null);
       setViewMode('my-listings');
       setProfileSubMode('selling');
       setActiveSellingTab('incoming-orders');
@@ -1683,81 +1721,159 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           pendingNavOrderIdRef.current = null;
         }
       }
-    } else if (type === 'market_message' || (!type && conversationId)) {
+      return;
+    }
+
+    if (type === 'market_message' || (!type && conversationId)) {
+      const reqSeq = ++navSeqRef.current;
+      pendingNavTargetRef.current = null;
+      setChatResolutionError(null);
       setViewMode('my-listings');
       setActiveBottomTab('messages');
-      const targetConvId = conversationId || (listingId && buyerId ? `${listingId}_${buyerId}` : null);
-      if (targetConvId) {
-        pendingNavConversationIdRef.current = targetConvId;
 
-        // Check if thread is in groupedChats
-        const matchedChat = groupedChats.find(c => c.conversationId === targetConvId);
-        if (matchedChat) {
-          const relListing = listings.find(l => l.id === matchedChat.listingId) || {
-            id: matchedChat.listingId,
-            title: matchedChat.listingTitle,
-            sellerId: matchedChat.sellerId || user?.uid || '',
-            sellerName: matchedChat.sellerName || 'Seller',
-            price: 0,
-            currency: 'USD',
-            condition: 'new',
-            isNegotiable: false,
-            status: 'active'
-          } as any;
-          const ctx: ActiveChatContext = {
-            conversationId: targetConvId,
-            listing: relListing,
-            buyerId: matchedChat.buyerId,
-            sellerId: matchedChat.sellerId || user?.uid || '',
-            buyerName: matchedChat.buyerName,
-            sellerName: matchedChat.sellerName,
-            orderId: matchedChat.orderId || null
-          };
-          setActiveChatContext(ctx);
-          setActiveChatListing(relListing);
-          pendingNavConversationIdRef.current = null;
-        } else {
-          // Resolve listing and buyer details for immediate conversation opening
-          const targetListingId = listingId || targetConvId.split('_')[0];
-          const targetBuyerId = buyerId || targetConvId.split('_').slice(1).join('_');
-          let foundListing: Listing | null = listings.find(l => l.id === targetListingId) || null;
-          if (!foundListing && targetListingId) {
-            try {
-              const snap = await getDoc(doc(db, 'listings', targetListingId));
-              if (snap.exists()) {
-                foundListing = { id: snap.id, ...snap.data() } as Listing;
-              }
-            } catch (e) {
-              // Ignore
-            }
+      if (!user?.uid) {
+        const msg = language === 'ka'
+          ? 'საუბრის გასახსნელად გთხოვთ გაიაროთ ავტორიზაცია.'
+          : 'Please sign in to open this conversation.';
+        setActiveChatContext(null);
+        setActiveChatListing(null);
+        setActiveChatOrder(null);
+        setChatResolutionError(msg);
+        showToast(msg, 'warning');
+        return;
+      }
+
+      const combinedOrders = [...sellerOrders, ...buyerOrders];
+      const hints = extractNavigationLookupHints({
+        target,
+        knownListings: listings,
+        groupedChats,
+        orders: combinedOrders,
+      });
+
+      // Resolve authoritative listing from listings state or Firestore (never via split('_')[0])
+      let fetchedListing: Listing | null = hints.lookupListingId
+        ? listings.find(l => l.id === hints.lookupListingId) || null
+        : null;
+
+      if (!fetchedListing && hints.lookupListingId) {
+        try {
+          const snap = await getDoc(doc(db, 'listings', hints.lookupListingId));
+          if (navSeqRef.current !== reqSeq) return;
+          if (snap.exists()) {
+            fetchedListing = { id: snap.id, ...snap.data() } as Listing;
           }
-          const finalListing: Listing = foundListing || ({
-            id: targetListingId,
-            title: 'Marketplace Item',
-            sellerId: user?.uid || '',
-            sellerName: user?.displayName || 'Seller',
-            price: 0,
-            currency: 'USD',
-            condition: 'new',
-            isNegotiable: false,
-            status: 'active'
-          } as any);
-
-          const ctx: ActiveChatContext = {
-            conversationId: targetConvId,
-            listing: finalListing,
-            buyerId: targetBuyerId,
-            sellerId: user?.uid || '',
-            buyerName: 'Buyer',
-            sellerName: user?.displayName || 'Seller',
-            orderId: target.orderId || null
-          };
-          setActiveChatContext(ctx);
-          setActiveChatListing(finalListing);
+        } catch (e) {
+          // Proceed with deleted-listing / existing-conversation fallback checks below
         }
       }
+
+      // Resolve linked order from Firestore if orderId exists and is not yet in sellerOrders/buyerOrders
+      let fetchedOrder: Order | null = hints.matchedOrder;
+      if (!fetchedOrder && hints.lookupOrderId) {
+        try {
+          const orderSnap = await getDoc(doc(db, 'orders', hints.lookupOrderId));
+          if (navSeqRef.current !== reqSeq) return;
+          if (orderSnap.exists()) {
+            fetchedOrder = { id: orderSnap.id, ...orderSnap.data() } as Order;
+          }
+        } catch (e) {
+          // Ignore order fetch permission/missing failure; resolution handles validation safely
+        }
+      }
+
+      const augmentedOrders =
+        fetchedOrder && !combinedOrders.some(o => o.id === fetchedOrder!.id)
+          ? [...combinedOrders, fetchedOrder]
+          : combinedOrders;
+
+      // If listing was deleted and in-memory groupedChats hasn't loaded yet, query conversation messages safely
+      let augmentedChats: MarketChatThreadLookupItem[] = groupedChats;
+      if (
+        !fetchedListing &&
+        !hints.matchedChat &&
+        !cleanChatId(target.sellerId) &&
+        hints.lookupConversationId
+      ) {
+        try {
+          const msgQ = query(
+            collection(db, 'market_messages'),
+            where('conversationId', '==', hints.lookupConversationId),
+            where('participants', 'array-contains', user.uid),
+            limit(5)
+          );
+          const msgSnap = await getDocs(msgQ);
+          if (navSeqRef.current !== reqSeq) return;
+          if (!msgSnap.empty) {
+            const docs = msgSnap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+            const sample = docs.find(d => d.sellerId && d.buyerId) || docs[0];
+            if (sample) {
+              const sellerMsg = docs.find(d => d.senderId === sample.sellerId && d.senderName);
+              const buyerMsg = docs.find(d => d.senderId === sample.buyerId && d.senderName);
+              const reconstructed: MarketChatThreadLookupItem = {
+                conversationId: cleanChatId(sample.conversationId) || hints.lookupConversationId,
+                listingId: cleanChatId(sample.listingId) || hints.lookupListingId,
+                listingTitle: cleanChatId(sample.listingTitle) || 'Marketplace Item',
+                sellerId: cleanChatId(sample.sellerId),
+                sellerName: cleanChatId(sample.sellerName) || cleanChatId(sellerMsg?.senderName),
+                buyerId: cleanChatId(sample.buyerId),
+                buyerName: cleanChatId(sample.buyerName) || cleanChatId(buyerMsg?.senderName),
+                orderId: cleanChatId(docs.find(d => d.orderId)?.orderId) || null,
+              };
+              augmentedChats = [...groupedChats, reconstructed];
+            }
+          }
+        } catch (e) {
+          // Ignore fallback query error; strict resolution below will block safely
+        }
+      }
+
+      const resolution = resolveMarketChatNavigation({
+        target,
+        currentUserId: user.uid,
+        currentUserDisplayName: user.displayName,
+        fetchedListing,
+        knownListings: listings,
+        groupedChats: augmentedChats,
+        orders: augmentedOrders,
+      });
+
+      if (navSeqRef.current !== reqSeq) return;
+
+      if (resolution.ok) {
+        pendingNavTargetRef.current = null;
+        setChatResolutionError(null);
+        setActiveChatContext({
+          conversationId: resolution.conversationId,
+          listing: resolution.listing,
+          buyerId: resolution.buyerId,
+          sellerId: resolution.sellerId,
+          buyerName: resolution.buyerName,
+          sellerName: resolution.sellerName,
+          orderId: resolution.orderId,
+        });
+        setActiveChatListing(resolution.listing);
+        setActiveChatOrder(resolution.matchedOrder);
+      } else {
+        // NEVER open chat or assign current user as sellerId on failure/conflict
+        setActiveChatContext(null);
+        setActiveChatListing(null);
+        setActiveChatOrder(null);
+        const errorText = language === 'ka' ? resolution.messageKa : resolution.messageEn;
+        setChatResolutionError(errorText);
+        if (resolution.canRetryWhenChatsLoad) {
+          pendingNavTargetRef.current = {
+            target,
+            fetchedListing,
+            fetchedOrder,
+          };
+        } else {
+          pendingNavTargetRef.current = null;
+        }
+        showToast(errorText, 'error');
+      }
     }
-  }, [sellerOrders, groupedChats, listings, user]);
+  }, [sellerOrders, buyerOrders, groupedChats, listings, user, language, showToast]);
 
   useEffect(() => {
     // Check initial window navigation target if set before MarketHub mounted
@@ -1769,6 +1885,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
     const handleCustomNav = (e: any) => {
       if (e.detail) {
+        (window as any).__protonMarketNavTarget = null;
         handleProcessMarketNavigation(e.detail);
       }
     };
@@ -1790,35 +1907,47 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   }, [sellerOrders]);
 
   useEffect(() => {
-    if (pendingNavConversationIdRef.current && groupedChats.length > 0) {
-      const found = groupedChats.find(c => c.conversationId === pendingNavConversationIdRef.current);
-      if (found) {
-        const relListing = listings.find(l => l.id === found.listingId) || {
-          id: found.listingId,
-          title: found.listingTitle,
-          sellerId: found.sellerId || user?.uid || '',
-          sellerName: found.sellerName || 'Seller',
-          price: 0,
-          currency: 'USD',
-          condition: 'new',
-          isNegotiable: false,
-          status: 'active'
-        } as any;
-        const ctx: ActiveChatContext = {
-          conversationId: found.conversationId,
-          listing: relListing,
-          buyerId: found.buyerId,
-          sellerId: found.sellerId || user?.uid || '',
-          buyerName: found.buyerName,
-          sellerName: found.sellerName,
-          orderId: found.orderId || null
-        };
-        setActiveChatContext(ctx);
-        setActiveChatListing(relListing);
-        pendingNavConversationIdRef.current = null;
-      }
+    const pending = pendingNavTargetRef.current;
+    if (!pending || !user?.uid || groupedChats.length === 0) return;
+
+    const combinedOrders = [...sellerOrders, ...buyerOrders];
+    const augmentedOrders =
+      pending.fetchedOrder && !combinedOrders.some(o => o.id === pending.fetchedOrder!.id)
+        ? [...combinedOrders, pending.fetchedOrder]
+        : combinedOrders;
+
+    const resolution = resolveMarketChatNavigation({
+      target: pending.target,
+      currentUserId: user.uid,
+      currentUserDisplayName: user.displayName,
+      fetchedListing: pending.fetchedListing,
+      knownListings: listings,
+      groupedChats,
+      orders: augmentedOrders,
+    });
+
+    pendingNavTargetRef.current = null;
+
+    if (resolution.ok) {
+      setChatResolutionError(null);
+      setActiveChatContext({
+        conversationId: resolution.conversationId,
+        listing: resolution.listing,
+        buyerId: resolution.buyerId,
+        sellerId: resolution.sellerId,
+        buyerName: resolution.buyerName,
+        sellerName: resolution.sellerName,
+        orderId: resolution.orderId,
+      });
+      setActiveChatListing(resolution.listing);
+      setActiveChatOrder(resolution.matchedOrder);
+    } else {
+      setActiveChatContext(null);
+      setActiveChatListing(null);
+      setActiveChatOrder(null);
+      setChatResolutionError(language === 'ka' ? resolution.messageKa : resolution.messageEn);
     }
-  }, [groupedChats, listings, user]);
+  }, [groupedChats, listings, sellerOrders, buyerOrders, user, language]);
 
   useEffect(() => {
     if (!activeChatContext || !user) {
@@ -1897,16 +2026,38 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       onOpenAuthModal?.();
       return;
     }
-    const isSeller = listing.sellerId === user.uid;
-    const buyerId = isSeller ? '' : user.uid;
-    const conversationId = buyerId ? `${listing.id}_${buyerId}` : listing.id;
+    if (!cleanChatId(listing?.id) || !cleanChatId(listing?.sellerId)) {
+      showToast(
+        language === 'ka'
+          ? 'საუბრის მონაცემების დადგენა ვერ მოხერხდა.'
+          : 'Conversation details could not be determined.',
+        'error'
+      );
+      return;
+    }
+    if (listing.sellerId === user.uid) {
+      showToast(
+        language === 'ka'
+          ? 'საკუთარ განცხადებაზე მყიდველის ჩატის დაწყება შეუძლებელია.'
+          : 'You cannot start a buyer chat on your own listing.',
+        'warning'
+      );
+      return;
+    }
+
+    navSeqRef.current += 1;
+    pendingNavTargetRef.current = null;
+    setChatResolutionError(null);
+
+    const buyerId = user.uid;
+    const conversationId = `${listing.id}_${buyerId}`;
 
     const ctx: ActiveChatContext = {
       conversationId,
       listing,
       buyerId,
       sellerId: listing.sellerId,
-      buyerName: isSeller ? '' : (user.displayName || user.email?.split('@')[0] || 'Buyer'),
+      buyerName: user.displayName || user.email?.split('@')[0] || 'Buyer',
       sellerName: listing.sellerName || 'Seller',
       orderId: null
     };
@@ -1920,23 +2071,26 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     e.preventDefault();
     if (!user || !activeChatContext || !chatMessageText.trim()) return;
 
+    const validation = validateActiveChatContext({
+      context: activeChatContext,
+      listing: activeChatListing,
+      order: activeChatOrder,
+      currentUserId: user.uid,
+    });
+
+    if (!validation.ok) {
+      const errMsg = language === 'ka' ? validation.messageKa : validation.messageEn;
+      showToast(errMsg, 'error');
+      return;
+    }
+
     try {
-      const { listing, buyerId, sellerId } = activeChatContext;
-      const isSeller = user.uid === sellerId;
-
-      // STRICT CONVERSATION ROUTING:
-      // When seller is sending, the buyer MUST be activeChatContext.buyerId.
-      // When buyer is sending, buyer is user.uid.
-      const resolvedBuyerId = isSeller ? buyerId : user.uid;
-      const resolvedSellerId = isSeller ? user.uid : sellerId;
+      const { listing } = activeChatContext;
+      const resolvedBuyerId = validation.buyerId;
+      const resolvedSellerId = validation.sellerId;
+      const isSeller = validation.userRole === 'seller';
       const receiverId = isSeller ? resolvedBuyerId : resolvedSellerId;
-
-      if (!resolvedBuyerId || !resolvedSellerId) {
-        showToast(language === 'ka' ? "შეცდომა: მოსაუბრე ვერ მოიძებნა." : "Error: Chat recipient could not be resolved.", 'error');
-        return;
-      }
-
-      const canonicalConversationId = `${listing.id}_${resolvedBuyerId}`;
+      const canonicalConversationId = validation.conversationId;
       const participants = [resolvedBuyerId, resolvedSellerId];
 
       const messageDoc: any = {
@@ -1973,6 +2127,16 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       return;
     }
 
+    if (!cleanChatId(order?.listingId) || !cleanChatId(order?.buyerId) || !cleanChatId(order?.sellerId) || order.buyerId === order.sellerId) {
+      showToast(
+        language === 'ka'
+          ? 'შეკვეთის საუბრის მონაცემების დადგენა ვერ მოხერხდა.'
+          : 'Order conversation participants could not be verified.',
+        'error'
+      );
+      return;
+    }
+
     // Security check: Only the buyer or seller of the order can initiate or participate in order chat
     const isBuyer = user.uid === order.buyerId;
     const isSeller = user.uid === order.sellerId;
@@ -1983,6 +2147,20 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
     // Resolve or create safe minimal listing metadata
     const matchedListing = listings.find(l => l.id === order.listingId);
+    if (matchedListing && cleanChatId(matchedListing.sellerId) && matchedListing.sellerId !== order.sellerId) {
+      showToast(
+        language === 'ka'
+          ? 'შეკვეთისა და განცხადების გამყიდველის მონაცემები არ ემთხვევა.'
+          : 'Order seller does not match listing seller.',
+        'error'
+      );
+      return;
+    }
+
+    navSeqRef.current += 1;
+    pendingNavTargetRef.current = null;
+    setChatResolutionError(null);
+
     const resolvedListing: Listing = matchedListing || {
       id: order.listingId,
       title: order.itemTitle || 'Marketplace Item',
@@ -1990,7 +2168,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       price: order.amount || 0,
       currency: order.currency || 'USD',
       sellerId: order.sellerId,
-      sellerName: (order as any).sellerName || (isBuyer ? 'Seller' : 'Buyer'),
+      sellerName: (order as any).sellerName || 'Seller',
       category: 'General',
       country: '',
       city: '',
@@ -2043,51 +2221,63 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   }, [sellerOrders, buyerOrders, activeChatOrder, user?.uid]);
 
   const handleSelectDesktopThread = useCallback((thread: ChatThreadSummary) => {
+    navSeqRef.current += 1;
+    pendingNavTargetRef.current = null;
+
     const originalChat = groupedChats.find((c) => c.conversationId === thread.conversationId);
-    const relatedListing = listings.find((l) => l.id === thread.listingId);
     const orderId =
       thread.orderId ||
       originalChat?.messages?.find((m: any) => m.orderId)?.orderId;
-    const matched = orderId
-      ? sellerOrders.find((o) => o.id === orderId) || buyerOrders.find((o) => o.id === orderId)
-      : null;
+    const combinedOrders = [...sellerOrders, ...buyerOrders];
+    const resolution = resolveMarketChatNavigation({
+      target: {
+        type: 'market_message',
+        conversationId: thread.conversationId,
+        listingId: thread.listingId,
+        buyerId: thread.buyerId,
+        sellerId: thread.sellerId,
+        orderId: orderId || undefined,
+      },
+      currentUserId: user?.uid,
+      currentUserDisplayName: user?.displayName,
+      knownListings: listings,
+      groupedChats,
+      orders: combinedOrders,
+    });
 
-    const resolvedListing =
-      relatedListing ||
-      ({
-        id: thread.listingId,
-        title: thread.listingTitle,
-        sellerId: thread.sellerId || (user?.uid === thread.buyerId ? '' : user?.uid || ''),
-        sellerName: thread.sellerName || 'Seller',
-        price: 0,
-        currency: 'USD',
-        condition: 'new',
-        isNegotiable: false,
-        status: 'active',
-      } as any);
+    if (!resolution.ok) {
+      const errorText = language === 'ka' ? resolution.messageKa : resolution.messageEn;
+      setActiveChatContext(null);
+      setActiveChatListing(null);
+      setActiveChatOrder(null);
+      setChatResolutionError(errorText);
+      showToast(errorText, 'error');
+      return;
+    }
 
+    setChatResolutionError(null);
     const ctx: ActiveChatContext = {
-      conversationId: thread.conversationId,
-      listing: resolvedListing,
-      buyerId: thread.buyerId,
-      sellerId: thread.sellerId,
-      buyerName: thread.buyerName,
-      sellerName: thread.sellerName,
-      orderId: orderId || null,
+      conversationId: resolution.conversationId,
+      listing: resolution.listing,
+      buyerId: resolution.buyerId,
+      sellerId: resolution.sellerId,
+      buyerName: resolution.buyerName,
+      sellerName: resolution.sellerName,
+      orderId: resolution.orderId,
     };
 
     setActiveChatContext(ctx);
-    setActiveChatListing(resolvedListing);
+    setActiveChatListing(resolution.listing);
 
-    if (matched) {
-      setActiveChatOrder(matched);
-    } else if (orderId) {
+    if (resolution.matchedOrder) {
+      setActiveChatOrder(resolution.matchedOrder);
+    } else if (resolution.orderId) {
       setActiveChatOrder({
-        id: orderId,
-        listingId: thread.listingId,
-        itemTitle: thread.listingTitle,
-        buyerId: thread.buyerId,
-        sellerId: thread.sellerId,
+        id: resolution.orderId,
+        listingId: resolution.listingId,
+        itemTitle: resolution.listing.title,
+        buyerId: resolution.buyerId,
+        sellerId: resolution.sellerId,
         amount: 0,
         currency: 'USD',
         status: 'pending',
@@ -2096,7 +2286,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     } else {
       setActiveChatOrder(null);
     }
-  }, [groupedChats, listings, sellerOrders, buyerOrders, user?.uid]);
+  }, [groupedChats, listings, sellerOrders, buyerOrders, user?.uid, user?.displayName, language, showToast]);
 
   // Dynamically resolve theme from design system.
   // Strips hardcoded hex values to support full color-variable harmony of Light, Forest, Titanium, Rose, Sunset, etc.
@@ -4854,12 +5044,35 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                             onSubmit={handleSendMessage}
                             language={language}
                             currentTheme={currentTheme}
+                            disabled={!isActiveChatSendAllowed}
                             placeholder={
                               language === 'ka'
                                 ? 'დაწერეთ შეთავაზება ან შეკითხვა...'
                                 : 'Propose a price or ask a question...'
                             }
                           />
+                        </div>
+                      ) : chatResolutionError ? (
+                        <div
+                          role="alert"
+                          className="h-full flex flex-col items-center justify-center text-center px-6 text-proton-muted"
+                        >
+                          <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/35 flex items-center justify-center text-rose-500 mb-3 shadow-sm">
+                            <AlertTriangle size={22} />
+                          </div>
+                          <p className="text-sm font-bold text-proton-text">
+                            {language === 'ka' ? 'საუბრის გახსნა ვერ მოხერხდა' : 'Unable to Open Conversation'}
+                          </p>
+                          <p className="text-xs text-rose-400 max-w-sm mt-1.5 leading-relaxed">
+                            {chatResolutionError}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setChatResolutionError(null)}
+                            className="mt-4 px-3.5 py-2 rounded-xl bg-proton-bg border border-proton-border text-xs font-bold text-proton-text hover:bg-proton-accent/10 transition-colors cursor-pointer"
+                          >
+                            {language === 'ka' ? 'დახურვა' : 'Dismiss'}
+                          </button>
                         </div>
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center px-6 text-proton-muted">
@@ -5923,6 +6136,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     onChangeChatMessageText={setChatMessageText}
     onSendMessage={handleSendMessage}
     buyerName={activeChatContext?.buyerName}
+    conversationId={activeChatContext?.conversationId}
+    isSendDisabled={!isActiveChatSendAllowed}
   />
 
   {/* Vendor Reviews & Rating Modal */}
@@ -6272,6 +6487,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   onSubmit={handleSendMessage}
                   language={language}
                   currentTheme={currentTheme}
+                  disabled={!isActiveChatSendAllowed}
                   placeholder={
                     language === 'ka'
                       ? 'დაწერეთ შეთავაზება ან შეკითხვა...'
@@ -6282,6 +6498,28 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
             ) : (
               // Chats and Orders List
               <div className="space-y-6 min-w-0">
+                {chatResolutionError && (
+                  <div
+                    role="alert"
+                    className="bg-rose-500/10 border border-rose-500/30 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-rose-400"
+                  >
+                    <AlertTriangle size={16} className="text-rose-500 shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-proton-text">
+                        {language === 'ka' ? 'საუბრის გახსნა ვერ მოხერხდა' : 'Unable to Open Conversation'}
+                      </p>
+                      <p className="mt-0.5 leading-relaxed">{chatResolutionError}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setChatResolutionError(null)}
+                      aria-label={language === 'ka' ? 'დახურვა' : 'Dismiss'}
+                      className="p-1 rounded-lg hover:bg-rose-500/15 text-rose-400 shrink-0 cursor-pointer"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 {/* Conversations via Shared ChatThreadList */}
                 <div className="space-y-3 min-w-0">
                   <div className="flex items-center justify-between gap-2 min-w-0">
