@@ -34,6 +34,92 @@ function getAi(apiKeyOverride?: string) {
   return aiInstances.get(apiKey)!;
 }
 
+const CLOUDFLARE_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+
+interface CloudflareMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+function convertHistoryToMessages(
+  history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []
+): CloudflareMessage[] {
+  return (history || [])
+    .map((entry) => ({
+      role: (entry.role === 'model' ? 'assistant' : 'user') as 'user' | 'assistant',
+      content: (entry.parts || []).map((part) => part?.text || '').join('\n').trim(),
+    }))
+    .filter((msg) => msg.content.length > 0);
+}
+
+function isRateLimitOrMissingKeyError(error: any): boolean {
+  if (!error) return false;
+  const status = error?.status ?? error?.statusCode ?? error?.code ?? error?.error?.code;
+  if (status === 429 || status === '429' || status === 'RESOURCE_EXHAUSTED') {
+    return true;
+  }
+  const errStr = String(error?.message || error || '');
+  const lower = errStr.toLowerCase();
+  return (
+    errStr.includes('429') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('quota') ||
+    lower.includes('rate limit') ||
+    lower.includes('rate-limit') ||
+    lower.includes('ratelimit') ||
+    lower.includes('too many requests') ||
+    lower.includes('gemini_api_key is missing') ||
+    lower.includes('ai engine not initialized')
+  );
+}
+
+async function callCloudflareWorkersAI(
+  messages: CloudflareMessage[],
+  options: { temperature?: number; max_tokens?: number } = {}
+): Promise<{ text: string; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } }> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+
+  if (!accountId || !apiToken) {
+    throw new Error("Cloudflare Workers AI credentials (CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN) are missing");
+  }
+
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CLOUDFLARE_MODEL}`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages,
+      ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
+      max_tokens: options.max_tokens ?? 2048,
+    }),
+  });
+
+  const data: any = await response.json().catch(() => null);
+
+  if (!response.ok || (data && data.success === false)) {
+    const errMsg = data?.errors?.[0]?.message || response.statusText || `HTTP ${response.status}`;
+    throw new Error(`Cloudflare Workers AI error (${response.status}): ${errMsg}`);
+  }
+
+  const text =
+    data?.result?.response ??
+    data?.choices?.[0]?.message?.content ??
+    '';
+
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new Error("Cloudflare Workers AI returned an empty response");
+  }
+
+  return {
+    text: text.trim(),
+    usage: data?.result?.usage ?? data?.usage,
+  };
+}
+
 export async function chatWithPersona(
   persona: Persona, 
   message: string, 
@@ -47,6 +133,10 @@ export async function chatWithPersona(
   apiKeyOverride?: string
 ): Promise<{ text: string, metadata: GeminiMetadata }> {
   const startTime = performance.now();
+  const systemInstruction = `${persona.systemInstruction}
+${persona.language !== 'English' ? "\n\nCRITICAL LANGUAGE INSTRUCTION: Prioritize using the Georgian language (Mkhedruli script) in your responses. Always include Georgian when 'Georgian' or 'Mixed' is selected, and use Georgian script for terms, names, or cultural nuances." : ""}
+${globalInstruction ? `\n\n${globalInstruction}` : ''}`.trim();
+
   try {
     const tools: any[] = [];
     if (includeSearch) {
@@ -64,9 +154,7 @@ export async function chatWithPersona(
         { role: 'user', parts: [{ text: message }] }
       ],
       config: {
-        systemInstruction: `${persona.systemInstruction}
-${persona.language !== 'English' ? "\n\nCRITICAL LANGUAGE INSTRUCTION: Prioritize using the Georgian language (Mkhedruli script) in your responses. Always include Georgian when 'Georgian' or 'Mixed' is selected, and use Georgian script for terms, names, or cultural nuances." : ""}
-${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
+        systemInstruction,
         temperature,
         topP: 0.95,
         tools: tools.length > 0 ? tools : undefined
@@ -86,10 +174,34 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
       metadata 
     };
   } catch (error: any) {
-    const endTime = performance.now();
     const errStr = error?.message || String(error);
     console.warn(`[Gemini API] chatWithPersona rate-limited or error: ${errStr.substring(0, 120)}`);
-    
+
+    if (isRateLimitOrMissingKeyError(error)) {
+      try {
+        const cfMessages: CloudflareMessage[] = [
+          ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
+          ...convertHistoryToMessages(history),
+          { role: 'user', content: message }
+        ];
+        const cfResult = await callCloudflareWorkersAI(cfMessages, { temperature });
+        const endTime = performance.now();
+        return {
+          text: cfResult.text,
+          metadata: {
+            promptTokenCount: cfResult.usage?.prompt_tokens || 0,
+            candidatesTokenCount: cfResult.usage?.completion_tokens || 0,
+            totalTokenCount: cfResult.usage?.total_tokens || 0,
+            modelName: CLOUDFLARE_MODEL,
+            latency: Math.round(endTime - startTime)
+          }
+        };
+      } catch (cfError: any) {
+        console.warn(`[Cloudflare Workers AI] chatWithPersona fallback failed: ${(cfError?.message || String(cfError)).substring(0, 120)}`);
+      }
+    }
+
+    const endTime = performance.now();
     let text = "";
     if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.toLowerCase().includes("resource_exhausted")) {
       text = appLanguage === 'ka'
@@ -109,16 +221,17 @@ ${globalInstruction ? `\n\n${globalInstruction}` : ''}`,
 }
 
 export async function generateNewPersona(basePersona: Persona, prompt: string, apiKeyOverride?: string): Promise<Persona> {
-  try {
-    const ai = getAi(apiKeyOverride);
-    if (!ai) throw new Error("AI engine not initialized");
-    const systemPrompt = `
+  const systemPrompt = `
       You are a Persona Architect. Create a new digital persona based on the user's prompt.
       The persona must have an ID, Name (EN/GE), Role, Description (EN/GE), System Instruction, and an Emoji Avatar.
       Respond ONLY with a JSON object matching the Persona type.
       
       BASE PERSONA FOR CONTEXT: ${JSON.stringify(basePersona)}
     `;
+
+  try {
+    const ai = getAi(apiKeyOverride);
+    if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
@@ -133,6 +246,33 @@ export async function generateNewPersona(basePersona: Persona, prompt: string, a
   } catch (error: any) {
     const errStr = error?.message || String(error);
     console.warn(`[Gemini API] generateNewPersona fallback triggered: ${errStr.substring(0, 120)}`);
+
+    if (isRateLimitOrMissingKeyError(error)) {
+      try {
+        const cfResult = await callCloudflareWorkersAI([
+          { role: 'system', content: systemPrompt.trim() },
+          { role: 'user', content: prompt }
+        ], { temperature: 0.7 });
+        const cleaned = cfResult.text.replace(/```json|```/gi, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+        return {
+          ...parsed,
+          id: `persona-${Date.now()}`,
+          name: parsed.name || `${prompt.substring(0, 15)} Advisor`,
+          nameGe: parsed.nameGe || parsed.name || `${prompt.substring(0, 15)} მრჩეველი`,
+          role: parsed.role || "Strategic Assistant",
+          description: parsed.description || `Optimized specialist adapted to: "${prompt.substring(0, 40)}"`,
+          descriptionGe: parsed.descriptionGe || parsed.description || `სპეციალისტი, რომელიც მორგებულია მოთხოვნაზე: "${prompt.substring(0, 40)}"`,
+          avatar: parsed.avatar || "🤖",
+          language: ['English', 'Georgian', 'Mixed'].includes(parsed.language) ? parsed.language : 'Mixed',
+          systemInstruction: parsed.systemInstruction || `You are an expert digital assistant customized for: "${prompt}". Provide guidance in both English and Georgian, ensuring context-rich responses.`
+        };
+      } catch (cfError: any) {
+        console.warn(`[Cloudflare Workers AI] generateNewPersona fallback failed: ${(cfError?.message || String(cfError)).substring(0, 120)}`);
+      }
+    }
+
     return {
       id: `persona-${Date.now()}`,
       name: `${prompt.substring(0, 15)} Advisor`,
@@ -150,7 +290,7 @@ export async function generateNewPersona(basePersona: Persona, prompt: string, a
 export async function summarizeConversation(history: { role: 'user' | 'model', parts: { text: string }[] }[], apiKeyOverride?: string) {
   try {
     const ai = getAi(apiKeyOverride);
-    if (!ai) return "AI engine not initialized.";
+    if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: [
@@ -162,6 +302,23 @@ export async function summarizeConversation(history: { role: 'user' | 'model', p
   } catch (error: any) {
     const errStr = error?.message || String(error);
     console.warn(`[Gemini API] summarizeConversation fallback triggered: ${errStr.substring(0, 120)}`);
+
+    if (isRateLimitOrMissingKeyError(error)) {
+      try {
+        const cfMessages: CloudflareMessage[] = [
+          ...convertHistoryToMessages(history),
+          {
+            role: 'user',
+            content: "Summarize this conversation in a concise way, highlighting key points and actionable items."
+          }
+        ];
+        const cfResult = await callCloudflareWorkersAI(cfMessages, { temperature: 0.5 });
+        return cfResult.text;
+      } catch (cfError: any) {
+        console.warn(`[Cloudflare Workers AI] summarizeConversation fallback failed: ${(cfError?.message || String(cfError)).substring(0, 120)}`);
+      }
+    }
+
     return "💡 **საუბრის შეჯამება (Offline Mode)**:\n\n* **ბიზნეს იდეები:** განხილულია ქართულ ბაზარზე მორგებული ავთენტური მარკეტინგისა და ტექნოლოგიური სტრატეგიები.\n* **ავტომატიზაცია:** დაგეგმილია ბიზნეს ნაკადების (Workflows) გააქტიურება დაყოვნების შესამცირებლად.\n* **გაფართოება:** რეკომენდებულია პარამეტრებში „AI სიმულაციური რეჟიმის“ ჩართვა შეზღუდვების ასაცილებლად.";
   }
 }
