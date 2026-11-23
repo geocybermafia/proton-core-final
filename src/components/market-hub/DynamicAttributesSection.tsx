@@ -43,10 +43,10 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
 
     if (field.type === 'select') {
       return (
-        <div key={`${schema.categoryId}-${field.key}`} className="space-y-2.5">
+        <div key={`${schema.categoryId}-${field.key}`} className="space-y-2 min-w-0">
           <label className={cn(
-            "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
-            field.required ? currentTheme.accent : currentTheme.muted
+            "text-[13px] sm:text-sm font-bold leading-snug flex flex-wrap items-center gap-1.5",
+            field.required ? currentTheme.accent : currentTheme.text
           )}>
             <span>{label}</span>
             {field.required && <span className="text-rose-500">*</span>}
@@ -61,7 +61,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               }}
               aria-invalid={Boolean(errorMsg)}
               className={cn(
-                "w-full pl-4 pr-10 py-3.5 rounded-2xl border appearance-none text-base md:text-xs font-bold shadow-inner transition-all cursor-pointer",
+                "w-full min-h-[46px] pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-sm font-semibold shadow-inner transition-all cursor-pointer",
                 currentTheme.input,
                 errorMsg && "border-rose-500/70 focus:border-rose-500"
               )}
@@ -80,13 +80,13 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               ))}
             </select>
             <ChevronDown
-              size={14}
-              className="absolute right-4.5 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors"
+              size={16}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors"
             />
           </div>
           {errorMsg && (
-            <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
-              <AlertCircle size={12} className="shrink-0" />
+            <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+              <AlertCircle size={13} className="shrink-0" />
               <span>{errorMsg}</span>
             </p>
           )}
@@ -96,18 +96,18 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
 
     if (field.type === 'url') {
       return (
-        <div key={`${schema.categoryId}-${field.key}`} className="space-y-2.5">
+        <div key={`${schema.categoryId}-${field.key}`} className="space-y-2 min-w-0">
           <label className={cn(
-            "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
-            field.required ? currentTheme.accent : currentTheme.muted
+            "text-[13px] sm:text-sm font-bold leading-snug flex flex-wrap items-center gap-1.5",
+            field.required ? currentTheme.accent : currentTheme.text
           )}>
             <span>{label}</span>
             {field.required && <span className="text-rose-500">*</span>}
           </label>
           <div className="relative group">
             <LinkIcon
-              size={13}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-proton-muted group-focus-within:text-proton-accent transition-colors"
+              size={15}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted group-focus-within:text-proton-accent transition-colors"
             />
             <FastInput
               type="url"
@@ -120,15 +120,15 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               placeholder={placeholder}
               aria-invalid={Boolean(errorMsg)}
               className={cn(
-                "w-full pl-10 pr-4 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
+                "w-full min-h-[46px] pl-10 pr-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
                 currentTheme.input,
                 errorMsg && "border-rose-500/70 focus:border-rose-500"
               )}
             />
           </div>
           {errorMsg && (
-            <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
-              <AlertCircle size={12} className="shrink-0" />
+            <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+              <AlertCircle size={13} className="shrink-0" />
               <span>{errorMsg}</span>
             </p>
           )}
@@ -138,10 +138,10 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
 
     if (field.type === 'number') {
       return (
-        <div key={`${schema.categoryId}-${field.key}`} className="space-y-2.5">
+        <div key={`${schema.categoryId}-${field.key}`} className="space-y-2 min-w-0">
           <label className={cn(
-            "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
-            field.required ? currentTheme.accent : currentTheme.muted
+            "text-[13px] sm:text-sm font-bold leading-snug flex flex-wrap items-center gap-1.5",
+            field.required ? currentTheme.accent : currentTheme.text
           )}>
             <span>{label}</span>
             {field.required && <span className="text-rose-500">*</span>}
@@ -160,7 +160,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
               placeholder={placeholder}
               aria-invalid={Boolean(errorMsg)}
               className={cn(
-                "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold font-mono shadow-inner transition-all",
+                "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-bold font-mono tabular-nums shadow-inner transition-all scroll-mb-24",
                 field.suffix ? "pr-16" : "",
                 currentTheme.input,
                 errorMsg && "border-rose-500/70 focus:border-rose-500"
@@ -168,7 +168,7 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
             />
             {field.suffix && (
               <span className={cn(
-                "absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-mono font-bold pointer-events-none",
+                "absolute right-4 top-1/2 -translate-y-1/2 text-xs font-mono font-bold pointer-events-none",
                 currentTheme.muted
               )}>
                 {field.suffix}
@@ -176,8 +176,8 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
             )}
           </div>
           {errorMsg && (
-            <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
-              <AlertCircle size={12} className="shrink-0" />
+            <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+              <AlertCircle size={13} className="shrink-0" />
               <span>{errorMsg}</span>
             </p>
           )}
@@ -187,10 +187,10 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
 
     // Default: 'text'
     return (
-      <div key={`${schema.categoryId}-${field.key}`} className="space-y-2.5">
+      <div key={`${schema.categoryId}-${field.key}`} className="space-y-2 min-w-0">
         <label className={cn(
-          "text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5",
-          field.required ? currentTheme.accent : currentTheme.muted
+          "text-[13px] sm:text-sm font-bold leading-snug flex flex-wrap items-center gap-1.5",
+          field.required ? currentTheme.accent : currentTheme.text
         )}>
           <span>{label}</span>
           {field.required && <span className="text-rose-500">*</span>}
@@ -206,14 +206,14 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
           placeholder={placeholder}
           aria-invalid={Boolean(errorMsg)}
           className={cn(
-            "w-full px-4.5 py-3.5 rounded-2xl border text-base md:text-xs font-bold shadow-inner transition-all",
+            "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
             currentTheme.input,
             errorMsg && "border-rose-500/70 focus:border-rose-500"
           )}
         />
         {errorMsg && (
-          <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
-            <AlertCircle size={12} className="shrink-0" />
+          <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+            <AlertCircle size={13} className="shrink-0" />
             <span>{errorMsg}</span>
           </p>
         )}
@@ -222,19 +222,19 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
   };
 
   return (
-    <div className="space-y-5 p-5 rounded-3xl bg-proton-bg/60 border border-proton-border shadow-inner">
-      <div className="flex items-center justify-between gap-2">
-        <span className={cn("text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5", currentTheme.accent)}>
+    <div className="space-y-5 p-4 sm:p-5 rounded-2xl bg-proton-bg/60 border border-proton-border shadow-inner">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className={cn("text-sm font-bold flex items-center gap-2 leading-snug", currentTheme.accent)}>
           <span>🧩</span>
           <span>{isKa ? 'კატეგორიის სპეციფიკური მონაცემები' : 'Category Specifications'}</span>
         </span>
-        <span className={cn("text-[9px] font-mono uppercase", currentTheme.muted)}>
+        <span className={cn("text-xs font-semibold", currentTheme.muted)}>
           {isKa ? '* სავალდებულო' : '* Required'}
         </span>
       </div>
 
       {nonBooleanFields.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
           {nonBooleanFields.map(renderFieldInput)}
         </div>
       )}
@@ -249,10 +249,10 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
             return (
               <div key={`${schema.categoryId}-${field.key}`} className="space-y-1.5">
                 <div className={cn(
-                  "px-4 py-3 rounded-2xl bg-proton-card/70 border border-proton-border flex items-center justify-between gap-4",
+                  "px-4 py-3 min-h-[54px] rounded-2xl bg-proton-card/70 border border-proton-border flex items-center justify-between gap-4",
                   errorMsg && "border-rose-500/70"
                 )}>
-                  <span className={cn("text-xs font-bold", currentTheme.text)}>
+                  <span className={cn("text-[13px] sm:text-sm font-semibold leading-snug break-words min-w-0", currentTheme.text)}>
                     {label}
                     {field.required && <span className="text-rose-500 ml-1">*</span>}
                   </span>
@@ -265,22 +265,24 @@ export const DynamicAttributesSection: React.FC<DynamicAttributesSectionProps> =
                       onChange(field.key, checked ? undefined : true);
                       onClearError?.(field.key);
                     }}
-                    className={cn(
-                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none",
-                      checked ? "bg-proton-accent" : "bg-proton-border"
-                    )}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-end shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent rounded-xl"
                   >
-                    <span
-                      className={cn(
-                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-300 ease-in-out",
-                        checked ? "translate-x-5" : "translate-x-0"
-                      )}
-                    />
+                    <span className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
+                      checked ? "bg-proton-accent" : "bg-proton-border"
+                    )}>
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                          checked ? "translate-x-5" : "translate-x-0"
+                        )}
+                      />
+                    </span>
                   </button>
                 </div>
                 {errorMsg && (
-                  <p className="text-[11px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
-                    <AlertCircle size={12} className="shrink-0" />
+                  <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                    <AlertCircle size={13} className="shrink-0" />
                     <span>{errorMsg}</span>
                   </p>
                 )}

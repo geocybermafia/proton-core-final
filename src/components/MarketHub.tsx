@@ -4742,7 +4742,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
       <div
         className={cn(
-          "w-full max-w-[1680px] mx-auto px-4 py-4 sm:p-6 lg:p-10 grow relative",
+          "w-full max-w-[1680px] mx-auto grow relative",
+          (viewMode === 'create' || viewMode === 'edit')
+            ? "px-2.5 py-3 sm:p-6 lg:p-8"
+            : "px-4 py-4 sm:p-6 lg:p-10",
           activeBottomTab === 'messages' && "md:py-4 lg:py-4"
         )}
       >
@@ -4751,8 +4754,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           animate={{ opacity: 1, y: 0 }}
           className={cn(
             "bg-transparent relative",
-            activeBottomTab === 'messages' ? "space-y-4 md:space-y-4 pb-4 md:pb-4" : "space-y-5 md:space-y-12",
-            activeBottomTab !== 'messages' && (isAnyMarketOverlayOpen ? "pb-8 md:pb-16" : "pb-16 md:pb-16")
+            activeBottomTab === 'messages' ? "space-y-4 md:space-y-4 pb-4 md:pb-4" : "space-y-5 md:space-y-10",
+            activeBottomTab !== 'messages' && ((viewMode === 'create' || viewMode === 'edit') ? "pb-12 md:pb-16" : isAnyMarketOverlayOpen ? "pb-8 md:pb-16" : "pb-16 md:pb-16")
           )}
         >
       {/* Market Hub Header / Banner Section */}
@@ -4768,7 +4771,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       >
         {/* Row 1: Title & Status on left, Grid / Map Mode on right */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-6 w-full">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             {viewMode !== 'browse' && (
               <button 
                 type="button"
@@ -4777,13 +4780,13 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   else setActiveBottomTab('home');
                   setViewMode('browse');
                 }}
-                className="p-2.5 md:p-3 bg-proton-card rounded-xl hover:bg-proton-accent/10 transition-colors border border-proton-border hover:border-proton-accent/40 text-proton-muted hover:text-proton-text cursor-pointer"
+                className="min-w-[44px] min-h-[44px] p-2.5 md:p-3 bg-proton-card rounded-xl hover:bg-proton-accent/10 transition-colors border border-proton-border hover:border-proton-accent/40 text-proton-muted hover:text-proton-text cursor-pointer flex items-center justify-center shrink-0"
                 title={language === 'ka' ? 'მარკეტში დაბრუნება' : 'Back to Market'}
               >
                 <ArrowLeft size={18} />
               </button>
             )}
-            <div>
+            <div className="min-w-0">
               <h1 className={cn(
                 "font-black tracking-tighter uppercase leading-none",
                 activeBottomTab === 'messages'
@@ -4796,9 +4799,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                 <span className={currentTheme.accent}>{t.market.title.split(' ')[0]}</span> {t.market.title.split(' ').slice(1).join(' ')}
               </h1>
               <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-md border", currentTheme.cardAlt)}>
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className={cn("font-black tracking-widest uppercase text-[8px]", currentTheme.muted)}>
+                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-md border", currentTheme.cardAlt)}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className={cn(
+                    (viewMode === 'create' || viewMode === 'edit')
+                      ? "text-[11px] sm:text-xs font-bold tracking-normal"
+                      : "font-black tracking-widest uppercase text-[8px]",
+                    currentTheme.muted
+                  )}>
                     {viewMode === 'browse' ? (language === 'ka' ? 'ონლაინ' : 'LIVE') : 
                      viewMode === 'rankings' ? (language === 'ka' ? 'რეიტინგები და მიღწევები' : 'Rankings & Achievements') :
                      viewMode === 'my-listings' && activeBottomTab === 'messages' ? (language === 'ka' ? 'შეტყობინებები' : 'Messages') :

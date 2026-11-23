@@ -18,6 +18,10 @@ const PICKER_CONTROL_STYLE = `
     background-color: var(--proton-card);
     color: var(--proton-text);
     border-color: var(--proton-border);
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    font-size: 16px;
   }
   .leaflet-container .leaflet-control-zoom a:hover {
     background-color: var(--proton-bg);
@@ -27,6 +31,7 @@ const PICKER_CONTROL_STYLE = `
     background-color: var(--proton-card);
     color: var(--proton-muted);
     opacity: 0.9;
+    font-size: 10px;
   }
   .leaflet-container .leaflet-control-attribution a {
     color: var(--proton-accent);
@@ -301,9 +306,9 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between ml-2">
-        <label className={cn("text-[10px] font-black uppercase tracking-[0.2em] leading-none", currentTheme.muted)}>
+    <div className="space-y-3 w-full min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
+        <label className={cn("text-[13px] sm:text-sm font-bold leading-snug", currentTheme.muted)}>
           {language === 'ka' ? 'რუკის კოორდინატები' : 'Geographical coordinates'}
         </label>
         
@@ -311,57 +316,59 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
           type="button"
           onClick={handleDetectLocation}
           disabled={detecting}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-proton-card border border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10 rounded-xl text-[9px] font-black uppercase tracking-wider text-proton-text transition-all disabled:opacity-50 cursor-pointer"
+          className="min-h-[44px] flex items-center justify-center gap-2 px-3.5 py-2 bg-proton-card border border-proton-border hover:border-proton-accent/40 hover:bg-proton-accent/10 rounded-xl text-xs sm:text-[13px] font-bold text-proton-text transition-all disabled:opacity-50 cursor-pointer shrink-0"
         >
           {detecting ? (
-            <Loader2 size={10} className="animate-spin text-proton-accent" />
+            <Loader2 size={14} className="animate-spin text-proton-accent shrink-0" />
           ) : (
-            <Navigation size={10} className="text-proton-accent" />
+            <Navigation size={14} className="text-proton-accent shrink-0" />
           )}
-          {language === 'ka' ? 'ჩემი ლოკაცია' : 'Auto Detect'}
+          <span>{language === 'ka' ? 'ჩემი ლოკაცია' : 'Auto Detect'}</span>
         </button>
       </div>
 
       {/* Non-intrusive Geolocation Error Banner */}
       {geoError && (
-        <div className="px-3.5 py-2 bg-proton-card/95 border border-amber-500/40 rounded-xl flex items-center justify-between gap-2 text-[10px] text-proton-text shadow-md">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={12} className="text-amber-500 shrink-0" />
-            <span className="leading-tight">{geoError}</span>
+        <div className="px-3.5 py-2.5 bg-proton-card/95 border border-amber-500/40 rounded-xl flex items-center justify-between gap-2.5 text-xs sm:text-[13px] text-proton-text shadow-md">
+          <div className="flex items-start gap-2 min-w-0">
+            <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+            <span className="leading-snug break-words">{geoError}</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={handleDetectLocation}
               disabled={detecting}
-              className="p-1 text-amber-500 hover:text-proton-text transition-colors"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-amber-500 hover:bg-amber-500/10 hover:text-proton-text transition-colors cursor-pointer"
               title={language === 'ka' ? 'ხელახლა ცდა' : 'Retry'}
+              aria-label={language === 'ka' ? 'ხელახლა ცდა' : 'Retry'}
             >
-              <RotateCcw size={11} />
+              <RotateCcw size={14} />
             </button>
             <button
               type="button"
               onClick={() => setGeoError(null)}
-              className="p-1 text-proton-muted hover:text-proton-text transition-colors"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg text-proton-muted hover:bg-proton-bg hover:text-proton-text transition-colors cursor-pointer"
               title={language === 'ka' ? 'დახურვა' : 'Dismiss'}
+              aria-label={language === 'ka' ? 'დახურვა' : 'Dismiss'}
             >
-              <X size={12} />
+              <X size={15} />
             </button>
           </div>
         </div>
       )}
 
-      <div className="relative w-full h-64 min-h-[250px] rounded-[30px] overflow-hidden border border-proton-border shadow-inner bg-proton-bg">
-        <div ref={mapContainerRef} className="w-full h-full min-h-[250px] z-0 bg-proton-bg" />
+      <div className="relative w-full h-[250px] min-[430px]:h-[280px] sm:h-[300px] lg:h-[320px] rounded-2xl overflow-hidden border border-proton-border shadow-inner bg-proton-bg">
+        <div ref={mapContainerRef} className="w-full h-full z-0 bg-proton-bg" />
         
         {/* Coordinate indicator overlay */}
-        <div className="absolute top-4 left-4 z-10 pointer-events-none">
-          <div className="px-3 py-1.5 bg-proton-card/95 backdrop-blur-md rounded-xl border border-proton-border flex items-center gap-2 shadow-lg">
-            <MapPin size={10} className="text-proton-accent" />
-            <span className="text-[8px] font-mono font-black text-proton-muted">
+        <div className="absolute top-3 left-3 right-3 sm:right-auto z-10 pointer-events-none flex">
+          <div className="px-3 py-1.5 bg-proton-card/95 backdrop-blur-md rounded-xl border border-proton-border flex items-center gap-2 shadow-lg max-w-full min-w-0">
+            <MapPin size={13} className="text-proton-accent shrink-0" />
+            <span className="text-xs font-mono font-bold text-proton-text truncate">
               {typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng)
                 ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-                : (language === 'ka' ? 'მიუთითეთ ლოკაცია' : 'Click map to pin asset')}
+                : (language === 'ka' ? 'მიუთითეთ ლოკაცია' : 'Click map to pin')}
             </span>
             {typeof lat === 'number' && (
               <button
@@ -370,7 +377,7 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
                   e.stopPropagation();
                   onChange(undefined, undefined);
                 }}
-                className="pointer-events-auto ml-1.5 text-rose-500 hover:text-rose-400 text-[8px] font-black uppercase"
+                className="pointer-events-auto ml-1 px-2 py-1 min-h-[28px] rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 hover:text-rose-400 text-xs font-bold shrink-0 cursor-pointer transition-colors"
               >
                 {language === 'ka' ? 'წაშლა' : 'Clear'}
               </button>
@@ -378,9 +385,9 @@ export function MapPicker({ lat, lng, onChange, language, currentTheme }: MapPic
           </div>
         </div>
         
-        <div className="absolute bottom-4 left-4 z-10 pointer-events-none">
-          <span className="px-3 py-1 bg-proton-card/90 backdrop-blur-md rounded-lg text-[7px] text-proton-muted font-bold uppercase tracking-widest leading-none border border-proton-border block">
-            {language === 'ka' ? 'დააკლიკეთ ან აწიეთ მარკერი' : 'Click anywhere or drag marker'}
+        <div className="absolute bottom-3 left-3 right-14 sm:right-auto z-10 pointer-events-none">
+          <span className="inline-block px-3 py-1.5 bg-proton-card/92 backdrop-blur-md rounded-lg text-[11px] sm:text-xs text-proton-muted font-semibold leading-snug border border-proton-border max-w-full truncate">
+            {language === 'ka' ? 'დააკლიკეთ ან გადააადგილეთ მარკერი' : 'Click map or drag marker'}
           </span>
         </div>
       </div>
