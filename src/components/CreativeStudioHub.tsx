@@ -38,6 +38,194 @@ export interface CreativeAdDraft {
   dismissed?: boolean;
 }
 
+function stripMarkdownCodeFences(text: string): string {
+  const trimmed = text.trim();
+  const fenceMatch = trimmed.match(/```(?:json|JSON)?\s*([\s\S]*?)```/);
+  if (fenceMatch && fenceMatch[1]) {
+    return fenceMatch[1].trim();
+  }
+  return trimmed
+    .replace(/^```(?:json|JSON)?\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .trim();
+}
+
+function escapeControlCharsInJsonStrings(jsonStr: string): string {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < jsonStr.length; i++) {
+    const ch = jsonStr[i];
+
+    if (escaped) {
+      result += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\') {
+      result += ch;
+      if (inString) {
+        escaped = true;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+      continue;
+    }
+
+    if (inString) {
+      if (ch === '\n') {
+        result += '\\n';
+      } else if (ch === '\r') {
+        result += '\\r';
+      } else if (ch === '\t') {
+        result += '\\t';
+      } else if (ch.charCodeAt(0) < 0x20) {
+        continue;
+      } else {
+        result += ch;
+      }
+    } else {
+      result += ch;
+    }
+  }
+
+  return result.replace(/,\s*([}\]])/g, '$1');
+}
+
+function normalizeAdCopyField(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeAdCopyField(item)).filter(Boolean).join('\n');
+  }
+  if (value && typeof value === 'object') {
+    return Object.values(value)
+      .map((val) => normalizeAdCopyField(val))
+      .filter(Boolean)
+      .join('\n');
+  }
+  if (value === null || value === undefined) return '';
+  return String(value).trim();
+}
+
+function extractAdCopyFieldsByKey(text: string): { hook?: string; body?: string; cta?: string } | null {
+  const keys = ['hook', 'body', 'cta'] as const;
+  const positions: { key: typeof keys[number]; keyStart: number; valueStart: number }[] = [];
+
+  for (const key of keys) {
+    const regex = new RegExp(`["']?${key}["']?\\s*:\\s*["']`, 'i');
+    const match = regex.exec(text);
+    if (match) {
+      positions.push({
+        key,
+        keyStart: match.index,
+        valueStart: match.index + match[0].length,
+      });
+    }
+  }
+
+  if (positions.length === 0) return null;
+  positions.sort((a, b) => a.keyStart - b.keyStart);
+
+  const extracted: { hook?: string; body?: string; cta?: string } = {};
+  for (let i = 0; i < positions.length; i++) {
+    const current = positions[i];
+    const next = positions[i + 1];
+    const closingBrace = text.lastIndexOf('}');
+    const sliceEnd = next ? next.keyStart : (closingBrace > current.valueStart ? closingBrace : text.length);
+    let rawVal = text.slice(current.valueStart, sliceEnd).trim();
+    rawVal = rawVal.replace(/,\s*$/, '').replace(/["']\s*$/, '').trim();
+    rawVal = rawVal
+      .replace(/\\n/g, '\n')
+      .replace(/\\r/g, '')
+      .replace(/\\t/g, '  ')
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, '\\');
+    if (rawVal) {
+      extracted[current.key] = rawVal;
+    }
+  }
+
+  return extracted.hook || extracted.body || extracted.cta ? extracted : null;
+}
+
+function parseAdCopyResponse(
+  rawText: string,
+  brandName: string,
+  isKa: boolean
+): { hook: string; body: string; cta: string; parsedFromJson: boolean } {
+  const withoutFences = stripMarkdownCodeFences(rawText);
+  const firstBrace = withoutFences.indexOf('{');
+  const lastBrace = withoutFences.lastIndexOf('}');
+  const jsonCandidate =
+    firstBrace !== -1 && lastBrace > firstBrace
+      ? withoutFences.substring(firstBrace, lastBrace + 1)
+      : withoutFences;
+
+  const tryParse = (candidate: string): Record<string, unknown> | null => {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      // Ignore and try next parser
+    }
+    return null;
+  };
+
+  const parsedObj =
+    tryParse(jsonCandidate) ||
+    tryParse(escapeControlCharsInJsonStrings(jsonCandidate));
+
+  if (parsedObj) {
+    let hook = normalizeAdCopyField(parsedObj.hook ?? parsedObj.headline ?? parsedObj.title);
+    let body = normalizeAdCopyField(parsedObj.body ?? parsedObj.copy ?? parsedObj.description ?? parsedObj.text);
+    let cta = normalizeAdCopyField(parsedObj.cta ?? parsedObj.callToAction ?? parsedObj.hashtags);
+
+    // Handle rare double-encoded JSON inside body
+    if (body && (body.startsWith('{') || body.includes('```json'))) {
+      const nested = parseAdCopyResponse(body, brandName, isKa);
+      if (nested.parsedFromJson) {
+        hook = hook || nested.hook;
+        body = nested.body;
+        cta = cta || nested.cta;
+      }
+    }
+
+    if (hook || body || cta) {
+      return {
+        hook: hook || `${brandName || 'Ad'} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`,
+        body: body || withoutFences,
+        cta: cta || '',
+        parsedFromJson: true,
+      };
+    }
+  }
+
+  const keyExtracted = extractAdCopyFieldsByKey(jsonCandidate);
+  if (keyExtracted && (keyExtracted.hook || keyExtracted.body || keyExtracted.cta)) {
+    return {
+      hook: keyExtracted.hook || `${brandName || 'Ad'} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`,
+      body: keyExtracted.body || withoutFences,
+      cta: keyExtracted.cta || '',
+      parsedFromJson: true,
+    };
+  }
+
+  return {
+    hook: `${brandName || 'Ad'} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`,
+    body: withoutFences,
+    cta: '',
+    parsedFromJson: false,
+  };
+}
+
 interface CreativeStudioHubProps {
   language: 'en' | 'ka';
   setActiveView: (view: any) => void;
@@ -220,7 +408,13 @@ export const CopywritingView: React.FC<{
     try {
       const stored = safeStorage.getJSON<CreativeAdDraft | null>('proton_creative_ad_draft', null);
       if (stored && !stored.exportedAt && stored.hook && stored.body) {
-        return { hook: stored.hook, body: stored.body, cta: stored.cta };
+        if (stored.body.trim().startsWith('{') || stored.body.includes('```')) {
+          const reparsed = parseAdCopyResponse(stored.body, stored.brandName || '', isKa);
+          if (reparsed.parsedFromJson) {
+            return { hook: reparsed.hook, body: reparsed.body, cta: reparsed.cta };
+          }
+        }
+        return { hook: stored.hook, body: stored.body, cta: stored.cta || '' };
       }
     } catch {
       // Ignore parse failure
@@ -240,7 +434,7 @@ export const CopywritingView: React.FC<{
     setExportingDraft(true);
     try {
       const title = result.hook || `${brandName || 'Proton'} - Ad Copy`;
-      const fullDesc = `${result.body}\n\n${result.cta}`;
+      const fullDesc = [result.body, result.cta].filter(Boolean).join('\n\n');
       const newListing = await createDraftListing({
         title,
         description: fullDesc,
@@ -289,6 +483,20 @@ export const CopywritingView: React.FC<{
 
     setLoading(true);
     try {
+      const languageGuidance =
+        targetLang === 'ka'
+          ? `LANGUAGE REQUIREMENT (GEORGIAN ONLY):
+- Write 100% of the ad copy ("hook", "body", and "cta") in natural, idiomatic, contemporary Georgian (Mkhedruli script).
+- Think and compose directly in Georgian like a senior creative copywriter in Tbilisi — NEVER translate word-for-word from English or use awkward English-to-Georgian calques.
+- Use authentic Georgian phrasing, persuasive rhythm, natural Georgian word order, and locally resonant hashtags.`
+          : targetLang === 'both'
+          ? `LANGUAGE REQUIREMENT (BILINGUAL — ENGLISH + GEORGIAN):
+- Include BOTH English and Georgian in each JSON field ("hook", "body", and "cta"), separated clearly by a blank line (\\n\\n).
+- Write the English version first, then write an independently crafted, culturally adapted, natural, idiomatic Georgian (Mkhedruli) version for a Georgian audience.
+- CRITICAL: NEVER perform a literal word-for-word translation from English into Georgian. Adapt idioms, tone, and phrasing so the Georgian reads naturally as native marketing copy.`
+          : `LANGUAGE REQUIREMENT (ENGLISH ONLY):
+- Write 100% of the ad copy ("hook", "body", and "cta") in crisp, persuasive, native-level English.`;
+
       const copywritingPersona: Persona = {
         id: 'copywriter',
         name: 'Creative Copywriter',
@@ -297,25 +505,33 @@ export const CopywritingView: React.FC<{
         description: 'AI Copywriter',
         descriptionGe: 'AI კოპირაიტერი',
         avatar: '✍️',
-        language: 'Mixed',
-        systemInstruction: `You are an elite dual-language digital advertising copywriter and marketing strategist. 
-Your goal is to generate exceptionally engaging, high-converting ad copy, captions, headlines, and calls-to-action.
-You write in Georgian (using modern natural style), English, or both, as requested.
-CRITICAL: Respond ONLY with a valid raw JSON object matching this structure:
+        language: targetLang === 'en' ? 'English' : targetLang === 'ka' ? 'Georgian' : 'Mixed',
+        systemInstruction: `You are an elite digital advertising copywriter and brand strategist specializing in both English and Georgian (Mkhedruli) markets.
+Your goal is to generate high-converting, emotionally resonant, platform-tailored ad copy, headlines, and calls-to-action.
+
+${languageGuidance}
+
+STRICT JSON OUTPUT REQUIREMENTS:
+Respond ONLY with a single valid raw JSON object matching this exact schema:
 {
   "hook": "Punchy hook, headline, or slogan",
   "body": "Engaging description with bullet points and appropriate emojis",
   "cta": "Clear call to action and suggested hashtags"
 }
-Do NOT include any introduction, conversational text, or markdown codeblocks before or after the JSON.`
+- Output MUST be strictly valid JSON.
+- Escape every newline inside JSON string values as \\n (never emit raw literal newlines inside string values).
+- Escape any double quotes inside string values as \\".
+- Do NOT include any introduction, conversational text, or markdown code fences (\`\`\`json or \`\`\`) before or after the JSON.`
       };
 
       const promptMessage = `Please generate ad copy for:
-Brand Name: ${brandName}
-Product/Service Details: ${description}
+Brand Name: ${brandName.trim()}
+Product/Service Details: ${description.trim()}
 Target Platform: ${platform.toUpperCase()}
 Tone of Voice: ${tone.toUpperCase()}
-Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write English first, then Georgian translation clearly)' : targetLang === 'ka' ? 'Purely Georgian' : 'Purely English'}`;
+Requested Language: ${targetLang === 'both' ? 'Bilingual (English + natural, idiomatic Georgian copy adapted natively — not a literal translation)' : targetLang === 'ka' ? 'Purely Georgian (natural, idiomatic Georgian marketing copy)' : 'Purely English'}
+
+Return strictly valid JSON matching { "hook": "...", "body": "...", "cta": "..." }.`;
 
       const aiResponse = await chatWithPersona(
         copywritingPersona,
@@ -323,47 +539,22 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
         [],
         'gemini-3.5-flash',
         false,
-        true,
+        false,
         0.85,
         undefined,
         language
       );
 
-      // Clean response text to ensure it's parseable JSON
-      let cleanedText = aiResponse.text.trim();
-      
-      // Extract JSON substring if wrapped in markdown or extraneous text
-      const firstBrace = cleanedText.indexOf('{');
-      const lastBrace = cleanedText.lastIndexOf('}');
-      if (firstBrace !== -1 && lastBrace > firstBrace) {
-        cleanedText = cleanedText.substring(firstBrace, lastBrace + 1);
-      }
+      const parsedCopy = parseAdCopyResponse(aiResponse.text, brandName.trim(), isKa);
+      const finalHook = parsedCopy.hook;
+      const finalBody = parsedCopy.body;
+      const finalCta = parsedCopy.cta;
 
-      let finalHook = 'Ad Copy Headline';
-      let finalBody = 'Ad content was generated successfully.';
-      let finalCta = '#marketing #leads';
-
-      try {
-        const parsed = JSON.parse(cleanedText);
-        finalHook = parsed.hook || 'Ad Copy Headline';
-        finalBody = parsed.body || 'Ad content was generated successfully.';
-        finalCta = parsed.cta || '#marketing #leads';
-        setResult({
-          hook: finalHook,
-          body: finalBody,
-          cta: finalCta
-        });
-      } catch (parseError) {
-        console.warn("Could not parse JSON directly, setting raw fallback", parseError);
-        finalHook = `${brandName} - ${isKa ? 'ახალი შეთავაზება' : 'Special Offer'}`;
-        finalBody = aiResponse.text.trim();
-        finalCta = '#marketing #business';
-        setResult({
-          hook: finalHook,
-          body: finalBody,
-          cta: finalCta
-        });
-      }
+      setResult({
+        hook: finalHook,
+        body: finalBody,
+        cta: finalCta
+      });
 
       // Persist generated ad copy in safeStorage (Opportunity #2 active state)
       try {
@@ -584,61 +775,63 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                 </div>
 
                 {/* Section 1: Hook */}
-                <div className="space-y-2">
+                <div className="bg-proton-bg/80 p-4 rounded-2xl border border-proton-border/80 space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">
+                    <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">
                       {isKa ? 'სათაური / ჰუკი' : 'HEADLINE / HOOK'}
                     </span>
                     <button
                       onClick={() => handleCopy(result.hook, 'hook')}
-                      className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline flex items-center gap-1"
+                      className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       {copiedSection === 'hook' ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
                       {copiedSection === 'hook' ? (isKa ? 'კოპირებულია!' : 'Copied!') : (isKa ? 'კოპირება' : 'Copy')}
                     </button>
                   </div>
-                  <div className="bg-proton-bg p-4 rounded-xl border border-proton-border text-sm font-bold text-proton-text">
+                  <div className="text-sm font-bold text-proton-text whitespace-pre-wrap leading-snug">
                     {result.hook}
                   </div>
                 </div>
 
                 {/* Section 2: Body */}
-                <div className="space-y-2">
+                <div className="bg-proton-bg/80 p-4 rounded-2xl border border-proton-border/80 space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">
+                    <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">
                       {isKa ? 'სარეკლამო ტექსტი' : 'PRIMARY AD COPY'}
                     </span>
                     <button
                       onClick={() => handleCopy(result.body, 'body')}
-                      className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline flex items-center gap-1"
+                      className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       {copiedSection === 'body' ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
                       {copiedSection === 'body' ? (isKa ? 'კოპირებულია!' : 'Copied!') : (isKa ? 'კოპირება' : 'Copy')}
                     </button>
                   </div>
-                  <div className="bg-proton-bg p-4 rounded-xl border border-proton-border text-xs leading-relaxed text-proton-muted whitespace-pre-wrap font-medium">
+                  <div className="text-xs leading-relaxed text-proton-text/90 whitespace-pre-wrap font-medium">
                     {result.body}
                   </div>
                 </div>
 
                 {/* Section 3: CTA */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-proton-muted uppercase tracking-widest">
-                      {isKa ? 'მოწოდება მოქმედებისკენ & ჰეშთეგები' : 'CTA & HASHTAGS'}
-                    </span>
-                    <button
-                      onClick={() => handleCopy(result.cta, 'cta')}
-                      className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline flex items-center gap-1"
-                    >
-                      {copiedSection === 'cta' ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
-                      {copiedSection === 'cta' ? (isKa ? 'კოპირებულია!' : 'Copied!') : (isKa ? 'კოპირება' : 'Copy')}
-                    </button>
+                {result.cta && (
+                  <div className="bg-proton-bg/80 p-4 rounded-2xl border border-proton-border/80 space-y-2.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-purple-400 uppercase tracking-widest">
+                        {isKa ? 'მოწოდება მოქმედებისკენ & ჰეშთეგები' : 'CTA & HASHTAGS'}
+                      </span>
+                      <button
+                        onClick={() => handleCopy(result.cta, 'cta')}
+                        className="text-[10px] font-black text-proton-accent uppercase tracking-widest hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedSection === 'cta' ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
+                        {copiedSection === 'cta' ? (isKa ? 'კოპირებულია!' : 'Copied!') : (isKa ? 'კოპირება' : 'Copy')}
+                      </button>
+                    </div>
+                    <div className="text-xs font-medium text-purple-300 break-words [word-break:break-word] whitespace-pre-wrap leading-relaxed">
+                      {result.cta}
+                    </div>
                   </div>
-                  <div className="bg-proton-bg p-4 rounded-xl border border-proton-border text-xs font-mono text-purple-400 break-words [word-break:break-word] whitespace-pre-wrap">
-                    {result.cta}
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Interactive Mockup Social Card */}
@@ -755,7 +948,7 @@ Requested Language: ${targetLang === 'both' ? 'Both English and Georgian (write 
                           <span>{isKa ? 'ექსპორტი მარკეტზე' : 'Export to Market'}</span>
                         </button>
                         <button 
-                          onClick={() => handleCopy(`${result.hook}\n\n${result.body}\n\n${result.cta}`, 'all')}
+                          onClick={() => handleCopy([result.hook, result.body, result.cta].filter(Boolean).join('\n\n'), 'all')}
                           className="flex items-center gap-1.5 text-purple-400 font-bold hover:text-purple-300 transition-colors cursor-pointer"
                         >
                           <Copy size={14} />
