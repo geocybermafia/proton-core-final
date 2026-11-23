@@ -11,6 +11,8 @@ import { useSeller } from '../contexts/SellerContext';
 import { useSellerStats } from '../hooks/useSellerStats';
 import { cn } from '../lib/utils';
 import { translations } from '../translations';
+import { isProjectAssetOrder, isServiceOrder } from '../lib/listingClassification';
+import { isCompletableDigitalAssetOrderStatus, MarketOrderRuleError } from '../lib/marketOrderRules';
 import AvatarEditorModal from './AvatarEditorModal';
 
 interface CabinetViewProps {
@@ -23,6 +25,8 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
   const { sellerListings, sellerOrders, loading, updateOrderStatus } = useSeller();
   const { completedOrders } = useSellerStats();
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [orderActionError, setOrderActionError] = useState<string | null>(null);
 
   if (!profile) return null;
   const rawLang = profile.language?.toLowerCase() || 'ka';
@@ -45,18 +49,26 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
   };
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    if (!user) return;
+    if (!user || updatingOrderId === orderId) return;
     const targetOrder = sellerOrders.find(o => o.id === orderId);
     if (!targetOrder || targetOrder.sellerId !== user.uid) {
       console.error("Only the seller is authorized to update order status.");
       return;
     }
+    setOrderActionError(null);
+    setUpdatingOrderId(orderId);
     try {
       if (updateOrderStatus) {
         await updateOrderStatus(orderId, newStatus);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Order update failed", e);
+      const msg = e instanceof MarketOrderRuleError
+        ? (lang === 'ka' ? e.messageKa : e.messageEn)
+        : (e instanceof Error ? e.message : (lang === 'ka' ? 'შეკვეთის განახლება ვერ მოხერხდა' : 'Failed to update order status'));
+      setOrderActionError(msg);
+    } finally {
+      setUpdatingOrderId(null);
     }
   };
 
@@ -276,6 +288,11 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                 </h4>
                 <span className="text-[9px] font-mono text-proton-muted uppercase font-bold">Seller Orders</span>
               </div>
+              {orderActionError && (
+                <div className="mx-5 mt-3 px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] font-bold">
+                  {orderActionError}
+                </div>
+              )}
               <div className="overflow-x-auto custom-scrollbar-minimal touch-pan-x">
                 <table className="w-full text-left text-xs min-w-[440px]">
                   <thead>
@@ -302,116 +319,149 @@ export default function CabinetView({ profile, onUpdateProfile }: CabinetViewPro
                         </td>
                       </tr>
                     ) : (
-                      sellerOrders.slice(0, 5).map((order) => (
-                        <tr key={order.id} className="group hover:bg-proton-accent/5 transition-colors">
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-proton-accent/10 overflow-hidden border border-proton-border flex items-center justify-center shrink-0">
-                                {(order as any).image ? (
-                                  <img src={(order as any).image} className="w-full h-full object-cover" />
-                                ) : (
-                                  <Package size={14} className="text-proton-muted" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-black text-proton-text truncate max-w-[160px] sm:max-w-xs">{order.itemTitle || (order as any).title || 'Order Item'}</p>
-                                <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">{order.amount ?? (order as any).price ?? 0} {order.currency || 'USD'}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5">
-                            <span className={cn(
-                              "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border",
-                              order.status === 'completed' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : 
-                              order.status === 'shipped' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
-                              order.status === 'processing' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" :
-                              order.status === 'in_progress' ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" :
-                              order.status === 'booked' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
-                              order.status === 'cancelled' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
-                              "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                            )}>
-                              {order.status === 'booked' ? (lang === 'ka' ? 'დაჯავშნილი' : 'Booked') :
-                               order.status === 'processing' ? (lang === 'ka' ? 'მუშავდება' : 'Processing') :
-                               order.status === 'in_progress' ? (lang === 'ka' ? 'მიმდინარე' : 'In Progress') :
-                               order.status === 'shipped' ? (lang === 'ka' ? 'გაგზავნილი' : 'Shipped') :
-                               order.status === 'completed' ? (lang === 'ka' ? 'დასრულებული' : 'Completed') :
-                               order.status === 'cancelled' ? (lang === 'ka' ? 'გაუქმებული' : 'Cancelled') :
-                               (order.status || 'pending')}
-                            </span>
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <div className="flex justify-end gap-2">
-                              {(() => {
-                                const isService = order.orderType === 'service' || order.orderType === 'project' || order.status === 'booked' || order.status === 'in_progress';
-                                const status = order.status || (isService ? 'booked' : 'pending');
+                      sellerOrders.slice(0, 5).map((order) => {
+                        const isProjectAsset = isProjectAssetOrder(order);
+                        const isService = !isProjectAsset && (isServiceOrder(order) || order.status === 'booked' || order.status === 'in_progress');
+                        const isOrderSeller = Boolean(user && order.sellerId === user.uid);
+                        const orderStatus = order.status || (isService ? 'booked' : 'pending');
+                        const isBusy = updatingOrderId === order.id;
 
-                                if (isService) {
-                                  // Service order lifecycle: booked -> in_progress -> completed
-                                  if (status === 'booked') {
+                        const orderTypeLabel = isProjectAsset
+                          ? (lang === 'ka' ? 'ციფრული აქტივი' : 'Digital Asset')
+                          : isService
+                          ? (lang === 'ka' ? 'სერვისი' : 'Service')
+                          : (lang === 'ka' ? 'პროდუქტი' : 'Product');
+
+                        const statusLabel = isProjectAsset && isCompletableDigitalAssetOrderStatus(orderStatus)
+                          ? (lang === 'ka' ? 'დაჯავშნილი · მოლოდინში' : 'Reserved · Pending')
+                          : orderStatus === 'booked' ? (lang === 'ka' ? 'დაჯავშნილი' : 'Booked')
+                          : orderStatus === 'processing' ? (lang === 'ka' ? 'მუშავდება' : 'Processing')
+                          : orderStatus === 'in_progress' ? (lang === 'ka' ? 'მიმდინარე' : 'In Progress')
+                          : orderStatus === 'shipped' ? (lang === 'ka' ? 'გაგზავნილი' : 'Shipped')
+                          : orderStatus === 'completed' ? (lang === 'ka' ? 'დასრულებული' : 'Completed')
+                          : orderStatus === 'cancelled' ? (lang === 'ka' ? 'გაუქმებული' : 'Cancelled')
+                          : (lang === 'ka' ? 'მოლოდინში' : 'Pending');
+
+                        return (
+                          <tr key={order.id} className="group hover:bg-proton-accent/5 transition-colors">
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-proton-accent/10 overflow-hidden border border-proton-border flex items-center justify-center shrink-0">
+                                  {(order as any).image ? (
+                                    <img src={(order as any).image} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Package size={14} className="text-proton-muted" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-black text-proton-text truncate max-w-[160px] sm:max-w-xs">{order.itemTitle || (order as any).title || 'Order Item'}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[9px] font-bold text-proton-muted uppercase tracking-tight">{order.amount ?? (order as any).price ?? 0} {order.currency || 'USD'}</p>
+                                    <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-proton-bg/70 border border-proton-border text-proton-muted">
+                                      {orderTypeLabel}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border",
+                                orderStatus === 'completed' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : 
+                                orderStatus === 'shipped' ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                                orderStatus === 'processing' ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20" :
+                                orderStatus === 'in_progress' ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" :
+                                orderStatus === 'booked' ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                                orderStatus === 'cancelled' ? "bg-rose-500/10 text-rose-400 border-rose-500/20" :
+                                "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                              )}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td className="px-5 py-3.5 text-right">
+                              <div className="flex justify-end gap-2">
+                                {(() => {
+                                  if (!isOrderSeller) {
+                                    return null;
+                                  }
+
+                                  if (isProjectAsset) {
+                                    if (isCompletableDigitalAssetOrderStatus(orderStatus)) {
+                                      return (
+                                        <button
+                                          type="button"
+                                          disabled={isBusy}
+                                          onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                          className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer disabled:opacity-50"
+                                        >
+                                          {(t as any).complete_order || (lang === 'ka' ? 'დასრულება' : 'Mark Completed')}
+                                        </button>
+                                      );
+                                    }
+                                    return null;
+                                  }
+
+                                  if (isService) {
+                                    // Service order lifecycle: booked -> in_progress -> completed
+                                    if (orderStatus === 'booked') {
+                                      return (
+                                        <button 
+                                          type="button"
+                                          disabled={isBusy}
+                                          onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
+                                          className="px-2.5 py-1.5 bg-indigo-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer disabled:opacity-50"
+                                        >
+                                          {lang === 'ka' ? 'დაწყება' : 'Start'}
+                                        </button>
+                                      );
+                                    }
+                                    if (orderStatus === 'in_progress') {
+                                      return (
+                                        <button 
+                                          type="button"
+                                          disabled={isBusy}
+                                          onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
+                                          className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer disabled:opacity-50"
+                                        >
+                                          {(t as any).complete_order || (lang === 'ka' ? 'დასრულება' : 'Complete')}
+                                        </button>
+                                      );
+                                    }
+                                    return null;
+                                  }
+
+                                  // Physical product lifecycle: pending -> processing -> shipped
+                                  if (orderStatus === 'pending') {
                                     return (
                                       <button 
                                         type="button"
-                                        onClick={() => handleUpdateOrderStatus(order.id, 'in_progress')}
-                                        className="px-2.5 py-1.5 bg-indigo-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                        disabled={isBusy}
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
+                                        className="px-2.5 py-1.5 bg-amber-500 text-black font-black rounded-md text-[9px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer disabled:opacity-50"
                                       >
-                                        {lang === 'ka' ? 'დაწყება' : 'Start'}
+                                        {lang === 'ka' ? 'დამუშავება' : 'Process'}
                                       </button>
                                     );
                                   }
-                                  if (status === 'in_progress') {
+                                  if (orderStatus === 'processing') {
                                     return (
                                       <button 
                                         type="button"
-                                        onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                                        className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
+                                        disabled={isBusy}
+                                        onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
+                                        className="px-2.5 py-1.5 bg-proton-accent text-proton-bg rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer disabled:opacity-50"
                                       >
-                                        {(t as any).complete_order || (lang === 'ka' ? 'დასრულება' : 'Complete')}
+                                        {(t as any).ship_order || (lang === 'ka' ? 'გაგზავნა' : 'Ship')}
                                       </button>
                                     );
                                   }
                                   return null;
-                                }
-
-                                // Physical product lifecycle: pending -> processing -> shipped -> completed
-                                if (status === 'pending') {
-                                  return (
-                                    <button 
-                                      type="button"
-                                      onClick={() => handleUpdateOrderStatus(order.id, 'processing')}
-                                      className="px-2.5 py-1.5 bg-amber-500 text-black font-black rounded-md text-[9px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
-                                    >
-                                      {lang === 'ka' ? 'დამუშავება' : 'Process'}
-                                    </button>
-                                  );
-                                }
-                                if (status === 'processing') {
-                                  return (
-                                    <button 
-                                      type="button"
-                                      onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
-                                      className="px-2.5 py-1.5 bg-proton-accent text-proton-bg rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
-                                    >
-                                      {(t as any).ship_order || (lang === 'ka' ? 'გაგზავნა' : 'Ship')}
-                                    </button>
-                                  );
-                                }
-                                if (status === 'shipped') {
-                                  return (
-                                    <button 
-                                      type="button"
-                                      onClick={() => handleUpdateOrderStatus(order.id, 'completed')}
-                                      className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-md text-[9px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all min-h-[32px] cursor-pointer"
-                                    >
-                                      {(t as any).complete_order || (lang === 'ka' ? 'დასრულება' : 'Complete')}
-                                    </button>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                                })()}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

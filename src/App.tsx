@@ -44,6 +44,12 @@ import {
   handleFirestoreError, 
   OperationType 
 } from './lib/firebaseUtils';
+import {
+  extractLinkedOrderIdFromTask,
+  isProjectAssetLinkedTask,
+  resolveOrganizerOrderToggleAction,
+  shouldGenerateOrganizerFulfillmentTask
+} from './lib/marketOrderRules';
 import { 
   Persona, 
   ChatMessage, 
@@ -2171,8 +2177,8 @@ export default function App() {
       const nextTasks = [...prevTasks];
 
       sellerOrders.forEach(order => {
-        // 1. Auto-generate structured task for pending or booked orders if not already present
-        if (order.status === 'pending' || order.status === 'booked') {
+        // 1. Auto-generate structured task ONLY for physical product or service orders (never digital asset `project` orders)
+        if (shouldGenerateOrganizerFulfillmentTask(order)) {
           const existingIndex = nextTasks.findIndex(t => 
             t.id === `order-task-${order.id}` || 
             t.orderId === order.id || 
@@ -2244,6 +2250,11 @@ export default function App() {
       });
     }
   }, [sellerOrders, user, trackFirestore]);
+
+  const organizerVisibleTasks = useMemo(
+    () => tasks.filter(t => !isProjectAssetLinkedTask(t, sellerOrders)),
+    [tasks, sellerOrders]
+  );
   const [userStats, setUserStats] = useState<{
     storageGB: number;
     workHours: number;
@@ -2876,33 +2887,21 @@ export default function App() {
     if (!targetTask) return;
 
     const nextCompleted = !targetTask.completed;
-    const targetOrderId = targetTask.orderId || targetTask.metadata?.orderId;
+    const targetOrderId = extractLinkedOrderIdFromTask(targetTask) || undefined;
     const linkedOrder = targetOrderId ? sellerOrders?.find(o => o.id === targetOrderId) : undefined;
 
-    // Determine target order status transition strictly based on current order status and role rules
-    let targetOrderStatus: string | null = null;
-
-    if (nextCompleted && linkedOrder && updateOrderStatus) {
-      const isService = linkedOrder.orderType === 'service' || linkedOrder.orderType === 'project';
-      const currentStatus = linkedOrder.status;
-
-      if (isService) {
-        if (currentStatus === 'booked') {
-          targetOrderStatus = 'in_progress';
-        } else if (currentStatus === 'in_progress') {
-          targetOrderStatus = 'completed';
-        }
-      } else {
-        // Physical product order:
-        // pending -> processing (advances order to processing; does NOT skip directly to completed)
-        // processing -> shipped (dispatch completion; does NOT skip directly to completed)
-        if (currentStatus === 'pending') {
-          targetOrderStatus = 'processing';
-        } else if (currentStatus === 'processing') {
-          targetOrderStatus = 'shipped';
-        }
-      }
+    const toggleAction = resolveOrganizerOrderToggleAction(linkedOrder, nextCompleted);
+    if (toggleAction.kind === 'blocked_project_asset') {
+      showToast(
+        language === 'ka'
+          ? 'ციფრული აქტივის შეკვეთა იმართება მხოლოდ Market Hub-იდან ან კაბინეტიდან.'
+          : 'Digital asset orders must be managed from Market Hub or Seller Cabinet.',
+        'warning'
+      );
+      return;
     }
+
+    const targetOrderStatus = toggleAction.kind === 'advance_order' ? toggleAction.targetOrderStatus : null;
 
     if (targetOrderStatus && targetOrderId && updateOrderStatus) {
       // Optimistically update local task
@@ -4530,7 +4529,7 @@ export default function App() {
                       <OrganizerView 
                         language={userProfile.language}
                         workflows={workflows}
-                        tasks={tasks}
+                        tasks={organizerVisibleTasks}
                         projects={projects}
                         onCreateProject={handleCreateProject}
                         onEditProject={handleEditProject}

@@ -975,7 +975,7 @@ export const OrderDetailsModal = React.memo(function OrderDetailsModal({
                     </button>
                   )}
 
-                  {isProjectAsset && (order.status === 'pending' || order.status === 'booked' || order.status === 'in_progress') && onUpdateOrderStatus && (
+                  {isProjectAsset && (order.status === 'pending' || order.status === 'booked') && onUpdateOrderStatus && (
                     <button
                       type="button"
                       onClick={() => handleSellerStatusChange('completed')}

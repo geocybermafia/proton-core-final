@@ -4,10 +4,10 @@ import { useAuth } from './AuthContext';
 import { 
   collection, 
   doc, 
-  getDoc,
   query, 
   where, 
   onSnapshot, 
+  runTransaction,
   setDoc, 
   limit,
   serverTimestamp 
@@ -18,9 +18,13 @@ import { uploadProductImage, validateListingImageUrl } from '../lib/storageUtils
 import { executeSecureTransaction } from '../services/cloudFunctionsService';
 import {
   isRealListing,
-  inferListingType,
-  isRuleServiceOrProjectOrderTarget
+  inferListingType
 } from '../components/market-hub/MarketConstants';
+import {
+  completeDigitalAssetOrderInTransaction,
+  isValidOrderStatusTransition,
+  placeVerifiedOrderInTransaction
+} from '../lib/marketOrderRules';
 export { isRealListing };
 
 export interface CreateListingPayload {
@@ -115,54 +119,17 @@ const generateTxId = (): string => {
 
 /**
  * Validates order status transitions strictly against business rules and Firestore rules.
- * Physical transitions: pending -> processing -> shipped -> completed
- * Service transitions:  booked -> in_progress -> completed
- * Permitted cancellations / refunds:
- * Seller: pending/booked -> cancelled/refunded
- * Buyer:  pending/booked -> cancelled, shipped -> completed
+ * Digital Asset transitions: pending | booked -> completed | cancelled | refunded
+ * Physical transitions:      pending -> processing -> shipped -> completed
+ * Service transitions:       booked -> in_progress -> completed
  */
 const isValidStatusTransition = (
   currentStatus: string,
   newStatus: string,
   isSeller: boolean,
-  isBuyer: boolean
-): boolean => {
-  if (currentStatus === newStatus) return false;
-
-  // Seller transitions
-  if (isSeller) {
-    // Physical product: pending -> processing
-    if (currentStatus === 'pending' && (newStatus === 'processing' || newStatus === 'cancelled' || newStatus === 'refunded')) {
-      return true;
-    }
-    // Physical product: processing -> shipped
-    if (currentStatus === 'processing' && newStatus === 'shipped') {
-      return true;
-    }
-    // Service: booked -> in_progress
-    if (currentStatus === 'booked' && (newStatus === 'in_progress' || newStatus === 'cancelled' || newStatus === 'refunded')) {
-      return true;
-    }
-    // Service: in_progress -> completed
-    if (currentStatus === 'in_progress' && newStatus === 'completed') {
-      return true;
-    }
-  }
-
-  // Buyer transitions
-  if (isBuyer) {
-    // Delivery receipt: shipped -> completed
-    if (currentStatus === 'shipped' && newStatus === 'completed') {
-      return true;
-    }
-    // Cancellation before processing: pending or booked -> cancelled
-    if ((currentStatus === 'pending' || currentStatus === 'booked') && newStatus === 'cancelled') {
-      return true;
-    }
-  }
-
-  return false;
-};
+  isBuyer: boolean,
+  orderType?: string | null
+): boolean => isValidOrderStatusTransition(currentStatus, newStatus, isSeller, isBuyer, orderType);
 
 const SellerContext = createContext<SellerContextType | undefined>(undefined);
 
@@ -639,103 +606,53 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       throw err;
     }
 
-    // Fetch authoritative listing document from Firestore
     const listingRef = doc(db, 'listings', payload.listingId);
-    const listingSnap = await getDoc(listingRef);
-    if (!listingSnap.exists()) {
-      const err = new Error(`Listing '${payload.listingId}' not found`);
-      console.error("[SellerContext] Create order error:", err);
-      setError(err.message);
-      throw err;
-    }
-
-    const listingData = listingSnap.data() as Listing;
-    const authPrice = typeof listingData.price === 'number' ? listingData.price : 0;
-    const authSellerId = listingData.sellerId;
-    const authStatus = listingData.status || 'active';
-
-    if (authStatus === 'sold' || (listingData as any).isSold) {
-      const err = new Error('Listing is already sold and unavailable for purchase');
-      console.error("[SellerContext] Create order error:", err);
-      setError(err.message);
-      throw err;
-    }
-
-    if (authPrice <= 0) {
-      const err = new Error('Listing does not have a valid positive price');
-      console.error("[SellerContext] Create order error:", err);
-      setError(err.message);
-      throw err;
-    }
-
-    if (!authSellerId) {
-      const err = new Error('Listing is missing authoritative seller information');
-      console.error("[SellerContext] Create order error:", err);
-      setError(err.message);
-      throw err;
-    }
-
-    if (authSellerId === user.uid) {
-      const err = new Error('Cannot purchase your own listing');
-      console.error("[SellerContext] Create order error:", err);
-      setError(err.message);
-      throw err;
-    }
-
     const newId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? `ord-${crypto.randomUUID()}`
       : `ord-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-    const isBookingTarget = isRuleServiceOrProjectOrderTarget(listingData);
-    const orderType = payload.orderType || (
-      listingData.listingType === 'project'
-        ? 'project'
-        : isBookingTarget
-        ? 'service'
-        : 'product'
-    );
-    const initialStatus = isBookingTarget || orderType === 'service' || orderType === 'project' ? 'booked' : 'pending';
-    const currency = (listingData.currency || payload.currency || 'USD').substring(0, 10);
-    const itemTitle = (listingData.title || payload.itemTitle || 'Marketplace Item').substring(0, 200);
-    const buyerInstructions = (payload.buyerInstructions || '').substring(0, 500);
-
-    const firestoreOrderData: Record<string, any> = {
-      listingId: payload.listingId,
-      buyerId: user.uid,
-      sellerId: authSellerId,
-      amount: authPrice,
-      currency,
-      itemTitle,
-      status: initialStatus,
-      orderType,
-      buyerInstructions,
-      createdAt: serverTimestamp()
-    };
-
-    if (payload.source) firestoreOrderData.source = payload.source;
-    if (payload.clipId) firestoreOrderData.clipId = payload.clipId;
-
-    const newOrder: Order = {
-      id: newId,
-      listingId: payload.listingId,
-      buyerId: user.uid,
-      sellerId: authSellerId,
-      amount: authPrice,
-      currency,
-      itemTitle,
-      status: initialStatus as any,
-      orderType,
-      buyerInstructions,
-      createdAt: Date.now(),
-      source: payload.source,
-      clipId: payload.clipId
-    };
+    const newOrderRef = doc(db, 'orders', newId);
 
     try {
-      const docRef = doc(db, 'orders', newId);
-      await setDoc(docRef, firestoreOrderData);
+      const txResult = await runTransaction(db, async (transaction) => {
+        return placeVerifiedOrderInTransaction({
+          tx: transaction,
+          listingRef,
+          newOrderRef,
+          orderId: newId,
+          listingId: payload.listingId,
+          buyerId: user.uid,
+          fallbackTitle: payload.itemTitle || 'Marketplace Item',
+          buyerInstructions: (payload.buyerInstructions || '').substring(0, 500),
+          shippingDetails: null,
+          fallbackBuyerName: user.displayName || null,
+          createdAt: serverTimestamp()
+        });
+      });
+
+      const newOrder: Order = {
+        id: newId,
+        listingId: payload.listingId,
+        buyerId: user.uid,
+        sellerId: txResult.orderData.sellerId,
+        amount: txResult.orderData.amount,
+        currency: txResult.orderData.currency,
+        itemTitle: txResult.orderData.itemTitle,
+        status: txResult.validation.initialOrderStatus,
+        orderType: txResult.validation.orderType,
+        buyerInstructions: txResult.orderData.buyerInstructions,
+        createdAt: Date.now(),
+        source: payload.source,
+        clipId: payload.clipId
+      };
+
       setSellerOrders(prev => [newOrder, ...prev.filter(o => o.id !== newId)]);
       setBuyerOrders(prev => [newOrder, ...prev.filter(o => o.id !== newId)]);
+      if (txResult.lockUpdate) {
+        const appliedLock = txResult.lockUpdate;
+        setAllListings(prev => prev.map(item => (
+          item.id === payload.listingId ? { ...item, ...appliedLock } : item
+        )));
+      }
       return newOrder;
     } catch (err: any) {
       console.error("[SellerContext] Firestore create order failed:", err);
@@ -745,9 +662,15 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [user]);
 
   /**
-   * Updates order status with strict transition validation and state rollback.
+   * Updates order status with strict transition validation, atomic digital asset finalization, and state rollback.
    */
   const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
+    if (!user) {
+      const err = new Error('Authentication required to update order status.');
+      console.error("[SellerContext] Update order status error:", err);
+      throw err;
+    }
+
     const existingOrder = sellerOrders.find(o => o.id === orderId) || buyerOrders.find(o => o.id === orderId);
     if (!existingOrder) {
       const err = new Error(`Order ${orderId} not found`);
@@ -756,10 +679,10 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     const currentStatus = existingOrder.status;
-    const isSeller = !!user && user.uid === existingOrder.sellerId;
-    const isBuyer = !!user && user.uid === existingOrder.buyerId;
+    const isSeller = user.uid === existingOrder.sellerId;
+    const isBuyer = user.uid === existingOrder.buyerId;
 
-    if (!isValidStatusTransition(currentStatus, status, isSeller, isBuyer)) {
+    if (!isValidStatusTransition(currentStatus, status, isSeller, isBuyer, existingOrder.orderType)) {
       const err = new Error(
         `Invalid status transition from '${currentStatus}' to '${status}' for role ${isSeller ? 'seller' : isBuyer ? 'buyer' : 'unauthorized'}`
       );
@@ -770,24 +693,40 @@ export const SellerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Save previous state for rollback on error
     const prevSellerOrders = sellerOrders;
     const prevBuyerOrders = buyerOrders;
+    const prevAllListings = allListings;
 
     // Optimistically update local state without altering financial fields
     setSellerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as any } : o));
     setBuyerOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: status as any } : o));
 
-    if (user) {
-      try {
+    try {
+      if (existingOrder.orderType === 'project' && status === 'completed') {
+        const { listingId, soldUpdate } = await runTransaction(db, async (transaction) => {
+          return completeDigitalAssetOrderInTransaction({
+            tx: transaction,
+            orderRef: doc(db, 'orders', orderId),
+            getListingRef: (id: string) => doc(db, 'listings', id),
+            orderId,
+            callerUid: user.uid
+          });
+        });
+
+        setAllListings(prev => prev.map(item => (
+          item.id === listingId ? { ...item, ...soldUpdate } : item
+        )));
+      } else {
         const docRef = doc(db, 'orders', orderId);
         await setDoc(docRef, { status }, { merge: true });
-      } catch (err: any) {
-        console.error("[SellerContext] Firestore order status update failed, rolling back:", err);
-        setSellerOrders(prevSellerOrders);
-        setBuyerOrders(prevBuyerOrders);
-        setError(err instanceof Error ? err.message : 'Failed to update order status');
-        throw err;
       }
+    } catch (err: any) {
+      console.error("[SellerContext] Firestore order status update failed, rolling back:", err);
+      setSellerOrders(prevSellerOrders);
+      setBuyerOrders(prevBuyerOrders);
+      setAllListings(prevAllListings);
+      setError(err instanceof Error ? err.message : 'Failed to update order status');
+      throw err;
     }
-  }, [user, sellerOrders, buyerOrders]);
+  }, [user, sellerOrders, buyerOrders, allListings]);
 
   const refresh = useCallback(async () => {
     // Re-trigger signals handled via active onSnapshot listeners

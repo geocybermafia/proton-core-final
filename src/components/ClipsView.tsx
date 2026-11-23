@@ -44,7 +44,11 @@ import { useToast } from './Toast';
 import { Clip, ClipComment, ClipIssue, MarketplaceItem, Order } from '../types';
 
 import { PRESET_LOOPS } from './clips/types';
-import { isRuleServiceOrProjectOrderTarget } from './market-hub/MarketConstants';
+import {
+  MarketOrderRuleError,
+  placeVerifiedOrderInTransaction
+} from '../lib/marketOrderRules';
+import { isUniqueDigitalAssetListing } from '../lib/listingClassification';
 import { ClipPlayer } from './clips/ClipPlayer';
 import { ClipCommentsDrawer } from './clips/ClipCommentsDrawer';
 import { ClipUploadModal } from './clips/ClipUploadModal';
@@ -962,53 +966,66 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
 
       let committedOrderId = '';
       let finalOrderStatus: 'pending' | 'booked' = 'pending';
+      let finalOrderType: 'service' | 'product' | 'project' = 'product';
+      let finalOrderAmount = checkoutClip.productInfo.price;
+      let finalOrderCurrency = 'USD';
+      let finalSellerId = checkoutClip.creatorId;
+      let finalItemTitle = checkoutClip.productInfo.title;
       const isPreset = productId.startsWith('preset-') || checkoutClip.id.startsWith('preset-');
 
       if (!isPreset) {
-        // Atomic Firestore transaction against real listing doc
-        await runTransaction(db, async (transaction) => {
+        // Atomic Firestore transaction against real listing doc using canonical lifecycle rules
+        const txSummary = await runTransaction(db, async (transaction) => {
           const listingRef = doc(db, 'listings', productId);
-          const listingSnap = await transaction.get(listingRef);
+          const newOrderRef = doc(collection(db, 'orders'));
 
-          if (!listingSnap.exists()) {
-            throw new Error(language === 'ka' ? 'პროდუქტი ბაზაში ვერ მოიძებნა.' : 'Product listing no longer exists.');
-          }
-
-          const freshData = listingSnap.data();
-          if (freshData.status === 'sold' || freshData.isSold) {
-            throw new Error(language === 'ka' ? 'ეს ნივთი უკვე გაყიდულია.' : 'This item has already been sold.');
-          }
-
-          const isService = isRuleServiceOrProjectOrderTarget(freshData);
-          finalOrderStatus = isService ? 'booked' : 'pending';
-          const verifiedOrderData = {
+          const result = await placeVerifiedOrderInTransaction({
+            tx: transaction,
+            listingRef,
+            newOrderRef,
+            orderId: newOrderRef.id,
             listingId: productId,
             buyerId: currentUser.uid,
-            sellerId: freshData.sellerId || checkoutClip.creatorId,
-            amount: freshData.price,
-            currency: freshData.currency || 'USD',
-            itemTitle: freshData.title || checkoutClip.productInfo?.title || 'Shoppable Item',
-            status: finalOrderStatus,
-            orderType: isService ? 'service' : 'product',
+            fallbackTitle: checkoutClip.productInfo?.title || 'Shoppable Item',
             buyerInstructions: checkoutDeliveryNotes ? checkoutDeliveryNotes.trim() : 'Shoppable Clip Order Request',
+            shippingDetails: null,
+            fallbackBuyerName: currentUser.displayName || null,
             createdAt: serverTimestamp()
+          });
+
+          return {
+            orderId: newOrderRef.id,
+            status: result.validation.initialOrderStatus,
+            orderType: result.validation.orderType,
+            amount: Number(result.orderData.amount) || checkoutClip.productInfo!.price,
+            currency: String(result.orderData.currency || 'USD'),
+            sellerId: String(result.orderData.sellerId || checkoutClip.creatorId),
+            itemTitle: String(result.orderData.itemTitle || checkoutClip.productInfo!.title),
+            lockUpdate: result.lockUpdate
           };
-
-          const newOrderRef = doc(collection(db, 'orders'));
-          committedOrderId = newOrderRef.id;
-          transaction.set(newOrderRef, verifiedOrderData);
-
-          if (!isService) {
-            transaction.update(listingRef, {
-              status: 'sold',
-              isSold: true,
-              activeOrderId: newOrderRef.id
-            });
-          }
         });
+
+        committedOrderId = txSummary.orderId;
+        finalOrderStatus = txSummary.status;
+        finalOrderType = txSummary.orderType;
+        finalOrderAmount = txSummary.amount;
+        finalOrderCurrency = txSummary.currency;
+        finalSellerId = txSummary.sellerId;
+        finalItemTitle = txSummary.itemTitle;
+
+        if (txSummary.lockUpdate) {
+          const appliedLock = txSummary.lockUpdate;
+          setAllListings(prev => prev.map(item => (
+            item.id === productId
+              ? { ...item, ...appliedLock }
+              : item
+          )));
+        }
       } else {
         // Preset / Demo showcase checkout
         finalOrderStatus = 'pending';
+        finalOrderType = 'product';
+        finalOrderAmount = checkoutClip.productInfo.price * checkoutQuantity;
         const orderData = {
           listingId: productId,
           buyerId: currentUser.uid,
@@ -1035,11 +1052,12 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
         id: committedOrderId || `ord-${Date.now()}`,
         listingId: productId,
         buyerId: currentUser.uid,
-        sellerId: checkoutClip.creatorId,
-        currency: 'USD',
-        itemTitle: checkoutClip.productInfo.title,
-        amount: checkoutClip.productInfo.price * checkoutQuantity,
-        quantity: checkoutQuantity,
+        sellerId: finalSellerId,
+        currency: finalOrderCurrency,
+        itemTitle: finalItemTitle,
+        amount: finalOrderAmount,
+        quantity: !isPreset && finalOrderType === 'project' ? 1 : checkoutQuantity,
+        orderType: finalOrderType,
         status: finalOrderStatus,
         createdAt: Date.now()
       });
@@ -1052,10 +1070,13 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
     } catch (e: any) {
       console.error("Instant checkout error:", e);
       setIsCheckingOut(false);
+      const localizedMsg = e instanceof MarketOrderRuleError
+        ? (language === 'ka' ? e.messageKa : e.messageEn)
+        : (e?.message || (language === 'ka' ? 'სისტემური შეცდომა' : 'Network or authorization error'));
       showToast(
-        language === 'ka' 
-          ? `შეკვეთის გაფორმება ვერ მოხერხდა: ${e?.message || 'სისტემური შეცდომა'}` 
-          : `Failed to place order: ${e?.message || 'Network or authorization error'}`,
+        language === 'ka'
+          ? `შეკვეთის გაფორმება ვერ მოხერხდა: ${localizedMsg}`
+          : `Failed to place order: ${localizedMsg}`,
         'error'
       );
     }
@@ -1424,7 +1445,13 @@ export const ClipsView: React.FC<ClipsViewProps> = ({
           setCheckoutSuccessOrder(null);
           setIsPlaying(true);
         }}
-        onChangeQuantity={(updater) => setCheckoutQuantity(updater)}
+        onChangeQuantity={(updater) => {
+          if (checkoutClip?.productInfo && isUniqueDigitalAssetListing(checkoutClip.productInfo)) {
+            setCheckoutQuantity(1);
+            return;
+          }
+          setCheckoutQuantity(updater);
+        }}
         onChangeDeliveryNotes={(notes) => setCheckoutDeliveryNotes(notes)}
         onChangePaymentMethod={(method) => setCheckoutPaymentMethod(method)}
         onSubmitCheckout={handleCompleteCheckout}

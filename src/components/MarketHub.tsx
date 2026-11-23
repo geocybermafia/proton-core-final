@@ -121,9 +121,9 @@ import {
   resolvePreservedListingStatus
 } from './market-hub/MarketConstants';
 import {
-  buildListingSoldFinalizationUpdate,
   buildVerifiedOrderPayload,
-  shouldFinalizeListingSoldOnOrderComplete,
+  completeDigitalAssetOrderInTransaction,
+  MarketOrderRuleError,
   shouldUnlockListingOnOrderCancel,
   validateListingForOrderCreation
 } from '../lib/marketOrderRules';
@@ -3383,69 +3383,20 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
           return;
         }
 
-        let finalizedListingId: string | null = null;
-        await runTransaction(db, async (transaction) => {
-          const orderRef = doc(db, 'orders', orderId);
-          const orderSnap = await transaction.get(orderRef);
-          if (!orderSnap.exists()) {
-            throw new Error(language === 'ka' ? "შეკვეთა ვერ მოიძებნა." : "Order not found.");
-          }
-
-          const freshOrder = orderSnap.data();
-          if (freshOrder.sellerId !== user.uid) {
-            throw new Error(language === 'ka' ? "არაავტორიზებული ოპერაცია." : "Only the seller can complete this order.");
-          }
-          if (freshOrder.orderType !== 'project') {
-            throw new Error(language === 'ka' ? "შეკვეთის ტიპი არ შეესაბამება ციფრულ აქტივს." : "Order type mismatch.");
-          }
-          if (freshOrder.status === 'completed') {
-            throw new Error(language === 'ka' ? "შეკვეთა უკვე დასრულებულია." : "Order is already completed.");
-          }
-          if (freshOrder.status !== 'pending' && freshOrder.status !== 'in_progress') {
-            throw new Error(
-              language === 'ka'
-                ? `შეკვეთის დასრულება შეუძლებელია მიმდინარე სტატუსში (${freshOrder.status}).`
-                : `Cannot complete order from status: ${freshOrder.status}.`
-            );
-          }
-
-          let listingRef: any = null;
-          let shouldMarkListingSold = false;
-          if (freshOrder.listingId) {
-            listingRef = doc(db, 'listings', freshOrder.listingId);
-            const listingSnap = await transaction.get(listingRef);
-            if (listingSnap.exists()) {
-              const freshListing = listingSnap.data() as Record<string, any>;
-              if (
-                typeof freshListing.activeOrderId === 'string' &&
-                freshListing.activeOrderId.trim().length > 0 &&
-                freshListing.activeOrderId !== orderId
-              ) {
-                throw new Error(
-                  language === 'ka'
-                    ? "აქტივი დაჯავშნილია სხვა აქტიური შეკვეთით."
-                    : "Listing is currently held by a different active order."
-                );
-              }
-              shouldMarkListingSold = shouldFinalizeListingSoldOnOrderComplete(
-                freshListing,
-                orderId,
-                freshOrder.sellerId
-              );
-            }
-          }
-
-          transaction.update(orderRef, { status: 'completed' });
-          if (shouldMarkListingSold && listingRef) {
-            finalizedListingId = freshOrder.listingId;
-            transaction.update(listingRef, buildListingSoldFinalizationUpdate(orderId));
-          }
+        const { listingId: finalizedListingId, soldUpdate } = await runTransaction(db, async (transaction) => {
+          return completeDigitalAssetOrderInTransaction({
+            tx: transaction,
+            orderRef: doc(db, 'orders', orderId),
+            getListingRef: (id: string) => doc(db, 'listings', id),
+            orderId,
+            callerUid: user.uid
+          });
         });
 
         if (finalizedListingId) {
           setListings(prev => prev.map(item => (
             item.id === finalizedListingId
-              ? { ...item, status: 'sold', isSold: true, activeOrderId: orderId }
+              ? { ...item, ...soldUpdate }
               : item
           )));
         }
@@ -3505,7 +3456,10 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       setShipmentTrackingInput(null);
     } catch (error: any) {
       console.error("Error updating order status:", error);
-      showToast(error?.message || (language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status."), 'error');
+      const localizedMsg = error instanceof MarketOrderRuleError
+        ? (language === 'ka' ? error.messageKa : error.messageEn)
+        : (error?.message || (language === 'ka' ? "სტატუსის განახლება ვერ მოხერხდა." : "Failed to update order status."));
+      showToast(localizedMsg, 'error');
     }
   };
 
@@ -5903,7 +5857,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
 
                                 {isProjectAsset && isSeller && order.status !== 'completed' && order.status !== 'cancelled' && (
                                   <div className="pt-2 flex flex-wrap gap-2">
-                                    {(order.status === 'pending' || order.status === 'booked' || order.status === 'in_progress') && (
+                                    {(order.status === 'pending' || order.status === 'booked') && (
                                       <button
                                         type="button"
                                         onClick={() => handleUpdateOrderStatus(order.id, 'completed')}

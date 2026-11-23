@@ -433,25 +433,23 @@ service cloud.firestore {
                 )
               )
               ||
-              (existing().status == 'booked' && incoming().status == 'in_progress' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              (existing().status == 'booked' && getStr(existing(), 'orderType', 'product') != 'project' && incoming().status == 'in_progress' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
               ||
-              (existing().status == 'in_progress' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+              (existing().status == 'in_progress' && getStr(existing(), 'orderType', 'product') != 'project' && incoming().status == 'completed' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
               ||
               (
-                existing().status == 'pending'
+                existing().status in ['pending', 'booked']
                 && incoming().status == 'completed'
                 && getStr(existing(), 'orderType', 'product') == 'project'
                 && incoming().diff(existing()).affectedKeys().hasOnly(['status'])
-                && (
-                  !exists(/databases/$(database)/documents/listings/$(existing().listingId))
-                  || get(/databases/$(database)/documents/listings/$(existing().listingId)).data.status != 'reserved'
-                  || getStr(get(/databases/$(database)/documents/listings/$(existing().listingId)).data, 'activeOrderId', '') != orderId
-                  || (
-                    existsAfter(/databases/$(database)/documents/listings/$(existing().listingId))
-                    && getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data.status == 'sold'
-                    && getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data.isSold == true
-                  )
-                )
+                && exists(/databases/$(database)/documents/listings/$(existing().listingId))
+                && get(/databases/$(database)/documents/listings/$(existing().listingId)).data.sellerId == existing().sellerId
+                && get(/databases/$(database)/documents/listings/$(existing().listingId)).data.status == 'reserved'
+                && getStr(get(/databases/$(database)/documents/listings/$(existing().listingId)).data, 'activeOrderId', '') == orderId
+                && existsAfter(/databases/$(database)/documents/listings/$(existing().listingId))
+                && getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data.status == 'sold'
+                && getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data.isSold == true
+                && getStr(getAfter(/databases/$(database)/documents/listings/$(existing().listingId)).data, 'activeOrderId', '') == orderId
               )
               ||
               (existing().status in ['pending', 'booked'] && incoming().status in ['cancelled', 'refunded'] && incoming().diff(existing()).affectedKeys().hasOnly(['status']))

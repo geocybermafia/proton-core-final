@@ -1,43 +1,20 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  isProjectAssetLinkedTask,
+  isValidOrderStatusTransition,
+  resolveOrganizerOrderToggleAction,
+  shouldGenerateOrganizerFulfillmentTask
+} from '../src/lib/marketOrderRules';
 
-// 1. Replicate exact SellerContext validation logic
+// 1. Canonical SellerContext validation logic
 const isValidStatusTransition = (
   currentStatus: string,
   newStatus: string,
   isSeller: boolean,
-  isBuyer: boolean
-): boolean => {
-  if (currentStatus === newStatus) return false;
-
-  // Seller transitions
-  if (isSeller) {
-    if (currentStatus === 'pending' && (newStatus === 'processing' || newStatus === 'cancelled' || newStatus === 'refunded')) {
-      return true;
-    }
-    if (currentStatus === 'processing' && newStatus === 'shipped') {
-      return true;
-    }
-    if (currentStatus === 'booked' && (newStatus === 'in_progress' || newStatus === 'cancelled' || newStatus === 'refunded')) {
-      return true;
-    }
-    if (currentStatus === 'in_progress' && newStatus === 'completed') {
-      return true;
-    }
-  }
-
-  // Buyer transitions
-  if (isBuyer) {
-    if (currentStatus === 'shipped' && newStatus === 'completed') {
-      return true;
-    }
-    if ((currentStatus === 'pending' || currentStatus === 'booked') && newStatus === 'cancelled') {
-      return true;
-    }
-  }
-
-  return false;
-};
+  isBuyer: boolean,
+  orderType?: string
+): boolean => isValidOrderStatusTransition(currentStatus, newStatus, isSeller, isBuyer, orderType);
 
 // 2. Replicate exact Firestore rules logic for order update
 function simulateFirestoreOrderUpdateRule(params: {
@@ -150,7 +127,7 @@ class TestAppEnvironment {
     const isSeller = sellerUid === order.sellerId;
     const isBuyer = sellerUid === order.buyerId;
 
-    if (!isValidStatusTransition(order.status, nextStatus, isSeller, isBuyer)) {
+    if (!isValidStatusTransition(order.status, nextStatus, isSeller, isBuyer, order.orderType)) {
       throw new Error(`Invalid status transition from '${order.status}' to '${nextStatus}' for role ${isSeller ? 'seller' : 'buyer'}`);
     }
 
@@ -187,26 +164,13 @@ class TestAppEnvironment {
     const targetOrderId = targetTask.orderId;
     const linkedOrder = targetOrderId ? this.sellerOrders.find(o => o.id === targetOrderId) : undefined;
 
-    let targetOrderStatus: string | null = null;
-
-    if (nextCompleted && linkedOrder) {
-      const isService = linkedOrder.orderType === 'service' || linkedOrder.orderType === 'project';
-      const currentStatus = linkedOrder.status;
-
-      if (isService) {
-        if (currentStatus === 'booked') {
-          targetOrderStatus = 'in_progress';
-        } else if (currentStatus === 'in_progress') {
-          targetOrderStatus = 'completed';
-        }
-      } else {
-        if (currentStatus === 'pending') {
-          targetOrderStatus = 'processing';
-        } else if (currentStatus === 'processing') {
-          targetOrderStatus = 'shipped';
-        }
-      }
+    const toggleAction = resolveOrganizerOrderToggleAction(linkedOrder, nextCompleted);
+    if (toggleAction.kind === 'blocked_project_asset') {
+      this.showToast('Digital asset orders must be managed from Market Hub or Seller Cabinet.', 'warning');
+      return;
     }
+
+    const targetOrderStatus = toggleAction.kind === 'advance_order' ? toggleAction.targetOrderStatus : null;
 
     if (targetOrderStatus && targetOrderId) {
       const originalCompleted = targetTask.completed;
@@ -386,6 +350,61 @@ async function runTests() {
   assert.equal(env3.toasts[1].type, 'success');
 
   console.log('✔ TEST CASE 3 PASSED: Service order strictly followed booked -> in_progress -> completed!\n');
+
+  // -------------------------------------------------------------
+  // TEST CASE 4: Digital Asset (project) Order Isolation in Organizer
+  // -------------------------------------------------------------
+  console.log('--- TEST CASE 4: DIGITAL ASSET (project) ORDER ISOLATION IN ORGANIZER ---');
+  assert.equal(shouldGenerateOrganizerFulfillmentTask({ orderType: 'project', status: 'pending' }), false);
+  assert.equal(shouldGenerateOrganizerFulfillmentTask({ orderType: 'project', status: 'booked' }), false);
+  assert.equal(shouldGenerateOrganizerFulfillmentTask({ orderType: 'service', status: 'booked' }), true);
+  assert.equal(shouldGenerateOrganizerFulfillmentTask({ orderType: 'product', status: 'pending' }), true);
+
+  const env4 = new TestAppEnvironment();
+  env4.sellerOrders = [
+    {
+      id: 'ord-project-404',
+      orderType: 'project',
+      status: 'pending',
+      sellerId: sellerUid,
+      buyerId: buyerUid
+    },
+    {
+      id: 'ord-project-legacy-405',
+      orderType: 'project',
+      status: 'booked',
+      sellerId: sellerUid,
+      buyerId: buyerUid
+    }
+  ];
+  env4.tasks = [
+    {
+      id: 'order-task-ord-project-404',
+      orderId: 'ord-project-404',
+      content: 'Legacy Task for Digital Asset',
+      completed: false
+    },
+    {
+      id: 'order-task-ord-project-legacy-405',
+      orderId: 'ord-project-legacy-405',
+      content: 'Legacy Booked Digital Asset Task',
+      completed: false
+    }
+  ];
+
+  // Legacy tasks for project orders must be filtered out from Organizer view
+  const visibleTasks = env4.tasks.filter(t => !isProjectAssetLinkedTask(t, env4.sellerOrders));
+  assert.equal(visibleTasks.length, 0, 'Project order tasks must be hidden from Organizer');
+
+  // Direct handleToggleTask invocation on legacy tasks must block status transition
+  await env4.handleToggleTask('order-task-ord-project-404', sellerUid);
+  await env4.handleToggleTask('order-task-ord-project-legacy-405', sellerUid);
+  assert.equal(env4.sellerOrders[0].status, 'pending');
+  assert.equal(env4.sellerOrders[1].status, 'booked');
+  assert.equal(env4.tasks[0].completed, false);
+  assert.equal(env4.tasks[1].completed, false);
+  assert.equal(env4.toasts.filter(t => t.type === 'warning').length, 2);
+  console.log('✔ TEST CASE 4 PASSED: Project orders never generate Organizer tasks and cannot transition via handleToggleTask!\n');
 
   console.log('================================================================');
   console.log('ALL TEST CASES VERIFIED AND PASSED WITH 100% COMPLIANCE');

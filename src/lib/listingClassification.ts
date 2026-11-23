@@ -274,7 +274,7 @@ export const isSellerActionRequired = (order: any): boolean => {
     return order.status === 'pending' || order.status === 'processing';
   }
   if (isProjectAsset) {
-    return order.status === 'pending' || order.status === 'booked' || order.status === 'in_progress';
+    return order.status === 'pending' || order.status === 'booked';
   }
   if (isService) {
     return order.status === 'booked' || order.status === 'in_progress';
