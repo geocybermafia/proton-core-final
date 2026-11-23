@@ -18,7 +18,6 @@ import {
   Edit3,
   AlertCircle,
   Globe,
-  Languages,
   Check
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -27,9 +26,11 @@ import {
   CURRENCIES,
   WORLD_COUNTRIES,
   CATEGORY_EMOJIS,
+  canInferListingTypeFromCategory,
   getCategoriesForListingType,
   getCategoryLabel,
   getDefaultCategoryForType,
+  inferListingType,
   isCategoryValidForType,
   roundPriceForDisplayCurrency
 } from './MarketConstants';
@@ -124,6 +125,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const previewImgRef = React.useRef<HTMLImageElement | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const [showSecondaryTitle, setShowSecondaryTitle] = React.useState(false);
+  const [showAdditionalTerms, setShowAdditionalTerms] = React.useState(false);
+  const [showExactLocation, setShowExactLocation] = React.useState(false);
   
   // Draft Save & Recovery State
   const [draftStatus, setDraftStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -237,7 +241,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
   );
 
   const effectiveIsRemote = React.useMemo(
-    () => activeSchema.locationMode !== 'physical' && Boolean(formData.isRemote),
+    () =>
+      activeSchema.locationMode === 'remote' ||
+      (activeSchema.locationMode === 'flexible' && Boolean(formData.isRemote)),
     [activeSchema.locationMode, formData.isRemote]
   );
 
@@ -268,7 +274,10 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
         if (activeSchema.locationMode === 'flexible') {
           if ((key === 'deliveryFormat' || key === 'employmentFormat') && value === 'remote') {
             nextIsRemote = true;
-          } else if ((key === 'deliveryFormat' || key === 'employmentFormat') && value === 'onsite') {
+          } else if (
+            (key === 'deliveryFormat' || key === 'employmentFormat') &&
+            (value === 'onsite' || value === 'hybrid')
+          ) {
             nextIsRemote = false;
           }
         }
@@ -338,17 +347,74 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
     return formData.condition || (language === 'ka' ? 'ახალი' : 'New');
   }, [formData.condition, language]);
 
+  const uiPrimaryLang: 'ka' | 'en' = language === 'ka' ? 'ka' : 'en';
+
+  const activeFormPrimaryLang: 'ka' | 'en' = React.useMemo(() => {
+    const rawTitleEn = (formData.title || '').trim();
+    const rawTitleGe = (formData.titleGe || '').trim();
+    if (viewMode === 'edit') {
+      if (formData.primaryLanguage === 'ka' && !rawTitleGe && rawTitleEn) return 'en';
+      if (formData.primaryLanguage === 'en' && !rawTitleEn && rawTitleGe) return 'ka';
+      if (formData.primaryLanguage === 'ka' || formData.primaryLanguage === 'en') {
+        return formData.primaryLanguage;
+      }
+      return uiPrimaryLang;
+    }
+    if (uiPrimaryLang === 'ka' && !rawTitleGe && rawTitleEn && formData.primaryLanguage === 'en') {
+      return 'en';
+    }
+    if (uiPrimaryLang === 'en' && !rawTitleEn && rawTitleGe && formData.primaryLanguage === 'ka') {
+      return 'ka';
+    }
+    return uiPrimaryLang;
+  }, [viewMode, formData.primaryLanguage, formData.title, formData.titleGe, uiPrimaryLang]);
+
   const effectivePrimaryLang: 'ka' | 'en' = React.useMemo(() => {
     const rawTitleEn = (formData.title || '').trim();
     const rawTitleGe = (formData.titleGe || '').trim();
-    let lang: 'ka' | 'en' = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+    let lang: 'ka' | 'en' = formData.primaryLanguage || uiPrimaryLang;
     if (lang === 'ka' && !rawTitleGe && rawTitleEn) {
       lang = 'en';
     } else if (lang === 'en' && !rawTitleEn && rawTitleGe) {
       lang = 'ka';
     }
     return lang;
-  }, [formData.primaryLanguage, formData.title, formData.titleGe, language]);
+  }, [formData.primaryLanguage, formData.title, formData.titleGe, uiPrimaryLang]);
+
+  // Auto-open optional progressive sections when prefilled (edit / restored draft)
+  const secondaryTitleVal = activeFormPrimaryLang === 'ka' ? (formData.title || '') : (formData.titleGe || '');
+  React.useEffect(() => {
+    if (secondaryTitleVal.trim()) {
+      setShowSecondaryTitle(true);
+    } else if (viewMode === 'create' && !(formData.title || '').trim() && !(formData.titleGe || '').trim()) {
+      setShowSecondaryTitle(false);
+    }
+  }, [viewMode, secondaryTitleVal, formData.title, formData.titleGe]);
+
+  React.useEffect(() => {
+    const hasTerms = Boolean((formData.serviceTerms || '').trim());
+    const hasDuration = Boolean((formData.serviceDuration || '').trim());
+    const shouldExpand = formData.category === 'rent' ? (hasTerms || hasDuration) : hasTerms;
+    if (shouldExpand) {
+      setShowAdditionalTerms(true);
+    } else if (viewMode === 'create' && !hasTerms && !hasDuration) {
+      setShowAdditionalTerms(false);
+    }
+  }, [viewMode, formData.category, formData.serviceTerms, formData.serviceDuration]);
+
+  React.useEffect(() => {
+    const hasAddress = Boolean((formData.location || '').trim());
+    const hasPin =
+      typeof formData.lat === 'number' &&
+      !isNaN(formData.lat) &&
+      typeof formData.lng === 'number' &&
+      !isNaN(formData.lng);
+    if (hasAddress || hasPin) {
+      setShowExactLocation(true);
+    } else if (viewMode === 'create' && !hasAddress && !hasPin) {
+      setShowExactLocation(false);
+    }
+  }, [viewMode, formData.location, formData.lat, formData.lng]);
 
   const validImages = React.useMemo(
     () => (formData.images || []).map(img => (typeof img === 'string' ? img.trim() : '')).filter(Boolean),
@@ -521,7 +587,21 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    setFormData(savedDraftData.formData);
+                    const restored = savedDraftData.formData;
+                    const restoredType = inferListingType(restored.category, restored.listingType);
+                    const restoredSchema = getCategoryFormSchema(restoredType, restored.category);
+                    const normalizedRemote =
+                      restoredSchema.locationMode === 'remote'
+                        ? true
+                        : restoredSchema.locationMode === 'physical'
+                        ? false
+                        : Boolean(restored.isRemote);
+                    setFormData({
+                      ...restored,
+                      listingType: restoredType,
+                      isRemote: normalizedRemote,
+                      attributes: filterAttributesForSchema(restoredSchema, restored.attributes),
+                    });
                     setFormStep(savedDraftData.formStep);
                     setSavedDraftData(null);
                     showToast(
@@ -538,6 +618,9 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   onClick={() => {
                     localStorage.removeItem(draftStorageKey);
                     setSavedDraftData(null);
+                    setShowSecondaryTitle(false);
+                    setShowAdditionalTerms(false);
+                    setShowExactLocation(false);
                     showToast(
                       language === 'ka' ? 'მონახაზი წაიშალა' : 'Draft discarded',
                       'info'
@@ -626,7 +709,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                       type="button"
                       onClick={() => {
                         if (step > 1) {
-                          const currentPrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+                          const currentPrimary = activeFormPrimaryLang;
                           const tEn = (formData.title || '').trim();
                           const tGe = (formData.titleGe || '').trim();
 
@@ -636,8 +719,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                             setFormData(p => ({ ...p, primaryLanguage: 'ka' }));
                           } else if (!tEn && !tGe) {
                             const msg = language === 'ka'
-                              ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.`
-                              : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`;
+                              ? 'გთხოვთ პირველ ნაბიჯზე შეიყვანოთ განცხადების სათაური გასაგრძელებლად.'
+                              : 'Please enter a listing title in Step 1 to continue.';
                             setFieldErrors(prev => ({ ...prev, title: msg }));
                             showToast(msg, 'warning');
                             return;
@@ -727,287 +810,260 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               transition={{ duration: 0.25 }}
               className="space-y-6 sm:space-y-7 animate-in fade-in min-w-0"
             >
-              {/* Listing Type Cards Selection */}
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                    <span>⚡</span> {language === 'ka' ? 'განცხადების ტიპი' : 'Listing Type'}
-                  </label>
-                  <span className={cn("text-xs font-medium", currentTheme.muted)}>
-                    {language === 'ka' ? 'აირჩიეთ ტიპი' : 'Choose type'}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-                  {[
-                    { 
-                      type: 'service', 
-                      emoji: '⚡', 
-                      labelEn: 'Service', 
-                      labelKa: 'სერვისი',
-                      descEn: 'Professional expertise & tasks',
-                      descKa: 'ტექნიკური ან სხვა მომსახურება'
-                    },
-                    { 
-                      type: 'product', 
-                      emoji: '📦', 
-                      labelEn: 'Product', 
-                      labelKa: 'პროდუქტი',
-                      descEn: 'Items, equipment & physical goods',
-                      descKa: 'ნივთები, ტექნიკა და პროდუქცია'
-                    },
-                    { 
-                      type: 'project', 
-                      emoji: '🚀', 
-                      labelEn: 'Project', 
-                      labelKa: 'პროექტი',
-                      descEn: 'Digital projects, jobs & partnerships',
-                      descKa: 'ციფრული პროექტები, ვაკანსიები და პარტნიორობა'
-                    }
-                  ].map(item => {
-                    const isSelected = formData.listingType === item.type;
-                    return (
-                      <button
-                        key={item.type}
-                        type="button"
-                        onClick={() => {
-                          const nextType = item.type as 'product' | 'service' | 'project';
-                          setFormData(prev => {
-                            const nextCategory = isCategoryValidForType(prev.category, nextType)
-                              ? prev.category
-                              : getDefaultCategoryForType(nextType);
+              {/* Grouped Listing Category Selection (Automatically infers ListingType) */}
+              {(() => {
+                const productCategories = getCategoriesForListingType('product', t, language);
+                const serviceCategories = getCategoriesForListingType('service', t, language);
+                const projectCategories = getCategoriesForListingType('project', t, language);
+                const allGroupedIds = new Set([
+                  ...productCategories.map(c => c.id),
+                  ...serviceCategories.map(c => c.id),
+                  ...projectCategories.map(c => c.id),
+                ]);
+                const isUnmatchedLegacyCategory =
+                  Boolean(formData.category) && !allGroupedIds.has(formData.category);
+                const canAutoInferType = canInferListingTypeFromCategory(formData.category);
+                const resolvedTypeDisplay =
+                  formData.listingType === 'service'
+                    ? (language === 'ka' ? '⚡ სერვისი' : '⚡ Service')
+                    : formData.listingType === 'project'
+                    ? (language === 'ka' ? '🚀 პროექტი' : '🚀 Project')
+                    : (language === 'ka' ? '📦 პროდუქტი' : '📦 Product');
+
+                return (
+                  <div className="space-y-4">
+                    <div className="space-y-2.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
+                          <span>📁</span> {t.market.form.category}
+                          <span className="text-rose-500">*</span>
+                        </label>
+                        {canAutoInferType && (
+                          <span
+                            data-testid="auto-inferred-listing-type"
+                            className={cn("text-xs font-semibold flex items-center gap-1.5", currentTheme.muted)}
+                          >
+                            <span>{language === 'ka' ? 'ტიპი:' : 'Type:'}</span>
+                            <span className={cn("font-bold", currentTheme.text)}>{resolvedTypeDisplay}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative group">
+                        <select
+                          data-testid="category-select"
+                          value={formData.category || getDefaultCategoryForType(formData.listingType)}
+                          onChange={e => {
+                            const nextCategory = e.target.value;
+                            const nextType = canInferListingTypeFromCategory(nextCategory)
+                              ? inferListingType(nextCategory, formData.listingType)
+                              : formData.listingType;
                             const nextSchema = getCategoryFormSchema(nextType, nextCategory);
-                            return {
+                            setFormData(prev => ({
                               ...prev,
                               listingType: nextType,
                               category: nextCategory,
                               isRemote: getDefaultIsRemoteForSchema(nextSchema),
                               attributes: filterAttributesForSchema(nextSchema, prev.attributes),
-                            };
-                          });
-                        }}
-                        className={cn(
-                          "relative min-h-[64px] p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 flex flex-row lg:flex-col items-center text-left lg:text-center gap-3.5 lg:gap-2 group overflow-hidden cursor-pointer",
-                          isSelected
-                            ? "bg-proton-accent/10 border-proton-accent text-proton-accent shadow-sm ring-1 ring-proton-accent/30"
-                            : "bg-proton-bg/70 border-proton-border text-proton-muted hover:text-proton-text hover:bg-proton-bg hover:border-proton-accent/30"
-                        )}
-                      >
-                        {isSelected && (
-                          <span className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-proton-accent" />
-                        )}
-                        <span className="text-2xl shrink-0 group-hover:scale-105 transition-transform duration-200">
-                          {item.emoji}
-                        </span>
-                        <div className="min-w-0 flex-1 lg:flex-none space-y-0.5 pr-4 lg:pr-0">
-                          <span className={cn("block text-sm font-bold leading-snug", isSelected ? currentTheme.accent : currentTheme.text)}>
-                            {language === 'ka' ? item.labelKa : item.labelEn}
-                          </span>
-                          <span className={cn("block text-xs sm:text-[13px] font-medium leading-snug break-words", currentTheme.muted)}>
-                            {language === 'ka' ? item.descKa : item.descEn}
+                            }));
+                          }}
+                          className={cn(
+                            "w-full min-h-[48px] pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-sm font-semibold shadow-inner transition-all cursor-pointer",
+                            currentTheme.input
+                          )}
+                        >
+                          {isUnmatchedLegacyCategory && (
+                            <option value={formData.category} className="bg-proton-card text-proton-text font-semibold py-2">
+                              {CATEGORY_EMOJIS[formData.category] || '🏷️'} {getCategoryLabel(formData.category, t, language)}
+                            </option>
+                          )}
+                          <optgroup label={language === 'ka' ? '📦 პროდუქტები' : '📦 Products'}>
+                            {productCategories.map(cat => (
+                              <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
+                                {cat.emoji} {cat.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={language === 'ka' ? '⚡ სერვისები და გაქირავება' : '⚡ Services & Rentals'}>
+                            {serviceCategories.map(cat => (
+                              <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
+                                {cat.emoji} {cat.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label={language === 'ka' ? '🚀 პროექტები და ციფრული აქტივები' : '🚀 Projects & Digital Assets'}>
+                            {projectCategories.map(cat => (
+                              <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
+                                {cat.emoji} {cat.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors" />
+                      </div>
+                    </div>
+
+                    {/* Fallback Listing Type Selector ONLY for legacy/ambiguous categories */}
+                    {!canAutoInferType && (
+                      <div data-testid="legacy-listing-type-selector" className="space-y-3 p-4 rounded-2xl bg-proton-bg/70 border border-proton-border">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
+                            <span>⚡</span> {language === 'ka' ? 'განცხადების ტიპი' : 'Listing Type'}
+                          </label>
+                          <span className={cn("text-xs font-medium", currentTheme.muted)}>
+                            {language === 'ka' ? 'მიუთითეთ ძველი კატეგორიის ტიპი' : 'Specify type for legacy category'}
                           </span>
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                          {[
+                            { type: 'service', emoji: '⚡', labelEn: 'Service', labelKa: 'სერვისი' },
+                            { type: 'product', emoji: '📦', labelEn: 'Product', labelKa: 'პროდუქტი' },
+                            { type: 'project', emoji: '🚀', labelEn: 'Project', labelKa: 'პროექტი' }
+                          ].map(item => {
+                            const isSelected = formData.listingType === item.type;
+                            return (
+                              <button
+                                key={item.type}
+                                type="button"
+                                onClick={() => {
+                                  const nextType = item.type as 'product' | 'service' | 'project';
+                                  setFormData(prev => {
+                                    const nextSchema = getCategoryFormSchema(nextType, prev.category);
+                                    return {
+                                      ...prev,
+                                      listingType: nextType,
+                                      isRemote: getDefaultIsRemoteForSchema(nextSchema),
+                                      attributes: filterAttributesForSchema(nextSchema, prev.attributes),
+                                    };
+                                  });
+                                }}
+                                className={cn(
+                                  "min-h-[48px] px-4 py-2.5 rounded-xl border transition-all duration-200 flex items-center justify-center gap-2 text-sm font-bold cursor-pointer",
+                                  isSelected
+                                    ? "bg-proton-accent/10 border-proton-accent text-proton-accent ring-1 ring-proton-accent/30"
+                                    : "bg-proton-card border-proton-border text-proton-muted hover:text-proton-text"
+                                )}
+                              >
+                                <span>{item.emoji}</span>
+                                <span>{language === 'ka' ? item.labelKa : item.labelEn}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
-              {/* Listing Category Selection */}
-              <div className="space-y-2.5">
-                <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                  <span>📁</span> {t.market.form.category}
-                </label>
-                <div className="relative group">
-                  {(() => {
-                    const availableCategories = getCategoriesForListingType(formData.listingType, t, language);
-                    const isLegacyCategoryInEdit =
-                      viewMode === 'edit' &&
-                      Boolean(formData.category) &&
-                      !availableCategories.some(cat => cat.id === formData.category);
-                    const selectValue =
-                      isLegacyCategoryInEdit || availableCategories.some(cat => cat.id === formData.category)
-                        ? formData.category
-                        : getDefaultCategoryForType(formData.listingType);
-
-                    return (
-                      <select 
-                        value={selectValue}
-                        onChange={e => {
-                          const nextCategory = e.target.value;
-                          const nextSchema = getCategoryFormSchema(formData.listingType, nextCategory);
-                          setFormData(prev => ({
-                            ...prev,
-                            category: nextCategory,
-                            isRemote: getDefaultIsRemoteForSchema(nextSchema),
-                            attributes: filterAttributesForSchema(nextSchema, prev.attributes),
-                          }));
-                        }}
-                        className={cn(
-                          "w-full min-h-[46px] pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-sm font-semibold shadow-inner transition-all cursor-pointer",
-                          currentTheme.input
-                        )}
-                      >
-                        {isLegacyCategoryInEdit && (
-                          <option value={formData.category} className="bg-proton-card text-proton-text font-semibold py-2">
-                            {CATEGORY_EMOJIS[formData.category] || '🏷️'} {getCategoryLabel(formData.category, t, language)}
-                          </option>
-                        )}
-                        {availableCategories.map(cat => (
-                          <option key={cat.id} value={cat.id} className="bg-proton-card text-proton-text font-semibold py-2">
-                            {cat.emoji} {cat.label}
-                          </option>
-                        ))}
-                      </select>
-                    );
-                  })()}
-                  <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors" />
-                </div>
-              </div>
-
-              {/* Primary Language Selection & Multilingual Titles */}
+              {/* Single Primary Title + Collapsible Optional Translation */}
               {(() => {
-                const activePrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
-                const isKaPrimary = activePrimary === 'ka';
+                const isKaPrimary = activeFormPrimaryLang === 'ka';
                 const resolvedTitleLabel = language === 'ka'
                   ? (activeSchema.titleLabelKa || t.market.form.title)
                   : (activeSchema.titleLabelEn || t.market.form.title);
-                const kaPlaceholderBase = activeSchema.titlePlaceholderKa || 'მაგ: განცხადების სათაური';
-                const enPlaceholderBase = activeSchema.titlePlaceholderEn || 'e.g. Listing title';
+                const primaryPlaceholder = isKaPrimary
+                  ? (activeSchema.titlePlaceholderKa || 'მაგ: განცხადების სათაური')
+                  : (activeSchema.titlePlaceholderEn || 'e.g. Listing title');
+                const secondaryPlaceholder = isKaPrimary
+                  ? (activeSchema.titlePlaceholderEn || 'e.g. Optional English title')
+                  : (activeSchema.titlePlaceholderKa || 'მაგ: სათაური ქართულად (არასავალდებულო)');
+                const primaryValue = isKaPrimary ? formData.titleGe : formData.title;
+                const secondaryValue = isKaPrimary ? formData.title : formData.titleGe;
+                const secondaryToggleLabel = isKaPrimary
+                  ? (language === 'ka' ? '+ ინგლისური სათაურის დამატება (არასავალდებულო)' : '+ Add English title (optional)')
+                  : (language === 'ka' ? '+ ქართული სათაურის დამატება (არასავალდებულო)' : '+ Add Georgian title (optional)');
+                const secondaryFieldLabel = isKaPrimary
+                  ? (language === 'ka' ? 'ინგლისური სათაური (EN · არასავალდებულო)' : 'English Title (Optional)')
+                  : (language === 'ka' ? 'ქართული სათაური (GE · არასავალდებულო)' : 'Georgian Title (Optional)');
 
                 return (
                   <div className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shadow-inner">
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Languages size={16} className={cn("shrink-0", currentTheme.accent)} />
-                          <span className={cn("text-sm font-bold leading-snug", currentTheme.text)}>
-                            {language === 'ka' ? 'განცხადების ძირითადი ენა' : 'Primary Listing Language'}
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5 leading-snug", currentTheme.accent)}>
+                          <span>{isKaPrimary ? '🇬🇪' : '🇬🇧'}</span>
+                          <span>{resolvedTitleLabel}</span>
+                          <span className="text-rose-500">*</span>
+                        </label>
+                        {viewMode === 'edit' && activeFormPrimaryLang !== uiPrimaryLang && (
+                          <span className={cn("text-xs font-medium", currentTheme.muted)}>
+                            {isKaPrimary ? 'KA' : 'EN'}
                           </span>
-                        </div>
-                        <p className={cn("text-xs sm:text-[13px] font-medium leading-snug", currentTheme.muted)}>
-                          {language === 'ka'
-                            ? 'ძირითად ენაზე სათაური სავალდებულოა. დამატებითი ენა არასავალდებულოა.'
-                            : 'Title in primary language is required. Secondary language title is optional.'}
-                        </p>
+                        )}
                       </div>
-
-                      <div className="grid grid-cols-2 sm:inline-flex p-1 rounded-xl bg-proton-card border border-proton-border w-full sm:w-auto shrink-0 gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setFormData(p => ({ ...p, primaryLanguage: 'ka' }))}
-                          className={cn(
-                            "min-h-[44px] px-3.5 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                      <FastInput
+                        data-testid="primary-title-input"
+                        required
+                        type="text"
+                        value={primaryValue}
+                        onCommit={val => {
+                          setFormData(p =>
                             isKaPrimary
-                              ? "bg-proton-accent text-proton-on-accent shadow-sm"
-                              : "text-proton-muted hover:text-proton-text hover:bg-proton-bg"
-                          )}
-                        >
-                          <span>🇬🇪</span>
-                          <span>ქართული</span>
-                        </button>
+                              ? { ...p, primaryLanguage: 'ka', titleGe: val }
+                              : { ...p, primaryLanguage: 'en', title: val }
+                          );
+                          clearFieldError('title');
+                        }}
+                        placeholder={primaryPlaceholder}
+                        aria-invalid={Boolean(fieldErrors.title)}
+                        className={cn(
+                          "w-full min-h-[48px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
+                          currentTheme.input,
+                          fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
+                        )}
+                      />
+                    </div>
+
+                    {!showSecondaryTitle ? (
+                      <div className="pt-0.5">
                         <button
                           type="button"
-                          onClick={() => setFormData(p => ({ ...p, primaryLanguage: 'en' }))}
+                          data-testid="toggle-secondary-title"
+                          onClick={() => setShowSecondaryTitle(true)}
                           className={cn(
-                            "min-h-[44px] px-3.5 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer",
-                            !isKaPrimary
-                              ? "bg-proton-accent text-proton-on-accent shadow-sm"
-                              : "text-proton-muted hover:text-proton-text hover:bg-proton-bg"
+                            "min-h-[40px] px-3.5 py-2 rounded-xl border border-proton-border/80 bg-proton-bg/60 hover:bg-proton-bg hover:border-proton-accent/40 text-xs sm:text-[13px] font-semibold transition-all cursor-pointer inline-flex items-center gap-2",
+                            currentTheme.muted,
+                            "hover:text-proton-text"
                           )}
                         >
-                          <span>🇬🇧</span>
-                          <span>English</span>
+                          <span>{secondaryToggleLabel}</span>
                         </button>
                       </div>
-                    </div>
-
-                    {/* Title inputs in GE & EN (1-column up to 820px tablet, 2-column from 1024px) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-                      {/* Georgian Title Field */}
-                      <div className="space-y-2 min-w-0">
+                    ) : (
+                      <div className="space-y-2 p-4 rounded-2xl bg-proton-bg/60 border border-proton-border/80 min-w-0 animate-in fade-in">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm shrink-0">🇬🇪</span>
-                            <label className={cn(
-                              "text-[13px] sm:text-sm font-bold leading-snug break-words",
-                              isKaPrimary ? currentTheme.accent : currentTheme.text
-                            )}>
-                              {resolvedTitleLabel} (GE)
-                            </label>
-                          </div>
-                          <span className={cn(
-                            "text-xs font-semibold shrink-0",
-                            isKaPrimary ? "text-proton-accent" : currentTheme.muted
-                          )}>
-                            {isKaPrimary
-                              ? (language === 'ka' ? 'ძირითადი · სავალდებულო' : 'Primary · Required')
-                              : (language === 'ka' ? 'არასავალდებულო' : 'Optional')}
-                          </span>
+                          <label className={cn("text-xs sm:text-[13px] font-bold flex items-center gap-1.5", currentTheme.text)}>
+                            <span>{isKaPrimary ? '🇬🇧' : '🇬🇪'}</span>
+                            <span>{secondaryFieldLabel}</span>
+                          </label>
+                          {!secondaryValue.trim() && (
+                            <button
+                              type="button"
+                              onClick={() => setShowSecondaryTitle(false)}
+                              className={cn("text-xs font-semibold hover:underline cursor-pointer", currentTheme.muted)}
+                            >
+                              {language === 'ka' ? 'დამალვა' : 'Hide'}
+                            </button>
+                          )}
                         </div>
-                        <div className="relative">
-                          <FastInput 
-                            type="text"
-                            value={formData.titleGe}
-                            onCommit={val => {
-                              setFormData(p => ({ ...p, titleGe: val }));
-                              clearFieldError('title');
-                            }}
-                            placeholder={isKaPrimary
-                              ? (language === 'ka' ? `${kaPlaceholderBase} (სავალდებულო)` : `${kaPlaceholderBase} (Required)`)
-                              : (language === 'ka' ? `${kaPlaceholderBase} (არასავალდებულო)` : `${kaPlaceholderBase} (Optional)`)
-                            }
-                            className={cn(
-                              "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
-                              currentTheme.input,
-                              isKaPrimary && fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
-                            )}
-                          />
-                        </div>
+                        <FastInput
+                          data-testid="secondary-title-input"
+                          type="text"
+                          value={secondaryValue}
+                          onCommit={val => {
+                            setFormData(p => (isKaPrimary ? { ...p, title: val } : { ...p, titleGe: val }));
+                            clearFieldError('title');
+                          }}
+                          placeholder={secondaryPlaceholder}
+                          className={cn(
+                            "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
+                            currentTheme.input
+                          )}
+                        />
                       </div>
+                    )}
 
-                      {/* English Title Field */}
-                      <div className="space-y-2 min-w-0">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm shrink-0">🇬🇧</span>
-                            <label className={cn(
-                              "text-[13px] sm:text-sm font-bold leading-snug break-words",
-                              !isKaPrimary ? currentTheme.accent : currentTheme.text
-                            )}>
-                              {resolvedTitleLabel} (EN)
-                            </label>
-                          </div>
-                          <span className={cn(
-                            "text-xs font-semibold shrink-0",
-                            !isKaPrimary ? "text-proton-accent" : currentTheme.muted
-                          )}>
-                            {!isKaPrimary
-                              ? (language === 'ka' ? 'ძირითადი · სავალდებულო' : 'Primary · Required')
-                              : (language === 'ka' ? 'არასავალდებულო' : 'Optional')}
-                          </span>
-                        </div>
-                        <div className="relative">
-                          <FastInput 
-                            type="text"
-                            value={formData.title}
-                            onCommit={val => {
-                              setFormData(p => ({ ...p, title: val }));
-                              clearFieldError('title');
-                            }}
-                            placeholder={!isKaPrimary
-                              ? (language === 'ka' ? `${enPlaceholderBase} (სავალდებულო)` : `${enPlaceholderBase} (Required)`)
-                              : (language === 'ka' ? `${enPlaceholderBase} (არასავალდებულო)` : `${enPlaceholderBase} (Optional)`)
-                            }
-                            className={cn(
-                              "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
-                              currentTheme.input,
-                              !isKaPrimary && fieldErrors.title && "border-rose-500/70 focus:border-rose-500"
-                            )}
-                          />
-                        </div>
-                      </div>
-                    </div>
                     {fieldErrors.title && (
                       <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
                         <AlertCircle size={14} className="shrink-0" />
@@ -1175,39 +1231,88 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                 </button>
               </div>
 
-              {/* Service specific characteristics */}
+              {/* Service & Rental Terms (Simplified Progressive Disclosure) */}
               {activeSchema.showServiceTerms && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl bg-proton-accent/5 border border-proton-accent/20 shadow-inner">
-                  <div className="space-y-2 min-w-0">
-                    <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                      <span>⏱️</span> {language === 'ka' ? 'შესრულების ვადა' : 'Estimated Completion Time'}
-                    </label>
-                    <FastInput 
-                      type="text"
-                      value={formData.serviceDuration || ''}
-                      onCommit={val => setFormData(p => ({ ...p, serviceDuration: val }))}
-                      placeholder={language === 'ka' ? "მაგ: 3 დღე" : "e.g. 3 business days"}
-                      className={cn(
-                        "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold transition-all scroll-mb-24",
-                        currentTheme.input
-                      )}
-                    />
-                  </div>
+                <div className="space-y-4">
+                  {formData.category !== 'rent' && (
+                    <div className="space-y-2 min-w-0">
+                      <label className={cn("text-[13px] sm:text-sm font-bold flex flex-wrap items-center gap-1.5", currentTheme.accent)}>
+                        <span>⏱️</span> {language === 'ka' ? 'შესრულების ვადა' : 'Estimated Completion Time'}
+                        <span className={cn("text-xs font-medium", currentTheme.muted)}>
+                          ({language === 'ka' ? 'არასავალდებულო' : 'optional'})
+                        </span>
+                      </label>
+                      <FastInput 
+                        type="text"
+                        value={formData.serviceDuration || ''}
+                        onCommit={val => setFormData(p => ({ ...p, serviceDuration: val }))}
+                        placeholder={language === 'ka' ? "მაგ: 3 დღე" : "e.g. 3 business days"}
+                        className={cn(
+                          "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold transition-all scroll-mb-24",
+                          currentTheme.input
+                        )}
+                      />
+                    </div>
+                  )}
 
-                  <div className="space-y-2 min-w-0">
-                    <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                      <span>📋</span> {language === 'ka' ? 'სამუშაო პირობები' : 'Work Terms & Requirements'}
-                    </label>
-                    <FastInput 
-                      type="text"
-                      value={formData.serviceTerms || ''}
-                      onCommit={val => setFormData(p => ({ ...p, serviceTerms: val }))}
-                      placeholder={language === 'ka' ? "მაგ: შეთანხმების მიხედვით" : "e.g. As agreed with client"}
-                      className={cn(
-                        "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold transition-all scroll-mb-24",
-                        currentTheme.input
-                      )}
-                    />
+                  <div className="rounded-2xl border border-proton-border/80 bg-proton-bg/45 overflow-hidden">
+                    <button
+                      type="button"
+                      data-testid="toggle-additional-terms"
+                      onClick={() => setShowAdditionalTerms(prev => !prev)}
+                      className="w-full min-h-[48px] px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-proton-bg/70 transition-colors cursor-pointer"
+                    >
+                      <div className="min-w-0">
+                        <span className={cn("text-[13px] sm:text-sm font-bold block", currentTheme.text)}>
+                          {language === 'ka' ? 'დამატებითი პირობები (არასავალდებულო)' : 'Additional terms (optional)'}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        className={cn(
+                          "text-proton-muted shrink-0 transition-transform duration-200",
+                          showAdditionalTerms && "rotate-180"
+                        )}
+                      />
+                    </button>
+
+                    {showAdditionalTerms && (
+                      <div className="p-4 pt-3 border-t border-proton-border/70 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {formData.category === 'rent' && (
+                          <div className="space-y-2 min-w-0">
+                            <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.text)}>
+                              <span>⏱️</span> {language === 'ka' ? 'მინ. ვადა / გაცემის დრო' : 'Duration / Pickup Window'}
+                            </label>
+                            <FastInput 
+                              type="text"
+                              value={formData.serviceDuration || ''}
+                              onCommit={val => setFormData(p => ({ ...p, serviceDuration: val }))}
+                              placeholder={language === 'ka' ? "მაგ: მინ. 1 დღე / 10:00–19:00" : "e.g. Min 1 day / 10:00–19:00"}
+                              className={cn(
+                                "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold transition-all scroll-mb-24",
+                                currentTheme.input
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        <div className={cn("space-y-2 min-w-0", formData.category !== 'rent' && "lg:col-span-2")}>
+                          <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.text)}>
+                            <span>📋</span> {language === 'ka' ? 'სამუშაო / გაქირავების პირობები' : 'Terms & Requirements'}
+                          </label>
+                          <FastInput 
+                            type="text"
+                            value={formData.serviceTerms || ''}
+                            onCommit={val => setFormData(p => ({ ...p, serviceTerms: val }))}
+                            placeholder={language === 'ka' ? "მაგ: შეთანხმების მიხედვით" : "e.g. As agreed with client"}
+                            className={cn(
+                              "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold transition-all scroll-mb-24",
+                              currentTheme.input
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1223,177 +1328,275 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
               transition={{ duration: 0.25 }}
               className="space-y-6 sm:space-y-7 animate-in fade-in min-w-0"
             >
-              {/* Remote / Online toggle for flexible & remote schemas */}
-              {activeSchema.locationMode !== 'physical' && (
-                <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-start sm:items-center gap-3 min-w-0">
-                    <div className={cn("p-2.5 rounded-xl bg-proton-accent/10 border border-proton-accent/25 shrink-0", currentTheme.accent)}>
-                      <Globe size={16} className="stroke-[2.5]" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className={cn("text-sm font-bold leading-snug break-words", currentTheme.text)}>
-                        {language === 'ka' ? 'დისტანციური / ონლაინ განცხადება' : 'Remote / Online Listing'}
-                      </h4>
-                      <p className={cn("text-xs sm:text-[13px] font-medium mt-0.5 leading-snug break-words", currentTheme.muted)}>
-                        {language === 'ka'
-                          ? (effectiveIsRemote
-                            ? 'ონლაინ რეჟიმში რუკა გამორთულია და ქალაქი არასავალდებულოა (თუ არ მიუთითებთ, შეინახება როგორც Online).'
-                            : 'გამორთულია — მიუთითეთ ფიზიკური მდებარეობა და ქალაქი.')
-                          : (effectiveIsRemote
-                            ? 'In online mode, map is hidden and city is optional (defaults to Online / Worldwide if left blank).'
-                            : 'Disabled — provide physical city and location details.')}
-                      </p>
-                    </div>
-                  </div>
+              {/* Smart Category-Aware Location Block */}
+              {(() => {
+                const hasStep2FormatField = activeSchema.fields.some(
+                  f => f.key === 'deliveryFormat' || f.key === 'employmentFormat'
+                );
 
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={effectiveIsRemote}
-                    aria-label={language === 'ka' ? 'დისტანციური / ონლაინ რეჟიმი' : 'Remote / Online mode'}
-                    onClick={() => {
-                      const nextRemote = !effectiveIsRemote;
-                      clearFieldError('city');
-                      setFormData(prev => ({
-                        ...prev,
-                        isRemote: nextRemote,
-                        country: !nextRemote && prev.country === 'GLOBAL'
-                          ? (language === 'ka' ? 'GEO' : 'USA')
-                          : prev.country,
-                      }));
-                    }}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-end shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent rounded-xl"
-                  >
-                    <span className={cn(
-                      "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
-                      effectiveIsRemote ? "bg-proton-accent" : "bg-proton-border"
-                    )}>
-                      <span
+                // Case C: Remote / Digital Asset categories -> Hide all location inputs cleanly
+                if (activeSchema.locationMode === 'remote') {
+                  return (
+                    <div
+                      data-testid="remote-digital-location-notice"
+                      className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex items-start sm:items-center gap-3"
+                    >
+                      <div className={cn("p-2.5 rounded-xl bg-proton-accent/10 border border-proton-accent/25 shrink-0", currentTheme.accent)}>
+                        <Globe size={16} className="stroke-[2.5]" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className={cn("text-sm font-bold leading-snug", currentTheme.text)}>
+                          {language === 'ka' ? 'ციფრული / ონლაინ განცხადება' : 'Digital / Online Listing'}
+                        </h4>
+                        <p className={cn("text-xs sm:text-[13px] font-medium mt-0.5 leading-snug", currentTheme.muted)}>
+                          {language === 'ka'
+                            ? 'მდებარეობის, ქალაქის და რუკის შევსება საჭირო არ არის — გამოქვეყნდება როგორც ონლაინ.'
+                            : 'Country, city, address, and map are not needed — listing will be published as Online.'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Exact location (address + MapPicker) collapsible block for physical & non-remote flexible flows
+                const renderExactLocationCollapsible = () => (
+                  <div className="rounded-2xl border border-proton-border/80 bg-proton-bg/45 overflow-hidden">
+                    <button
+                      type="button"
+                      data-testid="toggle-exact-location"
+                      onClick={() => setShowExactLocation(prev => !prev)}
+                      className="w-full min-h-[48px] px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-proton-bg/70 transition-colors cursor-pointer"
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        <MapPin size={15} className={cn("shrink-0", currentTheme.accent)} />
+                        <span className={cn("text-[13px] sm:text-sm font-bold", currentTheme.text)}>
+                          {language === 'ka' ? 'ზუსტი მდებარეობა (არასავალდებულო)' : 'Exact location (optional)'}
+                        </span>
+                      </div>
+                      <ChevronDown
+                        size={16}
                         className={cn(
-                          "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
-                          effectiveIsRemote ? "translate-x-5" : "translate-x-0"
+                          "text-proton-muted shrink-0 transition-transform duration-200",
+                          showExactLocation && "rotate-180"
                         )}
                       />
-                    </span>
-                  </button>
-                </div>
-              )}
+                    </button>
 
-              {/* Country and City Inputs Group (1-column up to 820px tablet, 2-column from 1024px) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-                <div className="space-y-2 min-w-0">
-                  <label className={cn("text-[13px] sm:text-sm font-bold flex flex-wrap items-center gap-1.5", currentTheme.accent)}>
-                    <span>🗺️</span> {t.market.form.country}
-                    {effectiveIsRemote && (
-                      <span className={cn("text-xs font-medium", currentTheme.muted)}>
-                        ({language === 'ka' ? 'არასავალდებულო' : 'optional'})
-                      </span>
+                    {showExactLocation && (
+                      <div className="p-4 pt-3 border-t border-proton-border/70 space-y-5">
+                        <div className="space-y-2 min-w-0">
+                          <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.text)}>
+                            <span>📍</span> {t.market.form.location}
+                          </label>
+                          <div className="relative group">
+                            <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted group-focus-within:text-proton-accent transition-colors" />
+                            <FastInput 
+                              type="text"
+                              value={formData.location}
+                              onCommit={val => setFormData(p => ({ ...p, location: val }))}
+                              placeholder={language === 'ka' ? 'ქუჩა, უბანი ან შეხვედრის ადგილი...' : 'Street address or pickup details...'}
+                              className={cn(
+                                "w-full min-h-[46px] pl-10.5 pr-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
+                                currentTheme.input
+                              )}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2.5 min-w-0">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
+                              <span>🛰️</span> {language === 'ka' ? 'მდებარეობა რუკაზე' : 'Location on Map'}
+                            </label>
+                            <span className={cn("text-xs font-mono font-semibold tabular-nums", currentTheme.muted)}>
+                              {formData.lat !== undefined && formData.lat !== null ? formData.lat.toFixed(4) : "41.7151"}, {formData.lng !== undefined && formData.lng !== null ? formData.lng.toFixed(4) : "44.8271"}
+                            </span>
+                          </div>
+                          <div className="p-3 sm:p-4 rounded-2xl bg-proton-bg/70 border border-proton-border shadow-md relative">
+                            <MapPicker 
+                              lat={formData.lat}
+                              lng={formData.lng}
+                              onChange={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
+                              language={language as 'en' | 'ka'}
+                              currentTheme={currentTheme}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </label>
-                  <div className="relative group">
-                    <select 
-                      value={effectiveIsRemote && !(formData.city || '').trim() && formData.country === 'GLOBAL' ? 'GLOBAL' : formData.country}
-                      onChange={e => setFormData({...formData, country: e.target.value})}
-                      className={cn(
-                        "w-full min-h-[46px] pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-sm font-semibold transition-all cursor-pointer",
-                        currentTheme.input
+                  </div>
+                );
+
+                // Country + City grid for physical & non-remote flexible flows
+                const renderCountryCityInputs = () => (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+                    <div className="space-y-2 min-w-0">
+                      <label className={cn("text-[13px] sm:text-sm font-bold flex flex-wrap items-center gap-1.5", currentTheme.accent)}>
+                        <span>🗺️</span> {t.market.form.country}
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative group">
+                        <select
+                          data-testid="country-select"
+                          value={formData.country && formData.country !== 'GLOBAL' ? formData.country : 'GEO'}
+                          onChange={e => setFormData({ ...formData, country: e.target.value })}
+                          className={cn(
+                            "w-full min-h-[46px] pl-4 pr-10 py-3 rounded-2xl border appearance-none text-base md:text-sm font-semibold transition-all cursor-pointer",
+                            currentTheme.input
+                          )}
+                        >
+                          {AVAILABLE_COUNTRY_OPTIONS.map(country => (
+                            <option key={country.code} value={country.code} className="bg-proton-card text-proton-text font-semibold py-1">
+                              {country.flag} {country.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 min-w-0">
+                      <label className={cn("text-[13px] sm:text-sm font-bold flex flex-wrap items-center gap-1.5", currentTheme.accent)}>
+                        <span>🏙️</span> {t.market.form.city}
+                        <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <FastInput
+                          data-testid="city-input"
+                          required
+                          type="text"
+                          value={formData.city}
+                          onCommit={val => {
+                            setFormData(p => ({ ...p, city: val }));
+                            clearFieldError('city');
+                          }}
+                          placeholder={language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi'}
+                          aria-invalid={Boolean(fieldErrors.city)}
+                          className={cn(
+                            "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
+                            currentTheme.input,
+                            fieldErrors.city && "border-rose-500/70 focus:border-rose-500"
+                          )}
+                        />
+                      </div>
+                      {fieldErrors.city && (
+                        <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
+                          <AlertCircle size={14} className="shrink-0" />
+                          <span>{fieldErrors.city}</span>
+                        </p>
                       )}
-                    >
-                      {(effectiveIsRemote ? WORLD_COUNTRIES : AVAILABLE_COUNTRY_OPTIONS).map(country => (
-                        <option key={country.code} value={country.code} className="bg-proton-card text-proton-text font-semibold py-1">
-                          {country.flag} {country.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-proton-muted pointer-events-none group-hover:text-proton-text transition-colors" />
+                    </div>
                   </div>
-                </div>
+                );
 
-                <div className="space-y-2 min-w-0">
-                  <label className={cn("text-[13px] sm:text-sm font-bold flex flex-wrap items-center gap-1.5", effectiveIsRemote ? currentTheme.text : currentTheme.accent)}>
-                    <span>🏙️</span> {t.market.form.city}
-                    {!effectiveIsRemote ? (
-                      <span className="text-rose-500">*</span>
-                    ) : (
-                      <span className={cn("text-xs font-medium", currentTheme.muted)}>
-                        ({language === 'ka' ? 'არასავალდებულო' : 'optional'})
-                      </span>
-                    )}
-                  </label>
-                  <div className="relative">
-                    <FastInput 
-                      required={!effectiveIsRemote}
-                      type="text"
-                      value={formData.city}
-                      onCommit={val => {
-                        setFormData(p => ({ ...p, city: val }));
-                        clearFieldError('city');
-                      }}
-                      placeholder={effectiveIsRemote
-                        ? (language === 'ka' ? 'სურვილისამებრ: მაგ. თბილისი ან ცარიელი (Online)' : 'Optional: e.g. Tbilisi or leave blank for Online')
-                        : (language === 'ka' ? 'მაგ: თბილისი' : 'e.g. Tbilisi')}
-                      aria-invalid={Boolean(fieldErrors.city)}
-                      className={cn(
-                        "w-full min-h-[46px] px-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
-                        currentTheme.input,
-                        fieldErrors.city && "border-rose-500/70 focus:border-rose-500"
+                // Case B: Flexible categories (service, project-jobs, collaboration)
+                if (activeSchema.locationMode === 'flexible') {
+                  return (
+                    <div className="space-y-5">
+                      {hasStep2FormatField ? (
+                        <div
+                          data-testid="step2-derived-format-banner"
+                          className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex flex-wrap items-center justify-between gap-3"
+                        >
+                          <div className="flex items-start sm:items-center gap-3 min-w-0">
+                            <div className={cn("p-2.5 rounded-xl bg-proton-accent/10 border border-proton-accent/25 shrink-0", currentTheme.accent)}>
+                              {effectiveIsRemote ? <Globe size={16} className="stroke-[2.5]" /> : <MapPin size={16} className="stroke-[2.5]" />}
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className={cn("text-sm font-bold leading-snug", currentTheme.text)}>
+                                {effectiveIsRemote
+                                  ? (language === 'ka' ? 'არჩეულია დისტანციური / ონლაინ ფორმატი' : 'Online / Remote format selected')
+                                  : (language === 'ka' ? 'არჩეულია ადგილზე / ჰიბრიდული ფორმატი' : 'On-site / Hybrid format selected')}
+                              </h4>
+                              <p className={cn("text-xs sm:text-[13px] font-medium mt-0.5 leading-snug", currentTheme.muted)}>
+                                {effectiveIsRemote
+                                  ? (language === 'ka' ? 'ქალაქი, მისამართი და რუკა საჭირო არ არის.' : 'City, address, and map are not required.')
+                                  : (language === 'ka' ? 'მიუთითეთ ქვეყანა და ქალაქი. ზუსტი მისამართი არასავალდებულოა.' : 'Provide country and city. Exact address is optional.')}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormStep(2)}
+                            className={cn("min-h-[38px] px-3 py-1.5 rounded-xl bg-proton-accent/10 hover:bg-proton-accent/20 text-xs font-bold cursor-pointer shrink-0 transition-colors", currentTheme.accent)}
+                          >
+                            {language === 'ka' ? 'ფორმატის შეცვლა' : 'Change format'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-2xl bg-proton-bg/70 border border-proton-border flex items-start sm:items-center justify-between gap-4">
+                          <div className="flex items-start sm:items-center gap-3 min-w-0">
+                            <div className={cn("p-2.5 rounded-xl bg-proton-accent/10 border border-proton-accent/25 shrink-0", currentTheme.accent)}>
+                              <Globe size={16} className="stroke-[2.5]" />
+                            </div>
+                            <div className="min-w-0">
+                              <h4 className={cn("text-sm font-bold leading-snug break-words", currentTheme.text)}>
+                                {language === 'ka' ? 'ონლაინ / დისტანციური ფორმატი' : 'Online / Remote Format'}
+                              </h4>
+                              <p className={cn("text-xs sm:text-[13px] font-medium mt-0.5 leading-snug break-words", currentTheme.muted)}>
+                                {language === 'ka'
+                                  ? (effectiveIsRemote
+                                    ? 'ქალაქი და მისამართი საჭირო არ არის.'
+                                    : 'ადგილზე — მიუთითეთ ქვეყანა და ქალაქი.')
+                                  : (effectiveIsRemote
+                                    ? 'City and address are not required.'
+                                    : 'On-site — provide country and city.')}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            data-testid="flexible-remote-toggle"
+                            role="switch"
+                            aria-checked={effectiveIsRemote}
+                            aria-label={language === 'ka' ? 'დისტანციური / ონლაინ რეჟიმი' : 'Remote / Online mode'}
+                            onClick={() => {
+                              const nextRemote = !effectiveIsRemote;
+                              clearFieldError('city');
+                              setFormData(prev => ({
+                                ...prev,
+                                isRemote: nextRemote,
+                                country: !nextRemote && (!prev.country || prev.country === 'GLOBAL')
+                                  ? 'GEO'
+                                  : prev.country,
+                              }));
+                            }}
+                            className="min-w-[44px] min-h-[44px] flex items-center justify-end shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-proton-accent rounded-xl"
+                          >
+                            <span className={cn(
+                              "relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",
+                              effectiveIsRemote ? "bg-proton-accent" : "bg-proton-border"
+                            )}>
+                              <span
+                                className={cn(
+                                  "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                                  effectiveIsRemote ? "translate-x-5" : "translate-x-0"
+                                )}
+                              />
+                            </span>
+                          </button>
+                        </div>
                       )}
-                    />
-                  </div>
-                  {fieldErrors.city && (
-                    <p className="text-xs sm:text-[13px] font-semibold text-rose-500 flex items-center gap-1.5 ml-1">
-                      <AlertCircle size={14} className="shrink-0" />
-                      <span>{fieldErrors.city}</span>
-                    </p>
-                  )}
-                </div>
-              </div>
 
-              {/* Address Location Input */}
-              <div className="space-y-2 min-w-0">
-                <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.text)}>
-                  <span>📍</span> {t.market.form.location}
-                </label>
-                <div className="relative group">
-                  <MapPin size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-proton-muted group-focus-within:text-proton-accent transition-colors" />
-                  <FastInput 
-                    type="text"
-                    value={formData.location}
-                    onCommit={val => setFormData(p => ({ ...p, location: val }))}
-                    placeholder={effectiveIsRemote
-                      ? (language === 'ka' ? 'სურვილისამებრ: ონლაინ / რეგიონი / სამუშაო საათები...' : 'Optional: Online / Timezone / Region notes...')
-                      : (language === 'ka' ? 'მისამართის დეტალები/მითითებები...' : 'Detailed address directions...')}
-                    className={cn(
-                      "w-full min-h-[46px] pl-10.5 pr-4 py-3 rounded-2xl border text-base md:text-sm font-semibold shadow-inner transition-all scroll-mb-24",
-                      currentTheme.input
-                    )}
-                  />
-                </div>
-              </div>
+                      {!effectiveIsRemote && (
+                        <>
+                          {renderCountryCityInputs()}
+                          {renderExactLocationCollapsible()}
+                        </>
+                      )}
+                    </div>
+                  );
+                }
 
-              {/* Interactive Map Coordinates Picker Container (Unclipped wrapper; hidden in remote mode) */}
-              {!effectiveIsRemote && (
-                <div className="space-y-2.5 min-w-0">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className={cn("text-[13px] sm:text-sm font-bold flex items-center gap-1.5", currentTheme.accent)}>
-                      <span>🛰️</span> {language === 'ka' ? 'მდებარეობა რუკაზე' : 'Location on Map'}
-                    </label>
-                    <span className={cn("text-xs font-mono font-semibold tabular-nums", currentTheme.muted)}>
-                      {formData.lat !== undefined && formData.lat !== null ? formData.lat.toFixed(4) : "41.7151"}, {formData.lng !== undefined && formData.lng !== null ? formData.lng.toFixed(4) : "44.8271"}
-                    </span>
+                // Case A: Physical Products & Rent
+                return (
+                  <div className="space-y-5">
+                    {renderCountryCityInputs()}
+                    {renderExactLocationCollapsible()}
                   </div>
-                  
-                  <div className="p-3 sm:p-4 rounded-2xl bg-proton-bg/70 border border-proton-border shadow-md relative">
-                    <MapPicker 
-                      lat={formData.lat}
-                      lng={formData.lng}
-                      onChange={(lat, lng) => setFormData(prev => ({ ...prev, lat, lng }))}
-                      language={language as 'en' | 'ka'}
-                      currentTheme={currentTheme}
-                    />
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Form Description and Spark AI Helper Button */}
               <div className="space-y-2.5 min-w-0">
@@ -1737,6 +1940,10 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                                 : (language === 'ka' ? '📦 პროდუქტი' : '📦 Product')}
                             </span>
                             <span aria-hidden="true" className={currentTheme.muted}>·</span>
+                            <span className={currentTheme.text}>
+                              {getCategoryLabel(formData.category, t, language)}
+                            </span>
+                            <span aria-hidden="true" className={currentTheme.muted}>·</span>
                             <span className={currentTheme.muted}>
                               {effectivePrimaryLang === 'ka'
                                 ? (language === 'ka' ? 'ენა: ქართული' : 'Primary: KA')
@@ -1878,14 +2085,16 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                             )}
                           </div>
 
-                          {trimmedAddress ? (
-                            <p className={cn("text-[13px] font-medium break-words", currentTheme.text)}>
-                              📍 {trimmedAddress}
-                            </p>
-                          ) : (
-                            <p className={cn("text-[13px] font-medium", currentTheme.text)}>
-                              {selectedCountry?.flag} {resolvedLocationForPreview.city}{selectedCountry?.name ? `, ${selectedCountry.name}` : ''}
-                            </p>
+                          {(!effectiveIsRemote || Boolean((formData.location || '').trim()) || Boolean((formData.city || '').trim())) && (
+                            trimmedAddress && (!effectiveIsRemote || Boolean((formData.location || '').trim())) ? (
+                              <p className={cn("text-[13px] font-medium break-words", currentTheme.text)}>
+                                📍 {trimmedAddress}
+                              </p>
+                            ) : (
+                              <p className={cn("text-[13px] font-medium", currentTheme.text)}>
+                                {selectedCountry?.flag} {resolvedLocationForPreview.city}{selectedCountry?.name ? `, ${selectedCountry.name}` : ''}
+                              </p>
+                            )
                           )}
                         </div>
                       </div>
@@ -1953,7 +2162,7 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                   type="button"
                   onClick={() => {
                     if (formStep === 1) {
-                      const currentPrimary = formData.primaryLanguage || (language === 'ka' ? 'ka' : 'en');
+                      const currentPrimary = activeFormPrimaryLang;
                       const tEn = (formData.title || '').trim();
                       const tGe = (formData.titleGe || '').trim();
 
@@ -1963,8 +2172,8 @@ export const CreateListingWizard: React.FC<CreateListingWizardProps> = ({
                         setFormData(p => ({ ...p, primaryLanguage: 'ka' }));
                       } else if (!tEn && !tGe) {
                         const msg = language === 'ka'
-                          ? `გთხოვთ პირველ ნაბიჯზე შეიყვანოთ სათაური ძირითად ენაზე (${currentPrimary === 'ka' ? 'ქართულად' : 'ინგლისურად'}) გასაგრძელებლად.`
-                          : `Please enter a listing title in the primary language (${currentPrimary === 'ka' ? 'Georgian' : 'English'}) to continue.`;
+                          ? 'გთხოვთ პირველ ნაბიჯზე შეიყვანოთ განცხადების სათაური გასაგრძელებლად.'
+                          : 'Please enter a listing title in Step 1 to continue.';
                         setFieldErrors(prev => ({ ...prev, title: msg }));
                         showToast(msg, 'warning');
                         return;

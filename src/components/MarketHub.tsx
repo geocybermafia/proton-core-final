@@ -1167,7 +1167,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       price: '',
       currency: language === 'ka' ? 'GEL' : 'USD',
       category: 'technics',
-      country: language === 'ka' ? 'GEO' : 'USA',
+      country: 'GEO',
       city: '',
       location: '',
       images: [],
@@ -1198,7 +1198,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     price: '',
     currency: language === 'ka' ? 'GEL' : 'USD',
     category: 'technics',
-    country: language === 'ka' ? 'GEO' : 'USA',
+    country: 'GEO',
     city: '',
     location: '',
     images: [],
@@ -1270,6 +1270,8 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
                   const restoredIsRemote =
                     restoredSchema.locationMode === 'physical'
                       ? false
+                      : restoredSchema.locationMode === 'remote'
+                      ? true
                       : (typeof parsed.data.isRemote === 'boolean'
                         ? parsed.data.isRemote
                         : getDefaultIsRemoteForSchema(restoredSchema));
@@ -3564,7 +3566,9 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
   };
 
   const handleAiDescription = async () => {
-    const titleForAi = (formData.title || formData.titleGe || '').trim();
+    const titleForAi = (language === 'ka'
+      ? (formData.titleGe || formData.title)
+      : (formData.title || formData.titleGe) || '').trim();
     if (!titleForAi) {
       showToast(language === 'ka' ? "გთხოვთ შეიყვანოთ სათაური" : "Please enter a title first", 'warning');
       return;
@@ -3801,15 +3805,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       }
 
       // Step 3 validation: Country and City (remote-aware)
-      const effectiveIsRemote = activeSchema.locationMode !== 'physical' && Boolean(formData.isRemote);
+      const effectiveIsRemote =
+        activeSchema.locationMode === 'remote' ||
+        (activeSchema.locationMode === 'flexible' && Boolean(formData.isRemote));
       const countryStr = (formData.country || '').trim();
       const cityStr = (formData.city || '').trim();
+      const hasRealCity = Boolean(cityStr && cityStr.toLowerCase() !== 'online');
       let finalCountry = countryStr;
       let finalCity = cityStr;
       let finalLocation = (formData.location || '').trim();
 
       if (effectiveIsRemote) {
-        const hasRealCity = Boolean(cityStr && cityStr.toLowerCase() !== 'online');
         if (!hasRealCity) {
           finalCountry = 'GLOBAL';
           finalCity = 'Online';
@@ -3841,9 +3847,17 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
         return;
       }
 
-      // Safe coordinate assignment (Never store stale map coordinates for remote listings)
-      const sanitizedLat = effectiveIsRemote ? null : ((typeof formData.lat === 'number' && !isNaN(formData.lat)) ? formData.lat : null);
-      const sanitizedLng = effectiveIsRemote ? null : ((typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null);
+      // Safe coordinate assignment (Preserve legacy remote coordinates only when editing a legacy listing with city, never leak stale pins on new/switched remote listings)
+      const preserveLegacyRemoteCoords =
+        effectiveIsRemote && activeSchema.locationMode === 'remote' && isEdit && hasRealCity;
+      const sanitizedLat =
+        effectiveIsRemote && !preserveLegacyRemoteCoords
+          ? null
+          : ((typeof formData.lat === 'number' && !isNaN(formData.lat)) ? formData.lat : null);
+      const sanitizedLng =
+        effectiveIsRemote && !preserveLegacyRemoteCoords
+          ? null
+          : ((typeof formData.lng === 'number' && !isNaN(formData.lng)) ? formData.lng : null);
 
       // Upload any local base64 images to Firebase Storage first to ensure HTTPS URLs in Firestore
       let finalImages = formData.images || [];
@@ -4200,11 +4214,14 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
     const editListingType = inferListingType(listing.category, listing.listingType);
     const editSchema = getCategoryFormSchema(editListingType, listing.category);
     const inferredRemote =
-      editSchema.locationMode !== 'physical' &&
-      (typeof listing.isRemote === 'boolean'
-        ? listing.isRemote
-        : ((listing.country || '').trim().toUpperCase() === 'GLOBAL' &&
-          (listing.city || '').trim().toLowerCase() === 'online'));
+      editSchema.locationMode === 'remote'
+        ? true
+        : editSchema.locationMode === 'flexible'
+        ? (typeof listing.isRemote === 'boolean'
+            ? listing.isRemote
+            : ((listing.country || '').trim().toUpperCase() === 'GLOBAL' &&
+              (listing.city || '').trim().toLowerCase() === 'online'))
+        : false;
 
     setFormData({
       title: editTitleEn,
@@ -4215,7 +4232,7 @@ export const MarketHub = React.memo(function MarketHub({ language, preferredCurr
       price: listing.price.toString(),
       currency: listing.currency || 'USD',
       category: listing.category,
-      country: (listing as any).country || (inferredRemote ? 'GLOBAL' : 'USA'),
+      country: (listing as any).country || (inferredRemote ? 'GLOBAL' : 'GEO'),
       city: (listing as any).city || '',
       location: listing.location || '',
       images: listing.images || (listing.image ? [listing.image] : []),

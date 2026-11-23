@@ -119,6 +119,9 @@ export const classifyListing = (item?: ListingClassificationInput): ListingClass
   if (COLLABORATION_CATEGORY_SET.has(cat)) {
     return 'collaboration';
   }
+  if (PRODUCT_CATEGORY_SET.has(cat)) {
+    return 'product';
+  }
 
   if (explicit === 'service') return 'service';
   if (explicit === 'project') return 'project';
@@ -127,6 +130,23 @@ export const classifyListing = (item?: ListingClassificationInput): ListingClass
   if (cat === 'project' || PROJECT_CATEGORY_SET.has(cat)) return 'project';
 
   return 'product';
+};
+
+/**
+ * Returns true when the given category deterministically defines its ListingType
+ * (Product / Service / Project) without requiring manual selection or guesswork.
+ * Returns false for legacy/ambiguous/empty categories so callers fall back safely.
+ */
+export const canInferListingTypeFromCategory = (category?: string | null): boolean => {
+  const cat = normalizeCategoryId(category);
+  if (!cat) return false;
+  return (
+    PRODUCT_CATEGORY_SET.has(cat) ||
+    SERVICE_CATEGORY_SET.has(cat) ||
+    PROJECT_CATEGORY_SET.has(cat) ||
+    cat === 'services' ||
+    cat === 'project'
+  );
 };
 
 export const isCategoryValidForType = (

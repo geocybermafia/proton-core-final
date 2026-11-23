@@ -24,6 +24,8 @@ export interface DynamicFieldSchema {
   max?: number;
   maxLength?: number;
   showOnCard?: boolean;
+  tier?: 'core' | 'additional';
+  visibleWhen?: (attributes: Record<string, string | number | boolean>) => boolean;
 }
 
 export interface CategoryFormSchema {
@@ -181,6 +183,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: 250000',
         placeholderEn: 'e.g. 250000',
         min: 0,
+        tier: 'additional',
       },
       {
         key: 'monthlyRevenue',
@@ -191,6 +194,8 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderEn: 'e.g. 850',
         min: 0,
         suffix: 'USD',
+        tier: 'core',
+        visibleWhen: (attrs) => attrs.monetizationStatus === 'monetized',
       },
       {
         key: 'channelLanguage',
@@ -200,6 +205,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: ქართული / ინგლისური',
         placeholderEn: 'e.g. Georgian / English',
         maxLength: 60,
+        tier: 'additional',
       },
       {
         key: 'channelUrl',
@@ -209,12 +215,14 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'https://www.youtube.com/@channel',
         placeholderEn: 'https://www.youtube.com/@channel',
         maxLength: 300,
+        tier: 'additional',
       },
       {
         key: 'strikesClean',
         type: 'boolean',
         labelKa: 'სტრაიკებისა და გაფრთხილებების გარეშე',
         labelEn: 'Zero Copyright / Community Strikes',
+        tier: 'additional',
       },
     ],
   },
@@ -509,6 +517,9 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         min: 0,
         max: 100,
         suffix: '%',
+        tier: 'additional',
+        visibleWhen: (attrs) =>
+          Boolean(attrs.partnershipModel) && attrs.partnershipModel !== 'content_collab',
       },
       {
         key: 'partnerContribution',
@@ -518,6 +529,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: დეველოპმენტი, მარკეტინგი, კაპიტალი',
         placeholderEn: 'e.g. Engineering, Marketing, Capital',
         maxLength: 140,
+        tier: 'additional',
       },
     ],
   },
@@ -542,6 +554,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         labelEn: 'Project Type',
         required: true,
         showOnCard: true,
+        tier: 'core',
         options: [
           { value: 'saas', labelKa: 'SaaS / ვებ-აპლიკაცია', labelEn: 'SaaS / Web App' },
           { value: 'website', labelKa: 'ვებსაიტი / პორტალი', labelEn: 'Website / Portal' },
@@ -560,6 +573,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderEn: 'e.g. Domain, Source Code, DB, Social Pages',
         required: true,
         maxLength: 160,
+        tier: 'core',
       },
       {
         key: 'techStack',
@@ -570,6 +584,14 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderEn: 'e.g. React, Node.js, Firebase, Stripe',
         maxLength: 120,
         showOnCard: true,
+        tier: 'core',
+      },
+      {
+        key: 'isMonetized',
+        type: 'boolean',
+        labelKa: 'პროექტი მონეტიზებულია (აქვს თვიური შემოსავალი)',
+        labelEn: 'Asset is Monetized (Generates Monthly Revenue)',
+        tier: 'additional',
       },
       {
         key: 'monthlyRevenue',
@@ -580,6 +602,8 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderEn: 'e.g. 1200',
         min: 0,
         suffix: 'USD',
+        tier: 'additional',
+        visibleWhen: (attrs) => attrs.isMonetized === true,
       },
       {
         key: 'monthlyUsers',
@@ -589,6 +613,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: 15000',
         placeholderEn: 'e.g. 15000',
         min: 0,
+        tier: 'additional',
       },
       {
         key: 'demoUrl',
@@ -598,6 +623,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'https://myproject.com',
         placeholderEn: 'https://myproject.com',
         maxLength: 300,
+        tier: 'additional',
       },
     ],
   },
@@ -708,6 +734,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         type: 'boolean',
         labelKa: 'საჭიროა საგარანტიო დეპოზიტი',
         labelEn: 'Security Deposit Required',
+        tier: 'core',
       },
       {
         key: 'depositAmount',
@@ -717,6 +744,8 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: 200',
         placeholderEn: 'e.g. 200',
         min: 0,
+        tier: 'core',
+        visibleWhen: (attrs) => attrs.depositRequired === true,
       },
     ],
   },
@@ -742,6 +771,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         required: true,
         maxLength: 50,
         showOnCard: true,
+        tier: 'core',
       },
       {
         key: 'model',
@@ -753,13 +783,15 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         required: true,
         maxLength: 70,
         showOnCard: true,
+        tier: 'core',
       },
       {
         key: 'storageGb',
         type: 'select',
-        labelKa: 'შიდა მეხსიერება',
-        labelEn: 'Storage Capacity',
+        labelKa: 'შიდა მეხსიერება / ტიპი',
+        labelEn: 'Storage / Item Type',
         showOnCard: true,
+        tier: 'core',
         options: [
           { value: '32GB', labelKa: '32 GB', labelEn: '32 GB' },
           { value: '64GB', labelKa: '64 GB', labelEn: '64 GB' },
@@ -780,6 +812,8 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         min: 1,
         max: 64,
         suffix: 'GB',
+        tier: 'additional',
+        visibleWhen: (attrs) => attrs.storageGb !== 'accessory',
       },
       {
         key: 'batteryHealth',
@@ -791,12 +825,16 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         min: 1,
         max: 100,
         suffix: '%',
+        tier: 'additional',
+        visibleWhen: (attrs) => attrs.storageGb !== 'accessory',
       },
       {
         key: 'simType',
         type: 'select',
         labelKa: 'SIM / ქსელის ტიპი',
         labelEn: 'SIM / Carrier Status',
+        tier: 'additional',
+        visibleWhen: (attrs) => attrs.storageGb !== 'accessory',
         options: [
           { value: 'unlocked_physical', labelKa: 'Sim Free (ფიზიკური SIM)', labelEn: 'Unlocked (Physical SIM)' },
           { value: 'esim', labelKa: 'eSIM / Sim Free', labelEn: 'Unlocked (eSIM)' },
@@ -844,6 +882,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: i7-13700H, RTX 4060, 16GB RAM, 1TB SSD',
         placeholderEn: 'e.g. i7-13700H, RTX 4060, 16GB RAM, 1TB SSD',
         maxLength: 140,
+        tier: 'core',
       },
       {
         key: 'accessoriesIncluded',
@@ -993,6 +1032,7 @@ const CATEGORY_SCHEMAS: Record<string, CategoryFormSchema> = {
         placeholderKa: 'მაგ: 150 x 80 სმ',
         placeholderEn: 'e.g. 150 x 80 cm',
         maxLength: 80,
+        tier: 'core',
       },
       {
         key: 'color',
@@ -1562,6 +1602,20 @@ const FALLBACK_BY_TYPE: Record<ListingType, CategoryFormSchema> = {
   },
 };
 
+export const isDynamicFieldVisible = (
+  field: DynamicFieldSchema,
+  attributes?: Record<string, any> | null
+): boolean => {
+  if (!field.visibleWhen) return true;
+  const attrs = attributes && typeof attributes === 'object' ? attributes : {};
+  return Boolean(field.visibleWhen(attrs));
+};
+
+export const isDynamicFieldCore = (field: DynamicFieldSchema): boolean => {
+  if (field.tier) return field.tier === 'core';
+  return Boolean(field.required || field.showOnCard);
+};
+
 export const getCategoryFormSchema = (
   listingType?: string | null,
   category?: string | null
@@ -1592,6 +1646,25 @@ export const filterAttributesForSchema = (
       next[k] = v;
     }
   }
+
+  // Backward-compatible hydration of controlling flags for legacy listings
+  if (
+    schema.categoryId === 'rent' &&
+    next.depositRequired === undefined &&
+    next.depositAmount !== undefined &&
+    Number(next.depositAmount) > 0
+  ) {
+    next.depositRequired = true;
+  }
+  if (
+    schema.categoryId === 'digital-projects' &&
+    next.isMonetized === undefined &&
+    next.monthlyRevenue !== undefined &&
+    Number(next.monthlyRevenue) > 0
+  ) {
+    next.isMonetized = true;
+  }
+
   return next;
 };
 
@@ -1607,6 +1680,9 @@ export const sanitizeListingAttributes = (
   const sanitized: Record<string, string | number | boolean> = {};
 
   for (const field of schema.fields) {
+    if (!isDynamicFieldVisible(field, rawAttributes)) {
+      continue;
+    }
     const rawVal = rawAttributes[field.key];
     if (rawVal === undefined || rawVal === null) continue;
 
@@ -1666,6 +1742,9 @@ export const validateSchemaAttributes = (
   const errors: Record<string, string> = {};
 
   for (const field of schema.fields) {
+    if (!isDynamicFieldVisible(field, attrs)) {
+      continue;
+    }
     const rawVal = attrs[field.key];
     const strVal = rawVal === undefined || rawVal === null ? '' : String(rawVal).trim();
     const fieldLabel = isKa ? field.labelKa : field.labelEn;
@@ -1794,6 +1873,7 @@ export const getFormattedListingAttributes = (
   const result: FormattedListingAttribute[] = [];
 
   for (const field of schema.fields) {
+    if (field.key === 'isMonetized') continue;
     const rawVal = listing.attributes[field.key];
     if (rawVal === undefined || rawVal === null) continue;
     if (field.type === 'boolean' && rawVal !== true) continue;
