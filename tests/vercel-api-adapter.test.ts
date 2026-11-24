@@ -298,6 +298,34 @@ describe('Vercel API Adapter & Shared ServerApp Suite', () => {
     );
   });
 
+  it('14. Enforces strict service account project_id === proton-core-ai validation and rejects foreign/missing project IDs', () => {
+    const validSa = {
+      type: 'service_account',
+      project_id: 'proton-core-ai',
+      client_email: 'sa@proton-core-ai.iam.gserviceaccount.com',
+      private_key: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD3\n-----END PRIVATE KEY-----\n',
+    };
+
+    // 1. Valid proton-core-ai project_id passes
+    const parsed = parseServiceAccountJson(JSON.stringify(validSa));
+    assert.strictEqual(parsed.project_id, 'proton-core-ai');
+
+    // 2. Foreign project_id is strictly rejected
+    const foreignSa = { ...validSa, project_id: 'attacker-firebase-project' };
+    assert.throws(
+      () => parseServiceAccountJson(JSON.stringify(foreignSa)),
+      (err: any) => err instanceof AnalyticsConfigError && err.code === 'analytics/admin-credentials-invalid'
+    );
+
+    // 3. Missing project_id is strictly rejected
+    const missingProjSa = { ...validSa };
+    delete (missingProjSa as any).project_id;
+    assert.throws(
+      () => parseServiceAccountJson(JSON.stringify(missingProjSa)),
+      (err: any) => err instanceof AnalyticsConfigError && err.code === 'analytics/admin-credentials-invalid'
+    );
+  });
+
   it('13. Enforces fail-closed 503 analytics/salt-missing in production when ANALYTICS_HASH_SALT is missing or weak, while preserving dev fallback', async () => {
     const prevNodeEnv = process.env.NODE_ENV;
     const prevVercel = process.env.VERCEL;

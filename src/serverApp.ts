@@ -52,9 +52,44 @@ async function getGooglePublicCerts(): Promise<Record<string, string>> {
   }
 }
 
-async function verifyFirebaseTokenDirectly(idToken: string, candidateProjects: string[]) {
+const PRIMARY_FIREBASE_PROJECT_ID = "proton-core-ai";
+const KNOWN_FIRESTORE_DATABASE_ID = "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
+const ALLOWED_SERVER_FIREBASE_PROJECT_IDS = new Set<string>([PRIMARY_FIREBASE_PROJECT_ID]);
+
+export function getTrustedFirebaseProjectIds(): string[] {
+  const configuredEnvProjectId =
+    typeof process.env.FIREBASE_PROJECT_ID === "string"
+      ? process.env.FIREBASE_PROJECT_ID.trim()
+      : "";
+
+  if (
+    configuredEnvProjectId &&
+    configuredEnvProjectId !== KNOWN_FIRESTORE_DATABASE_ID &&
+    ALLOWED_SERVER_FIREBASE_PROJECT_IDS.has(configuredEnvProjectId)
+  ) {
+    return [configuredEnvProjectId];
+  }
+
+  return [PRIMARY_FIREBASE_PROJECT_ID];
+}
+
+export async function verifyFirebaseTokenDirectly(
+  idToken: string,
+  trustedProjects: string[] = getTrustedFirebaseProjectIds(),
+  certProvider?: () => Promise<Record<string, string>>
+): Promise<{ uid: string; email?: string; aud: string } | null> {
   const parts = idToken.split('.');
   if (parts.length !== 3) return null;
+
+  const allowedProjects = Array.from(
+    new Set(
+      (Array.isArray(trustedProjects) ? trustedProjects : [])
+        .map((p) => (typeof p === 'string' ? p.trim() : ''))
+        .filter((p) => Boolean(p) && p !== KNOWN_FIRESTORE_DATABASE_ID)
+    )
+  );
+  if (allowedProjects.length === 0) return null;
+
   try {
     const unpaddedHeader = parts[0].replace(/-/g, '+').replace(/_/g, '/');
     const headerB64 = unpaddedHeader + '='.repeat((4 - (unpaddedHeader.length % 4)) % 4);
@@ -64,10 +99,13 @@ async function verifyFirebaseTokenDirectly(idToken: string, candidateProjects: s
     const payloadB64 = unpaddedPayload + '='.repeat((4 - (unpaddedPayload.length % 4)) % 4);
     const payload = JSON.parse(Buffer.from(payloadB64, 'base64').toString('utf8'));
 
-    if (header.alg !== 'RS256' || !header.kid) return null;
+    if (!header || typeof header !== 'object' || Array.isArray(header)) return null;
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
 
-    const certs = await getGooglePublicCerts();
-    const cert = certs[header.kid];
+    if (header.alg !== 'RS256' || typeof header.kid !== 'string' || !header.kid.trim()) return null;
+
+    const certs = certProvider ? await certProvider() : await getGooglePublicCerts();
+    const cert = certs?.[header.kid];
     if (!cert) return null;
 
     const verifier = crypto.createVerify('RSA-SHA256');
@@ -77,16 +115,27 @@ async function verifyFirebaseTokenDirectly(idToken: string, candidateProjects: s
     const sig = Buffer.from(sigB64, 'base64');
     if (!verifier.verify(cert, sig)) return null;
 
-    // Check project audience matches any recognized or candidate project
-    if (!candidateProjects.includes(payload.aud)) return null;
+    // Strictly enforce server-configured trusted Firebase Project IDs
+    if (typeof payload.aud !== 'string' || !allowedProjects.includes(payload.aud)) return null;
+    if (payload.aud === KNOWN_FIRESTORE_DATABASE_ID) return null;
     if (payload.iss !== `https://securetoken.google.com/${payload.aud}`) return null;
 
     const nowSec = Math.floor(Date.now() / 1000);
-    if (payload.exp < nowSec - 300) return null;
-    if (payload.iat > nowSec + 300) return null;
-    if (!payload.sub || typeof payload.sub !== 'string') return null;
+    if (typeof payload.exp !== 'number' || !Number.isFinite(payload.exp) || payload.exp <= nowSec) return null;
+    if (typeof payload.iat !== 'number' || !Number.isFinite(payload.iat) || payload.iat > nowSec + 300) return null;
+    if (
+      payload.auth_time !== undefined &&
+      (typeof payload.auth_time !== 'number' || !Number.isFinite(payload.auth_time) || payload.auth_time > nowSec + 300)
+    ) {
+      return null;
+    }
+    if (typeof payload.sub !== 'string' || !payload.sub.trim() || payload.sub.length > 128) return null;
 
-    return { uid: payload.sub, email: payload.email, aud: payload.aud };
+    return {
+      uid: payload.sub,
+      email: typeof payload.email === 'string' ? payload.email : undefined,
+      aud: payload.aud
+    };
   } catch {
     return null;
   }
@@ -120,10 +169,15 @@ export function detectImageMimeType(buffer: Buffer): 'image/jpeg' | 'image/png' 
 }
 
 async function getVerifiedAdminAuth(targetProjectId?: string) {
+  const trustedProjects = getTrustedFirebaseProjectIds();
+  const projectId = targetProjectId || trustedProjects[0] || PRIMARY_FIREBASE_PROJECT_ID;
+  if (!trustedProjects.includes(projectId) || projectId === KNOWN_FIRESTORE_DATABASE_ID) {
+    throw new Error(`Untrusted Firebase project ID rejected: ${projectId}`);
+  }
+
   const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
   const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
-  
-  const projectId = targetProjectId || "proton-core-ai";
+
   if (!_adminAuthMap.has(projectId)) {
     const existing = getAdminApps().find((a: any) => a.name === projectId || (a.name === '[DEFAULT]' && a.options?.projectId === projectId));
     const adminApp = existing || initAdminApp({ projectId }, projectId);
@@ -134,8 +188,9 @@ async function getVerifiedAdminAuth(targetProjectId?: string) {
 
 async function verifyBearerTokenFromRequest(
   req: express.Request,
-  customVerifier?: (token: string) => Promise<{ uid: string } | null>
-): Promise<{ uid?: string; error?: string; status?: number; code?: string }> {
+  customVerifier?: (token: string) => Promise<{ uid: string } | null>,
+  customCertProvider?: () => Promise<Record<string, string>>
+): Promise<{ uid?: string; email?: string; aud?: string; error?: string; status?: number; code?: string; reason?: string }> {
   const authHeader = req.headers.authorization || (req.headers as any)['Authorization'];
   const bearerMatch = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
   if (!bearerMatch) {
@@ -158,57 +213,72 @@ async function verifyBearerTokenFromRequest(
 
   const tokenParts = idToken.split(".");
   if (tokenParts.length !== 3) {
-    return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+    return {
+      error: "Unauthorized: Invalid or expired Firebase authentication token",
+      status: 401,
+      code: "auth/invalid-id-token",
+      reason: "Malformed JWT structure. Expected 3 segments."
+    };
   }
 
-  let tokenAudience: string | undefined;
-  try {
-    const unpadded = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padLength = (4 - (unpadded.length % 4)) % 4;
-    const base64 = unpadded + '='.repeat(padLength);
-    const parsedPayload = JSON.parse(Buffer.from(base64, 'base64').toString('utf8'));
-    tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === 'string' ? parsedPayload.iss.replace('https://securetoken.google.com/', '') : undefined);
-  } catch {
-    // ignore payload parse failure; verification below will reject
+  // Strictly use server-configured trusted Firebase Project IDs (never trust unverified JWT aud)
+  const trustedProjects = getTrustedFirebaseProjectIds();
+
+  if (customCertProvider) {
+    const directResult = await verifyFirebaseTokenDirectly(idToken, trustedProjects, customCertProvider);
+    if (directResult?.uid) {
+      return { uid: directResult.uid, email: directResult.email, aud: directResult.aud };
+    }
+    return {
+      error: "Unauthorized: Invalid or expired Firebase authentication token",
+      status: 401,
+      code: "auth/invalid-id-token",
+      reason: "Token verification rejected"
+    };
   }
 
-  const candidateProjects: string[] = [];
-  if (tokenAudience && typeof tokenAudience === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-    candidateProjects.push(tokenAudience);
-  }
-  for (const proj of [
-    "proton-core-ai",
-    "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-    process.env.VITE_FIREBASE_PROJECT_ID,
-    process.env.FIREBASE_PROJECT_ID,
-    process.env.GCLOUD_PROJECT,
-  ].filter(Boolean) as string[]) {
-    if (!candidateProjects.includes(proj)) candidateProjects.push(proj);
-  }
-
-  try {
-    const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-    if (directResult?.uid) return { uid: directResult.uid };
-  } catch {
-    // fall through to Admin Auth SDK
-  }
-
-  for (const projId of candidateProjects) {
+  // 1. Prefer Firebase Admin SDK verifyIdToken strictly against trusted server-configured projects
+  let lastAuthError: any = null;
+  for (const projId of trustedProjects) {
     try {
       const authInstance = await getVerifiedAdminAuth(projId);
       const decoded = await authInstance.verifyIdToken(idToken);
-      if (decoded?.uid) return { uid: decoded.uid };
-    } catch {
-      // try next project
+      if (
+        decoded?.uid &&
+        typeof decoded.aud === 'string' &&
+        trustedProjects.includes(decoded.aud) &&
+        decoded.aud === projId &&
+        decoded.aud !== KNOWN_FIRESTORE_DATABASE_ID
+      ) {
+        return { uid: decoded.uid, email: decoded.email, aud: decoded.aud };
+      }
+    } catch (authErr: any) {
+      lastAuthError = authErr;
     }
   }
 
-  return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+  // 2. Cryptographic public-cert fallback strictly enforcing the same trusted server allowlist
+  try {
+    const directResult = await verifyFirebaseTokenDirectly(idToken, trustedProjects);
+    if (directResult?.uid) {
+      return { uid: directResult.uid, email: directResult.email, aud: directResult.aud };
+    }
+  } catch {
+    // Reject below
+  }
+
+  return {
+    error: "Unauthorized: Invalid or expired Firebase authentication token",
+    status: 401,
+    code: lastAuthError?.code || "auth/invalid-id-token",
+    reason: lastAuthError?.message || "Token verification rejected"
+  };
 }
 
 export interface CreateApiAppOptions {
   analyticsService?: MarketAnalyticsService;
   verifyIdToken?: (token: string) => Promise<{ uid: string } | null>;
+  getPublicCerts?: () => Promise<Record<string, string>>;
 }
 
 export function createApiApp(options?: CreateApiAppOptions): express.Express {
@@ -281,102 +351,17 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
 
   // Secure Server-side Market Hub Listing Image Upload
   const uploadHandler: express.RequestHandler = async (req, res) => {
-    // 1. Authenticate user via Firebase ID Token
-    const authHeader = req.headers.authorization || (req.headers as any)['Authorization'];
-    const bearerMatch = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-    if (!bearerMatch) {
-      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
-    }
-    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, '');
-    if (!idToken) {
-      return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
-    }
-
-    // Basic structure check: Firebase ID token is a standard JWT with 3 dot-separated base64url segments
-    const tokenParts = idToken.split(".");
-    if (tokenParts.length !== 3) {
-      console.warn("[StorageServer] Token rejected: malformed JWT structure (expected 3 dot-separated segments)");
-      return res.status(401).json({ 
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        reason: "Malformed JWT structure. Expected 3 segments."
+    // 1. Authenticate user via centralized PROTON Firebase ID Token verifier
+    const authResult = await authenticateFirebaseUser(req);
+    if ('error' in authResult) {
+      return res.status(authResult.statusCode).json({
+        error: authResult.error,
+        reason: authResult.reason,
+        code: authResult.code
       });
     }
 
-    // Inspect token audience claim to dynamically match the issuing Firebase Project
-    let tokenAudience: string | undefined;
-    try {
-      const unpadded = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const padLength = (4 - (unpadded.length % 4)) % 4;
-      const base64 = unpadded + '='.repeat(padLength);
-      const payloadJson = Buffer.from(base64, 'base64').toString('utf8');
-      const parsedPayload = JSON.parse(payloadJson);
-      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === 'string' ? parsedPayload.iss.replace('https://securetoken.google.com/', '') : undefined);
-    } catch (e) {
-      console.warn("[StorageServer] Could not parse token payload:", e);
-    }
-
-    // Build list of candidate project IDs to verify against, prioritizing the token's own audience
-    const candidateProjects: string[] = [];
-    if (tokenAudience && typeof tokenAudience === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-      candidateProjects.push(tokenAudience);
-    }
-    const standardProjects = [
-      "proton-core-ai",
-      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-      process.env.VITE_FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.GCLOUD_PROJECT,
-    ].filter(Boolean) as string[];
-
-    for (const proj of standardProjects) {
-      if (!candidateProjects.includes(proj)) {
-        candidateProjects.push(proj);
-      }
-    }
-    if (candidateProjects.length === 0) {
-      candidateProjects.push("proton-core-ai");
-    }
-
-    let decodedToken: any = null;
-    let lastAuthError: any = null;
-
-    // 1. First attempt cryptographically authoritative direct verification using Google's public certs
-    // This avoids Cloud Run metadata audience mismatch (host vs client project ID)
-    try {
-      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-      if (directResult && directResult.uid) {
-        decodedToken = directResult;
-      }
-    } catch (e: any) {
-      console.warn("[StorageServer] Direct public cert verification attempt notice:", e?.message);
-    }
-
-    // 2. Secondary fallback via Firebase Admin SDK
-    if (!decodedToken || !decodedToken.uid) {
-      for (const projId of candidateProjects) {
-        try {
-          const authInstance = await getVerifiedAdminAuth(projId);
-          decodedToken = await authInstance.verifyIdToken(idToken);
-          if (decodedToken && decodedToken.uid) {
-            break;
-          }
-        } catch (authErr: any) {
-          lastAuthError = authErr;
-        }
-      }
-    }
-
-    if (!decodedToken || !decodedToken.uid) {
-      const errDetail = lastAuthError?.message || "Token verification rejected";
-      console.warn("[StorageServer] Token verification rejected (401):", errDetail, "Candidates tried:", candidateProjects);
-      return res.status(401).json({ 
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        reason: errDetail,
-        code: lastAuthError?.code || "auth/invalid-id-token"
-      });
-    }
-
-    const verifiedUid = decodedToken.uid;
+    const verifiedUid = authResult.uid;
     if (!verifiedUid) {
       return res.status(401).json({ error: "Unauthorized: User UID not found in verified token" });
     }
@@ -563,75 +548,16 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
 
   // Secure server-side listing image deletion endpoint enforcing token authentication and strict user ownership
   const deleteHandler: express.RequestHandler = async (req, res) => {
-    const authHeader = req.headers.authorization || (req.headers as any)['Authorization'];
-    const bearerMatch = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-    if (!bearerMatch) {
-      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
-    }
-    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, '');
-    if (!idToken) {
-      return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
-    }
-
-    const tokenParts = idToken.split(".");
-    if (tokenParts.length !== 3) {
-      return res.status(401).json({ 
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        reason: "Malformed JWT structure"
+    const authResult = await authenticateFirebaseUser(req);
+    if ('error' in authResult) {
+      return res.status(authResult.statusCode).json({
+        error: authResult.error,
+        reason: authResult.reason,
+        code: authResult.code
       });
     }
 
-    let tokenAudience: string | undefined;
-    try {
-      const unpadded = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const padLength = (4 - (unpadded.length % 4)) % 4;
-      const base64 = unpadded + '='.repeat(padLength);
-      const payloadJson = Buffer.from(base64, 'base64').toString('utf8');
-      const parsedPayload = JSON.parse(payloadJson);
-      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === 'string' ? parsedPayload.iss.replace('https://securetoken.google.com/', '') : undefined);
-    } catch {}
-
-    const candidateProjects: string[] = [];
-    if (tokenAudience && typeof tokenAudience === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-      candidateProjects.push(tokenAudience);
-    }
-    const standardProjects = [
-      "proton-core-ai",
-      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-      process.env.VITE_FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.GCLOUD_PROJECT,
-    ].filter(Boolean) as string[];
-
-    for (const proj of standardProjects) {
-      if (!candidateProjects.includes(proj)) candidateProjects.push(proj);
-    }
-    if (candidateProjects.length === 0) candidateProjects.push("proton-core-ai");
-
-    let decodedToken: any = null;
-    try {
-      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-      if (directResult && directResult.uid) decodedToken = directResult;
-    } catch {}
-
-    if (!decodedToken || !decodedToken.uid) {
-      for (const projId of candidateProjects) {
-        try {
-          const authInstance = await getVerifiedAdminAuth(projId);
-          decodedToken = await authInstance.verifyIdToken(idToken);
-          if (decodedToken && decodedToken.uid) break;
-        } catch {}
-      }
-    }
-
-    if (!decodedToken || !decodedToken.uid) {
-      return res.status(401).json({ 
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        code: "auth/invalid-id-token"
-      });
-    }
-
-    const verifiedUid = decodedToken.uid;
+    const verifiedUid = authResult.uid;
     const { path, url } = req.body || {};
     const target = path || url;
 
@@ -722,97 +648,22 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
     return deleteHandler(req, res, next);
   });
 
-  // Reusable Firebase Authentication helper for Storage endpoints
+  // Reusable centralized Firebase Authentication helper for Storage endpoints
   const authenticateFirebaseUser = async (req: express.Request): Promise<{ uid: string; email?: string } | { error: string; statusCode: number; code?: string; reason?: string }> => {
-    const authHeader = req.headers.authorization || (req.headers as any)['Authorization'];
-    const bearerMatch = typeof authHeader === 'string' ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-    if (!bearerMatch) {
-      return { error: "Unauthorized: Missing or invalid Authorization header", statusCode: 401 };
-    }
-    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, '');
-    if (!idToken) {
-      return { error: "Unauthorized: Empty authentication token", statusCode: 401 };
-    }
-
-    const tokenParts = idToken.split(".");
-    if (tokenParts.length !== 3) {
-      return { 
-        error: "Unauthorized: Invalid or expired Firebase authentication token", 
-        statusCode: 401, 
-        reason: "Malformed JWT structure. Expected 3 segments." 
+    const authRes = await verifyBearerTokenFromRequest(
+      req,
+      options?.verifyIdToken,
+      options?.getPublicCerts
+    );
+    if (!authRes.uid) {
+      return {
+        error: authRes.error || "Unauthorized: Invalid or expired Firebase authentication token",
+        statusCode: authRes.status || 401,
+        code: authRes.code,
+        reason: authRes.reason,
       };
     }
-
-    let tokenAudience: string | undefined;
-    try {
-      const unpadded = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const padLength = (4 - (unpadded.length % 4)) % 4;
-      const base64 = unpadded + '='.repeat(padLength);
-      const payloadJson = Buffer.from(base64, 'base64').toString('utf8');
-      const parsedPayload = JSON.parse(payloadJson);
-      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === 'string' ? parsedPayload.iss.replace('https://securetoken.google.com/', '') : undefined);
-    } catch (e) {
-      console.warn("[StorageServer] Could not parse token payload:", e);
-    }
-
-    const candidateProjects: string[] = [];
-    if (tokenAudience && typeof tokenAudience === 'string' && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-      candidateProjects.push(tokenAudience);
-    }
-    const standardProjects = [
-      "proton-core-ai",
-      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-      process.env.VITE_FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.GCLOUD_PROJECT,
-    ].filter(Boolean) as string[];
-
-    for (const proj of standardProjects) {
-      if (!candidateProjects.includes(proj)) {
-        candidateProjects.push(proj);
-      }
-    }
-    if (candidateProjects.length === 0) {
-      candidateProjects.push("proton-core-ai");
-    }
-
-    let decodedToken: any = null;
-    let lastAuthError: any = null;
-
-    try {
-      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-      if (directResult && directResult.uid) {
-        decodedToken = directResult;
-      }
-    } catch (e: any) {
-      console.warn("[StorageServer] Direct public cert verification attempt notice:", e?.message);
-    }
-
-    if (!decodedToken || !decodedToken.uid) {
-      for (const projId of candidateProjects) {
-        try {
-          const authInstance = await getVerifiedAdminAuth(projId);
-          decodedToken = await authInstance.verifyIdToken(idToken);
-          if (decodedToken && decodedToken.uid) {
-            break;
-          }
-        } catch (authErr: any) {
-          lastAuthError = authErr;
-        }
-      }
-    }
-
-    if (!decodedToken || !decodedToken.uid) {
-      const errDetail = lastAuthError?.message || "Token verification rejected";
-      return { 
-        error: "Unauthorized: Invalid or expired Firebase authentication token", 
-        statusCode: 401, 
-        reason: errDetail,
-        code: lastAuthError?.code || "auth/invalid-id-token"
-      };
-    }
-
-    return { uid: decodedToken.uid, email: decodedToken.email };
+    return { uid: authRes.uid, email: authRes.email };
   };
 
   // Secure Server-side Clips Video Signed Upload URL Generator
@@ -1148,7 +999,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       const hasAuthHeader = Boolean(req.headers.authorization || (req.headers as any)['Authorization']);
       let verifiedUid: string | null = null;
       if (hasAuthHeader) {
-        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
         if (!authRes.uid) {
           return res.status(authRes.status || 401).json({
             error: authRes.error || "Unauthorized",
@@ -1188,7 +1039,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
       const hasAuthHeader = Boolean(req.headers.authorization || (req.headers as any)['Authorization']);
       let verifiedUid: string | null = null;
       if (hasAuthHeader) {
-        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
         if (!authRes.uid) {
           return res.status(authRes.status || 401).json({
             error: authRes.error || "Unauthorized",
@@ -1235,7 +1086,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
   // 2. Owner-only Private Listing & Seller Statistics (24h, 7d, 30d, all + period comparisons)
   apiRouter.get("/market/listing-stats", analyticsReadLimiter, async (req, res) => {
     try {
-      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
       if (!authRes.uid) {
         return res.status(authRes.status || 401).json({
           error: authRes.error || "Unauthorized",
@@ -1296,7 +1147,7 @@ export function createApiApp(options?: CreateApiAppOptions): express.Express {
   // 4. Seller Opt-Out Control for Public Competition Rankings
   apiRouter.post("/market/competition-preference", analyticsReadLimiter, async (req, res) => {
     try {
-      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
       if (!authRes.uid) {
         return res.status(authRes.status || 401).json({
           error: authRes.error || "Unauthorized",

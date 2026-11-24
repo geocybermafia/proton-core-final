@@ -315,6 +315,13 @@ export function parseServiceAccountJson(rawSaJson: string): ParsedServiceAccount
     );
   }
 
+  if (typeof parsed.project_id !== 'string' || parsed.project_id.trim() !== 'proton-core-ai') {
+    throw new AnalyticsConfigError(
+      'analytics/admin-credentials-invalid',
+      'Server Firebase Admin service account JSON project_id must match proton-core-ai.'
+    );
+  }
+
   if (typeof parsed.client_email !== 'string' || !parsed.client_email.includes('@')) {
     throw new AnalyticsConfigError(
       'analytics/admin-credentials-invalid',
@@ -364,7 +371,7 @@ export async function getAdminFirestoreInstance(): Promise<any> {
   const { initializeApp, getApps, cert } = await import('firebase-admin/app');
   const { getFirestore } = await import('firebase-admin/firestore');
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || 'proton-core-ai';
+  const PRIMARY_PROJECT_ID = 'proton-core-ai';
   const databaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51';
   const appName = 'proton-analytics-admin';
 
@@ -377,11 +384,11 @@ export async function getAdminFirestoreInstance(): Promise<any> {
         app = initializeApp(
           {
             credential: cert({
-              projectId: parsed.project_id || projectId,
+              projectId: PRIMARY_PROJECT_ID,
               clientEmail: parsed.client_email,
               privateKey: parsed.private_key,
             }),
-            projectId: parsed.project_id || projectId,
+            projectId: PRIMARY_PROJECT_ID,
           },
           appName
         );
@@ -393,7 +400,7 @@ export async function getAdminFirestoreInstance(): Promise<any> {
         );
       }
     } else {
-      app = initializeApp({ projectId }, appName);
+      app = initializeApp({ projectId: PRIMARY_PROJECT_ID }, appName);
     }
   }
 

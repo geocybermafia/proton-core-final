@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build:api": "esbuild src/serverlessEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
-    "build": "NODE_OPTIONS=\"--max-old-space-size=1450\" vite build && NODE_OPTIONS=\"--max-old-space-size=1450\" esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/server.cjs && esbuild src/serverlessEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
+    "build:api": "NODE_OPTIONS=\"--max-old-space-size=1450\" esbuild src/serverlessEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
+    "build": "NODE_OPTIONS=\"--max-old-space-size=1450\" vite build && NODE_OPTIONS=\"--max-old-space-size=1450\" esbuild server.ts --bundle --platform=node --format=cjs --packages=external --outfile=dist/server.cjs && npm run build:api",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "rm -rf dist",

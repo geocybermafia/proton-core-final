@@ -28,8 +28,63 @@ function getAi(apiKeyOverride) {
   }
   return aiInstances.get(apiKey);
 }
+var CLOUDFLARE_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+function convertHistoryToMessages(history = []) {
+  return (history || []).map((entry) => ({
+    role: entry.role === "model" ? "assistant" : "user",
+    content: (entry.parts || []).map((part) => part?.text || "").join("\n").trim()
+  })).filter((msg) => msg.content.length > 0);
+}
+function isRateLimitOrMissingKeyError(error) {
+  if (!error) return false;
+  const status = error?.status ?? error?.statusCode ?? error?.code ?? error?.error?.code;
+  if (status === 429 || status === "429" || status === "RESOURCE_EXHAUSTED") {
+    return true;
+  }
+  const errStr = String(error?.message || error || "");
+  const lower = errStr.toLowerCase();
+  return errStr.includes("429") || lower.includes("resource_exhausted") || lower.includes("quota") || lower.includes("rate limit") || lower.includes("rate-limit") || lower.includes("ratelimit") || lower.includes("too many requests") || lower.includes("gemini_api_key is missing") || lower.includes("ai engine not initialized");
+}
+async function callCloudflareWorkersAI(messages, options = {}) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!accountId || !apiToken) {
+    throw new Error("Cloudflare Workers AI credentials (CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN) are missing");
+  }
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${CLOUDFLARE_MODEL}`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      messages,
+      ...options.temperature !== void 0 ? { temperature: options.temperature } : {},
+      max_tokens: options.max_tokens ?? 2048
+    })
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || data && data.success === false) {
+    const errMsg = data?.errors?.[0]?.message || response.statusText || `HTTP ${response.status}`;
+    throw new Error(`Cloudflare Workers AI error (${response.status}): ${errMsg}`);
+  }
+  const text = data?.result?.response ?? data?.choices?.[0]?.message?.content ?? "";
+  if (typeof text !== "string" || !text.trim()) {
+    throw new Error("Cloudflare Workers AI returned an empty response");
+  }
+  return {
+    text: text.trim(),
+    usage: data?.result?.usage ?? data?.usage
+  };
+}
 async function chatWithPersona(persona, message, history = [], model = "gemini-3.5-flash", includeMaps = false, includeSearch = true, temperature = 0.9, globalInstruction, appLanguage = "en", apiKeyOverride) {
   const startTime = performance.now();
+  const systemInstruction = `${persona.systemInstruction}
+${persona.language !== "English" ? "\n\nCRITICAL LANGUAGE INSTRUCTION: Prioritize using the Georgian language (Mkhedruli script) in your responses. Always include Georgian when 'Georgian' or 'Mixed' is selected, and use Georgian script for terms, names, or cultural nuances." : ""}
+${globalInstruction ? `
+
+${globalInstruction}` : ""}`.trim();
   try {
     const tools = [];
     if (includeSearch) {
@@ -46,11 +101,7 @@ async function chatWithPersona(persona, message, history = [], model = "gemini-3
         { role: "user", parts: [{ text: message }] }
       ],
       config: {
-        systemInstruction: `${persona.systemInstruction}
-${persona.language !== "English" ? "\n\nCRITICAL LANGUAGE INSTRUCTION: Prioritize using the Georgian language (Mkhedruli script) in your responses. Always include Georgian when 'Georgian' or 'Mixed' is selected, and use Georgian script for terms, names, or cultural nuances." : ""}
-${globalInstruction ? `
-
-${globalInstruction}` : ""}`,
+        systemInstruction,
         temperature,
         topP: 0.95,
         tools: tools.length > 0 ? tools : void 0
@@ -68,9 +119,32 @@ ${globalInstruction}` : ""}`,
       metadata
     };
   } catch (error) {
-    const endTime = performance.now();
     const errStr = error?.message || String(error);
     console.warn(`[Gemini API] chatWithPersona rate-limited or error: ${errStr.substring(0, 120)}`);
+    if (isRateLimitOrMissingKeyError(error)) {
+      try {
+        const cfMessages = [
+          ...systemInstruction ? [{ role: "system", content: systemInstruction }] : [],
+          ...convertHistoryToMessages(history),
+          { role: "user", content: message }
+        ];
+        const cfResult = await callCloudflareWorkersAI(cfMessages, { temperature });
+        const endTime2 = performance.now();
+        return {
+          text: cfResult.text,
+          metadata: {
+            promptTokenCount: cfResult.usage?.prompt_tokens || 0,
+            candidatesTokenCount: cfResult.usage?.completion_tokens || 0,
+            totalTokenCount: cfResult.usage?.total_tokens || 0,
+            modelName: CLOUDFLARE_MODEL,
+            latency: Math.round(endTime2 - startTime)
+          }
+        };
+      } catch (cfError) {
+        console.warn(`[Cloudflare Workers AI] chatWithPersona fallback failed: ${(cfError?.message || String(cfError)).substring(0, 120)}`);
+      }
+    }
+    const endTime = performance.now();
     let text = "";
     if (errStr.includes("429") || errStr.toLowerCase().includes("quota") || errStr.toLowerCase().includes("limit") || errStr.toLowerCase().includes("resource_exhausted")) {
       text = appLanguage === "ka" ? "\u10D3\u10E6\u10D8\u10E3\u10E0\u10D8 AI \u10DB\u10DD\u10D7\u10EE\u10DD\u10D5\u10DC\u10D4\u10D1\u10D8\u10E1 \u10DA\u10D8\u10DB\u10D8\u10E2\u10D8 \u10D0\u10DB\u10DD\u10D8\u10EC\u10E3\u10E0\u10D0. \u10E8\u10D4\u10D2\u10D8\u10EB\u10DA\u10D8\u10D0\u10D7 Settings-\u10D8\u10D3\u10D0\u10DC \u10E9\u10D0\u10E0\u10D7\u10DD\u10D7 \u10DD\u10E4\u10DA\u10D0\u10D8\u10DC \u10E0\u10D4\u10DF\u10D8\u10DB\u10D8 \u10D0\u10DC \u10EA\u10DD\u10E2\u10D0 \u10EE\u10D0\u10DC\u10E8\u10D8 \u10E1\u10EA\u10D0\u10D3\u10DD\u10D7 \u10D7\u10D0\u10D5\u10D8\u10D3\u10D0\u10DC." : "Daily AI request limit reached. You can turn on Offline Mode in Settings or try again shortly.";
@@ -84,16 +158,16 @@ ${globalInstruction}` : ""}`,
   }
 }
 async function generateNewPersona(basePersona, prompt, apiKeyOverride) {
-  try {
-    const ai = getAi(apiKeyOverride);
-    if (!ai) throw new Error("AI engine not initialized");
-    const systemPrompt = `
+  const systemPrompt = `
       You are a Persona Architect. Create a new digital persona based on the user's prompt.
       The persona must have an ID, Name (EN/GE), Role, Description (EN/GE), System Instruction, and an Emoji Avatar.
       Respond ONLY with a JSON object matching the Persona type.
       
       BASE PERSONA FOR CONTEXT: ${JSON.stringify(basePersona)}
     `;
+  try {
+    const ai = getAi(apiKeyOverride);
+    if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: [systemPrompt, prompt]
@@ -105,6 +179,31 @@ async function generateNewPersona(basePersona, prompt, apiKeyOverride) {
   } catch (error) {
     const errStr = error?.message || String(error);
     console.warn(`[Gemini API] generateNewPersona fallback triggered: ${errStr.substring(0, 120)}`);
+    if (isRateLimitOrMissingKeyError(error)) {
+      try {
+        const cfResult = await callCloudflareWorkersAI([
+          { role: "system", content: systemPrompt.trim() },
+          { role: "user", content: prompt }
+        ], { temperature: 0.7 });
+        const cleaned = cfResult.text.replace(/```json|```/gi, "").trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+        return {
+          ...parsed,
+          id: `persona-${Date.now()}`,
+          name: parsed.name || `${prompt.substring(0, 15)} Advisor`,
+          nameGe: parsed.nameGe || parsed.name || `${prompt.substring(0, 15)} \u10DB\u10E0\u10E9\u10D4\u10D5\u10D4\u10DA\u10D8`,
+          role: parsed.role || "Strategic Assistant",
+          description: parsed.description || `Optimized specialist adapted to: "${prompt.substring(0, 40)}"`,
+          descriptionGe: parsed.descriptionGe || parsed.description || `\u10E1\u10DE\u10D4\u10EA\u10D8\u10D0\u10DA\u10D8\u10E1\u10E2\u10D8, \u10E0\u10DD\u10DB\u10D4\u10DA\u10D8\u10EA \u10DB\u10DD\u10E0\u10D2\u10D4\u10D1\u10E3\u10DA\u10D8\u10D0 \u10DB\u10DD\u10D7\u10EE\u10DD\u10D5\u10DC\u10D0\u10D6\u10D4: "${prompt.substring(0, 40)}"`,
+          avatar: parsed.avatar || "\u{1F916}",
+          language: ["English", "Georgian", "Mixed"].includes(parsed.language) ? parsed.language : "Mixed",
+          systemInstruction: parsed.systemInstruction || `You are an expert digital assistant customized for: "${prompt}". Provide guidance in both English and Georgian, ensuring context-rich responses.`
+        };
+      } catch (cfError) {
+        console.warn(`[Cloudflare Workers AI] generateNewPersona fallback failed: ${(cfError?.message || String(cfError)).substring(0, 120)}`);
+      }
+    }
     return {
       id: `persona-${Date.now()}`,
       name: `${prompt.substring(0, 15)} Advisor`,
@@ -121,7 +220,7 @@ async function generateNewPersona(basePersona, prompt, apiKeyOverride) {
 async function summarizeConversation(history, apiKeyOverride) {
   try {
     const ai = getAi(apiKeyOverride);
-    if (!ai) return "AI engine not initialized.";
+    if (!ai) throw new Error("AI engine not initialized (GEMINI_API_KEY is missing on server)");
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: [
@@ -133,6 +232,21 @@ async function summarizeConversation(history, apiKeyOverride) {
   } catch (error) {
     const errStr = error?.message || String(error);
     console.warn(`[Gemini API] summarizeConversation fallback triggered: ${errStr.substring(0, 120)}`);
+    if (isRateLimitOrMissingKeyError(error)) {
+      try {
+        const cfMessages = [
+          ...convertHistoryToMessages(history),
+          {
+            role: "user",
+            content: "Summarize this conversation in a concise way, highlighting key points and actionable items."
+          }
+        ];
+        const cfResult = await callCloudflareWorkersAI(cfMessages, { temperature: 0.5 });
+        return cfResult.text;
+      } catch (cfError) {
+        console.warn(`[Cloudflare Workers AI] summarizeConversation fallback failed: ${(cfError?.message || String(cfError)).substring(0, 120)}`);
+      }
+    }
     return "\u{1F4A1} **\u10E1\u10D0\u10E3\u10D1\u10E0\u10D8\u10E1 \u10E8\u10D4\u10EF\u10D0\u10DB\u10D4\u10D1\u10D0 (Offline Mode)**:\n\n* **\u10D1\u10D8\u10D6\u10DC\u10D4\u10E1 \u10D8\u10D3\u10D4\u10D4\u10D1\u10D8:** \u10D2\u10D0\u10DC\u10EE\u10D8\u10DA\u10E3\u10DA\u10D8\u10D0 \u10E5\u10D0\u10E0\u10D7\u10E3\u10DA \u10D1\u10D0\u10D6\u10D0\u10E0\u10D6\u10D4 \u10DB\u10DD\u10E0\u10D2\u10D4\u10D1\u10E3\u10DA\u10D8 \u10D0\u10D5\u10D7\u10D4\u10DC\u10E2\u10E3\u10E0\u10D8 \u10DB\u10D0\u10E0\u10D9\u10D4\u10E2\u10D8\u10DC\u10D2\u10D8\u10E1\u10D0 \u10D3\u10D0 \u10E2\u10D4\u10E5\u10DC\u10DD\u10DA\u10DD\u10D2\u10D8\u10E3\u10E0\u10D8 \u10E1\u10E2\u10E0\u10D0\u10E2\u10D4\u10D2\u10D8\u10D4\u10D1\u10D8.\n* **\u10D0\u10D5\u10E2\u10DD\u10DB\u10D0\u10E2\u10D8\u10D6\u10D0\u10EA\u10D8\u10D0:** \u10D3\u10D0\u10D2\u10D4\u10D2\u10DB\u10D8\u10DA\u10D8\u10D0 \u10D1\u10D8\u10D6\u10DC\u10D4\u10E1 \u10DC\u10D0\u10D9\u10D0\u10D3\u10D4\u10D1\u10D8\u10E1 (Workflows) \u10D2\u10D0\u10D0\u10E5\u10E2\u10D8\u10E3\u10E0\u10D4\u10D1\u10D0 \u10D3\u10D0\u10E7\u10DD\u10D5\u10DC\u10D4\u10D1\u10D8\u10E1 \u10E8\u10D4\u10E1\u10D0\u10DB\u10EA\u10D8\u10E0\u10D4\u10D1\u10DA\u10D0\u10D3.\n* **\u10D2\u10D0\u10E4\u10D0\u10E0\u10D7\u10DD\u10D4\u10D1\u10D0:** \u10E0\u10D4\u10D9\u10DD\u10DB\u10D4\u10DC\u10D3\u10D4\u10D1\u10E3\u10DA\u10D8\u10D0 \u10DE\u10D0\u10E0\u10D0\u10DB\u10D4\u10E2\u10E0\u10D4\u10D1\u10E8\u10D8 \u201EAI \u10E1\u10D8\u10DB\u10E3\u10DA\u10D0\u10EA\u10D8\u10E3\u10E0\u10D8 \u10E0\u10D4\u10DF\u10D8\u10DB\u10D8\u10E1\u201C \u10E9\u10D0\u10E0\u10D7\u10D5\u10D0 \u10E8\u10D4\u10D6\u10E6\u10E3\u10D3\u10D5\u10D4\u10D1\u10D8\u10E1 \u10D0\u10E1\u10D0\u10EA\u10D8\u10DA\u10D4\u10D1\u10DA\u10D0\u10D3.";
   }
 }
@@ -809,7 +923,7 @@ var classifyListing = (item) => {
   if (SERVICE_CATEGORY_SET.has(cat) || cat === "services") {
     return "service";
   }
-  if (PROJECT_ASSET_CATEGORY_SET.has(cat)) {
+  if (PROJECT_ASSET_CATEGORY_SET.has(cat) || cat === "digital" || normalizeCategoryId(item.listingType) === "digital") {
     return "project_asset";
   }
   if (JOB_CATEGORY_SET.has(cat)) {
@@ -817,6 +931,9 @@ var classifyListing = (item) => {
   }
   if (COLLABORATION_CATEGORY_SET.has(cat)) {
     return "collaboration";
+  }
+  if (PRODUCT_CATEGORY_SET.has(cat)) {
+    return "product";
   }
   if (explicit === "service") return "service";
   if (explicit === "project") return "project";
@@ -1399,11 +1516,59 @@ function buildRankingsFromPublicDocs(params) {
     };
   });
 }
+var SELLER_DAILY_BUCKET_RETENTION_DAYS = 62;
+var SELLER_HOURLY_BUCKET_RETENTION_HOURS = 52;
 var GUEST_SESSION_MAX_LISTING_IDS = 50;
 var GUEST_SESSION_MAX_SELLER_IDS = 30;
 var GUEST_SESSION_TTL_DAYS = 30;
 var GUEST_SESSION_TTL_MS = GUEST_SESSION_TTL_DAYS * 24 * 60 * 60 * 1e3;
 var SELLER_ANALYTICS_SCHEMA_VERSION = 1;
+var SELLER_BUCKET_NUMERIC_KEYS = [
+  "profileViews",
+  "uniqueProfileViewers",
+  "authProfileViews",
+  "guestProfileViews",
+  "authUniqueProfileViewers",
+  "guestUniqueProfileViewers",
+  "listingToSellerClicks",
+  "uniqueListingToSellerUsers",
+  "authListingToSellerClicks",
+  "guestListingToSellerClicks",
+  "authUniqueListingToSellerUsers",
+  "guestUniqueListingToSellerUsers",
+  "contactClicks",
+  "uniqueContactClickers",
+  "authContactClicks",
+  "guestContactClicks",
+  "authUniqueContactClickers",
+  "guestUniqueContactClickers",
+  "orderIntents",
+  "uniqueOrderIntentUsers",
+  "authOrderIntents",
+  "guestOrderIntents",
+  "authUniqueOrderIntentUsers",
+  "guestUniqueOrderIntentUsers",
+  "contactConfirmed",
+  "uniqueContactedBuyers",
+  "ordersConfirmed",
+  "uniqueOrderBuyers",
+  "guestToAuthLinks",
+  "audienceImpressions",
+  "audienceViews",
+  "audienceUniqueViewers",
+  "authAudienceImpressions",
+  "authAudienceViews",
+  "authAudienceUniqueViewers",
+  "guestAudienceImpressions",
+  "guestAudienceViews",
+  "guestAudienceUniqueViewers",
+  "totalEvents",
+  "uniqueUsers",
+  "authEvents",
+  "guestEvents",
+  "authUniqueUsers",
+  "guestUniqueUsers"
+];
 function isValidHmacDigest(value) {
   return typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
 }
@@ -1430,6 +1595,47 @@ function createEmptySellerAnalyticsTotalCounters() {
     guestUniqueUsers: 0
   };
 }
+function createEmptySellerAnalyticsBucket() {
+  const bucket = {};
+  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
+    bucket[key] = 0;
+  }
+  return bucket;
+}
+function sanitizeSellerAnalyticsBucket(raw) {
+  const sanitized = createEmptySellerAnalyticsBucket();
+  if (!raw || typeof raw !== "object") return sanitized;
+  const src = raw;
+  for (const key of SELLER_BUCKET_NUMERIC_KEYS) {
+    const val = Number(src[key]);
+    sanitized[key] = Number.isFinite(val) && val >= 0 ? val : 0;
+  }
+  return sanitized;
+}
+function pruneSellerHourlyBuckets(hourly, nowMs) {
+  const result = {};
+  if (!hourly || typeof hourly !== "object") return result;
+  const minTs = nowMs - SELLER_HOURLY_BUCKET_RETENTION_HOURS * 60 * 60 * 1e3;
+  const minKey = getHourBucketKey(minTs);
+  for (const [k, v] of Object.entries(hourly)) {
+    if (k >= minKey && v && typeof v === "object") {
+      result[k] = sanitizeSellerAnalyticsBucket(v);
+    }
+  }
+  return result;
+}
+function pruneSellerDailyBuckets(daily, nowMs) {
+  const result = {};
+  if (!daily || typeof daily !== "object") return result;
+  const minTs = nowMs - SELLER_DAILY_BUCKET_RETENTION_DAYS * 24 * 60 * 60 * 1e3;
+  const minKey = getDayBucketKey(minTs);
+  for (const [k, v] of Object.entries(daily)) {
+    if (k >= minKey && v && typeof v === "object") {
+      result[k] = sanitizeSellerAnalyticsBucket(v);
+    }
+  }
+  return result;
+}
 function createEmptySellerAnalyticsDoc(params) {
   const nowMs = params.nowMs ?? Date.now();
   return {
@@ -1454,6 +1660,8 @@ function createEmptySellerAnalyticsDoc(params) {
     uniqueListingToSellerUsers: 0,
     authListingToSellerClicks: 0,
     guestListingToSellerClicks: 0,
+    authUniqueListingToSellerUsers: 0,
+    guestUniqueListingToSellerUsers: 0,
     contactClicks: 0,
     uniqueContactClickers: 0,
     authContactClicks: 0,
@@ -1633,8 +1841,209 @@ function buildVerifiedFunnelMarkerId(markerType, sourceId) {
   }
   return markerId;
 }
+function computeSellerFunnelTransactionUpdate(input) {
+  const nowMs = input.nowMs ?? Date.now();
+  const baseSeller = input.existingSeller ?? createEmptySellerAnalyticsDoc({
+    sellerId: input.sellerId,
+    optedOut: input.sellerMeta?.optedOut,
+    sellerName: input.sellerMeta?.sellerName,
+    country: input.sellerMeta?.country,
+    region: input.sellerMeta?.region,
+    nowMs
+  });
+  const viewerData = input.existingViewer ? { ...input.existingViewer } : {
+    viewerHash: input.viewerHash,
+    viewerType: input.viewerType,
+    firstSeenAt: nowMs,
+    lastSeenAt: nowMs
+  };
+  viewerData.lastSeenAt = nowMs;
+  const hourKey = getHourBucketKey(nowMs);
+  const dayKey = getDayBucketKey(nowMs);
+  const hourly = pruneSellerHourlyBuckets(baseSeller.hourly, nowMs);
+  const daily = pruneSellerDailyBuckets(baseSeller.daily, nowMs);
+  const hBucket = hourly[hourKey] || createEmptySellerAnalyticsBucket();
+  const dBucket = daily[dayKey] || createEmptySellerAnalyticsBucket();
+  const isAuth = input.viewerType === "auth";
+  let uniqueIncremented = false;
+  let counterField;
+  let uniqueField;
+  let authField;
+  let guestField;
+  let authUniqueField;
+  let guestUniqueField;
+  let lastTimestampField;
+  let uniqueViewerCheckField;
+  switch (input.eventType) {
+    case "seller_profile_view":
+      counterField = "profileViews";
+      uniqueField = "uniqueProfileViewers";
+      authField = "authProfileViews";
+      guestField = "guestProfileViews";
+      authUniqueField = "authUniqueProfileViewers";
+      guestUniqueField = "guestUniqueProfileViewers";
+      lastTimestampField = "lastProfileViewAt";
+      uniqueViewerCheckField = "firstProfileViewAt";
+      break;
+    case "listing_to_seller":
+      counterField = "listingToSellerClicks";
+      uniqueField = "uniqueListingToSellerUsers";
+      authField = "authListingToSellerClicks";
+      guestField = "guestListingToSellerClicks";
+      authUniqueField = "authUniqueListingToSellerUsers";
+      guestUniqueField = "guestUniqueListingToSellerUsers";
+      lastTimestampField = "lastListingToSellerAt";
+      uniqueViewerCheckField = "firstListingToSellerAt";
+      break;
+    case "contact_click":
+      counterField = "contactClicks";
+      uniqueField = "uniqueContactClickers";
+      authField = "authContactClicks";
+      guestField = "guestContactClicks";
+      authUniqueField = "authUniqueContactClickers";
+      guestUniqueField = "guestUniqueContactClickers";
+      lastTimestampField = "lastContactClickAt";
+      uniqueViewerCheckField = "firstContactClickAt";
+      break;
+    case "order_intent":
+      counterField = "orderIntents";
+      uniqueField = "uniqueOrderIntentUsers";
+      authField = "authOrderIntents";
+      guestField = "guestOrderIntents";
+      authUniqueField = "authUniqueOrderIntentUsers";
+      guestUniqueField = "guestUniqueOrderIntentUsers";
+      lastTimestampField = "lastOrderIntentAt";
+      uniqueViewerCheckField = "firstOrderIntentAt";
+      break;
+    case "contact_confirmed":
+      counterField = "contactConfirmed";
+      uniqueField = "uniqueContactedBuyers";
+      lastTimestampField = "firstContactConfirmedAt";
+      uniqueViewerCheckField = "firstContactConfirmedAt";
+      break;
+    case "order_confirmed":
+      counterField = "ordersConfirmed";
+      uniqueField = "uniqueOrderBuyers";
+      lastTimestampField = "firstOrderConfirmedAt";
+      uniqueViewerCheckField = "firstOrderConfirmedAt";
+      break;
+    default:
+      return { recorded: false, reason: "invalid_event_type", uniqueIncremented: false };
+  }
+  const isFirstViewerAction = !viewerData[uniqueViewerCheckField];
+  if (isFirstViewerAction) {
+    viewerData[uniqueViewerCheckField] = nowMs;
+    uniqueIncremented = true;
+  }
+  if (lastTimestampField !== uniqueViewerCheckField || isFirstViewerAction) {
+    viewerData[lastTimestampField] = nowMs;
+  }
+  viewerData.firstAudienceAt = viewerData.firstAudienceAt || nowMs;
+  viewerData.lastAudienceAt = nowMs;
+  const cleanViewerDoc = sanitizeSellerViewerDoc(
+    viewerData
+  );
+  const nextSellerDoc = {
+    ...baseSeller,
+    metadata: {
+      schemaVersion: baseSeller.metadata?.schemaVersion || SELLER_ANALYTICS_SCHEMA_VERSION,
+      ...baseSeller.metadata?.sellerName ? { sellerName: baseSeller.metadata.sellerName } : input.sellerMeta?.sellerName ? { sellerName: input.sellerMeta.sellerName } : {},
+      lastEventAt: nowMs
+    },
+    [counterField]: (Number(baseSeller[counterField]) || 0) + 1,
+    ...uniqueIncremented ? { [uniqueField]: (Number(baseSeller[uniqueField]) || 0) + 1 } : {},
+    ...authField ? {
+      [authField]: isAuth ? (Number(baseSeller[authField]) || 0) + 1 : Number(baseSeller[authField]) || 0
+    } : {},
+    ...guestField ? {
+      [guestField]: !isAuth ? (Number(baseSeller[guestField]) || 0) + 1 : Number(baseSeller[guestField]) || 0
+    } : {},
+    ...authUniqueField ? {
+      [authUniqueField]: uniqueIncremented && isAuth ? (Number(baseSeller[authUniqueField]) || 0) + 1 : Number(baseSeller[authUniqueField]) || 0
+    } : {},
+    ...guestUniqueField ? {
+      [guestUniqueField]: uniqueIncremented && !isAuth ? (Number(baseSeller[guestUniqueField]) || 0) + 1 : Number(baseSeller[guestUniqueField]) || 0
+    } : {},
+    audience: {
+      totalImpressions: baseSeller.audience?.totalImpressions || 0,
+      totalViews: baseSeller.audience?.totalViews || 0,
+      uniqueViewers: baseSeller.audience?.uniqueViewers || 0,
+      authImpressions: baseSeller.audience?.authImpressions || 0,
+      authViews: baseSeller.audience?.authViews || 0,
+      authUniqueViewers: baseSeller.audience?.authUniqueViewers || 0,
+      guestImpressions: baseSeller.audience?.guestImpressions || 0,
+      guestViews: baseSeller.audience?.guestViews || 0,
+      guestUniqueViewers: baseSeller.audience?.guestUniqueViewers || 0
+    },
+    totals: {
+      totalEvents: (Number(baseSeller.totals?.totalEvents) || 0) + 1,
+      totalUniqueUsers: (Number(baseSeller.totals?.totalUniqueUsers) || 0) + (uniqueIncremented ? 1 : 0),
+      authEvents: (Number(baseSeller.totals?.authEvents) || 0) + (isAuth ? 1 : 0),
+      guestEvents: (Number(baseSeller.totals?.guestEvents) || 0) + (!isAuth ? 1 : 0),
+      authUniqueUsers: (Number(baseSeller.totals?.authUniqueUsers) || 0) + (uniqueIncremented && isAuth ? 1 : 0),
+      guestUniqueUsers: (Number(baseSeller.totals?.guestUniqueUsers) || 0) + (uniqueIncremented && !isAuth ? 1 : 0)
+    },
+    hourly,
+    daily,
+    updatedAt: nowMs
+  };
+  const applyBucketUpdates = (bucket) => {
+    const cKey = counterField;
+    const uKey = uniqueField;
+    bucket[cKey] = (Number(bucket[cKey]) || 0) + 1;
+    if (uniqueIncremented) {
+      bucket[uKey] = (Number(bucket[uKey]) || 0) + 1;
+    }
+    if (authField && isAuth) {
+      const aKey = authField;
+      bucket[aKey] = (Number(bucket[aKey]) || 0) + 1;
+    }
+    if (guestField && !isAuth) {
+      const gKey = guestField;
+      bucket[gKey] = (Number(bucket[gKey]) || 0) + 1;
+    }
+    if (uniqueIncremented && authUniqueField && isAuth) {
+      const auKey = authUniqueField;
+      bucket[auKey] = (Number(bucket[auKey]) || 0) + 1;
+    }
+    if (uniqueIncremented && guestUniqueField && !isAuth) {
+      const guKey = guestUniqueField;
+      bucket[guKey] = (Number(bucket[guKey]) || 0) + 1;
+    }
+    bucket.totalEvents = (Number(bucket.totalEvents) || 0) + 1;
+    bucket.authEvents = (Number(bucket.authEvents) || 0) + (isAuth ? 1 : 0);
+    bucket.guestEvents = (Number(bucket.guestEvents) || 0) + (!isAuth ? 1 : 0);
+    if (uniqueIncremented) {
+      bucket.uniqueUsers = (Number(bucket.uniqueUsers) || 0) + 1;
+      if (isAuth) {
+        bucket.authUniqueUsers = (Number(bucket.authUniqueUsers) || 0) + 1;
+      } else {
+        bucket.guestUniqueUsers = (Number(bucket.guestUniqueUsers) || 0) + 1;
+      }
+    }
+  };
+  applyBucketUpdates(hBucket);
+  applyBucketUpdates(dBucket);
+  hourly[hourKey] = hBucket;
+  daily[dayKey] = dBucket;
+  return {
+    recorded: true,
+    uniqueIncremented,
+    nextSellerDoc,
+    nextViewerDoc: cleanViewerDoc
+  };
+}
 
 // src/lib/analyticsServer.ts
+var CONFIRMED_ORDER_ALLOWED_STATUSES = /* @__PURE__ */ new Set([
+  "pending",
+  "booked",
+  "processing",
+  "in_progress",
+  "shipped",
+  "delivered",
+  "completed"
+]);
 function parseTimestampMs(val) {
   if (typeof val === "number" && Number.isFinite(val)) return val;
   if (val && typeof val.toMillis === "function") return val.toMillis();
@@ -1687,6 +2096,12 @@ function parseServiceAccountJson(rawSaJson) {
       "Server Firebase Admin service account JSON must be an object."
     );
   }
+  if (typeof parsed.project_id !== "string" || parsed.project_id.trim() !== "proton-core-ai") {
+    throw new AnalyticsConfigError(
+      "analytics/admin-credentials-invalid",
+      "Server Firebase Admin service account JSON project_id must match proton-core-ai."
+    );
+  }
   if (typeof parsed.client_email !== "string" || !parsed.client_email.includes("@")) {
     throw new AnalyticsConfigError(
       "analytics/admin-credentials-invalid",
@@ -1717,7 +2132,7 @@ async function getAdminFirestoreInstance() {
   if (cachedAdminFirestore) return cachedAdminFirestore;
   const { initializeApp, getApps, cert } = await import("firebase-admin/app");
   const { getFirestore } = await import("firebase-admin/firestore");
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GCLOUD_PROJECT || "proton-core-ai";
+  const PRIMARY_PROJECT_ID = "proton-core-ai";
   const databaseId = process.env.FIRESTORE_DATABASE_ID || "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
   const appName = "proton-analytics-admin";
   let app2 = getApps().find((a) => a.name === appName);
@@ -1729,11 +2144,11 @@ async function getAdminFirestoreInstance() {
         app2 = initializeApp(
           {
             credential: cert({
-              projectId: parsed.project_id || projectId,
+              projectId: PRIMARY_PROJECT_ID,
               clientEmail: parsed.client_email,
               privateKey: parsed.private_key
             }),
-            projectId: parsed.project_id || projectId
+            projectId: PRIMARY_PROJECT_ID
           },
           appName
         );
@@ -1745,7 +2160,7 @@ async function getAdminFirestoreInstance() {
         );
       }
     } else {
-      app2 = initializeApp({ projectId }, appName);
+      app2 = initializeApp({ projectId: PRIMARY_PROJECT_ID }, appName);
     }
   }
   cachedAdminFirestore = getFirestore(app2, databaseId);
@@ -1852,6 +2267,80 @@ var FirestoreAdminAnalyticsRepository = class {
       isDemo: data.isDemo,
       isSeed: data.isSeed,
       isMock: data.isMock
+    };
+  }
+  async getOrderForAnalytics(orderId) {
+    if (!isValidAnalyticsId(orderId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection("orders").doc(orderId).get();
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    return {
+      id: snap.id,
+      listingId: typeof data.listingId === "string" ? data.listingId : "",
+      buyerId: typeof data.buyerId === "string" ? data.buyerId : "",
+      sellerId: typeof data.sellerId === "string" ? data.sellerId : "",
+      status: typeof data.status === "string" ? data.status : "",
+      orderType: typeof data.orderType === "string" ? data.orderType : void 0
+    };
+  }
+  async getMarketMessageForAnalytics(messageId) {
+    if (!isValidAnalyticsId(messageId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const snap = await db.collection("market_messages").doc(messageId).get();
+    if (!snap.exists) return null;
+    const data = snap.data() || {};
+    return {
+      id: snap.id,
+      listingId: typeof data.listingId === "string" ? data.listingId : void 0,
+      conversationId: typeof data.conversationId === "string" ? data.conversationId : void 0,
+      senderId: typeof data.senderId === "string" ? data.senderId : "",
+      receiverId: typeof data.receiverId === "string" ? data.receiverId : void 0,
+      buyerId: typeof data.buyerId === "string" ? data.buyerId : void 0,
+      sellerId: typeof data.sellerId === "string" ? data.sellerId : "",
+      participants: Array.isArray(data.participants) ? data.participants.filter((p) => typeof p === "string") : void 0
+    };
+  }
+  async getSellerForAnalytics(sellerId) {
+    if (!isValidAnalyticsId(sellerId)) return null;
+    const db = await getAdminFirestoreInstance();
+    const [userSnap, prefSnap] = await Promise.all([
+      db.collection("users").doc(sellerId).get(),
+      db.collection("seller_competition_prefs").doc(sellerId).get().catch(() => null)
+    ]);
+    const pData = prefSnap?.exists ? prefSnap.data() || {} : {};
+    if (userSnap.exists) {
+      const uData = userSnap.data() || {};
+      if (uData.deleted === true || uData.status === "deleted" || uData.isDemo || uData.isSeed || uData.isMock) {
+        return null;
+      }
+      const loc = resolveReliableSellerLocation({
+        profileCountry: uData.country,
+        profileRegion: uData.region
+      });
+      return {
+        id: sellerId,
+        exists: true,
+        sellerName: typeof uData.displayName === "string" && uData.displayName.trim() ? uData.displayName.trim() : typeof uData.name === "string" && uData.name.trim() ? uData.name.trim() : typeof uData.sellerName === "string" && uData.sellerName.trim() ? uData.sellerName.trim() : void 0,
+        country: loc.country,
+        region: loc.region,
+        optedOut: Boolean(pData.optedOut ?? uData.competitionOptOut)
+      };
+    }
+    const listingsSnap = await db.collection("listings").where("sellerId", "==", sellerId).limit(5).get();
+    const validListingDoc = (listingsSnap.docs || []).find((d) => {
+      const data = d.data() || {};
+      return !data.isDemo && !data.isSeed && !data.isMock && data.status !== "deleted";
+    });
+    if (!validListingDoc) {
+      return null;
+    }
+    const lData = validListingDoc.data() || {};
+    return {
+      id: sellerId,
+      exists: true,
+      sellerName: lData.sellerName || lData.authorName,
+      optedOut: Boolean(pData.optedOut)
     };
   }
   async getSellerProfileLocation(sellerId) {
@@ -2413,6 +2902,39 @@ var FirestoreAdminAnalyticsRepository = class {
       return { created: true, duplicate: false, markerId };
     });
   }
+  async recordSellerFunnelEvent(params) {
+    if (!isValidAnalyticsId(params.sellerId) || !isValidHmacDigest(params.viewerHash)) {
+      throw new Error("Invalid sellerId or viewerHash for seller funnel event");
+    }
+    const db = await getAdminFirestoreInstance();
+    const nowMs = params.nowMs ?? Date.now();
+    const sellerRef = db.collection("seller_analytics").doc(params.sellerId);
+    const viewerRef = sellerRef.collection("viewers").doc(params.viewerHash);
+    return db.runTransaction(async (tx) => {
+      const [sellerSnap, viewerSnap] = await Promise.all([
+        tx.get(sellerRef),
+        tx.get(viewerRef)
+      ]);
+      const existingSeller = sellerSnap.exists ? sellerSnap.data() : null;
+      const existingViewer = viewerSnap.exists ? viewerSnap.data() : null;
+      const mutation = computeSellerFunnelTransactionUpdate({
+        sellerId: params.sellerId,
+        eventType: params.eventType,
+        viewerHash: params.viewerHash,
+        viewerType: params.viewerType,
+        existingSeller,
+        existingViewer,
+        sellerMeta: params.sellerMeta,
+        nowMs
+      });
+      if (!mutation.recorded || !mutation.nextSellerDoc || !mutation.nextViewerDoc) {
+        return { recorded: false, reason: mutation.reason };
+      }
+      tx.set(viewerRef, mutation.nextViewerDoc, { merge: true });
+      tx.set(sellerRef, mutation.nextSellerDoc);
+      return { recorded: true };
+    });
+  }
 };
 var MarketAnalyticsService = class {
   repo;
@@ -2897,6 +3419,361 @@ var MarketAnalyticsService = class {
       nowMs: params.nowMs ?? Date.now()
     });
   }
+  async recordSellerFunnelEvent(params) {
+    const nowMs = params.nowMs ?? Date.now();
+    const validEventTypes = [
+      "seller_profile_view",
+      "listing_to_seller",
+      "contact_click",
+      "contact_confirmed",
+      "order_intent",
+      "order_confirmed"
+    ];
+    if (!validEventTypes.includes(params.eventType)) {
+      return { status: 400, body: { error: "Invalid eventType", code: "analytics/invalid-event-type" } };
+    }
+    const isConfirmedEvent = params.eventType === "contact_confirmed" || params.eventType === "order_confirmed";
+    if (isConfirmedEvent) {
+      if (!params.verifiedUid || !isValidAnalyticsId(params.verifiedUid)) {
+        return {
+          status: 401,
+          body: {
+            recorded: false,
+            error: "Unauthorized: Authentication required for confirmed funnel events",
+            code: "analytics/auth-required"
+          }
+        };
+      }
+    }
+    if (isBotUserAgent(params.userAgent)) {
+      return { status: 200, body: { recorded: false, reason: "bot_filtered" } };
+    }
+    if (!isValidAnalyticsId(params.sellerId)) {
+      return { status: 400, body: { error: "Invalid sellerId", code: "analytics/invalid-seller-id" } };
+    }
+    let viewerType;
+    let identityKey;
+    if (params.verifiedUid && isValidAnalyticsId(params.verifiedUid)) {
+      viewerType = "auth";
+      identityKey = `auth:${params.verifiedUid}`;
+    } else {
+      if (typeof params.visitorToken !== "string" || params.visitorToken.length < 8 || params.visitorToken.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(params.visitorToken)) {
+        return { status: 400, body: { error: "Valid visitorToken required for guest telemetry", code: "analytics/invalid-visitor-token" } };
+      }
+      viewerType = "guest";
+      identityKey = `guest:${params.visitorToken}`;
+    }
+    try {
+      this.resolveEffectiveSalt();
+    } catch (err) {
+      if (err instanceof AnalyticsConfigError && err.code === "analytics/salt-missing") {
+        return {
+          status: 503,
+          body: {
+            recorded: false,
+            code: "analytics/salt-missing",
+            error: err.message
+          }
+        };
+      }
+      throw err;
+    }
+    let targetSellerId = String(params.sellerId);
+    let targetListingId;
+    let sellerMeta;
+    if (isConfirmedEvent) {
+      targetListingId = typeof params.listingId === "string" ? params.listingId : void 0;
+      const verifiedUid = params.verifiedUid;
+      if (typeof params.sourceId !== "string" || !isValidAnalyticsId(params.sourceId)) {
+        return {
+          status: 400,
+          body: {
+            recorded: false,
+            error: "Valid sourceId required for confirmed funnel markers",
+            code: "analytics/invalid-source-id"
+          }
+        };
+      }
+      const sourceId = params.sourceId;
+      if (params.eventType === "order_confirmed") {
+        if (!this.repo.getOrderForAnalytics) {
+          throw new Error("Repository does not implement getOrderForAnalytics");
+        }
+        const order = await this.repo.getOrderForAnalytics(sourceId);
+        if (!order) {
+          return {
+            status: 404,
+            body: {
+              recorded: false,
+              error: "Order not found",
+              code: "analytics/order-not-found"
+            }
+          };
+        }
+        if (order.buyerId !== verifiedUid) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: Order does not belong to authenticated buyer",
+              code: "analytics/order-buyer-mismatch"
+            }
+          };
+        }
+        if (!isValidAnalyticsId(order.sellerId) || order.sellerId === verifiedUid) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "Invalid order seller",
+              code: "analytics/invalid-order-seller"
+            }
+          };
+        }
+        if (order.sellerId !== targetSellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: sellerId does not match authoritative order seller",
+              code: "analytics/seller-mismatch"
+            }
+          };
+        }
+        if (typeof params.listingId === "string" && params.listingId.length > 0 && order.listingId !== params.listingId) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "listingId does not match authoritative order listing",
+              code: "analytics/listing-mismatch"
+            }
+          };
+        }
+        const normalizedStatus = String(order.status || "").trim().toLowerCase();
+        if (!CONFIRMED_ORDER_ALLOWED_STATUSES.has(normalizedStatus)) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "Order status is not eligible for confirmation",
+              code: "analytics/invalid-order-status"
+            }
+          };
+        }
+        targetSellerId = order.sellerId;
+        targetListingId = isValidAnalyticsId(order.listingId) ? order.listingId : void 0;
+      } else {
+        if (!this.repo.getMarketMessageForAnalytics) {
+          throw new Error("Repository does not implement getMarketMessageForAnalytics");
+        }
+        const message = await this.repo.getMarketMessageForAnalytics(sourceId);
+        if (!message) {
+          return {
+            status: 404,
+            body: {
+              recorded: false,
+              error: "Message not found",
+              code: "analytics/message-not-found"
+            }
+          };
+        }
+        if (message.senderId !== verifiedUid) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: Message does not belong to authenticated sender",
+              code: "analytics/message-sender-mismatch"
+            }
+          };
+        }
+        if (!isValidAnalyticsId(message.sellerId) || message.sellerId === verifiedUid) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "Invalid message seller",
+              code: "analytics/invalid-message-seller"
+            }
+          };
+        }
+        if (message.sellerId !== targetSellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: sellerId does not match authoritative message seller",
+              code: "analytics/seller-mismatch"
+            }
+          };
+        }
+        if (message.buyerId && message.buyerId !== verifiedUid) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: Message buyerId does not match authenticated user",
+              code: "analytics/message-buyer-mismatch"
+            }
+          };
+        }
+        if (message.receiverId && message.receiverId !== message.sellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: Message receiver does not match seller",
+              code: "analytics/message-receiver-mismatch"
+            }
+          };
+        }
+        if (Array.isArray(message.participants) && (!message.participants.includes(verifiedUid) || !message.participants.includes(message.sellerId))) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: Message participants do not match sender and seller",
+              code: "analytics/message-participants-mismatch"
+            }
+          };
+        }
+        if (typeof params.listingId === "string" && params.listingId.length > 0 && message.listingId !== params.listingId) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "listingId does not match authoritative message listing",
+              code: "analytics/listing-mismatch"
+            }
+          };
+        }
+        targetSellerId = message.sellerId;
+        targetListingId = message.listingId && isValidAnalyticsId(message.listingId) ? message.listingId : void 0;
+      }
+      if (verifiedUid === targetSellerId) {
+        return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
+      }
+      const markerType = params.eventType === "order_confirmed" ? "order_confirmed" : "contact_confirmed";
+      const buyerHash = this.computeBuyerIdentityHash(verifiedUid);
+      if (this.repo.claimVerifiedFunnelMarker) {
+        const markerRes = await this.repo.claimVerifiedFunnelMarker({
+          markerType,
+          sourceId,
+          sellerId: targetSellerId,
+          buyerHash,
+          listingId: targetListingId,
+          nowMs
+        });
+        if (markerRes.duplicate) {
+          return { status: 200, body: { recorded: false, reason: "duplicate_verified_marker" } };
+        }
+      }
+    } else {
+      if (!this.repo.getSellerForAnalytics) {
+        throw new Error("Repository does not implement getSellerForAnalytics");
+      }
+      const seller = await this.repo.getSellerForAnalytics(targetSellerId);
+      if (!seller || !seller.exists || seller.deleted || seller.isDemo || seller.isSeed || seller.isMock) {
+        return {
+          status: 404,
+          body: {
+            recorded: false,
+            error: "Seller not found",
+            code: "analytics/seller-not-found"
+          }
+        };
+      }
+      sellerMeta = {
+        optedOut: seller.optedOut,
+        sellerName: seller.sellerName,
+        country: seller.country,
+        region: seller.region
+      };
+      const rawListingId = params.listingId;
+      if (params.eventType === "listing_to_seller") {
+        if (rawListingId === void 0 || rawListingId === null || rawListingId === "") {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "listingId is required for listing_to_seller events",
+              code: "analytics/listing-id-required"
+            }
+          };
+        }
+      }
+      if (rawListingId !== void 0 && rawListingId !== null) {
+        if (!isValidAnalyticsId(rawListingId)) {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "Invalid listingId",
+              code: "analytics/invalid-listing-id"
+            }
+          };
+        }
+        const listing = await this.repo.getListing(rawListingId);
+        const normalizedListingStatus = typeof listing?.status === "string" ? listing.status.trim().toLowerCase() : "";
+        if (!listing || listing.isDemo || listing.isSeed || listing.isMock || normalizedListingStatus === "deleted") {
+          return {
+            status: 404,
+            body: {
+              recorded: false,
+              error: "Listing not found",
+              code: "analytics/listing-not-found"
+            }
+          };
+        }
+        if (normalizedListingStatus !== "" && normalizedListingStatus !== "active") {
+          return {
+            status: 400,
+            body: {
+              recorded: false,
+              error: "Listing is not active",
+              code: "analytics/listing-not-active"
+            }
+          };
+        }
+        if (listing.sellerId !== targetSellerId) {
+          return {
+            status: 403,
+            body: {
+              recorded: false,
+              error: "Forbidden: Listing does not belong to target seller",
+              code: "analytics/listing-seller-mismatch"
+            }
+          };
+        }
+        targetListingId = listing.id;
+      }
+      if (params.verifiedUid && params.verifiedUid === targetSellerId) {
+        return { status: 200, body: { recorded: false, reason: "owner_excluded" } };
+      }
+    }
+    const viewerHash = this.computeSellerViewerHash(targetSellerId, identityKey);
+    if (!this.repo.recordSellerFunnelEvent) {
+      throw new Error("Repository does not implement recordSellerFunnelEvent");
+    }
+    const txResult = await this.repo.recordSellerFunnelEvent({
+      sellerId: targetSellerId,
+      eventType: params.eventType,
+      viewerHash,
+      viewerType,
+      nowMs,
+      listingId: targetListingId,
+      sourceId: typeof params.sourceId === "string" ? params.sourceId : void 0,
+      ...sellerMeta ? { sellerMeta } : {}
+    });
+    return {
+      status: 200,
+      body: {
+        recorded: txResult.recorded,
+        ...txResult.reason ? { reason: txResult.reason } : {}
+      }
+    };
+  }
 };
 function isAdminCredentialsError(err) {
   if (err instanceof AnalyticsConfigError) return true;
@@ -2928,9 +3805,25 @@ async function getGooglePublicCerts() {
     return _googlePublicCerts || {};
   }
 }
-async function verifyFirebaseTokenDirectly(idToken, candidateProjects) {
+var PRIMARY_FIREBASE_PROJECT_ID = "proton-core-ai";
+var KNOWN_FIRESTORE_DATABASE_ID = "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51";
+var ALLOWED_SERVER_FIREBASE_PROJECT_IDS = /* @__PURE__ */ new Set([PRIMARY_FIREBASE_PROJECT_ID]);
+function getTrustedFirebaseProjectIds() {
+  const configuredEnvProjectId = typeof process.env.FIREBASE_PROJECT_ID === "string" ? process.env.FIREBASE_PROJECT_ID.trim() : "";
+  if (configuredEnvProjectId && configuredEnvProjectId !== KNOWN_FIRESTORE_DATABASE_ID && ALLOWED_SERVER_FIREBASE_PROJECT_IDS.has(configuredEnvProjectId)) {
+    return [configuredEnvProjectId];
+  }
+  return [PRIMARY_FIREBASE_PROJECT_ID];
+}
+async function verifyFirebaseTokenDirectly(idToken, trustedProjects = getTrustedFirebaseProjectIds(), certProvider) {
   const parts = idToken.split(".");
   if (parts.length !== 3) return null;
+  const allowedProjects = Array.from(
+    new Set(
+      (Array.isArray(trustedProjects) ? trustedProjects : []).map((p) => typeof p === "string" ? p.trim() : "").filter((p) => Boolean(p) && p !== KNOWN_FIRESTORE_DATABASE_ID)
+    )
+  );
+  if (allowedProjects.length === 0) return null;
   try {
     const unpaddedHeader = parts[0].replace(/-/g, "+").replace(/_/g, "/");
     const headerB64 = unpaddedHeader + "=".repeat((4 - unpaddedHeader.length % 4) % 4);
@@ -2938,9 +3831,11 @@ async function verifyFirebaseTokenDirectly(idToken, candidateProjects) {
     const unpaddedPayload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
     const payloadB64 = unpaddedPayload + "=".repeat((4 - unpaddedPayload.length % 4) % 4);
     const payload = JSON.parse(Buffer.from(payloadB64, "base64").toString("utf8"));
-    if (header.alg !== "RS256" || !header.kid) return null;
-    const certs = await getGooglePublicCerts();
-    const cert = certs[header.kid];
+    if (!header || typeof header !== "object" || Array.isArray(header)) return null;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+    if (header.alg !== "RS256" || typeof header.kid !== "string" || !header.kid.trim()) return null;
+    const certs = certProvider ? await certProvider() : await getGooglePublicCerts();
+    const cert = certs?.[header.kid];
     if (!cert) return null;
     const verifier = crypto2.createVerify("RSA-SHA256");
     verifier.update(`${parts[0]}.${parts[1]}`);
@@ -2948,13 +3843,21 @@ async function verifyFirebaseTokenDirectly(idToken, candidateProjects) {
     const sigB64 = unpaddedSig + "=".repeat((4 - unpaddedSig.length % 4) % 4);
     const sig = Buffer.from(sigB64, "base64");
     if (!verifier.verify(cert, sig)) return null;
-    if (!candidateProjects.includes(payload.aud)) return null;
+    if (typeof payload.aud !== "string" || !allowedProjects.includes(payload.aud)) return null;
+    if (payload.aud === KNOWN_FIRESTORE_DATABASE_ID) return null;
     if (payload.iss !== `https://securetoken.google.com/${payload.aud}`) return null;
     const nowSec = Math.floor(Date.now() / 1e3);
-    if (payload.exp < nowSec - 300) return null;
-    if (payload.iat > nowSec + 300) return null;
-    if (!payload.sub || typeof payload.sub !== "string") return null;
-    return { uid: payload.sub, email: payload.email, aud: payload.aud };
+    if (typeof payload.exp !== "number" || !Number.isFinite(payload.exp) || payload.exp <= nowSec) return null;
+    if (typeof payload.iat !== "number" || !Number.isFinite(payload.iat) || payload.iat > nowSec + 300) return null;
+    if (payload.auth_time !== void 0 && (typeof payload.auth_time !== "number" || !Number.isFinite(payload.auth_time) || payload.auth_time > nowSec + 300)) {
+      return null;
+    }
+    if (typeof payload.sub !== "string" || !payload.sub.trim() || payload.sub.length > 128) return null;
+    return {
+      uid: payload.sub,
+      email: typeof payload.email === "string" ? payload.email : void 0,
+      aud: payload.aud
+    };
   } catch {
     return null;
   }
@@ -2973,9 +3876,13 @@ function detectImageMimeType(buffer) {
   return null;
 }
 async function getVerifiedAdminAuth(targetProjectId) {
+  const trustedProjects = getTrustedFirebaseProjectIds();
+  const projectId = targetProjectId || trustedProjects[0] || PRIMARY_FIREBASE_PROJECT_ID;
+  if (!trustedProjects.includes(projectId) || projectId === KNOWN_FIRESTORE_DATABASE_ID) {
+    throw new Error(`Untrusted Firebase project ID rejected: ${projectId}`);
+  }
   const { initializeApp: initAdminApp, getApps: getAdminApps } = await import("firebase-admin/app");
   const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
-  const projectId = targetProjectId || "proton-core-ai";
   if (!_adminAuthMap.has(projectId)) {
     const existing = getAdminApps().find((a) => a.name === projectId || a.name === "[DEFAULT]" && a.options?.projectId === projectId);
     const adminApp = existing || initAdminApp({ projectId }, projectId);
@@ -2983,7 +3890,7 @@ async function getVerifiedAdminAuth(targetProjectId) {
   }
   return _adminAuthMap.get(projectId);
 }
-async function verifyBearerTokenFromRequest(req, customVerifier) {
+async function verifyBearerTokenFromRequest(req, customVerifier, customCertProvider) {
   const authHeader = req.headers.authorization || req.headers["Authorization"];
   const bearerMatch = typeof authHeader === "string" ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
   if (!bearerMatch) {
@@ -3004,44 +3911,51 @@ async function verifyBearerTokenFromRequest(req, customVerifier) {
   }
   const tokenParts = idToken.split(".");
   if (tokenParts.length !== 3) {
-    return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+    return {
+      error: "Unauthorized: Invalid or expired Firebase authentication token",
+      status: 401,
+      code: "auth/invalid-id-token",
+      reason: "Malformed JWT structure. Expected 3 segments."
+    };
   }
-  let tokenAudience;
-  try {
-    const unpadded = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padLength = (4 - unpadded.length % 4) % 4;
-    const base64 = unpadded + "=".repeat(padLength);
-    const parsedPayload = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-    tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === "string" ? parsedPayload.iss.replace("https://securetoken.google.com/", "") : void 0);
-  } catch {
+  const trustedProjects = getTrustedFirebaseProjectIds();
+  if (customCertProvider) {
+    const directResult = await verifyFirebaseTokenDirectly(idToken, trustedProjects, customCertProvider);
+    if (directResult?.uid) {
+      return { uid: directResult.uid, email: directResult.email, aud: directResult.aud };
+    }
+    return {
+      error: "Unauthorized: Invalid or expired Firebase authentication token",
+      status: 401,
+      code: "auth/invalid-id-token",
+      reason: "Token verification rejected"
+    };
   }
-  const candidateProjects = [];
-  if (tokenAudience && typeof tokenAudience === "string" && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-    candidateProjects.push(tokenAudience);
-  }
-  for (const proj of [
-    "proton-core-ai",
-    "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-    process.env.VITE_FIREBASE_PROJECT_ID,
-    process.env.FIREBASE_PROJECT_ID,
-    process.env.GCLOUD_PROJECT
-  ].filter(Boolean)) {
-    if (!candidateProjects.includes(proj)) candidateProjects.push(proj);
-  }
-  try {
-    const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-    if (directResult?.uid) return { uid: directResult.uid };
-  } catch {
-  }
-  for (const projId of candidateProjects) {
+  let lastAuthError = null;
+  for (const projId of trustedProjects) {
     try {
       const authInstance = await getVerifiedAdminAuth(projId);
       const decoded = await authInstance.verifyIdToken(idToken);
-      if (decoded?.uid) return { uid: decoded.uid };
-    } catch {
+      if (decoded?.uid && typeof decoded.aud === "string" && trustedProjects.includes(decoded.aud) && decoded.aud === projId && decoded.aud !== KNOWN_FIRESTORE_DATABASE_ID) {
+        return { uid: decoded.uid, email: decoded.email, aud: decoded.aud };
+      }
+    } catch (authErr) {
+      lastAuthError = authErr;
     }
   }
-  return { error: "Unauthorized: Invalid or expired Firebase authentication token", status: 401, code: "auth/invalid-id-token" };
+  try {
+    const directResult = await verifyFirebaseTokenDirectly(idToken, trustedProjects);
+    if (directResult?.uid) {
+      return { uid: directResult.uid, email: directResult.email, aud: directResult.aud };
+    }
+  } catch {
+  }
+  return {
+    error: "Unauthorized: Invalid or expired Firebase authentication token",
+    status: 401,
+    code: lastAuthError?.code || "auth/invalid-id-token",
+    reason: lastAuthError?.message || "Token verification rejected"
+  };
 }
 function createApiApp(options) {
   const app2 = express();
@@ -3096,86 +4010,15 @@ function createApiApp(options) {
   };
   apiRouter.get("/health", healthHandler);
   const uploadHandler = async (req, res) => {
-    const authHeader = req.headers.authorization || req.headers["Authorization"];
-    const bearerMatch = typeof authHeader === "string" ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-    if (!bearerMatch) {
-      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
-    }
-    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, "");
-    if (!idToken) {
-      return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
-    }
-    const tokenParts = idToken.split(".");
-    if (tokenParts.length !== 3) {
-      console.warn("[StorageServer] Token rejected: malformed JWT structure (expected 3 dot-separated segments)");
-      return res.status(401).json({
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        reason: "Malformed JWT structure. Expected 3 segments."
+    const authResult = await authenticateFirebaseUser(req);
+    if ("error" in authResult) {
+      return res.status(authResult.statusCode).json({
+        error: authResult.error,
+        reason: authResult.reason,
+        code: authResult.code
       });
     }
-    let tokenAudience;
-    try {
-      const unpadded = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const padLength = (4 - unpadded.length % 4) % 4;
-      const base64 = unpadded + "=".repeat(padLength);
-      const payloadJson = Buffer.from(base64, "base64").toString("utf8");
-      const parsedPayload = JSON.parse(payloadJson);
-      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === "string" ? parsedPayload.iss.replace("https://securetoken.google.com/", "") : void 0);
-    } catch (e) {
-      console.warn("[StorageServer] Could not parse token payload:", e);
-    }
-    const candidateProjects = [];
-    if (tokenAudience && typeof tokenAudience === "string" && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-      candidateProjects.push(tokenAudience);
-    }
-    const standardProjects = [
-      "proton-core-ai",
-      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-      process.env.VITE_FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.GCLOUD_PROJECT
-    ].filter(Boolean);
-    for (const proj of standardProjects) {
-      if (!candidateProjects.includes(proj)) {
-        candidateProjects.push(proj);
-      }
-    }
-    if (candidateProjects.length === 0) {
-      candidateProjects.push("proton-core-ai");
-    }
-    let decodedToken = null;
-    let lastAuthError = null;
-    try {
-      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-      if (directResult && directResult.uid) {
-        decodedToken = directResult;
-      }
-    } catch (e) {
-      console.warn("[StorageServer] Direct public cert verification attempt notice:", e?.message);
-    }
-    if (!decodedToken || !decodedToken.uid) {
-      for (const projId of candidateProjects) {
-        try {
-          const authInstance = await getVerifiedAdminAuth(projId);
-          decodedToken = await authInstance.verifyIdToken(idToken);
-          if (decodedToken && decodedToken.uid) {
-            break;
-          }
-        } catch (authErr) {
-          lastAuthError = authErr;
-        }
-      }
-    }
-    if (!decodedToken || !decodedToken.uid) {
-      const errDetail = lastAuthError?.message || "Token verification rejected";
-      console.warn("[StorageServer] Token verification rejected (401):", errDetail, "Candidates tried:", candidateProjects);
-      return res.status(401).json({
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        reason: errDetail,
-        code: lastAuthError?.code || "auth/invalid-id-token"
-      });
-    }
-    const verifiedUid = decodedToken.uid;
+    const verifiedUid = authResult.uid;
     if (!verifiedUid) {
       return res.status(401).json({ error: "Unauthorized: User UID not found in verified token" });
     }
@@ -3318,70 +4161,15 @@ function createApiApp(options) {
     }
   });
   const deleteHandler = async (req, res) => {
-    const authHeader = req.headers.authorization || req.headers["Authorization"];
-    const bearerMatch = typeof authHeader === "string" ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-    if (!bearerMatch) {
-      return res.status(401).json({ error: "Unauthorized: Missing or invalid Authorization header" });
-    }
-    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, "");
-    if (!idToken) {
-      return res.status(401).json({ error: "Unauthorized: Empty authentication token" });
-    }
-    const tokenParts = idToken.split(".");
-    if (tokenParts.length !== 3) {
-      return res.status(401).json({
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        reason: "Malformed JWT structure"
+    const authResult = await authenticateFirebaseUser(req);
+    if ("error" in authResult) {
+      return res.status(authResult.statusCode).json({
+        error: authResult.error,
+        reason: authResult.reason,
+        code: authResult.code
       });
     }
-    let tokenAudience;
-    try {
-      const unpadded = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const padLength = (4 - unpadded.length % 4) % 4;
-      const base64 = unpadded + "=".repeat(padLength);
-      const payloadJson = Buffer.from(base64, "base64").toString("utf8");
-      const parsedPayload = JSON.parse(payloadJson);
-      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === "string" ? parsedPayload.iss.replace("https://securetoken.google.com/", "") : void 0);
-    } catch {
-    }
-    const candidateProjects = [];
-    if (tokenAudience && typeof tokenAudience === "string" && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-      candidateProjects.push(tokenAudience);
-    }
-    const standardProjects = [
-      "proton-core-ai",
-      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-      process.env.VITE_FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.GCLOUD_PROJECT
-    ].filter(Boolean);
-    for (const proj of standardProjects) {
-      if (!candidateProjects.includes(proj)) candidateProjects.push(proj);
-    }
-    if (candidateProjects.length === 0) candidateProjects.push("proton-core-ai");
-    let decodedToken = null;
-    try {
-      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-      if (directResult && directResult.uid) decodedToken = directResult;
-    } catch {
-    }
-    if (!decodedToken || !decodedToken.uid) {
-      for (const projId of candidateProjects) {
-        try {
-          const authInstance = await getVerifiedAdminAuth(projId);
-          decodedToken = await authInstance.verifyIdToken(idToken);
-          if (decodedToken && decodedToken.uid) break;
-        } catch {
-        }
-      }
-    }
-    if (!decodedToken || !decodedToken.uid) {
-      return res.status(401).json({
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        code: "auth/invalid-id-token"
-      });
-    }
-    const verifiedUid = decodedToken.uid;
+    const verifiedUid = authResult.uid;
     const { path, url } = req.body || {};
     const target = path || url;
     if (!target || typeof target !== "string") {
@@ -3456,86 +4244,20 @@ function createApiApp(options) {
     return deleteHandler(req, res, next);
   });
   const authenticateFirebaseUser = async (req) => {
-    const authHeader = req.headers.authorization || req.headers["Authorization"];
-    const bearerMatch = typeof authHeader === "string" ? authHeader.match(/^Bearer\s+(.+)$/i) : null;
-    if (!bearerMatch) {
-      return { error: "Unauthorized: Missing or invalid Authorization header", statusCode: 401 };
-    }
-    const idToken = bearerMatch[1].trim().replace(/^["']|["']$/g, "");
-    if (!idToken) {
-      return { error: "Unauthorized: Empty authentication token", statusCode: 401 };
-    }
-    const tokenParts = idToken.split(".");
-    if (tokenParts.length !== 3) {
+    const authRes = await verifyBearerTokenFromRequest(
+      req,
+      options?.verifyIdToken,
+      options?.getPublicCerts
+    );
+    if (!authRes.uid) {
       return {
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        statusCode: 401,
-        reason: "Malformed JWT structure. Expected 3 segments."
+        error: authRes.error || "Unauthorized: Invalid or expired Firebase authentication token",
+        statusCode: authRes.status || 401,
+        code: authRes.code,
+        reason: authRes.reason
       };
     }
-    let tokenAudience;
-    try {
-      const unpadded = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
-      const padLength = (4 - unpadded.length % 4) % 4;
-      const base64 = unpadded + "=".repeat(padLength);
-      const payloadJson = Buffer.from(base64, "base64").toString("utf8");
-      const parsedPayload = JSON.parse(payloadJson);
-      tokenAudience = parsedPayload.aud || (typeof parsedPayload.iss === "string" ? parsedPayload.iss.replace("https://securetoken.google.com/", "") : void 0);
-    } catch (e) {
-      console.warn("[StorageServer] Could not parse token payload:", e);
-    }
-    const candidateProjects = [];
-    if (tokenAudience && typeof tokenAudience === "string" && /^[a-zA-Z0-9_-]{3,64}$/.test(tokenAudience)) {
-      candidateProjects.push(tokenAudience);
-    }
-    const standardProjects = [
-      "proton-core-ai",
-      "ai-studio-01dfb83a-da41-4952-8647-6368b0e05d51",
-      process.env.VITE_FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.GCLOUD_PROJECT
-    ].filter(Boolean);
-    for (const proj of standardProjects) {
-      if (!candidateProjects.includes(proj)) {
-        candidateProjects.push(proj);
-      }
-    }
-    if (candidateProjects.length === 0) {
-      candidateProjects.push("proton-core-ai");
-    }
-    let decodedToken = null;
-    let lastAuthError = null;
-    try {
-      const directResult = await verifyFirebaseTokenDirectly(idToken, candidateProjects);
-      if (directResult && directResult.uid) {
-        decodedToken = directResult;
-      }
-    } catch (e) {
-      console.warn("[StorageServer] Direct public cert verification attempt notice:", e?.message);
-    }
-    if (!decodedToken || !decodedToken.uid) {
-      for (const projId of candidateProjects) {
-        try {
-          const authInstance = await getVerifiedAdminAuth(projId);
-          decodedToken = await authInstance.verifyIdToken(idToken);
-          if (decodedToken && decodedToken.uid) {
-            break;
-          }
-        } catch (authErr) {
-          lastAuthError = authErr;
-        }
-      }
-    }
-    if (!decodedToken || !decodedToken.uid) {
-      const errDetail = lastAuthError?.message || "Token verification rejected";
-      return {
-        error: "Unauthorized: Invalid or expired Firebase authentication token",
-        statusCode: 401,
-        reason: errDetail,
-        code: lastAuthError?.code || "auth/invalid-id-token"
-      };
-    }
-    return { uid: decodedToken.uid, email: decodedToken.email };
+    return { uid: authRes.uid, email: authRes.email };
   };
   const createClipUploadUrlHandler = async (req, res) => {
     const authResult = await authenticateFirebaseUser(req);
@@ -3821,7 +4543,7 @@ function createApiApp(options) {
       const hasAuthHeader = Boolean(req.headers.authorization || req.headers["Authorization"]);
       let verifiedUid = null;
       if (hasAuthHeader) {
-        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
         if (!authRes.uid) {
           return res.status(authRes.status || 401).json({
             error: authRes.error || "Unauthorized",
@@ -3853,9 +4575,55 @@ function createApiApp(options) {
       return res.status(500).json({ error: "Failed to record listing analytics event" });
     }
   });
+  apiRouter.post("/market/seller-funnel-event", analyticsEventLimiter, async (req, res) => {
+    try {
+      const hasAuthHeader = Boolean(req.headers.authorization || req.headers["Authorization"]);
+      let verifiedUid = null;
+      if (hasAuthHeader) {
+        const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
+        if (!authRes.uid) {
+          return res.status(authRes.status || 401).json({
+            error: authRes.error || "Unauthorized",
+            code: authRes.code || "auth/invalid-id-token"
+          });
+        }
+        verifiedUid = authRes.uid;
+      }
+      const { sellerId, eventType, visitorToken, sourceId, listingId } = req.body || {};
+      if ((eventType === "contact_confirmed" || eventType === "order_confirmed") && !verifiedUid) {
+        return res.status(401).json({
+          recorded: false,
+          error: "Unauthorized: Authentication required for confirmed funnel events",
+          code: "analytics/auth-required"
+        });
+      }
+      const result = await analyticsService.recordSellerFunnelEvent({
+        sellerId,
+        eventType,
+        visitorToken,
+        verifiedUid,
+        sourceId,
+        listingId,
+        userAgent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : void 0,
+        clientIp: req.ip
+      });
+      return res.status(result.status).json(result.body);
+    } catch (err) {
+      if (isAdminCredentialsError(err)) {
+        const isConfigErr = err instanceof AnalyticsConfigError;
+        return res.status(503).json({
+          recorded: false,
+          code: isConfigErr ? err.code : "analytics/admin-credentials-missing",
+          error: isConfigErr ? err.message : "Seller analytics requires server Firebase Admin credentials for proton-core-ai."
+        });
+      }
+      console.error("[MarketAnalytics] seller-funnel-event error:", err);
+      return res.status(500).json({ error: "Failed to record seller funnel event" });
+    }
+  });
   apiRouter.get("/market/listing-stats", analyticsReadLimiter, async (req, res) => {
     try {
-      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
       if (!authRes.uid) {
         return res.status(authRes.status || 401).json({
           error: authRes.error || "Unauthorized",
@@ -3908,7 +4676,7 @@ function createApiApp(options) {
   });
   apiRouter.post("/market/competition-preference", analyticsReadLimiter, async (req, res) => {
     try {
-      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken);
+      const authRes = await verifyBearerTokenFromRequest(req, options?.verifyIdToken, options?.getPublicCerts);
       if (!authRes.uid) {
         return res.status(authRes.status || 401).json({
           error: authRes.error || "Unauthorized",
