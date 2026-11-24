@@ -166,7 +166,7 @@ const SidebarItem = React.memo(({
           className="flex items-center justify-between flex-1 min-w-0"
         >
           <span className={cn(
-            "text-xs font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden transition-all duration-500",
+            "text-[11px] font-bold uppercase tracking-wide leading-tight break-words transition-all duration-500 pr-1",
             active ? "text-proton-accent" : "text-proton-muted group-hover:text-proton-text"
           )}>
             {label}
@@ -3922,9 +3922,9 @@ export default function App() {
                             : "bg-proton-bg/40 border-proton-border/40 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <item.icon size={16} className={activeView === item.id ? "text-proton-accent" : "text-proton-muted"} />
-                          <span className="text-xs font-bold uppercase tracking-wide">{item.label}</span>
+                        <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                          <item.icon size={16} className={activeView === item.id ? "text-proton-accent shrink-0" : "text-proton-muted shrink-0"} />
+                          <span className="text-xs font-bold uppercase tracking-wide leading-tight break-words">{item.label}</span>
                         </div>
                         <ChevronRight size={14} className={cn("transition-transform", activeView === item.id ? "text-proton-accent translate-x-0.5" : "text-proton-muted opacity-40")} />
                       </button>
@@ -3960,9 +3960,9 @@ export default function App() {
                             : "bg-proton-bg/20 border-proton-border/30 text-proton-text hover:bg-proton-accent/5 hover:border-proton-accent/20"
                         )}
                       >
-                        <div className="flex items-center gap-3">
-                          <item.icon size={15} className={activeView === item.id ? "text-proton-accent" : "text-proton-muted"} />
-                          <span className="text-xs font-bold uppercase tracking-wide">{item.label}</span>
+                        <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                          <item.icon size={15} className={activeView === item.id ? "text-proton-accent shrink-0" : "text-proton-muted shrink-0"} />
+                          <span className="text-xs font-bold uppercase tracking-wide leading-tight break-words">{item.label}</span>
                         </div>
                         {item.badge ? (
                           <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-proton-accent/20 text-proton-accent">{item.badge}</span>
